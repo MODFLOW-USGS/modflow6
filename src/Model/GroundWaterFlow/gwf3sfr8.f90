@@ -2091,6 +2091,9 @@ contains
      ! -- write sfr stage and depth table
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
+      ! -- set table kstp and kper
+      call this%stagetab%set_kstpkper(kstp, kper)
+      !
       ! -- fill stage data
       do n = 1, this%maxbound
         node = this%igwfnode(n)
@@ -2133,7 +2136,7 @@ contains
     !
     ! -- Output sfr flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output sfr budget

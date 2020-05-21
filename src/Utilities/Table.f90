@@ -10,7 +10,7 @@ module TableModule
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error, ustop
-  use TdisModule, only: kstp, kper
+  use SimVariablesModule, only: errmsg
   
   implicit none
   
@@ -58,6 +58,7 @@ module TableModule
     procedure :: line_to_columns
     procedure :: finalize_table  
     procedure :: set_maxbound
+    procedure :: set_kstpkper
     procedure :: set_title
     procedure :: set_iout
     procedure :: print_list_entry
@@ -152,6 +153,8 @@ module TableModule
     ! -- initialize values based on optional dummy variables
     if (present(transient)) then
       this%transient = transient
+      allocate(this%kstp)
+      allocate(this%kper)
     else
       this%transient = .FALSE.
     end if
@@ -203,7 +206,6 @@ module TableModule
     integer(I4B), intent(in) :: width
     integer(I4B), intent(in), optional :: alignment
     ! -- local
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idx
     integer(I4B) :: ialign
 ! ------------------------------------------------------------------------------
@@ -221,10 +223,11 @@ module TableModule
     !
     ! -- check that ientry is in bounds
     if (this%ientry > this%ntableterm) then
-      write(errmsg,'(4x,a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)')                   &
-        '****ERROR. TRYING TO ADD COLUMN "', trim(adjustl(text)), '" (',         &
-        this%ientry, ') IN THE', trim(adjustl(this%name)), 'TABLE ("',           &
-        trim(adjustl(this%title)), '") THAT ONLY HAS', this%ntableterm, 'COLUMNS'
+      write(errmsg,'(a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)')                      &
+        'Trying to add column "', trim(adjustl(text)), '" (',                    &
+        this%ientry, ') in the', trim(adjustl(this%name)), 'table ("',           &
+        trim(adjustl(this%title)), '") that only has', this%ntableterm,          &
+        'columns.'
       call store_error(errmsg)
       call ustop()
     end if
@@ -401,8 +404,8 @@ module TableModule
       ! -- write title
       title = this%title
       if (this%transient) then
-        write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', kper
-        write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', kstp
+        write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', this%kper
+        write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', this%kstp
       end if
       if (len_trim(title) > 0) then
         write(this%iout, '(/,1x,a)') trim(adjustl(title))
@@ -527,6 +530,10 @@ module TableModule
     deallocate(this%tableterm)
     !
     ! -- deallocate scalars
+    if (this%transient) then
+      deallocate(this%kstp)
+      deallocate(this%kper)
+    end if
     deallocate(this%sep)
     deallocate(this%write_csv)
     deallocate(this%first_entry)
@@ -606,15 +613,14 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- check that ientry is within bounds
     if (this%ientry > this%ntableterm) then
-      write(errmsg,'(4x,a,1x,i0,5(1x,a),1x,i0,1x,a)')                            &
-        '****ERROR. TRYING TO ADD DATA TO COLUMN ', this%ientry, 'IN THE',       &
-        trim(adjustl(this%name)), 'TABLE (', trim(adjustl(this%title)),          &
-        ') THAT ONLY HAS', this%ntableterm, 'COLUMNS'
+      write(errmsg,'(a,1x,i0,5(1x,a),1x,i0,1x,a)')                               &
+        'Trying to add data to column ', this%ientry, 'in the',                  &
+        trim(adjustl(this%name)), 'table (', trim(adjustl(this%title)),          &
+        ') that only has', this%ntableterm, 'columns.'
       call store_error(errmsg)
       call ustop()
     end if
@@ -860,6 +866,29 @@ module TableModule
     ! -- return
     return
   end subroutine set_maxbound   
+  
+  subroutine set_kstpkper(this, kstp, kper)
+! ******************************************************************************
+! set_maxbound -- reset maxbound
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- set maxbound
+    this%kstp = kstp
+    this%kper = kper
+    !
+    ! -- return
+    return
+  end subroutine set_kstpkper   
   
   subroutine set_title(this, title)
 ! ******************************************************************************

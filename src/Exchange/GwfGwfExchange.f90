@@ -838,7 +838,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
-    !use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(inout) :: icnvg
@@ -895,6 +895,10 @@ contains
         call this%outputtab2%set_maxbound(ntabrows)
       end if
     end if
+    !
+    ! -- set table kstp and kper
+    call this%outputtab1%set_kstpkper(kstp, kper)
+    call this%outputtab2%set_kstpkper(kstp, kper)
     !
     ! -- Print and write budget terms for model 1
     !

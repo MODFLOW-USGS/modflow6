@@ -4343,7 +4343,7 @@ contains
     !
     ! -- Output lake flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output lake budget

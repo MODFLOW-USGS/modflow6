@@ -2826,6 +2826,9 @@ contains
      ! -- write maw head table
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
+      ! -- set table kstp and kper
+      call this%headtab%set_kstpkper(kstp, kper)
+      !
       ! -- fill stage data
       do n = 1, this%nmawwells
         if(this%inamedbound==1) then
@@ -2838,7 +2841,7 @@ contains
     !
     ! -- Output maw flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output maw budget

@@ -550,7 +550,7 @@ module BndModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kstp, kper
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -591,6 +591,12 @@ module BndModule
       end if
     else
       imover = this%imover
+    end if
+    !
+    ! -- set table kstp and kper
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
     end if
     !
     ! -- set maxrows
