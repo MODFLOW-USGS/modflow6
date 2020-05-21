@@ -2683,7 +2683,10 @@ contains
     !    after number of delay beds is defined
     !
     ! -- allocate boundname
-    allocate(this%boundname(this%ninterbeds))
+    if (this%inamedbound /= 0) then
+      call mem_allocate(this%boundname, LENBOUNDNAME, this%ninterbeds,           &
+                        'BOUNDNAME', trim(this%origin))
+    end if
     !
     ! -- allocate the nodelist and bound arrays
     if (this%maxsig0 > 0) then
