@@ -3581,6 +3581,13 @@ contains
       end do
     end do
     !
+    ! -- copy lakein into iprmap so mvr budget contains lake instead of outlet
+    if (this%imover == 1) then
+      do n = 1, this%noutlets
+        this%pakmvrobj%iprmap(n) = this%lakein(n)
+      end do
+    end if
+    !
     ! -- return
     return
   end subroutine lak_rp
