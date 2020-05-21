@@ -14,8 +14,9 @@ module PackageMoverModule
   type PackageMoverType
     
     character(len=LENORIGIN)                     :: origin
-    integer, pointer                             :: nproviders
-    integer, pointer                             :: nreceivers
+    integer(I4B), pointer                        :: nproviders
+    integer(I4B), pointer                        :: nreceivers
+    integer(I4B), dimension(:), pointer, contiguous :: iprmap => null()         ! map between id1 and feature (needed for lake to map from outlet to lake number)
     real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
     real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
     real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
@@ -43,6 +44,7 @@ module PackageMoverModule
     packagemover%origin = origin
     call mem_setptr(packagemover%nproviders, 'NPROVIDERS', origin)
     call mem_setptr(packagemover%nreceivers, 'NRECEIVERS', origin)
+    call mem_setptr(packagemover%iprmap, 'IPRMAP', origin)
     call mem_setptr(packagemover%qtformvr, 'QTFORMVR', origin)
     call mem_setptr(packagemover%qformvr, 'QFORMVR', origin)
     call mem_setptr(packagemover%qtomvr, 'QTOMVR', origin)
@@ -54,6 +56,7 @@ module PackageMoverModule
     packagemover%origin = ''
     packagemover%nproviders => null()
     packagemover%nreceivers => null()
+    packagemover%iprmap => null()
     packagemover%qtformvr => null()
     packagemover%qformvr => null()
     packagemover%qtomvr => null()
@@ -124,6 +127,7 @@ module PackageMoverModule
     class(PackageMoverType) :: this
     !
     ! -- arrays
+    call mem_deallocate(this%iprmap)
     call mem_deallocate(this%qtformvr)
     call mem_deallocate(this%qformvr)
     call mem_deallocate(this%qtomvr)
@@ -132,6 +136,9 @@ module PackageMoverModule
     ! -- scalars
     call mem_deallocate(this%nproviders)
     call mem_deallocate(this%nreceivers)
+    !
+    ! -- pointers
+    nullify(this%iprmap)
     !
     ! -- return
     return
@@ -156,6 +163,7 @@ module PackageMoverModule
     class(PackageMoverType) :: this
     integer(I4B) :: i
     !
+    call mem_allocate(this%iprmap, this%nproviders, 'IPRMAP', this%origin)
     call mem_allocate(this%qtformvr, this%nproviders, 'QTFORMVR', this%origin)
     call mem_allocate(this%qformvr, this%nproviders, 'QFORMVR', this%origin)
     call mem_allocate(this%qtomvr, this%nproviders, 'QTOMVR', this%origin)
@@ -163,6 +171,7 @@ module PackageMoverModule
     !
     ! -- initialize
     do i = 1, this%nproviders
+      this%iprmap(i) = i
       this%qtformvr(i) = DZERO
       this%qformvr(i) = DZERO
       this%qtomvr(i) = DZERO

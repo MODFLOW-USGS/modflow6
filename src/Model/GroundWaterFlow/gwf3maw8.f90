@@ -145,6 +145,10 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
     real(DP), dimension(:), pointer, contiguous  :: cterm => null()              !package c vector
     !
+    ! -- density variables
+    integer(I4B), pointer :: idense
+    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
+    !
     ! -- type bound procedures
     contains
     procedure :: maw_allocate_scalars
@@ -191,6 +195,8 @@ module MawModule
     procedure, private :: maw_fill_budobj
     ! -- table
     procedure, private :: maw_setup_tableobj
+    ! -- density
+    procedure, private :: maw_calculate_density_exchange
   end type MawType
 
 contains
@@ -272,6 +278,7 @@ contains
     call mem_allocate(this%theta, 'THETA', this%origin)
     call mem_allocate(this%kappa, 'KAPPA', this%origin)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%origin)
+    call mem_allocate(this%idense, 'IDENSE', this%origin)
     !
     ! -- Set values
     this%nmawwells = 0
@@ -287,6 +294,7 @@ contains
     this%theta = DP7
     this%kappa = DEM4
     this%cbcauxitems = 1
+    this%idense = 0
     !
     ! -- return
     return
@@ -477,6 +485,9 @@ contains
       this%botscrn(i) = DZERO
       this%qleak(i) = DZERO
     end do
+    !
+    ! -- allocate denseterms to size 0
+    call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%origin)
     !
     ! -- return
     return
@@ -2242,7 +2253,6 @@ contains
     integer(I4B) :: jpos
     real(DP) :: hmaw
     real(DP) :: bmaw
-    real(DP) :: bnode
     real(DP) :: sat
     real(DP) :: cfw
     real(DP) :: cmaw
@@ -2252,6 +2262,10 @@ contains
     real(DP) :: bt
     real(DP) :: rate
     real(DP) :: ratefw
+    real(DP) :: flow
+    real(DP) :: amatnn
+    real(DP) :: amatnm
+    real(DP) :: rhsterm
 ! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
@@ -2328,6 +2342,8 @@ contains
         end if
         !
       end if
+      !
+      ! -- process each maw/gwf connection
       do j = 1, this%ngwfnodes(n)
         if (this%iboundpak(n) /= 0) then
           jpos = this%get_jpos(n, j)
@@ -2336,7 +2352,6 @@ contains
           cmaw = this%satcond(jpos) * sat
           this%simcond(jpos) = cmaw
 
-          bnode = this%dis%bot(igwfnode)
           bmaw = this%botscrn(jpos)
           !
           ! -- calculate cterm - relative to gwf
@@ -2364,7 +2379,29 @@ contains
           !
           ! -- add correction term
           rhs(isymnode) = rhs(isymnode) - cterm
+          !
+          ! -- add density terms
+          if (this%idense /= 0) then
+            !
+            ! -- call density routine to calculate terms
+            call this%maw_calculate_density_exchange(idx, hmaw,                &
+                                                     this%xnew(igwfnode),      &
+                                                     cmaw, bmaw, flow,         &
+                                                     amatnn, amatnm, rhsterm)
+            !
+            ! -- add to maw row
+            rhs(iloc) = rhs(iloc) !+ xxx
+            amatsln(iposd) = amatsln(iposd) !+ xxx
+            amatsln(iposoffd) = amatsln(iposoffd) !+ xxx
+            !
+            ! -- add to gwf row            
+            rhs(isymnode) = rhs(isymnode) !+ xxx
+            amatsln(ipossymd) = amatsln(ipossymd) !+ xxx
+            amatsln(ipossymoffd) = amatsln(ipossymoffd) !+ xxx
+            !
+          end if
         end if
+        !
         ! -- increment maw connection counter
         idx = idx + 1
       end do
@@ -2723,6 +2760,13 @@ contains
           cterm = cmaw * (bmaw - hmaw)
         end if
         rrate = -(cmaw * (hmaw - hgwf) + cterm)
+        !
+        ! -- add density contribution
+        if (this%idense /= 0) then
+          ! -- todo
+          
+        end if
+        !
         this%qleak(ibnd) = rrate
         if (this%iboundpak(n) < 0) then
           this%qconst(n) = this%qconst(n) - rrate
@@ -2954,6 +2998,7 @@ contains
     call mem_deallocate(this%theta)
     call mem_deallocate(this%kappa)
     call mem_deallocate(this%cbcauxitems)
+    call mem_deallocate(this%idense)
     !
     ! -- pointers to gwf variables
     nullify(this%gwfiss)
@@ -4528,5 +4573,167 @@ contains
     ! -- return
     return
   end function get_gwfnode
+
+  subroutine maw_activate_density(this)
+! ******************************************************************************
+! maw_activate_density -- Activate addition of density terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(MawType),intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i, j
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set idense and reallocate denseterms to be of size MAXBOUND
+    this%idense = 1
+    call mem_reallocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', &
+                        this%origin)
+    do i = 1, this%maxbound
+      do j = 1, 3
+        this%denseterms(j, i) = DZERO
+      end do
+    end do
+    write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR MAW &
+      &PACKAGE: ' // trim(adjustl(this%name))
+    !
+    ! -- return
+    return
+  end subroutine maw_activate_density
+
+  subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond,     &
+                                            bmaw, flow, amatnn, amatnm, rhsterm)
+! ******************************************************************************
+! maw_calculate_density_exchange -- Calculate the groundwater-maw density 
+!                                   exchange terms.
+!
+! -- Arguments are as follows:
+!     iconn       : maw-gwf connection number
+!     hmaw        : maw head
+!     hgwf        : gwf head
+!     cond        : conductance
+!     bmaw        : bottom elevation of this connection
+!     flow        : calculated flow, updated here with density terms, + into maw
+!     amatnn      : diagonal amat term, updated here with density terms
+!     amatnm      : off-diagonal amat term, updated here with density terms
+!     rhsterm     : right-hand-side value, updated here with density terms
+!
+! -- Member variable used here
+!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
+!                     col 1 is relative density of maw (densemaw / denseref)
+!                     col 2 is relative density of gwf cell (densegwf / denseref)
+!                     col 3 is elevation of gwf cell
+
+! 
+! -- Upon return, amat and rhs for maw row should be updated as:
+!    amat(idiag) = amat(idiag) - amatnn
+!    amat(ioffd) = amat(ioffd) + amatnm
+!    rhs(n) = rhs(n) + rhsterm
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(MawType),intent(inout) :: this
+    integer(I4B), intent(in) :: iconn
+    real(DP), intent(in) :: hmaw
+    real(DP), intent(in) :: hgwf
+    real(DP), intent(in) :: cond
+    real(DP), intent(in) :: bmaw
+    real(DP), intent(inout) :: flow
+    real(DP), intent(inout) :: amatnn
+    real(DP), intent(inout) :: amatnm
+    real(DP), intent(inout) :: rhsterm
+    ! -- local
+    real(DP) :: ss
+    real(DP) :: hh
+    real(DP) :: havg
+    real(DP) :: rdensemaw
+    real(DP) :: rdensegwf
+    real(DP) :: rdenseavg
+    real(DP) :: elevmaw
+    real(DP) :: elevgwf
+    real(DP) :: elevavg
+    logical :: hmaw_below_bot
+    logical :: hgwf_below_bot
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set maw density to maw density or gwf density
+    if (hmaw >= bmaw) then
+      ss = hmaw
+      hmaw_below_bot = .false.
+      rdensemaw = this%denseterms(1, iconn)  ! lak rel density
+    else
+      ss = bmaw
+      hmaw_below_bot = .true.
+      rdensemaw = this%denseterms(2, iconn)  ! gwf rel density
+    end if
+    !
+    ! -- set hh to hgwf or botl
+    if (hgwf >= bmaw) then
+      hh = hgwf
+      hgwf_below_bot = .false.
+      rdensegwf = this%denseterms(2, iconn)  ! gwf rel density
+    else
+      hh = bmaw
+      hgwf_below_bot = .true.
+      rdensegwf = this%denseterms(1, iconn)  ! lak rel density
+    end if
+    !
+    ! -- todo: hack because denseterms not updated in a cf calculation
+    if (rdensegwf == DZERO) return
+    !
+    ! -- Update flow
+    if (hmaw_below_bot .and. hgwf_below_bot) then
+      !
+      ! -- flow is zero, so no terms are updated
+      !
+    else
+      !
+      ! -- calulate averages
+      rdenseavg = DHALF * (rdensemaw + rdensegwf)
+      !
+      ! -- Add contribution of first density term: 
+      !      cond * (denseavg/denseref - 1) * (hgwf - hmaw)
+      amatnn = cond * (rdenseavg - DONE)
+      amatnm = amatnn
+      flow = flow + amatnm * hgwf - amatnn * hmaw
+      !
+      ! -- if hmaw < bmaw, then reduce flow by correction term
+      if (hmaw < bmaw) then
+        rhsterm = amatnn * (bmaw - hmaw)
+        flow = flow - rhsterm
+      end if
+      !
+      ! -- Add second density term if hmaw and hgwf not below bottom
+      !      cond * (havg - elevavg) * (densegwf - denselak) / denseref
+      if (.not. hmaw_below_bot .and. .not. hgwf_below_bot) then
+        !
+        ! -- Add head contribution of second density term:
+        amatnn = amatnn - DHALF * (rdensegwf - rdensemaw)
+        amatnm = amatnm + DHALF * (rdensegwf - rdensemaw)
+        !
+        ! -- rhs for non-head dep terms
+        elevgwf = this%denseterms(3, iconn)
+        elevmaw = elevgwf
+        elevavg = DHALF * (elevmaw + elevgwf)
+        rhsterm = rhsterm + cond * elevavg * (rdensegwf - rdensemaw)
+        !
+        ! -- flow update
+        havg = DHALF * (hgwf + hmaw)
+        flow = flow + cond * (havg - elevavg) * (rdensegwf - rdensemaw)
+      end if
+      
+    end if
+    !
+    ! -- return
+    return
+  end subroutine maw_calculate_density_exchange
+
 
 end module MawModule

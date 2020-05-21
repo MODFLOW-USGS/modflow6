@@ -1238,9 +1238,18 @@ module GwfMvrModule
           !    flow is always negative because it is coming from provider
           if(this%pakorigins(i) == this%mvr(n)%pname1) then
             if(this%pakorigins(j) == this%mvr(n)%pname2) then
+              !
+              ! -- set q to qpactual
               q = -this%mvr(n)%qpactual
+              !
+              ! -- map from irch1 to feature (needed for lake to map outlet to lake number)
               n1 = this%mvr(n)%irch1
+              n1 = this%pakmovers(i)%iprmap(n1)
+              !
+              ! -- set receiver id to irch2
               n2 = this%mvr(n)%irch2
+              !
+              ! -- check record into budget object
               call this%budobj%budterm(idx)%update_term(n1, n2, q)
             end if
           end if
