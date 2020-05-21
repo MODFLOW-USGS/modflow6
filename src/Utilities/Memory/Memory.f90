@@ -2,7 +2,10 @@ module MemoryTypeModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENORIGIN, LENTIMESERIESNAME, LENVARNAME,           &
-                             MAXMEMRANK, LENMEMTYPE
+                             MAXMEMRANK, LENMEMTYPE,                             &
+                             TABSTRING, TABINTEGER,                              &
+                             TABCENTER, TABLEFT, TABRIGHT
+  use InputOutputModule, only: UWWORD
   implicit none
   private
   public :: MemoryType
@@ -31,21 +34,64 @@ module MemoryTypeModule
   
   contains
   
-  subroutine table_entry(this, msg)
+  subroutine table_entry(this, line)
+    ! -- dummy
     class(MemoryType) :: this
-    character(len=*), intent(inout) :: msg
-    character(len=*), parameter ::                                             &
-      fmt = "(1x, a40, a20, a20, i10, i10, a10, a2)"
-    character(len=1) :: cptr
-    character(len=1) :: dastr
+    character(len=*), intent(inout) :: line
+    ! -- local
+    character(len=16) :: cmem
+    character(len=10) :: cnalloc
+    character(len=5) :: cptr
+    character(len=5) :: dastr
+    integer(I4B) :: ipos
+    integer(I4B) :: iloc
+    integer(I4B) :: ival
+    real(DP) :: rval
+    ! -- formats
     !
-    ! -- Create the msg table entry
-    cptr = ''
-    if (.not. this%master) cptr = 'T'
-    dastr = ''
-    if (this%mt_associated() .and. this%isize > 0) dastr='*'
-    write(msg, fmt) this%origin, this%name, this%memtype, this%isize,          &
-                    this%nrealloc, cptr, dastr
+    ! -- determine memory type
+    ipos = index(this%memtype, ' (')
+    if (ipos < 1) then
+      ipos = 16
+    else
+      ipos = min(16,ipos-1)
+    end if
+    cmem = this%memtype(1:ipos)
+    !
+    ! -- set reallocation string
+    cnalloc = '--'
+    if (this%nrealloc > 0) then
+      write(cnalloc, '(i0)') this%nrealloc
+    end if
+    !
+    ! -- Set pointer and deallocation string
+    cptr = '--'
+    if (.not. this%master) then
+      cptr = 'TRUE'
+    end if
+    dastr = '--'
+    if (this%mt_associated() .and. this%isize > 0) then
+      dastr='FALSE'
+    end if
+    iloc = 1
+    line = ''
+    call UWWORD(line, iloc, LENORIGIN, TABSTRING, this%origin, ival, rval,       &
+                ALIGNMENT=TABLEFT, SEP=' ')
+    call UWWORD(line, iloc, LENVARNAME, TABSTRING, this%name, ival, rval,        &
+                ALIGNMENT=TABLEFT, SEP=' ')
+    call UWWORD(line, iloc, 16, TABSTRING, cmem, ival, rval,                     &
+                ALIGNMENT=TABLEFT, SEP=' ')
+    call UWWORD(line, iloc, 20, TABINTEGER, 'SIZE', this%isize, rval,            &
+                ALIGNMENT=TABRIGHT, SEP=' ')
+    call UWWORD(line, iloc, 10, TABSTRING, cnalloc, ival, rval,                  &
+                ALIGNMENT=TABCENTER, SEP=' ')
+    call UWWORD(line, iloc, 10, TABSTRING, cptr, ival, rval,                     &
+                ALIGNMENT=TABCENTER, SEP=' ')    
+    call UWWORD(line, iloc, 10, TABSTRING, dastr, ival, rval,                    &
+                ALIGNMENT=TABCENTER)    
+    !
+    ! -- return
+    return
   end subroutine table_entry
 
   function mt_associated(this) result(al)
