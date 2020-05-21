@@ -118,7 +118,7 @@ def get_model(idx, dir):
         cdelays = 'nodelay'
 
     sub6 = [[0, (0, 0, 0), cdelays, ini_stress, thick[0],
-             1., cc, cr, theta, kv, 0.]]
+             1., cc, cr, theta, kv, 0., 'db01']]
 
     # build MODFLOW 6 files
     ws = dir
@@ -173,7 +173,10 @@ def get_model(idx, dir):
                                   save_flows=False)
 
     # csub files
-    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+    csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    print_input=True,
+                                    boundnames=True,
+                                    head_based=True,
                                     ndelaycells=ndelaycells[idx],
                                     ninterbeds=1,
                                     beta=0., cg_ske_cr=cg_ske,

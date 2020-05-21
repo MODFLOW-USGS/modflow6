@@ -1690,11 +1690,11 @@ contains
     character(len=LINELENGTH) :: tag
     character(len=20) :: scellid
     character(len=10) :: text
-    character(len=LENBOUNDNAME) :: bndName, bndNameTemp
+    character(len=LENBOUNDNAME) :: bndName
     character(len=7) :: cdelay
-    character(len=9) :: cno
+    logical :: isfound
+    logical :: endOfBlock
     integer(I4B) :: ival
-    logical :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: nn
     integer(I4B) :: ib
@@ -1729,10 +1729,14 @@ contains
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        ! -- read interbed number
+        if (endOfBlock) then
+          exit
+        end if
+        !
+        ! -- get interbed number
         itmp = this%parser%GetInteger()
-
+        !
+        ! -- check for error condition
         if (itmp < 1 .or. itmp > this%ninterbeds) then
           write(errmsg,'(a,1x,i0,2(1x,a),1x,i0,a)')                           &
             'Interbed number (', itmp, ') must be greater than 0 and ',       &
@@ -1740,10 +1744,10 @@ contains
           call store_error(errmsg)
           cycle
         end if
-
+        !
         ! -- increment nboundchk
         nboundchk(itmp) = nboundchk(itmp) + 1
-
+        !
         ! -- read cellid
         call this%parser%GetCellid(this%dis%ndim, cellid)
         nn = this%dis%noder_from_cellid(cellid,                                  &
@@ -1753,17 +1757,18 @@ contains
         top = this%dis%top(nn)
         bot = this%dis%bot(nn)
         baq = top - bot
+        !
         ! -- determine if a valid cell location was provided
         if (nn < 1) then
           write(errmsg,'(a,1x,i0,a)')                                            &
             'Invalid cellid for packagedata entry', itmp, '.'
           call store_error(errmsg)
         end if
-        
+        !
         ! -- set nodelist and unodelist
         this%nodelist(itmp) = nn
         this%unodelist(itmp) = n
-
+        !
         ! -- get cdelay
         call this%parser%GetStringCaps(cdelay)
         select case (cdelay)
@@ -1781,10 +1786,10 @@ contains
           end select
         idelay = ival
         this%idelay(itmp) = ival
-
+        !
         ! -- get initial preconsolidation stress
         this%pcs(itmp) = this%parser%GetDouble()
-
+        !
         ! -- get thickness or cell fraction
         rval = this%parser%GetDouble()
         if (this%icellf == 0) then
@@ -1808,7 +1813,7 @@ contains
         if (this%iupdatematprop /= 0) then
           this%thick(itmp) = rval
         end if
-
+        !
         ! -- get rnb
         rval = this%parser%GetDouble()
         if (idelay > 0) then
@@ -1873,26 +1878,24 @@ contains
           end if
         end if
         this%kv(itmp) = rval
-
+        !
         ! -- get h0
         rval =  this%parser%GetDouble()
         this%h0(itmp) = rval
-
+        !
         ! -- get bound names
-        write (cno,'(i9.9)') nn
-          bndName = 'nsystem' // cno
         if (this%inamedbound /= 0) then
-          call this%parser%GetStringCaps(bndNameTemp)
-          if (bndNameTemp /= '') then
-            bndName = bndNameTemp(1:16)
+          call this%parser%GetStringCaps(bndName)
+          if (len_trim(bndName) < 1) then
+            write(errmsg,'(a,1x,i0,a)')                                          &
+              'BOUNDNAME must be specified for packagedata entry', itmp, '.'
+            call store_error(errmsg)
           else
-             write(errmsg,'(a,1x,i0,a)')                                         &
-               'BOUNDNAME must be specified for packagedata entry', itmp, '.'
-             call store_error(errmsg)
+            this%boundname(itmp) = bndName            
           end if
         end if
-        this%boundname(itmp) = bndName
       end do
+
       write(this%iout,'(1x,a)')                                                  &
         'END OF ' // trim(adjustl(this%name)) // ' PACKAGEDATA'
     end if
