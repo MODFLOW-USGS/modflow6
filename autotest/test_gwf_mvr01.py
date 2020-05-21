@@ -147,7 +147,9 @@ def get_model(idx, dir):
 
     packagedata = [(0, 1., 11),
                    (1, 0.5, 11)]
-    outlets = [(0, 0, 1, 'manning', 0.001, 0., 0.1, 0.001)]
+    outlets = [(0, 0, 1, 'manning', 0.001, 0., 0.1, 0.001),
+               (1, 0, -1, 'specified', -999., -999., -999., -999.),
+               (2, 0, -1, 'specified', -999., -999., -999., -999.),]
     nlakes = len(packagedata)
     noutlets = len(outlets)
     connectiondata = [
@@ -178,11 +180,14 @@ def get_model(idx, dir):
                       (1, 'evaporation', '0.000000000000e+000'),
                       (1, 'runoff', '0.000000000000e+000'),
                       (1, 'withdrawal', '0.000000000000e+000')]
-    outletperioddata = [(0, 'rate', '1.000000000000e+000'),
-                        (0, 'invert', '1.000000000000e-003'),
-                        (0, 'width', '0.000000000000e+000'),
-                        (0, 'slope', '1.000000000000e-003'),
-                        (0, 'rough', '1.000000000000e-001')]
+    outletperioddata = [(0, 'rate', 1.000000000000e+000),
+                        (0, 'invert', 1.000000000000e-003),
+                        (0, 'width', 0.000000000000e+000),
+                        (0, 'slope', 1.000000000000e-003),
+                        (0, 'rough', 1.000000000000e-001),
+                        (1, 'rate', -0.001),
+                        (2, 'rate', 0.),
+                        ]
     perioddata = lakeperioddata + outletperioddata
     cnvgpth = '{}.lak.cnvg.csv'.format(name)
     lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
@@ -233,6 +238,8 @@ def get_model(idx, dir):
         ('drn-1', 1, 'maw-1', 0, 'threshold', 2.),
         ('drn-1', 1, 'sfr-1', 2, 'upto', 3.),
         ('lak-1', 0, 'sfr-1', 0, 'factor', 1.),
+        ('lak-1', 1, 'sfr-1', 1, 'factor', 0.5),
+        ('lak-1', 2, 'sfr-1', 2, 'factor', 0.5),
         ('uzf-1', 0, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 1, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 2, 'sfr-1', 0, 'factor', 1.),
@@ -301,8 +308,8 @@ def eval_model(sim):
     assert records[5].shape == (0,)
     assert records[6].shape == (0,)
     assert records[7].shape == (0,)
-    assert records[8].shape == (1,)
-    a = np.array([(1, 1, -0.)], dtype=adt)
+    assert records[8].shape == (3,)
+    a = np.array([(1, 1, -0.), (1, 2, -0.0005), (1, 3, -0.)], dtype=adt)
     assert np.array_equal(records[8], a)
 
     assert records[9].shape == (0,)
