@@ -1130,7 +1130,7 @@ module LnfModule
     call this%disl%dis_da()
     call this%ic%ic_da()
     call this%npf%npf_da()
-    !call this%sto%sto_da()
+    call this%sto%sto_da()
     call this%budget%budget_da()
     !call this%mvr%mvr_da()
     call this%oc%oc_da()
