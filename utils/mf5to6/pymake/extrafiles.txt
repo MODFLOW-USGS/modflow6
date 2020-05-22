@@ -12,3 +12,5 @@
 ../../../src/Utilities/List.f90
 ../../../src/Utilities/OpenSpec.f90
 ../../../src/Utilities/version.f90
+../../../src/Utilities/Table.f90
+../../../src/Utilities/TableTerm.f90

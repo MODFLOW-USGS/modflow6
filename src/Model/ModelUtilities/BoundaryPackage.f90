@@ -1,6 +1,6 @@
 module BndModule
 
-  use KindModule,                   only: DP, I4B
+  use KindModule,                   only: DP, LGP, I4B
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, LENMODELNAME, LENPACKAGENAME, &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
@@ -32,9 +32,10 @@ module BndModule
 
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
-    character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
+    !character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
+    character(len=:), pointer :: listlabel  => null()                            !title of table written for RP
     character(len=LENPACKAGENAME) :: text = ''
-    character(len=LENAUXNAME), dimension(:), pointer,                         &
+    character(len=LENAUXNAME), dimension(:), pointer,                           &
                                  contiguous :: auxname => null()                 !vector of auxname
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: boundname => null()               !vector of boundnames
@@ -68,7 +69,7 @@ module BndModule
     type(TimeSeriesManagerType), pointer :: TsManager => null()                  ! time series manager
     type(TimeArraySeriesManagerType), pointer :: TasManager => null()            ! time array series manager
     integer(I4B) :: indxconvertflux = 0                                          ! indxconvertflux is column of bound to multiply by area to convert flux to rate
-    logical :: AllowTimeArraySeries = .false.
+    logical(LGP) :: AllowTimeArraySeries = .false.
     !
     ! -- pointers for observations
     integer(I4B), pointer :: inobspkg => null()                                  ! unit number for obs package
@@ -289,7 +290,7 @@ module BndModule
     class(BndType),intent(inout) :: this
     ! -- local
     integer(I4B) :: ierr, nlist
-    logical :: isfound
+    logical(LGP) :: isfound
     character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
@@ -421,7 +422,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     class(BndType) :: this
-    logical, intent(in), optional :: reset_mover
+    logical(LGP), intent(in), optional :: reset_mover
 ! ------------------------------------------------------------------------------
     ! -- bnd has no cf routine
     !
@@ -897,6 +898,9 @@ module BndModule
       nullify(this%errortab)
     end if
     !
+    ! -- deallocate character variables
+    call mem_deallocate(this%listlabel)
+    !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)
     call mem_deallocate(this%maxbound)
@@ -949,6 +953,9 @@ module BndModule
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
+    !
+    ! -- allocate character variables
+    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%origin)
     !
     ! -- allocate integer variables
     call mem_allocate(this%ibcnum, 'IBCNUM', this%origin)
@@ -1157,9 +1164,9 @@ module BndModule
     integer(I4B) :: n
     integer(I4B) :: ierr
     integer(I4B) :: inobs
-    logical :: isfound
-    logical :: endOfBlock
-    logical :: foundchildclassoption
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
+    logical(LGP) :: foundchildclassoption
     ! -- format
     character(len=*),parameter :: fmtflow = &
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
@@ -1356,8 +1363,8 @@ module BndModule
     class(BndType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword
-    logical :: isfound
-    logical :: endOfBlock
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
     integer(I4B) :: ierr
     ! -- format
 ! ------------------------------------------------------------------------------
@@ -1442,7 +1449,7 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
+    logical(LGP), intent(inout) :: found
 ! ------------------------------------------------------------------------------
     !
     ! Return with found = .false.
@@ -1512,7 +1519,7 @@ module BndModule
 
   ! -- Procedures related to observations
 
-  logical function bnd_obs_supported(this)
+  function bnd_obs_supported(this) result(supported)
     ! **************************************************************************
     ! bnd_obs_supported
     !   -- Return true if package supports observations. Default is false.
@@ -1522,9 +1529,12 @@ module BndModule
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
+    ! -- return variable
+    logical(LGP) :: supported
+    ! -- dummy
     class(BndType) :: this
     ! --------------------------------------------------------------------------
-    bnd_obs_supported = .false.
+    supported = .false.
     !
     ! -- Return
     return
@@ -1557,7 +1567,7 @@ module BndModule
     integer(I4B) :: i, j, n
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
-    logical :: jfound
+    logical(LGP) :: jfound
     !
     if (.not. this%bnd_obs_supported()) return
     !

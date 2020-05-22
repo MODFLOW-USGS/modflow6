@@ -41,7 +41,7 @@ module MemoryManagerModule
 
   interface mem_allocate
     module procedure allocate_logical,                                           &
-                     allocate_str1d,                                             &
+                     allocate_str, allocate_str1d,                               &
                      allocate_int, allocate_int1d, allocate_int2d,               &
                      allocate_int3d,                                             &
                      allocate_dbl, allocate_dbl1d, allocate_dbl2d,               &
@@ -71,7 +71,7 @@ module MemoryManagerModule
 
   interface mem_deallocate
     module procedure deallocate_logical,                                         &
-                     deallocate_str1d,                                           &
+                     deallocate_str, deallocate_str1d,                           &
                      deallocate_int, deallocate_int1d, deallocate_int2d,         &
                      deallocate_int3d,                                           &
                      deallocate_dbl, deallocate_dbl1d, deallocate_dbl2d,         &
@@ -275,6 +275,39 @@ module MemoryManagerModule
     write(mt%memtype, "(a)") 'LOGICAL'
     call memorylist%add(mt)
   end subroutine allocate_logical
+
+  subroutine allocate_str(strsclr, ilen, name, origin)
+    ! -- dummy
+    character(len=:), pointer, intent(inout) :: strsclr
+    integer(I4B), intent(in) :: ilen
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    ! -- local
+    character(len=ilen) :: string
+    integer(I4B) :: istat
+    type(MemoryType), pointer :: mt
+    ! -- format
+    ! -- code
+    call check_varname(name)
+    !
+    ! -- initialize string
+    string = ' '
+    !
+    ! -- allocate string
+    allocate(character(len=ilen) :: strsclr, stat=istat, errmsg=errmsg)
+    if (istat /= 0) then
+      call allocate_error(name, origin, istat, 1)
+    end if
+    strsclr = ' '
+    nvalues_astr = nvalues_astr + ilen
+    allocate(mt)
+    mt%strsclr => strsclr
+    mt%isize = ilen
+    mt%name = name
+    mt%origin = origin
+    write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
+    call memorylist%add(mt)
+  end subroutine allocate_str
 
   subroutine allocate_int(intsclr, name, origin)
     integer(I4B), pointer, intent(inout) :: intsclr
@@ -1045,6 +1078,35 @@ module MemoryManagerModule
     mt%master = .false.
     return
   end subroutine reassignptr_dbl2d
+
+  subroutine deallocate_str(strsclr)
+    character(len=:), pointer, intent(inout) :: strsclr
+    class(MemoryType), pointer :: mt
+    integer(I4B) :: ipos
+    logical :: found
+    found = .false.
+    do ipos = 1, memorylist%count()
+      mt => memorylist%Get(ipos)
+      !if(associated(mt%strsclr, strsclr)) then
+      if(associated(mt%strsclr)) then
+        if (mt%strsclr == strsclr) then
+          nullify(mt%strsclr)
+          found = .true.
+          exit
+        end if
+      endif
+    enddo
+    if (.not. found) then
+      call store_error('programming error in deallocate_str')
+      call ustop()
+    else
+      if (mt%master) then
+        deallocate(strsclr)
+      else
+        nullify(strsclr)
+      end if
+    endif
+  end subroutine deallocate_str
 
   subroutine deallocate_logical(logicalsclr)
     logical(LGP), pointer, intent(inout) :: logicalsclr
