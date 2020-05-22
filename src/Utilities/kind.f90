@@ -5,6 +5,7 @@ module KindModule
   public
   
   integer, parameter :: DP = KIND(1.0D0)                                         ! Precision of all real variables
+  integer, parameter :: LGP = SELECTED_INT_KIND(8)                               ! Logical kind
   integer, parameter :: I4B = SELECTED_INT_KIND(8)                               ! Integer kind
   integer, parameter :: I8B = SELECTED_INT_KIND(18)                              ! Long integer kind
 
@@ -19,7 +20,9 @@ module KindModule
 ! ------------------------------------------------------------------------------
     integer(I4B), intent(in) :: iout
     real(DP) :: rdum = 0.
+    integer(LGP) :: ldum = 0
     integer(I4B) :: idum = 0
+    integer(I8B) :: long_idum = 0
 ! ------------------------------------------------------------------------------
     !
     write(iout, '(a)') 'Real Variables'
@@ -31,6 +34,13 @@ module KindModule
     write(iout, '(2x,a,i0)') 'KIND: ', I4B
     write(iout, '(2x,a,i0)') 'HUGE (largest value): ', huge(idum)
     write(iout, '(2x,a,i0)') 'BIT_SIZE: ', bit_size(idum)
+    write(iout, '(a)') 'Long Integer Variables'
+    write(iout, '(2x,a,i0)') 'KIND: ', I8B
+    write(iout, '(2x,a,i0)') 'HUGE (largest value): ', huge(long_idum)
+    write(iout, '(2x,a,i0)') 'BIT_SIZE: ', bit_size(long_idum)
+    write(iout, '(a)') 'Logical Variables'
+    write(iout, '(2x,a,i0)') 'KIND: ', LGP
+    write(iout, '(2x,a,i0)') 'BIT_SIZE: ', bit_size(ldum)
     !
     ! -- Return
     return

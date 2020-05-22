@@ -3,7 +3,7 @@
 ! an advanced package.
 module TableModule
   
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, I8B, DP
   use ConstantsModule, only: LINELENGTH, LENBUDTXT,                              &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,        &
                              TABCENTER
@@ -71,8 +71,9 @@ module TableModule
     procedure, private :: add_error
     procedure, private :: reset
     
-    generic, public :: add_term => add_integer, add_real, add_string
-    procedure, private :: add_integer, add_real, add_string    
+    generic, public :: add_term => add_integer, add_long_integer,                &
+                                   add_real, add_string
+    procedure, private :: add_integer, add_long_integer, add_real, add_string    
 
   end type TableType
   
@@ -699,6 +700,79 @@ module TableModule
     ! -- Return
     return
   end subroutine add_integer
+  
+  subroutine add_long_integer(this, long_ival)
+! ******************************************************************************
+! add_long_integer -- add long integer value to the dataline
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I8B), intent(in) :: long_ival
+    ! -- local
+    logical :: line_end
+    character(len=LINELENGTH) :: cval
+    real(DP) :: rval
+    integer(I4B) :: ival
+    integer(I4B) :: width
+    integer(I4B) :: alignment
+    integer(I4B) :: j
+! ------------------------------------------------------------------------------
+    !
+    ! -- write header
+    if (this%icount == 0 .and. this%ientry == 0) then
+      call this%write_header()
+    end if
+    !
+    ! -- update index for tableterm
+    this%ientry = this%ientry + 1
+    !
+    ! -- check that ientry is within bounds
+    call this%add_error()
+    !
+    ! -- initialize local variables
+    j = this%ientry
+    width = this%tableterm(j)%get_width()
+    alignment = this%tableterm(j)%get_alignment()
+    line_end = .FALSE.
+    if (j == this%ntableterm) then
+      line_end = .TRUE.
+    end if
+    !
+    ! -- add data to line
+    if (this%write_csv) then
+      if (j == 1) then
+        write(this%dataline, '(G0)') long_ival
+      else
+        write(this%dataline, '(a,",",G0)') trim(this%dataline), long_ival
+      end if
+    else
+      write(cval, '(i0)') long_ival
+      if (j == this%ntableterm) then
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+                    trim(cval), ival, rval, ALIGNMENT=alignment)
+      else
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+                    trim(cval), ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      end if
+    end if
+    !
+    ! -- write the data line, if necessary
+    if (line_end) then
+      call this%write_line()
+    end if
+    !
+    ! -- finalize the table, if necessary
+    if (this%allow_finalization) then
+      call this%finalize()
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine add_long_integer
 
   subroutine add_real(this, rval)
 ! ******************************************************************************

@@ -1,11 +1,11 @@
 module MemoryTypeModule
   
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, LGP, I4B
   use ConstantsModule, only: LENORIGIN, LENTIMESERIESNAME, LENVARNAME,           &
                              MAXMEMRANK, LENMEMTYPE,                             &
                              TABSTRING, TABINTEGER,                              &
                              TABCENTER, TABLEFT, TABRIGHT
-  use InputOutputModule, only: UWWORD
+  use TableModule, only: TableType
   implicit none
   private
   public :: MemoryType
@@ -18,7 +18,7 @@ module MemoryTypeModule
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array
     logical                                                :: master = .true.        !master copy, others point to this one
-    logical, pointer                                       :: logicalsclr => null()  !pointer to the logical
+    logical(LGP), pointer                                  :: logicalsclr => null()  !pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !pointer to the integer
     real(DP), pointer                                      :: dblsclr     => null()  !pointer to the double
     integer(I4B), dimension(:), pointer, contiguous        :: aint1d      => null()  !pointer to 1d integer array
@@ -34,19 +34,16 @@ module MemoryTypeModule
   
   contains
   
-  subroutine table_entry(this, line)
+  subroutine table_entry(this, memtab)
     ! -- dummy
     class(MemoryType) :: this
-    character(len=*), intent(inout) :: line
+    type(TableType), intent(inout) :: memtab
     ! -- local
     character(len=16) :: cmem
     character(len=10) :: cnalloc
     character(len=5) :: cptr
     character(len=5) :: dastr
     integer(I4B) :: ipos
-    integer(I4B) :: iloc
-    integer(I4B) :: ival
-    real(DP) :: rval
     ! -- formats
     !
     ! -- determine memory type
@@ -73,22 +70,15 @@ module MemoryTypeModule
     if (this%mt_associated() .and. this%isize > 0) then
       dastr='FALSE'
     end if
-    iloc = 1
-    line = ''
-    call UWWORD(line, iloc, LENORIGIN, TABSTRING, this%origin, ival, rval,       &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, LENVARNAME, TABSTRING, this%name, ival, rval,        &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 16, TABSTRING, cmem, ival, rval,                     &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 20, TABINTEGER, 'SIZE', this%isize, rval,            &
-                ALIGNMENT=TABRIGHT, SEP=' ')
-    call UWWORD(line, iloc, 10, TABSTRING, cnalloc, ival, rval,                  &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 10, TABSTRING, cptr, ival, rval,                     &
-                ALIGNMENT=TABCENTER, SEP=' ')    
-    call UWWORD(line, iloc, 10, TABSTRING, dastr, ival, rval,                    &
-                ALIGNMENT=TABCENTER)    
+    !
+    ! -- write data to the table
+    call memtab%add_term(this%origin)
+    call memtab%add_term(this%name)
+    call memtab%add_term(cmem)
+    call memtab%add_term(this%isize)
+    call memtab%add_term(cnalloc)
+    call memtab%add_term(cptr)
+    call memtab%add_term(dastr)
     !
     ! -- return
     return

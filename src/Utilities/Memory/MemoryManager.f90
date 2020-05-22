@@ -1,6 +1,6 @@
 module MemoryManagerModule
 
-  use KindModule,             only: DP, I4B, I8B
+  use KindModule,             only: DP, LGP, I4B, I8B
   use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH,    &
                                     LENMEMTYPE,                                  &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
@@ -9,7 +9,7 @@ module MemoryManagerModule
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
   use MemoryListModule,       only: MemoryListType
-  use InputOutputModule,      only: UWWORD
+  use TableModule,            only: TableType, table_cr
   
   implicit none
   private
@@ -31,6 +31,7 @@ module MemoryManagerModule
   public :: copy_dbl1d
   
   type(MemoryListType) :: memorylist
+  type(TableType), pointer :: memtab => null()
   integer(I8B) :: nvalues_alogical = 0
   integer(I8B) :: nvalues_achr = 0
   integer(I8B) :: nvalues_astr = 0
@@ -256,7 +257,7 @@ module MemoryManagerModule
   end subroutine check_varname
 
   subroutine allocate_logical(logicalsclr, name, origin)
-    logical, pointer, intent(inout) :: logicalsclr
+    logical(LGP), pointer, intent(inout) :: logicalsclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     integer(I4B) :: istat
@@ -967,7 +968,7 @@ module MemoryManagerModule
     end if
     aint1d => mt2%aint1d
     mt%aint1d => aint1d
-    mt%isize = size(aint1d)
+    mt%isize = 0 !size(aint1d)
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     mt%master = .false.
     return
@@ -990,7 +991,7 @@ module MemoryManagerModule
     end if
     aint2d => mt2%aint2d
     mt%aint2d => aint2d
-    mt%isize = size(aint2d)
+    mt%isize = 0 !size(aint2d)
     ncol = size(aint2d, dim=1)
     nrow = size(aint2d, dim=2)
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
@@ -1014,7 +1015,7 @@ module MemoryManagerModule
     end if
     adbl1d => mt2%adbl1d
     mt%adbl1d => adbl1d
-    mt%isize = size(adbl1d)
+    mt%isize = 0 !size(adbl1d)
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
     mt%master = .false.
     return
@@ -1037,7 +1038,7 @@ module MemoryManagerModule
     end if
     adbl2d => mt2%adbl2d
     mt%adbl2d => adbl2d
-    mt%isize = size(adbl2d)
+    mt%isize = 0 !size(adbl2d)
     ncol = size(adbl2d, dim=1)
     nrow = size(adbl2d, dim=2)
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
@@ -1046,7 +1047,7 @@ module MemoryManagerModule
   end subroutine reassignptr_dbl2d
 
   subroutine deallocate_logical(logicalsclr)
-    logical, pointer, intent(inout) :: logicalsclr
+    logical(LGP), pointer, intent(inout) :: logicalsclr
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -1384,216 +1385,219 @@ module MemoryManagerModule
     return
   end subroutine mem_set_print_option
   
-  subroutine summary_header(iout, linesep)
+  subroutine summary_table(iout, nrows)
     ! -- dummy
     integer(I4B), intent(in) :: iout
-    character(len=*), intent(inout) :: linesep
+    integer(I4B), intent(in) :: nrows
     ! -- local
-    character(len=LINELENGTH) :: line
-    integer(I4B) :: iloc
-    integer(I4B) :: ival
-    real(DP) :: rval
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    iloc = 1
-    line = ''
-    call UWWORD(line, iloc, 20, TABSTRING, 'COMPONENT', ival, rval,              &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 20, TABSTRING, 'NCHARS', ival, rval,                 &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 20, TABSTRING, 'NINTS', ival, rval,                  &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 20, TABSTRING, 'NREALS', ival, rval,                 &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 15, TABSTRING, 'MBYTES', ival, rval,                 &
-                ALIGNMENT=TABCENTER)
-    linesep = repeat('-', iloc)
-    write(iout, '(1x,a)') trim(linesep)
-    write(iout, '(1x,a)') trim(line)
-    write(iout, '(1x,a)') trim(linesep)
+    nterms = 6
+    !
+    ! -- set up table title
+    title = 'SUMMARY INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
+    !
+    ! -- set up stage tableobj
+    call table_cr(memtab, 'MEM SUM', title)
+    call memtab%table_df(nrows, nterms, iout)
+    !
+    ! -- data type
+    text = 'COMPONENT'
+    call memtab%initialize_column(text, 20, alignment=TABLEFT)
+    !
+    ! -- number of characters
+    text = 'CHARACTER'
+    call memtab%initialize_column(text, 15, alignment=TABCENTER)
+    !
+    ! -- number of logical
+    text = 'LOGICAL'
+    call memtab%initialize_column(text, 15, alignment=TABCENTER)
+    !
+    ! -- number of integers
+    text = 'INTEGER'
+    call memtab%initialize_column(text, 15, alignment=TABCENTER)
+    !
+    ! -- number of reals
+    text = 'REAL'
+    call memtab%initialize_column(text, 15, alignment=TABCENTER)
+    !
+    ! -- number of integers
+    text = 'TOTAL MEGABYTES'
+    call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
     ! -- return
     return
-  end subroutine summary_header  
+  end subroutine summary_table 
   
-  subroutine summary_line(iout, component, nchars, nint, nreal, bytesmb)
+  subroutine detailed_table(iout, nrows)
     ! -- dummy
     integer(I4B), intent(in) :: iout
-    character(len=*), intent(in) :: component
-    integer(I4B), intent(in) :: nchars
-    integer(I4B), intent(in) :: nint
-    integer(I4B), intent(in) :: nreal
-    real(DP), intent(in) :: bytesmb
+    integer(I4B), intent(in) :: nrows
     ! -- local
-    character(len=LINELENGTH) :: line
-    integer(I4B) :: iloc
-    integer(I4B) :: ival
-    real(DP) :: rval
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    iloc = 1
-    line = ''
-    call UWWORD(line, iloc, 20, TABSTRING, component, ival, rval,                &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 20, TABINTEGER, 'NCHARS', nchars, rval,              &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 20, TABINTEGER, 'NINTS', nint, rval,                 &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 20, TABINTEGER, 'NREALS', nreal, rval,               &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 15, TABREAL, 'MBYTES', ival, bytesmb,                &
-                ALIGNMENT=TABCENTER)
-    write(iout, '(1x,a)') trim(line)
+    nterms = 7
+    !
+    ! -- set up table title
+    title = 'DETAILED INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
+    !
+    ! -- set up stage tableobj
+    call table_cr(memtab, 'MEM DET', title)
+    call memtab%table_df(nrows, nterms, iout)
+    !
+    ! -- origin
+    text = 'ORIGIN'
+    call memtab%initialize_column(text, LENORIGIN, alignment=TABLEFT)
+    !
+    ! -- variable
+    text = 'VARIABLE NAME'
+    call memtab%initialize_column(text, LENVARNAME, alignment=TABLEFT)
+    !
+    ! -- data type
+    text = 'DATA TYPE'
+    call memtab%initialize_column(text, 16, alignment=TABLEFT)
+    !
+    ! -- size
+    text = 'NUMBER OF ITEMS'
+    call memtab%initialize_column(text, 16, alignment=TABRIGHT)
+    !
+    ! -- number oof reallocations
+    text = 'NUMBER OF TIMES RE- ALLOCATED'
+    call memtab%initialize_column(text, 10, alignment=TABCENTER)
+    !
+    ! -- is it a point
+    text = 'POINTER TO ANOTHER VARIABLE'
+    call memtab%initialize_column(text, 10, alignment=TABCENTER)
+    !
+    ! -- has it been deallocated
+    text = 'STILL ALLOCATED'
+    call memtab%initialize_column(text, 10, alignment=TABCENTER)
+    !
+    ! -- return
+    return
+  end subroutine detailed_table  
+  
+  subroutine summary_line(component, nchars, nlog, nint, nreal, bytesmb)
+    ! -- dummy
+    character(len=*), intent(in) :: component
+    integer(I8B), intent(in) :: nchars
+    integer(I8B), intent(in) :: nlog
+    integer(I8B), intent(in) :: nint
+    integer(I8B), intent(in) :: nreal
+    real(DP), intent(in) :: bytesmb
+    ! -- local
+    ! -- formats
+    ! -- code
+    call memtab%add_term(component)
+    call memtab%add_term(nchars)
+    call memtab%add_term(nlog)
+    call memtab%add_term(nint)
+    call memtab%add_term(nreal)
+    call memtab%add_term(bytesmb)
     !
     ! -- return
     return
   end subroutine summary_line 
-  
-  subroutine detailed_header(iout, linesep)
-    ! -- dummy
-    integer(I4B), intent(in) :: iout
-    character(len=*), intent(inout) :: linesep
-    ! -- local
-    character(len=LINELENGTH) :: line
-    integer(I4B) :: iloc
-    integer(I4B) :: ival
-    real(DP) :: rval
-    ! -- formats
-    ! -- code
-    iloc = 1
-    line = ''
-    call UWWORD(line, iloc, LENORIGIN, TABSTRING, 'ORIGIN', ival, rval,          &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, LENVARNAME, TABSTRING, 'NAME', ival, rval,           &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 16, TABSTRING, 'TYPE', ival, rval,                   &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 20, TABSTRING, 'SIZE', ival, rval,                   &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 10, TABSTRING, 'REALLOC.', ival, rval,           &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 10, TABSTRING, 'POINTER', ival, rval,                &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 10, TABSTRING, 'DEALLOC.', ival, rval,            &
-                ALIGNMENT=TABCENTER)
-    linesep = repeat('-', iloc)
-    write(iout, '(1x,a)') trim(linesep)
-    write(iout, '(1x,a)') trim(line)
-    write(iout, '(1x,a)') trim(linesep)
-    !
-    ! -- return
-    return
-  end subroutine detailed_header  
   
   subroutine summary_total(iout, bytesmb)
     ! -- dummy
     integer(I4B), intent(in) :: iout
     real(DP), intent(in) :: bytesmb
     ! -- local
-    character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: linesep
-    character(len=40) :: text
-    character(len=25) :: cval
-    integer(I4B) :: iloc
-    integer(I4B) :: ival
-    real(DP) :: rval
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: nterms
+    integer(I4B) :: nrows
     ! -- formats
     ! -- code
+    nterms = 2
+    nrows = 4
     !
-    ! -- initialize linesep
-    linesep = repeat('-', 66)
+    ! -- set up table title
+    title = 'MEMORY MANAGER TOTAL STORAGE BY DATA TYPE'
     !
-    ! -- write initial line
-    write(iout, '(/1x,a,/1x,a)') &
-      'MEMORY MANAGER TOTAL STORAGE BY DATA TYPE', trim(linesep)
+    ! -- set up stage tableobj
+    call table_cr(memtab, 'MEM TOT', title)
+    call memtab%table_df(nrows, nterms, iout)
     !
-    ! -- header
-    iloc = 1
-    line = ''
-    call UWWORD(line, iloc, 40, TABSTRING, 'DATA TYPE', ival, rval,              &
-                ALIGNMENT=TABCENTER, SEP=' ')
-    call UWWORD(line, iloc, 25, TABSTRING, 'ALLOCATED NUMBER', ival, rval,       &
-                ALIGNMENT=TABCENTER)
-    write(iout, '(1x,a)') trim(line)
-    write(iout, '(1x,a)') trim(linesep)
-
-    iloc = 1
-    line = ''
-    text = 'Character'
-    write(cval,'(i0)') nvalues_astr
-    call UWWORD(line, iloc, 40, TABSTRING, text, ival, rval,                     &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 25, TABSTRING, cval, ival, rval,                     &
-                ALIGNMENT=TABRIGHT)
-    write(iout, '(1x,a)') trim(line)
-    
-    iloc = 1
-    line = ''
-    text = 'Integer'
-    write(cval,'(i0)') nvalues_aint
-    call UWWORD(line, iloc, 40, TABSTRING, text, ival, rval,                     &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 25, TABSTRING, cval, ival, rval,                     &
-                ALIGNMENT=TABRIGHT)
-    write(iout, '(1x,a)') trim(line)
-    
-    iloc = 1
-    line = ''
-    text = 'Real'
-    write(cval,'(i0)') nvalues_adbl
-    call UWWORD(line, iloc, 40, TABSTRING, text, ival, rval,                     &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 25, TABSTRING, cval, ival, rval,                     &
-                ALIGNMENT=TABRIGHT)
-    write(iout, '(1x,a)') trim(line)
-    
-    write(iout, '(1x,a)') trim(linesep)
-    iloc = 1
-    line = ''
-    text = 'Total allocated memory in megabytes:'
-    write(cval,'(1pg25.7)') bytesmb
-    call UWWORD(line, iloc, 40, TABSTRING, text, ival, rval,                     &
-                ALIGNMENT=TABLEFT, SEP=' ')
-    call UWWORD(line, iloc, 25, TABSTRING, cval, ival, rval,                     &
-                ALIGNMENT=TABRIGHT)
-    write(iout, '(1x,a)') trim(line)
+    ! -- data type
+    text = 'DATA TYPE'
+    call memtab%initialize_column(text, 15, alignment=TABLEFT)
     !
-    ! -- write final line
-    write(iout, '(1x,a,/)') trim(linesep)
+    ! -- number of values
+    text = 'ALLOCATED NUMBER'
+    call memtab%initialize_column(text, 25, alignment=TABRIGHT)
+    !
+    ! -- write data
+    ! -- characters
+    call memtab%add_term('Character')
+    call memtab%add_term(nvalues_astr)
+    ! -- logicals
+    call memtab%add_term('Logical')
+    call memtab%add_term(nvalues_alogical)
+    ! -- integers
+    call memtab%add_term('Integer')
+    call memtab%add_term(nvalues_aint)
+    ! -- reals
+    call memtab%add_term('Real')
+    call memtab%add_term(nvalues_adbl)
+    !
+    ! -- total memory usage
+    write(iout, '(1x,a,1x,g15.7,1x,a)') 'Total allocated memory:', bytesmb, 'MB'
+    !
+    ! -- deallocate table
+    call cleanup_table()
     !
     ! -- return
     return
   end subroutine summary_total  
+  
+  subroutine cleanup_table()
+    ! -- dummy
+    ! -- local
+    ! -- formats
+    ! -- code
+    call memtab%table_da()
+    deallocate(memtab)
+    nullify(memtab)
+    !
+    ! -- return
+    return
+  end subroutine cleanup_table  
   
   subroutine mem_usage(iout)
     ! -- dummy
     integer(I4B), intent(in) :: iout
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LINELENGTH) :: linesep
-    character(len=LINELENGTH) :: line
     character(len=LENORIGIN), allocatable, dimension(:) :: cunique
     real(DP) :: bytesmb
     integer(I4B) :: ipos
     integer(I4B) :: icomp
     integer(I4B) :: ilen
-    integer(I4B) :: nchars
-    integer(I4B) :: nint
-    integer(I4B) :: nreal
+    integer(I8B) :: nchars
+    integer(I8B) :: nlog
+    integer(I8B) :: nint
+    integer(I8B) :: nreal
     ! -- formats
-    !
-    ! -- Write info to simulation list file
-    write(iout, "(/,1x,a)")                                                      &
-      'INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
+    ! -- code
     !
     ! -- Write summary table for simulation components
     if (iprmem == 1) then
       !
       ! -- Find unique names of simulation components
       call mem_unique_origins(cunique)
-      call summary_header(iout, linesep)
+      call summary_table(iout, size(cunique))
+      !call summary_header(iout, linesep)
       do icomp = 1, size(cunique)
         nchars = 0
+        nlog = 0
         nint = 0
         nreal = 0
         bytesmb = DZERO
@@ -1602,29 +1606,39 @@ module MemoryManagerModule
           mt => memorylist%Get(ipos)
           if (cunique(icomp) /= mt%origin(1:ilen)) cycle
           if (.not. mt%master) cycle
-          if (mt%memtype(1:6) == 'STRING') nchars = nchars + mt%isize
-          if (mt%memtype(1:7) == 'INTEGER') nint = nint + mt%isize
-          if (mt%memtype(1:6) == 'DOUBLE') nreal = nreal + mt%isize
-        enddo
-        bytesmb = (nchars + nint * I4B + nreal * DP) / 1000000_DP
-        call summary_line(iout, cunique(icomp), nchars, nint, nreal, bytesmb)
+          if (mt%memtype(1:6) == 'STRING') then
+            nchars = nchars + mt%isize
+          else if (mt%memtype(1:7) == 'LOGICAL') then
+            nlog = nlog + mt%isize
+          else if (mt%memtype(1:7) == 'INTEGER') then
+            nint = nint + mt%isize
+          else if (mt%memtype(1:6) == 'DOUBLE') then
+            nreal = nreal + mt%isize
+          end if
+        end do
+        !
+        ! -- calculate storage in megabytes
+        bytesmb = (nchars + nlog * LGP + nint * I4B + nreal * DP) / 1000000_DP
+        !
+        ! -- write data
+        call summary_line(cunique(icomp), nchars, nlog, nint, nreal, bytesmb)
       end do
-      write(iout, "(1x,a)") trim(linesep)
+      call cleanup_table()
     endif
     !
     ! -- Write table with all variables for iprmem == 2
     if (iprmem == 2) then
-      call detailed_header(iout, linesep)
+      call detailed_table(iout, memorylist%count())
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
-        call mt%table_entry(line)
-        write(iout, '(1x,a)') trim(line)
+        call mt%table_entry(memtab)
       end do
-      write(iout, "(1x,a)") trim(linesep)
+      call cleanup_table()
     end if
     !
     ! -- Calculate and write total memory allocation
     bytesmb = (nvalues_astr +                                                    &
+               nvalues_alogical * LGP +                                          &
                nvalues_aint * I4B +                                              &
                nvalues_adbl * DP) / 1000000_DP
     call summary_total(iout, bytesmb)

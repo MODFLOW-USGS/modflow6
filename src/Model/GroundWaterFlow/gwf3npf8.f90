@@ -1047,8 +1047,8 @@ module GwfNpfModule
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
-    call mem_deallocate(this%k22, 'K22', this%origin)
-    call mem_deallocate(this%k33, 'K33', this%origin)
+    call mem_deallocate(this%k22)
+    call mem_deallocate(this%k33)
     call mem_deallocate(this%sat)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
