@@ -10,7 +10,7 @@ module LnfModule
   use LnfIcModule,                 only: LnfIcType
   use LnfNpflModule,                only: LnfNpflType
   use LnfOcModule,                 only: LnfOcType
-  !use LnfStoModule,                only: sto_cr
+  use LnfStoModule,                only: sto_cr, sto_ar, sto_rp, LnfStoType
   !use LnfMvrModule,                only: mvr_cr
   use CircularGeometryModule,      only: cgeo_cr
   use RectangularGeometryModule,   only: rgeo_cr
@@ -32,7 +32,7 @@ module LnfModule
 
     type(LnfIcType),                pointer :: ic        => null()                ! initial conditions package
     type(LnfNpflType),              pointer :: npf       => null()                ! node property flow package
-    !type(LnfStoType),               pointer :: sto       => null()                ! storage package
+    type(LnfStoType),               pointer :: sto       => null()                ! storage package
     !type(LnfMvrType),               pointer :: mvr       => null()                ! water mover package
     type(LnfOcType),                pointer :: oc        => null()                ! output control package
     type(BudgetType),               pointer :: budget    => null()                ! budget object
@@ -271,7 +271,7 @@ module LnfModule
     !!
     !! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
-    !!call sto_cr(this%sto, this%name, this%insto, this%iout)
+    call sto_cr(this%sto, this%name, this%insto, this%iout)
     !!call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%disl)
     if (this%incgeo /= 0) then
       call cgeo_cr(this%cgeo, this%name, this%incgeo, this%iout)
@@ -344,7 +344,7 @@ module LnfModule
     !enddo
     !!
     !! -- Store information needed for observations
-    !!call this%obs%obs_df(this%iout, this%name, 'LNF', this%disl)
+    !call this%obs%obs_df(this%iout, this%name, 'LNF', this%disl)
     !
     ! -- return
     return
@@ -448,7 +448,7 @@ module LnfModule
     end if
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
-    !if(this%insto > 0) call this%sto%sto_ar(this%disl, this%ibound)
+    if(this%insto > 0) call this%sto%sto_ar(this%disl, this%ibound)
     !if(this%inmvr > 0) call this%mvr%mvr_ar()
     !if(this%inobs > 0) call this%obs%lnf_obs_ar(this%ic, this%x, this%flowja)
     !!
@@ -493,7 +493,7 @@ module LnfModule
     !!
     !! -- Read and prepare
     if(this%inoc > 0)  call this%oc%oc_rp()
-    !!if(this%insto > 0) call this%sto%sto_rp()
+    if(this%insto > 0) call this%sto%sto_rp()
     !do ip = 1, this%bndlist%Count()
     !  packobj => GetBndFromList(this%bndlist, ip)
     !  call packobj%bnd_rp()
@@ -618,36 +618,24 @@ module LnfModule
       !tthk = tp - bt
 
       !! -- storage
-      tled = DONE / delt
-      !rhsterm = DZERO
-      !snnew = sQuadraticSaturation(tp, bt, this%x(n), this%satomega)
-      !snold = sQuadraticSaturation(tp, bt, this%xold(n), this%satomega)
+          ! -- storage
+      if(this%insto > 0) then
+          call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln,          &
+                              this%idxglo, this%rhs)
+      end if
+
+      !tled = DONE / delt
 
       ! -- storage coefficients
-      rho1 = 0.000001 * tled
+      !rho1 = 0.000001 * tled
       !rho2 = 0.000001 * tled
-      ss0 = DONE
-      ss1 = DONE
-      ssh0 = this%xold(n)
-      ssh1 = DZERO
+      !ss0 = DONE
+      !ss1 = DONE
+      !ssh0 = this%xold(n)
+      !ssh1 = DZERO
 
-      amatsln(this%idxglo(idiag)) = amatsln(this%idxglo(idiag)) - rho1 * ss1
-      this%rhs(n) = this%rhs(n) - rho1 * ss0 * ssh0 + rho1 * ssh1
-
-      ! -- add specific yield terms to amat at rhs
-      !if (snnew < DONE) then
-      !  if (snnew > DZERO) then
-      !    amat(idxglo(idiag)) = amat(idxglo(idiag)) - tled
-      !    rhsterm = tled * tthk * snold
-      !    rhsterm = rhsterm + tled * bt
-      !  else
-      !    rhsterm = -tled * tthk * (DZERO - snold)
-      !  end if
-      ! -- known flow from specific yield
-      !else
-      !rhsterm = -tled * tthk * (DONE - snold)
-      !end if
-      !this%rhs(n) = this%rhs(n) - rhsterm
+      !amatsln(this%idxglo(idiag)) = amatsln(this%idxglo(idiag)) - rho1
+      !this%rhs(n) = this%rhs(n) - rho1 * this%xold(n)
     end do
     
     !if(this%insto > 0) then

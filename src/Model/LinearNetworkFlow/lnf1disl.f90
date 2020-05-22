@@ -29,6 +29,7 @@ module LnfDislModule
     real(DP), dimension(:,:), pointer, contiguous :: cellcenters => null()       ! cell centers stored as 3d array of x, y, and z
     integer(I4B), dimension(:,:), pointer, contiguous :: centerverts => null()   ! vertex at cell center or vertices cell center is between
     real(DP), dimension(:), pointer, contiguous :: cellfdc => null()             ! fdc stored as array
+    real(DP), dimension(:), pointer, contiguous :: celllen => null()             ! length of each conduit
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: iavertcells => null()     ! vertex to cells ia array
@@ -106,6 +107,7 @@ module LnfDislModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use ConstantsModule,   only: DZERO
     class(LnfDislType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: iout
@@ -139,6 +141,7 @@ module LnfDislModule
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
     call mem_allocate(disext%cellfdc, disext%nodesuser, 'CELLFDC', disext%origin)
     ! -- Allocate geometries array
+    call mem_allocate(disext%celllen, disext%nodesuser, 'CELLLEN', disext%origin)
     call mem_allocate(disext%iageom, disext%nodesuser, 'IAGEOM', disext%origin)
     call mem_allocate(disext%iageocellnum, disext%nodesuser, 'IAGEOCELLNUM', disext%origin)
     allocate(disext%jametries(disext%nsupportedgeoms))
@@ -163,6 +166,7 @@ module LnfDislModule
     end do
     do n = 1, disext%nodesuser
       disext%cellfdc(n) = cellfdc(n)
+      disext%celllen(n) = DZERO
     end do
     !
     ! -- Return
@@ -276,6 +280,7 @@ module LnfDislModule
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%cellcenters)
     call mem_deallocate(this%centerverts)
+    call mem_deallocate(this%celllen)
     call mem_deallocate(this%vertices)
     call mem_deallocate(this%cellfdc)
     call mem_deallocate(this%iavert)
@@ -381,7 +386,7 @@ module LnfDislModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule,  only: LINELENGTH
+    use ConstantsModule,  only: LINELENGTH, DZERO
     ! -- dummy
     class(LnfDislType) :: this
     ! -- locals
@@ -445,6 +450,7 @@ module LnfDislModule
     ! -- Allocate vertices array
     call mem_allocate(this%vertices, 3, this%nvert, 'VERTICES', this%origin)
     call mem_allocate(this%cellfdc, this%nodesuser, 'CELLFDC', this%origin)
+    call mem_allocate(this%celllen, this%nodesuser, 'CELLLEN', this%origin)
     call mem_allocate(this%cellcenters, 3, this%nodesuser, 'CELLCENTERS', this%origin)
     call mem_allocate(this%centerverts, 2, this%nodesuser, 'CENTERVERTS', this%origin)
     call mem_allocate(this%iageom, this%nodesuser, 'IAGEOM', this%origin)
@@ -457,6 +463,7 @@ module LnfDislModule
       this%idomain(k) = 1
       this%iageom(k) = 0
       this%iageocellnum(k) = 0
+      this%celllen(k) = DZERO
     end do
     !
     ! -- Return
@@ -557,7 +564,7 @@ module LnfDislModule
     class(LnfDislType) :: this
     ! -- locals
     integer(I4B) :: node, noder, j, k, n
-    real(DP) :: nodelen, curlen, seglen
+    real(DP) :: curlen, seglen
     real(DP) :: cendist, segpercent
     character(len=300) :: ermsg
     ! -- formats
@@ -630,13 +637,13 @@ module LnfDislModule
     ! calculate and fill cell center array
     do k = 1, this%nodesuser
       ! calculate node length
-      nodelen = DZERO
+      this%celllen(k) = DZERO
       do j = this%iavert(k), this%iavert(k+1) - 2
-        nodelen = nodelen + calcdist(this%vertices, this%javert(j), &
+        this%celllen(k) = this%celllen(k) + calcdist(this%vertices, this%javert(j), &
           this%javert(j+1))
       end do
       ! calculate distance from start of node to cell center
-      cendist = nodelen * this%cellfdc(k)
+      cendist = this%celllen(k) * this%cellfdc(k)
       ! calculate cell center location
       curlen = DZERO
       ! loop through cell's vertices
