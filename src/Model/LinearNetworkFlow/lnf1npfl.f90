@@ -1087,6 +1087,7 @@ module LnfNpflModule  ! Npf package for laminar flow
         call ustop()
       end if
       condsatnm = this%condmean(area1, area2, cl1, cl2, this%icellavg)
+      !ck1 = 0.5 * this%grav / this%visc * area1 / 
     end if
     !
     ! -- Return

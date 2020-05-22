@@ -84,7 +84,8 @@
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1disl.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1ic.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1npfl.f90"/>
-		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1oc.f90"/></Filter>
+		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1oc.f90"/>
+		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1sto.f90"/></Filter>
 		<Filter Name="ModelUtilities">
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
