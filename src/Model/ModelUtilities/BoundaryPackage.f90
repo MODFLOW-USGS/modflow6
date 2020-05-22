@@ -594,8 +594,7 @@ module BndModule
     end if
     !
     ! -- set table kstp and kper
-    maxrows = 0
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+    if (this%iprflow /= 0) then
       call this%outputtab%set_kstpkper(kstp, kper)
     end if
     !

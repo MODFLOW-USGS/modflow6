@@ -1424,9 +1424,10 @@ contains
     qseeptomvr = DZERO
     qgwet = DZERO
     !
-    ! -- set maxrows
+    ! -- set kstp, kper, and maxrows
     maxrows = 0
     if (this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
       do i = 1, this%nodes
         node = this%nodelist(i)
         if (this%ibound(node) > 0) then
@@ -1435,7 +1436,6 @@ contains
       end do
       call this%outputtab%set_maxbound(maxrows)
     end if
-    
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes

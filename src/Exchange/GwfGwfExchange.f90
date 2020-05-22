@@ -878,6 +878,10 @@ contains
         call this%outputtab2%set_title(packname2)
       end if
       !
+      ! -- set table kstp and kper
+      call this%outputtab1%set_kstpkper(kstp, kper)
+      call this%outputtab2%set_kstpkper(kstp, kper)
+      !
       ! -- update maxbound of tables
       ntabrows = 0
       do i = 1, this%nexg
@@ -895,10 +899,6 @@ contains
         call this%outputtab2%set_maxbound(ntabrows)
       end if
     end if
-    !
-    ! -- set table kstp and kper
-    call this%outputtab1%set_kstpkper(kstp, kper)
-    call this%outputtab2%set_kstpkper(kstp, kper)
     !
     ! -- Print and write budget terms for model 1
     !

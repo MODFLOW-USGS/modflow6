@@ -869,7 +869,7 @@ module TableModule
   
   subroutine set_kstpkper(this, kstp, kper)
 ! ******************************************************************************
-! set_maxbound -- reset maxbound
+! set_kstpkper -- reset kstp and kper
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

@@ -4677,7 +4677,9 @@ contains
       !    so they can be written to the binary budget files, but these internal
       !    flows are not included as part of the budget table.
       nterms = 8
-      if (this%inamedbound == 1) nterms = nterms + 1
+      if (this%inamedbound == 1) then
+        nterms = nterms + 1
+      end if
       !
       ! -- set up table title
       title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
