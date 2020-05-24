@@ -86,7 +86,7 @@ module MemoryManagerModule
     character(len=LENMEMTYPE), intent(out) :: var_type    
     ! local
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
         
     mt => null()
     var_type = 'UNKNOWN'
@@ -103,7 +103,7 @@ module MemoryManagerModule
     integer(I4B), intent(out)    :: rank    
     ! local
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
         
     mt => null()
     rank = -1
@@ -128,7 +128,7 @@ module MemoryManagerModule
     integer(I4B), intent(out)    :: size
     ! local
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
         
     mt => null()
     call get_from_memorylist(name, origin, mt, found)
@@ -153,7 +153,7 @@ module MemoryManagerModule
     integer(I4B), dimension(:), intent(out) :: mem_shape
     ! local
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     
     mt => null()
     call get_from_memorylist(name, origin, mt, found)
@@ -180,7 +180,7 @@ module MemoryManagerModule
     integer(I4B), intent(out)    :: isize
     ! local
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
         
     mt => null()
     call get_from_memorylist(name, origin, mt, found)
@@ -195,10 +195,10 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer, intent(out) :: mt
-    logical,intent(out) :: found
-    logical, intent(in), optional :: check
+    logical(LGP),intent(out) :: found
+    logical(LGP), intent(in), optional :: check
     integer(I4B) :: ipos
-    logical check_opt
+    logical(LGP) check_opt
     mt => null()
     found = .false.
     do ipos = 1, memorylist%count()
@@ -283,52 +283,40 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     ! -- local
-    character(len=ilen) :: string
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
     ! -- format
     ! -- code
     call check_varname(name)
     !
-    ! -- initialize string
-    string = ' '
-    !
     ! -- allocate string
     allocate(character(len=ilen) :: strsclr, stat=istat, errmsg=errmsg)
     if (istat /= 0) then
       call allocate_error(name, origin, istat, 1)
     end if
+    !
+    ! -- set strscl to a empty string
     strsclr = ' '
+    !
+    ! -- update string counter
     nvalues_astr = nvalues_astr + ilen
+    !
+    ! -- allocate memory type
     allocate(mt)
+    !
+    ! -- set memory type
     mt%strsclr => strsclr
     mt%isize = ilen
     mt%name = name
     mt%origin = origin
     write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
+    !
+    ! -- add deferred length string to the memory manager
     call memorylist%add(mt)
+    !
+    ! -- return
+    return
   end subroutine allocate_str
-
-  subroutine allocate_int(intsclr, name, origin)
-    integer(I4B), pointer, intent(inout) :: intsclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B) :: istat
-    type(MemoryType), pointer :: mt
-    call check_varname(name)
-    allocate(intsclr, stat=istat, errmsg=errmsg)
-    if (istat /= 0) then
-      call allocate_error(name, origin, istat, 1)
-    end if
-    nvalues_aint = nvalues_aint + 1
-    allocate(mt)
-    mt%intsclr => intsclr
-    mt%isize = 1
-    mt%name = name
-    mt%origin = origin
-    write(mt%memtype, "(a)") 'INTEGER'
-    call memorylist%add(mt)
-  end subroutine allocate_int
   
   subroutine allocate_str1d(astr1d, ilen, nrow, name, origin)
     ! -- dummy variables
@@ -356,7 +344,7 @@ module MemoryManagerModule
     !
     ! -- allocate defined length string array
     if (isize > 0) Then
-      allocate(astr1d(nrow), stat=istat, errmsg=errmsg)
+      allocate(character(len=ilen) :: astr1d(nrow), stat=istat, errmsg=errmsg)
       !
       ! -- check for error condition
       if (istat /= 0) then
@@ -380,13 +368,34 @@ module MemoryManagerModule
       mt%origin = origin
       write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
       !
-      ! -- add defined length character array to the memory manager
+      ! -- add deferred length character array to the memory manager
       call memorylist%add(mt)
     end if
     !
     ! -- return
     return
   end subroutine allocate_str1d
+
+  subroutine allocate_int(intsclr, name, origin)
+    integer(I4B), pointer, intent(inout) :: intsclr
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B) :: istat
+    type(MemoryType), pointer :: mt
+    call check_varname(name)
+    allocate(intsclr, stat=istat, errmsg=errmsg)
+    if (istat /= 0) then
+      call allocate_error(name, origin, istat, 1)
+    end if
+    nvalues_aint = nvalues_aint + 1
+    allocate(mt)
+    mt%intsclr => intsclr
+    mt%isize = 1
+    mt%name = name
+    mt%origin = origin
+    write(mt%memtype, "(a)") 'INTEGER'
+    call memorylist%add(mt)
+  end subroutine allocate_int
   
   subroutine allocate_int1d(aint, isize, name, origin)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
@@ -566,7 +575,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: origin
     ! -- local
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     character(len=ilen), dimension(:), allocatable :: astrtemp
     integer(I4B) :: istat
     integer(I4B) :: isize
@@ -651,7 +660,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, isizeold
     integer(I4B) :: ifill
-    logical :: found
+    logical(LGP) :: found
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, origin, mt, found)
@@ -690,7 +699,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     integer(I4B), dimension(2) :: ishape
     integer(I4B) :: i, j, isize, isizeold
-    logical :: found
+    logical(LGP) :: found
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, origin, mt, found)
@@ -731,7 +740,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, isizeold
     integer(I4B) :: ifill
-    logical :: found
+    logical(LGP) :: found
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, origin, mt, found)
@@ -770,7 +779,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     integer(I4B), dimension(2) :: ishape
     integer(I4B) :: i, j, isize, isizeold
-    logical :: found
+    logical(LGP) :: found
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, origin, mt, found)
@@ -803,11 +812,11 @@ module MemoryManagerModule
   end subroutine reallocate_dbl2d
   
   subroutine setptr_logical(logicalsclr, name, origin)
-    logical, pointer, intent(inout) :: logicalsclr
+    logical(LGP), pointer, intent(inout) :: logicalsclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     logicalsclr => mt%logicalsclr
   end subroutine setptr_logical
@@ -817,7 +826,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     intsclr => mt%intsclr
   end subroutine setptr_int
@@ -827,7 +836,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     aint => mt%aint1d
   end subroutine setptr_int1d
@@ -837,7 +846,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     aint => mt%aint2d
   end subroutine setptr_int2d
@@ -847,7 +856,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     dblsclr => mt%dblsclr
   end subroutine setptr_dbl
@@ -857,7 +866,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     adbl => mt%adbl1d
   end subroutine setptr_dbl1d
@@ -867,7 +876,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     adbl => mt%adbl2d
   end subroutine setptr_dbl2d
@@ -879,7 +888,7 @@ module MemoryManagerModule
     character(len=*), intent(in), optional :: origin2
     type(MemoryType), pointer :: mt
     integer(I4B) :: n
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     aint => null()
     ! -- check the copy into the memory manager
@@ -902,7 +911,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, j
     integer(I4B) :: ncol, nrow
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     aint => null()
     ncol = size(mt%aint2d, dim=1)
@@ -928,7 +937,7 @@ module MemoryManagerModule
     character(len=*), intent(in), optional :: origin2
     type(MemoryType), pointer :: mt
     integer(I4B) :: n
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     adbl => null()
     ! -- check the copy into the memory manager
@@ -951,7 +960,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, j
     integer(I4B) :: ncol, nrow
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)    
     adbl => null()
     ncol = size(mt%adbl2d, dim=1)
@@ -976,7 +985,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: n
-    logical :: found
+    logical(LGP) :: found
     
     call get_from_memorylist(name, origin, mt, found)
     do n = 1, size(mt%adbl1d)
@@ -992,7 +1001,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name2
     character(len=*), intent(in) :: origin2
     type(MemoryType), pointer :: mt, mt2
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)
     call get_from_memorylist(name2, origin2, mt2, found)
     if (size(aint1d) > 0) then
@@ -1015,7 +1024,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: origin2
     integer(I4B) :: ncol, nrow
     type(MemoryType), pointer :: mt, mt2
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)
     call get_from_memorylist(name2, origin2, mt2, found)
     if (size(aint2d) > 0) then
@@ -1039,7 +1048,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name2
     character(len=*), intent(in) :: origin2
     type(MemoryType), pointer :: mt, mt2
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)
     call get_from_memorylist(name2, origin2, mt2, found)
     if (size(adbl1d) > 0) then
@@ -1062,7 +1071,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: origin2
     integer(I4B) :: ncol, nrow
     type(MemoryType), pointer :: mt, mt2
-    logical :: found
+    logical(LGP) :: found
     call get_from_memorylist(name, origin, mt, found)
     call get_from_memorylist(name2, origin2, mt2, found)
     if (size(adbl2d) > 0) then
@@ -1080,10 +1089,13 @@ module MemoryManagerModule
   end subroutine reassignptr_dbl2d
 
   subroutine deallocate_str(strsclr)
+    ! -- dummy  
     character(len=:), pointer, intent(inout) :: strsclr
+    ! -- local
     class(MemoryType), pointer :: mt
+    logical(LGP) :: found
     integer(I4B) :: ipos
-    logical :: found
+    ! -- code
     found = .false.
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
@@ -1094,8 +1106,8 @@ module MemoryManagerModule
           found = .true.
           exit
         end if
-      endif
-    enddo
+      end if
+    end do
     if (.not. found) then
       call store_error('programming error in deallocate_str')
       call ustop()
@@ -1107,12 +1119,77 @@ module MemoryManagerModule
       end if
     endif
   end subroutine deallocate_str
+  
+  subroutine deallocate_str1d(astr1d, name, origin)
+    ! -- dummy variables
+    character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d
+    character(len=*), optional :: name
+    character(len=*), optional :: origin
+    ! -- local variables
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    integer(I4B) :: ipos
+    ! -- code
+    found = .false.
+    if (associated(astr1d)) then
+      if (present(name) .and. present(origin)) then
+        call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
+      else
+        errmsg = 'Programming error. Name and origin not passed ' //             &
+          'to deallocate_str1d.'
+        call store_error(errmsg)
+        call ustop()
+      end if
+      if (.not. found .and. associated(astr1d)) then
+        errmsg = "Programming error in deallocate_str1d. Variable '" //          &
+          trim(name) // "' from origin '" // trim(origin) // "' is not " //      &
+          "present in the memory manager but is associated."
+        call store_error(errmsg)
+        call ustop()
+      else
+        if (found) then
+          if (mt%master) then
+            if (mt%isize > 0) then
+              deallocate(astr1d)
+            end if
+          else
+            nullify(astr1d)
+          end if
+        end if
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine deallocate_str1d
+  
+  function astr1d_equal(a, b) result(equal)
+    ! -- return variable
+    logical(LGP) :: equal
+    ! -- dummy
+    character(len=:), dimension(:), pointer, contiguous, intent(in) :: a
+    character(len=:), dimension(:), pointer, contiguous, intent(in) :: b
+    ! -- local
+    integer(I4B) :: n
+    ! -- format
+    ! -- code
+    equal = .TRUE.
+    do n = 1, size(a)
+      if (a(n) /= b(n)) then
+        equal = .FALSE.
+        exit
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end function astr1d_equal
 
   subroutine deallocate_logical(logicalsclr)
     logical(LGP), pointer, intent(inout) :: logicalsclr
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     found = .false.
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
@@ -1138,7 +1215,7 @@ module MemoryManagerModule
     integer(I4B), pointer, intent(inout) :: intsclr
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     found = .false.
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
@@ -1164,7 +1241,7 @@ module MemoryManagerModule
     real(DP), pointer, intent(inout) :: dblsclr
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     found = .false.
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
@@ -1186,53 +1263,13 @@ module MemoryManagerModule
     endif
   end subroutine deallocate_dbl
   
-  subroutine deallocate_str1d(astr1d, name, origin)
-    ! -- dummy variables
-    character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
-    ! -- local variables
-    type(MemoryType), pointer :: mt
-    logical :: found
-    !integer(I4B) :: ipos
-    ! -- code
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
-    else
-      errmsg = 'Programming error. Name and origin not passed ' //               &
-        'to deallocate_str1d.'
-      call store_error(errmsg)
-      call ustop()
-    end if
-    if (.not. found .and. associated(astr1d)) then
-      errmsg = "Programming error in deallocate_str1d. Variable '" //            &
-        trim(name) // "' from origin '" // trim(origin) // "' is not " //        &
-        "present in the memory manager but is associated."
-      call store_error(errmsg)
-      call ustop()
-    else
-      if (found) then
-        if (mt%master) then
-          if (mt%isize > 0) then
-            deallocate(astr1d)
-          end if
-        else
-          nullify(astr1d)
-        end if
-      end if
-    endif
-    !
-    ! -- return
-    return
-  end subroutine deallocate_str1d
-  
   subroutine deallocate_int1d(aint1d, name, origin)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint1d
     character(len=*), optional :: name
     character(len=*), optional :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     if (present(name) .and. present(origin)) then
       call get_from_memorylist(name, origin, mt, found)
       nullify(mt%aint1d)
@@ -1265,7 +1302,7 @@ module MemoryManagerModule
     character(len=*), optional :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     if (present(name) .and. present(origin)) then
       call get_from_memorylist(name, origin, mt, found)
       nullify(mt%aint2d)
@@ -1298,7 +1335,7 @@ module MemoryManagerModule
     character(len=*), optional :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     if (present(name) .and. present(origin)) then
       call get_from_memorylist(name, origin, mt, found)
       nullify(mt%aint3d)
@@ -1331,7 +1368,7 @@ module MemoryManagerModule
     character(len=*), optional :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     if (present(name) .and. present(origin)) then
       call get_from_memorylist(name, origin, mt, found)
       nullify(mt%adbl1d)
@@ -1364,7 +1401,7 @@ module MemoryManagerModule
     character(len=*), optional :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     if (present(name) .and. present(origin)) then
       call get_from_memorylist(name, origin, mt, found)
       nullify(mt%adbl2d)
@@ -1397,7 +1434,7 @@ module MemoryManagerModule
     character(len=*), optional :: origin
     type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    logical :: found
+    logical(LGP) :: found
     if (present(name) .and. present(origin)) then
       call get_from_memorylist(name, origin, mt, found)
       nullify(mt%adbl3d)
@@ -1639,7 +1676,6 @@ module MemoryManagerModule
     ! -- local
     class(MemoryType), pointer :: mt
     character(len=LENORIGIN), allocatable, dimension(:) :: cunique
-    real(DP) :: bytesmb
     integer(I4B) :: ipos
     integer(I4B) :: icomp
     integer(I4B) :: ilen
@@ -1647,6 +1683,7 @@ module MemoryManagerModule
     integer(I8B) :: nlog
     integer(I8B) :: nint
     integer(I8B) :: nreal
+    real(DP) :: bytesmb
     ! -- formats
     ! -- code
     !

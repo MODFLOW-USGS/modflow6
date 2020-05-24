@@ -1,7 +1,7 @@
 module BaseDisModule
   
   use KindModule,              only: DP, I4B
-  use ConstantsModule,         only: LENMODELNAME, LENORIGIN, LINELENGTH, DZERO
+  use ConstantsModule,         only: LENMODELNAME, LENAUXNAME, LENORIGIN, LINELENGTH, DZERO
   use SmoothingModule,         only: sQuadraticSaturation
   use ConnectionsModule,       only: ConnectionsType
   use InputOutputModule,       only: URWORD, ubdsv1
@@ -1039,9 +1039,11 @@ module BaseDisModule
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: nodelist
     real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: rlist
     real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: auxvar
-    character(len=16), dimension(:), intent(inout) :: auxname
+    character(len=LENAUXNAME), dimension(:), intent(inout) :: auxname
     character(len=LENBOUNDNAME), dimension(:), pointer, contiguous,                        &
                                           intent(inout) :: boundname
+    !character(len=:), dimension(:), pointer, contiguous, intent(inout) :: auxname
+    !character(len=:), dimension(:), pointer, contiguous, intent(inout) :: boundname
     character(len=*), intent(in) :: label
     character(len=*),  intent(in) :: pkgName
     type(TimeSeriesManagerType)   :: tsManager

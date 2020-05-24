@@ -6,6 +6,7 @@ module GwfCsubModule
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
                              LENBUDTXT, LENAUXNAME, LENORIGIN, LENPAKLOC,       &
+                             LENLISTLABEL,                                      &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilitiesModule, only: is_same, sim_message
@@ -51,10 +52,12 @@ module GwfCsubModule
   type, extends(NumericalPackageType) :: GwfCsubType
     character(len=LENBOUNDNAME), dimension(:),                                  &
                                  pointer, contiguous :: boundname => null()      !vector of boundnames
-    character(len=LENAUXNAME), dimension(:), pointer,                         &
-                                 contiguous :: auxname => null()                 !vector of auxname
-    character(len=500) :: listlabel   = ''                                       !title of table written for RP
-    character(len=LENORIGIN) :: stoname
+    character(len=LENAUXNAME), dimension(:),                                    &
+                                 pointer, contiguous :: auxname => null()        !vector of auxname
+    !character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
+    !character(len=LENORIGIN) :: stoname
+    character(len=:), pointer :: listlabel => null()                              !title of table written for RP
+    character(len=:), pointer :: stoname => null()
     integer(I4B), pointer :: istounit => null()
     integer(I4B), pointer :: istrainib => null()
     integer(I4B), pointer :: istrainsk => null()
@@ -338,6 +341,10 @@ contains
     !
     ! -- call standard NumericalPackageType allocate scalars
     call this%NumericalPackageType%allocate_scalars()
+    !
+    ! -- allocate character variables
+    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%origin)
+    call mem_allocate(this%stoname, LENORIGIN, 'STONAME', this%origin)
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%istounit, 'ISTOUNIT', this%origin)
@@ -2890,6 +2897,10 @@ contains
       deallocate(this%pakcsvtab)
       nullify(this%pakcsvtab)
     end if
+    !
+    ! -- deallocate character variables
+    call mem_deallocate(this%listlabel)
+    call mem_deallocate(this%stoname)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%istounit)
