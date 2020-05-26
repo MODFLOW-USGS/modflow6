@@ -34,7 +34,7 @@ module NumericalSolutionModule
   ! expose for use in the bmi++
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
-  public :: prepareIteration, doIteration, finalizeIteration
+  public :: doIteration, finalizeIteration
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LINELENGTH)                            :: fname
@@ -159,12 +159,11 @@ module NumericalSolutionModule
     procedure, private :: csv_convergence_summary
 
     ! for BMI refactoring:
-    procedure, public :: prepareIteration
     procedure, public :: doIteration
     procedure, public :: finalizeIteration
-    procedure, private :: writeCSVHeader
-    procedure, private :: writePTCInfoToFile
-    procedure, private :: advanceSolution
+    procedure, public :: writeCSVHeader
+    procedure, public :: writePTCInfoToFile
+    procedure, public :: advanceSolution
     
   end type NumericalSolutionType
 
@@ -988,15 +987,34 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: readnewdata
+    use TdisModule, only: readnewdata, kstp, kper
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
+    
     !
     ! -- Check with TDIS on whether or not it is time to RP
-    if (.not. readnewdata) return
-    !
+    if (readnewdata) then
+      ! do stuff here...
+      
+    end if
+    
+    ! write headers to CSV file
+    if (kper == 1 .and. kstp == 1) then
+      call this%writeCSVHeader()
+    end if
+      
+    ! advance models and exchanges
+    call this%advanceSolution()
+        
+    ! write PTC info on models to iout
+    call this%writePTCInfoToFile(kper)
+            
+    ! reset convergence flag and inner solve counter
+    this%icnvg = 0
+    this%itertot = 0   
+    
     ! -- return
     return
   end subroutine sln_rp
@@ -1161,7 +1179,7 @@ contains
     return
   end subroutine sln_da
 
-  subroutine sln_ca(this, kpicard, isgcnvg, isuppress_output)
+  subroutine sln_ca(this, isgcnvg, isuppress_output)
 ! ******************************************************************************
 ! sln_ca -- Solve the models in this solution for kper and kstp.  If necessary
 !           use subtiming to get to the end of the time step
@@ -1170,31 +1188,18 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kper, perlen, totimsav
     ! -- dummy
     class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kpicard
     integer(I4B), intent(inout) :: isgcnvg
     integer(I4B), intent(in) :: isuppress_output    
     ! -- local
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
     integer(I4B) :: kiter   ! non-linear iteration counter
-    integer(I4B) :: im, ic   
-    real(DP) :: dt
-    real(DP) :: totim
+    integer(I4B) :: im, ic
 
 ! ------------------------------------------------------------------------------
     
-    dt = perlen(kper)
-    totim = totimsav
-    !
-    ! -- update totim
-    totim = totim + dt
-      
-    ! prepare for the nonlinear iteration loop
-    call this%prepareIteration(kpicard)
-      
     ! nonlinear iteration loop for this solution
     outerloop: do kiter = 1, this%mxiter
         
@@ -1222,30 +1227,7 @@ contains
     ! -- return
     return
   end subroutine sln_ca
-
-  ! prepare for iteration loop, use kpicard == 1 when no picard loop (c.f. sgp_ca())
-  subroutine prepareIteration(this, kpicard)
-    use TdisModule, only: kper, kstp
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kpicard
-        
-    ! write headers to CSV file
-    if (kper == 1 .and. kstp == 1) then
-      call this%writeCSVHeader()
-    end if
-      
-    ! advance models and exchanges
-    call this%advanceSolution(kpicard)
-      
-    ! write PTC info on models to iout
-    call this%writePTCInfoToFile(kper)
-
-    ! reset convergence flag and inner solve counter
-    this%icnvg = 0
-    this%itertot = 0
-    
-  end subroutine      
-      
+       
   ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
@@ -1295,12 +1277,9 @@ contains
     return
   end subroutine writeCSVHeader
   
-  ! advances the exchanges and models in this solution by 1 timestep,
-  ! kpicard will change if we are running the outer picard loop,
-  ! if not (the current use cases) then we use kpicard == 1  
-  subroutine advanceSolution(this, kpicard)
+  ! advances the exchanges and models in this solution by 1 timestep
+  subroutine advanceSolution(this)
     class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kpicard
     ! local
     integer(I4B) :: ic, im
     class(NumericalExchangeType), pointer :: cp
@@ -1309,13 +1288,13 @@ contains
     ! -- Exchange advance
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_ad(this%id, kpicard)
+      call cp%exg_ad(this%id)
     enddo
     
     ! -- Model advance
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ad(kpicard)
+      call mp%model_ad()
     enddo
     
   end subroutine advanceSolution

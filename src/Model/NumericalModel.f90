@@ -101,9 +101,8 @@ module NumericalModelModule
     class(NumericalModelType) :: this
   end subroutine model_rp
 
-  subroutine model_ad(this, ipicard)
+  subroutine model_ad(this)
     class(NumericalModelType) :: this
-    integer(I4B), intent(in) :: ipicard
   end subroutine model_ad
 
   subroutine model_cf(this,kiter)

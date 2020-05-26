@@ -163,7 +163,7 @@ contains
     return
   end subroutine exg_ar
 
-  subroutine exg_ad(this, isolnid, kpicard)
+  subroutine exg_ad(this, isolnid)
 ! ******************************************************************************
 ! exg_ad -- Advance
 ! ******************************************************************************
@@ -173,7 +173,6 @@ contains
     ! -- dummy
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: isolnid
-    integer(I4B), intent(in) :: kpicard
     ! -- local
 ! ------------------------------------------------------------------------------
     !

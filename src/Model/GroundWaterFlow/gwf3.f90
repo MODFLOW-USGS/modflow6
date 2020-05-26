@@ -504,7 +504,7 @@ module GwfModule
     return
   end subroutine gwf_rp
 
-  subroutine gwf_ad(this, ipicard)
+  subroutine gwf_ad(this)
 ! ******************************************************************************
 ! gwf_ad -- GroundWater Flow Model Time Step Advance
 ! Subroutine: (1) calls package advance subroutines
@@ -517,7 +517,6 @@ module GwfModule
     ! -- dummy
     class(GwfModelType) :: this
     class(BndType), pointer :: packobj
-    integer(I4B), intent(in) :: ipicard
     ! -- local
     integer(I4B) :: ip, n
 ! ------------------------------------------------------------------------------

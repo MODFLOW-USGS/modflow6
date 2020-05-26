@@ -53,11 +53,11 @@ module BaseSolutionModule
       class(BaseSolutionType) :: this
     end subroutine
 
-    subroutine sln_ca(this, kpicard, isgcnvg, isuppress_output)
+    subroutine sln_ca(this, isgcnvg, isuppress_output)
       use KindModule, only: DP, I4B
       import BaseSolutionType
       class(BaseSolutionType) :: this
-      integer(I4B),intent(in) :: kpicard, isuppress_output
+      integer(I4B),intent(in) :: isuppress_output
       integer(I4B), intent(inout) :: isgcnvg
     end subroutine
 

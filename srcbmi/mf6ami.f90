@@ -86,7 +86,8 @@ module mf6ami
     ns => getSolution(subcomponent_idx)
     
     ! prepare with defaults, no picard
-    call ns%prepareIteration(1)
+    ! TODO_MJR: clean this up....
+    !call ns%prepareIteration(1)
     
     ! reset counter
     allocate(iterationCounter)
