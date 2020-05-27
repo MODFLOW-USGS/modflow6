@@ -34,7 +34,7 @@ module NumericalSolutionModule
   ! expose for use in the bmi++
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
-  public :: prepareIteration, doIteration, finalizeIteration
+  public :: doIteration, finalizeIteration
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LINELENGTH)                            :: fname
@@ -130,7 +130,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
-    procedure :: sln_rp
+    procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
     procedure :: sln_fp
@@ -159,12 +159,10 @@ module NumericalSolutionModule
     procedure, private :: csv_convergence_summary
 
     ! for BMI refactoring:
-    procedure, public :: prepareIteration
     procedure, public :: doIteration
     procedure, public :: finalizeIteration
-    procedure, private :: writeCSVHeader
-    procedure, private :: writePTCInfoToFile
-    procedure, private :: advanceSolution
+    procedure, public :: writeCSVHeader
+    procedure, public :: writePTCInfoToFile
     
   end type NumericalSolutionType
 
@@ -980,27 +978,35 @@ contains
     return
   end subroutine sln_ar
 
-  subroutine sln_rp(this)
+   subroutine sln_ad(this)
 ! ******************************************************************************
-! sln_rp -- Read and Prepare
+! sln_ad -- Advance solution
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: readnewdata
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Check with TDIS on whether or not it is time to RP
-    if (.not. readnewdata) return
-    !
-    ! -- return
+    ! write headers to CSV file
+    
+    if (kper == 1 .and. kstp == 1) then
+      call this%writeCSVHeader()
+    end if
+      
+    ! write PTC info on models to iout
+    call this%writePTCInfoToFile(kper)
+            
+    ! reset convergence flag and inner solve counter
+    this%icnvg = 0
+    this%itertot = 0   
+    
     return
-  end subroutine sln_rp
-
+  end subroutine sln_ad
+  
   subroutine sln_ot(this)
 ! ******************************************************************************
 ! sln_ot -- Output
@@ -1161,7 +1167,7 @@ contains
     return
   end subroutine sln_da
 
-  subroutine sln_ca(this, kpicard, isgcnvg, isuppress_output)
+  subroutine sln_ca(this, isgcnvg, isuppress_output)
 ! ******************************************************************************
 ! sln_ca -- Solve the models in this solution for kper and kstp.  If necessary
 !           use subtiming to get to the end of the time step
@@ -1170,10 +1176,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kper, subtiming_begin, subtiming_end, perlen, totimsav
     ! -- dummy
     class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kpicard
     integer(I4B), intent(inout) :: isgcnvg
     integer(I4B), intent(in) :: isuppress_output    
     ! -- local
@@ -1181,98 +1185,29 @@ contains
     class(NumericalExchangeType), pointer :: cp
     integer(I4B) :: kiter   ! non-linear iteration counter
     integer(I4B) :: im, ic
-    integer(I4B) :: nsubtimes, nstm, isubtime    
-    real(DP) :: dt
-    real(DP) :: totim
 
 ! ------------------------------------------------------------------------------
-  
-    ! TODO_MJR: the subtime loop is now around the sln_ca body, easy to discard, do we still want this?
     
-    ! -- Find the number of sub-timesteps for each model and then use
-    !    the largest one.
-    nsubtimes = 1
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      nstm = mp%get_nsubtimes()
-      if(nstm > nsubtimes) nsubtimes = nstm
-    enddo
-    
-    dt = perlen(kper) / REAL(nsubtimes, DP)
-    totim = totimsav
-    !
-    do isubtime = 1, nsubtimes
-      !
-      ! -- update totim
-      totim = totim + dt
-      !
-      ! -- Start subtiming
-      call subtiming_begin(isubtime, nsubtimes, this%id)
-      
-      ! prepare for the nonlinear iteration loop
-      call this%prepareIteration(kpicard, isubtime)
-      
-      ! nonlinear iteration loop for this solution      
-      outerloop: do kiter = 1, this%mxiter
+    ! nonlinear iteration loop for this solution
+    outerloop: do kiter = 1, this%mxiter
         
-        ! perform a single iteration
-        call this%doIteration(kiter)        
+      ! perform a single iteration
+      call this%doIteration(kiter)     
         
-        ! exit if converged
-        if (this%icnvg == 1) then
-          exit outerloop
-        end if
+      ! exit if converged
+      if (this%icnvg == 1) then
+        exit outerloop
+      end if
         
-      end do outerloop
+    end do outerloop
       
-      ! finish up, write convergence info, CSV file, budgets and flows, ...
-      call this%finalizeIteration(kiter, isgcnvg, isubtime, isuppress_output)      
-      
-    ! -- End of the sub-timestep loop
-    end do 
-    
-    ! -- end the subtiming
-    call subtiming_end()
-    !
-    !
-    ! -- Check if convergence for the exchange packages
-    ! TODO_MJR: shouldn't this be in the subtiming loop?
-    do ic = 1, this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cnvg(this%id, isgcnvg)
-    enddo
-    !
+    ! finish up, write convergence info, CSV file, budgets and flows, ...
+    call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
+     
     ! -- return
     return
   end subroutine sln_ca
-
-  ! prepare for iteration loop, use isubtime == 1 when there is no subtiming
-  ! and the default kpicard == 1 when no picard loop (c.f. sgp_ca())
-  subroutine prepareIteration(this, kpicard, isubtime)
-    use TdisModule, only: kper, kstp
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kpicard
-    integer(I4B), intent(in) :: isubtime
-        
-    ! write headers to CSV file
-    if (kper == 1 .and. kstp == 1 .and. isubtime == 1) then
-      call this%writeCSVHeader()
-    end if
-      
-    ! advance models and exchanges
-    call this%advanceSolution(kpicard, isubtime)
-      
-    ! write PTC info on models to iout
-    call this%writePTCInfoToFile(kper)
-
-    ! reset convergence flag and inner solve counter
-    this%icnvg = 0
-    if (isubtime == 1) then
-      this%itertot = 0
-    end if
-    
-  end subroutine      
-      
+       
   ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
@@ -1321,31 +1256,6 @@ contains
     ! -- return
     return
   end subroutine writeCSVHeader
-  
-  ! advances the exchanges and models in this solution by 1 (sub)timestep
-  ! kpicard will change if we are running the outer picard loop,
-  ! if not (the current use cases) then we use kpicard == 1  
-  subroutine advanceSolution(this, isubtime, kpicard)
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: isubtime, kpicard
-    ! local
-    integer(I4B) :: ic, im
-    class(NumericalExchangeType), pointer :: cp
-    class(NumericalModelType), pointer :: mp
-    
-    ! -- Exchange advance
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_ad(this%id, kpicard, isubtime)
-    enddo
-    
-    ! -- Model advance
-    do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ad(kpicard, isubtime)
-    enddo
-    
-  end subroutine advanceSolution
   
   ! write the PTC header information to file
   subroutine writePTCInfoToFile(this, kper)
@@ -1797,13 +1707,11 @@ contains
   end subroutine doIteration
   
   ! finalize the solution calculate, called after the non-linear iteration loop
-  ! when used without subtiming, do isubtime == 1
-  subroutine finalizeIteration(this, kiter, isgcnvg, isubtime, isuppress_output)
+  subroutine finalizeIteration(this, kiter, isgcnvg, isuppress_output)
     use TdisModule, only: kper, kstp
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
     integer(I4B), intent(inout) :: isgcnvg
-    integer(I4B), intent(in) :: isubtime
     integer(I4B), intent(in) :: isuppress_output
     ! local
     integer(I4B) :: ic, im

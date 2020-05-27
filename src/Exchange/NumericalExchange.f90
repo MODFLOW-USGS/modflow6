@@ -39,14 +39,12 @@ module NumericalExchangeModule
     procedure :: exg_mc
     procedure :: exg_ar
     !procedure :: exg_rp (not needed yet; base exg_rp does nothing)
-    procedure :: exg_ad
     procedure :: exg_cf
     procedure :: exg_fc
     procedure :: exg_nr
     procedure :: exg_cc
     procedure :: exg_cq
     procedure :: exg_bd
-    procedure :: exg_cnvg
     procedure :: exg_ot
     procedure :: exg_da
     procedure :: allocate_scalars
@@ -162,26 +160,6 @@ contains
     ! -- return
     return
   end subroutine exg_ar
-
-  subroutine exg_ad(this, isolnid, kpicard, isubtime)
-! ******************************************************************************
-! exg_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalExchangeType) :: this
-    integer(I4B), intent(in) :: isolnid
-    integer(I4B), intent(in) :: kpicard
-    integer(I4B), intent(in) :: isubtime
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    !
-    ! -- return
-    return
-  end subroutine exg_ad
 
   subroutine exg_cf(this, kiter)
 ! ******************************************************************************
@@ -317,27 +295,6 @@ contains
     ! -- return
     return
   end subroutine exg_bd
-
-  subroutine exg_cnvg(this, isolnid, icnvg)
-! ******************************************************************************
-! exg_cnvg -- Check for convergence for explicit exchange
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: DZERO
-    ! -- dummy
-    class(NumericalExchangeType) :: this
-    integer(I4B), intent(in) :: isolnid
-    integer(I4B), intent(inout) :: icnvg
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    !
-    ! -- return
-    return
-  end subroutine exg_cnvg
 
   subroutine exg_ot(this)
 ! ******************************************************************************
