@@ -1,10 +1,11 @@
 module NumericalExchangeModule
 
   use KindModule,            only: DP, I4B
+  use SimVariablesModule,    only: errmsg
   use BaseExchangeModule,    only: BaseExchangeType
   use NumericalModelModule,  only: NumericalModelType
   use BaseExchangeModule,    only: BaseExchangeType, AddBaseExchangeToList
-  use ConstantsModule,       only: LINELENGTH, DZERO
+  use ConstantsModule,       only: LINELENGTH, LENAUXNAME, DZERO
   use ListModule,            only: ListType
   use BlockParserModule,     only: BlockParserType
 
@@ -30,7 +31,8 @@ module NumericalExchangeModule
     class(NumericalModelType), pointer              :: m1        => null()       !pointer to model 1
     class(NumericalModelType), pointer              :: m2        => null()       !pointer to model 2
     integer(I4B), pointer                           :: naux      => null()       !number of auxiliary variables
-    character(len=16), allocatable, dimension(:)    :: auxname                   !array of auxiliary variable names
+    character(len=LENAUXNAME), dimension(:), pointer,                         &
+                                 contiguous :: auxname => null()                 !vector of auxname
     real(DP), dimension(:, :), pointer, contiguous  :: auxvar    => null()       !array of auxiliary variable values
     type(BlockParserType)                           :: parser                    !block parser
   contains
@@ -362,7 +364,6 @@ contains
     call mem_allocate(this%ipakcb, 'IPAKCB', this%name)
     call mem_allocate(this%nexg, 'NEXG', this%name)
     call mem_allocate(this%naux, 'NAUX', this%name)
-    allocate(this%auxname(0))
     this%filename = ''
     this%typename = ''
     this%implicit = .false.
@@ -430,7 +431,7 @@ contains
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%nexg)
     call mem_deallocate(this%naux)
-    deallocate(this%auxname)
+    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%name))
     !
     ! -- arrays
     call mem_deallocate(this%nodem1)
@@ -452,7 +453,8 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, LENAUXNAME
+    use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, ustop
     use InputOutputModule, only: urdaux
     use ArrayHandlersModule, only: expandarray
@@ -460,9 +462,16 @@ contains
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
-    integer(I4B) :: istart,istop,lloc,ierr
-    logical :: isfound, endOfBlock
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: keyword
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: lloc
+    integer(I4B) :: ierr
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -474,14 +483,22 @@ contains
       write(iout,'(1x,a)')'PROCESSING EXCHANGE OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
+        if (endOfBlock) then
+          exit
+        end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case('AUX', 'AUXILIARY')
             call this%parser%GetRemainingLine(line)
             lloc = 1
-            call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart,   &
-                        istop, this%auxname, line, 'NM_NM_Exchange')
+            call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart,     &
+                        istop, caux, line, 'NM_NM_Exchange')
+            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+                                'AUXNAME', trim(this%name))
+            do n = 1, this%naux
+              this%auxname(n) = caux(n)
+            end do
+            deallocate(caux)
           case ('PRINT_INPUT')
             this%iprpak = 1
             write(iout,'(4x,a)') &
@@ -491,14 +508,13 @@ contains
             write(iout,'(4x,a)') &
               'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN EXCHANGE OPTION: ',    &
-                                     trim(keyword)
+            errmsg = "Unknown exchange option '" // trim(keyword) // "'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(iout,'(1x,a)')'END OF EXCHANGE OPTIONS'
+      write(iout,'(1x,a)') 'END OF EXCHANGE OPTIONS'
     end if
     !
     ! -- return
@@ -520,7 +536,7 @@ contains
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -531,7 +547,7 @@ contains
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(iout,'(1x,a)')'PROCESSING EXCHANGE DIMENSIONS'
+      write(iout,'(1x,a)') 'PROCESSING EXCHANGE DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -539,18 +555,17 @@ contains
         select case (keyword)
           case ('NEXG')
             this%nexg = this%parser%GetInteger()
-            write(iout,'(4x,a,i7)')'NEXG = ', this%nexg
+            write(iout,'(4x,a,i0)') 'NEXG = ', this%nexg
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DIMENSION: ',          &
-                                     trim(keyword)
+            errmsg = "Unknown dimension '" // trim(keyword) // "'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(iout,'(1x,a)')'END OF EXCHANGE DIMENSIONS'
+      write(iout,'(1x,a)') 'END OF EXCHANGE DIMENSIONS'
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required dimensions block not found.')
       call this%parser%StoreErrorUnit()
       call ustop()
     end if

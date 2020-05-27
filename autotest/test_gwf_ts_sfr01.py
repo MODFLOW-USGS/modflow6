@@ -175,6 +175,7 @@ def build_model(ws, name, timeseries=False):
     budpth = '{}.{}.cbc'.format(name, paktest)
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
+                                  print_stage=True,
                                   maximum_picard_iterations=1,
                                   auxiliary=auxnames,
                                   print_input=True,
@@ -200,7 +201,9 @@ def build_model(ws, name, timeseries=False):
         [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
     perioddata = [[0, 'FLOWING_WELL', 0., 0., 0.],
                   [0, 'RATE', 1.e-3]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, mover=True, nmawwells=nmawwells,
+    maw = flopy.mf6.ModflowGwfmaw(gwf,
+                                  print_head=True,
+                                  mover=True, nmawwells=nmawwells,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   perioddata=perioddata, pname='maw-1')
@@ -318,7 +321,8 @@ def build_model(ws, name, timeseries=False):
                                 head_filerecord='{}.hds'.format(name),
                                 saverecord=[('HEAD', 'ALL'),
                                             ('BUDGET', 'ALL')],
-                                printrecord=[('BUDGET', 'LAST')])
+                                printrecord=[('BUDGET', 'LAST'),
+                                             ('HEAD', 'LAST')])
 
     return sim
 

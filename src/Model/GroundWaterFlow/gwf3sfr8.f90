@@ -23,6 +23,7 @@ module SfrModule
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit,              &
                        store_warning, ustop
+  use SimVariablesModule, only: errmsg, warnmsg
   use GenericUtilitiesModule, only: sim_message
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
@@ -313,7 +314,8 @@ contains
     !
     ! -- allocate character array for budget text
     allocate(this%csfrbudget(this%bditems))
-    allocate(this%sfrname(this%maxbound))
+    call mem_allocate(this%sfrname, LENBOUNDNAME, this%maxbound,                 &
+                      'SFRNAME', this%origin)
     !
     ! -- variables originally in SfrDataType
     call mem_allocate(this%iboundpak, this%maxbound, 'IBOUNDPAK', this%origin)
@@ -465,7 +467,6 @@ contains
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg
     character (len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -750,7 +751,6 @@ contains
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: cellid
     character(len=LINELENGTH) :: keyword
@@ -962,7 +962,6 @@ contains
     class(SfrType),intent(inout) :: this
     ! -- local
     character (len=LINELENGTH) :: line
-    character (len=LINELENGTH) :: errmsg
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: n
@@ -1178,7 +1177,6 @@ contains
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg
     character (len=10) :: cnum
     character (len=10) :: cval
     integer(I4B) :: j
@@ -1392,7 +1390,6 @@ contains
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     integer(I4B) :: n
     integer(I4B) :: ichkustrm
@@ -2094,6 +2091,9 @@ contains
      ! -- write sfr stage and depth table
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
+      ! -- set table kstp and kper
+      call this%stagetab%set_kstpkper(kstp, kper)
+      !
       ! -- fill stage data
       do n = 1, this%maxbound
         node = this%igwfnode(n)
@@ -2136,7 +2136,7 @@ contains
     !
     ! -- Output sfr flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output sfr budget
@@ -2164,7 +2164,7 @@ contains
     call mem_deallocate(this%qoutflow)
     call mem_deallocate(this%qextoutflow)
     deallocate(this%csfrbudget)
-    deallocate(this%sfrname)
+    call mem_deallocate(this%sfrname, 'SFRNAME', this%origin)
     call mem_deallocate(this%dbuff)
     deallocate(this%cauxcbc)
     call mem_deallocate(this%qauxcbc)
@@ -2514,7 +2514,6 @@ contains
     class(SfrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, n, nn1
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -2674,7 +2673,6 @@ contains
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ival
     integer(I4B) :: ii
     integer(I4B) :: jj
@@ -3624,7 +3622,6 @@ contains
     character (len=30) :: nodestr
     character (len=LINELENGTH) :: title
     character (len=LINELENGTH) :: text
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nn
     real(DP) :: btgwf, bt
     ! -- code
@@ -3738,7 +3735,6 @@ contains
     character (len= 5) :: crch2
     character (len=LINELENGTH) :: text
     character (len=LINELENGTH) :: title
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nn, nc
     integer(I4B) :: i, ii
     integer(I4B) :: ifound
@@ -3972,7 +3968,6 @@ contains
     character (len= 5) :: cdiv
     character (len= 5) :: crch2
     character (len=10) :: cprior
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: maxdiv
     integer(I4B) :: n
     integer(I4B) :: nn
@@ -4077,7 +4072,6 @@ contains
     logical :: ladd
     character (len=5) :: crch, crch2
     character (len=10) :: cval
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: maxcols
     integer(I4B) :: npairs
     integer(I4B) :: ipair
@@ -4175,11 +4169,11 @@ contains
           if (ids > 1) then
             call store_error(errmsg)
           else
-            write(errmsg, '(a,3(1x,a))')                                         &
-              trim(errmsg), 'A warning instead of an error is issued because',   &
+            write(warnmsg, '(a,3(1x,a))')                                        &
+              trim(warnmsg), 'A warning instead of an error is issued because',  &
               'the reach is only connected to the diversion reach in the ',      &
               'downstream direction.'
-            call store_warning(errmsg)
+            call store_warning(warnmsg)
           end if
         end if
       end do
@@ -4683,7 +4677,9 @@ contains
       !    so they can be written to the binary budget files, but these internal
       !    flows are not included as part of the budget table.
       nterms = 8
-      if (this%inamedbound == 1) nterms = nterms + 1
+      if (this%inamedbound == 1) then
+        nterms = nterms + 1
+      end if
       !
       ! -- set up table title
       title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &

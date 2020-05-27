@@ -3,14 +3,14 @@
 ! an advanced package.
 module TableModule
   
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, I8B, DP
   use ConstantsModule, only: LINELENGTH, LENBUDTXT,                              &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,        &
                              TABCENTER
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error, ustop
-  use TdisModule, only: kstp, kper
+  use SimVariablesModule, only: errmsg
   
   implicit none
   
@@ -58,9 +58,11 @@ module TableModule
     procedure :: line_to_columns
     procedure :: finalize_table  
     procedure :: set_maxbound
+    procedure :: set_kstpkper
     procedure :: set_title
     procedure :: set_iout
     procedure :: print_list_entry
+    procedure :: print_separator
 
     procedure, private :: allocate_strings
     procedure, private :: set_header  
@@ -70,8 +72,9 @@ module TableModule
     procedure, private :: add_error
     procedure, private :: reset
     
-    generic, public :: add_term => add_integer, add_real, add_string
-    procedure, private :: add_integer, add_real, add_string    
+    generic, public :: add_term => add_integer, add_long_integer,                &
+                                   add_real, add_string
+    procedure, private :: add_integer, add_long_integer, add_real, add_string    
 
   end type TableType
   
@@ -152,6 +155,8 @@ module TableModule
     ! -- initialize values based on optional dummy variables
     if (present(transient)) then
       this%transient = transient
+      allocate(this%kstp)
+      allocate(this%kper)
     else
       this%transient = .FALSE.
     end if
@@ -203,7 +208,6 @@ module TableModule
     integer(I4B), intent(in) :: width
     integer(I4B), intent(in), optional :: alignment
     ! -- local
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idx
     integer(I4B) :: ialign
 ! ------------------------------------------------------------------------------
@@ -221,10 +225,11 @@ module TableModule
     !
     ! -- check that ientry is in bounds
     if (this%ientry > this%ntableterm) then
-      write(errmsg,'(4x,a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)')                   &
-        '****ERROR. TRYING TO ADD COLUMN "', trim(adjustl(text)), '" (',         &
-        this%ientry, ') IN THE', trim(adjustl(this%name)), 'TABLE ("',           &
-        trim(adjustl(this%title)), '") THAT ONLY HAS', this%ntableterm, 'COLUMNS'
+      write(errmsg,'(a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)')                      &
+        'Trying to add column "', trim(adjustl(text)), '" (',                    &
+        this%ientry, ') in the', trim(adjustl(this%name)), 'table ("',           &
+        trim(adjustl(this%title)), '") that only has', this%ntableterm,          &
+        'columns.'
       call store_error(errmsg)
       call ustop()
     end if
@@ -401,8 +406,8 @@ module TableModule
       ! -- write title
       title = this%title
       if (this%transient) then
-        write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', kper
-        write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', kstp
+        write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', this%kper
+        write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', this%kstp
       end if
       if (len_trim(title) > 0) then
         write(this%iout, '(/,1x,a)') trim(adjustl(title))
@@ -486,16 +491,10 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     ! -- local
-    integer(I4B) :: width
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize local variables
-    width = this%nlinewidth
-    !
     ! -- write the final table separator
-    if (this%add_linesep) then
-      write(this%iout, '(1x,a,/)') this%linesep(1:width)
-    end if
+    call this%print_separator(iextralines=1)
     !
     ! -- reinitialize variables
     call this%reset()
@@ -527,6 +526,10 @@ module TableModule
     deallocate(this%tableterm)
     !
     ! -- deallocate scalars
+    if (this%transient) then
+      deallocate(this%kstp)
+      deallocate(this%kper)
+    end if
     deallocate(this%sep)
     deallocate(this%write_csv)
     deallocate(this%first_entry)
@@ -606,15 +609,14 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- check that ientry is within bounds
     if (this%ientry > this%ntableterm) then
-      write(errmsg,'(4x,a,1x,i0,5(1x,a),1x,i0,1x,a)')                            &
-        '****ERROR. TRYING TO ADD DATA TO COLUMN ', this%ientry, 'IN THE',       &
-        trim(adjustl(this%name)), 'TABLE (', trim(adjustl(this%title)),          &
-        ') THAT ONLY HAS', this%ntableterm, 'COLUMNS'
+      write(errmsg,'(a,1x,i0,5(1x,a),1x,i0,1x,a)')                               &
+        'Trying to add data to column ', this%ientry, 'in the',                  &
+        trim(adjustl(this%name)), 'table (', trim(adjustl(this%title)),          &
+        ') that only has', this%ntableterm, 'columns.'
       call store_error(errmsg)
       call ustop()
     end if
@@ -693,6 +695,79 @@ module TableModule
     ! -- Return
     return
   end subroutine add_integer
+  
+  subroutine add_long_integer(this, long_ival)
+! ******************************************************************************
+! add_long_integer -- add long integer value to the dataline
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I8B), intent(in) :: long_ival
+    ! -- local
+    logical :: line_end
+    character(len=LINELENGTH) :: cval
+    real(DP) :: rval
+    integer(I4B) :: ival
+    integer(I4B) :: width
+    integer(I4B) :: alignment
+    integer(I4B) :: j
+! ------------------------------------------------------------------------------
+    !
+    ! -- write header
+    if (this%icount == 0 .and. this%ientry == 0) then
+      call this%write_header()
+    end if
+    !
+    ! -- update index for tableterm
+    this%ientry = this%ientry + 1
+    !
+    ! -- check that ientry is within bounds
+    call this%add_error()
+    !
+    ! -- initialize local variables
+    j = this%ientry
+    width = this%tableterm(j)%get_width()
+    alignment = this%tableterm(j)%get_alignment()
+    line_end = .FALSE.
+    if (j == this%ntableterm) then
+      line_end = .TRUE.
+    end if
+    !
+    ! -- add data to line
+    if (this%write_csv) then
+      if (j == 1) then
+        write(this%dataline, '(G0)') long_ival
+      else
+        write(this%dataline, '(a,",",G0)') trim(this%dataline), long_ival
+      end if
+    else
+      write(cval, '(i0)') long_ival
+      if (j == this%ntableterm) then
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+                    trim(cval), ival, rval, ALIGNMENT=alignment)
+      else
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+                    trim(cval), ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      end if
+    end if
+    !
+    ! -- write the data line, if necessary
+    if (line_end) then
+      call this%write_line()
+    end if
+    !
+    ! -- finalize the table, if necessary
+    if (this%allow_finalization) then
+      call this%finalize()
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine add_long_integer
 
   subroutine add_real(this, rval)
 ! ******************************************************************************
@@ -861,6 +936,29 @@ module TableModule
     return
   end subroutine set_maxbound   
   
+  subroutine set_kstpkper(this, kstp, kper)
+! ******************************************************************************
+! set_kstpkper -- reset kstp and kper
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- set maxbound
+    this%kstp = kstp
+    this%kper = kper
+    !
+    ! -- return
+    return
+  end subroutine set_kstpkper   
+  
   subroutine set_title(this, title)
 ! ******************************************************************************
 ! set_maxbound -- reset maxbound
@@ -931,6 +1029,45 @@ module TableModule
     ! -- return
     return
   end subroutine print_list_entry  
+  
+  subroutine print_separator(this, iextralines)
+! ******************************************************************************
+! print_separator -- print a line separator to the table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I4B), optional :: iextralines
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: iextra
+    integer(I4B) :: width
+! ------------------------------------------------------------------------------
+    !
+    ! -- process optional variables
+    if (present(iextralines)) then
+      iextra = iextralines
+    else
+      iextra = 0
+    end if
+    !
+    ! -- initialize local variables
+    width = this%nlinewidth
+    !
+    ! -- print line separator
+    if (this%add_linesep) then
+      write(this%iout, '(1x,a)') this%linesep(1:width)
+      do i = 1, iextra
+        write(this%iout, '(/)')
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine print_separator
   
   subroutine reset(this)
 ! ******************************************************************************

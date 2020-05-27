@@ -1778,8 +1778,7 @@ module InputOutputModule
     return
   end subroutine extract_idnum_or_bndname
 
-  subroutine urdaux(naux, inunit, iout, lloc, istart, istop, auxname, line,  &
-                    text)
+  subroutine urdaux(naux, inunit, iout, lloc, istart, istop, auxname, line, text)
 ! ******************************************************************************
 ! Read auxiliary variables from an input line
 ! ******************************************************************************
@@ -1808,9 +1807,8 @@ module InputOutputModule
 ! ------------------------------------------------------------------------------
     linelen = len(line)
     if(naux > 0) then
-      write(errmsg,'(a)') '****ERROR. AUXILIARY VARIABLES ' //         &
-        'ALREADY SPECIFIED. AUXILIARY VARIABLES MUST BE SPECIFIED '//  &
-        'ON ONE LINE IN THE OPTIONS BLOCK.'
+      write(errmsg,'(a)') 'Auxiliary variables already specified. Auxiliary ' // &
+        'variables must be specified on one line in the options block.'
       call store_error(errmsg)
       call store_error_unit(inunit)
       call ustop()
