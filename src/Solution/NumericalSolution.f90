@@ -73,8 +73,8 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: res_in  => NULL()
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
-    integer(I4B), pointer                                :: itertot => NULL() ! total nr. of linear solves per call to sln_ca
-    integer(I4B), pointer                                :: innertot => NULL() ! total nr. of inner iterations for simulation
+    integer(I4B), pointer                                :: itertot_timestep => NULL()   ! total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                                :: itertot_sim => NULL()        ! total nr. of inner iterations for simulation
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -253,8 +253,8 @@ contains
     call mem_allocate(this%res_in, 'RES_IN', solutionname)
     call mem_allocate(this%ibcount, 'IBCOUNT', solutionname)
     call mem_allocate(this%icnvg, 'ICNVG', solutionname)
-    call mem_allocate(this%itertot, 'ITERTOT', solutionname)
-    call mem_allocate(this%innertot, 'INNERTOT', solutionname)
+    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', solutionname)
+    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', solutionname)
     call mem_allocate(this%mxiter, 'MXITER', solutionname)
     call mem_allocate(this%linmeth, 'LINMETH', solutionname)
     call mem_allocate(this%nonmeth, 'NONMETH', solutionname)
@@ -299,8 +299,8 @@ contains
     this%res_in = DZERO
     this%ibcount = 0
     this%icnvg = 0
-    this%itertot = 0
-    this%innertot = 0
+    this%itertot_timestep = 0
+    this%itertot_sim = 0
     this%mxiter = 0
     this%linmeth = 1
     this%nonmeth = 0
@@ -1002,7 +1002,7 @@ contains
             
     ! reset convergence flag and inner solve counter
     this%icnvg = 0
-    this%itertot = 0   
+    this%itertot_timestep = 0   
     
     return
   end subroutine sln_ad
@@ -1133,8 +1133,8 @@ contains
     call mem_deallocate(this%res_in)
     call mem_deallocate(this%ibcount)
     call mem_deallocate(this%icnvg)
-    call mem_deallocate(this%itertot)
-    call mem_deallocate(this%innertot)
+    call mem_deallocate(this%itertot_timestep)
+    call mem_deallocate(this%itertot_sim)
     call mem_deallocate(this%mxiter)
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
@@ -1181,11 +1181,7 @@ contains
     integer(I4B), intent(inout) :: isgcnvg
     integer(I4B), intent(in) :: isuppress_output    
     ! -- local
-    class(NumericalModelType), pointer :: mp
-    class(NumericalExchangeType), pointer :: cp
     integer(I4B) :: kiter   ! non-linear iteration counter
-    integer(I4B) :: im, ic
-
 ! ------------------------------------------------------------------------------
     
     ! nonlinear iteration loop for this solution
@@ -1331,6 +1327,7 @@ contains
     integer(I4B) :: ic
     integer(I4B) :: im    
     integer(I4B) :: icsv0
+    integer(I4B) :: kcsv0
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: i0, i1    
@@ -1358,7 +1355,8 @@ contains
     ! -- code
     !
     ! -- initialize local variables
-    icsv0 = max(1, this%innertot + 1)
+    icsv0 = max(1, this%itertot_sim + 1)
+    kcsv0 = max(1, this%itertot_timestep + 1)
     !
     ! -- create header for outer iteration table
     if (this%iprims > 0) then
@@ -1466,8 +1464,8 @@ contains
     !
     ! -- increment counters storing the total number of linear iterations
     !    for this timestep and all timesteps
-    this%itertot = this%itertot + iter
-    this%innertot = this%innertot + iter
+    this%itertot_timestep = this%itertot_timestep + iter
+    this%itertot_sim = this%itertot_sim + iter
     !
     ! -- save matrix to a file
     !    to enable set itestmat to 1 and recompile
@@ -1555,7 +1553,8 @@ contains
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
       call mp%get_mcellid(0, cmod)
-      call mp%model_cc(this%innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+      call mp%model_cc(this%itertot_sim, kiter, iend, icnvgmod,                  &
+                       cpak, ipak, dpak)
       if (ipak /= 0) then
         ipos0 = index(cpak, '-', back=.true.)
         ipos1 = len_trim(cpak)
@@ -1694,14 +1693,14 @@ contains
       !
       ! -- write line to outer iteration csv file
       write(this%icsvouterout, '(*(G0,:,","))')                                  &
-          this%innertot, totim, kper, kstp, kiter, iter,                         &
+          this%itertot_sim, totim, kper, kstp, kiter, iter,                      &
           outer_hncg, im, trim(cpakout), nodeu
     end if
     !
     ! -- write to inner iteration csv file
     if (this%icsvinnerout > 0) then
       call this%csv_convergence_summary(this%icsvinnerout, totim, kper, kstp,    &
-                                        kiter, iter, icsv0)
+                                        kiter, iter, icsv0, kcsv0)
     end if
     
   end subroutine doIteration
@@ -1737,7 +1736,7 @@ contains
     ! -- convergence was achieved
     if (this%icnvg /= 0) then
       if (this%iprims > 0) then
-        write(iout, fmtcnvg) kiter, kstp, kper, this%itertot
+        write(iout, fmtcnvg) kiter, kstp, kper, this%itertot_timestep
       end if
     !
     ! -- convergence was not achieved
@@ -1751,11 +1750,11 @@ contains
       ! -- write summary for each model
       do im=1,this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
-        call this%convergence_summary(mp%iout, im, this%itertot)
+        call this%convergence_summary(mp%iout, im, this%itertot_timestep)
       end do
       !
       ! -- write summary for entire solution
-      call this%convergence_summary(iout, this%convnmod+1, this%itertot)
+      call this%convergence_summary(iout, this%convnmod+1, this%itertot_timestep)
     end if
     !
     ! -- set solution goup convergence flag
@@ -1787,7 +1786,7 @@ contains
     
   end subroutine finalizeIteration
   
-  subroutine convergence_summary(this, iu, im, itertot)
+  subroutine convergence_summary(this, iu, im, itertot_timestep)
 ! ******************************************************************************
 ! convergence_summary -- Save convergence summary to a File
 ! ******************************************************************************
@@ -1800,7 +1799,7 @@ contains
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: iu
     integer(I4B), intent(in) :: im
-    integer(I4B), intent(in) :: itertot
+    integer(I4B), intent(in) :: itertot_timestep
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
@@ -1827,7 +1826,7 @@ contains
       !
       ! -- create outer iteration table
       ! -- table dimensions
-      ntabrows = itertot
+      ntabrows = itertot_timestep
       ntabcols = 7
       !
       ! -- initialize table and define columns
@@ -1851,13 +1850,13 @@ contains
     !
     ! -- reset the output unit and the number of rows (maxbound)
     else
-      call this%innertab%set_maxbound(itertot)
+      call this%innertab%set_maxbound(itertot_timestep)
       call this%innertab%set_iout(iu)
     end if
     !
     ! -- write the inner iteration summary to unit iu
     i0 = 0
-    do k = 1, itertot
+    do k = 1, itertot_timestep
       i = this%itinner(k)
       if (i <= i0) then
         iouter = iouter + 1
@@ -1903,7 +1902,7 @@ contains
 
 
   subroutine csv_convergence_summary(this, iu, totim, kper, kstp, kouter,        &
-                                     niter, istart)
+                                     niter, istart, kstart)
 ! ******************************************************************************
 ! csv_convergence_summary -- Save convergence summary to a csv file
 ! ******************************************************************************
@@ -1921,11 +1920,13 @@ contains
     integer(I4B), intent(in) :: kouter
     integer(I4B), intent(in) :: niter
     integer(I4B), intent(in) :: istart
+    integer(I4B), intent(in) :: kstart
     ! -- local
     integer(I4B) :: itot
     integer(I4B) :: im
     integer(I4B) :: j
     integer(I4B) :: k
+    integer(I4B) :: kpos
     integer(I4B) :: locdv
     integer(I4B) :: locdr
     integer(I4B) :: nodeu
@@ -1938,6 +1939,7 @@ contains
     !
     ! -- write inner iteration results to the inner csv output file
     do k = 1, niter
+      kpos = kstart + k - 1
       write(iu, '(*(G0,:,","))', advance='NO')                                 &
         itot, totim, kper, kstp, kouter, k
       !
@@ -1945,13 +1947,13 @@ contains
       dv = DZERO
       dr = DZERO
       do j = 1, this%convnmod
-        if (ABS(this%convdvmax(j, k)) > ABS(dv)) then
-          locdv = this%convlocdv(j, k)
-          dv = this%convdvmax(j, k)
+        if (ABS(this%convdvmax(j, kpos)) > ABS(dv)) then
+          locdv = this%convlocdv(j, kpos)
+          dv = this%convdvmax(j, kpos)
         end if
-        if (ABS(this%convdrmax(j, k)) > ABS(dr)) then
-          locdr = this%convlocdr(j, k)
-          dr = this%convdrmax(j, k)
+        if (ABS(this%convdrmax(j, kpos)) > ABS(dr)) then
+          locdr = this%convlocdr(j, kpos)
+          dr = this%convdrmax(j, kpos)
         end if
       end do
       !
@@ -1964,15 +1966,16 @@ contains
       write(iu, '(*(G0,:,","))', advance='NO') '', dr, im, nodeu
       !
       ! -- write acceleration parameters
-      write(iu, '(*(G0,:,","))', advance='NO') '', trim(adjustl(this%caccel(k)))
+      write(iu, '(*(G0,:,","))', advance='NO')                                   &
+        '', trim(adjustl(this%caccel(kpos)))
       !
       ! -- write information for each model
       if (this%convnmod > 1) then
         do j = 1, this%convnmod
-          locdv = this%convlocdv(j, k)
-          dv = this%convdvmax(j, k)
-          locdr = this%convlocdr(j, k)
-          dr = this%convdrmax(j, k)
+          locdv = this%convlocdv(j, kpos)
+          dv = this%convdvmax(j, kpos)
+          locdr = this%convlocdr(j, kpos)
+          dr = this%convdrmax(j, kpos)
           !
           ! -- get model number and user node number for dv
           call this%sln_get_nodeu(locdv, im, nodeu)
