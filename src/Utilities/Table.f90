@@ -62,6 +62,7 @@ module TableModule
     procedure :: set_title
     procedure :: set_iout
     procedure :: print_list_entry
+    procedure :: print_separator
 
     procedure, private :: allocate_strings
     procedure, private :: set_header  
@@ -490,16 +491,10 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     ! -- local
-    integer(I4B) :: width
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize local variables
-    width = this%nlinewidth
-    !
     ! -- write the final table separator
-    if (this%add_linesep) then
-      write(this%iout, '(1x,a,/)') this%linesep(1:width)
-    end if
+    call this%print_separator(iextralines=1)
     !
     ! -- reinitialize variables
     call this%reset()
@@ -1034,6 +1029,45 @@ module TableModule
     ! -- return
     return
   end subroutine print_list_entry  
+  
+  subroutine print_separator(this, iextralines)
+! ******************************************************************************
+! print_separator -- print a line separator to the table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I4B), optional :: iextralines
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: iextra
+    integer(I4B) :: width
+! ------------------------------------------------------------------------------
+    !
+    ! -- process optional variables
+    if (present(iextralines)) then
+      iextra = iextralines
+    else
+      iextra = 0
+    end if
+    !
+    ! -- initialize local variables
+    width = this%nlinewidth
+    !
+    ! -- print line separator
+    if (this%add_linesep) then
+      write(this%iout, '(1x,a)') this%linesep(1:width)
+      do i = 1, iextra
+        write(this%iout, '(/)')
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine print_separator
   
   subroutine reset(this)
 ! ******************************************************************************

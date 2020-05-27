@@ -12,13 +12,13 @@ module MemoryTypeModule
  
   type MemoryType
     character(len=LENVARNAME)                              :: name                   !name of the array
+    character(len=LENVARNAME)                              :: mastername = 'none'    !name of the master array
     character(len=LENORIGIN)                               :: origin                 !name of origin
     character(len=LENMEMTYPE)                              :: memtype                !type (INTEGER or DOUBLE)
     integer(I4B)                                           :: id                     !id, not used
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array
     logical(LGP)                                           :: master = .true.        !master copy, others point to this one
-    character(len=:), pointer                              :: strsclr     => null()  !deferred length string
     logical(LGP), pointer                                  :: logicalsclr => null()  !pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !pointer to the integer
     real(DP), pointer                                      :: dblsclr     => null()  !pointer to the double
@@ -41,9 +41,7 @@ module MemoryTypeModule
     type(TableType), intent(inout) :: memtab
     ! -- local
     character(len=16) :: cmem
-    character(len=10) :: cnalloc
-    character(len=5) :: cptr
-    character(len=5) :: dastr
+    character(len=LENVARNAME) :: cptr
     integer(I4B) :: ipos
     ! -- formats
     !
@@ -56,20 +54,10 @@ module MemoryTypeModule
     end if
     cmem = this%memtype(1:ipos)
     !
-    ! -- set reallocation string
-    cnalloc = '--'
-    if (this%nrealloc > 0) then
-      write(cnalloc, '(i0)') this%nrealloc
-    end if
-    !
     ! -- Set pointer and deallocation string
     cptr = '--'
     if (.not. this%master) then
-      cptr = 'TRUE'
-    end if
-    dastr = '--'
-    if (this%mt_associated() .and. this%isize > 0) then
-      dastr='FALSE'
+      cptr = this%mastername
     end if
     !
     ! -- write data to the table
@@ -77,9 +65,7 @@ module MemoryTypeModule
     call memtab%add_term(this%name)
     call memtab%add_term(cmem)
     call memtab%add_term(this%isize)
-    call memtab%add_term(cnalloc)
     call memtab%add_term(cptr)
-    call memtab%add_term(dastr)
     !
     ! -- return
     return
@@ -89,7 +75,6 @@ module MemoryTypeModule
     class(MemoryType) :: this
     logical :: al
     al = .false.
-    if(associated(this%strsclr)) al = .true.
     if(associated(this%logicalsclr)) al = .true.
     if(associated(this%intsclr)) al = .true.
     if(associated(this%dblsclr)) al = .true.

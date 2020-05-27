@@ -50,14 +50,17 @@ module GwfCsubModule
   !
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
+    ! -- characters scalars
+    character(len=LENLISTLABEL), pointer :: listlabel => null()                  !title of table written for RP
+    character(len=LENORIGIN), pointer :: stoname => null()
+    ! -- character arrays
     character(len=LENBOUNDNAME), dimension(:),                                  &
                                  pointer, contiguous :: boundname => null()      !vector of boundnames
     character(len=LENAUXNAME), dimension(:),                                    &
                                  pointer, contiguous :: auxname => null()        !vector of auxname
-    !character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
-    !character(len=LENORIGIN) :: stoname
-    character(len=:), pointer :: listlabel => null()                              !title of table written for RP
-    character(len=:), pointer :: stoname => null()
+    ! -- logical scalars
+    logical, pointer :: lhead_based => null()
+    ! -- integer scalars
     integer(I4B), pointer :: istounit => null()
     integer(I4B), pointer :: istrainib => null()
     integer(I4B), pointer :: istrainsk => null()
@@ -86,8 +89,8 @@ module GwfCsubModule
     integer(I4B), pointer :: initialized => null()
     integer(I4B), pointer :: ieslag => null()
     integer(I4B), pointer :: ipch => null()
-    logical, pointer :: lhead_based => null()
     integer(I4B), pointer :: iupdatestress => null()
+    ! -- real scalars
     real(DP), pointer :: epsilon => null()                                       !epsilon for stress smoothing
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
@@ -96,11 +99,13 @@ module GwfCsubModule
     real(DP), pointer :: dbfact => null()
     real(DP), pointer :: dbfacti => null()
     real(DP), pointer :: satomega => null()                                      !newton-raphson saturation omega
-
+    ! -- integer pointer to storage package variables
     integer(I4B), pointer :: gwfiss => NULL()                                    !pointer to model iss flag
     integer(I4B), pointer :: gwfiss0 => NULL()                                   !iss flag for last stress period
+    ! -- integer arrays
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: stoiconv => null()        !pointer to iconvert in storage
+    ! -- real arrays
     real(DP), dimension(:), pointer, contiguous :: stosc1 => null()              !pointer to sc1 in storage
     real(DP), dimension(:), pointer, contiguous :: buff => null()                !buff array
     real(DP), dimension(:), pointer, contiguous :: buffusr => null()             !buffusr array
@@ -2899,8 +2904,8 @@ contains
     end if
     !
     ! -- deallocate character variables
-    call mem_deallocate(this%listlabel)
-    call mem_deallocate(this%stoname)
+    call mem_deallocate(this%listlabel, 'LISTLABEL', this%origin)
+    call mem_deallocate(this%stoname, 'STONAME', this%origin)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%istounit)

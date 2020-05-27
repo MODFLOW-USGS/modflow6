@@ -32,8 +32,7 @@ module BndModule
 
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
-    !character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
-    character(len=:), pointer :: listlabel  => null()                            !title of table written for RP
+    character(len=LENLISTLABEL), pointer :: listlabel  => null()                 !title of table written for RP
     character(len=LENPACKAGENAME) :: text = ''
     character(len=LENAUXNAME), dimension(:), pointer,                           &
                                  contiguous :: auxname => null()                 !vector of auxname
@@ -899,7 +898,7 @@ module BndModule
     end if
     !
     ! -- deallocate character variables
-    call mem_deallocate(this%listlabel)
+    call mem_deallocate(this%listlabel, 'LISTLABEL', this%origin)
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)

@@ -1,8 +1,8 @@
 module MemoryManagerModule
 
   use KindModule,             only: DP, LGP, I4B, I8B
-  use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH,    &
-                                    LENMEMTYPE,                                  &
+  use ConstantsModule,        only: DZERO, DEM6, LENORIGIN, LENVARNAME,          &
+                                    LINELENGTH, LENMEMTYPE,                      &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                                     TABCENTER, TABLEFT, TABRIGHT
   use SimVariablesModule,     only: errmsg
@@ -194,7 +194,7 @@ module MemoryManagerModule
   subroutine get_from_memorylist(name, origin, mt, found, check)
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    type(MemoryType), pointer, intent(out) :: mt
+    type(MemoryType), pointer, intent(inout) :: mt
     logical(LGP),intent(out) :: found
     logical(LGP), intent(in), optional :: check
     integer(I4B) :: ipos
@@ -278,8 +278,8 @@ module MemoryManagerModule
 
   subroutine allocate_str(strsclr, ilen, name, origin)
     ! -- dummy
-    character(len=:), pointer, intent(inout) :: strsclr
     integer(I4B), intent(in) :: ilen
+    character(len=ilen), pointer, intent(inout) :: strsclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     ! -- local
@@ -287,6 +287,15 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     ! -- format
     ! -- code
+    !
+    ! -- make sure ilen is greater than 0
+    if (ilen < 1) then
+      errmsg = 'Programming error in allocate_str. ILEN must be greater than 0.' 
+      call store_error(errmsg)
+      call ustop()
+    end if
+    !
+    ! -- check that the varible name is not already defined
     call check_varname(name)
     !
     ! -- allocate string
@@ -305,7 +314,6 @@ module MemoryManagerModule
     allocate(mt)
     !
     ! -- set memory type
-    mt%strsclr => strsclr
     mt%isize = ilen
     mt%name = name
     mt%origin = origin
@@ -335,6 +343,14 @@ module MemoryManagerModule
     !
     ! -- initialize string
     string = ''
+    !
+    ! -- make sure ilen is greater than 0
+    if (ilen < 1) then
+      errmsg = 'Programming error in allocate_str1d. ' //                        &
+        'ILEN must be greater than 0.' 
+      call store_error(errmsg)
+      call ustop()
+    end if
     !
     ! -- check that the varible name is not already defined
     call check_varname(name)
@@ -1010,9 +1026,12 @@ module MemoryManagerModule
     end if
     aint1d => mt2%aint1d
     mt%aint1d => aint1d
-    mt%isize = 0 !size(aint1d)
+    mt%isize = 0 
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     mt%master = .false.
+    mt%mastername = name2
+    !
+    ! -- return
     return
   end subroutine reassignptr_int1d
 
@@ -1033,11 +1052,14 @@ module MemoryManagerModule
     end if
     aint2d => mt2%aint2d
     mt%aint2d => aint2d
-    mt%isize = 0 !size(aint2d)
+    mt%isize = 0 
     ncol = size(aint2d, dim=1)
     nrow = size(aint2d, dim=2)
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     mt%master = .false.
+    mt%mastername = name2
+    !
+    ! -- return
     return
   end subroutine reassignptr_int2d
 
@@ -1057,9 +1079,12 @@ module MemoryManagerModule
     end if
     adbl1d => mt2%adbl1d
     mt%adbl1d => adbl1d
-    mt%isize = 0 !size(adbl1d)
+    mt%isize = 0 
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
     mt%master = .false.
+    mt%mastername = name2
+    !
+    ! -- return
     return
   end subroutine reassignptr_dbl1d
 
@@ -1080,110 +1105,62 @@ module MemoryManagerModule
     end if
     adbl2d => mt2%adbl2d
     mt%adbl2d => adbl2d
-    mt%isize = 0 !size(adbl2d)
+    mt%isize = 0 
     ncol = size(adbl2d, dim=1)
     nrow = size(adbl2d, dim=2)
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     mt%master = .false.
+    mt%mastername = name2
+    !
+    ! -- return
     return
   end subroutine reassignptr_dbl2d
 
-  subroutine deallocate_str(strsclr)
+  subroutine deallocate_str(strsclr, name, origin)
     ! -- dummy  
-    character(len=:), pointer, intent(inout) :: strsclr
+    character(len=*), pointer, intent(inout) :: strsclr
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
     ! -- local
-    class(MemoryType), pointer :: mt
+    type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
     ! -- code
-    found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      !if(associated(mt%strsclr, strsclr)) then
-      if(associated(mt%strsclr)) then
-        if (mt%strsclr == strsclr) then
-          nullify(mt%strsclr)
-          found = .true.
-          exit
-        end if
-      end if
-    end do
-    if (.not. found) then
-      call store_error('programming error in deallocate_str')
-      call ustop()
-    else
-      if (mt%master) then
-        deallocate(strsclr)
+    if (associated(strsclr)) then
+      call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
+      if (.not. found) then
+        call store_error('Programming error in deallocate_str.')
+        call ustop()
       else
-        nullify(strsclr)
+        deallocate(strsclr)
       end if
-    endif
+    end if
   end subroutine deallocate_str
   
   subroutine deallocate_str1d(astr1d, name, origin)
     ! -- dummy variables
     character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
     ! -- local variables
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
     ! -- code
-    found = .false.
     if (associated(astr1d)) then
-      if (present(name) .and. present(origin)) then
-        call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
-      else
-        errmsg = 'Programming error. Name and origin not passed ' //             &
-          'to deallocate_str1d.'
-        call store_error(errmsg)
-        call ustop()
-      end if
-      if (.not. found .and. associated(astr1d)) then
+      call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
+      if (.not. found) then
         errmsg = "Programming error in deallocate_str1d. Variable '" //          &
           trim(name) // "' from origin '" // trim(origin) // "' is not " //      &
           "present in the memory manager but is associated."
         call store_error(errmsg)
         call ustop()
       else
-        if (found) then
-          if (mt%master) then
-            if (mt%isize > 0) then
-              deallocate(astr1d)
-            end if
-          else
-            nullify(astr1d)
-          end if
-        end if
+        deallocate(astr1d)
       end if
     end if
     !
     ! -- return
     return
   end subroutine deallocate_str1d
-  
-  function astr1d_equal(a, b) result(equal)
-    ! -- return variable
-    logical(LGP) :: equal
-    ! -- dummy
-    character(len=:), dimension(:), pointer, contiguous, intent(in) :: a
-    character(len=:), dimension(:), pointer, contiguous, intent(in) :: b
-    ! -- local
-    integer(I4B) :: n
-    ! -- format
-    ! -- code
-    equal = .TRUE.
-    do n = 1, size(a)
-      if (a(n) /= b(n)) then
-        equal = .FALSE.
-        exit
-      end if
-    end do
-    !
-    ! -- return
-    return
-  end function astr1d_equal
 
   subroutine deallocate_logical(logicalsclr)
     logical(LGP), pointer, intent(inout) :: logicalsclr
@@ -1226,7 +1203,7 @@ module MemoryManagerModule
       endif
     enddo
     if (.not. found) then
-      call store_error('programming error in deallocate_int')
+      call store_error('Programming error in deallocate_int.')
       call ustop()
     else
       if (mt%master) then
@@ -1252,7 +1229,7 @@ module MemoryManagerModule
       endif
     enddo
     if (.not. found) then
-      call store_error('programming error in deallocate_dbl')
+      call store_error('Programming error in deallocate_dbl.')
       call ustop()
     else
       if (mt%master) then
@@ -1497,7 +1474,8 @@ module MemoryManagerModule
     nterms = 6
     !
     ! -- set up table title
-    title = 'SUMMARY INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
+    title = 'SUMMARY INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER, ' // &
+            'IN MEGABYTES'
     !
     ! -- set up stage tableobj
     call table_cr(memtab, 'MEM SUM', title)
@@ -1507,24 +1485,24 @@ module MemoryManagerModule
     text = 'COMPONENT'
     call memtab%initialize_column(text, 20, alignment=TABLEFT)
     !
-    ! -- number of characters
+    ! -- memory allocated for characters
     text = 'CHARACTER'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
-    ! -- number of logical
+    ! -- memory allocated for logical
     text = 'LOGICAL'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
-    ! -- number of integers
+    ! -- memory allocated for integers
     text = 'INTEGER'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
-    ! -- number of reals
+    ! -- memory allocated for reals
     text = 'REAL'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
-    ! -- number of integers
-    text = 'TOTAL MEGABYTES'
+    ! -- total memory allocated
+    text = 'TOTAL'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
     ! -- return
@@ -1541,7 +1519,7 @@ module MemoryManagerModule
     integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    nterms = 7
+    nterms = 5
     !
     ! -- set up table title
     title = 'DETAILED INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
@@ -1564,40 +1542,32 @@ module MemoryManagerModule
     !
     ! -- size
     text = 'NUMBER OF ITEMS'
-    call memtab%initialize_column(text, 16, alignment=TABRIGHT)
+    call memtab%initialize_column(text, 20, alignment=TABRIGHT)
     !
-    ! -- number oof reallocations
-    text = 'NUMBER OF TIMES RE- ALLOCATED'
-    call memtab%initialize_column(text, 10, alignment=TABCENTER)
-    !
-    ! -- is it a point
-    text = 'POINTER TO ANOTHER VARIABLE'
-    call memtab%initialize_column(text, 10, alignment=TABCENTER)
-    !
-    ! -- has it been deallocated
-    text = 'STILL ALLOCATED'
-    call memtab%initialize_column(text, 10, alignment=TABCENTER)
+    ! -- is it a pointer
+    text = 'ASSOCIATED VARIABLE'
+    call memtab%initialize_column(text, LENVARNAME, alignment=TABLEFT)
     !
     ! -- return
     return
   end subroutine detailed_table  
   
-  subroutine summary_line(component, nchars, nlog, nint, nreal, bytesmb)
+  subroutine summary_line(component, rchars, rlog, rint, rreal, bytesmb)
     ! -- dummy
     character(len=*), intent(in) :: component
-    integer(I8B), intent(in) :: nchars
-    integer(I8B), intent(in) :: nlog
-    integer(I8B), intent(in) :: nint
-    integer(I8B), intent(in) :: nreal
+    real(DP), intent(in) :: rchars
+    real(DP), intent(in) :: rlog
+    real(DP), intent(in) :: rint
+    real(DP), intent(in) :: rreal
     real(DP), intent(in) :: bytesmb
     ! -- local
     ! -- formats
     ! -- code
     call memtab%add_term(component)
-    call memtab%add_term(nchars)
-    call memtab%add_term(nlog)
-    call memtab%add_term(nint)
-    call memtab%add_term(nreal)
+    call memtab%add_term(rchars)
+    call memtab%add_term(rlog)
+    call memtab%add_term(rint)
+    call memtab%add_term(rreal)
     call memtab%add_term(bytesmb)
     !
     ! -- return
@@ -1613,13 +1583,14 @@ module MemoryManagerModule
     character(len=LINELENGTH) :: text
     integer(I4B) :: nterms
     integer(I4B) :: nrows
+    real(DP) :: smb
     ! -- formats
     ! -- code
     nterms = 2
-    nrows = 4
+    nrows = 5
     !
     ! -- set up table title
-    title = 'MEMORY MANAGER TOTAL STORAGE BY DATA TYPE'
+    title = 'MEMORY MANAGER TOTAL STORAGE BY DATA TYPE, IN MEGABYTES'
     !
     ! -- set up stage tableobj
     call table_cr(memtab, 'MEM TOT', title)
@@ -1630,25 +1601,35 @@ module MemoryManagerModule
     call memtab%initialize_column(text, 15, alignment=TABLEFT)
     !
     ! -- number of values
-    text = 'ALLOCATED NUMBER'
-    call memtab%initialize_column(text, 25, alignment=TABRIGHT)
+    text = 'ALLOCATED MEMORY'
+    call memtab%initialize_column(text, 15, alignment=TABCENTER)
     !
     ! -- write data
+    !
     ! -- characters
+    smb = real(nvalues_astr, DP) * DEM6
     call memtab%add_term('Character')
-    call memtab%add_term(nvalues_astr)
+    call memtab%add_term(smb)
+    !
     ! -- logicals
+    smb = real(nvalues_alogical * LGP, DP) * DEM6
     call memtab%add_term('Logical')
-    call memtab%add_term(nvalues_alogical)
+    call memtab%add_term(smb)
+    !
     ! -- integers
+    smb = real(nvalues_aint * I4B, DP) * DEM6
     call memtab%add_term('Integer')
-    call memtab%add_term(nvalues_aint)
+    call memtab%add_term(smb)
+    !
     ! -- reals
+    smb = real(nvalues_adbl * DP, DP) * DEM6
     call memtab%add_term('Real')
-    call memtab%add_term(nvalues_adbl)
+    call memtab%add_term(smb)
     !
     ! -- total memory usage
-    write(iout, '(1x,a,1x,g15.7,1x,a)') 'Total allocated memory:', bytesmb, 'MB'
+    call memtab%print_separator()
+    call memtab%add_term('Total')
+    call memtab%add_term(bytesmb)
     !
     ! -- deallocate table
     call cleanup_table()
@@ -1668,7 +1649,8 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine cleanup_table  
+  end subroutine cleanup_table 
+  
   
   subroutine mem_usage(iout)
     ! -- dummy
@@ -1683,6 +1665,10 @@ module MemoryManagerModule
     integer(I8B) :: nlog
     integer(I8B) :: nint
     integer(I8B) :: nreal
+    real(DP) :: rchars
+    real(DP) :: rlog
+    real(DP) :: rint
+    real(DP) :: rreal
     real(DP) :: bytesmb
     ! -- formats
     ! -- code
@@ -1716,11 +1702,17 @@ module MemoryManagerModule
           end if
         end do
         !
-        ! -- calculate storage in megabytes
-        bytesmb = (nchars + nlog * LGP + nint * I4B + nreal * DP) / 1000000_DP
+        ! -- calculate size of each data type
+        rchars = real(nchars, DP) * DEM6
+        rlog = real(nlog * LGP, DP) * DEM6
+        rint = real(nint * I4B, DP) * DEM6
+        rreal = real(nreal * DP, DP) * DEM6
+        !
+        ! -- calculate total storage in megabytes
+        bytesmb = rchars + rlog + rint + rreal
         !
         ! -- write data
-        call summary_line(cunique(icomp), nchars, nlog, nint, nreal, bytesmb)
+        call summary_line(cunique(icomp), rchars, rlog, rint, rreal, bytesmb)
       end do
       call cleanup_table()
     endif
@@ -1739,7 +1731,8 @@ module MemoryManagerModule
     bytesmb = (nvalues_astr +                                                    &
                nvalues_alogical * LGP +                                          &
                nvalues_aint * I4B +                                              &
-               nvalues_adbl * DP) / 1000000_DP
+               nvalues_adbl * DP)
+    bytesmb = real(bytesmb, DP) * DEM6
     call summary_total(iout, bytesmb)
     !
     ! -- return
