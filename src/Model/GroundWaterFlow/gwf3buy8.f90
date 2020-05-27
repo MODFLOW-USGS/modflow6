@@ -217,7 +217,8 @@ module GwfBuyModule
 
   subroutine buy_ar_bnd(this, packobj, hnew)
 ! ******************************************************************************
-! buy_ar_bnd -- buoyancy ar_bnd routine to activate density in packages
+! buy_ar_bnd -- buoyancy ar_bnd routine to activate density in packages.
+!   This routine is called from gwf_ar() as it goes through each package.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -226,6 +227,7 @@ module GwfBuyModule
     use BndModule, only: BndType
     use LakModule, only: LakType
     use SfrModule, only: SfrType
+    use MawModule, only: MawType
     ! -- dummy
     class(GwfBuyType) :: this
     class(BndType), pointer :: packobj
@@ -249,6 +251,14 @@ module GwfBuyModule
         select type(packobj)
         type is (SfrType)
           call packobj%sfr_activate_density()
+        end select
+        
+      case('MAW')
+        !
+        ! -- activate density for maw package
+        select type(packobj)
+        type is (MawType)
+          call packobj%maw_activate_density()
         end select
         
       case default
@@ -896,7 +906,7 @@ module GwfBuyModule
   subroutine buy_cf_maw(packobj, hnew, dense, elev, denseref, locdense,        &
                         locconc, drhodc, crhoref, ctemp, iform)
 ! ******************************************************************************
-! buy_cf_maw -- Pass density information into sfr package; density terms are
+! buy_cf_maw -- Pass density information into maw package; density terms are
 !   calculated in the maw package as part of maw_calculate_density_exchange
 !   method
 ! ******************************************************************************
@@ -1751,7 +1761,10 @@ module GwfBuyModule
 
   subroutine set_concentration_pointer(this, modelname, conc, icbund)
 ! ******************************************************************************
-! set_concentration_pointer
+! set_concentration_pointer -- pass in a gwt model name, concentration array
+!   and ibound, and store a pointer to these in the BUY package so that 
+!   density can be calculated from them.
+!   This routine is called from the gwfgwt exchange in the exg_ar() method.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

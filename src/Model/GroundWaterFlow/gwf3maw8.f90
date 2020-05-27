@@ -196,6 +196,7 @@ module MawModule
     ! -- table
     procedure, private :: maw_setup_tableobj
     ! -- density
+    procedure :: maw_activate_density
     procedure, private :: maw_calculate_density_exchange
   end type MawType
 
@@ -1129,6 +1130,7 @@ contains
     ! -- initialize xnewpak
     do n = 1, this%nmawwells
       this%xnewpak(n) = this%strt(n)
+      this%xsto(n) = this%strt(n)
     end do
     !
     ! -- initialize status (iboundpak) of maw wells to active
@@ -2378,7 +2380,7 @@ contains
           amatsln(ipossymoffd) = cmaw
           !
           ! -- add correction term
-          rhs(isymnode) = rhs(isymnode) - cterm
+            rhs(isymnode) = rhs(isymnode) - cterm
           !
           ! -- add density terms
           if (this%idense /= 0) then
@@ -2974,6 +2976,7 @@ contains
     call mem_deallocate(this%qout)
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%qconst)
+    call mem_deallocate(this%denseterms)
     deallocate(this%idxlocnode)
     deallocate(this%idxdglo)
     deallocate(this%idxoffdglo)

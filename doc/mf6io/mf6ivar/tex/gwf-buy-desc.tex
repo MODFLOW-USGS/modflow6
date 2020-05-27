@@ -31,7 +31,7 @@
 
 \item \texttt{modelname}---name of GWT model used to simulate a species that will be used in the density equation of state.
 
-\item \texttt{auxspeciesname}---name of the auxiliary variable used by the GWT model to assign species concentrations for boundary packages.  If a density value is needed by the Buoyancy Package then it will use the concentration values in this AUXSPECIESNAME column in the density equation of state.  For advanced stress packages (LAK, SFR, MAW, and UZF) that have an associated advanced transport package (LKT, SFT, MWT, and UZT), the FLOW\_PACKAGE\_AUXILIARY\_NAME option in the advanced transport package can be used to transfer simulated concentrations into the flow package auxiliary variable.  In this manner, the Buoyancy Package can calculate density values for lakes, streams, multi-aquifer wells, and unsaturated zone flow cells using simulated concentrations.
+\item \texttt{auxspeciesname}---name of an auxiliary variable in a GWF stress package that will be used for this species to calculate a density value.  If a density value is needed by the Buoyancy Package then it will use the concentration values in this AUXSPECIESNAME column in the density equation of state.  For advanced stress packages (LAK, SFR, MAW, and UZF) that have an associated advanced transport package (LKT, SFT, MWT, and UZT), the FLOW\_PACKAGE\_AUXILIARY\_NAME option in the advanced transport package can be used to transfer simulated concentrations into the flow package auxiliary variable.  In this manner, the Buoyancy Package can calculate density values for lakes, streams, multi-aquifer wells, and unsaturated zone flow cells using simulated concentrations.
 
 \end{description}
 \item \textbf{Block: PERIOD}
