@@ -236,7 +236,7 @@ contains
   
   subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
-    use TdisModule,             only: tdis_tu
+    use TdisModule,             only: tdis_tu, kper, kstp
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
@@ -262,16 +262,26 @@ contains
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
       call ep%exg_rp()
     enddo
+    !      
+    ! -- Exchange advance
+    do ic=1,baseexchangelist%Count()
+      ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      call ep%exg_ad()
+    enddo
     !
-    ! -- Read and prepare each solution
+    ! -- Model advance
+    do im = 1, basemodellist%Count()
+      mp => GetBaseModelFromList(basemodellist, im)
+      call mp%model_ad()
+    enddo
+    !
+    ! -- Solution advance
     do is=1,basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_rp()
+      call sp%sln_ad()    
     enddo
     !
     call converge_reset()
-    !
-    ! insert here:
     
   end subroutine Mf6PrepareTimestep
   

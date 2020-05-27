@@ -16,7 +16,7 @@ module BaseSolutionModule
   contains
     procedure (sln_df), deferred :: sln_df
     procedure (sln_ar), deferred :: sln_ar
-    procedure (sln_rp), deferred :: sln_rp
+    procedure (sln_ad), deferred :: sln_ad
     procedure (sln_ca), deferred :: sln_ca
     procedure (sln_ot), deferred :: sln_ot
     procedure (sln_fp), deferred :: sln_fp
@@ -44,6 +44,11 @@ module BaseSolutionModule
     end subroutine
 
     subroutine sln_rp(this)
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+    end subroutine
+    
+    subroutine sln_ad(this)
       import BaseSolutionType
       class(BaseSolutionType) :: this
     end subroutine

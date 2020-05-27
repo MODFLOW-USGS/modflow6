@@ -457,7 +457,7 @@ contains
     return
   end subroutine gwf_gwf_rp
 
-  subroutine gwf_gwf_ad(this, isolnid)
+  subroutine gwf_gwf_ad(this)
 ! ******************************************************************************
 ! gwf_gwf_ad -- Initialize package x values to zero for explicit exchanges
 ! ******************************************************************************
@@ -467,7 +467,6 @@ contains
     ! -- modules
     ! -- dummy
     class(GwfExchangeType) :: this
-    integer(I4B), intent(in) :: isolnid
     ! -- local
 ! ------------------------------------------------------------------------------
     !

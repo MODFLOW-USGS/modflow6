@@ -130,7 +130,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
-    procedure :: sln_rp
+    procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
     procedure :: sln_fp
@@ -163,7 +163,6 @@ module NumericalSolutionModule
     procedure, public :: finalizeIteration
     procedure, public :: writeCSVHeader
     procedure, public :: writePTCInfoToFile
-    procedure, public :: advanceSolution
     
   end type NumericalSolutionType
 
@@ -979,35 +978,25 @@ contains
     return
   end subroutine sln_ar
 
-  subroutine sln_rp(this)
+   subroutine sln_ad(this)
 ! ******************************************************************************
-! sln_rp -- Read and Prepare
+! sln_ad -- Advance solution
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: readnewdata, kstp, kper
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
-    
-    !
-    ! -- Check with TDIS on whether or not it is time to RP
-    if (readnewdata) then
-      ! do stuff here...
-      
-    end if
-    
     ! write headers to CSV file
+    
     if (kper == 1 .and. kstp == 1) then
       call this%writeCSVHeader()
     end if
       
-    ! advance models and exchanges
-    call this%advanceSolution()
-        
     ! write PTC info on models to iout
     call this%writePTCInfoToFile(kper)
             
@@ -1015,10 +1004,9 @@ contains
     this%icnvg = 0
     this%itertot = 0   
     
-    ! -- return
     return
-  end subroutine sln_rp
-
+  end subroutine sln_ad
+  
   subroutine sln_ot(this)
 ! ******************************************************************************
 ! sln_ot -- Output
@@ -1215,15 +1203,7 @@ contains
       
     ! finish up, write convergence info, CSV file, budgets and flows, ...
     call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
-        
-    !
-    ! -- Check if convergence for the exchange packages
-    ! TODO_MJR: shouldn't this be in the subtiming loop?
-    do ic = 1, this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cnvg(this%id, isgcnvg)
-    enddo
-    !
+     
     ! -- return
     return
   end subroutine sln_ca
@@ -1276,28 +1256,6 @@ contains
     ! -- return
     return
   end subroutine writeCSVHeader
-  
-  ! advances the exchanges and models in this solution by 1 timestep
-  subroutine advanceSolution(this)
-    class(NumericalSolutionType) :: this
-    ! local
-    integer(I4B) :: ic, im
-    class(NumericalExchangeType), pointer :: cp
-    class(NumericalModelType), pointer :: mp
-    
-    ! -- Exchange advance
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_ad(this%id)
-    enddo
-    
-    ! -- Model advance
-    do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ad()
-    enddo
-    
-  end subroutine advanceSolution
   
   ! write the PTC header information to file
   subroutine writePTCInfoToFile(this, kper)
