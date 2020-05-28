@@ -57,6 +57,7 @@ module NumericalModelModule
     procedure :: model_bdcalc
     procedure :: model_bdsave
     procedure :: model_ot
+    procedure :: model_validate
     procedure :: model_bdentry
     !
     ! -- Utility methods
@@ -189,6 +190,10 @@ module NumericalModelModule
   subroutine model_ot(this)
     class(NumericalModelType) :: this
   end subroutine model_ot
+
+  subroutine model_validate(this)
+    class(NumericalModelType) :: this
+  end subroutine model_validate
 
   subroutine model_bdentry(this, budterm, budtxt, rowlabel)
     class(NumericalModelType) :: this

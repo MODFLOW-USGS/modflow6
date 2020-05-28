@@ -7,7 +7,8 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20, DNODATA,       &
-                                     TABLEFT, TABRIGHT
+                                     TABLEFT, TABRIGHT,                        &
+                                     MNORMAL, MVALIDATE
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
@@ -22,7 +23,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
-  use SimVariablesModule,      only: iout
+  use SimVariablesModule,      only: iout, isim_mode
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 
@@ -1184,24 +1185,30 @@ contains
     integer(I4B) :: kiter   ! non-linear iteration counter
 ! ------------------------------------------------------------------------------
     
-    ! nonlinear iteration loop for this solution
-    outerloop: do kiter = 1, this%mxiter
+     select case (isim_mode)
+       case (MVALIDATE)
+         ! write a message to iout
+       case(MNORMAL)
+         ! nonlinear iteration loop for this solution
+         outerloop: do kiter = 1, this%mxiter
+           
+           ! perform a single iteration
+            call this%doIteration(kiter)     
         
-      ! perform a single iteration
-      call this%doIteration(kiter)     
+           ! exit if converged
+           if (this%icnvg == 1) then
+             exit outerloop
+           end if
         
-      ! exit if converged
-      if (this%icnvg == 1) then
-        exit outerloop
-      end if
-        
-    end do outerloop
+         end do outerloop
       
-    ! finish up, write convergence info, CSV file, budgets and flows, ...
-    call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
-     
+         ! finish up, write convergence info, CSV file, budgets and flows, ...
+         call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
+    end select
+    !
     ! -- return
     return
+    
   end subroutine sln_ca
        
   ! write the header for the solver output to the CSV files

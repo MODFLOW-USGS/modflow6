@@ -28,6 +28,7 @@ module BaseModelModule
     procedure :: model_rp
     procedure :: model_ad
     procedure :: model_ot
+    procedure :: model_validate
     procedure :: model_fp
     procedure :: model_da
     procedure :: allocate_scalars
@@ -93,7 +94,7 @@ module BaseModelModule
   
   subroutine model_ot(this)
 ! ******************************************************************************
-! model_ot -- Read and prepare
+! model_ot -- output results
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -104,6 +105,20 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_ot
+  
+  subroutine model_validate(this)
+! ******************************************************************************
+! model_validate -- write information if validation mode
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(BaseModelType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- return
+    return
+  end subroutine model_validate
   
   subroutine model_fp(this)
 ! ******************************************************************************
