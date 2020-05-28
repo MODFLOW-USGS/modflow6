@@ -71,7 +71,6 @@ module GwfModule
     procedure :: model_ot                => gwf_ot
     procedure :: model_fp                => gwf_fp
     procedure :: model_da                => gwf_da
-    procedure :: get_nsubtimes           => gwf_get_nsubtimes
     procedure :: model_bdentry           => gwf_bdentry
     procedure :: get_iasym               => gwf_get_iasym
     ! -- private
@@ -505,7 +504,7 @@ module GwfModule
     return
   end subroutine gwf_rp
 
-  subroutine gwf_ad(this, ipicard, isubtime)
+  subroutine gwf_ad(this)
 ! ******************************************************************************
 ! gwf_ad -- GroundWater Flow Model Time Step Advance
 ! Subroutine: (1) calls package advance subroutines
@@ -518,8 +517,6 @@ module GwfModule
     ! -- dummy
     class(GwfModelType) :: this
     class(BndType), pointer :: packobj
-    integer(I4B), intent(in) :: ipicard
-    integer(I4B), intent(in) :: isubtime
     ! -- local
     integer(I4B) :: ip, n
 ! ------------------------------------------------------------------------------
@@ -1214,27 +1211,7 @@ module GwfModule
     ! -- return
     return
   end subroutine gwf_da
-
-  function gwf_get_nsubtimes(this) result(nsubtimes)
-! ******************************************************************************
-! gwf_get_nsubtimes -- Return number of subtimesteps
-! Subtimesteps not implemented yet, so just return 1.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    !
-    ! -- result
-    integer(I4B) :: nsubtimes
-    class(GwfModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    nsubtimes = 1
-    !
-    ! -- return
-    return
-  end function gwf_get_nsubtimes
-
+  
   subroutine gwf_bdentry(this, budterm, budtxt, rowlabel)
 ! ******************************************************************************
 ! gwf_bdentry -- GroundWater Flow Model Budget Entry

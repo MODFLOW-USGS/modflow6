@@ -1,6 +1,7 @@
 module GwfGwfExchangeModule
 
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: errmsg
   use ArrayHandlersModule,     only: ExpandArray
   use BaseModelModule,         only: GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
@@ -312,7 +313,6 @@ contains
     real(DP) :: csat
     real(DP) :: fawidth
     real(DP), dimension(3) :: vg
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- If mover is active, then call ar routine
@@ -323,9 +323,9 @@ contains
     !    GWF-GWF exchange (this%ianglex > 0).
     if(this%gwfmodel1%npf%ik22 /= 0 .or. this%gwfmodel2%npf%ik22 /= 0) then
       if(this%ianglex == 0) then
-        write(errmsg, '(a)') 'Error.  GWF-GWF requires that ANGLDEGX be ' //   &
-                             'specified as an auxiliary variable because ' //  &
-                             'K22 was specified in one or both ' // &
+        write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //             &
+                             'specified as an auxiliary variable because ' //    &
+                             'K22 was specified in one or both ' //              &
                              'groundwater models.'
         call store_error(errmsg)
         call ustop()
@@ -338,17 +338,17 @@ contains
     if(this%gwfmodel1%npf%icalcspdis /= 0 .or. &
        this%gwfmodel2%npf%icalcspdis /= 0) then
       if(this%ianglex == 0) then
-        write(errmsg, '(a)') 'Error.  GWF-GWF requires that ANGLDEGX be ' //   &
-                             'specified as an auxiliary variable because ' //  &
-                             'specific discharge is being calculated in' // &
+        write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //             &
+                             'specified as an auxiliary variable because ' //    &
+                             'specific discharge is being calculated in' //      &
                              ' one or both groundwater models.'
         call store_error(errmsg)
         call ustop()
       endif
       if(this%icdist == 0) then
-        write(errmsg, '(a)') 'Error.  GWF-GWF requires that CDIST be ' //   &
-                             'specified as an auxiliary variable because ' //  &
-                             'specific discharge is being calculated in' // &
+        write(errmsg, '(a)') 'GWF-GWF requires that CDIST be ' //                &
+                             'specified as an auxiliary variable because ' //    &
+                             'specific discharge is being calculated in' //      &
                              ' one or both groundwater models.'
         call store_error(errmsg)
         call ustop()
@@ -457,7 +457,7 @@ contains
     return
   end subroutine gwf_gwf_rp
 
-  subroutine gwf_gwf_ad(this, isolnid, kpicard, isubtime)
+  subroutine gwf_gwf_ad(this)
 ! ******************************************************************************
 ! gwf_gwf_ad -- Initialize package x values to zero for explicit exchanges
 ! ******************************************************************************
@@ -467,16 +467,13 @@ contains
     ! -- modules
     ! -- dummy
     class(GwfExchangeType) :: this
-    integer(I4B), intent(in) :: isolnid
-    integer(I4B), intent(in) :: kpicard
-    integer(I4B), intent(in) :: isubtime
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance mover
     if(this%inmvr > 0) call this%mvr%mvr_ad()
     !
-    ! -- Push simulated values to preceding time/subtime step
+    ! -- Push simulated values to preceding time step
     call this%obs%obs_ad()
     !
     ! -- Return
@@ -838,7 +835,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
-    !use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(inout) :: icnvg
@@ -877,6 +874,10 @@ contains
       if (this%gwfmodel2%oc%oc_save('BUDGET')) then 
         call this%outputtab2%set_title(packname2)
       end if
+      !
+      ! -- set table kstp and kper
+      call this%outputtab1%set_kstpkper(kstp, kper)
+      call this%outputtab2%set_kstpkper(kstp, kper)
       !
       ! -- update maxbound of tables
       ntabrows = 0
@@ -1170,17 +1171,27 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ArrayHandlersModule, only: ifind
-    use ConstantsModule, only: LINELENGTH, DEM6
+    use ConstantsModule, only: LINELENGTH, LENAUXNAME, DEM6
+    use MemoryManagerModule, only: mem_allocate
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit, ustop
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword, fname
-    integer(I4B) :: istart,istop,lloc,ierr,ival
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: fname
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: lloc
+    integer(I4B) :: ierr
+    integer(I4B) :: ival
     integer(I4B) :: inobs
-    logical :: isfound, endOfBlock
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -1192,21 +1203,33 @@ contains
       write(iout,'(1x,a)')'PROCESSING GWF EXCHANGE OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
+        if (endOfBlock) then
+          exit
+        end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case('AUXILIARY')
             call this%parser%GetRemainingLine(line)
             lloc = 1
-            call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart,   &
-                        istop, this%auxname, line, 'GWF_GWF_Exchange')
+            call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart,     &
+                        istop, caux, line, 'GWF_GWF_Exchange')
+            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+                                'AUXNAME', trim(this%name))
+            do n = 1, this%naux
+              this%auxname(n) = caux(n)
+            end do
+            deallocate(caux)
             !
             ! -- If ANGLDEGX is an auxiliary variable, then anisotropy can be
             !    used in either model.  Store ANGLDEGX position in this%ianglex
             ival = ifind(this%auxname, 'ANGLDEGX')
-            if(ival > 0) this%ianglex = ival
+            if (ival > 0) then
+              this%ianglex = ival
+            end if
             ival = ifind(this%auxname, 'CDIST')
-            if(ival > 0) this%icdist = ival
+            if(ival > 0) then
+              this%icdist = ival
+            end if
           case ('PRINT_INPUT')
             this%iprpak = 1
             write(iout,'(4x,a)') &
@@ -1227,8 +1250,7 @@ contains
             case('AMT-LMK')
               this%icellavg = 2
             case default
-              write(errmsg,'(4x,a,a)')'UNKNOWN CELL AVERAGING METHOD: ',       &
-                                       trim(keyword)
+              errmsg = "Unknown cell averaging method '" // trim(keyword) // "'."
               call store_error(errmsg)
               call this%parser%StoreErrorUnit()
               call ustop()
@@ -1304,14 +1326,13 @@ contains
             call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
             this%obs%inUnitObs = inobs
           case default
-            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN GWF EXCHANGE OPTION: ', &
-                                     trim(keyword)
+            errmsg = "Unknown gwf exchange option '" // trim(keyword) // "'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(iout,'(1x,a)')'END OF GWF EXCHANGE OPTIONS'
+      write(iout,'(1x,a)') 'END OF GWF EXCHANGE OPTIONS'
     end if
     !
     ! -- set omega value used for saturation calculations
@@ -1338,7 +1359,7 @@ contains
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: errmsg, nodestr, node1str, node2str, cellid
+    character(len=LINELENGTH) :: nodestr, node1str, node2str, cellid
     character(len=2) :: cnfloat
     integer(I4B) :: lloc, ierr, nerr, iaux
     integer(I4B) :: iexg, nodem1, nodem2, nodeum1, nodeum2
@@ -1424,20 +1445,20 @@ contains
         ! -- Check to see if nodem1 is outside of active domain
         if(nodem1 <= 0) then
           call this%gwfmodel1%dis%nodeu_to_string(nodeum1, nodestr)
-          write(errmsg, *)                                                     &
-                  trim(adjustl(this%gwfmodel1%name)) //                        &
-                  ' Cell is outside active grid domain: ' //                   &
-                  trim(adjustl(nodestr))
+          write(errmsg, *)                                                       &
+                  trim(adjustl(this%gwfmodel1%name)) //                          &
+                  ' Cell is outside active grid domain ' //                      &
+                  trim(adjustl(nodestr)) // '.'
           call store_error(errmsg)
         endif
         !
         ! -- Check to see if nodem2 is outside of active domain
         if(nodem2 <= 0) then
           call this%gwfmodel2%dis%nodeu_to_string(nodeum2, nodestr)
-          write(errmsg, *)                                                     &
-                  trim(adjustl(this%gwfmodel2%name)) //                        &
-                  ' Cell is outside active grid domain: ' //                   &
-                  trim(adjustl(nodestr))
+          write(errmsg, *)                                                       &
+                  trim(adjustl(this%gwfmodel2%name)) //                          &
+                  ' Cell is outside active grid domain ' //                      &
+                  trim(adjustl(nodestr)) // '.'
           call store_error(errmsg)
         endif
       enddo
@@ -1452,7 +1473,7 @@ contains
       !
       write(iout,'(1x,a)')'END OF EXCHANGEDATA'
     else
-      write(errmsg, '(1x,a)')'ERROR.  REQUIRED EXCHANGEDATA BLOCK NOT FOUND.'
+      errmsg = 'Required exchangedata block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()
@@ -1477,7 +1498,6 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: i, nm1, nm2, nmgnc1, nmgnc2
-    character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmterr = &
       "('EXCHANGE NODES ', i0, ' AND ', i0,"  // &
       "' NOT CONSISTENT WITH GNC NODES ', i0, ' AND ', i0)"

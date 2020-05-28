@@ -77,6 +77,7 @@ distribution/*.zip
 mod_temp/
 obj_temp/
 src_temp/
+pymake/dependencies/
 
 trash/
 

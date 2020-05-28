@@ -3,7 +3,7 @@ module ListReaderModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
-                             LENLISTLABEL, DONE
+                             LENAUXNAME, LENLISTLABEL, DONE
   use SimModule,       only: store_error_unit
   implicit none
   private
@@ -71,9 +71,9 @@ module ListReaderModule
     integer(I4B), dimension(:), intent(inout), contiguous, pointer :: nodelist
     real(DP), dimension(:, :), intent(inout), contiguous, pointer :: rlist
     real(DP), dimension(:, :), intent(inout), contiguous, pointer :: auxvar
-    character(len=16), dimension(:), intent(inout), target :: auxname
+    character(len=LENAUXNAME), dimension(:), intent(inout), target :: auxname
     character(len=LENBOUNDNAME), dimension(:), pointer, contiguous, intent(inout) :: boundname
-    character(len=500), intent(in) :: label
+    character(len=LENLISTLABEL), intent(in) :: label
     ! -- local
 ! ------------------------------------------------------------------------------
     !

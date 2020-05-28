@@ -196,6 +196,7 @@ module MawModule
     ! -- table
     procedure, private :: maw_setup_tableobj
     ! -- density
+    procedure :: maw_activate_density
     procedure, private :: maw_calculate_density_exchange
   end type MawType
 
@@ -1129,6 +1130,7 @@ contains
     ! -- initialize xnewpak
     do n = 1, this%nmawwells
       this%xnewpak(n) = this%strt(n)
+      this%xsto(n) = this%strt(n)
     end do
     !
     ! -- initialize status (iboundpak) of maw wells to active
@@ -2378,7 +2380,7 @@ contains
           amatsln(ipossymoffd) = cmaw
           !
           ! -- add correction term
-          rhs(isymnode) = rhs(isymnode) - cterm
+            rhs(isymnode) = rhs(isymnode) - cterm
           !
           ! -- add density terms
           if (this%idense /= 0) then
@@ -2870,6 +2872,9 @@ contains
      ! -- write maw head table
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
+      ! -- set table kstp and kper
+      call this%headtab%set_kstpkper(kstp, kper)
+      !
       ! -- fill stage data
       do n = 1, this%nmawwells
         if(this%inamedbound==1) then
@@ -2882,7 +2887,7 @@ contains
     !
     ! -- Output maw flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output maw budget
@@ -2974,6 +2979,7 @@ contains
     call mem_deallocate(this%qout)
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%qconst)
+    call mem_deallocate(this%denseterms)
     deallocate(this%idxlocnode)
     deallocate(this%idxdglo)
     deallocate(this%idxoffdglo)

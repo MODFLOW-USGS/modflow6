@@ -19,6 +19,7 @@ module BaseExchangeModule
     procedure(exg_df), deferred :: exg_df
     procedure(exg_ar), deferred :: exg_ar
     procedure :: exg_rp
+    procedure :: exg_ad
     procedure :: exg_ot
     procedure :: exg_fp
     procedure :: exg_da
@@ -39,7 +40,7 @@ module BaseExchangeModule
   end interface
   
   contains
-  
+     
   subroutine exg_rp(this)
 ! ******************************************************************************
 ! exg_rp -- Read and prepare
@@ -61,6 +62,23 @@ module BaseExchangeModule
     ! -- Return
     return
   end subroutine exg_rp
+  
+  subroutine exg_ad(this)
+! ******************************************************************************
+! exg_ad -- Advance
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(BaseExchangeType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    !
+    ! -- return
+    return
+  end subroutine exg_ad
   
   subroutine exg_ot(this)
 ! ******************************************************************************

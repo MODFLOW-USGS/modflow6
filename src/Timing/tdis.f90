@@ -12,8 +12,6 @@
   implicit none
   !
   private
-  public :: subtiming_begin
-  public :: subtiming_end
   public :: tdis_cr
   public :: tdis_tu
   public :: tdis_ot
@@ -676,55 +674,6 @@
     ! -- Return
     return
   end subroutine check_tdis_timing
-
-  subroutine subtiming_begin(isubtime, nsubtimes, idsolution)
-! ******************************************************************************
-! subtiming_begin -- start subtiming
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    integer(I4B), intent(in) :: isubtime
-    integer(I4B), intent(in) :: nsubtimes
-    integer(I4B), intent(in) :: idsolution
-    ! -- formats
-    character(len=*), parameter :: fmtsub = "(a, i0, a, a, i0, a, i0, a)"
-    character(len=*), parameter :: fmtdelt = "(a, i0, a, 1pg15.6)"
-! ------------------------------------------------------------------------------
-    !
-    ! -- Save and calculate delt if first subtimestep
-    if(isubtime == 1) then
-      deltsav = delt
-      delt = delt / nsubtimes
-    else
-      totimc = totimc + delt
-    endif
-    !
-    ! -- Write message
-    if(nsubtimes > 1) then
-      write(iout, fmtsub) 'SOLUTION ID (', idsolution, '): ', &
-                     'SUB-TIMESTEP ', isubtime, ' OF ', nsubtimes, ' TOTAL'
-      write(iout, fmtdelt) 'SOLUTION ID (', idsolution, '): DELT = ', delt
-    endif
-    !
-    ! -- return
-    return
-  end subroutine subtiming_begin
-
-  subroutine subtiming_end()
-! ******************************************************************************
-! subtiming_end -- start subtiming
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    !
-    ! -- Reset delt to what it was prior to subtiming
-    delt = deltsav
-    !
-    ! -- return
-    return
-  end subroutine subtiming_end
 
 end module TdisModule
 
