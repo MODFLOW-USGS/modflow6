@@ -117,7 +117,7 @@ def get_model(idx, dir):
 
     mawradius = 0.1
     mawbottom = 0.
-    mawstrt = 2.5
+    mawstrt = 3.5
     mawcondeqn = 'THIEM'
     mawngwfnodes = nlay
     # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
@@ -174,17 +174,37 @@ def eval_results(sim):
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text='HEAD')
     stage = bobj.get_alldata().flatten()
-    print(stage)
 
     fname = gwfname + '.hds'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
-    head = hobj.get_data()
-    print(head)
+    head = hobj.get_alldata()
 
-    # todo: add a better check of the lake concentrations
-    # assert False
+    # calculate initial volume of water in well and aquifer
+    v0maw = 3.5 * np.pi * 0.1 ** 2
+    v0gwf = 4 * 7 * 0.3
+    v0 = v0maw + v0gwf
+    top = [4., 3., 2., 1.]
+    botm = [3., 2., 1., 0.]
+    nlay = 4
+    ncol = 7
+
+    # calculate current volume of water in well and aquifer and compare with
+    # initial volume
+    for kstp, mawstage in enumerate(stage):
+
+        vgwf = 0
+        for k in range(nlay):
+            for j in range(ncol):
+                tp = min(head[kstp, k, 0, j], top[k])
+                dz =  tp - botm[k]
+                vgwf += 0.3 * max(0., dz)
+        vmaw = stage[kstp] * np.pi * 0.1 ** 2
+        vnow = vmaw + vgwf
+        errmsg = 'kstp {}: current volume ({}) not equal initial volume ({})'.format(kstp, v0, vnow)
+        assert np.allclose(v0, vnow), errmsg
+
 
     return
 
