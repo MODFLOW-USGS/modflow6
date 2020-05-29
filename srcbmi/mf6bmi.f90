@@ -809,7 +809,7 @@ module mf6bmi
       end if
     end do
     
-    write(error_msg,'(a,i6)') 'BMI error: no model for grid id ', grid_id
+    write(error_msg,'(a,i0)') 'BMI error: no model for grid id ', grid_id
     call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
   end function get_model_name
 end module mf6bmi
