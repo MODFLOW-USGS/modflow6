@@ -103,7 +103,6 @@ module GwtModule
     procedure :: allocate_scalars
     procedure, private :: package_create
     procedure, private :: ftype_check
-    procedure :: get_nsubtimes
     procedure :: get_iasym => gwt_get_iasym
     procedure, private :: gwt_bdsav
     
@@ -509,7 +508,7 @@ module GwtModule
     return
   end subroutine gwt_rp
   
-  subroutine gwt_ad(this, ipicard, isubtime)
+  subroutine gwt_ad(this)
 ! ******************************************************************************
 ! gwt_ad -- GroundWater Transport Model Time Step Advance
 ! Subroutine: (1) calls package advance subroutines
@@ -522,8 +521,6 @@ module GwtModule
     ! -- dummy
     class(GwtModelType) :: this
     class(BndType), pointer :: packobj
-    integer(I4B), intent(in) :: ipicard
-    integer(I4B), intent(in) :: isubtime
     ! -- local
     integer(I4B) :: ip, n
 ! ------------------------------------------------------------------------------
@@ -1195,12 +1192,6 @@ module GwtModule
     return
   end subroutine ftype_check
 
-  function get_nsubtimes(this) result(nsubtimes)
-    integer(I4B) :: nsubtimes
-    class(GwtModelType) :: this
-    nsubtimes = 1
-    return
-  end function get_nsubtimes
 
   
 end module GwtModule
