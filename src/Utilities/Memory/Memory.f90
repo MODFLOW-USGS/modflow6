@@ -1,21 +1,25 @@
 module MemoryTypeModule
   
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, LGP, I4B
   use ConstantsModule, only: LENORIGIN, LENTIMESERIESNAME, LENVARNAME,           &
-                             MAXMEMRANK, LENMEMTYPE
+                             MAXMEMRANK, LENMEMTYPE,                             &
+                             TABSTRING, TABINTEGER,                              &
+                             TABCENTER, TABLEFT, TABRIGHT
+  use TableModule, only: TableType
   implicit none
   private
   public :: MemoryType
  
   type MemoryType
     character(len=LENVARNAME)                              :: name                   !name of the array
+    character(len=LENVARNAME)                              :: mastername = 'none'    !name of the master array
     character(len=LENORIGIN)                               :: origin                 !name of origin
     character(len=LENMEMTYPE)                              :: memtype                !type (INTEGER or DOUBLE)
     integer(I4B)                                           :: id                     !id, not used
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array
-    logical                                                :: master = .true.        !master copy, others point to this one
-    logical, pointer                                       :: logicalsclr => null()  !pointer to the logical
+    logical(LGP)                                           :: master = .true.        !master copy, others point to this one
+    logical(LGP), pointer                                  :: logicalsclr => null()  !pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !pointer to the integer
     real(DP), pointer                                      :: dblsclr     => null()  !pointer to the double
     integer(I4B), dimension(:), pointer, contiguous        :: aint1d      => null()  !pointer to 1d integer array
@@ -31,21 +35,40 @@ module MemoryTypeModule
   
   contains
   
-  subroutine table_entry(this, msg)
+  subroutine table_entry(this, memtab)
+    ! -- dummy
     class(MemoryType) :: this
-    character(len=*), intent(inout) :: msg
-    character(len=*), parameter ::                                             &
-      fmt = "(1x, a40, a20, a20, i10, i10, a10, a2)"
-    character(len=1) :: cptr
-    character(len=1) :: dastr
+    type(TableType), intent(inout) :: memtab
+    ! -- local
+    character(len=16) :: cmem
+    character(len=LENVARNAME) :: cptr
+    integer(I4B) :: ipos
+    ! -- formats
     !
-    ! -- Create the msg table entry
-    cptr = ''
-    if (.not. this%master) cptr = 'T'
-    dastr = ''
-    if (this%mt_associated() .and. this%isize > 0) dastr='*'
-    write(msg, fmt) this%origin, this%name, this%memtype, this%isize,          &
-                    this%nrealloc, cptr, dastr
+    ! -- determine memory type
+    ipos = index(this%memtype, ' (')
+    if (ipos < 1) then
+      ipos = 16
+    else
+      ipos = min(16,ipos-1)
+    end if
+    cmem = this%memtype(1:ipos)
+    !
+    ! -- Set pointer and deallocation string
+    cptr = '--'
+    if (.not. this%master) then
+      cptr = this%mastername
+    end if
+    !
+    ! -- write data to the table
+    call memtab%add_term(this%origin)
+    call memtab%add_term(this%name)
+    call memtab%add_term(cmem)
+    call memtab%add_term(this%isize)
+    call memtab%add_term(cptr)
+    !
+    ! -- return
+    return
   end subroutine table_entry
 
   function mt_associated(this) result(al)

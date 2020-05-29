@@ -244,7 +244,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kstp, kper
     use ConstantsModule, only: LENBOUNDNAME
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -297,8 +297,9 @@ contains
     ! -- If no boundaries, skip flow calculations.
     if(this%nbound > 0) then
       !
-      ! -- reset size of table
+      ! -- set kstp and kper and reset size of table
       if (this%iprflow /= 0) then
+        call this%outputtab%set_kstpkper(kstp, kper)
         call this%outputtab%set_maxbound(this%nbound)
       end if
       !

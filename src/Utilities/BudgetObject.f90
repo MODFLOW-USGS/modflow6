@@ -334,7 +334,7 @@ module BudgetObjectModule
     return
   end subroutine accumulate_terms
 
-  subroutine write_flowtable(this, dis)
+  subroutine write_flowtable(this, dis, kstp, kper)
 ! ******************************************************************************
 ! write_flowtable -- Write the flow table for each advanced package control
 !                    volume  
@@ -346,6 +346,8 @@ module BudgetObjectModule
     ! -- dummy
     class(BudgetObjectType) :: this
     class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
     ! -- dummy
     character(len=LENBUDTXT) :: flowtype
     character(len=20) :: cellid
@@ -372,6 +374,9 @@ module BudgetObjectModule
     do j = 1, this%nflowterms
       this%istart(j) = 1
     end do
+    !
+    ! -- set table kstp and kper
+    call this%flowtab%set_kstpkper(kstp, kper)
     !
     ! -- write the table
     do icv = 1, this%ncv

@@ -83,22 +83,31 @@ def get_model(idx, dir):
     vr = hbndl[1]
     for k in range(nlay):
         for i in range(nrow):
-            c6left.append([(k, i, 0), vl])
-            c6right.append([(k, i, ncols[idx][-1] - 1), vr])
+            c6left.append([(k, i, 0), vl, 'left'])
+            c6right.append([(k, i, ncols[idx][-1] - 1), vr, 'right'])
     cd6left = {0: c6left}
     cd6right = {0: c6right}
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 memory_print_option='all',
+                                 version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
 
+    # set ims csv files
+    csv0 = '{}.outer.ims.csv'.format(name)
+    csv1 = '{}.inner.ims.csv'.format(name)
+
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+    ims = flopy.mf6.ModflowIms(sim,
+                               print_option='ALL',
+                               csv_outer_output_filerecord=csv0,
+                               csv_inner_output_filerecord=csv1,
                                outer_dvclose=hclose * 10.,
                                outer_maximum=nouter,
                                under_relaxation='NONE',
@@ -197,6 +206,7 @@ def get_model(idx, dir):
         if jdx == 0:
             fn = '{}.chd1.chd'.format(mname)
             chd1 = flopy.mf6.modflow.ModflowGwfchd(gwf,
+                                                   boundnames=True,
                                                    stress_period_data=cd6left,
                                                    save_flows=False,
                                                    filename=fn, pname='chd1',
@@ -204,6 +214,7 @@ def get_model(idx, dir):
         if jdx == nmodels - 1:
             fn = '{}.chd2.chd'.format(mname)
             chd2 = flopy.mf6.modflow.ModflowGwfchd(gwf,
+                                                   boundnames=True,
                                                    stress_period_data=cd6right,
                                                    save_flows=False,
                                                    filename=fn, pname='chd2',

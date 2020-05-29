@@ -176,7 +176,8 @@ module LakModule
     ! -- lake budget object
     type(BudgetObjectType), pointer :: budobj => null()
     !
-    ! -- laketable objects
+    ! -- lake table objects
+    type(TableType), pointer :: stagetab => null()
     type(TableType), pointer :: pakcsvtab => null()
     !
     ! -- density variables
@@ -212,7 +213,6 @@ module LakModule
     procedure, private :: lak_read_outlets
     procedure, private :: lak_read_tables
     procedure, private :: lak_read_table
-    !procedure, private :: lak_check_attributes
     procedure, private :: lak_check_valid
     procedure, private :: lak_set_stressperiod
     procedure, private :: lak_set_attribute_error
@@ -252,6 +252,9 @@ module LakModule
     procedure, private :: lak_linear_interpolation
     procedure, private :: lak_setup_budobj
     procedure, private :: lak_fill_budobj
+    ! -- table
+    procedure, private :: lak_setup_tableobj
+    ! -- density
     procedure          :: lak_activate_density
     procedure, private :: lak_calculate_density_exchange
   end type LakType
@@ -1626,6 +1629,9 @@ contains
     !
     ! -- setup the budget object
     call this%lak_setup_budobj()
+    !
+    ! -- setup the stage table object
+    call this%lak_setup_tableobj()
     !
     ! -- return
     return
@@ -4154,6 +4160,7 @@ contains
       if (this%iboundpak(n) == 0) cycle
       hlak = this%xnewpak(n)
       call this%lak_calculate_vol(n, hlak, v1)
+      !
       ! -- add budget terms for active lakes
       if (this%iboundpak(n) /= 0) then
         !
@@ -4284,7 +4291,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    use InputOutputModule, only: UWWORD
     ! -- dummy
     class(LakType) :: this
     integer(I4B),intent(in) :: kstp
@@ -4293,64 +4299,40 @@ contains
     integer(I4B),intent(in) :: ihedfl
     integer(I4B),intent(in) :: ibudfl
     ! -- locals
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
     integer(I4B) :: n
-    integer(I4B) :: iloc
-    real(DP) :: q
-    ! format
- 2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
+    real(DP) :: stage
+    real(DP) :: sa
+    real(DP) :: wa
+    real(DP) :: v
+    ! -- format
     ! --------------------------------------------------------------------------
     !
     ! -- write lake stage
     if (ihedfl /= 0 .and. this%iprhed /= 0) then
-      write(iout, 2000) 'LAKE (', trim(this%name), ') STAGE', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'lake', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'lake', n, q, ALIGNMENT=TABCENTER)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'name', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'stage', n, q, ALIGNMENT=TABCENTER)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
+      !
+      ! -- set table kstp and kper
+      call this%stagetab%set_kstpkper(kstp, kper)
+      !
       ! -- write data
       do n = 1, this%nlakes
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      this%lakename(n), n, q, ALIGNMENT=TABLEFT)
+        stage = this%xnewpak(n)
+        call this%lak_calculate_sarea(n, stage, sa)
+        call this%lak_calculate_warea(n, stage, wa)
+        call this%lak_calculate_vol(n, stage, v)
+        if(this%inamedbound==1) then
+          call this%stagetab%add_term(this%lakename(n))
         end if
-        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
-        call UWWORD(line, iloc, 11, TABREAL, text, n, this%xnewpak(n))
-        write(iout, '(1X,A)') line(1:iloc)
+        call this%stagetab%add_term(n)
+        call this%stagetab%add_term(stage)
+        call this%stagetab%add_term(sa)
+        call this%stagetab%add_term(wa)
+        call this%stagetab%add_term(v)
       end do
     end if
     !
     ! -- Output lake flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output lake budget
@@ -4421,6 +4403,13 @@ contains
       call mem_deallocate(this%outslope)
       call mem_deallocate(this%simoutrate)
     endif
+    !
+    ! -- stage table
+    if (this%iprhed > 0) then
+      call this%stagetab%table_da()
+      deallocate(this%stagetab)
+      nullify(this%stagetab)
+    end if
     !
     ! -- package csv table
     if (this%ipakcsv > 0) then
@@ -6199,6 +6188,78 @@ contains
     ! -- return
     return
   end subroutine lak_fill_budobj
+
+  subroutine lak_setup_tableobj(this)
+! ******************************************************************************
+! lak_setup_tableobj -- Set up the table object that is used to write the lak 
+!                       stage data. The terms listed here must correspond in  
+!                       number and order to the ones written to the stage table 
+!                       in the lak_ot method.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, LENBUDTXT
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: nterms
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+! ------------------------------------------------------------------------------
+    !
+    ! -- setup stage table
+    if (this%iprhed > 0) then
+      !
+      ! -- Determine the number of lake stage terms. These are fixed for 
+      !    the simulation and cannot change.  This includes FLOW-JA-FACE
+      !    so they can be written to the binary budget files, but these internal
+      !    flows are not included as part of the budget table.
+      nterms = 5
+      if (this%inamedbound == 1) then
+        nterms = nterms + 1
+      end if
+      !
+      ! -- set up table title
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STAGES FOR EACH CONTROL VOLUME'
+      !
+      ! -- set up stage tableobj
+      call table_cr(this%stagetab, this%name, title)
+      call this%stagetab%table_df(this%nlakes, nterms, this%iout,                &
+                                  transient=.TRUE.)
+      !
+      ! -- Go through and set up table budget term
+      if (this%inamedbound == 1) then
+        text = 'NAME'
+        call this%stagetab%initialize_column(text, 20, alignment=TABLEFT)
+      end if
+      !
+      ! -- lake number
+      text = 'NUMBER'
+      call this%stagetab%initialize_column(text, 10, alignment=TABCENTER)
+      !
+      ! -- lake stage
+      text = 'STAGE'
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
+      !
+      ! -- lake surface area
+      text = 'SURFACE AREA'
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
+      !
+      ! -- lake wetted area
+      text = 'WETTED AREA'
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
+      !
+      ! -- lake volume
+      text = 'VOLUME'
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lak_setup_tableobj
   
   subroutine lak_activate_density(this)
 ! ******************************************************************************
