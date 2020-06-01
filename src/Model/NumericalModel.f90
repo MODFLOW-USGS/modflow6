@@ -45,6 +45,7 @@ module NumericalModelModule
     procedure :: model_ac
     procedure :: model_mc
     procedure :: model_rp
+    procedure :: model_ad
     procedure :: model_cf
     procedure :: model_fc
     procedure :: model_ptcchk
@@ -100,6 +101,10 @@ module NumericalModelModule
     class(NumericalModelType) :: this
   end subroutine model_rp
 
+  subroutine model_ad(this)
+    class(NumericalModelType) :: this
+  end subroutine model_ad
+  
   subroutine model_cf(this,kiter)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter

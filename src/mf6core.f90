@@ -263,18 +263,6 @@ contains
       call ep%exg_rp()
     enddo
     !      
-    ! -- Exchange advance
-    do ic=1,baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_ad()
-    enddo
-    !
-    ! -- Model advance
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_ad()
-    enddo
-    !
     ! -- Solution advance
     do is=1,basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
