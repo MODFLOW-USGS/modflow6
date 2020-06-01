@@ -359,34 +359,32 @@ module MemoryManagerModule
     isize = ilen * nrow
     !
     ! -- allocate defined length string array
-    if (isize > 0) Then
-      allocate(character(len=ilen) :: astr1d(nrow), stat=istat, errmsg=errmsg)
-      !
-      ! -- check for error condition
-      if (istat /= 0) then
-        call allocate_error(name, origin, istat, isize)
-      end if
-      !
-      ! -- fill deferred length string with empty string
-      do n = 1, nrow
-        astr1d(n) = string
-      end do
-      !
-      ! -- update string counter
-      nvalues_astr = nvalues_astr + isize
-      !
-      ! -- allocate memory type
-      allocate(mt)
-      !
-      ! -- set memory type
-      mt%isize = isize
-      mt%name = name
-      mt%origin = origin
-      write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
-      !
-      ! -- add deferred length character array to the memory manager
-      call memorylist%add(mt)
+    allocate(character(len=ilen) :: astr1d(nrow), stat=istat, errmsg=errmsg)
+    !
+    ! -- check for error condition
+    if (istat /= 0) then
+      call allocate_error(name, origin, istat, isize)
     end if
+    !
+    ! -- fill deferred length string with empty string
+    do n = 1, nrow
+      astr1d(n) = string
+    end do
+    !
+    ! -- update string counter
+    nvalues_astr = nvalues_astr + isize
+    !
+    ! -- allocate memory type
+    allocate(mt)
+    !
+    ! -- set memory type
+    mt%isize = isize
+    mt%name = name
+    mt%origin = origin
+    write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
+    !
+    ! -- add deferred length character array to the memory manager
+    call memorylist%add(mt)
     !
     ! -- return
     return

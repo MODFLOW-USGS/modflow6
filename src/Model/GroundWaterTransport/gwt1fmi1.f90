@@ -951,7 +951,7 @@ module GwtFmiModule
       if (imap(i) == 0) cycle
       call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i))
       naux = this%bfr%nauxarray(i)
-      call this%gwfpackages(ip)%set_auxname(this%bfr%auxtxtarray(1:naux, i))
+      call this%gwfpackages(ip)%set_auxname(naux, this%bfr%auxtxtarray(1:naux, i))
       ip = ip + 1
     end do
     !

@@ -165,7 +165,8 @@ module GwfGwtExchangeModule
     ngwfpack = gwfmodel%bndlist%Count()
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(ip)%set_auxname(packobj%auxname)
+      call gwtmodel%fmi%gwfpackages(ip)%set_auxname(packobj%naux,              &
+                                                    packobj%auxname)
     end do
     !
     ! -- return

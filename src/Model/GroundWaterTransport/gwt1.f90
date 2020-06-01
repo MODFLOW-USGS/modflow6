@@ -948,10 +948,15 @@ module GwtModule
     ! -- Internal package objects
     deallocate(this%dis)
     deallocate(this%ic)
+    deallocate(this%fmi)
+    deallocate(this%adv)
+    deallocate(this%dsp)
+    deallocate(this%ssm)
     deallocate(this%mst)
+    deallocate(this%mvt)
     deallocate(this%budget)
-    deallocate(this%obs)
     deallocate(this%oc)
+    deallocate(this%obs)
     !
     ! -- Boundary packages
     do ip = 1, this%bndlist%Count()
@@ -963,11 +968,11 @@ module GwtModule
     ! -- Scalars
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
-    call mem_deallocate(this%inmvt)
-    call mem_deallocate(this%inmst)
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
+    call mem_deallocate(this%inmst)
+    call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
     !
