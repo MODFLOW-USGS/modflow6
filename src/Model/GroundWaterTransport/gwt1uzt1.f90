@@ -322,7 +322,8 @@ module GwtUztModule
 
   subroutine uzt_solve(this)
 ! ******************************************************************************
-! uzt_solve -- add terms specific to lakes to the explicit lake solve
+! uzt_solve -- add terms specific to the unsaturated zone to the explicit 
+!              unsaturated-zone solve
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -400,7 +401,8 @@ module GwtUztModule
   
   subroutine uzt_setup_budobj(this, idx)
 ! ******************************************************************************
-! uzt_setup_budobj -- Set up the budget object that stores all the lake flows
+! uzt_setup_budobj -- Set up the budget object that stores all the unsaturated-
+!                     zone flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

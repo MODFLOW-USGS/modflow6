@@ -328,7 +328,8 @@ module GwtMwtModule
 
   subroutine mwt_solve(this)
 ! ******************************************************************************
-! mwt_solve -- add terms specific to lakes to the explicit lake solve
+! mwt_solve -- add terms specific to multi-aquifer wells to the explicit multi-
+!              aquifer well solve  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -405,7 +406,8 @@ module GwtMwtModule
   
   subroutine mwt_setup_budobj(this, idx)
 ! ******************************************************************************
-! mwt_setup_budobj -- Set up the budget object that stores all the lake flows
+! mwt_setup_budobj -- Set up the budget object that stores all the multi-
+!                     aquifer well flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
