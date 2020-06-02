@@ -41,6 +41,7 @@ module NumericalExchangeModule
     procedure :: exg_mc
     procedure :: exg_ar
     !procedure :: exg_rp (not needed yet; base exg_rp does nothing)
+    procedure :: exg_ad
     procedure :: exg_cf
     procedure :: exg_fc
     procedure :: exg_nr
@@ -163,6 +164,23 @@ contains
     return
   end subroutine exg_ar
 
+  subroutine exg_ad(this)
+! ******************************************************************************
+! exg_ad -- Advance
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(NumericalExchangeType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    !
+    ! -- return
+    return
+  end subroutine exg_ad
+  
   subroutine exg_cf(this, kiter)
 ! ******************************************************************************
 ! exg_cf -- Calculate conductance, and for explicit exchanges, set the

@@ -163,6 +163,7 @@ module NumericalSolutionModule
     procedure, public :: finalizeIteration
     procedure, public :: writeCSVHeader
     procedure, public :: writePTCInfoToFile
+    procedure, public :: advanceSolution
     
   end type NumericalSolutionType
 
@@ -1184,6 +1185,9 @@ contains
     integer(I4B) :: kiter   ! non-linear iteration counter
 ! ------------------------------------------------------------------------------
     
+    ! advance the solution by calling exchange and model advance routines
+    call this%advanceSolution()
+    
     ! nonlinear iteration loop for this solution
     outerloop: do kiter = 1, this%mxiter
         
@@ -1204,6 +1208,28 @@ contains
     return
   end subroutine sln_ca
        
+  ! advances the exchanges and models in this solution by 1 timestep
+  subroutine advanceSolution(this)
+    class(NumericalSolutionType) :: this
+    ! local
+    integer(I4B) :: ic, im
+    class(NumericalExchangeType), pointer :: cp
+    class(NumericalModelType), pointer :: mp
+    
+    ! -- Exchange advance
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_ad()
+    enddo
+    
+    ! -- Model advance
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ad()
+    enddo
+    
+  end subroutine advanceSolution
+
   ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
