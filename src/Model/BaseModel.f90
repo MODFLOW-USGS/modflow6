@@ -26,7 +26,6 @@ module BaseModelModule
     procedure :: model_df
     procedure :: model_ar
     procedure :: model_rp
-    procedure :: model_ad
     procedure :: model_ot
     procedure :: model_fp
     procedure :: model_da
@@ -76,20 +75,6 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_rp
-  
-  subroutine model_ad(this)
-! ******************************************************************************
-! model_ad -- advance the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine model_ad
   
   subroutine model_ot(this)
 ! ******************************************************************************

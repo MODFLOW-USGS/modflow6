@@ -978,6 +978,9 @@ module BndModule
     allocate(this%TsManager)
     allocate(this%TasManager)
     !
+    ! -- allocate text strings
+    call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%origin)
+    !
     ! -- Initialize variables
     this%ibcnum = 0
     this%maxbound = 0
@@ -1147,7 +1150,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule,   only: urdaux
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_reallocate
     use SimModule,           only: ustop, store_error, store_error_unit
     ! -- dummy
     class(BndType),intent(inout) :: this
@@ -1201,7 +1204,7 @@ module BndModule
             lloc = 1
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
                         istart, istop, caux, line, this%text)
-            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+            call mem_reallocate(this%auxname, LENAUXNAME, this%naux,             &
                                 'AUXNAME', this%origin)
             do n = 1, this%naux
               this%auxname(n) = caux(n)
