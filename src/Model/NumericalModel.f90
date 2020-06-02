@@ -45,6 +45,7 @@ module NumericalModelModule
     procedure :: model_ac
     procedure :: model_mc
     procedure :: model_rp
+    procedure :: model_ad
     procedure :: model_cf
     procedure :: model_fc
     procedure :: model_ptcchk
@@ -57,7 +58,6 @@ module NumericalModelModule
     procedure :: model_bdcalc
     procedure :: model_bdsave
     procedure :: model_ot
-    procedure :: model_validate
     procedure :: model_bdentry
     !
     ! -- Utility methods
@@ -101,6 +101,10 @@ module NumericalModelModule
     class(NumericalModelType) :: this
   end subroutine model_rp
 
+  subroutine model_ad(this)
+    class(NumericalModelType) :: this
+  end subroutine model_ad
+  
   subroutine model_cf(this,kiter)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
@@ -190,10 +194,6 @@ module NumericalModelModule
   subroutine model_ot(this)
     class(NumericalModelType) :: this
   end subroutine model_ot
-
-  subroutine model_validate(this)
-    class(NumericalModelType) :: this
-  end subroutine model_validate
 
   subroutine model_bdentry(this, budterm, budtxt, rowlabel)
     class(NumericalModelType) :: this

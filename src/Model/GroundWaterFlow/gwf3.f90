@@ -69,7 +69,6 @@ module GwfModule
     procedure :: model_cq                => gwf_cq
     procedure :: model_bd                => gwf_bd
     procedure :: model_ot                => gwf_ot
-    procedure :: model_validate          => gwf_validate
     procedure :: model_fp                => gwf_fp
     procedure :: model_da                => gwf_da
     procedure :: model_bdentry           => gwf_bdentry
@@ -1120,30 +1119,6 @@ module GwfModule
     ! -- return
     return
   end subroutine gwf_ot
-
-  subroutine gwf_validate(this)
-! ******************************************************************************
-! gwf_validate -- GroundWater Flow Model Validation message
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule,only:kstp, kper, endofperiod, tdis_ot
-    ! -- dummy
-    class(GwfModelType) :: this
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- 
-    write(this%iout, '(/,1x,a,1x,i0,1x,a,1x,i0,a,/)')                            &
-      'MODFLOW 6 model validation mode. End of stress period', kper,             &
-      'time step', kstp, '.'
-    !
-    ! -- return
-    return
-  end subroutine gwf_validate
 
   subroutine gwf_fp(this)
 ! ******************************************************************************

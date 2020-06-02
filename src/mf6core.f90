@@ -256,27 +256,47 @@ contains
   
   subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
-    use TdisModule,             only: tdis_tu
+    use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
+    use TdisModule,             only: tdis_tu, kstp, kper
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule,              only: converge_reset
+    use SimVariablesModule,     only: isim_mode
     ! -- dummy
     ! -- local
-    integer(I4B) :: im
-    integer(I4B) :: ic
-    integer(I4B) :: is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
-    
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fmt
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    integer(I4B) :: is
+    !
+    ! -- initialize fmt
+    fmt = "(/,1x,79('-'),/,1x,a,/)"
+    !
     ! -- time update
     call tdis_tu()
+    !
+    ! -- evaluate simulation mode
+    select case (isim_mode)
+      case (MVALIDATE)
+        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
+          'MODFLOW 6 validation simulation mode. Start of stress period',        &
+          kper, 'time step', kstp, '.'
+      case(MNORMAL)
+        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
+          'MODFLOW 6 normal simulation mode. Start of stress period',            &
+          kper, 'time step', kstp, '.'
+    end select
     
     ! -- Read and prepare each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
+      call mp%model_message(line, fmt=fmt)
       call mp%model_rp()
     enddo
     !
@@ -286,18 +306,6 @@ contains
       call ep%exg_rp()
     enddo
     !      
-    ! -- Exchange advance
-    do ic=1,baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_ad()
-    enddo
-    !
-    ! -- Model advance
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_ad()
-    enddo
-    !
     ! -- Solution advance
     do is=1,basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
@@ -325,39 +333,56 @@ contains
   
   function Mf6FinalizeTimestep() result(hasConverged)
     use KindModule,             only: I4B
-    use ConstantsModule,        only: MNORMAL, MVALIDATE
+    use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist    
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule,              only: converge_check
     use SimVariablesModule,     only: isim_mode
+    use TdisModule,             only: kstp, kper
     ! -- dummy
     logical(LGP) :: hasConverged    
     ! -- local
-    integer(I4B) :: im
-    integer(I4B) :: ic
-    integer(I4B) :: is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fmt
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    integer(I4B) :: is
     ! -- code
     !
-    ! -- skip Mf6FinalizeTimestep calls if just checking input
+    ! -- initialize format
+    fmt = "(/,1x,a,/,1x,79('-'),/)"
+    !
+    ! -- evaluate simulation mode
     select case (isim_mode)
       case(MVALIDATE)
         !
-        ! -- Write validation output for each model
+        ! -- write appropriate message
+        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
+          'MODFLOW 6 validation simulation mode. End of stress period',          &
+          kper, 'time step', kstp, '.'
+        !
+        ! -- Write validation message for each model
         do im = 1, basemodellist%Count()
           mp => GetBaseModelFromList(basemodellist, im)
-          call mp%model_validate()
+          call mp%model_message(line, fmt=fmt)
         end do
       case(MNORMAL)
+        !
+        ! -- write appropriate message
+        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
+          'MODFLOW 6 normal simulation mode. End of stress period',              &
+          kper, 'time step', kstp, '.'
         !
         ! -- Write output for each model
         do im = 1, basemodellist%Count()
           mp => GetBaseModelFromList(basemodellist, im)
           call mp%model_ot()
+          call mp%model_message(line, fmt=fmt)
         enddo
         !
         ! -- Write output for each exchange

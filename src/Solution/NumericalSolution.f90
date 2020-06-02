@@ -164,6 +164,7 @@ module NumericalSolutionModule
     procedure, public :: finalizeIteration
     procedure, public :: writeCSVHeader
     procedure, public :: writePTCInfoToFile
+    procedure, public :: advanceSolution
     
   end type NumericalSolutionType
 
@@ -1182,28 +1183,41 @@ contains
     integer(I4B), intent(inout) :: isgcnvg
     integer(I4B), intent(in) :: isuppress_output    
     ! -- local
+    class(NumericalModelType), pointer :: mp
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fmt
+    integer(I4B) :: im
     integer(I4B) :: kiter   ! non-linear iteration counter
 ! ------------------------------------------------------------------------------
     
-     select case (isim_mode)
-       case (MVALIDATE)
-         ! write a message to iout
-       case(MNORMAL)
-         ! nonlinear iteration loop for this solution
-         outerloop: do kiter = 1, this%mxiter
+    ! advance the solution by calling exchange and model advance routines
+    call this%advanceSolution()
+    
+    select case (isim_mode)
+      case (MVALIDATE)
+        line = 'MODFLOW 6 validation simulation mode. Skipping matrix ' //       &
+          'assembly and solution.'
+        fmt = "(/,1x,a,/)"
+        do im = 1, this%modellist%Count()
+          mp => GetNumericalModelFromList(this%modellist, im)
+          call mp%BaseModelType%model_message(line, fmt=fmt)
+        end do
+      case(MNORMAL)
+        ! nonlinear iteration loop for this solution
+        outerloop: do kiter = 1, this%mxiter
            
-           ! perform a single iteration
-            call this%doIteration(kiter)     
+          ! perform a single iteration
+          call this%doIteration(kiter)     
         
-           ! exit if converged
-           if (this%icnvg == 1) then
-             exit outerloop
-           end if
+          ! exit if converged
+          if (this%icnvg == 1) then
+            exit outerloop
+          end if
         
-         end do outerloop
+        end do outerloop
       
-         ! finish up, write convergence info, CSV file, budgets and flows, ...
-         call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
+        ! finish up, write convergence info, CSV file, budgets and flows, ...
+        call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
     end select
     !
     ! -- return
@@ -1211,6 +1225,29 @@ contains
     
   end subroutine sln_ca
        
+  ! advances the exchanges and models in this solution by 1 timestep
+  subroutine advanceSolution(this)
+    class(NumericalSolutionType) :: this
+    ! local
+    class(NumericalExchangeType), pointer :: cp
+    class(NumericalModelType), pointer :: mp
+    integer(I4B) :: ic
+    integer(I4B) :: im
+    
+    ! -- Exchange advance
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_ad()
+    enddo
+    
+    ! -- Model advance
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ad()
+    enddo
+    
+  end subroutine advanceSolution
+
   ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
