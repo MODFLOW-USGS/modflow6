@@ -14,6 +14,8 @@
 \usepackage{graphicx}
 \usepackage{longtable}
 
+\usepackage[T1]{fontenc}
+
 \makeindex
 \usepackage{setspace}
 % uncomment to make double space 
@@ -164,7 +166,7 @@ This section describes changes introduced into MODFLOW 6 for the current release
 		\item Add option to scale drain conductance over a user-defined range (drainage depth). Linear-conductance scaling is used with the Standard Formulation. Cubic-conductance scaling is used with the Newton-Raphson Formulation. The additional drainage depth variable is specified as an auxiliary variable and AUXDEPTHNAM is used to identify the auxiliary variable defining the drainage depth. The cubic-conductance scaling can be used as a replacement for the groundwater seepage option in the UZF Package. The scaled drainage conductance option can also be used to represent vertical seepage faces and improve model convergence in cells where simulated heads fluctuate around the elevation where the drain begins to discharge groundwater.
 		\item Add timeseries support for the reach upstream fraction variable in the SFR package.
 		\item Add Picard iterations for the SFR package to minimize differences in SFR package results between subsequent GWF Picard (non-linear) iterations as a result of non-optimal reach numbering. The number of SFR package Picard iterations can be controlled by specifying the maximum number of Picard  iteration to be used in the OPTIONS block (MAXIMUM\_PICARD\_ITERATIONS). If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. Specifying  MAXIMUM\_PICARD\_ITERATIONS to 1 will result in identical SFR package performance to previous versions of MODFLOW 6.
-		\item Add flow correction option for the MAW package that corrects the MAW-GWF exchange in cases where the head in a multi-aquifer well is below the bottom of the screen for a connection or the head in a convertible cell connected to a multi-aquifer well is below the cell bottom.  When flow corrections are activated, unit head gradients are used to calculate the flow between a multi-aquifer well and a connected GWF cell. This option is identical to the MODFLOW-USG ``flow-to-dry-cell'' option for flow between a CLN cell and a GWF cell if the cell is convertible \citep{modflowusg}. Flow corrections are enabled by specifying FLOW\_CORRECTION in the OPTIONS block. By default, flow corrections are not made.
+		\item Add flow correction option for the MAW package that corrects the MAW-GWF exchange in cases where the head in a multi-aquifer well is below the bottom of the screen for a connection or the head in a convertible cell connected to a multi-aquifer well is below the cell bottom.  When flow corrections are activated, unit head gradients are used to calculate the flow between a multi-aquifer well and a connected GWF cell. This option is identical to the MODFLOW-USG ``flow-to-dry-cell'' option for flow between a CLN cell and a GWF cell if the cell is convertible \citep{modflowusg}. Flow corrections are enabled by specifying FLOW\_CORRECTION in the OPTIONS block. By default, flow corrections are not made. \emph{Prior to this release (version 6.1.1), flow corrections were made anytime the head in a multi-aquifer well was below the bottom of the screen for a connection--this may result in different results for existing models that can be resolved by using the FLOW\_CORRECTION option.}
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
