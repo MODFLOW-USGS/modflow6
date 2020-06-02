@@ -189,7 +189,7 @@ module MawModule
     procedure, private :: maw_set_attribute_error
     procedure, private :: maw_calculate_saturation
     procedure, private :: maw_calculate_satcond
-    procedure, private :: maw_calculate_flow_correction
+    procedure, private :: maw_calculate_conn_terms
     procedure, private :: maw_calculate_wellq
     procedure, private :: maw_calculate_qpot
     procedure, private :: maw_cfupdate
@@ -2256,8 +2256,9 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    logical :: correct_flow
-    integer(I4B) :: j, n
+    !logical :: correct_flow
+    integer(I4B) :: j
+    integer(I4B) :: n
     integer(I4B) :: idx
     integer(I4B) :: iloc
     integer(I4B) :: isymloc
@@ -2268,15 +2269,17 @@ contains
     integer(I4B) :: ipossymd
     integer(I4B) :: ipossymoffd
     integer(I4B) :: jpos
+    integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: hgwf
     real(DP) :: bmaw
-    real(DP) :: sat
+    !real(DP) :: sat
     real(DP) :: cfw
     real(DP) :: cmaw
     real(DP) :: cterm
-    real(DP) :: en
-    real(DP) :: hbar
+    !real(DP) :: term
+    !real(DP) :: en
+    !real(DP) :: hbar
     real(DP) :: scale
     real(DP) :: tp
     real(DP) :: bt
@@ -2369,11 +2372,11 @@ contains
           jpos = this%get_jpos(n, j)
           igwfnode = this%get_gwfnode(n, j)
           hgwf = this%xnew(igwfnode)
-          !
-          ! -- calculate saturation
-          call this%maw_calculate_saturation(n, j, igwfnode, sat)
-          cmaw = this%satcond(jpos) * sat
-          this%simcond(jpos) = cmaw
+          !!
+          !! -- calculate saturation
+          !call this%maw_calculate_saturation(n, j, igwfnode, sat)
+          !cmaw = this%satcond(jpos) * sat
+          !this%simcond(jpos) = cmaw
           !!
           !! -- set bmaw, determine en, and set correct_flow flag
           !bmaw = this%botscrn(jpos)
@@ -2399,7 +2402,8 @@ contains
           !end if
           !
           ! -- calculate correction term
-          call this%maw_calculate_flow_correction(n, j, cterm)
+          call this%maw_calculate_conn_terms(n, j, icflow, cterm, cmaw)
+          this%simcond(jpos) = cmaw
           !
           ! -- add to maw row
           iposd = this%idxdglo(idx)
@@ -2467,8 +2471,9 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    logical :: correct_flow
-    integer(I4B) :: j, n
+    !logical :: correct_flow
+    integer(I4B) :: j
+    integer(I4B) :: n
     integer(I4B) :: idx
     integer(I4B) :: iloc
     integer(I4B) :: isymloc
@@ -2479,15 +2484,16 @@ contains
     integer(I4B) :: ipossymd
     integer(I4B) :: ipossymoffd
     integer(I4B) :: jpos
+    integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: hgwf
-    real(DP) :: hups
-    real(DP) :: hbar
-    real(DP) :: tmaw
-    real(DP) :: bmaw
-    real(DP) :: en
-    real(DP) :: sat
-    real(DP) :: cmaw
+    !real(DP) :: hups
+    !real(DP) :: hbar
+    !real(DP) :: tmaw
+    !real(DP) :: bmaw
+    !real(DP) :: en
+    !real(DP) :: sat
+    !real(DP) :: cmaw
     real(DP) :: scale
     real(DP) :: tp
     real(DP) :: bt
@@ -2497,7 +2503,8 @@ contains
     real(DP) :: rterm
     real(DP) :: derv
     real(DP) :: drterm
-    real(DP) :: dhbarterm
+    !real(DP) :: dhbarterm
+    real(DP) :: cterm
     real(DP) :: term
     real(DP) :: term2
     real(DP) :: rhsterm
@@ -2573,24 +2580,24 @@ contains
           jpos = this%get_jpos(n, j)
           igwfnode = this%get_gwfnode(n, j)
           hgwf = this%xnew(igwfnode)
-          !
-          ! -- calculate upstream weighted conductance
-          call this%maw_calculate_saturation(n, j, igwfnode, sat)
-          cmaw = this%satcond(jpos) * sat
-          !
-          ! -- set top and bottom of the screen
-          tmaw = this%topscrn(jpos)
-          bmaw = this%botscrn(jpos)
-          !
-          ! -- calculate en and determine if flow corrections are applied
-          en = max(bmaw, this%dis%bot(igwfnode))
-          correct_flow = .FALSE.
-          if (hmaw < en) then
-            correct_flow = .TRUE.
-          end if
-          if (hgwf < en .and. this%icelltype(igwfnode) /= 0) then
-            correct_flow = .TRUE.
-          end if
+          !!
+          !! -- calculate upstream weighted conductance
+          !call this%maw_calculate_saturation(n, j, igwfnode, sat)
+          !cmaw = this%satcond(jpos) * sat
+          !!
+          !! -- set top and bottom of the screen
+          !tmaw = this%topscrn(jpos)
+          !bmaw = this%botscrn(jpos)
+          !!
+          !! -- calculate en and determine if flow corrections are applied
+          !en = max(bmaw, this%dis%bot(igwfnode))
+          !correct_flow = .FALSE.
+          !if (hmaw < en) then
+          !  correct_flow = .TRUE.
+          !end if
+          !if (hgwf < en .and. this%icelltype(igwfnode) /= 0) then
+          !  correct_flow = .TRUE.
+          !end if
           !
           ! -- add to maw row
           iposd = this%idxdglo(idx)
@@ -2601,24 +2608,77 @@ contains
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
           ipossymoffd = this%idxsymoffdglo(idx)
+          !!
+          !! -- calculate newton corrections
+          !hups = hmaw
+          !if (hgwf > hups) then
+          !  hups = hgwf
+          !end if
+          !!
+          !! -- calculate the derivative of saturation
+          !drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups, this%satomega)
+          !!
+          !! -- maw is upstream
+          !if (hmaw > hgwf) then
+          !  if (correct_flow) then
+          !    ! -- add flow correction derivative terms
+          !    hbar = sQuadratic0sp(hgwf, en, this%satomega)
+          !    term = drterm * this%satcond(jpos) * (hbar - hmaw)
+          !    dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
+          !    term2 = cmaw * (dhbarterm - DONE)
+          !    rhsterm = term2 * hgwf + term * hmaw
+          !    rhs(iloc) = rhs(iloc) + rhsterm
+          !    rhs(isymnode) = rhs(isymnode) - rhsterm
+          !    if (this%iboundpak(n) > 0) then
+          !      amatsln(iposd) = amatsln(iposd) + term
+          !      amatsln(iposoffd) = amatsln(iposoffd) + term2
+          !    end if
+          !    amatsln(ipossymd) = amatsln(ipossymd) - term2
+          !    amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
+          !  else
+          !    term = drterm * this%satcond(jpos) * (hmaw - hgwf)
+          !    rhs(iloc) = rhs(iloc) + term * hmaw
+          !    rhs(isymnode) = rhs(isymnode) - term * hmaw
+          !    amatsln(iposd) = amatsln(iposd) + term
+          !    if (this%ibound(igwfnode) > 0) then
+          !      amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
+          !    end if
+          !  end if
+          !!
+          !! -- gwf is upstream
+          !else
+          !  if (correct_flow) then
+          !    ! -- add flow correction derivative terms
+          !    hbar = sQuadratic0sp(hmaw, en, this%satomega)
+          !    term = -drterm * this%satcond(jpos) * (hgwf - hbar)
+          !    dhbarterm = sQuadratic0spDerivative(hmaw, en, this%satomega)
+          !    term2 = cmaw * (DONE - dhbarterm)
+          !    rhsterm = term2 * hmaw + term * hgwf
+          !    rhs(iloc) = rhs(iloc) + rhsterm
+          !    rhs(isymnode) = rhs(isymnode) - rhsterm
+          !    if (this%iboundpak(n) > 0) then
+          !      amatsln(iposd) = amatsln(iposd) + term2
+          !      amatsln(iposoffd) = amatsln(iposoffd) + term
+          !    end if
+          !    amatsln(ipossymd) = amatsln(ipossymd) - term
+          !    amatsln(ipossymoffd) = amatsln(ipossymoffd) - term2
+          !  else
+          !    term = -drterm * this%satcond(jpos) * (hgwf - hmaw)
+          !    rhs(iloc) = rhs(iloc) + term * hgwf
+          !    rhs(isymnode) = rhs(isymnode) - term * hgwf
+          !    if (this%iboundpak(n) > 0) then
+          !      amatsln(iposoffd) = amatsln(iposoffd) + term
+          !    end if
+          !    amatsln(ipossymd) = amatsln(ipossymd) - term
+          !  end if
+          !end if
           !
-          ! -- calculate newton corrections
-          hups = hmaw
-          if (hgwf > hups) then
-            hups = hgwf
-          end if
-          !
-          ! -- calculate the derivative of saturation
-          drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups, this%satomega)
+          ! -- calculate newton terms
+          call this%maw_calculate_conn_terms(n, j, icflow, cterm, term, term2)
           !
           ! -- maw is upstream
           if (hmaw > hgwf) then
-            if (correct_flow) then
-              ! -- add flow correction derivative terms
-              hbar = sQuadratic0sp(hgwf, en, this%satomega)
-              term = drterm * this%satcond(jpos) * (hbar - hmaw)
-              dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
-              term2 = cmaw * (dhbarterm - DONE)
+            if (icflow /= 0) then
               rhsterm = term2 * hgwf + term * hmaw
               rhs(iloc) = rhs(iloc) + rhsterm
               rhs(isymnode) = rhs(isymnode) - rhsterm
@@ -2629,7 +2689,6 @@ contains
               amatsln(ipossymd) = amatsln(ipossymd) - term2
               amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
             else
-              term = drterm * this%satcond(jpos) * (hmaw - hgwf)
               rhs(iloc) = rhs(iloc) + term * hmaw
               rhs(isymnode) = rhs(isymnode) - term * hmaw
               amatsln(iposd) = amatsln(iposd) + term
@@ -2640,12 +2699,7 @@ contains
           !
           ! -- gwf is upstream
           else
-            if (correct_flow) then
-              ! -- add flow correction derivative terms
-              hbar = sQuadratic0sp(hmaw, en, this%satomega)
-              term = -drterm * this%satcond(jpos) * (hgwf - hbar)
-              dhbarterm = sQuadratic0spDerivative(hmaw, en, this%satomega)
-              term2 = cmaw * (DONE - dhbarterm)
+            if (icflow /= 0) then
               rhsterm = term2 * hmaw + term * hgwf
               rhs(iloc) = rhs(iloc) + rhsterm
               rhs(isymnode) = rhs(isymnode) - rhsterm
@@ -2656,7 +2710,6 @@ contains
               amatsln(ipossymd) = amatsln(ipossymd) - term
               amatsln(ipossymoffd) = amatsln(ipossymoffd) - term2
             else
-              term = -drterm * this%satcond(jpos) * (hgwf - hmaw)
               rhs(iloc) = rhs(iloc) + term * hgwf
               rhs(isymnode) = rhs(isymnode) - term * hgwf
               if (this%iboundpak(n) > 0) then
@@ -3831,17 +3884,26 @@ contains
     return
   end subroutine maw_calculate_saturation
   
-  subroutine maw_calculate_flow_correction(this, n, j, cterm, term, term2)
-    ! -- return variable
+  subroutine maw_calculate_conn_terms(this, n, j, icflow, cterm, term, term2)
+! **************************************************************************
+! maw_calculate_conn_terms-- Calculate matrix terms for a multi-aquifer well
+!                            connection. Terms for fc and fn methods are 
+!                            calculated based on whether term2 is passed
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: j
+    integer(I4B), intent(inout) :: icflow
     real(DP), intent(inout) :: cterm
-    real(DP), intent(inout), optional :: term
+    real(DP), intent(inout) :: term
     real(DP), intent(inout), optional :: term2
     ! -- local
     logical(LGP) :: correct_flow
+    integer(I4B) :: inewton
     integer(I4B) :: jpos
     integer(I4B) :: igwfnode
     real(DP) :: hmaw
@@ -3855,10 +3917,13 @@ contains
     real(DP) :: en
     real(DP) :: hbar
     real(DP) :: drterm
+    real(DP) :: dhbarterm
 ! --------------------------------------------------------------------------
     !
-    ! -- initialize correction term
+    ! -- initialize terms
     cterm = DZERO
+    icflow = 0
+    inewton = 0
     !
     ! -- set common terms
     jpos = this%get_jpos(n, j)
@@ -3873,7 +3938,8 @@ contains
     cmaw = this%satcond(jpos) * sat
     !
     ! -- set upstream head, term, and term2 if returning newton terms
-    if (present(term) .and. present(term2)) then
+    if (present(term2)) then
+      inewton = 1
       term = DZERO
       term2 = DZERO
       hups = hmaw
@@ -3883,6 +3949,8 @@ contains
       !
       ! -- calculate the derivative of saturation
       drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups, this%satomega)
+    else
+      term = cmaw
     end if
     !
     ! -- calculate correction term if flow_correction option specified
@@ -3898,6 +3966,7 @@ contains
         correct_flow = .TRUE.
       end if
       if (correct_flow) then
+        icflow = 1
         hdowns = min(hmaw, hgwf)
         hbar = sQuadratic0sp(hdowns, en, this%satomega)
         if (hgwf > hmaw) then
@@ -3906,14 +3975,32 @@ contains
           cterm = cmaw * (hbar - hgwf)
         end if
       end if
+      if (inewton /= 0) then
+        !
+        ! -- maw is upstream
+        if (hmaw > hgwf) then
+          hbar = sQuadratic0sp(hgwf, en, this%satomega)
+          term = drterm * this%satcond(jpos) * (hbar - hmaw)
+          dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
+          term2 = cmaw * (dhbarterm - DONE)
+        !
+        ! -- gwf is upstream
+        else
+          hbar = sQuadratic0sp(hmaw, en, this%satomega)
+          term = -drterm * this%satcond(jpos) * (hgwf - hbar)
+          dhbarterm = sQuadratic0spDerivative(hmaw, en, this%satomega)
+          term2 = cmaw * (DONE - dhbarterm)
+        end if
+      end if
     else
-      if (present(term) .and. present(term2)) then
+      if (inewton /= 0) then
+        term = drterm * this%satcond(jpos) * (hmaw - hgwf)
       end if
     end if
     !
     ! -- return
     return
-  end subroutine maw_calculate_flow_correction
+  end subroutine maw_calculate_conn_terms
 
   subroutine maw_calculate_wellq(this, n, hmaw, q)
 ! **************************************************************************
