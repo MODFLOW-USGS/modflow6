@@ -95,7 +95,7 @@ nosetests -v test_*
 # Build MODFLOW 6 example tests
 nosetests -v test_z01_nightly_build_examples.py
 
-# Build MODFLOW 5 to 6 converter xample tests
+# Build MODFLOW 5 to 6 converter example tests
 nosetests -v test_z02_nightly_build_mf5to6.py
 ```
 
