@@ -2,6 +2,7 @@ module MawModule
   !
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
+                             LENBUDTXT,                                          &
                              DZERO, DEM6, DEM4, DEM2, DQUARTER, DHALF, DP7,      &
                              DP9, DONE, DTWO, DPI, DTWOPI, DEIGHT, DHUNDRED,     &
                              DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
@@ -43,7 +44,8 @@ module MawModule
     ! -- scalars
     ! -- characters
     !
-    character(len=16), dimension(:), pointer, contiguous :: cmawbudget => NULL()
+    character(len=LENBUDTXT), dimension(:), pointer,                            &
+                               contiguous :: cmawbudget => NULL()
     character(len=LENAUXNAME), dimension(:), pointer,                           &
                                contiguous :: cauxcbc => NULL()
     !
@@ -148,7 +150,6 @@ module MawModule
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
     real(DP), dimension(:), pointer, contiguous  :: xnewpak => null()            !package x vector
     real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
-    real(DP), dimension(:), pointer, contiguous  :: cterm => null()              !package c vector
     !
     ! -- density variables
     integer(I4B), pointer :: idense
@@ -183,7 +184,6 @@ module MawModule
     ! -- private procedures
     procedure, private :: maw_read_wells
     procedure, private :: maw_read_well_connections
-    !procedure, private :: maw_deallocate_well
     procedure, private :: maw_check_attributes
     procedure, private :: maw_set_stressperiod
     procedure, private :: maw_set_attribute_error
@@ -321,12 +321,14 @@ contains
     ! -- dummy
     class(MawType),   intent(inout) :: this
     ! -- local
-    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n
     integer(I4B) :: jj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate character array for budget text
-    allocate(this%cmawbudget(this%bditems))
+    call mem_allocate(this%cmawbudget, LENBUDTXT, this%bditems, 'CMAWBUDGET',    &
+                      this%origin)
     !
     !-- fill cmawbudget
     this%cmawbudget(1) = '             GWF'
@@ -339,8 +341,9 @@ contains
     this%cmawbudget(8) = '  FW-RATE-TO-MVR'
     !
     ! -- allocate character arrays
-    allocate(this%cmawname(this%nmawwells))
-    allocate(this%status(this%nmawwells))
+    call mem_allocate(this%cmawname, LENBOUNDNAME, this%nmawwells, 'CMAWNAME',   &
+                      this%origin)
+    call mem_allocate(this%status, 8, this%nmawwells, 'STATUS', this%origin)
     !
     ! -- allocate well data pointers in memory manager
     call mem_allocate(this%ngwfnodes, this%nmawwells, 'NGWFNODES', this%origin)
@@ -391,8 +394,7 @@ contains
     end if
     !
     ! -- allocate iaconn
-    call mem_allocate(this%iaconn, this%nmawwells+1, 'iaconn',           &
-                      this%origin)
+    call mem_allocate(this%iaconn, this%nmawwells+1, 'IACONN', this%origin)
     !
     ! -- allocate imap
     call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%origin)
@@ -410,57 +412,58 @@ contains
     call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
     !
     ! -- initialize well data
-    do i = 1, this%nmawwells
-      this%status(i) = 'ACTIVE'
-      this%ngwfnodes(i) = 0
-      this%ieqn(i) = 0
-      this%ishutoff(i) = 0
-      this%ifwdischarge(i) = 0
-      this%strt(i) = DEP20
-      this%radius(i) = DEP20
-      this%area(i) = DZERO
-      this%pumpelev(i) = DEP20
-      this%bot(i) = DEP20
-      this%ratesim(i) = DZERO
-      this%reduction_length(i) = DEP20
-      this%fwelev(i) = DZERO
-      this%fwcond(i) = DZERO
-      this%fwrlen(i) = DZERO
-      this%fwcondsim(i) = DZERO
-      this%xsto(i) = DZERO
-      this%xoldsto(i) = DZERO
-      this%shutoffmin(i) = DZERO
-      this%shutoffmax(i) = DZERO
-      this%shutofflevel(i) = DEP20
-      this%shutoffweight(i) = DONE
-      this%shutoffdq(i) = DONE
-      this%shutoffqold(i) = DONE
+    do n = 1, this%nmawwells
+      this%status(n) = 'ACTIVE'
+      this%ngwfnodes(n) = 0
+      this%ieqn(n) = 0
+      this%ishutoff(n) = 0
+      this%ifwdischarge(n) = 0
+      this%strt(n) = DEP20
+      this%radius(n) = DEP20
+      this%area(n) = DZERO
+      this%pumpelev(n) = DEP20
+      this%bot(n) = DEP20
+      this%ratesim(n) = DZERO
+      this%reduction_length(n) = DEP20
+      this%fwelev(n) = DZERO
+      this%fwcond(n) = DZERO
+      this%fwrlen(n) = DZERO
+      this%fwcondsim(n) = DZERO
+      this%xsto(n) = DZERO
+      this%xoldsto(n) = DZERO
+      this%shutoffmin(n) = DZERO
+      this%shutoffmax(n) = DZERO
+      this%shutofflevel(n) = DEP20
+      this%shutoffweight(n) = DONE
+      this%shutoffdq(n) = DONE
+      this%shutoffqold(n) = DONE
       !
       ! -- timeseries aware variables
-      this%rate(i) = DZERO
-      this%well_head(i) = DZERO
+      this%rate(n) = DZERO
+      this%well_head(n) = DZERO
       do jj = 1, max(1, this%naux)
-        this%mauxvar(jj, i) = DZERO
+        this%mauxvar(jj, n) = DZERO
       end do
       !
       ! -- dbuff
       if (this%iheadout > 0) then
-        this%dbuff(i) = DZERO
+        this%dbuff(n) = DZERO
       end if
     end do
     !
     ! -- initialize iaconn
-    do i = 1, this%nmawwells + 1
-      this%iaconn(i) = 0
+    do n = 1, this%nmawwells + 1
+      this%iaconn(n) = 0
     end do
     !
     ! -- allocate character array for budget text
-    allocate(this%cauxcbc(this%cbcauxitems))
+    call mem_allocate(this%cauxcbc, LENAUXNAME, this%cbcauxitems, 'CAUXCBC',     &
+                      this%origin)
     !
     ! -- allocate and initialize qauxcbc
     call mem_allocate(this%qauxcbc, this%cbcauxitems, 'QAUXCBC', this%origin)
-    do i = 1, this%cbcauxitems
-      this%qauxcbc(i) = DZERO
+    do j = 1, this%cbcauxitems
+      this%qauxcbc(j) = DZERO
     end do
     !
     ! -- allocate flowing well data
@@ -474,25 +477,25 @@ contains
     call mem_allocate(this%qconst, this%nmawwells, 'QCONST', this%origin)
     !
     ! -- initialize flowing well, storage, and constant flow terms
-    do i = 1, this%nmawwells
+    do n = 1, this%nmawwells
       if (this%iflowingwells > 0) then
-        this%qfw(i) = DZERO
+        this%qfw(n) = DZERO
       end if
-      this%qsto(i) = DZERO
-      this%qconst(i) = DZERO
+      this%qsto(n) = DZERO
+      this%qconst(n) = DZERO
     end do
     !
     ! -- initialize connection data
-    do i = 1, this%maxbound
-      this%imap(i) = 0
-      this%gwfnodes(i) = 0
-      this%sradius(i) = DZERO
-      this%hk(i) = DZERO
-      this%satcond(i) = DZERO
-      this%simcond(i) = DZERO
-      this%topscrn(i) = DZERO
-      this%botscrn(i) = DZERO
-      this%qleak(i) = DZERO
+    do j = 1, this%maxbound
+      this%imap(j) = 0
+      this%gwfnodes(j) = 0
+      this%sradius(j) = DZERO
+      this%hk(j) = DZERO
+      this%satcond(j) = DZERO
+      this%simcond(j) = DZERO
+      this%topscrn(j) = DZERO
+      this%botscrn(j) = DZERO
+      this%qleak(j) = DZERO
     end do
     !
     ! -- allocate denseterms to size 0
@@ -1637,6 +1640,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: moffset
@@ -1653,12 +1657,13 @@ contains
     ! -- format
 ! ------------------------------------------------------------------------------
     !
-    !
-    allocate(this%idxlocnode(this%nmawwells))
-    allocate(this%idxdglo(this%maxbound))
-    allocate(this%idxoffdglo(this%maxbound))
-    allocate(this%idxsymdglo(this%maxbound))
-    allocate(this%idxsymoffdglo(this%maxbound))
+    ! -- allocate connection mapping vectors
+    call mem_allocate(this%idxlocnode, this%nmawwells, 'IDXLOCNODE', this%origin)
+    call mem_allocate(this%idxdglo, this%maxbound, 'IDXDGLO', this%origin)
+    call mem_allocate(this%idxoffdglo, this%maxbound, 'IDXOFFDGLO', this%origin)
+    call mem_allocate(this%idxsymdglo, this%maxbound, 'IDXSYMDGLO', this%origin)
+    call mem_allocate(this%idxsymoffdglo, this%maxbound, 'IDXSYMOFFDGLO',        &
+                      this%origin)
     !
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.  idxglo allows this model to insert or
@@ -2256,7 +2261,6 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    !logical :: correct_flow
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: idx
@@ -2273,13 +2277,9 @@ contains
     real(DP) :: hmaw
     real(DP) :: hgwf
     real(DP) :: bmaw
-    !real(DP) :: sat
     real(DP) :: cfw
     real(DP) :: cmaw
     real(DP) :: cterm
-    !real(DP) :: term
-    !real(DP) :: en
-    !real(DP) :: hbar
     real(DP) :: scale
     real(DP) :: tp
     real(DP) :: bt
@@ -2372,36 +2372,8 @@ contains
           jpos = this%get_jpos(n, j)
           igwfnode = this%get_gwfnode(n, j)
           hgwf = this%xnew(igwfnode)
-          !!
-          !! -- calculate saturation
-          !call this%maw_calculate_saturation(n, j, igwfnode, sat)
-          !cmaw = this%satcond(jpos) * sat
-          !this%simcond(jpos) = cmaw
-          !!
-          !! -- set bmaw, determine en, and set correct_flow flag
-          !bmaw = this%botscrn(jpos)
-          !en = max(bmaw, this%dis%bot(igwfnode))
-          !correct_flow = .FALSE.
-          !if (hmaw < en) then
-          !  correct_flow = .TRUE.
-          !end if
-          !if (hgwf < en .and. this%icelltype(igwfnode) /= 0) then
-          !  correct_flow = .TRUE.
-          !end if
-          !!
-          !! -- calculate cterm if flow correction required
-          !cterm = DZERO
-          !if (correct_flow) then
-          !  if (hgwf > hmaw) then
-          !    hbar = sQuadratic0sp(hmaw, en, this%satomega)
-          !    cterm = cmaw * (hmaw - hbar)
-          !  else
-          !    hbar = sQuadratic0sp(hgwf, en, this%satomega)
-          !    cterm = cmaw * (hbar - hgwf)
-          !  end if
-          !end if
           !
-          ! -- calculate correction term
+          ! -- calculate connection terms
           call this%maw_calculate_conn_terms(n, j, icflow, cterm, cmaw)
           this%simcond(jpos) = cmaw
           !
@@ -2471,7 +2443,6 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    !logical :: correct_flow
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: idx
@@ -2487,13 +2458,6 @@ contains
     integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: hgwf
-    !real(DP) :: hups
-    !real(DP) :: hbar
-    !real(DP) :: tmaw
-    !real(DP) :: bmaw
-    !real(DP) :: en
-    !real(DP) :: sat
-    !real(DP) :: cmaw
     real(DP) :: scale
     real(DP) :: tp
     real(DP) :: bt
@@ -2503,7 +2467,6 @@ contains
     real(DP) :: rterm
     real(DP) :: derv
     real(DP) :: drterm
-    !real(DP) :: dhbarterm
     real(DP) :: cterm
     real(DP) :: term
     real(DP) :: term2
@@ -2580,24 +2543,6 @@ contains
           jpos = this%get_jpos(n, j)
           igwfnode = this%get_gwfnode(n, j)
           hgwf = this%xnew(igwfnode)
-          !!
-          !! -- calculate upstream weighted conductance
-          !call this%maw_calculate_saturation(n, j, igwfnode, sat)
-          !cmaw = this%satcond(jpos) * sat
-          !!
-          !! -- set top and bottom of the screen
-          !tmaw = this%topscrn(jpos)
-          !bmaw = this%botscrn(jpos)
-          !!
-          !! -- calculate en and determine if flow corrections are applied
-          !en = max(bmaw, this%dis%bot(igwfnode))
-          !correct_flow = .FALSE.
-          !if (hmaw < en) then
-          !  correct_flow = .TRUE.
-          !end if
-          !if (hgwf < en .and. this%icelltype(igwfnode) /= 0) then
-          !  correct_flow = .TRUE.
-          !end if
           !
           ! -- add to maw row
           iposd = this%idxdglo(idx)
@@ -2608,70 +2553,6 @@ contains
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
           ipossymoffd = this%idxsymoffdglo(idx)
-          !!
-          !! -- calculate newton corrections
-          !hups = hmaw
-          !if (hgwf > hups) then
-          !  hups = hgwf
-          !end if
-          !!
-          !! -- calculate the derivative of saturation
-          !drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups, this%satomega)
-          !!
-          !! -- maw is upstream
-          !if (hmaw > hgwf) then
-          !  if (correct_flow) then
-          !    ! -- add flow correction derivative terms
-          !    hbar = sQuadratic0sp(hgwf, en, this%satomega)
-          !    term = drterm * this%satcond(jpos) * (hbar - hmaw)
-          !    dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
-          !    term2 = cmaw * (dhbarterm - DONE)
-          !    rhsterm = term2 * hgwf + term * hmaw
-          !    rhs(iloc) = rhs(iloc) + rhsterm
-          !    rhs(isymnode) = rhs(isymnode) - rhsterm
-          !    if (this%iboundpak(n) > 0) then
-          !      amatsln(iposd) = amatsln(iposd) + term
-          !      amatsln(iposoffd) = amatsln(iposoffd) + term2
-          !    end if
-          !    amatsln(ipossymd) = amatsln(ipossymd) - term2
-          !    amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
-          !  else
-          !    term = drterm * this%satcond(jpos) * (hmaw - hgwf)
-          !    rhs(iloc) = rhs(iloc) + term * hmaw
-          !    rhs(isymnode) = rhs(isymnode) - term * hmaw
-          !    amatsln(iposd) = amatsln(iposd) + term
-          !    if (this%ibound(igwfnode) > 0) then
-          !      amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
-          !    end if
-          !  end if
-          !!
-          !! -- gwf is upstream
-          !else
-          !  if (correct_flow) then
-          !    ! -- add flow correction derivative terms
-          !    hbar = sQuadratic0sp(hmaw, en, this%satomega)
-          !    term = -drterm * this%satcond(jpos) * (hgwf - hbar)
-          !    dhbarterm = sQuadratic0spDerivative(hmaw, en, this%satomega)
-          !    term2 = cmaw * (DONE - dhbarterm)
-          !    rhsterm = term2 * hmaw + term * hgwf
-          !    rhs(iloc) = rhs(iloc) + rhsterm
-          !    rhs(isymnode) = rhs(isymnode) - rhsterm
-          !    if (this%iboundpak(n) > 0) then
-          !      amatsln(iposd) = amatsln(iposd) + term2
-          !      amatsln(iposoffd) = amatsln(iposoffd) + term
-          !    end if
-          !    amatsln(ipossymd) = amatsln(ipossymd) - term
-          !    amatsln(ipossymoffd) = amatsln(ipossymoffd) - term2
-          !  else
-          !    term = -drterm * this%satcond(jpos) * (hgwf - hmaw)
-          !    rhs(iloc) = rhs(iloc) + term * hgwf
-          !    rhs(isymnode) = rhs(isymnode) - term * hgwf
-          !    if (this%iboundpak(n) > 0) then
-          !      amatsln(iposoffd) = amatsln(iposoffd) + term
-          !    end if
-          !    amatsln(ipossymd) = amatsln(ipossymd) - term
-          !  end if
-          !end if
           !
           ! -- calculate newton terms
           call this%maw_calculate_conn_terms(n, j, icflow, cterm, term, term2)
@@ -3072,9 +2953,9 @@ contains
     end if
     !
     ! -- character arrays
-    deallocate(this%cmawbudget)
-    deallocate(this%cmawname)
-    deallocate(this%status)
+    call mem_deallocate(this%cmawbudget, 'CMAWBUDGET', this%origin)
+    call mem_deallocate(this%cmawname, 'CMAWNAME', this%origin)
+    call mem_deallocate(this%status, 'STATUS', this%origin)
     !
     ! -- deallocate well data pointers in memory manager
     call mem_deallocate(this%ngwfnodes)
@@ -3119,7 +3000,7 @@ contains
     ! -- imap vector
     call mem_deallocate(this%imap)
     call mem_deallocate(this%dbuff)
-    deallocate(this%cauxcbc)
+    call mem_deallocate(this%cauxcbc, 'CAUXCBC', this%origin)
     call mem_deallocate(this%qauxcbc)
     call mem_deallocate(this%qleak)
     call mem_deallocate(this%qfw)
@@ -3127,13 +3008,12 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%qconst)
     call mem_deallocate(this%denseterms)
-    deallocate(this%idxlocnode)
-    deallocate(this%idxdglo)
-    deallocate(this%idxoffdglo)
-    deallocate(this%idxsymdglo)
-    deallocate(this%idxsymoffdglo)
-    deallocate(this%xoldpak)
-    !deallocate(this%cterm)
+    call mem_deallocate(this%idxlocnode)
+    call mem_deallocate(this%idxdglo)
+    call mem_deallocate(this%idxoffdglo)
+    call mem_deallocate(this%idxsymdglo)
+    call mem_deallocate(this%idxsymoffdglo)
+    call mem_deallocate(this%xoldpak)
     !
     ! -- scalars
     call mem_deallocate(this%correct_flow)
@@ -3205,6 +3085,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
     class(MawType) :: this
     integer(I4B), pointer :: neq
     integer(I4B), dimension(:), pointer, contiguous :: ibound
@@ -3226,8 +3109,7 @@ contains
     iend = istart + this%nmawwells - 1
     this%iboundpak => this%ibound(istart:iend)
     this%xnewpak => this%xnew(istart:iend)
-    allocate(this%xoldpak(this%nmawwells))
-    !allocate(this%cterm(this%maxbound))
+    call mem_allocate(this%xoldpak, this%nmawwells, 'XOLDPAK', this%origin)
     !
     ! -- initialize xnewpak
     do n = 1, this%nmawwells
