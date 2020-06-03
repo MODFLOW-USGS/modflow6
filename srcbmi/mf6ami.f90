@@ -52,21 +52,21 @@ module mf6ami
   function ami_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
   !DEC$ ATTRIBUTES DLLEXPORT :: ami_get_subcomponent_count
     use ListsModule, only: solutiongrouplist
-    use SimVariablesModule, only: iout
+    use SimVariablesModule, only: istdout
     integer(kind=c_int) :: bmi_status
     integer(kind=c_int), intent(out) :: count
     ! local
     class(SolutionGroupType), pointer :: sgp
     
-    ! TODO_MJR: this goes for all calls, move to init I guess...
+    ! the following is true for all calls at this level (subcomponent)
     if (solutiongrouplist%Count() /= 1) then
-      write(iout,*) 'multiple solution groups not supported'
+      write(istdout,*) 'Error: BMI does not support the use of multiple solution groups'
       count = -1      
       bmi_status = BMI_FAILURE
       return
     end if 
     
-    sgp => GetSolutionGroupFromList(solutiongrouplist, 1)    
+    sgp => GetSolutionGroupFromList(solutiongrouplist, 1)
     count = sgp%nsolutions    
     bmi_status = BMI_SUCCESS
     
@@ -76,11 +76,20 @@ module mf6ami
   ! on the specific subcomponent (=NumericalSolution)
   function ami_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
   !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_solve   
+    use ListsModule, only: solutiongrouplist
     use NumericalSolutionModule
+    use SimVariablesModule, only: istdout
     integer(kind=c_int) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
     integer(kind=c_int) :: bmi_status
     ! local
     class(NumericalSolutionType), pointer :: ns
+    
+     ! people might not call 'ami_get_subcomponent_count' first, so let's repeat this:
+    if (solutiongrouplist%Count() /= 1) then
+      write(istdout,*) 'Error: BMI does not support the use of multiple solution groups'
+      bmi_status = BMI_FAILURE
+      return
+    end if 
     
     ! get the numerical solution we are running
     ns => getSolution(subcomponent_idx)
