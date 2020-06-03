@@ -262,12 +262,6 @@ contains
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
       call ep%exg_rp()
     enddo
-    !      
-    ! -- Solution advance
-    do is=1,basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_ad()    
-    enddo
     !
     call converge_reset()
     
