@@ -198,7 +198,9 @@ module GwtMvtModule
     integer(I4B) :: id1, id2, nlist
     integer(I4B) :: ipr, irc
     integer(I4B) :: igwtnode
+    integer(I4B) :: nbudterm
     real(DP) :: q, cp
+    real(DP), dimension(:), pointer :: concpak
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize the mass flow into advanced package from the mover
@@ -210,11 +212,13 @@ module GwtMvtModule
     end do
     !
     ! -- Add mover terms?
-    do i = 1, this%fmi%mvrbudobj%nbudterm
+    nbudterm = this%fmi%mvrbudobj%nbudterm
+    do i = 1, nbudterm
       nlist = this%fmi%mvrbudobj%budterm(i)%nlist
       if (nlist > 0) then
         call this%fmi%get_package_index(this%fmi%mvrbudobj%budterm(i)%text2id1, ipr)
         call this%fmi%get_package_index(this%fmi%mvrbudobj%budterm(i)%text2id2, irc)
+        if (this%fmi%iatp(ipr) /= 0) concpak => this%fmi%datp(ipr)%concpack
         do n = 1, nlist
           !
           ! -- lak/sfr/maw/uzf id1 (provider) and id2 (receiver)
@@ -227,7 +231,7 @@ module GwtMvtModule
           ! -- concentration of the provider
           cp = DZERO
           if (this%fmi%iatp(ipr) /= 0) then
-            cp = this%fmi%datp(ipr)%concpack(id1)
+            cp = concpak(id1)
           else
             ! -- Must be a regular stress package
             igwtnode = this%fmi%gwfpackages(ipr)%nodelist(id1)

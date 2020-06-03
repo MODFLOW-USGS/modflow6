@@ -350,6 +350,7 @@ module GwtSsmModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -384,6 +385,7 @@ module GwtSsmModule
     ! -- set maxrows
     maxrows = 0
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
       do ip = 1, this%fmi%nflowpack
         if (this%fmi%iatp(ip) /= 0) cycle
         !
