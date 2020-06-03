@@ -1,11 +1,7 @@
 """
 MODFLOW 6 Autotest
-Test to make sure that recharge is passed to the highest active layer and
-verify that recharge is in the highest active layer by looking at the
-individual budget terms.  For this test, there are two layers and five
-columns.  The top layer is dry except for the middle cell.  Recharge is
-applied to the top layer.  In the test a, IRCH is not specified.  In test b
-IRCH is specified as 1, and in test c IRCH is specified as [2, 2, 1, 2, 2]
+Test the bmi which is used update the Sy=0 value with same Sy used to
+calculate SC2 in the non-bmi simulation.
 """
 
 import os
@@ -31,7 +27,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation, bmi_return
 
-ex = ['libgwf_rch02']
+ex = ['libgwf_sto01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -76,20 +72,27 @@ h2 = 11.
 chd_spd = {0: [[(0, 0, 0), h1],
                [(0, 0, ncol - 1), h2]]}
 
+strt = np.linspace(h1, h2, num=ncol)
+
 # build recharge spd
 rch_spd = {}
 for n in range(nper):
     rch_spd[n] = rch_rates[n]
+
+# storage variables
+sy_val = 0.2
 
 # solver data
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, rech):
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+def build_model(ws, name, sy):
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 version='mf6',
                                  exe_name='mf6',
-                                 sim_ws=ws, memory_print_option='all')
+                                 sim_ws=ws,
+                                 memory_print_option='all')
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
@@ -113,18 +116,24 @@ def build_model(ws, name, rech):
                                   top=top, botm=botm)
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=top)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=1,
                                   k=hk)
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(gwf,
+                                  save_flows=True,
+                                  iconvert=1,
+                                  ss=0., sy=sy,
+                                  transient={0: True})
 
     # chd file
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
     # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
+    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rch_spd)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -142,11 +151,11 @@ def get_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = build_model(ws, name, rech=rch_spd)
+    sim = build_model(ws, name, sy=sy_val)
 
     # build comparison model
     ws = os.path.join(dir, 'libmf6')
-    mc = build_model(ws, name, rech=0.)
+    mc = build_model(ws, name, sy=0.)
 
     return sim, mc
 
@@ -181,48 +190,27 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # maximum outer iterations
-    max_iter = mf6.get_value_ptr("SLN_1/MXITER")
+    # get sc2 array and update flag
+    cdata = "{} STO/IRESETSC2".format(name)
+    update_sc2 = mf6.get_value_ptr(cdata)
+    cdata = "{} STO/SC2".format(name)
+    sc2 = mf6.get_value_ptr(cdata)
 
-    # get recharge array
-    cdata = "{} RCHA/BOUND".format(name)
-    recharge = mf6.get_value_ptr(cdata)
-    trch = np.zeros((ncol), dtype=np.float64)
+    # reset sc2 and update flag
+    sc2 += sy_val
+    update_sc2[0] = 1
 
     # model time loop
     idx = 0
     while current_time < end_time:
 
-        # get dt and prepare for non-linear iterations
-        dt = mf6.get_time_step()
-        mf6.prepare_time_step(dt)
-
-        # convergence loop
-        kiter = 0
-        mf6.prepare_solve(1)
-
-        # update recharge
-        trch[:] = rch_spd[idx] * area
-        recharge[:, 0] = trch[:]
-
-        while kiter < max_iter:
-            has_converged = mf6.solve(1)
-            kiter += 1
-
-            if has_converged:
-                msg = "Component {}".format(1) + \
-                      " converged in {}".format(kiter) + " outer iterations"
-                print(msg)
-                break
-
-        if not has_converged:
+        # run the time step
+        try:
+            mf6.update()
+        except:
             return bmi_return(success, model_ws)
 
-        # finalize time step
-        mf6.finalize_solve(1)
-
-        # finalize time step and update time
-        mf6.finalize_time_step()
+        # update time
         current_time = mf6.get_current_time()
 
         # increment counter
