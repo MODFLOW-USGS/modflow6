@@ -2473,7 +2473,7 @@ contains
     real(DP) :: rhsterm
 ! --------------------------------------------------------------------------
     !
-    ! -- Copy package rhs and hcof into solution rhs and amat
+    ! -- Calculate Newton-Raphson corrections
     idx = 1
     do n = 1, this%nmawwells
       iloc = this%idxlocnode(n)
@@ -2521,23 +2521,9 @@ contains
             end if
           end if
         end if
-        !!
-        !! -- add maw storage changes
-        !if (this%imawiss /= 1) then
-        !  if (this%ifwdischarge(n) /= 1) then
-        !    rate = this%area(n) * hmaw / delt
-        !    rterm = -rate
-        !    !
-        !    ! -- calculate storage derivative
-        !    drterm = -this%area(n) / delt
-        !    !
-        !    ! -- fill amat and rhs with storage components
-        !    rhs(iloc) = rhs(iloc) - rterm + drterm * hmaw
-        !  end if
-        !end if
       end if
-      
-      ! -- well connections
+      !
+      ! -- process each maw/gwf connection
       do j = 1, this%ngwfnodes(n)
         if (this%iboundpak(n) /= 0) then
           jpos = this%get_jpos(n, j)

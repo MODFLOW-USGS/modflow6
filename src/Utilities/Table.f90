@@ -525,6 +525,11 @@ module TableModule
     ! -- deallocate space for tableterm
     deallocate(this%tableterm)
     !
+    ! -- deallocate character scalars and arrays
+    deallocate(this%linesep)
+    deallocate(this%dataline)
+    deallocate(this%header)
+    !
     ! -- deallocate scalars
     if (this%transient) then
       deallocate(this%kstp)
