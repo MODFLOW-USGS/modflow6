@@ -39,7 +39,7 @@ module BaseExchangeModule
   end interface
   
   contains
-  
+     
   subroutine exg_rp(this)
 ! ******************************************************************************
 ! exg_rp -- Read and prepare

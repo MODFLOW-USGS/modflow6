@@ -68,7 +68,6 @@ module NumericalModelModule
     procedure :: set_xptr
     procedure :: set_rhsptr
     procedure :: set_iboundptr
-    procedure :: get_nsubtimes
     procedure :: get_mrange
     procedure :: get_mcellid
     procedure :: get_mnodeu
@@ -102,12 +101,10 @@ module NumericalModelModule
     class(NumericalModelType) :: this
   end subroutine model_rp
 
-  subroutine model_ad(this, ipicard, isubtime)
+  subroutine model_ad(this)
     class(NumericalModelType) :: this
-    integer(I4B), intent(in) :: ipicard
-    integer(I4B), intent(in) :: isubtime
   end subroutine model_ad
-
+  
   subroutine model_cf(this,kiter)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
@@ -324,13 +321,6 @@ module NumericalModelModule
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iboundsln
     this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
   end subroutine set_iboundptr
-
-  function get_nsubtimes(this) result(nsubtimes)
-    integer(I4B) :: nsubtimes
-    class(NumericalModelType) :: this
-    nsubtimes = 1
-    return
-  end function get_nsubtimes
 
   subroutine get_mcellid(this, node, mcellid)
     use BndModule, only: BndType, GetBndFromList

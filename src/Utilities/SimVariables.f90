@@ -1,11 +1,13 @@
 module SimVariablesModule
   use, intrinsic :: iso_fortran_env, only: output_unit
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, IUSTART, VALL
+  use ConstantsModule, only: LINELENGTH, MAXCHARLEN, IUSTART, VALL
   public
   character(len=LINELENGTH) :: simfile    = 'mfsim.nam'
   character(len=LINELENGTH) :: simlstfile = 'mfsim.lst'
   character(len=LINELENGTH) :: simstdout  = 'mfsim.stdout'
+  character(len=MAXCHARLEN) :: errmsg
+  character(len=MAXCHARLEN) :: warnmsg
   integer(I4B) :: istdout = output_unit                                          ! -- unit number for stdout
   integer(I4B) :: isim_level = VALL                                              ! -- unit number for stdout
   integer(I4B) :: iout                                                           ! -- unit number for simulation output

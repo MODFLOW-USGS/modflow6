@@ -62,9 +62,15 @@ def build_model(ws, name, timeseries=False):
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
+    # set ims csv files
+    csv0 = '{}.outer.ims.csv'.format(name)
+    csv1 = '{}.inner.ims.csv'.format(name)
+
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim,
-                               print_option='SUMMARY',
+                               print_option='ALL',
+                               csv_outer_output_filerecord=csv0,
+                               csv_inner_output_filerecord=csv1,
                                outer_dvclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='NONE',
@@ -175,6 +181,7 @@ def build_model(ws, name, timeseries=False):
     budpth = '{}.{}.cbc'.format(name, paktest)
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
+                                  print_stage=True,
                                   maximum_picard_iterations=1,
                                   auxiliary=auxnames,
                                   print_input=True,
@@ -200,7 +207,9 @@ def build_model(ws, name, timeseries=False):
         [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
     perioddata = [[0, 'FLOWING_WELL', 0., 0., 0.],
                   [0, 'RATE', 1.e-3]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, mover=True, nmawwells=nmawwells,
+    maw = flopy.mf6.ModflowGwfmaw(gwf,
+                                  print_head=True,
+                                  mover=True, nmawwells=nmawwells,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   perioddata=perioddata, pname='maw-1')
@@ -318,7 +327,8 @@ def build_model(ws, name, timeseries=False):
                                 head_filerecord='{}.hds'.format(name),
                                 saverecord=[('HEAD', 'ALL'),
                                             ('BUDGET', 'ALL')],
-                                printrecord=[('BUDGET', 'LAST')])
+                                printrecord=[('BUDGET', 'LAST'),
+                                             ('HEAD', 'LAST')])
 
     return sim
 

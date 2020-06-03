@@ -6,6 +6,7 @@ module GwfCsubModule
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
                              LENBUDTXT, LENAUXNAME, LENORIGIN, LENPAKLOC,       &
+                             LENLISTLABEL,                                      &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilitiesModule, only: is_same, sim_message
@@ -20,6 +21,7 @@ module GwfCsubModule
   use InputOutputModule, only: get_node, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop 
+  use SimVariablesModule, only: errmsg
   use ArrayHandlersModule, only: ExpandArray
   use SortModule, only: qsort, selectn
   !
@@ -48,11 +50,17 @@ module GwfCsubModule
   !
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
+    ! -- characters scalars
+    character(len=LENLISTLABEL), pointer :: listlabel => null()                  !title of table written for RP
+    character(len=LENORIGIN), pointer :: stoname => null()
+    ! -- character arrays
     character(len=LENBOUNDNAME), dimension(:),                                  &
                                  pointer, contiguous :: boundname => null()      !vector of boundnames
-    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
-    character(len=500) :: listlabel   = ''                                       !title of table written for RP
-    character(len=LENORIGIN) :: stoname
+    character(len=LENAUXNAME), dimension(:),                                    &
+                                 pointer, contiguous :: auxname => null()        !vector of auxname
+    ! -- logical scalars
+    logical, pointer :: lhead_based => null()
+    ! -- integer scalars
     integer(I4B), pointer :: istounit => null()
     integer(I4B), pointer :: istrainib => null()
     integer(I4B), pointer :: istrainsk => null()
@@ -81,8 +89,8 @@ module GwfCsubModule
     integer(I4B), pointer :: initialized => null()
     integer(I4B), pointer :: ieslag => null()
     integer(I4B), pointer :: ipch => null()
-    logical, pointer :: lhead_based => null()
     integer(I4B), pointer :: iupdatestress => null()
+    ! -- real scalars
     real(DP), pointer :: epsilon => null()                                       !epsilon for stress smoothing
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
@@ -91,11 +99,13 @@ module GwfCsubModule
     real(DP), pointer :: dbfact => null()
     real(DP), pointer :: dbfacti => null()
     real(DP), pointer :: satomega => null()                                      !newton-raphson saturation omega
-
+    ! -- integer pointer to storage package variables
     integer(I4B), pointer :: gwfiss => NULL()                                    !pointer to model iss flag
     integer(I4B), pointer :: gwfiss0 => NULL()                                   !iss flag for last stress period
+    ! -- integer arrays
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: stoiconv => null()        !pointer to iconvert in storage
+    ! -- real arrays
     real(DP), dimension(:), pointer, contiguous :: stosc1 => null()              !pointer to sc1 in storage
     real(DP), dimension(:), pointer, contiguous :: buff => null()                !buff array
     real(DP), dimension(:), pointer, contiguous :: buffusr => null()             !buffusr array
@@ -337,6 +347,10 @@ contains
     ! -- call standard NumericalPackageType allocate scalars
     call this%NumericalPackageType%allocate_scalars()
     !
+    ! -- allocate character variables
+    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%origin)
+    call mem_allocate(this%stoname, LENORIGIN, 'STONAME', this%origin)
+    !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%istounit, 'ISTOUNIT', this%origin)
     call mem_allocate(this%inobspkg, 'INOBSPKG', this%origin)
@@ -379,9 +393,6 @@ contains
     !
     ! -- allocate TS object
     allocate(this%TsManager)
-    !
-    ! -- Allocate text strings
-    allocate(this%auxname(0))
     !
     ! -- initialize values
     this%istounit = 0
@@ -1686,17 +1697,16 @@ contains
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=20) :: scellid
     character(len=10) :: text
-    character(len=LENBOUNDNAME) :: bndName, bndNameTemp
+    character(len=LENBOUNDNAME) :: bndName
     character(len=7) :: cdelay
-    character(len=9) :: cno
+    logical :: isfound
+    logical :: endOfBlock
     integer(I4B) :: ival
-    logical :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: nn
     integer(I4B) :: ib
@@ -1731,10 +1741,14 @@ contains
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        ! -- read interbed number
+        if (endOfBlock) then
+          exit
+        end if
+        !
+        ! -- get interbed number
         itmp = this%parser%GetInteger()
-
+        !
+        ! -- check for error condition
         if (itmp < 1 .or. itmp > this%ninterbeds) then
           write(errmsg,'(a,1x,i0,2(1x,a),1x,i0,a)')                           &
             'Interbed number (', itmp, ') must be greater than 0 and ',       &
@@ -1742,10 +1756,10 @@ contains
           call store_error(errmsg)
           cycle
         end if
-
+        !
         ! -- increment nboundchk
         nboundchk(itmp) = nboundchk(itmp) + 1
-
+        !
         ! -- read cellid
         call this%parser%GetCellid(this%dis%ndim, cellid)
         nn = this%dis%noder_from_cellid(cellid,                                  &
@@ -1755,17 +1769,18 @@ contains
         top = this%dis%top(nn)
         bot = this%dis%bot(nn)
         baq = top - bot
+        !
         ! -- determine if a valid cell location was provided
         if (nn < 1) then
           write(errmsg,'(a,1x,i0,a)')                                            &
             'Invalid cellid for packagedata entry', itmp, '.'
           call store_error(errmsg)
         end if
-        
+        !
         ! -- set nodelist and unodelist
         this%nodelist(itmp) = nn
         this%unodelist(itmp) = n
-
+        !
         ! -- get cdelay
         call this%parser%GetStringCaps(cdelay)
         select case (cdelay)
@@ -1783,10 +1798,10 @@ contains
           end select
         idelay = ival
         this%idelay(itmp) = ival
-
+        !
         ! -- get initial preconsolidation stress
         this%pcs(itmp) = this%parser%GetDouble()
-
+        !
         ! -- get thickness or cell fraction
         rval = this%parser%GetDouble()
         if (this%icellf == 0) then
@@ -1810,7 +1825,7 @@ contains
         if (this%iupdatematprop /= 0) then
           this%thick(itmp) = rval
         end if
-
+        !
         ! -- get rnb
         rval = this%parser%GetDouble()
         if (idelay > 0) then
@@ -1875,26 +1890,24 @@ contains
           end if
         end if
         this%kv(itmp) = rval
-
+        !
         ! -- get h0
         rval =  this%parser%GetDouble()
         this%h0(itmp) = rval
-
+        !
         ! -- get bound names
-        write (cno,'(i9.9)') nn
-          bndName = 'nsystem' // cno
         if (this%inamedbound /= 0) then
-          call this%parser%GetStringCaps(bndNameTemp)
-          if (bndNameTemp /= '') then
-            bndName = bndNameTemp(1:16)
+          call this%parser%GetStringCaps(bndName)
+          if (len_trim(bndName) < 1) then
+            write(errmsg,'(a,1x,i0,a)')                                          &
+              'BOUNDNAME must be specified for packagedata entry', itmp, '.'
+            call store_error(errmsg)
           else
-             write(errmsg,'(a,1x,i0,a)')                                         &
-               'BOUNDNAME must be specified for packagedata entry', itmp, '.'
-             call store_error(errmsg)
+            this%boundname(itmp) = bndName            
           end if
         end if
-        this%boundname(itmp) = bndName
       end do
+
       write(this%iout,'(1x,a)')                                                  &
         'END OF ' // trim(adjustl(this%name)) // ' PACKAGEDATA'
     end if
@@ -2130,18 +2143,20 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO
+    use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, urdaux, openfile
     implicit none
     ! -- dummy
     class(GwfCsubType),   intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN) :: fname
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound
     logical :: endOfBlock
+    integer(I4B) :: n
     integer(I4B) :: lloc
     integer(I4B) :: istart
     integer(I4B) :: istop
@@ -2184,14 +2199,22 @@ contains
       write(this%iout,'(1x,a)') 'PROCESSING CSUB OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
+        if (endOfBlock) then
+          exit
+        end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case('AUX', 'AUXILIARY')
             call this%parser%GetRemainingLine(line)
             lloc = 1
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
-                        istart, istop, this%auxname, line, this%name)
+                        istart, istop, caux, line, this%name)
+            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+                              'AUXNAME', this%origin)
+            do n = 1, this%naux
+              this%auxname(n) = caux(n)
+            end do
+            deallocate(caux)
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtflow2)
@@ -2675,7 +2698,10 @@ contains
     !    after number of delay beds is defined
     !
     ! -- allocate boundname
-    allocate(this%boundname(this%ninterbeds))
+    if (this%inamedbound /= 0) then
+      call mem_allocate(this%boundname, LENBOUNDNAME, this%ninterbeds,           &
+                        'BOUNDNAME', trim(this%origin))
+    end if
     !
     ! -- allocate the nodelist and bound arrays
     if (this%maxsig0 > 0) then
@@ -2774,8 +2800,8 @@ contains
       call mem_deallocate(this%cell_thick)
       !
       ! -- interbed storage
-      deallocate(this%boundname)
-      deallocate(this%auxname)
+      call mem_deallocate(this%boundname, 'BOUNDNAME', this%origin)
+      call mem_deallocate(this%auxname, 'AUXNAME', this%origin)
       call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
@@ -2877,6 +2903,10 @@ contains
       nullify(this%pakcsvtab)
     end if
     !
+    ! -- deallocate character variables
+    call mem_deallocate(this%listlabel, 'LISTLABEL', this%origin)
+    call mem_deallocate(this%stoname, 'STONAME', this%origin)
+    !
     ! -- deallocate scalars
     call mem_deallocate(this%istounit)
     call mem_deallocate(this%inobspkg)
@@ -2951,7 +2981,6 @@ contains
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -3034,7 +3063,6 @@ contains
     ! -- local
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=20) :: cellid
     integer(I4B) :: iske
@@ -3415,7 +3443,6 @@ contains
     implicit none
     class(GwfCsubType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
     integer(I4B) :: ierr
     integer(I4B) :: node
@@ -3485,7 +3512,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B),intent(in) :: i
     ! locals
-    character(len=LINELENGTH) :: errmsg
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
@@ -3679,7 +3705,6 @@ contains
     class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
     character(len=20) :: cellid
@@ -3839,7 +3864,6 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ib
     integer(I4B) :: n
     integer(I4B) :: idelay
@@ -3963,7 +3987,6 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=20) :: cellid
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: n
@@ -4718,7 +4741,6 @@ contains
     real(DP), intent(inout) :: rhs
     ! locals
     character(len=20) :: cellid
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idelaycalc
     real(DP) :: snnew
     real(DP) :: snold
@@ -5059,7 +5081,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B),intent(in) :: node
     ! locals
-    character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
     real(DP) :: comp
     real(DP) :: thick
@@ -5828,7 +5849,6 @@ contains
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
     integer(I4B) :: idelay
     integer(I4B) :: node
@@ -6320,7 +6340,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: idelay
     integer(I4B) :: n
     real(DP) :: comp
@@ -6676,7 +6695,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     ! -- local
     type(ObserveType), pointer :: obsrv => null()
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: n
@@ -6898,7 +6916,6 @@ contains
     ! -- local
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, j, n
     integer(I4B) :: n2
     integer(I4B) :: idelay

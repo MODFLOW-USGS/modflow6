@@ -45,7 +45,9 @@ module mf6bmi
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
-        
+    ! local
+    logical :: isValid
+    
     if (istdout_to_file > 0) then
       ! -- open stdout file mfsim.stdout
       istdout = getunit() 
@@ -56,6 +58,13 @@ module mf6bmi
     !
     ! -- initialize MODFLOW 6
     call Mf6Initialize()
+    
+    isValid = validateSimulation()
+    if (.not. isValid) then      
+      bmi_status = BMI_FAILURE
+      return  
+    end if
+    
     bmi_status = BMI_SUCCESS
     
   end function bmi_initialize
@@ -122,6 +131,18 @@ module mf6bmi
     bmi_status = BMI_SUCCESS    
     
   end function get_current_time
+  
+  ! Get the timestep
+  function get_time_step(dt) result(bmi_status) bind(C, name="get_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_time_step
+    use TdisModule, only: delt 
+    double precision, intent(out) :: dt
+    integer(kind=c_int) :: bmi_status
+    
+    dt = delt
+    bmi_status = BMI_SUCCESS
+    
+  end function get_time_step
   
   ! Get memory use per array element, in bytes.
   function get_var_itemsize(c_var_name, var_size) result(bmi_status) bind(C, name="get_var_itemsize")
@@ -706,6 +727,16 @@ module mf6bmi
   ! -----------------------------------------------------------------------
   ! convenience functions follow here, TODO_MJR: move to dedicated module?
   ! -----------------------------------------------------------------------
+  
+  ! Validation of the MODFLOW 6 simulation for use with BMI/AMI.  
+  function validateSimulation() result(isValid)
+      logical :: isValid
+  
+      isValid = .true.
+      
+      
+  
+  end function validateSimulation
   
   ! Helper function to check the grid, not all bmi routines are implemented
   ! for all types of discretizations

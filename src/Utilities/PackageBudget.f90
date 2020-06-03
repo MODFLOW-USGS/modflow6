@@ -40,12 +40,17 @@ module PackageBudgetModule
     this%name = name
   end subroutine set_name
   
-  subroutine set_auxname(this, auxname)
+  subroutine set_auxname(this, naux, auxname)
     class(PackageBudgetType) :: this
+    integer(I4B), intent(in) :: naux
     character(len=LENAUXNAME), contiguous, dimension(:), intent(in) :: auxname
-    this%naux = size(auxname)
-    if (.not. allocated(this%auxname)) allocate(this%auxname(this%naux))
-    this%auxname(:) = auxname(:)
+    this%naux = naux
+    if (naux > 0) then
+      if (.not. allocated(this%auxname)) then
+        allocate(this%auxname(this%naux))
+      end if
+      this%auxname(:) = auxname(:)
+    end if
   end subroutine set_auxname
   
   subroutine set_pointers(this, name, auxname, nbound, naux, nodelist, &
@@ -61,9 +66,13 @@ module PackageBudgetModule
     real(DP), dimension(:,:), target, contiguous, intent(in) :: auxvar
     real(DP), dimension(:), target, contiguous, intent(in) :: xnew
     this%name = name
-    if (.not. allocated(this%auxname)) allocate(this%auxname(naux))
-    this%auxname(:) = auxname(:)
     this%naux = naux
+    if (naux > 0) then
+      if (.not. allocated(this%auxname)) then
+        allocate(this%auxname(naux))
+      end if
+      this%auxname(:) = auxname(:)
+    end if
     this%nbound => nbound
     this%nodelist => nodelist
     this%hcof => hcof

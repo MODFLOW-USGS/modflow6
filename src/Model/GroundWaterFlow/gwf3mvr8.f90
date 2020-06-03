@@ -1322,12 +1322,16 @@ module GwfMvrModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfMvrType),intent(inout) :: this
     ! -- local
     character (len=LINELENGTH) :: title
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
+    !
+    ! -- set table kstp and kper
+    call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
     title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &

@@ -528,8 +528,11 @@ module GwtDspModule
       call mem_deallocate(this%angle3)
       call mem_deallocate(this%gwfflowjaold)
       call mem_deallocate(this%dispcoef)
-      if(this%ixt3d > 0) call this%xt3d%xt3d_da()
+      if (this%ixt3d > 0) call this%xt3d%xt3d_da()
     end if
+    !
+    ! -- deallocate objects
+    if (this%ixt3d > 0) deallocate(this%xt3d)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%idiffc)

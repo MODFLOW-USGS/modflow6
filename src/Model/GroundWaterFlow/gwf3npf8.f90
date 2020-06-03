@@ -1045,10 +1045,11 @@ module GwfNpfModule
     call mem_deallocate(this%ik33overk)
     !
     ! -- Deallocate arrays
+    deallocate(this%aname)
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
-    call mem_deallocate(this%k22, 'K22', this%origin)
-    call mem_deallocate(this%k33, 'K33', this%origin)
+    call mem_deallocate(this%k22, 'K22', trim(this%origin))
+    call mem_deallocate(this%k33, 'K33', trim(this%origin))
     call mem_deallocate(this%sat)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
@@ -1197,6 +1198,9 @@ module GwfNpfModule
       call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%origin))
       call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE',           &
         trim(this%origin))
+      do n = 1, ncells
+        this%spdis(:, n) = DZERO
+      end do
     else
       call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%origin))
       call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%origin))

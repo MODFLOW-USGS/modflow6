@@ -64,7 +64,7 @@ module BaseModelModule
   
   subroutine model_rp(this)
 ! ******************************************************************************
-! modelrp -- Read and prepare
+! model_rp -- Read and prepare
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

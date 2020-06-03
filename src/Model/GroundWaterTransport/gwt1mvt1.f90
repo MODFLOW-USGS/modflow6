@@ -78,12 +78,6 @@ module GwtMvtModule
     ! -- set pointers
     mvt%fmi => fmi
     !
-    ! -- Initialize block parser
-    call mvt%parser%Initialize(inunit, iout)
-    !
-    ! -- initialize the budget table writer
-    call budget_cr(mvt%budget, mvt%origin)
-    !
     ! -- Return
     return
   end subroutine mvt_cr
@@ -111,6 +105,12 @@ module GwtMvtModule
     !
     ! --print a message identifying the MVT package.
     write(this%iout, fmtmvt) this%inunit
+    !
+    ! -- Initialize block parser
+    call this%parser%Initialize(this%inunit, this%iout)
+    !
+    ! -- initialize the budget table writer
+    call budget_cr(this%budget, this%origin)
     !
     ! -- Read mvt options
     call this%read_options()
