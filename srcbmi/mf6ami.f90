@@ -13,27 +13,27 @@ module mf6ami
     
   contains
   
-  function ami_prepare_timestep(dt) result(bmi_status) bind(C, name="prepare_timestep")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_timestep
+  function ami_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_time_step
     double precision, intent(in) :: dt ! we cannot set the timestep (yet), ignore for now
     integer(kind=c_int) :: bmi_status
       
     call Mf6PrepareTimestep()    
     bmi_status = BMI_SUCCESS
     
-  end function ami_prepare_timestep
+  end function ami_prepare_time_step
     
-  function ami_do_timestep() result(bmi_status) bind(C, name="do_timestep")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_do_timestep
+  function ami_do_time_step() result(bmi_status) bind(C, name="do_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_do_time_step
     integer(kind=c_int) :: bmi_status
     
     call Mf6DoTimestep()
     bmi_status = BMI_SUCCESS
     
-  end function ami_do_timestep
+  end function ami_do_time_step
   
-  function ami_finalize_timestep() result(bmi_status) bind(C, name="finalize_timestep")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_timestep
+  function ami_finalize_time_step() result(bmi_status) bind(C, name="finalize_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_time_step
     integer(kind=c_int) :: bmi_status
     ! local
     logical :: hasConverged
@@ -45,7 +45,7 @@ module mf6ami
       bmi_status = BMI_FAILURE
     end if
     
-  end function ami_finalize_timestep
+  end function ami_finalize_time_step
   
   ! returns the number of NumericalSolutions in the simulation. 
   ! It works if there is only one SolutionGroup used.
@@ -72,10 +72,10 @@ module mf6ami
     
   end function ami_get_subcomponent_count
     
-  ! this prepares for running a single outer iteration on the 
-  ! specific subcomponent (=NumericalSolution)
-  function ami_prepare_iteration(subcomponent_idx) result(bmi_status) bind(C, name="prepare_iteration")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_iteration   
+  ! this prepares for running a loop over outer iterations 
+  ! on the specific subcomponent (=NumericalSolution)
+  function ami_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_solve   
     use NumericalSolutionModule
     integer(kind=c_int) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
     integer(kind=c_int) :: bmi_status
@@ -85,9 +85,8 @@ module mf6ami
     ! get the numerical solution we are running
     ns => getSolution(subcomponent_idx)
     
-    ! prepare with defaults, no picard
-    ! TODO_MJR: clean this up....
-    !call ns%prepareIteration(1)
+    ! *_ad (model, exg, sln)
+    call ns%prepareSolve()
     
     ! reset counter
     allocate(iterationCounter)
@@ -95,12 +94,12 @@ module mf6ami
     
     bmi_status = BMI_SUCCESS
     
-  end function ami_prepare_iteration
+  end function ami_prepare_solve
   
   ! execute a single outer iteration on the specified 
   ! subcomponent (=NumericalSolution)
-  function ami_do_iteration(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="do_iteration")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_do_iteration   
+  function ami_solve(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="solve")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_solve  
     use NumericalSolutionModule
     integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
     integer(kind=c_int), intent(out) :: has_converged
@@ -113,7 +112,7 @@ module mf6ami
     
     ! execute the nth iteration    
     iterationCounter = iterationCounter + 1
-    call ns%doIteration(iterationCounter)
+    call ns%solve(iterationCounter)
         
     ! the following check is equivalent to that in NumericalSolution%sln_ca
     if (ns%icnvg == 1) then
@@ -124,12 +123,12 @@ module mf6ami
     
     bmi_status = BMI_SUCCESS
     
-  end function ami_do_iteration
+  end function ami_solve
   
-  ! after the convergence loop on the subcomponent is done,
+  ! after the outer iteration loop on the subcomponent is exited,
   ! call this to report, clean up, etc.
-  function ami_finalize_iteration(subcomponent_idx) result(bmi_status) bind(C, name="finalize_iteration")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_iteration   
+  function ami_finalize_solve(subcomponent_idx) result(bmi_status) bind(C, name="finalize_solve")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_solve   
     use NumericalSolutionModule
     integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
     integer(kind=c_int) :: bmi_status
@@ -145,7 +144,7 @@ module mf6ami
     hasConverged = 1
     
     ! finish up
-    call ns%finalizeIteration(iterationCounter, hasConverged, 0)
+    call ns%finalizeSolve(iterationCounter, hasConverged, 0)
     
     ! check convergence on solution
     if (hasConverged == 1) then
@@ -157,7 +156,7 @@ module mf6ami
     ! clear this for safety
     deallocate(iterationCounter)
     
-  end function ami_finalize_iteration
+  end function ami_finalize_solve
   
   ! the subcomponent_idx runs from 1 to the nr of 
   ! solutions in the solution group
