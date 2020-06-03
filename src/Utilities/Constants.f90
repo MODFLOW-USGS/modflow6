@@ -130,8 +130,8 @@ module ConstantsModule
   END ENUM
 
   ENUM, BIND(C)
-    ! Sets MNORMAL=0, MVALIDATE=1
-    ENUMERATOR :: MNORMAL, MVALIDATE
+    ! Sets MVALIDATE=0, MNORMAL=1, MRUN=2 
+    ENUMERATOR :: MVALIDATE, MNORMAL, MRUN
   END ENUM
 
 end module ConstantsModule

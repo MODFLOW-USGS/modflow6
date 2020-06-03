@@ -1196,7 +1196,7 @@ contains
         fmt = "(/,1x,a,/)"
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%BaseModelType%model_message(line, fmt=fmt)
+          call mp%model_message(line, fmt=fmt)
         end do
       case(MNORMAL)
         ! nonlinear iteration loop for this solution

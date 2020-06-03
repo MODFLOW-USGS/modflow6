@@ -3,7 +3,7 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
-  use SimVariablesModule, only: iunext
+  use SimVariablesModule, only: iunext, isim_mode
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
   use ConstantsModule, only: IUSTART, IULAST,                                  &
@@ -30,7 +30,7 @@ module InputOutputModule
   contains
 
   subroutine openfile(iu, iout, fname, ftype, fmtarg_opt, accarg_opt,          &
-                      filstat_opt)
+                      filstat_opt, mode_opt)
 ! ******************************************************************************
 ! openfile -- Open a file using the specified arguments.
 !
@@ -42,6 +42,8 @@ module InputOutputModule
 !   accarg_opt is the access, default is 'sequential'
 !   filstat_opt is the file status, default is 'old'.  Use 'REPLACE' for an
 !     output file.
+!   mode_opt is a simulation mode that is evaluated to determine if the file
+!   should be opened  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -57,20 +59,23 @@ module InputOutputModule
     character(len=*), intent(in), optional :: fmtarg_opt
     character(len=*), intent(in), optional :: accarg_opt
     character(len=*), intent(in), optional :: filstat_opt
+    integer(I4B), intent(in), optional :: mode_opt
     ! -- local
     character(len=20) :: fmtarg
     character(len=20) :: accarg
     character(len=20) :: filstat
     character(len=20) :: filact
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: imode
     integer(I4B) :: iflen
     integer(I4B) :: ivar
     integer(I4B) :: iuop
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 50  FORMAT(1X,/1X,'OPENED ',A,/                                                &
                  1X,'FILE TYPE:',A,'   UNIT ',I4,3X,'STATUS:',A,/              &
                  1X,'FORMAT:',A,3X,'ACCESS:',A/                                &
                  1X,'ACTION:',A/)
+60  FORMAT(1X,/1X,'DID NOT OPEN ',A,/)
 2011  FORMAT('*** ERROR OPENING FILE "',A,'" ON UNIT ',I0)
 2017  format('*** FILE ALREADY OPEN ON UNIT: ',I0)
 2012  format('       SPECIFIED FILE STATUS: ',A)
@@ -81,77 +86,92 @@ module InputOutputModule
 2018  format('  -- STOP EXECUTION (openfile)')
 ! ------------------------------------------------------------------------------
     !
-    ! -- Default is to read an existing text file
-    fmtarg = 'FORMATTED'
-    accarg = 'SEQUENTIAL'
-    filstat = 'OLD'
-    !
-    ! -- Override defaults
-    if(present(fmtarg_opt)) then
-      fmtarg = fmtarg_opt
-      call upcase(fmtarg)
-    endif
-    if(present(accarg_opt)) then
-      accarg = accarg_opt
-      call upcase(accarg)
-    endif
-    if(present(filstat_opt)) then
-      filstat = filstat_opt
-      call upcase(filstat)
-    endif
-    if(filstat == 'OLD') then
-      filact = action(1)
+    ! -- process mode_opt
+    if (present(mode_opt)) then
+      imode = mode_opt
     else
-      filact = action(2)
-    endif
+      imode = isim_mode
+    end if
     !
-    ! -- size of fname
-    iflen = len_trim(fname)
-    !
-    ! -- Get a free unit number
-    if(iu <= 0) then
-      call freeunitnumber(iu)
-    endif
-    !
-    ! -- Check to see if file is already open, if not then open the file
-    inquire(file=fname(1:iflen), number=iuop)
-    if(iuop > 0) then
-      ivar = -1
+    ! -- evaluate if the file should be opened
+    if (isim_mode < imode) then
+      if(iout > 0) then
+        write(iout, 60) trim(fname)
+      end if
     else
-      open(unit=iu, file=fname(1:iflen), form=fmtarg, access=accarg,           &
-         status=filstat, action=filact, iostat=ivar)
-    endif
-    !
-    ! -- Check for an error
-    if(ivar /= 0) then
-      write(errmsg,2011) fname(1:iflen), iu
-      call store_error(errmsg)
-      if(iuop > 0) then
-        write(errmsg, 2017) iuop
-        call store_error(errmsg)
+      !
+      ! -- Default is to read an existing text file
+      fmtarg = 'FORMATTED'
+      accarg = 'SEQUENTIAL'
+      filstat = 'OLD'
+      !
+      ! -- Override defaults
+      if(present(fmtarg_opt)) then
+        fmtarg = fmtarg_opt
+        call upcase(fmtarg)
       endif
-      write(errmsg,2012) filstat
-      call store_error(errmsg)
-      write(errmsg,2013) fmtarg
-      call store_error(errmsg)
-      write(errmsg,2014) accarg
-      call store_error(errmsg)
-      write(errmsg,2015) filact
-      call store_error(errmsg)
-      write(errmsg,2016) ivar
-      call store_error(errmsg)
-      write(errmsg,2018)
-      call store_error(errmsg)
-      call ustop()
-    endif
-    !
-    ! -- Write a message
-    if(iout > 0) then
-      write(iout, 50) fname(1:iflen),                                         &
-                     ftype, iu, filstat,                                      &
-                     fmtarg, accarg,                                          &
-                     filact
-    endif
+      if(present(accarg_opt)) then
+        accarg = accarg_opt
+        call upcase(accarg)
+      endif
+      if(present(filstat_opt)) then
+        filstat = filstat_opt
+        call upcase(filstat)
+      endif
+      if(filstat == 'OLD') then
+        filact = action(1)
+      else
+        filact = action(2)
+      endif
+      !
+      ! -- size of fname
+      iflen = len_trim(fname)
+      !
+      ! -- Get a free unit number
+      if(iu <= 0) then
+        call freeunitnumber(iu)
+      endif
+      !
+      ! -- Check to see if file is already open, if not then open the file
+      inquire(file=fname(1:iflen), number=iuop)
+      if(iuop > 0) then
+        ivar = -1
+      else
+        open(unit=iu, file=fname(1:iflen), form=fmtarg, access=accarg,           &
+           status=filstat, action=filact, iostat=ivar)
+      endif
+      !
+      ! -- Check for an error
+      if(ivar /= 0) then
+        write(errmsg,2011) fname(1:iflen), iu
+        call store_error(errmsg)
+        if(iuop > 0) then
+          write(errmsg, 2017) iuop
+          call store_error(errmsg)
+        endif
+        write(errmsg,2012) filstat
+        call store_error(errmsg)
+        write(errmsg,2013) fmtarg
+        call store_error(errmsg)
+        write(errmsg,2014) accarg
+        call store_error(errmsg)
+        write(errmsg,2015) filact
+        call store_error(errmsg)
+        write(errmsg,2016) ivar
+        call store_error(errmsg)
+        write(errmsg,2018)
+        call store_error(errmsg)
+        call ustop()
+      endif
+      !
+      ! -- Write a message
+      if(iout > 0) then
+        write(iout, 50) fname(1:iflen),                                          &
+                       ftype, iu, filstat,                                       &
+                       fmtarg, accarg,                                           &
+                       filact
+      end if
+    end if
     !
     ! -- return
     return

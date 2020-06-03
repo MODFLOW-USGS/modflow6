@@ -1715,7 +1715,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: MAXCHARLEN, DZERO
+    use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
@@ -1748,8 +1748,8 @@ contains
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%iheadout = getunit()
-          call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)',  &
-                       form, access, 'REPLACE')
+          call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)',         &
+                       form, access, 'REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtmawbin) 'HEAD', fname, this%iheadout
           found = .true.
         else
@@ -1761,8 +1761,8 @@ contains
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
-                        form, access, 'REPLACE')
+          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
+                        form, access, 'REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtmawbin) 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
