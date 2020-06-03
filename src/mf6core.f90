@@ -276,7 +276,7 @@ contains
     integer(I4B) :: is
     !
     ! -- initialize fmt
-    fmt = "(/,1x,79('-'),/,1x,a,/)"
+    fmt = "(/,1x,79('+'),/,1x,a,/)"
     !
     ! -- time update
     call tdis_tu()
@@ -304,12 +304,6 @@ contains
     do ic = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
       call ep%exg_rp()
-    enddo
-    !      
-    ! -- Solution advance
-    do is=1,basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_ad()    
     enddo
     !
     ! -- reset simulation convergence flag
@@ -355,7 +349,7 @@ contains
     ! -- code
     !
     ! -- initialize format
-    fmt = "(/,1x,a,/,1x,79('-'),/)"
+    fmt = "(/,1x,a,/,1x,79('+'),/)"
     !
     ! -- evaluate simulation mode
     select case (isim_mode)

@@ -31,11 +31,8 @@ module NumericalSolutionModule
   private
   
   public :: solution_create
-  
-  ! expose for use in the bmi++
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
-  public :: doIteration, finalizeIteration
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LINELENGTH)                            :: fname
@@ -158,14 +155,14 @@ module NumericalSolutionModule
     procedure, private :: allocate_arrays
     procedure, private :: convergence_summary
     procedure, private :: csv_convergence_summary
-
-    ! for BMI refactoring:
-    procedure, public :: doIteration
-    procedure, public :: finalizeIteration
-    procedure, public :: writeCSVHeader
-    procedure, public :: writePTCInfoToFile
-    procedure, public :: advanceSolution
+    procedure, private :: writeCSVHeader
+    procedure, private :: writePTCInfoToFile
     
+    ! Expose these for use through the BMI/AMI:
+    procedure, public :: prepareSolve
+    procedure, public :: solve
+    procedure, public :: finalizeSolve
+  
   end type NumericalSolutionType
 
 contains
@@ -1190,8 +1187,8 @@ contains
     integer(I4B) :: kiter   ! non-linear iteration counter
 ! ------------------------------------------------------------------------------
     
-    ! advance the solution by calling exchange and model advance routines
-    call this%advanceSolution()
+    ! advance the models, exchanges, and solution
+    call this%prepareSolve()
     
     select case (isim_mode)
       case (MVALIDATE)
@@ -1207,7 +1204,7 @@ contains
         outerloop: do kiter = 1, this%mxiter
            
           ! perform a single iteration
-          call this%doIteration(kiter)     
+          call this%solve(kiter)     
         
           ! exit if converged
           if (this%icnvg == 1) then
@@ -1217,13 +1214,14 @@ contains
         end do outerloop
       
         ! finish up, write convergence info, CSV file, budgets and flows, ...
-        call this%finalizeIteration(kiter, isgcnvg, isuppress_output)   
+        call this%finalizeSolve(kiter, isgcnvg, isuppress_output)   
     end select
     !
     ! -- return
     return
     
   end subroutine sln_ca
+   
        
   ! advances the exchanges and models in this solution by 1 timestep
   subroutine advanceSolution(this)
@@ -1337,8 +1335,32 @@ contains
     
   end subroutine writePTCInfoToFile
   
-  ! this routine performs a single iteration, with the following steps:
-  ! (TODO_MJR: refactor this routine, it is long)
+  ! prepare for outer iteration loop
+  subroutine prepareSolve(this)
+    class(NumericalSolutionType) :: this
+    ! local
+    integer(I4B) :: ic, im
+    class(NumericalExchangeType), pointer :: cp
+    class(NumericalModelType), pointer :: mp    
+    
+     ! -- Exchange advance
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_ad()
+    enddo
+    
+    ! -- Model advance
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ad()
+    enddo
+    
+    ! advance models and exchanges
+    call this%sln_ad()
+    
+  end subroutine prepareSolve
+  
+  ! this routine performs a single outer iteration, with the following steps:
   !
   ! - backtracking
   ! - reset amat and rhs
@@ -1352,7 +1374,8 @@ contains
   ! - underrelaxation
   !
   ! it updates the convergence flag "this%icnvg" accordingly
-  subroutine doIteration(this, kiter)
+  !
+  subroutine solve(this, kiter)
     use TdisModule, only: kstp, kper, totim
     class(NumericalSolutionType) :: this    
     integer(I4B), intent(in) :: kiter
@@ -1747,10 +1770,10 @@ contains
                                         kiter, iter, icsv0, kcsv0)
     end if
     
-  end subroutine doIteration
+  end subroutine solve
   
-  ! finalize the solution calculate, called after the non-linear iteration loop
-  subroutine finalizeIteration(this, kiter, isgcnvg, isuppress_output)
+  ! finalize the solution calculate, called after the outer iteration loop
+  subroutine finalizeSolve(this, kiter, isgcnvg, isuppress_output)
     use TdisModule, only: kper, kstp
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
@@ -1828,7 +1851,7 @@ contains
       call cp%exg_bd(isgcnvg, isuppress_output, this%id)
     enddo
     
-  end subroutine finalizeIteration
+  end subroutine finalizeSolve
   
   subroutine convergence_summary(this, iu, im, itertot_timestep)
 ! ******************************************************************************
