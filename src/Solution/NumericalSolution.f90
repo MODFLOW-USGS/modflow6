@@ -1192,8 +1192,7 @@ contains
     
     select case (isim_mode)
       case (MVALIDATE)
-        line = 'MODFLOW 6 validation simulation mode. Skipping matrix ' //       &
-          'assembly and solution.'
+        line = 'mode="validation" -- Skipping matrix assembly and solution.'
         fmt = "(/,1x,a,/)"
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)

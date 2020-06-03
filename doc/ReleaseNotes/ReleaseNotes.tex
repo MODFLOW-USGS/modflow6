@@ -24,9 +24,9 @@
 
 \usepackage[hidelinks]{hyperref}
 \hypersetup{
-    pdftitle={MODFLOW 6 Release Notes},
-    pdfauthor={MODFLOW 6 Development Team},
-    pdfsubject={MODFLOW 6 Release Notes},
+    pdftitle={MODFLOW~6 Release Notes},
+    pdfauthor={MODFLOW~6 Development Team},
+    pdfsubject={MODFLOW~6 Release Notes},
     pdfkeywords={MODFLOW, groundwater model, simulation},
     bookmarksnumbered=true,     
     bookmarksopen=true,         
@@ -46,17 +46,17 @@
 \renewcommand{\cooperator}
 {the \textusgs\ Water Availability and Use Science Program}
 \renewcommand{\reporttitle}
-{MODFLOW 6 Release Notes}
+{MODFLOW~6 Release Notes}
 \renewcommand{\coverphoto}{coverimage.jpg}
 \renewcommand{\GSphotocredit}{Binary computer code illustration.}
 \renewcommand{\reportseries}{}
 \renewcommand{\reportnumber}{}
 \renewcommand{\reportyear}{2017}
 \ifdef{\reportversion}{\renewcommand{\reportversion}{\currentmodflowversion}}{}
-\renewcommand{\theauthors}{MODFLOW 6 Development Team}
+\renewcommand{\theauthors}{MODFLOW~6 Development Team}
 \renewcommand{\thetitlepageauthors}{\theauthors}
 %\renewcommand{\theauthorslastfirst}{}
-\renewcommand{\reportcitingtheauthors}{MODFLOW 6 Development Team}
+\renewcommand{\reportcitingtheauthors}{MODFLOW~6 Development Team}
 \renewcommand{\colophonmoreinfo}{}
 \renewcommand{\theoffice}{Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648-5001}
 \renewcommand{\reportbodypages}{}
@@ -70,7 +70,7 @@
 \renewcommand{\theconventions}{}
 \definecolor{coverbar}{RGB}{32, 18, 88}
 \renewcommand{\bannercolor}{\color{coverbar}}
-%\renewcommand{\thePSC}{the MODFLOW 6 Development Team}
+%\renewcommand{\thePSC}{the MODFLOW~6 Development Team}
 %\renewcommand{\theeditor}{Christian D. Langevin}
 %\renewcommand{\theillustrator}{None}
 %\renewcommand{\thefirsttypesetter}{Joseph D. Hughes}
@@ -126,21 +126,23 @@ https://water.usgs.gov/ogw/
 
 % -------------------------------------------------
 \section{Introduction}
-This document describes MODFLOW 6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 and 10 operating systems, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
+This document describes MODFLOW~6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 and 10 operating systems, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
 
-Version numbers for MODFLOW 6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
+Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
 
 % -------------------------------------------------
 \section{History}
-This section describes changes introduced into MODFLOW 6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
+This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
 	\item Version mf6.1.1--Release Candidate
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
+		\item The source code was refactored to support the \href{https://csdms.colorado.edu/wiki/BMI_Description}{Basic Model Interface} (BMI) developed by the \href{https://csdms.colorado.edu/wiki/Main_Page}{Community Surface Dynamics Modeling System} (CSDMS) group. BMI is a set of standard control and query functions that, when added to a model code, make that model both easier to learn and easier to couple with other software elements \citep{PECKHAM20133}. Furthermore, the BMI makes it possible to control MODFLOW~6 execution using from scripting languages using bindings for the BMI (for example, python bindings for the BMI available through \href{https://csdms.colorado.edu/wiki/PyMT}{pymt}). The BMI in this version is considered preliminary (alpha release). Limited testing of the BMI has been performed but significant changes are expected in future releases and BMI support will not be provided to users at this time.
 		\item Add silent command line switch (\texttt{-s} or \texttt{--silent}) that sends all output to the screen (\texttt{STDOUT})  to a file (``mfsim.stdout'').
 		\item Add screen output command line switch (\texttt{-l <str>} or \texttt{--silent <str>}) that controls output to the screen (\texttt{STDOUT}). If \texttt{<str>}  is \texttt{summary}, stress period and time step data are not written to \texttt{STDOUT}. If \texttt{<str>} is \texttt{debug}, normal and debug output are written to \texttt{STDOUT}. 
+		\item Add simulation mode command line switch (\texttt{-m <str>} or \texttt{--mode <str>}) that controls the solution mode. If \texttt{<str>}  is \texttt{validate}, model input will be checked for errors but the coefficient matrix or matrices will not be assembled or solved and solution output will not be written.
 		\item Add SAVE\_SATURATION option to the Node Property Flow Package.  When invoked, cell saturation is written to the binary budget file.  The cell saturation can be used by post-processors to determine how much of the cell is saturated without having to know the value for ICELLTYPE or the value for head. If a cell is marked as confined (ICELLTYPE=0) then saturation is always one. If ICELLTYPE is one, then saturation ranges between zero and one.
 		\item Add option for saving package convergence for the CSUB Package to a comma-separated values (CSV) file. Package convergence is enabled by specifying PACKAGE\_CONVERGENCE FILEOUT $<$package\_convergence\_filename$>$ in the options block for the package.
 		\item Add option for saving package convergence for the LAK, SFR, and UZF Packages to comma-separated values (CSV) files. Package convergence for the LAK, SFR, and UZF Packages is enabled by specifying PACKAGE\_CONVERGENCE FILEOUT $<$package\_convergence\_filename$>$ in the options block for the package.
@@ -149,7 +151,7 @@ This section describes changes introduced into MODFLOW 6 for the current release
 		\item Add OUTER\_DVCLOSE and INNER\_DVCLOSE variables to replace OUTER\_HCLOSE and INNER\_HCLOSE variables. Warning messages will be issued if OUTER\_HCLOSE and/or INNER\_HCLOSE variables are specified. OUTER\_HCLOSE and INNER\_HCLOSE variables will eventually be deprecated. 
 		\item Add option to scale drain conductance over a user-defined range (drainage depth). Linear-conductance scaling is used with the Standard Formulation. Cubic-conductance scaling is used with the Newton-Raphson Formulation. The additional drainage depth variable is specified as an auxiliary variable and AUXDEPTHNAM is used to identify the auxiliary variable defining the drainage depth. The cubic-conductance scaling can be used as a replacement for the groundwater seepage option in the UZF Package. The scaled drainage conductance option can also be used to represent vertical seepage faces and improve model convergence in cells where simulated heads fluctuate around the elevation where the drain begins to discharge groundwater.
 		\item Add timeseries support for the reach upstream fraction variable in the SFR package.
-		\item Add Picard iterations for the SFR package to minimize differences in SFR package results between subsequent GWF Picard (non-linear) iterations as a result of non-optimal reach numbering. The number of SFR package Picard iterations can be controlled by specifying the maximum number of Picard  iteration to be used in the OPTIONS block (MAXIMUM\_PICARD\_ITERATIONS). If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. Specifying  MAXIMUM\_PICARD\_ITERATIONS to 1 will result in identical SFR package performance to previous versions of MODFLOW 6.
+		\item Add Picard iterations for the SFR package to minimize differences in SFR package results between subsequent GWF Picard (non-linear) iterations as a result of non-optimal reach numbering. The number of SFR package Picard iterations can be controlled by specifying the maximum number of Picard  iteration to be used in the OPTIONS block (MAXIMUM\_PICARD\_ITERATIONS). If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. Specifying  MAXIMUM\_PICARD\_ITERATIONS to 1 will result in identical SFR package performance to previous versions of MODFLOW~6.
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
@@ -190,7 +192,7 @@ This section describes changes introduced into MODFLOW 6 for the current release
 
 % -------------------------------------------------
 \section{Known Issues}
-This section describes known issues with this release of MODFLOW 6.
+This section describes known issues with this release of MODFLOW~6.
 
 \begin{enumerate}
 
@@ -211,53 +213,53 @@ It is recommended that no user files are kept in the \modflowversion~directory s
 
 % -------------------------------------------------
 \section{Installation and Execution}
-There is no installation of MODFLOW 6 other than the requirement that \modflowversion.zip must be unzipped into a location where it can be accessed.  
+There is no installation of MODFLOW~6 other than the requirement that \modflowversion.zip must be unzipped into a location where it can be accessed.  
 
-To make the executable versions of MODFLOW 6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW 6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
+To make the executable versions of MODFLOW~6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW~6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
 
 As an alternative, the executable file, mf6.exe, in the \modflowversion{}/bin directory can be copied into a directory already included in the PATH environment variable.
 
-To run MODFLOW 6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW 6 will immediately look for file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
+To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW~6 will immediately look for file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
 
 % -------------------------------------------------
-\section{Compiling MODFLOW 6}
-MODFLOW 6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran capabilities, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW 6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
+\section{Compiling MODFLOW~6}
+MODFLOW~6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran capabilities, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW~6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
 
-This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW 6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2017 and Intel(R) Visual Fortran Compiler 2019.2.190.
+This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2017 and Intel(R) Visual Fortran Compiler 2019.2.190.
 
-This distribution also comes with a makefile for compiling MODFLOW 6 with gfortran.  The makefile is contained in the \texttt{make} folder.
+This distribution also comes with a makefile for compiling MODFLOW~6 with gfortran.  The makefile is contained in the \texttt{make} folder.
 
-For those familiar with Python, the pymake package can also be used to compile MODFLOW 6.  Additional information on the Python pymake utility can be found at: \url{https://github.com/modflowpy/pymake}.  
+For those familiar with Python, the pymake package can also be used to compile MODFLOW~6.  Additional information on the Python pymake utility can be found at: \url{https://github.com/modflowpy/pymake}.  
 
 % -------------------------------------------------
 \section{System Requirements}
-MODFLOW 6 is written in Fortran.  It uses features from the 95, 2003, and 2008 language.  The code has been used on UNIX-based computers and personal computers running various forms of the Microsoft Windows operating system.
+MODFLOW~6 is written in Fortran.  It uses features from the 95, 2003, and 2008 language.  The code has been used on UNIX-based computers and personal computers running various forms of the Microsoft Windows operating system.
 
 % -------------------------------------------------
 \section{Testing}
-The examples distributed with MODFLOW 6 can be run by navigating to the examples folder and executing the "run.bat" batch files within each example folder.  Alternatively, there is a runall.bat batch file under the examples folder that will run all of the test problems.
+The examples distributed with MODFLOW~6 can be run by navigating to the examples folder and executing the "run.bat" batch files within each example folder.  Alternatively, there is a runall.bat batch file under the examples folder that will run all of the test problems.
 
 % -------------------------------------------------
-\section{MODFLOW 6 Documentation}
-Details on the numerical methods and the underlying theory for MODFLOW 6 are described in the following reports:
+\section{MODFLOW~6 Documentation}
+Details on the numerical methods and the underlying theory for MODFLOW~6 are described in the following reports:
 
 \begin{itemize}
 \item
-Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the MODFLOW 6 framework: U.S. Geological Survey Techniques and Methods, book 6, chap. A57, 40 p., https://doi.org/10.3133/tm6A57.
+Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the MODFLOW~6 framework: U.S. Geological Survey Techniques and Methods, book 6, chap. A57, 40 p., https://doi.org/10.3133/tm6A57.
 
 \item
-Langevin, C.D., Hughes, J.D., Banta, E.R., Niswonger, R.G., Panday, Sorab, and Provost, A.M., 2017, Documentation for the MODFLOW 6 Groundwater Flow Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197 p., https://doi.org/10.3133/tm6A55.
+Langevin, C.D., Hughes, J.D., Banta, E.R., Niswonger, R.G., Panday, Sorab, and Provost, A.M., 2017, Documentation for the MODFLOW~6 Groundwater Flow Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197 p., https://doi.org/10.3133/tm6A55.
 
 \item
-Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the ``XT3D'' option in the Node Property Flow (NPF) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A56, 40 p., https://doi.org/10.3133/tm6A56.
+Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the ``XT3D'' option in the Node Property Flow (NPF) Package of MODFLOW~6: U.S. Geological Survey Techniques and Methods, book 6, chap. A56, 40 p., https://doi.org/10.3133/tm6A56.
 
 \end{itemize}
  
-\noindent Description of the MODFLOW 6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
+\noindent Description of the MODFLOW~6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
 
 % -------------------------------------------------
 \section{Test Problems}
-The following is a list of test problems distributed with MODFLOW 6.  Characteristics of these tests are contained in Table \ref{table:examples}.
+The following is a list of test problems distributed with MODFLOW~6.  Characteristics of these tests are contained in Table \ref{table:examples}.
 
 
 % example tex files created by python scripts

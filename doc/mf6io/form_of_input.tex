@@ -79,9 +79,47 @@ Character variables, which are used to store names of models, packages, observat
 {\small
 \begin{lstlisting}[style=modeloutput]
 MODFLOW was compiled using uniform precision.
-Real Variables  PRECISION: 15  KIND: 8  TINY (smallest non-zero value):    2.225074-308  HUGE (largest value):    1.797693+308Integer Variables  KIND: 4  HUGE (largest value): 2147483647  BIT_SIZE: 32
+
+Real Variables
+  KIND: 8
+  TINY (smallest non-zero value):    2.225074-308
+  HUGE (largest value):    1.797693+308
+  PRECISION: 15
+  BIT SIZE: 64
+
+Integer Variables
+  KIND: 4
+  HUGE (largest value): 2147483647
+  BIT SIZE: 32
+
+Long Integer Variables
+  KIND: 8
+  HUGE (largest value): 9223372036854775807
+  BIT SIZE: 64
+
+Logical Variables
+  KIND: 4
+  BIT SIZE: 32
 \end{lstlisting}
 }
 
-This information indicates that real variables have about 15 digits of precision.  The smallest positive non-zero value that can be stored is 2.2e-308.  The largest value that can be stored is 1.8e+308.  If the user enters a value in an input file that cannot be stored, such as 1.9335e-310 for example, then the program can produce unexpected results.  This does not affect an exact value of zero, which can be stored accurately.  Integer variables also have a maximum and minimum value, which is about 2 billion.  Values larger and smaller than this cannot be stored.  These numbers are rarely exceeded for most practical problems, but as the size of models (number of nodes) increase into the billions, then the program may need to be recompiled using a larger size for integer variables.
+This information indicates that real variables have about 15 digits of precision.  The smallest positive non-zero value that can be stored is 2.2e-308.  The largest value that can be stored is 1.8e+308.  If the user enters a value in an input file that cannot be stored, such as 1.9335e-310 for example, then the program can produce unexpected results.  This does not affect an exact value of zero, which can be stored accurately.  Integer variables also have a maximum and minimum value, which is about 2 billion.  Values larger and smaller than this cannot be stored.  These numbers are rarely exceeded for most practical problems, but as the size of models (number of nodes) increase into the billions, then the program may need to be recompiled using a larger size for integer variables. Long integers are used to calculate the amount of memory allocated in the memory manager:
 
+{\small
+\begin{lstlisting}[style=modeloutput]
+ MEMORY MANAGER TOTAL STORAGE BY DATA TYPE, IN MEGABYTES
+ -------------------------------
+                    ALLOCATED   
+ DATA TYPE           MEMORY     
+ -------------------------------
+ Character        1.53300000E-03
+ Logical          4.40000000E-05
+ Integer          100.03799     
+ Real             223.43994     
+ -------------------------------
+ Total            323.47951     
+ -------------------------------
+\end{lstlisting}
+}
+
+Currently, standard precision 4 byte logical variables are used throughout the program.

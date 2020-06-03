@@ -258,7 +258,7 @@ contains
     use KindModule,             only: I4B
     use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
     use TdisModule,             only: tdis_tu, kstp, kper
-    use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
+    use ListsModule,            only: basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
@@ -266,31 +266,29 @@ contains
     use SimVariablesModule,     only: isim_mode
     ! -- dummy
     ! -- local
-    class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: fmt
     integer(I4B) :: im
     integer(I4B) :: ic
-    integer(I4B) :: is
     !
     ! -- initialize fmt
-    fmt = "(/,1x,79('+'),/,1x,a,/)"
+    fmt = "(/,a,/)"
     !
     ! -- time update
     call tdis_tu()
     !
+    ! -- set base line
+    write(line, '(a,i0,a,i0,a)')                                                 &
+      'start timestep kper="', kper, '" kstp="', kstp, '" mode="'
+    !
     ! -- evaluate simulation mode
     select case (isim_mode)
       case (MVALIDATE)
-        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
-          'MODFLOW 6 validation simulation mode. Start of stress period',        &
-          kper, 'time step', kstp, '.'
+        line = trim(line) // 'validate"'
       case(MNORMAL)
-        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
-          'MODFLOW 6 normal simulation mode. Start of stress period',            &
-          kper, 'time step', kstp, '.'
+        line = trim(line) // 'normal"'
     end select
     
     ! -- Read and prepare each model
@@ -334,7 +332,6 @@ contains
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule,              only: converge_check
     use SimVariablesModule,     only: isim_mode
-    use TdisModule,             only: kstp, kper
     ! -- dummy
     logical(LGP) :: hasConverged    
     ! -- local
@@ -348,31 +345,22 @@ contains
     integer(I4B) :: is
     ! -- code
     !
-    ! -- initialize format
-    fmt = "(/,1x,a,/,1x,79('+'),/)"
+    ! -- initialize format and line
+    fmt = "(/,a,/)"
+    line = 'end timestep'
     !
     ! -- evaluate simulation mode
     select case (isim_mode)
       case(MVALIDATE)
         !
-        ! -- write appropriate message
-        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
-          'MODFLOW 6 validation simulation mode. End of stress period',          &
-          kper, 'time step', kstp, '.'
-        !
-        ! -- Write validation message for each model
+        ! -- Write final message for timestep for each model 
         do im = 1, basemodellist%Count()
           mp => GetBaseModelFromList(basemodellist, im)
           call mp%model_message(line, fmt=fmt)
         end do
       case(MNORMAL)
         !
-        ! -- write appropriate message
-        write(line, '(a,1x,i0,1x,a,1x,i0,a)')                                    &
-          'MODFLOW 6 normal simulation mode. End of stress period',              &
-          kper, 'time step', kstp, '.'
-        !
-        ! -- Write output for each model
+        ! -- Write output and final message for timestep for each model 
         do im = 1, basemodellist%Count()
           mp => GetBaseModelFromList(basemodellist, im)
           call mp%model_ot()
