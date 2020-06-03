@@ -201,7 +201,7 @@ module GwfStoModule
     
     !stotxt = aname(2)
     if(this%ionper==kper) then
-      write(this%iout, '(//,1x,a)') 'UPDATING STORAGE VALUES'
+      write(this%iout, '(//,1x,a)') 'PROCESSING STORAGE PERIOD DATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -219,7 +219,7 @@ module GwfStoModule
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)') 'END UPDATING STORAGE VALUES'
+      write(this%iout,'(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
     !else
     !  write(this%iout,fmtlsp) 'STORAGE VALUES'
     endif

@@ -3284,7 +3284,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: MAXCHARLEN, DZERO
+    use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use SimModule, only: ustop, store_error
     use InputOutputModule, only: urword, getunit, openfile
@@ -3320,7 +3320,7 @@ contains
           call this%parser%GetString(fname)
           this%istageout = getunit()
           call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',  &
-                       form, access, 'REPLACE')
+                       form, access, 'REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtlakbin) 'STAGE', fname, this%istageout
           found = .true.
         else
@@ -3332,7 +3332,7 @@ contains
           call this%parser%GetString(fname)
           this%ibudgetout = getunit()
           call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
-                        form, access, 'REPLACE')
+                        form, access, 'REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtlakbin) 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
@@ -3344,7 +3344,7 @@ contains
           call this%parser%GetString(fname)
           this%ipakcsv = getunit()
           call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
-                        filstat_opt='REPLACE')
+                        filstat_opt='REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtlakbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
           found = .true.
         else

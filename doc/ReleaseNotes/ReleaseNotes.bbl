@@ -1,4 +1,4 @@
-\begin{thebibliography}{21}
+\begin{thebibliography}{22}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -106,6 +106,12 @@ Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
   volume finite-difference formulation: {U.S. Geological Survey Techniques and
   Methods, book 6, chap. A45, 66 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/tm/06/a45/}.
+
+\bibitem[{Peckham and others(2013)Peckham, Hutton, and Norris}]{PECKHAM20133}
+Peckham, S.D., Hutton, E.W., and Norris, Boyana, 2013, A component-based
+  approach to integrated modeling in the geosciences: The design of {CSDMS}:
+  Computers \& Geosciences, v.~53, p.~3 -- 12, accessed March 24, 2020, at
+  \url{https://doi.org/https://doi.org/10.1016/j.cageo.2012.04.002}.
 
 \bibitem[{Provost and others(2017)Provost, Langevin, and Hughes}]{modflow6xt3d}
 Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
