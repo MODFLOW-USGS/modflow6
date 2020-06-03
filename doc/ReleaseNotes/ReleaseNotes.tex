@@ -10,8 +10,11 @@
 \usepackage{bm}
 \usepackage{calc}
 \usepackage{natbib}
+\usepackage{bibentry}
 \usepackage{graphicx}
 \usepackage{longtable}
+
+\usepackage[T1]{fontenc}
 
 \makeindex
 \usepackage{setspace}
@@ -93,6 +96,18 @@ Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunris
 https://water.usgs.gov/ogw/
 }
 
+\renewcommand{\reportrefname}{References Cited}
+\newcommand{\inreferences}{%
+\renewcommand{\theequation}{R--\arabic{equation}}%
+\setcounter{equation}{0}%
+\renewcommand{\thefigure}{R--\arabic{figure}}%
+\setcounter{figure}{0}%
+\renewcommand{\thetable}{R--\arabic{table}}%
+\setcounter{table}{0}%
+\renewcommand{\thepage}{R--\arabic{page}}%
+\setcounter{page}{1}%
+}
+
 \newcounter{appendixno}
 \setcounter{appendixno}{0}
 \newcommand{\inappendix}{%
@@ -107,6 +122,7 @@ https://water.usgs.gov/ogw/
 \setcounter{page}{1}%
 }
 
+\nobibliography*
 
 \begin{document}
 
@@ -152,6 +168,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item Add option to scale drain conductance over a user-defined range (drainage depth). Linear-conductance scaling is used with the Standard Formulation. Cubic-conductance scaling is used with the Newton-Raphson Formulation. The additional drainage depth variable is specified as an auxiliary variable and AUXDEPTHNAM is used to identify the auxiliary variable defining the drainage depth. The cubic-conductance scaling can be used as a replacement for the groundwater seepage option in the UZF Package. The scaled drainage conductance option can also be used to represent vertical seepage faces and improve model convergence in cells where simulated heads fluctuate around the elevation where the drain begins to discharge groundwater.
 		\item Add timeseries support for the reach upstream fraction variable in the SFR package.
 		\item Add Picard iterations for the SFR package to minimize differences in SFR package results between subsequent GWF Picard (non-linear) iterations as a result of non-optimal reach numbering. The number of SFR package Picard iterations can be controlled by specifying the maximum number of Picard  iteration to be used in the OPTIONS block (MAXIMUM\_PICARD\_ITERATIONS). If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. Specifying  MAXIMUM\_PICARD\_ITERATIONS to 1 will result in identical SFR package performance to previous versions of MODFLOW~6.
+		\item Add flow correction option for the MAW package that corrects the MAW-GWF exchange in cases where the head in a multi-aquifer well is below the bottom of the screen for a connection or the head in a convertible cell connected to a multi-aquifer well is below the cell bottom.  When flow corrections are activated, unit head gradients are used to calculate the flow between a multi-aquifer well and a connected GWF cell. This option is identical to the MODFLOW-USG ``flow-to-dry-cell'' option for flow between a CLN cell and a GWF cell if the cell is convertible \citep{modflowusg}. Flow corrections are enabled by specifying FLOW\_CORRECTION in the OPTIONS block. By default, flow corrections are not made. \emph{Prior to this release (version 6.1.1), flow corrections were made anytime the head in a multi-aquifer well was below the bottom of the screen for a connection--this may result in different results for existing models that can be resolved by using the FLOW\_CORRECTION option.}
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
@@ -244,14 +261,12 @@ The examples distributed with MODFLOW~6 can be run by navigating to the examples
 Details on the numerical methods and the underlying theory for MODFLOW~6 are described in the following reports:
 
 \begin{itemize}
-\item
-Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the MODFLOW~6 framework: U.S. Geological Survey Techniques and Methods, book 6, chap. A57, 40 p., https://doi.org/10.3133/tm6A57.
 
-\item
-Langevin, C.D., Hughes, J.D., Banta, E.R., Niswonger, R.G., Panday, Sorab, and Provost, A.M., 2017, Documentation for the MODFLOW~6 Groundwater Flow Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197 p., https://doi.org/10.3133/tm6A55.
+\item \bibentry{modflow6framework}
 
-\item
-Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the ``XT3D'' option in the Node Property Flow (NPF) Package of MODFLOW~6: U.S. Geological Survey Techniques and Methods, book 6, chap. A56, 40 p., https://doi.org/10.3133/tm6A56.
+\item \bibentry{modflow6gwf}
+
+\item \bibentry{modflow6xt3d}
 
 \end{itemize}
  
@@ -284,32 +299,16 @@ Notices related to this software are as follows:
 \item As a work of the United States Government, this USGS product is in the public domain within the United States. You can copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission. Additionally, USGS waives copyright and related rights in the work worldwide through CC0 1.0 Universal Public Domain Dedication (\url{https://creativecommons.org/publicdomain/zero/1.0/}).
 \end{itemize}
 
-% -------------------------------------------------
-\section{References Cited}
 
-\begin{itemize}
-\item Hoffmann, J{\"o}rn, Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003, MODFLOW-2000 Ground-Water Model--User Guide to the Subsidence and Aquifer-System Compaction (SUB) Package: U.S. Geological Survey Open-File Report 03–233, 44 p.,  \url{https://pubs.usgs.gov/of/2003/ofr03-233/}
+\newpage
+\ifx\usgsdirector\undefined
+\addcontentsline{toc}{section}{\hspace{1.5em}\bibname}
+\else
+\inreferences
+\REFSECTION
+\fi
+\input{bibliography.tex}
 
-\item Keating, E., and Zyvoloski, G. 2009. A stable and efficient numerical algorithm for unconfined aquifer analysis. Ground Water, 47: 569--579. \href{https://doi.org/10.1111/j.1745-6584.2009.00555.x}{doi:10.1111/j.1745-6584.2009.00555.x}
-
-\item Laattoe, T., Post, V. E.A. and Werner, A. D. 2014, Spatial periodic boundary condition for MODFLOW. Groundwater, v. 52: 606--612. \href{https://doi.org/10.1111/gwat.12086}{doi:10.1111/gwat.12086}
-
-\item Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model--User guide to the Subsidence and Aquifer-System Compaction Package (SUB-WT) for Water-Table Aquifers: U.S. Geological Survey Techniques and Methods, book 6, chap. A23, 42 p., \url{https://pubs.er.usgs.gov/publication/tm6A23}.
-
-\item Merritt, M.L., and Konikow, L.F. 2000, Documentation of a computer program to simulate lake-aquifer interaction using the MODFLOW ground-water flow model and the MOC3D solute-transport model. U.S. Geological Survey Water-Resources Investigations Report 00--4167, 146 p. \url{https://pubs.er.usgs.gov/publication/wri004167}.
-
-\item Neville, C.J., and M.J. Tonkin. 2004. Modeling multiaquifer wells with MODFLOW.  Ground Water, 42: 910--919. \href{https://doi.org/10.1111/j.1745-6584.2004.t01-9-.x}{doi:10.1111/j.1745-6584.2004.t01-9-.x}
-
-\item Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes, J.D. 2013, MODFLOW-USG version 1: An unstructured grid version of MODFLOW for simulating groundwater flow and tightly coupled processes using a control volume finite-difference formulation. U.S. Geological Survey Techniques and Methods, book 6, chap. A45, 66 p., \url{https://pubs.usgs.gov/tm/06/a45}.
-
-\item Prudic, D.E. 1989, Documentation of a computer program to simulate stream-aquifer relations using a modular, finite-difference, ground-water flow model. U.S. Geological Survey Open-File Report 88--729, 113 p. \url{https://pubs.er.usgs.gov/publication/ofr88729}.
-
-\item Reilly, T.E., O.L. Franke, and Bennett, G.D. 1989. Bias in groundwater samples caused by wellbore flow. Journal of Hydraulic Engineering 115, no. 2: 270--276. \url{https://doi.org/10.1061/(ASCE)0733-9429(1989)115:2(270)}
-
-\item Vilhelmsen, T.N., Christensen, S., and Mehl, S.W., 2012, Evaluation of MODFLOW-LGR in connection with a synthetic regional-scale model. Ground Water, 50: 118--132. \href{https://doi.org/10.1111/j.1745-6584.2011.00826.x}{doi:10.1111/j.1745-6584.2011.00826.x}
-
-\item Zaidel, J. 2013, Discontinuous Steady-State Analytical Solutions of the Boussinesq Equation and Their Numerical Representation by MODFLOW. Groundwater, 51: 952--959. \href{https://doi.org/10.1111/gwat.12019}{doi:10.1111/gwat.12019}
-\end{itemize}
 
 \newpage
 \inappendix

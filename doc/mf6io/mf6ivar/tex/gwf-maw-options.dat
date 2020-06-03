@@ -8,6 +8,7 @@ BEGIN OPTIONS
   [HEAD FILEOUT <headfile>]
   [BUDGET FILEOUT <budgetfile>]
   [NO_WELL_STORAGE]
+  [FLOW_CORRECTION]
   [FLOWING_WELLS]
   [SHUTDOWN_THETA <shutdown_theta>]
   [SHUTDOWN_KAPPA <shutdown_kappa>]

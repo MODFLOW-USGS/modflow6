@@ -136,6 +136,14 @@ longname deactivate well storage
 description keyword that deactivates inclusion of well storage contributions to the multi-aquifer well package continuity equation.
 
 block options
+name flow_correction
+type keyword
+reader urword
+optional true
+longname activate flow correction
+description keyword that activates flow corrections in cases where the head in a multi-aquifer well is below the bottom of the screen for a connection or the head in a convertible cell connected to a multi-aquifer well is below the cell bottom. When flow corrections are activated, unit head gradients are used to calculate the flow between a multi-aquifer well and a connected GWF cell. By default, flow corrections are not made.
+
+block options
 name flowing_wells
 type keyword
 reader urword
