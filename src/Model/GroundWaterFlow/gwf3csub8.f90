@@ -2142,7 +2142,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: MAXCHARLEN, DZERO
+    use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, urdaux, openfile
@@ -2316,7 +2316,7 @@ contains
               call this%parser%GetString(fname)
               this%istrainib = getunit()
               call openfile(this%istrainib, this%iout, fname, 'CSV_OUTPUT',     &
-                            filstat_opt='REPLACE')
+                            filstat_opt='REPLACE', mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'INTERBED STRAIN CSV', fname, this%istrainib
             else
@@ -2330,7 +2330,7 @@ contains
               call this%parser%GetString(fname)
               this%istrainsk = getunit()
               call openfile(this%istrainsk, this%iout, fname, 'CSV_OUTPUT',     &
-                            filstat_opt='REPLACE')
+                            filstat_opt='REPLACE', mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'COARSE STRAIN CSV', fname, this%istrainsk
             else
@@ -2346,7 +2346,7 @@ contains
               call this%parser%GetString(fname)
               this%ioutcomp = getunit()
               call openfile(this%ioutcomp, this%iout, fname, 'DATA(BINARY)',    &
-                            form, access, 'REPLACE')
+                            form, access, 'REPLACE', mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'COMPACTION', fname, this%ioutcomp
             else 
@@ -2360,7 +2360,8 @@ contains
               call this%parser%GetString(fname)
               this%ioutcompi = getunit()
               call openfile(this%ioutcompi, this%iout, fname,                   &
-                            'DATA(BINARY)', form, access, 'REPLACE')
+                            'DATA(BINARY)', form, access, 'REPLACE',            &
+                            mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'COMPACTION_INELASTIC', fname, this%ioutcompi
             else 
@@ -2374,7 +2375,8 @@ contains
               call this%parser%GetString(fname)
               this%ioutcompe = getunit()
               call openfile(this%ioutcompe, this%iout, fname,                   &
-                            'DATA(BINARY)', form, access, 'REPLACE')
+                            'DATA(BINARY)', form, access, 'REPLACE',            &
+                            mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'COMPACTION_ELASTIC', fname, this%ioutcompe
             else 
@@ -2388,7 +2390,8 @@ contains
               call this%parser%GetString(fname)
               this%ioutcompib = getunit()
               call openfile(this%ioutcompib, this%iout, fname,                  &
-                            'DATA(BINARY)', form, access, 'REPLACE')
+                            'DATA(BINARY)', form, access, 'REPLACE',            &
+                            mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'COMPACTION_INTERBED', fname, this%ioutcompib
             else 
@@ -2402,7 +2405,8 @@ contains
               call this%parser%GetString(fname)
               this%ioutcomps = getunit()
               call openfile(this%ioutcomps, this%iout, fname,                   &
-                            'DATA(BINARY)', form, access, 'REPLACE')
+                            'DATA(BINARY)', form, access, 'REPLACE',            &
+                            mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'COMPACTION_COARSE', fname, this%ioutcomps
             else 
@@ -2418,7 +2422,8 @@ contains
               call this%parser%GetString(fname)
               this%ioutzdisp = getunit()
               call openfile(this%ioutzdisp, this%iout, fname,                   &
-                            'DATA(BINARY)', form, access, 'REPLACE')
+                            'DATA(BINARY)', form, access, 'REPLACE',            &
+                            mode_opt=MNORMAL)
               write(this%iout,fmtfileout) &
                 'ZDISPLACEMENT', fname, this%ioutzdisp
             else 
@@ -2433,7 +2438,7 @@ contains
               call this%parser%GetString(fname)
               this%ipakcsv = getunit()
               call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
-                            filstat_opt='REPLACE')
+                            filstat_opt='REPLACE', mode_opt=MNORMAL)
               write(this%iout,fmtfileout) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
             else
               call store_error('Optional PACKAGE_CONVERGENCE keyword must be ' //    &

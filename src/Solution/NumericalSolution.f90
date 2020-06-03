@@ -7,7 +7,8 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20, DNODATA,       &
-                                     TABLEFT, TABRIGHT
+                                     TABLEFT, TABRIGHT,                        &
+                                     MNORMAL, MVALIDATE
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
@@ -22,7 +23,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
-  use SimVariablesModule,      only: iout
+  use SimVariablesModule,      only: iout, isim_mode
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 
@@ -1179,32 +1180,47 @@ contains
     integer(I4B), intent(inout) :: isgcnvg
     integer(I4B), intent(in) :: isuppress_output    
     ! -- local
+    class(NumericalModelType), pointer :: mp
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fmt
+    integer(I4B) :: im
     integer(I4B) :: kiter   ! non-linear iteration counter
 ! ------------------------------------------------------------------------------
     
     ! advance the models, exchanges, and solution
     call this%prepareSolve()
     
-    ! outer iteration loop for this solution
-    outerloop: do kiter = 1, this%mxiter
+    select case (isim_mode)
+      case (MVALIDATE)
+        line = 'mode="validation" -- Skipping matrix assembly and solution.'
+        fmt = "(/,1x,a,/)"
+        do im = 1, this%modellist%Count()
+          mp => GetNumericalModelFromList(this%modellist, im)
+          call mp%model_message(line, fmt=fmt)
+        end do
+      case(MNORMAL)
+        ! nonlinear iteration loop for this solution
+        outerloop: do kiter = 1, this%mxiter
+           
+          ! perform a single iteration
+          call this%solve(kiter)     
         
-      ! perform a single iteration
-      call this%solve(kiter)     
+          ! exit if converged
+          if (this%icnvg == 1) then
+            exit outerloop
+          end if
         
-      ! exit if converged
-      if (this%icnvg == 1) then
-        exit outerloop
-      end if
-        
-    end do outerloop
+        end do outerloop
       
-    ! finish up, write convergence info, CSV file, budgets and flows, ...
-    call this%finalizeSolve(kiter, isgcnvg, isuppress_output)   
-     
+        ! finish up, write convergence info, CSV file, budgets and flows, ...
+        call this%finalizeSolve(kiter, isgcnvg, isuppress_output)   
+    end select
+    !
     ! -- return
     return
+    
   end subroutine sln_ca
-   
+       
   ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this

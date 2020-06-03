@@ -3,7 +3,7 @@
 module BaseModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME
+  use ConstantsModule, only: LENMODELNAME, LINELENGTH
   use ListModule, only: ListType
   implicit none
 
@@ -30,6 +30,7 @@ module BaseModelModule
     procedure :: model_fp
     procedure :: model_da
     procedure :: allocate_scalars
+    procedure :: model_message
   end type BaseModelType
 
   contains
@@ -78,7 +79,7 @@ module BaseModelModule
   
   subroutine model_ot(this)
 ! ******************************************************************************
-! model_ot -- Read and prepare
+! model_ot -- output results
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -89,6 +90,35 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_ot
+  
+  subroutine model_message(this, line, fmt)
+! ******************************************************************************
+! model_message -- write line to model iout
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(BaseModelType) :: this
+    character(len=*), intent(in) :: line
+    character(len=*), intent(in), optional :: fmt
+    ! -- local
+    character(len=LINELENGTH) :: cfmt
+! ------------------------------------------------------------------------------
+    !
+    ! -- process optional variables
+    if (present(fmt)) then
+      cfmt = fmt
+    else
+      cfmt = '(1x,a)'
+    end if
+    !
+    ! -- write line
+    write(this%iout, trim(cfmt)) trim(line)
+    !
+    ! -- return
+    return
+  end subroutine model_message
   
   subroutine model_fp(this)
 ! ******************************************************************************

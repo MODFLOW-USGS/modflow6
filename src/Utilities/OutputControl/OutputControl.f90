@@ -342,7 +342,7 @@ module OutputControlModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING OC OPTIONS'
+      write(this%iout,'(/,1x,a,/)') 'PROCESSING OC OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -356,8 +356,7 @@ module OutputControlModule
           endif
         enddo
         if (.not. found) then
-          write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN OC OPTION: ',       &
-                                 trim(keyword)
+          errmsg = "UNKNOWN OC OPTION '" // trim(keyword) // "'."
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
@@ -365,7 +364,7 @@ module OutputControlModule
         call this%parser%GetRemainingLine(line)
         call ocdobjptr%set_option(line, this%parser%iuactive, this%iout)
       end do
-      write(this%iout,'(1x,a)')'END OF OC OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF OC OPTIONS'
     end if
     !
     ! -- return
