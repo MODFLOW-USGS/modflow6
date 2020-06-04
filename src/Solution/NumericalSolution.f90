@@ -1220,31 +1220,7 @@ contains
     return
     
   end subroutine sln_ca
-   
        
-  ! advances the exchanges and models in this solution by 1 timestep
-  subroutine advanceSolution(this)
-    class(NumericalSolutionType) :: this
-    ! local
-    class(NumericalExchangeType), pointer :: cp
-    class(NumericalModelType), pointer :: mp
-    integer(I4B) :: ic
-    integer(I4B) :: im
-    
-    ! -- Exchange advance
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_ad()
-    enddo
-    
-    ! -- Model advance
-    do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ad()
-    enddo
-    
-  end subroutine advanceSolution
-
   ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
