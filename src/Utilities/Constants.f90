@@ -129,4 +129,9 @@ module ConstantsModule
     ENUMERATOR :: OSUNDEF, OSLINUX, OSUNIX, OSMAC, OSWIN
   END ENUM
 
+  ENUM, BIND(C)
+    ! Sets MVALIDATE=0, MNORMAL=1, MRUN=2 
+    ENUMERATOR :: MVALIDATE, MNORMAL, MRUN
+  END ENUM
+
 end module ConstantsModule

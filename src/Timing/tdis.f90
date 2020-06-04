@@ -4,7 +4,7 @@
 
   module TdisModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: iout
   use BlockParserModule, only: BlockParserType
   use ConstantsModule, only: LINELENGTH, LENDATETIME, VALL
@@ -21,9 +21,9 @@
   integer(I4B), public, pointer                            :: itmuni             !flag indicating time units
   integer(I4B), public, pointer                            :: kper               !current stress period number
   integer(I4B), public, pointer                            :: kstp               !current time step number
-  logical, public, pointer                                 :: readnewdata        !flag indicating time to read new data
-  logical, public, pointer                                 :: endofperiod        !flag indicating end of stress period
-  logical, public, pointer                                 :: endofsimulation    !flag indicating end of simulation
+  logical(LGP), public, pointer                            :: readnewdata        !flag indicating time to read new data
+  logical(LGP), public, pointer                            :: endofperiod        !flag indicating end of stress period
+  logical(LGP), public, pointer                            :: endofsimulation    !flag indicating end of simulation
   real(DP), public, pointer                                :: delt               !length of the current time step
   real(DP), public, pointer                                :: pertim             !time relative to start of stress period
   real(DP), public, pointer                                :: totim              !time relative to start of simulation
@@ -102,7 +102,8 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DONE, DZERO
+    use ConstantsModule, only: DONE, DZERO, MNORMAL, MVALIDATE
+    use SimVariablesModule, only: isim_mode
     use GenericUtilitiesModule, only: sim_message
     ! -- local
     character(len=LINELENGTH) :: line
@@ -115,11 +116,13 @@
     character(len=*),parameter :: fmttsi =                                     &
       "(1X,/28X,'INITIAL TIME STEP SIZE =',G15.7)"
     character(len=*),parameter :: fmtspts =                                    &
-      "(' Solving:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
+      "('    Solving:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
+    character(len=*),parameter :: fmtvspts =                                   &
+      "(' Validating:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Increment kstp and kper
-    if(endofperiod) then
+    if (endofperiod) then
       kstp = 1
       kper = kper + 1
     else
@@ -156,10 +159,17 @@
     endif
     !
     ! -- Calculate delt for kstp > 1
-    if(kstp /= 1) delt = tsmult(kper) * delt
+    if (kstp /= 1) then
+      delt = tsmult(kper) * delt
+    end if
     !
     ! -- Print stress period and time step to console
-    write(line, fmtspts) kper, kstp
+    select case(isim_mode)
+      case(MVALIDATE)  
+        write(line, fmtvspts) kper, kstp
+      case(MNORMAL)
+        write(line, fmtspts) kper, kstp
+    end select
     call sim_message(line, level=VALL)
     !
     ! -- Store totim and pertim, which are times at end of previous time step
@@ -172,8 +182,10 @@
     pertim = pertimsav + delt
     !
     ! -- End of stress period and/or simulation?
-    if(kstp == nstp(kper)) endofperiod = .true.
-    if(endofperiod .and. kper==nper) then
+    if (kstp == nstp(kper)) then
+      endofperiod = .true.
+    end if
+    if (endofperiod .and. kper==nper) then
       endofsimulation = .true.
       totim = totalsimtime  
     end if
