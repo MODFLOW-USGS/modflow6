@@ -190,6 +190,7 @@ def run_perturbation(mf6, max_iter, recharge, rch):
 
 
 def bmifunc(exe, idx, model_ws=None):
+    print('\nBMI implementation test:')
     success = False
 
     name = ex[idx].upper()
@@ -223,7 +224,6 @@ def bmifunc(exe, idx, model_ws=None):
     # get recharge array
     cdata = "{} RCHA/BOUND".format(name)
     recharge = mf6.get_value_ptr(cdata)
-    trch = np.ones(ncol, dtype=np.float64)
 
     # determine initial recharge value
     np.random.seed(0)
@@ -233,6 +233,7 @@ def bmifunc(exe, idx, model_ws=None):
     idx = 0
     while current_time < end_time:
 
+        # target head
         htarget = hobs[idx]
 
         # get dt and prepare for non-linear iterations
@@ -249,7 +250,8 @@ def bmifunc(exe, idx, model_ws=None):
             r0 = h0 - htarget
 
             # perturbation simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge, rch + drch)
+            has_converged = run_perturbation(mf6, max_iter, recharge,
+                                             rch + drch)
             if not has_converged:
                 return bmi_return(success, model_ws)
             h1 = head.reshape((nrow, ncol))[5, 5]
@@ -258,7 +260,15 @@ def bmifunc(exe, idx, model_ws=None):
             # calculate update terms
             dqdr = drch / (r0 - r1)
             dr = r1 * dqdr
+
+            # evaluate if the estimation iterations need to continue
             if abs(r0) < 1e-5:
+                msg = "Estimation for time {:5.1f}".format(current_time) + \
+                      " converged in {:3d}".format(est_iter) + \
+                      " iterations" + \
+                      " -- final recharge={:10.5f}".format(rch) + \
+                      " residual={:10.2g}".format(rch - rch_rates[idx])
+                print(msg)
                 break
             else:
                 est_iter += 1

@@ -187,7 +187,6 @@ def bmifunc(exe, idx, model_ws=None):
     # get recharge array
     cdata = "{} RCHA/BOUND".format(name)
     recharge = mf6.get_value_ptr(cdata)
-    trch = np.zeros(ncol, dtype=np.float64)
 
     # model time loop
     idx = 0
@@ -202,8 +201,7 @@ def bmifunc(exe, idx, model_ws=None):
         mf6.prepare_solve(1)
 
         # update recharge
-        trch[:] = rch_spd[idx] * area
-        recharge[:, 0] = trch[:]
+        recharge[:, 0] = rch_spd[idx] * area
 
         while kiter < max_iter:
             has_converged = mf6.solve(1)
