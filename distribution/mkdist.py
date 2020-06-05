@@ -382,6 +382,11 @@ def clean_latex_files():
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + '.pdf')
 
+    pth = os.path.join('..', '..', 'modflow6-docs.git', 'mf6suptechinfo')
+    files = ['converter_mf5to6.{}'.format(e) for e in exts]
+    delete_files(files, pth, allow_failure=True)
+    assert not os.path.isfile(pth + '.pdf')
+
     return
 
 
@@ -494,15 +499,19 @@ def update_mf6io_tex_files(distfolder):
 
 def build_latex_docs():
     print('Building latex files')
-    pth = os.path.join('..', 'doc')
-    doclist = [('mf6io', 'mf6io.tex'),
-               ('ReleaseNotes', 'ReleaseNotes.tex'),
-               ('zonebudget', 'zonebudget.tex'),
-               ('ConverterGuide', 'converter_mf5to6.tex')]
+    pth1 = os.path.join('..', 'doc')
+    pth2 = os.path.join('..', '..', 'modflow6-docs.git')
+    doclist = [
+               (pth1, 'mf6io', 'mf6io.tex'),
+               (pth1, 'ReleaseNotes', 'ReleaseNotes.tex'),
+               (pth1, 'zonebudget', 'zonebudget.tex'),
+               (pth1, 'ConverterGuide', 'converter_mf5to6.tex'),
+               (pth2, 'mf6suptechinfo', 'mf6suptechinfo.tex'),
+              ]
 
-    for d, t in doclist:
+    for p, d, t in doclist:
 
-        dirname = os.path.join(pth, d)
+        dirname = os.path.join(p, d)
         with cwd(dirname):
 
             cmd = ['pdflatex', t]
@@ -754,6 +763,7 @@ if __name__ == '__main__':
                [os.path.join(docsrc, 'mf6io', 'mf6io.pdf'), 'mf6io.pdf'],
                [os.path.join(docsrc, 'ConverterGuide', 'converter_mf5to6.pdf'), 'mf5to6.pdf'],
                [os.path.join('..', 'doc', 'zonebudget', 'zonebudget.pdf'), 'zonebudget.pdf'],
+               [os.path.join('..', '..', 'modflow6-docs.git', 'mf6suptechinfo', 'mf6suptechinfo.pdf'), 'mf6suptechinfo.pdf'],
                ]
 
     print('Copying documentation')

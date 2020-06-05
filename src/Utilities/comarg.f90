@@ -88,7 +88,7 @@ module CommandArguments
       call get_command_argument(iarg, uctag)
       call upcase(uctag)
       if (trim(adjustl(uctag)) == '-S' .or.                                      &
-          trim(adjustl(uctag)) == '-SILENT') then 
+          trim(adjustl(uctag)) == '--SILENT') then 
         !
         ! -- get file unit and open mfsim.stdout
         istdout = getunit()
