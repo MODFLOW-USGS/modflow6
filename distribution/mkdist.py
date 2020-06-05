@@ -509,6 +509,9 @@ def build_latex_docs():
                (pth2, 'mf6suptechinfo', 'mf6suptechinfo.tex'),
               ]
 
+    # copy version.tex from doc to modflow6-docs
+    shutil.copy(os.path.join(pth1, 'version.tex'), pth2)
+
     for p, d, t in doclist:
 
         dirname = os.path.join(p, d)
