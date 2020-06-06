@@ -83,7 +83,7 @@ contains
   subroutine Mf6Finalize()
     use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule,            only: lists_da
-    use MemoryManagerModule,    only: mem_usage, mem_da
+    use MemoryManagerModule,    only: mem_write_usage, mem_da
     use TimerModule,            only: elapsed_time   
     use SimVariablesModule,     only: iout
     use SimulationCreateModule, only: simulation_cr, simulation_da  
@@ -153,8 +153,8 @@ contains
     call simulation_da()
     call lists_da()
     !
-    ! -- Calculate memory usage, elapsed time and terminate
-    call mem_usage(iout)
+    ! -- Write memory usage, elapsed time and terminate
+    call mem_write_usage(iout)
     call mem_da()
     call elapsed_time(iout, 1)
     call final_message()
