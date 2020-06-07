@@ -60,7 +60,9 @@ module ConstantsModule
   real(DP), parameter :: DTEN = 1.0e1_DP
   real(DP), parameter :: DHUNDRED = 1.0e2_DP
 
+  real(DP), parameter :: DEP3 = 1.0e3_DP
   real(DP), parameter :: DEP6 = 1.0e6_DP
+  real(DP), parameter :: DEP9 = 1.0e9_DP
   real(DP), parameter :: DEP20 = 1.0e20_DP
 
   real(DP), parameter :: DHNOFLO = 1.e30_DP
