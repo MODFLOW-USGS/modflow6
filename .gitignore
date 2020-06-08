@@ -7,6 +7,7 @@
 *.u2d
 Debug/
 Release/
+.vs/
 *.pdb
 *.user
 *.list
