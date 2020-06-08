@@ -244,9 +244,9 @@ To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current wo
 
 % -------------------------------------------------
 \section{Compiling MODFLOW~6}
-MODFLOW~6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran capabilities, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW~6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
+MODFLOW~6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran extensions, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW~6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
 
-This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Microsoft Visual Studio Community 2019 and Intel(R) Visual Fortran Compiler 2019.2.190.
+This distribution contains the Microsoft Visual Studio solution and project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Microsoft Visual Studio Community 2019 and Intel(R) Visual Fortran Compiler 2020.0.166.  To compile MODFLOW~6, open the mf6.sln file in the msvs folder and click Build >  Build Solution.  A separate Visual Studio solution file is also included for building the BMI dynamically linked library version of MODFLOW~6.
 
 This distribution also comes with a makefile for compiling MODFLOW~6 with \texttt{gfortran}.  The makefile is contained in the \texttt{make} folder.
 
