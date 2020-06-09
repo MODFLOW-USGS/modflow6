@@ -239,6 +239,9 @@ class Simulation(object):
                 files = os.listdir(cpth)
                 for file in files:
                     files_cmp.append(file)
+            elif 'mf6' in self.action:
+                fpth = os.path.join(cpth, 'mfsim.nam')
+                cinp, self.coutp = pymake.get_mf6_files(fpth)
 
             files1 = []
             files2 = []

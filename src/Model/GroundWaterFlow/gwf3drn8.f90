@@ -33,6 +33,7 @@ module DrnModule
       procedure :: bnd_da => drn_da
       procedure :: define_listlabel
       procedure :: get_drain_elevations
+      procedure :: get_drain_factor
       ! -- methods for observations
       procedure, public :: bnd_obs_supported => drn_obs_supported
       procedure, public :: bnd_df_obs => drn_df_obs
@@ -303,9 +304,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: node
     real(DP) :: cdrn
-    real(DP) :: xnew
-    real(DP) :: drndepth
-    real(DP) :: drntop
     real(DP) :: drnbot
     real(DP) :: fact
     logical :: lrm
@@ -332,26 +330,9 @@ contains
       !
       ! -- set local variables for this drain
       cdrn = this%bound(2,i)
-      xnew = this%xnew(node)
       !
-      ! -- calculate the drainage depth and the top and bottom of
-      !    the conductance scaling elevations
-      call this%get_drain_elevations(i, drndepth, drntop, drnbot)
-      !
-      ! -- calculate scaling factor
-      if (drndepth /= DZERO) then
-        if (this%icubic_scaling /= 0) then
-          fact = sQSaturation(drntop, drnbot, xnew, c1=-DONE, c2=DTWO)
-        else
-          fact = sQuadraticSaturation(drntop, drnbot, xnew, eps=DZERO)
-        end if
-      else
-        if (xnew <= drnbot) then
-          fact = DZERO
-        else
-          fact = DONE
-        end if
-      end if
+      ! -- calculate the drainage scaling factor
+      call this%get_drain_factor(i, fact, drnbot)
       !
       ! -- calculate rhs and hcof
       this%rhs(i) = -fact * cdrn * drnbot
@@ -376,8 +357,13 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    integer(I4B) :: i, n, ipos
-    real(DP) :: drncond, drnelev, qdrn
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: ipos
+    real(DP) :: fact
+    real(DP) :: drnbot
+    real(DP) :: drncond
+    real(DP) :: qdrn
 ! --------------------------------------------------------------------------
     !
     ! -- packmvrobj fc
@@ -392,12 +378,14 @@ contains
       ipos = ia(n)
       amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
       !
+      ! -- calculate the drainage scaling factor
+      call this%get_drain_factor(i, fact, drnbot)
+      !
       ! -- If mover is active and this drain is discharging,
       !    store available water (as positive value).
-      drnelev = this%bound(1,i)
-      if(this%imover == 1 .and. this%xnew(n) > drnelev) then
+      if(this%imover == 1 .and. fact > DZERO) then
         drncond = this%bound(2,i)
-        qdrn = drncond * (this%xnew(n) - drnelev)
+        qdrn = fact * drncond * (this%xnew(n) - drnbot)
         call this%pakmvrobj%accumulate_qformvr(i, qdrn)
       endif
     enddo
@@ -544,6 +532,59 @@ contains
     ! -- return
     return
   end subroutine get_drain_elevations
+
+    
+  subroutine get_drain_factor(this, i, factor, opt_drnbot)
+! ******************************************************************************
+! get_drain_factor -- Get the drain conductance scale factor.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DrnType), intent(inout) :: this
+    integer(I4B), intent(in) :: i
+    real(DP), intent(inout) :: factor
+    real(DP), intent(inout), optional :: opt_drnbot
+    ! -- local
+    integer(I4B) :: node
+    real(DP) :: xnew
+    real(DP) :: drndepth
+    real(DP) :: drntop
+    real(DP) :: drnbot
+! ------------------------------------------------------------------------------
+      !
+      ! -- set local variables for this drain
+      node = this%nodelist(i)
+      xnew = this%xnew(node)
+      !
+      ! -- calculate the drainage depth and the top and bottom of
+      !    the conductance scaling elevations
+      call this%get_drain_elevations(i, drndepth, drntop, drnbot)
+      !
+      ! -- set opt_drnbot to drnbot if passed as dummy variable
+      if (present(opt_drnbot)) then
+        opt_drnbot = drnbot
+      end if
+      !
+      ! -- calculate scaling factor
+      if (drndepth /= DZERO) then
+        if (this%icubic_scaling /= 0) then
+          factor = sQSaturation(drntop, drnbot, xnew, c1=-DONE, c2=DTWO)
+        else
+          factor = sQuadraticSaturation(drntop, drnbot, xnew, eps=DZERO)
+        end if
+      else
+        if (xnew <= drnbot) then
+          factor = DZERO
+        else
+          factor = DONE
+        end if
+      end if
+    !
+    ! -- return
+    return
+  end subroutine get_drain_factor
   
   ! -- Procedures related to observations
 

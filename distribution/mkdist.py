@@ -26,6 +26,9 @@ import pymake
 from pymake.download import download_and_unzip
 from contextlib import contextmanager
 
+# examples_setup contains code for copying examples into distribution
+import examples_setup
+
 
 @contextmanager
 def cwd(path):
@@ -382,6 +385,11 @@ def clean_latex_files():
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + '.pdf')
 
+    pth = os.path.join('..', '..', 'modflow6-docs.git', 'mf6suptechinfo')
+    files = ['converter_mf5to6.{}'.format(e) for e in exts]
+    delete_files(files, pth, allow_failure=True)
+    assert not os.path.isfile(pth + '.pdf')
+
     return
 
 
@@ -429,14 +437,14 @@ def rebuild_tex_from_dfn():
     return
 
 
-def update_mf6io_tex_files(distfolder):
+def update_mf6io_tex_files(distfolder, mf6pth):
 
     texpth = '../doc/mf6io'
     fname1 = os.path.join(texpth, 'mf6output.tex')
     fname2 = os.path.join(texpth, 'mf6noname.tex')
     fname3 = os.path.join(texpth, 'mf6switches.tex')
-    mf6pth = os.path.join(distfolder, 'bin', 'mf6.exe')
-    mf6pth = os.path.abspath(mf6pth)
+    #mf6pth = os.path.join(distfolder, 'bin', 'mf6.exe')
+    #mf6pth = os.path.abspath(mf6pth)
     expth = os.path.join(distfolder, 'examples', 'ex01-twri')
     expth = os.path.abspath(expth)
 
@@ -494,15 +502,22 @@ def update_mf6io_tex_files(distfolder):
 
 def build_latex_docs():
     print('Building latex files')
-    pth = os.path.join('..', 'doc')
-    doclist = [('mf6io', 'mf6io.tex'),
-               ('ReleaseNotes', 'ReleaseNotes.tex'),
-               ('zonebudget', 'zonebudget.tex'),
-               ('ConverterGuide', 'converter_mf5to6.tex')]
+    pth1 = os.path.join('..', 'doc')
+    pth2 = os.path.join('..', '..', 'modflow6-docs.git')
+    doclist = [
+               (pth1, 'mf6io', 'mf6io.tex'),
+               (pth1, 'ReleaseNotes', 'ReleaseNotes.tex'),
+               (pth1, 'zonebudget', 'zonebudget.tex'),
+               (pth1, 'ConverterGuide', 'converter_mf5to6.tex'),
+               (pth2, 'mf6suptechinfo', 'mf6suptechinfo.tex'),
+              ]
 
-    for d, t in doclist:
+    # copy version.tex from doc to modflow6-docs
+    shutil.copy(os.path.join(pth1, 'version.tex'), pth2)
 
-        dirname = os.path.join(pth, d)
+    for p, d, t in doclist:
+
+        dirname = os.path.join(p, d)
         with cwd(dirname):
 
             cmd = ['pdflatex', t]
@@ -535,23 +550,19 @@ def build_latex_docs():
     return
 
 
-def update_latex_releaseinfo():
+def update_latex_releaseinfo(examples_folder):
 
     pth = os.path.join('..', 'doc', 'ReleaseNotes')
     files = ['example_items.tex', 'example_table.tex', 'folder_struct.tex']
     delete_files(files, pth, allow_failure=True)
 
-    cmd = ['python', 'mk_example_items.py']
-    buff, ierr = run_command(cmd, pth)
-    msg = '\nERROR {}: could not run {} on {}'.format(ierr, cmd[0],
-                                                      cmd[1])
-    assert ierr == 0, buff + msg
+    # make release notes example_items.tex
+    fname = os.path.join(pth, 'example_items.tex')
+    examples_setup.make_example_items(fname)
 
-    cmd = ['python', 'mk_example_table.py']
-    buff, ierr = run_command(cmd, pth)
-    msg = '\nERROR {}: could not run {} on {}'.format(ierr, cmd[0],
-                                                      cmd[1])
-    assert ierr == 0, buff + msg
+    # make release notes example_table.tex
+    fname = os.path.join(pth, 'example_table.tex')
+    examples_setup.make_example_table(fname, examples_folder)
 
     cmd = ['python', 'mk_folder_struct.py']
     buff, ierr = run_command(cmd, pth)
@@ -575,7 +586,7 @@ if __name__ == '__main__':
     versiontexname = os.path.join('..', 'doc', 'version.tex')
     version, versiondate =  get_distribution_info(versiontexname)
     distfolder = os.path.join(destpath, version)
-    subdirs = ['bin', 'doc', 'examples', 'src', 'msvs', 'make', 'utils']
+    subdirs = ['bin', 'doc', 'examples', 'src', 'srcbmi', 'msvs', 'make', 'utils']
     fd = setup(name, destpath, version, subdirs)
 
     # Copy the Visual Studio solution and project files
@@ -596,10 +607,9 @@ if __name__ == '__main__':
     copytree(os.path.join('..', 'src'), fd['src'],
              ignore=shutil.ignore_patterns('.DS_Store'))
 
-    # modify the constants fortran source file with version information
-    # this is now handled by pre-commit.py
-    #fname = os.path.join(distfolder, 'src', 'Utilities', 'version.f90')
-    #change_version_module(fname, '{} {}'.format(version, versiondate))
+    # copy srcbmi folder
+    copytree(os.path.join('..', 'srcbmi'), fd['srcbmi'],
+             ignore=shutil.ignore_patterns('.DS_Store'))
 
     # Create makefile in the make folder and then copy into distribution
     print('Creating makefile')
@@ -637,114 +647,18 @@ if __name__ == '__main__':
     make_mf5to6(os.path.join('..', 'utils', 'mf5to6'), fd['utils'],
                 win_target_os, fd['bin'])
 
-    # examples
+    # setup the examples
     expath = fd['examples']
     exsrcpath = os.path.join('..', '..', 'modflow6-examples.git', 'mf6')
     assert os.path.isdir(exsrcpath)
-    examplelist = [
-        ['test021_twri', 'twri'],
-        ['test005_advgw_tidal', 'tidal'],
-        ['test004_bcfss', 'bcf2ss'],
-        ['test035_fhb', 'fhb'],
-
-        ['test006_gwf3_gnc',  'mfusg1disu'],       # disu
-        ['test006_gwf3_disv', 'mfusg1disv'],       # disv
-        ['test006_2models_gnc',   'mfusg1lgr'],    # dis lgr
-        ['test006_gwf3_disv_xt3d', 'mfusg1xt3d'],  # disv xt3d
-
-        ['test041_flowdivert', 'bump'],
-        ['test041_flowdivert_nr', 'bumpnr'],
-
-        ['test050_circle_island', 'disvmesh'],
-
-        ['test030_hani_col', 'hanicol'],
-        ['test030_hani_row', 'hanirow'],
-        ['test030_hani_xt3d', 'hanixt3d'],
-        ['test054_xt3d_whirlsA', 'whirlsxt3d'],
-
-        ['test034_nwtp2', 'mfnwt2'],
-        ['test014_NWTP3High', 'mfnwt3h'],
-        ['test014_NWTP3Low', 'mfnwt3l'],
-        ['test013_Zaidel', 'zaidel'],
-        ['test016_Keating', 'keating'],
-
-        ['test028_sfr', 'sfr1'],
-        ['test045_lake2tr', 'lak2'],
-        ['test045_lake4ss', 'lak4'],
-        ['test020_NevilleTonkinTransient', 'neville'],
-        ['test023_FlowingWell', 'flowing-maw'],
-        ['test024_Reilly', 'Reilly-maw'],
-        ['test051_uzfp3_wellakmvr_v2', 'advpakmvr'],
-
-        ['test011_mflgr_ex3', 'mflgr3'],
-        ['test019_VilhelmsenGC', 'vilhelmsen-gc'],
-        ['test019_VilhelmsenGF', 'vilhelmsen-gf'],
-        ['test019_VilhelmsenLGR', 'vilhelmsen-lgr'],
-
-        ['test046_periodic_bc', 'periodicbc'],
-        ['test061_csub_jacob', 'csub-jacob'],
-        ['test062_csub_sub01', 'csub-sub01'],
-        ['test063_csub_holly', 'csub-holly'],
-        ['test064_csub_subwt01', 'csub-subwt01'],
-    ]
-
-    # Create a runall.bat file in examples
-    if win_target_os:
-        frunallbat = open(os.path.join(expath, 'runall.bat'), 'w')
-    else:
-        frunallbat = None
-
-    # For each example, copy the necessary files from the development directory
-    # into the distribution directory.
-    print('Copying examples')
-    for i, (exsrc, exdest) in enumerate(examplelist):
-        srcpath = os.path.join(exsrcpath, exsrc)
-
-        prefix = 'ex{:02d}-'.format(i + 1)
-        destfoldername = prefix + exdest
-        dstpath = os.path.join(expath, prefix + exdest)
-        print('  {:<35} ===> {:<20}'.format(exsrc, prefix + exdest))
-
-        # Copy all of the mf6 input from srcpath to dstpath
-        extrafiles = ['description.txt']
-        pymake.setup_mf6(srcpath, dstpath, extrafiles=extrafiles)
-
-        if win_target_os:
-            # Create a batch file for running the model
-            fname = os.path.join(dstpath, 'run.bat')
-            with open(fname, 'w') as f:
-                s = '@echo off'
-                f.write(s + '\n')
-                s = r'..\..\bin\mf6.exe'
-                f.write(s + '\n')
-                s = 'echo.'
-                f.write(s + '\n')
-                s = 'echo Run complete.  Press any key to continue.'
-                f.write(s + '\n')
-                s = 'pause>nul'
-                f.write(s + '\n')
-
-            # # Create a batch file for running the model without pausing
-            # fname = os.path.join(dstpath, 'run_nopause.bat')
-            # with open(fname, 'w') as f:
-            #     s = r'..\..\bin\{}.exe'.format(exename)
-            #     f.write(s + '\n')
-
-            if frunallbat is not None:
-                frunallbat.write('cd ' + destfoldername + '\n')
-                frunallbat.write(r'..\..\bin\mf6.exe' + '\n')
-                frunallbat.write('cd ..' + '\n\n')
-    print('\n')
-
-    if frunallbat is not None:
-        frunallbat.write('pause' + '\n')
-        frunallbat.close()
+    examples_setup.setup_examples(exsrcpath, expath,
+                                  win_target_os=win_target_os)
 
     # Clean and then remake latex docs
     clean_latex_files()
     rebuild_tex_from_dfn()
-    update_mf6io_tex_files(distfolder)
-    update_latex_releaseinfo()
+    update_mf6io_tex_files(distfolder, target)
+    update_latex_releaseinfo(fd['examples'])
     build_latex_docs()
 
     # docs
@@ -754,6 +668,7 @@ if __name__ == '__main__':
                [os.path.join(docsrc, 'mf6io', 'mf6io.pdf'), 'mf6io.pdf'],
                [os.path.join(docsrc, 'ConverterGuide', 'converter_mf5to6.pdf'), 'mf5to6.pdf'],
                [os.path.join('..', 'doc', 'zonebudget', 'zonebudget.pdf'), 'zonebudget.pdf'],
+               [os.path.join('..', '..', 'modflow6-docs.git', 'mf6suptechinfo', 'mf6suptechinfo.pdf'), 'mf6suptechinfo.pdf'],
                ]
 
     print('Copying documentation')
