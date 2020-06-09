@@ -1,11 +1,11 @@
-This appendix describes changes introduced into MODFLOW 6 in previous releases. These changes may substantially affect users.
+This appendix describes changes introduced into MODFLOW~6 in previous releases. These changes may substantially affect users.
 
 \begin{itemize}
 	\item Version mf6.1.0
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item Added the Skeletal Storage, Compaction, and Subsidence (CSUB) Package. The one-dimensional effective-stress based compaction theory implemented in the CSUB Package is documented in Leake and Galloway (2007). The numerical approach used for delay interbeds in the CSUB package is documented in Hoffmann and others (2003) and uses the same one-dimensional effective-stress based compaction theory as coarse-grained and fine-grained no-delay interbed sediments. A number of example problems that use the CSUB Package are documented in the ``MODFLOW 6 CSUB Package Example Problems'' pdf document included in this and subsequent releases.
+		\item Added the Skeletal Storage, Compaction, and Subsidence (CSUB) Package. The one-dimensional effective-stress based compaction theory implemented in the CSUB Package is documented in \cite{leake2007modflow}. The numerical approach used for delay interbeds in the CSUB package is documented in \cite{hoffmann2003modflow} and uses the same one-dimensional effective-stress based compaction theory as coarse-grained and fine-grained no-delay interbed sediments. A number of example problems that use the CSUB Package are documented in the ``MODFLOW 6 CSUB Package Example Problems'' pdf document included in this and subsequent releases.
 	\end{itemize}
 	
 	\underline{BASIC FUNCTIONALITY}
@@ -68,7 +68,7 @@ This appendix describes changes introduced into MODFLOW 6 in previous releases. 
 	\underline{SOLUTION}
 	\begin{itemize}
 		\item Modified pseudo-transient continuation (PTC) approach to use PTC for steady-state stress period for models using the Newton-Raphson formulation for problems with and without the storage (STO) package. Previously, PTC was only used with problems that did not include the STO package (this was not the intended behavior of PTC).
-		\item Added NO\_PTC option to disable PTC for problems where PTC degrades/prevents model convergence. Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then this NO\_PTC option should be used to deactivate PTC.  This NO\_PTC option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW 6. 
+		\item Added NO\_PTC option to disable PTC for problems where PTC degrades/prevents model convergence. Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then this NO\_PTC option should be used to deactivate PTC.  This NO\_PTC option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW~6. 
 		\item Small improvements to PTC to reduce the initial PTCDEL value loaded on the diagonal. This reduces the number of iterations required to achieve convergence for steady-state stress periods for most problems.
 		\item Added OUTER\_RCLOSEBND variable that is used when performing final convergence checks on model packages that solve a separate equation not solved by the IMS linear solver. This value represents the maximum allowable residual at any single model package element between successive outer iterations. An example of a model package that would use OUTER\_RCLOSEBND to evaluate convergence is the SFR package which solves a continuity equation for each reach.
 		\item Minor refactoring to improve code clarity.
@@ -192,7 +192,7 @@ This appendix describes changes introduced into MODFLOW 6 in previous releases. 
 		\item Fixed bug in LAK package when internal outlets were specified and combined with the MVR package that was also moving water internally in the same LAK package.
 		\item Updated the table created when PRINT\_FLOWS is specified in the LAK package OPTIONS block to include internal flow terms if NOUTLETS is greater than 0. 
 		\item Renamed Lake Tables DIMENSIONS block NENTRIES to NROW and added NCOL to DIMENSIONS block.
-		\item Eliminated MAXIMUM\_OUTLET\_DEPTH = 10 [L] as default behavior for MANNING and WEIR LAK package lake outlet types. The maximum depth threshold was used in MODFLOW-2005 lake package because a table was used to calculate lake outflows to SFR. Can still use maximum depth threshold in develop versions of MODFLOW 6 by specifying MAXIMUM\_OUTLET\_DEPTH in the options block with a value.
+		\item Eliminated MAXIMUM\_OUTLET\_DEPTH = 10 [L] as default behavior for MANNING and WEIR LAK package lake outlet types. The maximum depth threshold was used in MODFLOW-2005 lake package because a table was used to calculate lake outflows to SFR. Can still use maximum depth threshold in develop versions of MODFLOW~6 by specifying MAXIMUM\_OUTLET\_DEPTH in the options block with a value.
 		\item Removed MULTILAYER option for UZF package---this option didn't actually do anything.
 		\item Added the requirement that the UZF number be specified as the first value on each line in the PACKAGEDATA block.
 		\item Renamed MAXBOUND in the DIMENSIONS block of the SFR Package to be NREACHES.
@@ -253,7 +253,7 @@ This appendix describes changes introduced into MODFLOW 6 in previous releases. 
 	\item
 	Version mf6beta0.9.01---May 11, 2017
 	\begin{itemize}
-		\item Added a copy of the third MODFLOW 6 report. 
+		\item Added a copy of the third MODFLOW~6 report. 
 		\item Made several minor corrections to doc/mf6io.pdf.  
 		\item If vertices were specified for DISU, then the last header line was not written to the binary grid file.  This has been corrected.
 	\end{itemize}
@@ -261,7 +261,7 @@ This appendix describes changes introduced into MODFLOW 6 in previous releases. 
 	\item
 	Version mf6beta0.9.00---May 10, 2017
 	\begin{itemize}
-		\item First public release of MODFLOW 6 in beta form. 
+		\item First public release of MODFLOW~6 in beta form. 
 	\end{itemize}
 
 \end{itemize}

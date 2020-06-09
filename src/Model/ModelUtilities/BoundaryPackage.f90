@@ -2,7 +2,8 @@ module BndModule
 
   use KindModule,                   only: DP, LGP, I4B
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
-                                          DZERO, LENMODELNAME, LENPACKAGENAME, &
+                                          DZERO, DONE,                         &
+                                          LENMODELNAME, LENPACKAGENAME,        &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
                                           TABLEFT, TABCENTER
@@ -572,11 +573,17 @@ module BndModule
     integer(I4B) :: nodeu
     integer(I4B) :: maxrows
     integer(I4B) :: imover
-    integer(I4B) :: i, node, n2, ibinun
+    integer(I4B) :: i
+    integer(I4B) :: node
+    integer(I4B) :: n2
+    integer(I4B) :: ibinun
+    integer(I4B) :: naux
     real(DP) :: q
     real(DP) :: qtomvr
-    real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: naux
+    real(DP) :: ratin
+    real(DP) :: ratout
+    real(DP) :: rrate
+    real(DP) :: fact
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
@@ -629,8 +636,12 @@ module BndModule
     else
       ibinun = this%ipakcb
     end if
-    if (icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if (icbcfl == 0) then
+      ibinun = 0
+    end if
+    if (isuppress_output /= 0) then
+      ibinun = 0
+    end if
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun /= 0) then
@@ -651,7 +662,7 @@ module BndModule
           bname = this%boundname(i)
         else
           bname = ''
-        endif
+        end if
         !
         ! -- If cell is no-flow or constant-head, then ignore it.
         rrate = DZERO
@@ -665,7 +676,19 @@ module BndModule
             if (rrate < DZERO) then
               if (imover == 1) then
                 qtomvr = this%pakmvrobj%get_qtomvr(i)
-                rrate = rrate + qtomvr
+                !
+                ! -- Evaluate if qtomvr exceeds the calculated rrate.
+                !    When fact is greater than 1, qtomvr is numerically
+                !    larger than rrate (which should never happen) and 
+                !    represents a water budget error. When this happens,
+                !    rrate is set to 0. so that the water budget error is
+                !    correctly accounted for in the listing water budget. 
+                fact = -qtomvr / rrate
+                if (fact > DONE) then
+                  rrate = DZERO
+                else
+                  rrate = rrate + qtomvr
+                end if
               end if
             end if
             !
@@ -683,7 +706,7 @@ module BndModule
             end if
             !
             ! -- See if flow is into aquifer or out of aquifer.
-            if(rrate < dzero) then
+            if(rrate < DZERO) then
               !
               ! -- Flow is out of aquifer; subtract rate from ratout.
               ratout=ratout - rrate
@@ -691,9 +714,9 @@ module BndModule
               !
               ! -- Flow is into aquifer; add rate to ratin.
               ratin=ratin + rrate
-            endif
-          endif
-        endif
+            end if
+          end if
+        end if
         !
         ! -- If saving cell-by-cell flows in list, write flow
         if (ibinun /= 0) then
@@ -707,7 +730,7 @@ module BndModule
         ! -- Save simulated value to simvals array.
         this%simvals(i) = rrate
         !
-      enddo
+      end do
       if (ibudfl /= 0) then
         if (this%iprflow /= 0) then
            write(this%iout,'(1x)')
@@ -736,7 +759,7 @@ module BndModule
         call this%dis%record_srcdst_list_header(text, this%name_model,       &
                     this%name_model, this%name_model, this%name, naux,           &
                     this%auxname, ibinun, this%nbound, this%iout)
-      endif
+      end if
       !
       ! -- If no boundaries, skip flow calculations.
       if(this%nbound > 0) then
@@ -749,7 +772,7 @@ module BndModule
             bname = this%boundname(i)
           else
             bname = ''
-          endif
+          end if
           !
           ! -- If cell is no-flow or constant-head, then ignore it.
           rrate = DZERO
@@ -775,11 +798,11 @@ module BndModule
                   call this%dis%nodeu_to_string(nodeu, nodestr)
                   call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),&
                                                        rrate, bname)
-                endif
-              endif
+                end if
+              end if
               !
               ! -- See if flow is into aquifer or out of aquifer.
-              if(rrate < dzero) then
+              if(rrate < DZERO) then
                 !
                 ! -- Flow is out of aquifer; subtract rate from ratout.
                 ratout=ratout - rrate
@@ -787,9 +810,9 @@ module BndModule
                 !
                 ! -- Flow is into aquifer; add rate to ratin.
                 ratin=ratin + rrate
-              endif
-            endif
-          endif
+              end if
+            end if
+          end if
           !
           ! -- If saving cell-by-cell flows in list, write flow
           if (ibinun /= 0) then
@@ -803,8 +826,8 @@ module BndModule
           ! -- Save simulated value to simvals array.
           this%simtomvr(i) = rrate
           !
-        enddo
-      endif
+        end do
+      end if
       !
       ! -- Store the rates
       call model_budget%addentry(ratin, ratout, delt, text,                     &
@@ -815,7 +838,7 @@ module BndModule
     ! -- Save the simulated values to the ObserveType objects
     if (iprobs /= 0 .and. this%obs%npakobs > 0) then
       call this%bnd_bd_obs()
-    endif
+    end if
     !
     ! -- return
     return
@@ -977,6 +1000,9 @@ module BndModule
     ! -- allocate TS objects
     allocate(this%TsManager)
     allocate(this%TasManager)
+    !
+    ! -- allocate text strings
+    call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%origin)
     !
     ! -- Initialize variables
     this%ibcnum = 0
@@ -1147,7 +1173,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule,   only: urdaux
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_reallocate
     use SimModule,           only: ustop, store_error, store_error_unit
     ! -- dummy
     class(BndType),intent(inout) :: this
@@ -1201,7 +1227,7 @@ module BndModule
             lloc = 1
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
                         istart, istop, caux, line, this%text)
-            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+            call mem_reallocate(this%auxname, LENAUXNAME, this%naux,             &
                                 'AUXNAME', this%origin)
             do n = 1, this%naux
               this%auxname(n) = caux(n)

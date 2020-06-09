@@ -1,11 +1,13 @@
 module CommandArguments
   use KindModule
   use ConstantsModule, only: LINELENGTH, LENHUGELINE,                            &
-                             VSUMMARY, VALL, VDEBUG
+                             VSUMMARY, VALL, VDEBUG,                             &
+                             MVALIDATE
   use VersionModule,          only: VERSION, MFVNAM, IDEVELOPMODE
   use CompilerVersion
   use SimVariablesModule,     only: istdout, isim_level,                         &
-                                    simfile, simlstfile, simstdout
+                                    simfile, simlstfile, simstdout,              &
+                                    isim_mode
   use GenericUtilitiesModule, only: sim_message
   use SimModule, only: store_error, ustop, store_error_unit,                     &
                        store_error_filename
@@ -31,6 +33,7 @@ module CommandArguments
     character(len=LINELENGTH) :: uctag
     character(len=LENHUGELINE) :: line
     character(len=LINELENGTH) :: clevel
+    character(len=LINELENGTH) :: cmode
     character(len=LINELENGTH) :: header
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cexe
@@ -85,7 +88,7 @@ module CommandArguments
       call get_command_argument(iarg, uctag)
       call upcase(uctag)
       if (trim(adjustl(uctag)) == '-S' .or.                                      &
-          trim(adjustl(uctag)) == '-SILENT') then 
+          trim(adjustl(uctag)) == '--SILENT') then 
         !
         ! -- get file unit and open mfsim.stdout
         istdout = getunit()
@@ -129,6 +132,18 @@ module CommandArguments
         call upcase(uctag)
       end if
       !
+      ! -- parse mode string, if necessary
+      cmode = ' '
+      ipos = index(uctag, '--MODE=')
+      if (ipos > 0) then
+        ipos = index(tag, '=')
+        ilen = len_trim(tag)
+        cmode = tag(ipos+1:ilen)
+        call upcase(cmode)
+        uctag = tag(1:ipos-1)
+        call upcase(uctag)
+      end if
+      !
       ! -- evaluate the command line argument (uctag)
       select case(trim(adjustl(uctag)))
         case('-H', '-?', '--HELP')
@@ -167,7 +182,7 @@ module CommandArguments
               isim_level = VDEBUG
             case default
               call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
-              write(errmsg, '(2a,1x,a)') &
+              write(errmsg, '(2a,1x,a)')                                         &
                 trim(adjustl(cexe)), ': illegal STDOUT level option -',          &
                 trim(adjustl(clevel))
               call store_error(errmsg)
@@ -177,6 +192,28 @@ module CommandArguments
           write(line, '(2a,2(1x,a))')                                            &
             trim(adjustl(cexe)), ':', 'stdout output level',                     &
             trim(adjustl(clevel))
+          call sim_message(line)
+        case('-M', '--MODE')
+          if (len_trim(cmode) < 1) then
+            iarg = iarg + 1
+            call get_command_argument(iarg, cmode)
+            call upcase(cmode)
+          end if
+          select case(trim(adjustl(cmode)))
+            case('VALIDATE')
+              isim_mode = MVALIDATE
+            case default
+              call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
+              errmsg = trim(adjustl(cexe)) // ': illegal MODFLOW 6 ' //          &
+                'simulation mode option - ' // trim(adjustl(cmode))
+              call store_error(errmsg)
+          end select
+          !
+          ! -- write message to stdout
+          line = trim(adjustl(cexe)) // ': MODFLOW 6 simulation mode ' //        &
+            trim(adjustl(cmode)) // '. Model input will be checked for all ' //  &
+            'stress periods but the matrix equations will not be ' //            &
+            'assembled or solved.'
           call sim_message(line)
         case default
           lstop = .TRUE.
@@ -231,6 +268,11 @@ module CommandArguments
       &' -l <str>  --level <str>    STDOUT output to screen based on <str>.',/,  &
       &'                            <str>=summary Limited output to STDOUT.',/,  &
       &'                            <str>=debug   Enhanced output to STDOUT.',/, &
+      &' -m <str>  --mode <str>     MODFLOW 6 simulation mode based on <str>.',/,&
+      &'                            <str>=validate Check model input for',/,     &
+      &'                                           errors but do assemble or',/, &
+      &'                                           solve matrix equations or',/, &
+      &'                                           write solution output.',/,    &
       &'                                                                    ',/, &
       &'Bug reporting and contributions are welcome from the community. ',/,     &
       &'Questions can be asked on the issues page[1]. Before creating a new',/,  &

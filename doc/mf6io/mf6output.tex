@@ -2,32 +2,39 @@
 \begin{lstlisting}[style=modeloutput]
                                    MODFLOW 6
                 U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL
-                            VERSION 6.1.0 12/12/2019
+                            VERSION 6.1.1 12/12/2019
+                               ***DEVELOP MODE***
 
-   MODFLOW 6 compiled Dec 12 2019 13:30:12 with IFORT compiler (ver. 19.0.5)
+  MODFLOW 6 compiled Jun  8 2020 12:35:50 with GFORTRAN compiler (ver. 8.4.0)
 
-This software has been approved for release by the U.S. Geological
-Survey (USGS). Although the software has been subjected to rigorous
-review, the USGS reserves the right to update the software as needed
-pursuant to further analysis and review. No warranty, expressed or
-implied, is made by the USGS or the U.S. Government as to the
-functionality of the software and related material nor shall the
-fact of release constitute any such warranty. Furthermore, the
-software is released on condition that neither the USGS nor the U.S.
-Government shall be held liable for any damages resulting from its
-authorized or unauthorized use. Also refer to the USGS Water
-Resources Software User Rights Notice for complete use, copyright,
-and distribution information.
+This software is preliminary or provisional and is subject to 
+revision. It is being provided to meet the need for timely best 
+science. The software has not received final approval by the U.S. 
+Geological Survey (USGS). No warranty, expressed or implied, is made 
+by the USGS or the U.S. Government as to the functionality of the 
+software and related material nor shall the fact of release 
+constitute any such warranty. The software is provided on the 
+condition that neither the USGS nor the U.S. Government shall be held 
+liable for any damages resulting from the authorized or unauthorized 
+use of the software.
 
- Run start date and time (yyyy/mm/dd hh:mm:ss): 2019/12/12 13:32:39
+ Run start date and time (yyyy/mm/dd hh:mm:ss): 2020/06/08 12:37:34
 
  Writing simulation list file: mfsim.lst
  Using Simulation name file: mfsim.nam
- Solving:  Stress period:     1    Time step:     1
- Run end date and time (yyyy/mm/dd hh:mm:ss): 2019/12/12 13:32:39
- Elapsed run time:  0.073 Seconds
 
+    Solving:  Stress period:     1    Time step:     1
+
+ Run end date and time (yyyy/mm/dd hh:mm:ss): 2020/06/08 12:37:34
+ Elapsed run time:  0.021 Seconds
+
+
+WARNING REPORT:
+
+  1. NONLINEAR BLOCK VARIABLE 'OUTER_HCLOSE' IN FILE 'twri.ims' WAS
+     DEPRECATED IN VERSION 6.1.1. SETTING OUTER_DVCLOSE TO OUTER_HCLOSE VALUE.
+  2. LINEAR BLOCK VARIABLE 'INNER_HCLOSE' IN FILE 'twri.ims' WAS DEPRECATED
+     IN VERSION 6.1.1. SETTING INNER_DVCLOSE TO INNER_HCLOSE VALUE.
  Normal termination of simulation.
-
 \end{lstlisting}
 }

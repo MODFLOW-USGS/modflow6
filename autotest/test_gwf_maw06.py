@@ -4,7 +4,6 @@
 # maw_05c - well starts at or below 3.0; not working yet
 
 import os
-import sys
 import numpy as np
 
 try:
@@ -18,47 +17,61 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['maw_05a', 'maw_05b', 'maw_05c']
-mawstrt = [4.0, 3.5, 2.5]  # add 3.0
+ex = ['maw_06a', 'maw_06b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
+nlay = 2
+nrow = 1
+ncol = 1
+
+delc = 1.
+delr = 1.
+gwfarea = delr * delc
+
+top = 2.
+bot = 0.
+aqthick = top - bot
+dz = aqthick / float(nlay)
+botm = [top - dz * (k + 1) for k in range(nlay)]
+ztop = [top - dz * k for k in range(nlay)]
+
+strt_min = aqthick / 8.
+mawstrt = [strt_min, top,]
+gwfstrt = [top, strt_min,]
+
+Kh = 1.
+Kv = 1.
+sy = 1.
+ss = 0.
+
+mawarea = 1.
+mawradius = np.sqrt(mawarea / np.pi) #.65
+mawcond = Kh * delc * dz / (0.5 * delr)
 
 def get_model(idx, dir):
-    lx = 7.
-    lz = 4.
-    nlay = 4
-    nrow = 1
-    ncol = 7
     nper = 1
-    delc = 1.
-    delr = lx / ncol
-    delz = lz / nlay
-    top = 4.
-    botm = [3., 2., 1., 0.]
-
     perlen = [10.0]
-    nstp = [50]
-    tsmult = [1.]
-
-    Kh = 1.
-    Kv = 1.
+    nstp = [100]
+    tsmult = [1.005]
 
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    nouter, ninner = 700, 10
-    hclose, rclose, relax = 1e-8, 1e-6, 0.97
+    nouter, ninner = 700, 200
+    hclose, rclose, relax = 1e-9, 1e-9, 1.0
 
     name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 version='mf6',
                                  exe_name='mf6',
-                                 sim_ws=ws)
+                                 sim_ws=ws,
+                                 memory_print_option='summary')
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
@@ -70,13 +83,14 @@ def get_model(idx, dir):
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname,
                                newtonoptions=newtonoptions)
 
-    imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_dvclose=hclose,
+    imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                                  outer_hclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='SIMPLE',
-                                  under_relaxation_gamma=0.1,
+                                  under_relaxation_gamma=0.98,
                                   inner_maximum=ninner,
-                                  inner_dvclose=hclose, rcloserecord=rclose,
+                                  inner_hclose=hclose,
+                                  rcloserecord=[rclose, 'strict'],
                                   linear_acceleration='BICGSTAB',
                                   scaling_method='NONE',
                                   reordering_method='NONE',
@@ -88,8 +102,7 @@ def get_model(idx, dir):
                                   top=top, botm=botm)
 
     # initial conditions
-    strt = 4.
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=gwfstrt[idx])
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=False,
@@ -98,30 +111,29 @@ def get_model(idx, dir):
                                   icelltype=1,
                                   k=Kh, k33=Kv)
 
-    sto = flopy.mf6.ModflowGwfsto(gwf, sy=0.3, ss=0., iconvert=1)
+    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, iconvert=1)
 
-    mawradius = 0.1
-    mawbottom = 0.
     mstrt = mawstrt[idx]
-    mawcondeqn = 'THIEM'
+    mawcondeqn = 'SPECIFIED'
     mawngwfnodes = nlay
     # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = [
-        [0, mawradius, mawbottom, mstrt, mawcondeqn, mawngwfnodes]]
+        [0, mawradius, bot, mstrt, mawcondeqn, mawngwfnodes]]
     # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
-    mawconnectiondata = [[0, icon, (icon, 0, 0), top, mawbottom, -999., -999.]
+    mawconnectiondata = [[0, icon, (icon, 0, 0), top, bot, mawcond, -999]
                          for icon in range(nlay)]
     # <wellno> <mawsetting>
     mawperioddata = [[0, 'STATUS', 'ACTIVE']]
+    mbin = '{}.maw.bin'.format(gwfname)
+    mbud = '{}.maw.bud'.format(gwfname)
     maw = flopy.mf6.ModflowGwfmaw(gwf,
                                   print_input=True,
                                   print_head=True,
                                   print_flows=True,
                                   save_flows=True,
-                                  stage_filerecord='{}.maw.bin'.format(
-                                      gwfname),
-                                  budget_filerecord='{}.maw.bud'.format(
-                                      gwfname),
+                                  flow_correction=True,
+                                  stage_filerecord=mbin,
+                                  budget_filerecord=mbud,
                                   packagedata=mawpackagedata,
                                   connectiondata=mawconnectiondata,
                                   perioddata=mawperioddata,
@@ -175,13 +187,9 @@ def eval_results(sim):
     head = hobj.get_alldata()
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * np.pi * 0.1 ** 2
-    v0gwf = 4 * 7 * 0.3
+    v0maw = mawstrt[sim.idxsim] * mawarea
+    v0gwf = (gwfstrt[sim.idxsim] - bot) * sy * gwfarea
     v0 = v0maw + v0gwf
-    top = [4., 3., 2., 1.]
-    botm = [3., 2., 1., 0.]
-    nlay = 4
-    ncol = 7
 
     print('Initial volumes\n' +
           '  Groundwater:    {}\n'.format(v0gwf) +
@@ -191,16 +199,15 @@ def eval_results(sim):
     # calculate current volume of water in well and aquifer and compare with
     # initial volume
     for kstp, mawstage in enumerate(stage):
-
-        vgwf = 0
+        vgwf = 0.
         for k in range(nlay):
             for j in range(ncol):
-                tp = min(head[kstp, k, 0, j], top[k])
+                tp = min(head[kstp, k, 0, j], ztop[k])
                 dz = tp - botm[k]
-                vgwf += 0.3 * max(0., dz)
-        vmaw = stage[kstp] * np.pi * 0.1 ** 2
+                vgwf += max(0., dz) * sy * gwfarea
+        vmaw = (stage[kstp] - bot) * mawarea
         vnow = vmaw + vgwf
-        errmsg = 'kstp {}: \n'.format(kstp + 1) + \
+        errmsg = 'kstp {}: \n'.format(kstp+1) + \
                  '  Groundwater:   {}\n'.format(vgwf) + \
                  '  Well:          {}\n'.format(vmaw) + \
                  '  Total:         {}\n'.format(vnow) + \

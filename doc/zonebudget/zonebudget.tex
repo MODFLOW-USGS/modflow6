@@ -294,6 +294,11 @@ This section describes changes introduced into MODFLOW 6 with each official rele
 \item
 \currentmodflowversion
 \begin{itemize}
+  \item None.
+\end{itemize}
+
+\item Version 6.1.0---December 12, 2019
+\begin{itemize}
   \item Added functionality to allow for non-sequential zone numbers. User-specified zone numbers are internally converted to sequential zone numbers but results are still reported using user-specified zone numbers. This functionality eliminates memory allocation issues when large zone numbers (for example, Hydrologic Unit Codes (HUC)) are used. This functionality also permits use of negative zone numbers.
   \item Fixed issue related to deferred length character array dfntxt used in grb.f90 to read ascii header data in grb file when compiled with gfortran version 4.9. Revised code to use deferred length characters variables instead of deferred length character arrays.
 \end{itemize}

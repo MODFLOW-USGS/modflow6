@@ -1,5 +1,5 @@
 module Mf6CoreModule 
-  use KindModule,             only: I4B
+  use KindModule,             only: I4B, LGP
   use ListsModule,            only: basesolutionlist, solutiongrouplist, basemodellist, baseexchangelist
   use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
@@ -16,11 +16,12 @@ contains
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
     ! -- modules 
-    
     use CommandArguments, only: GetCommandLineArguments
     use TdisModule, only: totim, totalsimtime  
     use KindModule, only: DP
-    logical :: hasConverged
+    ! -- dummy
+    ! -- local
+    logical(LGP) :: hasConverged
     !
     ! -- parse any command line arguments
     call GetCommandLineArguments()
@@ -46,6 +47,8 @@ contains
   
   subroutine Mf6Initialize()
     use SimulationCreateModule, only: simulation_cr
+    ! -- dummy
+    ! -- local
     
     ! -- print banner and info to screen
     call printInfo()
@@ -62,7 +65,9 @@ contains
   end subroutine Mf6Initialize
   
   function Mf6Update() result(hasConverged)
-    logical :: hasConverged
+    ! -- dummy
+    logical(LGP) :: hasConverged
+    ! -- local
     !
     ! -- prepare timestep
     call Mf6PrepareTimestep()
@@ -78,13 +83,18 @@ contains
   subroutine Mf6Finalize()
     use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule,            only: lists_da
-    use MemoryManagerModule,    only: mem_usage, mem_da
+    use MemoryManagerModule,    only: mem_write_usage, mem_da
     use TimerModule,            only: elapsed_time   
     use SimVariablesModule,     only: iout
     use SimulationCreateModule, only: simulation_cr, simulation_da  
     use TdisModule,             only: tdis_tu, tdis_da
     use SimModule,              only: final_message
-    integer(I4B) :: im, ic, is, isg
+    ! -- dummy
+    ! -- local
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    integer(I4B) :: is
+    integer(I4B) :: isg
     class(SolutionGroupType), pointer :: sgp => null()
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
@@ -143,8 +153,8 @@ contains
     call simulation_da()
     call lists_da()
     !
-    ! -- Calculate memory usage, elapsed time and terminate
-    call mem_usage(iout)
+    ! -- Write memory usage, elapsed time and terminate
+    call mem_write_usage(iout)
     call mem_da()
     call elapsed_time(iout, 1)
     call final_message()
@@ -157,6 +167,8 @@ contains
                                       IDEVELOPMODE
     use TimerModule,            only: start_time    
     use GenericUtilitiesModule, only: write_centered, sim_message
+    ! -- dummy
+    ! -- local
     character(len=80) :: compiler
     
     ! -- Write banner to screen (unit stdout) and start timer
@@ -183,7 +195,11 @@ contains
   end subroutine printInfo
   
   subroutine simulation_df()
-    integer(I4B) :: im, ic, is
+    ! -- dummy
+    ! -- local
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    integer(I4B) :: is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -209,7 +225,11 @@ contains
   end subroutine simulation_df
   
   subroutine simulation_ar()  
-    integer(I4B) :: im, ic, is
+    ! -- dummy
+    ! -- local
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    integer(I4B) :: is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -236,24 +256,45 @@ contains
   
   subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
-    use TdisModule,             only: tdis_tu, kper, kstp
-    use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
+    use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
+    use TdisModule,             only: tdis_tu, kstp, kper
+    use ListsModule,            only: basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule,              only: converge_reset
-    
-    integer(I4B) :: im, ic, is
-    class(BaseSolutionType), pointer :: sp => null()
+    use SimVariablesModule,     only: isim_mode
+    ! -- dummy
+    ! -- local
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
-    
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fmt
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    !
+    ! -- initialize fmt
+    fmt = "(/,a,/)"
+    !
     ! -- time update
     call tdis_tu()
+    !
+    ! -- set base line
+    write(line, '(a,i0,a,i0,a)')                                                 &
+      'start timestep kper="', kper, '" kstp="', kstp, '" mode="'
+    !
+    ! -- evaluate simulation mode
+    select case (isim_mode)
+      case (MVALIDATE)
+        line = trim(line) // 'validate"'
+      case(MNORMAL)
+        line = trim(line) // 'normal"'
+    end select
     
     ! -- Read and prepare each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
+      call mp%model_message(line, fmt=fmt)
       call mp%model_rp()
     enddo
     !
@@ -262,25 +303,8 @@ contains
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
       call ep%exg_rp()
     enddo
-    !      
-    ! -- Exchange advance
-    do ic=1,baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_ad()
-    enddo
     !
-    ! -- Model advance
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_ad()
-    enddo
-    !
-    ! -- Solution advance
-    do is=1,basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_ad()    
-    enddo
-    !
+    ! -- reset simulation convergence flag
     call converge_reset()
     
   end subroutine Mf6PrepareTimestep
@@ -301,37 +325,66 @@ contains
   
   function Mf6FinalizeTimestep() result(hasConverged)
     use KindModule,             only: I4B
+    use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist    
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule,              only: converge_check
-    logical :: hasConverged    
-    integer(I4B) :: im, ic, is
+    use SimVariablesModule,     only: isim_mode
+    ! -- dummy
+    logical(LGP) :: hasConverged    
+    ! -- local
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
-    
-    ! -- Write output for each model
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_ot()
-    enddo
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fmt
+    integer(I4B) :: im
+    integer(I4B) :: ic
+    integer(I4B) :: is
+    ! -- code
     !
-    ! -- Write output for each exchange
-    do ic = 1, baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_ot()
-    enddo
+    ! -- initialize format and line
+    fmt = "(/,a,/)"
+    line = 'end timestep'
     !
-    ! -- Write output for each solution
-    do is=1,basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_ot()
-    enddo
+    ! -- evaluate simulation mode
+    select case (isim_mode)
+      case(MVALIDATE)
+        !
+        ! -- Write final message for timestep for each model 
+        do im = 1, basemodellist%Count()
+          mp => GetBaseModelFromList(basemodellist, im)
+          call mp%model_message(line, fmt=fmt)
+        end do
+      case(MNORMAL)
+        !
+        ! -- Write output and final message for timestep for each model 
+        do im = 1, basemodellist%Count()
+          mp => GetBaseModelFromList(basemodellist, im)
+          call mp%model_ot()
+          call mp%model_message(line, fmt=fmt)
+        enddo
+        !
+        ! -- Write output for each exchange
+        do ic = 1, baseexchangelist%Count()
+          ep => GetBaseExchangeFromList(baseexchangelist, ic)
+          call ep%exg_ot()
+        enddo
+        !
+        ! -- Write output for each solution
+        do is=1,basesolutionlist%Count()
+          sp => GetBaseSolutionFromList(basesolutionlist, is)
+          call sp%sln_ot()
+        enddo
+    end select
     !
     ! -- Check if we're done
     call converge_check(hasConverged)
+    !
+    ! -- return
+    return    
     
   end function Mf6FinalizeTimestep
   

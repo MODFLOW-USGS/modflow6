@@ -1,8 +1,7 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used to calculate a recharge rate that results in a
-simulated head in the center of the model domain to be equal to the
-simulated head in the non-bmi simulation.
+Test the bmi which is used update the Sy=0 value with same Sy used to
+calculate SC2 in the non-bmi simulation.
 """
 
 import os
@@ -28,14 +27,13 @@ except:
 from framework import testing_framework
 from simulation import Simulation, bmi_return
 
-ex = ['libgwf_rch02']
+ex = ['libgwf_sto01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
 # average recharge rate
 avg_rch = 0.001
-drch = 1e-6 * avg_rch
 
 # calculate recharge rates
 dx = 1 / 20
@@ -50,40 +48,46 @@ for i in range(nper):
     tdis_rc.append((1., 1, 1))
 
 # model spatial dimensions
-nlay, nrow, ncol = 1, 11, 11
+nlay, nrow, ncol = 1, 1, 100
 
 # cell spacing
-delr = 10.
-delc = 10.
+delr = 50.
+delc = 1.
 area = delr * delc
 
 # top of the aquifer
-top = 10.
+top = 25.
 
 # bottom of the aquifer
 botm = 0.
 
 # hydraulic conductivity
-hk = 1.
+hk = 50.
 
-# starting head
-strt = 5.
+# boundary heads
+h1 = 20.
+h2 = 11.
 
 # build chd stress period data
-chd_spd = {0: [[(0, 0, 0), strt],
-               [(0, nrow - 1, ncol - 1), strt]]}
+chd_spd = {0: [[(0, 0, 0), h1],
+               [(0, 0, ncol - 1), h2]]}
+
+strt = np.linspace(h1, h2, num=ncol)
 
 # build recharge spd
 rch_spd = {}
 for n in range(nper):
     rch_spd[n] = rch_rates[n]
 
+# storage variables
+sy_val = 0.2
+
 # solver data
-nouter, ninner = 100, 100
+nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, rech=rch_spd):
+def build_model(ws, name, sy):
     sim = flopy.mf6.MFSimulation(sim_name=name,
                                  version='mf6',
                                  exe_name='mf6',
@@ -98,20 +102,14 @@ def build_model(ws, name, rech=rch_spd):
                                print_option='SUMMARY',
                                outer_dvclose=hclose,
                                outer_maximum=nouter,
-                               under_relaxation='SIMPLE',
-                               under_relaxation_gamma=0.98,
+                               under_relaxation='DBD',
                                inner_maximum=ninner,
                                inner_dvclose=hclose, rcloserecord=rclose,
                                linear_acceleration='BICGSTAB',
                                relaxation_factor=relax)
 
     # create gwf model
-    newtonoptions = ['NEWTON', 'UNDER_RELAXATION']
-    gwf = flopy.mf6.ModflowGwf(sim,
-                               newtonoptions=newtonoptions,
-                               modelname=name,
-                               print_input=True,
-                               save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
@@ -124,22 +122,18 @@ def build_model(ws, name, rech=rch_spd):
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=1,
                                   k=hk)
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(gwf,
+                                  save_flows=True,
+                                  iconvert=1,
+                                  ss=0., sy=sy,
+                                  transient={0: True})
 
     # chd file
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
     # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
-
-    # gwf observations
-    onam = '{}.head.obs'.format(name)
-    cnam = onam + '.csv'
-    obs_recarray = {cnam: [('h1_6_6', 'HEAD', (0, 5, 5))]}
-    gwfobs = flopy.mf6.ModflowUtlobs(gwf,
-                                     print_input=True,
-                                     filename=onam,
-                                     digits=20,
-                                     continuous=obs_recarray)
+    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rch_spd)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -157,11 +151,11 @@ def get_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = build_model(ws, name)
+    sim = build_model(ws, name, sy=sy_val)
 
     # build comparison model
     ws = os.path.join(dir, 'libmf6')
-    mc = build_model(ws, name, rech=0.)
+    mc = build_model(ws, name, sy=0.)
 
     return sim, mc
 
@@ -175,32 +169,13 @@ def build_models():
     return
 
 
-def run_perturbation(mf6, max_iter, recharge, rch):
-    mf6.prepare_solve(1)
-    kiter = 0
-    while kiter < max_iter:
-        # update recharge
-        recharge[:, 0] = rch * area
-        # solve with updated well rate
-        has_converged = mf6.solve(1)
-        kiter += 1
-        if has_converged:
-            break
-    return has_converged
-
-
 def bmifunc(exe, idx, model_ws=None):
-    print('\nBMI implementation test:')
     success = False
 
     name = ex[idx].upper()
     init_wd = os.path.abspath(os.getcwd())
     if model_ws is not None:
         os.chdir(model_ws)
-
-    # get the observations from the standard run
-    fpth = os.path.join('..', '{}.head.obs.csv'.format(ex[idx]))
-    hobs = np.genfromtxt(fpth, delimiter=',', names=True)['H1_6_6']
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
     mf6 = AmiWrapper(exe)
@@ -215,79 +190,32 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get pointer to simulated heads
-    head = mf6.get_value_ptr("SLN_1/X")
+    # get sc2 array and update flag
+    cdata = "{} STO/IRESETSC2".format(name)
+    update_sc2 = mf6.get_value_ptr(cdata)
+    cdata = "{} STO/SC2".format(name)
+    sc2 = mf6.get_value_ptr(cdata)
 
-    # maximum outer iterations
-    max_iter = mf6.get_value_ptr("SLN_1/MXITER")
-
-    # get recharge array
-    cdata = "{} RCHA/BOUND".format(name)
-    recharge = mf6.get_value_ptr(cdata)
-
-    # determine initial recharge value
-    np.random.seed(0)
-    rch = np.random.normal(1) * avg_rch
+    # reset sc2 and update flag
+    sc2 += sy_val
+    update_sc2[0] = 1
 
     # model time loop
     idx = 0
     while current_time < end_time:
 
-        # target head
-        htarget = hobs[idx]
-
-        # get dt and prepare for non-linear iterations
-        dt = mf6.get_time_step()
-        mf6.prepare_time_step(dt)
-
-        est_iter = 0
-        while est_iter < 100:
-            # base simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge, rch)
-            if not has_converged:
-                return bmi_return(success, model_ws)
-            h0 = head.reshape((nrow, ncol))[5, 5]
-            r0 = h0 - htarget
-
-            # perturbation simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge,
-                                             rch + drch)
-            if not has_converged:
-                return bmi_return(success, model_ws)
-            h1 = head.reshape((nrow, ncol))[5, 5]
-            r1 = h1 - htarget
-
-            # calculate update terms
-            dqdr = drch / (r0 - r1)
-            dr = r1 * dqdr
-
-            # evaluate if the estimation iterations need to continue
-            if abs(r0) < 1e-5:
-                msg = "Estimation for time {:5.1f}".format(current_time) + \
-                      " converged in {:3d}".format(est_iter) + \
-                      " iterations" + \
-                      " -- final recharge={:10.5f}".format(rch) + \
-                      " residual={:10.2g}".format(rch - rch_rates[idx])
-                print(msg)
-                break
-            else:
-                est_iter += 1
-                rch += dr
-
-        # solution with final estimated recharge for the timestep
-        has_converged = run_perturbation(mf6, max_iter, recharge, rch)
-        if not has_converged:
+        # run the time step
+        try:
+            mf6.update()
+        except:
             return bmi_return(success, model_ws)
 
-        # finalize time step
-        mf6.finalize_solve(1)
-
-        # finalize time step and update time
-        mf6.finalize_time_step()
+        # update time
         current_time = mf6.get_current_time()
 
         # increment counter
         idx += 1
+
     # cleanup
     try:
         mf6.finalize()

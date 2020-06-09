@@ -1,8 +1,8 @@
 ! Module description:
-! 
+!
 ! This module holds the MODFLOW 6 BMI interface. The interface matches the CSDMS standard, with
 ! a few exceptions:
-  
+
 ! - This interface will build into a shared library that can be called from other
 !   executables and scripts, not necessarily written in Fortran. Therefore we have
 !   omitted the type-boundness of the routines, since they cannot have the
@@ -45,7 +45,9 @@ module mf6bmi
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
-        
+    ! local
+    logical :: isValid
+    
     if (istdout_to_file > 0) then
       ! -- open stdout file mfsim.stdout
       istdout = getunit() 
@@ -56,6 +58,13 @@ module mf6bmi
     !
     ! -- initialize MODFLOW 6
     call Mf6Initialize()
+    
+    isValid = validateSimulation()
+    if (.not. isValid) then      
+      bmi_status = BMI_FAILURE
+      return  
+    end if
+    
     bmi_status = BMI_SUCCESS
     
   end function bmi_initialize
@@ -122,17 +131,17 @@ module mf6bmi
     bmi_status = BMI_SUCCESS    
     
   end function get_current_time
-  
+
   ! Get the timestep
   function get_time_step(dt) result(bmi_status) bind(C, name="get_time_step")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_time_step
-    use TdisModule, only: delt 
+    use TdisModule, only: delt
     double precision, intent(out) :: dt
     integer(kind=c_int) :: bmi_status
-    
+
     dt = delt
     bmi_status = BMI_SUCCESS
-    
+
   end function get_time_step
   
   ! Get memory use per array element, in bytes.
@@ -382,12 +391,12 @@ module mf6bmi
     character(len=MAXSTRLEN) :: grid_type_f
     character(len=LENMODELNAME) :: model_name
     
-    model_name = get_model_name(grid_id) 
+    model_name = get_model_name(grid_id)
     if (model_name == '') then      
       bmi_status = BMI_FAILURE
       return
     end if
-    
+
     bmi_status = BMI_SUCCESS
     call get_grid_type_model(model_name, grid_type_f) 
     grid_type(1:len(trim(grid_type_f))+1) = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
@@ -405,7 +414,7 @@ module mf6bmi
     ! local
     integer :: i    
     class(NumericalModelType), pointer :: numericalModel
-    
+
     grid_type_f = "unknown"
     do i = 1,basemodellist%Count()
       numericalModel => GetNumericalModelFromList(basemodellist, i)
@@ -422,7 +431,7 @@ module mf6bmi
     
   end subroutine get_grid_type_model
   
-  !TODO_JH: Currently only works for rectilinear grids
+  ! TODO_JH: Currently only works for rectilinear grids
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
@@ -435,11 +444,9 @@ module mf6bmi
     integer(I4B), dimension(:), pointer, contiguous :: grid_shape
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     
+    bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
-    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
     
     ! get shape array
     model_name = get_model_name(grid_id)
@@ -468,11 +475,9 @@ module mf6bmi
     character(len=MAXSTRLEN) :: grid_type_f
     integer :: status
     
+    bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
-    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
     grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
         
     model_name = get_model_name(grid_id)
@@ -489,38 +494,32 @@ module mf6bmi
     end if
   end function get_grid_size
   
-  ! TODO_MJR: refactor this, grid_shape should be copied into an externally
-  ! allocated array (same for get_grid_x and get_grid_y)
-  !
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
     use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
-    type(c_ptr), intent(out) :: grid_shape
+    integer(kind=c_int), intent(out) :: grid_shape(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
-    integer, dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     
+    bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
-    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
     
     ! get shape array
     model_name = get_model_name(grid_id)
     call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
     
     if (grid_shape_ptr(1) == 1) then
-      array = grid_shape_ptr(2:3)
-      grid_shape_ptr => array
+      grid_shape(1:2) = grid_shape_ptr(2:3)  ! 2D
+    else
+      grid_shape(1:3) = grid_shape_ptr       ! 3D
     end if
-    
-    grid_shape = c_loc(grid_shape_ptr)
+
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
@@ -530,41 +529,39 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
     use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
-    type(c_ptr), intent(out) :: grid_x
+    real(kind=c_double), intent(out) :: grid_x(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
-    real(DP), dimension(:), pointer, contiguous :: array_ptr
-    real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
     character(len=MAXSTRLEN) :: grid_type_f
+    integer :: x_size
     
+    bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
-    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
     grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
     
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then      
       call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
-      array = [ (i, i=0,grid_shape_ptr(size(grid_shape_ptr))) ]      
+      ! The dimension of x is in the last element of the shape array.
+      ! + 1 because we count corners, not centers.
+      x_size = grid_shape_ptr(size(grid_shape_ptr)) + 1
+      grid_x(1:x_size) = [ (i, i=0,x_size-1) ]
     else if (grid_type_f == "unstructured") then
       call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
-      array = vertices_ptr(1, :)
+      ! x-coordinates are in the 1st column
+      x_size = size(vertices_ptr(1, :))
+      grid_x(1:x_size) = vertices_ptr(1, :)
     else
       bmi_status = BMI_FAILURE
       return
     end if
-    
-    array_ptr => array
-    grid_x = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
-  
   end function get_grid_x
   
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
@@ -572,39 +569,38 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_y
     use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
-    type(c_ptr), intent(out) :: grid_y
+    real(kind=c_double), intent(out) :: grid_y(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
-    real(DP), dimension(:), pointer, contiguous :: array_ptr
-    real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
     character(len=MAXSTRLEN) :: grid_type_f
+    integer :: y_size
     
+    bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
-    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
     grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
     
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then      
       call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
-      array = [ (i, i=grid_shape_ptr(size(grid_shape_ptr)-1),0,-1) ]      
+      ! The dimension of y is in the second last element of the shape array.
+      ! + 1 because we count corners, not centers.
+      y_size = grid_shape_ptr(size(grid_shape_ptr-1)) + 1
+      grid_y(1:y_size) = [ (i, i=y_size-1,0,-1) ]
     else if (grid_type_f == "unstructured") then
       call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
-      array = vertices_ptr(2, :)
+      ! y-coordinates are in the 2nd column
+      y_size = size(vertices_ptr(2, :))
+      grid_y(1:y_size) = vertices_ptr(2, :)
     else
       bmi_status = BMI_FAILURE
       return
     end if
-    
-    array_ptr => array
-    grid_y = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_y
     
@@ -687,15 +683,12 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
     use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
-    type(c_ptr), intent(out) :: nodes_per_face
+    real(kind=c_double), intent(out) :: nodes_per_face(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
-    integer :: status
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: iavert_ptr
-    integer, dimension(:), pointer, contiguous :: array_ptr
-    integer, dimension(:), target, allocatable, save :: array
     
     ! make sure function is only used for unstructured grids
     bmi_status = BMI_FAILURE
@@ -704,20 +697,25 @@ module mf6bmi
     model_name = get_model_name(grid_id)
     call mem_setptr(iavert_ptr, "IAVERT", trim(model_name) // " DIS")
     
-    if (allocated(array)) deallocate(array)
-    allocate(array(size(iavert_ptr) - 1))
-    do i = 2, size(iavert_ptr)
-      array(i-1) = iavert_ptr(i) - iavert_ptr(i-1) - 1
+    do i = 1, size(iavert_ptr)-1
+      nodes_per_face(i) = iavert_ptr(i+1) - iavert_ptr(i) - 1
     end do
-    
-    array_ptr => array
-    nodes_per_face = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_nodes_per_face
   
   ! -----------------------------------------------------------------------
   ! convenience functions follow here, TODO_MJR: move to dedicated module?
   ! -----------------------------------------------------------------------
+  
+  ! Validation of the MODFLOW 6 simulation for use with BMI/AMI.  
+  function validateSimulation() result(isValid)
+      logical :: isValid
+  
+      isValid = .true.
+      
+      
+  
+  end function validateSimulation
   
   ! Helper function to check the grid, not all bmi routines are implemented
   ! for all types of discretizations
@@ -830,13 +828,7 @@ module mf6bmi
       end if
     end do
     
-    write(error_msg,'(a,i6)') 'BMI error: no model for grid id ', grid_id
+    write(error_msg,'(a,i0)') 'BMI error: no model for grid id ', grid_id
     call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
-    
-    
   end function get_model_name
-  
-  
-
-
 end module mf6bmi
