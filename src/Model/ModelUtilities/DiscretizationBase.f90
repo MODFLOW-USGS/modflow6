@@ -96,9 +96,6 @@ module BaseDisModule
     procedure, public  :: record_srcdst_list_header
     procedure, private :: record_srcdst_list_entry
     generic, public    :: record_mf6_list_entry => record_srcdst_list_entry
-  ! *** NOTE: REMOVE print_list_entry WHEN ALL USES OF THIS METHOD ARE 
-  !           REMOVED FROM TRANSPORT
-    procedure, public  :: print_list_entry
     procedure, public  :: nlarray_to_nodelist
     procedure, public  :: highest_active
     procedure, public  :: get_area
@@ -1402,47 +1399,6 @@ module BaseDisModule
     ! -- return
     return
   end subroutine record_srcdst_list_entry
-
-  ! *** NOTE: REMOVE print_list_entry WHEN ALL USES OF THIS METHOD ARE 
-  !           REMOVED FROM TRANSPORT
-  subroutine print_list_entry(this, l, noder, q, iout, boundname)
-! ******************************************************************************
-! print_list_entry -- Print list budget entry
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use InputOutputModule, only: ubdsvb, get_ijk
-    use ConstantsModule, only: LENBOUNDNAME, LINELENGTH
-    ! -- dummy
-    class(DisBaseType), intent(in) :: this
-    integer(I4B), intent(in) :: l
-    integer(I4B), intent(in) :: noder
-    real(DP), intent(in) :: q
-    integer(I4B), intent(in) :: iout
-    character(len=*), intent(in), optional :: boundname
-    ! -- local
-    integer(I4B) :: nodeu
-    character(len=*), parameter :: fmt1 =                                      &
-      "(1X,'BOUNDARY ',I8,'  CELL ',A20,'   RATE ', 1PG15.6,2x,A)"
-    character(len=LENBOUNDNAME) :: bname
-    character(len=LINELENGTH) :: nodestr
-! ------------------------------------------------------------------------------
-    !
-    bname = ''
-    if (present(boundname)) bname = boundname
-    nodeu = this%get_nodeuser(noder)
-    call this%nodeu_to_string(nodeu, nodestr)
-    if (bname == '') then
-      write(iout, fmt1) l, trim(nodestr), q
-    else
-      write(iout, fmt1) l, trim(nodestr), q, trim(bname)
-    endif
-    !
-    ! -- return
-    return
-  end subroutine print_list_entry
 
   subroutine nlarray_to_nodelist(this, nodelist, maxbnd, nbound, aname,        &
                                  inunit, iout)
