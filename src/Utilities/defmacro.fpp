@@ -18,9 +18,6 @@
 # ifdef __linux__
           ios = OSLINUX
 # endif
-# ifdef __unix__
-          ios = OSUNIX
-# endif
 # ifdef __APPLE__
           ios = OSMAC
 # endif
@@ -31,9 +28,6 @@
 #ifdef __INTEL_COMPILER
 # ifdef __linux__
           ios = OSLINUX
-# endif
-# ifdef __unix__
-          ios = OSUNIX
 # endif
 # ifdef __APPLE__
           ios = OSMAC
