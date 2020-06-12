@@ -7,8 +7,8 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.1.1 release candidate
-[![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=develop)](https://travis-ci.org/MODFLOW-USGS/modflow6)
+### Version 6.1.1
+[![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=master)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
 
@@ -31,7 +31,7 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 #### ***Software/Code citation for MODFLOW 6:***
 
-[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2019, MODFLOW 6 Modular Hydrologic Model version 6.1.1 release candidate: U.S. Geological Survey Software Release, 12 December 2019, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2020, MODFLOW 6 Modular Hydrologic Model version 6.1.1: U.S. Geological Survey Software Release, 12 June 2020, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
 ## Instructions for building definition files for new packages
 
@@ -41,12 +41,13 @@ Instructions for building definition files for new packages are summarized in [d
 Disclaimer
 ----------
 
-This software is preliminary or provisional and is subject to revision. It is
-being provided to meet the need for timely best science. The software has not
-received final approval by the U.S. Geological Survey (USGS). No warranty,
-expressed or implied, is made by the USGS or the U.S. Government as to the
-functionality of the software and related material nor shall the fact of release
-constitute any such warranty. The software is provided on the condition that
-neither the USGS nor the U.S. Government shall be held liable for any damages
-resulting from the authorized or unauthorized use of the software.
+This software has been approved for release by the U.S. Geological Survey
+(USGS). Although the software has been subjected to rigorous review, the USGS
+reserves the right to update the software as needed pursuant to further analysis
+and review. No warranty, expressed or implied, is made by the USGS or the U.S.
+Government as to the functionality of the software and related material nor
+shall the fact of release constitute any such warranty. Furthermore, the
+software is released on condition that neither the USGS nor the U.S. Government
+shall be held liable for any damages resulting from its authorized or
+unauthorized use.
 
