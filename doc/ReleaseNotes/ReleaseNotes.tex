@@ -151,59 +151,42 @@ Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The ma
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.1.1--June 12, 2019
+	\item Version mf6.1.2--Month xx, 20xx
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item Refactor the source code to support the \href{https://csdms.colorado.edu/wiki/BMI_Description}{Basic Model Interface} (BMI) developed by the \href{https://csdms.colorado.edu/wiki/Main_Page}{Community Surface Dynamics Modeling System} (CSDMS) group. BMI is a set of standard control and query functions that, when added to a model code, make that model both easier to learn and easier to couple with other software elements \citep{PECKHAM20133}. Furthermore, the BMI makes it possible to control MODFLOW~6 execution from scripting languages using bindings for the BMI (for example, python bindings for the BMI available through \href{https://csdms.colorado.edu/wiki/PyMT}{pymt}). The BMI in this version is considered preliminary (alpha release). Limited testing of the BMI has been performed but significant changes are expected in future releases.  User support for the MODFLOW 6 BMI may be provided in the future.
-		\item Add silent command line switch (\texttt{-s} or \texttt{\doubledash silent}) that sends all screen output (\texttt{STDOUT}) to a text file (with the name ``mfsim.stdout'').
-		\item Add screen output command line switch (\texttt{-l <str>} or \texttt{\doubledash level <str>}) that controls output to the screen (\texttt{STDOUT}). If \texttt{<str>}  is \texttt{summary}, stress period and time step data are not written to \texttt{STDOUT}. If \texttt{<str>} is \texttt{debug}, normal and debug output are written to \texttt{STDOUT}. 
-		\item Add simulation mode command line switch (\texttt{-m <str>} or \texttt{\doubledash mode <str>}) that controls the solution mode. If \texttt{<str>}  is \texttt{validate}, model input will be read and checked for errors, but the coefficient matrix or matrices will not be assembled or solved and solution output will not be written.
-		\item Add SAVE\_SATURATION option to the Node Property Flow Package.  When invoked, cell saturation is written to the binary budget file as an auxiliary column for a record with the name ``DATA-SAT''.  The cell saturation can be used by post-processors to determine how much of the cell is saturated without having to know the value for ICELLTYPE or the value for head. If a cell is marked as confined (ICELLTYPE=0) then saturation is always one. If ICELLTYPE is one, then saturation ranges between zero and one.
-		\item Add option for saving package convergence for the CSUB Package to a comma-separated values (CSV) file. Package convergence is enabled by specifying PACKAGE\_CONVERGENCE FILEOUT $<$package\_convergence\_filename$>$ in the options block for the package.
-		\item Add option for saving package convergence for the LAK, SFR, and UZF Packages to comma-separated values (CSV) files. Package convergence for the LAK, SFR, and UZF Packages is enabled by specifying PACKAGE\_CONVERGENCE FILEOUT $<$package\_convergence\_filename$>$ in the options block for the package.
-		\item Add CSV\_OUTER\_OUTPUT output option to save outer iteration information to a comma-separated values (CSV) file. The maximum of the model or package dependent-variable change for the outer iteration is written to the CSV file at the end of each outer iteration. 
-		\item Add CSV\_INNER\_OUTPUT output option to save inner iteration information to a comma-separated values (CSV) file. The CSV output also the includes maximum dependent-variable change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration. The inner iteration CSV output, which contains a separate line for each inner iteration, is written to the CSV file all at once at the end of each outer iteration.
-		\item Add OUTER\_DVCLOSE and INNER\_DVCLOSE variables to replace OUTER\_HCLOSE and INNER\_HCLOSE variables in the IMS Package input file. ``DV'' is used now instead to more generally refer to dependent variable.  Warning messages will be issued if OUTER\_HCLOSE and/or INNER\_HCLOSE variables are specified. OUTER\_HCLOSE and INNER\_HCLOSE variables will eventually be deprecated. 
-		\item Add option to scale drain conductance as a function of simulated head over a user-defined range (drainage depth). Linear-conductance scaling is used with the Standard Formulation. Cubic-conductance scaling is used with the Newton-Raphson Formulation. The additional drainage depth variable is specified as an auxiliary variable and AUXDEPTHNAME is used to identify the auxiliary variable defining the drainage depth. The cubic-conductance scaling can be used as a replacement for the groundwater seepage option in the UZF Package. The scaled drainage conductance option can also be used to represent vertical seepage faces and improve model convergence in cells where simulated heads fluctuate around the elevation where the drain begins to discharge groundwater.
-		\item Add timeseries support for the reach upstream fraction variable in the SFR package.
-		\item Add Picard iterations for the SFR package to minimize differences in SFR package results between subsequent GWF Picard (non-linear) iterations as a result of non-optimal reach numbering. The number of SFR package Picard iterations can be controlled by specifying the maximum number of Picard  iteration to be used in the OPTIONS block (MAXIMUM\_PICARD\_ITERATIONS). If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. Specifying  MAXIMUM\_PICARD\_ITERATIONS to 1 will result in identical SFR package performance to previous versions of MODFLOW~6.
-		\item Add flow correction option for the MAW package that corrects the MAW-GWF exchange in cases where the head in a multi-aquifer well is below the bottom of the screen for a connection or the head in a convertible cell connected to a multi-aquifer well is below the cell bottom.  When flow corrections are activated, unit head gradients are used to calculate the flow between a multi-aquifer well and a connected GWF cell. This option is identical to the MODFLOW-USG ``flow-to-dry-cell'' option for flow between a CLN cell and a GWF cell if the cell is convertible \citep{modflowusg}. Flow corrections are enabled by specifying FLOW\_CORRECTION in the OPTIONS block. By default, flow corrections are not made. \emph{Prior to this release (version 6.1.1), flow corrections were made anytime the head in a multi-aquifer well was below the bottom of the screen for a connection--this may result in different results for existing models that can be resolved by using the FLOW\_CORRECTION option.}
-		\item Add new document, ``MODFLOW 6 -- Supplemental Technical Information,'' to the doc folder.  This document contains information that was in the mf6io.pdf appendices.  This technical information document may expand with future versions as new features are added.
+		\item 
+		\item 
+		\item 
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-		\item Correct an error in how the discretization package (for regular MODFLOW grids) calculates the distance between two cells when one or both of the cells are unconfined.  The error in the code would have only affected XT3D simulations with a regular grid, unconfined conditions, and specification of ANGLE2 in the NPF Package.  
-		\item Correct an error in the use of the AUXMULTNAME option for boundary packages when time series are used.  A problem remains when time series are used for AUXMULTNAME but not for the column that is scaled by AUXMULTNAME.  This situation should be avoided.
+		\item
+		\item
+		\item
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
-		\item Fix a bug in binary budget file header for CSUB Package budget data written using IMETH=6 (CSUB-ELASTIC and CSUB-INELASTIC) .
-		\item Add information on the CSUB Package budget terms and compaction data written the the Input/Output document in the `Description of Groundwater Flow (GWF) Model Binary Output Files' section.
-		\item Prior to this release, calculated flows between a standard stress package (WEL, DRN, RIV, GHB, RCH, and EVT) and the connected model cell were based on the RHS and HCOF terms from the previous iteration.  This was not consistent with previous MODFLOW versions.  These packages were modified so that the flows are recalculated using the final converged head solution.  As a result of this change, simulated groundwater flows for these packages may be slightly different (compared to previous releases) if the package HCOF and RHS values depend on the simulated groundwater head.
+		\item 
+		\item 
+		\item 
 	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-		\item The code for saving the budget terms for the advanced packages was refactored to use common routines.  These changes should have no affect on simulation results.
-		\item In previous releases, the LAK Package would accept negative user-input values for  RAINFALL, EVAPORATION, RUNOFF, INFLOW, and WITHDRAWAL even though the user guide mentioned that negative values are not allowed for these flow terms.  Error checks were added to ensure these values are specified as positive.
-		\item Add a storage term to the SFR Package binary output file.  This term is always zero with the present implementation.  An auxiliary variable, called VOLUME, is also written with the storage budget term.  This term contains the calculated water volume in the reach.
-		\item Refactor the SFR Package to remove use of RectangularChGeometry objects and added required functionality as private methods in the SFR module.
-		\item  Improve error trapping in the MAW Package to catch divide by zero errors when calculating the saturated conductance for wells using the SKIN CONDEQN in connections where the cell  transmissivity (the product of geometric mean of the horizontal hydraulic conductivity and cell thickness) and well transmissivity (the product of HK\_SKIN and screen thickness) is equal to one. Also add error trapping for well connections using the 1) SKIN CONDEQN where the contrast between the cell and well transmissivities are less than one and 2) SKIN and MEAN CONDEQN where the calculated connection saturated conductance is less than zero.
-		\item For the Lake Package, the outlet number was written as ID1 and ID2 for the TO-MVR record in the binary budget file.  This has been changed so that the lake number of the connected outlet is written to ID1 and ID2.  This change was implemented so that lake budgets can be calculated using the information in the lake budget file.
-		\item The Lake, Streamflow Routing, and Multi-Aquifer Well Packages were modified to save the user-specified stage or head to the binary output file for lakes, reaches, or wells that are specified as being CONSTANT.  Prior to this change, a no-flow value was written to the package binary output files for constant stage lakes and streams and constant head multi-aquifer wells.  The no-flow value is still written for those lakes, streams, or wells that are specified by the user as being inactive.  This change should make it easier to post-process the results from these packages.
+		\item 
+		\item 
+		\item 
 	\end{itemize}
 
 	\underline{SOLUTION}
 	\begin{itemize}
-		\item Fix a bug in the linear solver when using the STRICT RCLOSE\_OPTION that prevented termination of inner iterations when the INNER\_DVCLOSE and INNER\_RCLOSE criteria were met but the inner iteration count was greater than one. The inner iterations are now terminated when the INNER\_DVCLOSE and INNER\_RCLOSE criteria are met but the linear solver is considered non-converged if the inner iteration count is greater than one.
-		\item Deprecate the CSV\_OUTPUT output option in the OPTIONS BLOCK because the output to the comma-separated values (CSV) file was based on the PRINT\_OPTION option. If CSV\_OUTPUT is specified, it is used to define the file name for the CSV\_OUTER\_OUTPUT output option.
-		\item Modify the outer iteration information written to the simulation listing file when PRINT\_OPTION is not NONE to improve the ability of users to evaluate model convergence. Added Package convergence data, eliminated dependent variable changes adjusted by under-relaxation, and flags to indicate when an outer iterations step is considered converged. Information is also provided if PTC causes non-convergence for a outer iteration (even if the model is converged) and if NEWTON UNDER\_RELAXATION resets outer iteration convergence from FALSE to TRUE. Dependent-variable changes for the under-relaxation step in an outer iteration are no longer reported because under-relaxation is only applied if the model or package outer iteration steps do not converge and by definition reduce dependent-variable changes and are not used to evaluate outer iteration convergence.
-		\item Deprecate the OUTER\_RCLOSEBND optional variable in the NONLINEAR BLOCK because OUTER\_DVCLOSE is used for all terms used to evaluate package convergence. An warning will be issued if OUTER\_RCLOSEBND is specified.
-		\item Deprecate the CSV\_OUTPUT output option. A warning will be issued if the CSV\_OUTPUT option is specified and outer iteration information will be saved to the specified FILEOUT comma-separated values (CSV) file.	
+		\item
+		\item
+		\item
 	\end{itemize}
 
 \end{itemize}
