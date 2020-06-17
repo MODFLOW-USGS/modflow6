@@ -1,4 +1,4 @@
-# makefile created on 2020-06-08 12:36:32.365194
+# makefile created on 2020-06-11 17:48:22.733501
 # by pymake (version 1.1.0)
 # using the gfortran fortran and gcc c/c++ compilers.
 
@@ -19,31 +19,31 @@ ${SOURCEDIR2}
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -fbacktrace -D__APPLE__ -MMD -cpp 
+FFLAGS = -O2 -fbacktrace -Bstatic -D_WIN32 -MMD -cpp 
 
 # Define the C compile flags
 CC = gcc
-CFLAGS = -O2 -D_UF -MMD -cpp 
+CFLAGS = -O2 -Bstatic -D_UF -MMD -cpp 
 
 # Define the libraries
-SYSLIBS = -lc 
+SYSLIBS = -lgfortran -lm 
 
 OBJECTS = \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/kind.o \
-$(OBJDIR)/Constants.o \
-$(OBJDIR)/defmacro.o \
-$(OBJDIR)/SimVariables.o \
 $(OBJDIR)/version.o \
+$(OBJDIR)/Constants.o \
+$(OBJDIR)/SimVariables.o \
+$(OBJDIR)/defmacro.o \
 $(OBJDIR)/genericutils.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Message.o \
 $(OBJDIR)/Sim.o \
-$(OBJDIR)/budgetdata.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/Budget.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/budgetdata.o \
+$(OBJDIR)/Budget.o \
 $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/grb.o \
 $(OBJDIR)/zone.o \
