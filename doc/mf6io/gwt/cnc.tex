@@ -1,0 +1,47 @@
+Constant Concentration (CNC) Package information is read from the file that is specified by ``CNC6'' as the file type.  Any number of CNC Packages can be specified for a single GWT model, but the same cell cannot be designated as a constant concentration by more than one CNC entry. 
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-cnc-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-cnc-dimensions.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-cnc-period.dat}
+\packageperioddescription
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwt-cnc-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-cnc-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+CNC Package observations are limited to the simulated constant concentration mass flow rate (\texttt{cnc}). The data required for the CNC Package observation type is defined in table~\ref{table:gwt-cncobstype}. Negative and positive values for an observation represent a loss from and gain to the GWT model, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available CNC Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Model} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwt-cncobs.tex}
+\label{table:gwt-cncobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-cnc-example-obs.dat}

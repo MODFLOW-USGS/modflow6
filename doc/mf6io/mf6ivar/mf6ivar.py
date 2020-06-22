@@ -452,6 +452,7 @@ if __name__ == '__main__':
     file_order = ['sim-nam',     # dfn completed  tex updated
                   'sim-tdis',    # dfn completed  tex updated
                   'exg-gwfgwf',  # dfn completed  tex updated
+                  'exg-gwfgwt',
                   'sln-ims',     # dfn completed  tex updated
                   'gwf-nam',     # dfn completed  tex updated
                   'gwf-dis',     # dfn completed  tex updated
@@ -459,6 +460,7 @@ if __name__ == '__main__':
                   'gwf-disu',    # dfn completed  tex updated
                   'gwf-ic',      # dfn completed  tex updated
                   'gwf-npf',     # dfn completed  tex updated
+                  'gwf-buy',     # dfn completed  tex updated
                   'gwf-sto',     # dfn completed  tex updated
                   'gwf-csub',    # dfn completed  tex updated
                   'gwf-hfb',     # dfn completed  tex updated
@@ -478,6 +480,25 @@ if __name__ == '__main__':
                   'gwf-mvr',     # dfn completed  tex updated
                   'gwf-gnc',     # dfn completed  tex updated
                   'gwf-oc',      # dfn completed  tex updated
+                  'gwt-adv',
+                  'gwt-dsp',
+                  'gwt-cnc',
+                  'gwt-dis',
+                  'gwt-disv',
+                  'gwt-disu',
+                  'gwt-ic',
+                  'gwt-nam',
+                  'gwt-oc',
+                  'gwt-ssm',
+                  'gwt-src',
+                  'gwt-mst',
+                  'gwt-ist',
+                  'gwt-sft',
+                  'gwt-lkt',
+                  'gwt-mwt',
+                  'gwt-uzt',
+                  'gwt-fmi',
+                  'gwt-mvt',
                   'utl-lak-tab', # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',

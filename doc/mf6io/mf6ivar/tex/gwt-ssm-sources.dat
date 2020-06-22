@@ -1,0 +1,5 @@
+BEGIN SOURCES
+  <pname> <srctype> <auxname>
+  <pname> <srctype> <auxname>
+  ...
+END SOURCES

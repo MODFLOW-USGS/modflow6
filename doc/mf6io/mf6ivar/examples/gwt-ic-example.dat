@@ -1,0 +1,10 @@
+#The OPTIONS block is optional
+BEGIN OPTIONS
+END OPTIONS
+
+#The GRIDDATA block is required
+BEGIN GRIDDATA
+  STRT LAYERED
+    CONSTANT   0.0  Initial Concentration layer   1
+    CONSTANT   0.0  Initial Concentration layer   2
+END GRIDDATA

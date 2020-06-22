@@ -1,0 +1,16 @@
+BEGIN GRIDDATA
+  [CIM [LAYERED]
+    <cim(nodes)> -- READARRAY]
+  THETAIM [LAYERED]
+    <thetaim(nodes)> -- READARRAY
+  ZETAIM [LAYERED]
+    <zetaim(nodes)> -- READARRAY
+  [DECAY [LAYERED]
+    <decay(nodes)> -- READARRAY]
+  [DECAY_SORBED [LAYERED]
+    <decay_sorbed(nodes)> -- READARRAY]
+  BULK_DENSITY [LAYERED]
+    <bulk_density(nodes)> -- READARRAY
+  DISTCOEF [LAYERED]
+    <distcoef(nodes)> -- READARRAY
+END GRIDDATA
