@@ -1,0 +1,5 @@
+BEGIN VERTICES
+  <iv> <xv> <yv>
+  <iv> <xv> <yv>
+  ...
+END VERTICES

@@ -1,0 +1,5 @@
+BEGIN DIMENSIONS
+  NLAY <nlay>
+  NCPL <ncpl>
+  NVERT <nvert>
+END DIMENSIONS

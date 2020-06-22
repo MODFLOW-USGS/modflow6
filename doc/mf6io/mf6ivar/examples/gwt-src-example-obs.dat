@@ -1,0 +1,11 @@
+BEGIN OPTIONS
+  DIGITS 7
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.src.obs.csv
+# obsname           obstype  ID
+  src-7-102-17      SRC      7  102  17
+  src-7-102-17      SRC      CW_1
+  sources           SRC      sources
+END CONTINUOUS

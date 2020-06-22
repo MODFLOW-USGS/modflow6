@@ -1,0 +1,47 @@
+Input to the Mass Source Loading (SRC) Package is read from the file that has type ``SRC6'' in the Name File.  Any number of SRC Packages can be specified for a single groundwater transport model.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-src-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-src-dimensions.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-src-period.dat}
+\packageperioddescription
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwt-src-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-src-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Mass Source Loading Package observations include the simulated source loading rates (\texttt{src}). The data required for each SRC Package observation type is defined in table~\ref{table:gwt-srcobstype}. The \texttt{src} observation is equal to the simulated mass source loading rate. Negative and positive values for an observation represent a loss from and gain to the GWT model, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available SRC Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwt-srcobs.tex}
+\label{table:gwt-srcobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-src-example-obs.dat}

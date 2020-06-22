@@ -1,0 +1,72 @@
+# --------------------- gwt dsp options ---------------------
+
+block options
+name xt3d
+type keyword
+shape
+reader urword
+optional true
+longname activate xt3d
+description activate the xt3d method to solve the dispersion term
+
+# --------------------- gwt dsp griddata ---------------------
+
+block griddata
+name diffc
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname diffusion coefficient
+description molecular diffusion coefficient.
+
+block griddata
+name alh
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname longitudinal dispersivity in horizontal direction
+description longitudinal dispersivity in horizontal direction.  If mechanical dispersion is represented (by specifying any dispersivity values) then this array is required.
+
+block griddata
+name alv
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname longitudinal dispersivity in vertical direction
+description longitudinal dispersivity in vertical direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ALH.
+
+block griddata
+name ath1
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname transverse dispersivity in horizontal direction
+description transverse dispersivity in horizontal direction.  If mechanical dispersion is represented (by specifying any dispersivity values) then this array is required.
+
+block griddata
+name ath2
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname transverse dispersivity in horizontal direction
+description transverse dispersivity in horizontal direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH1.
+
+block griddata
+name atv
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname transverse dispersivity when flow is in vertical direction
+description transverse dispersivity when flow is in vertical direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH2.
