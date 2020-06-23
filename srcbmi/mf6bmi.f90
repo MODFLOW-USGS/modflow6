@@ -85,7 +85,7 @@ module mf6bmi
   ! Perform teardown tasks for the model.
   function bmi_finalize() result(bmi_status) bind(C, name="finalize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
-    use SimVariablesModule, only: iforcestop, ireturnerr
+    use SimVariablesModule, only: iforcestop
     integer(kind=c_int) :: bmi_status
     
     ! we don't want a full stop() here, this disables it:    
@@ -171,7 +171,7 @@ module mf6bmi
     integer, intent(out) :: var_nbytes
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: var_size, isize
+    integer(I4B) :: var_size, isize
     character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
         
@@ -197,7 +197,6 @@ module mf6bmi
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
     character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     real(DP), pointer :: dblptr
@@ -238,7 +237,6 @@ module mf6bmi
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
     character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     integer(I4B) :: rank
@@ -321,7 +319,7 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B), dimension(MAXMEMRANK) :: var_shape
-    integer :: var_rank
+    integer(I4B) :: var_rank
     character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
         
@@ -357,7 +355,7 @@ module mf6bmi
     ! local
     character(len=LENMODELNAME) :: model_name
     character(len=LENORIGIN) :: var_name
-    integer :: i
+    integer(I4B) :: i
     class(BaseModelType), pointer :: baseModel
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
@@ -410,9 +408,9 @@ module mf6bmi
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     character(len=LENMODELNAME) :: model_name
     character(len=MAXSTRLEN) :: grid_type_f
-    integer(kind=c_int) :: bmi_status
+    !integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i    
+    integer(I4B) :: i    
     class(NumericalModelType), pointer :: numericalModel
 
     grid_type_f = "unknown"
@@ -473,7 +471,7 @@ module mf6bmi
     integer(I4B), dimension(:), pointer, contiguous :: grid_shape
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     character(len=MAXSTRLEN) :: grid_type_f
-    integer :: status
+    integer(I4B) :: status
     
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
@@ -532,13 +530,13 @@ module mf6bmi
     real(kind=c_double), intent(out) :: grid_x(*)
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
+    integer(I4B) :: i
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
     character(len=MAXSTRLEN) :: grid_type_f
-    integer :: x_size
+    integer(I4B) :: x_size
     
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
@@ -572,13 +570,13 @@ module mf6bmi
     real(kind=c_double), intent(out) :: grid_y(*)
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
+    integer(I4B) :: i
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
     character(len=MAXSTRLEN) :: grid_type_f
-    integer :: y_size
+    integer(I4B) :: y_size
     
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
@@ -614,7 +612,6 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
-    integer :: status
     integer(I4B), pointer :: nvert_ptr
     
     ! make sure function is only used for unstructured grids
@@ -638,8 +635,7 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
-    integer :: i
-    integer :: status
+    integer(I4B) :: i
     class(NumericalModelType), pointer :: numericalModel
     
     ! make sure function is only used for unstructured grids
@@ -664,7 +660,6 @@ module mf6bmi
     type(c_ptr), intent(out) :: face_nodes
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: status
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: javert_ptr
     
@@ -686,7 +681,7 @@ module mf6bmi
     real(kind=c_double), intent(out) :: nodes_per_face(*)
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
+    integer(I4B) :: i
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: iavert_ptr
     
@@ -724,7 +719,6 @@ module mf6bmi
     character(kind=c_char), intent(in) :: expected_type(MAXSTRLEN) ! this is a C-style string
     logical :: is_match
     ! local
-    integer :: status
     character(len=LENMODELNAME) :: model_name
     character(len=MAXSTRLEN) :: expected_type_f ! this is a fortran style string
     character(len=MAXSTRLEN) :: grid_type_f
@@ -747,7 +741,7 @@ module mf6bmi
     character(len=LENORIGIN), intent(out) :: origin
     character(len=LENVARNAME), intent(out) :: var_name_only    
     ! local
-    integer :: idx
+    integer(I4B) :: idx
     character(len=LENORIGIN) :: var_name    
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
@@ -759,7 +753,7 @@ module mf6bmi
   
   integer(c_int) pure function strlen(char_array)
     character(c_char), intent(in) :: char_array(LENORIGIN)
-    integer :: inull, i
+    integer(I4B) :: i
     
     strlen = 0
     do i = 1, size(char_array)
@@ -775,7 +769,7 @@ module mf6bmi
     integer(c_int), intent(in) :: length
     character(c_char),intent(in) :: char_array(length)
     character(len=length) :: char_array_to_string
-    integer :: i
+    integer(I4B) :: i
     
     do i = 1, length
       char_array_to_string(i:i) = char_array(i)
@@ -787,7 +781,7 @@ module mf6bmi
    integer(c_int),intent(in) :: length
    character(len=length), intent(in) :: string
    character(kind=c_char,len=1) :: string_to_char_array(length+1)
-   integer :: i
+   integer(I4B) :: i
    
    do i = 1, length
       string_to_char_array(i) = string(i:i)
@@ -801,7 +795,7 @@ module mf6bmi
   pure function extract_model_name(var_name)
     character(len=*), intent(in) :: var_name
     character(len=LENMODELNAME) :: extract_model_name
-    integer :: idx
+    integer(I4B) :: idx
     
     idx = index(var_name, ' ')
     extract_model_name = var_name(:idx-1)
@@ -814,7 +808,7 @@ module mf6bmi
     integer(kind=c_int), intent(in) :: grid_id
     character(len=LENMODELNAME) :: model_name
     ! local
-    integer :: i
+    integer(I4B) :: i
     class(BaseModelType), pointer :: baseModel    
     character(len=LINELENGTH) :: error_msg
     

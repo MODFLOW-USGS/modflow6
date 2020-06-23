@@ -151,7 +151,8 @@ class Simulation(object):
         nam = None
 
         # run mf6 models
-        exe = os.path.abspath(targets.target_dict[targets.program])
+        target, ext = os.path.splitext(targets.program)
+        exe = os.path.abspath(targets.target_dict[target])
         msg = sfmt.format('using executable', exe)
         print(msg)
         try:

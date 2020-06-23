@@ -20,9 +20,9 @@ except:
 
 from simulation import Simulation
 
-# find path to modflow6-largetests directory
+# find path to modflow6-largetestmodels directory
 home = os.path.expanduser('~')
-fdir = 'modflow6-largetests'
+fdir = 'modflow6-largetestmodels'
 exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
