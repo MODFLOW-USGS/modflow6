@@ -4,9 +4,9 @@ set -e
 echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, BRANCH=$BRANCH"
 pwd
 git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
-cd ../modflow6-examples
+cd ../modflow6-testmodels
 if git show-ref -q --heads $BRANCH; then
-  git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
+  git checkout $BRANCH; echo switched to modflow6-testmodels branch $BRANCH;
   else echo using modflow6-testmodels branch master;  fi
 git branch
 cd ../modflow6
