@@ -1,6 +1,5 @@
 import os
 import sys
-import platform
 import shutil
 import pymake
 
@@ -17,9 +16,10 @@ if not os.path.exists(ebindir):
 
 # make sure exe extension is used on windows
 eext = ''
-sysinfo = platform.system()
-if sysinfo.lower() == 'windows':
+soext = '.so'
+if sys.platform.lower() == 'win32':
     eext = '.exe'
+    soext = '.dll'
 
 download_version = '3.0'
 mfexe_pth = 'temp/mfexes'
@@ -109,8 +109,8 @@ def test_build_modflow6_so():
     srcdir = os.path.join('..', 'srcbmi')
     comdir = os.path.join('..', 'src')
     excludefiles = [os.path.join(comdir, 'mf6.f90')]
-    target = os.path.join('..', 'bin', 'libmf6.so')
-    target += eext
+    target = os.path.join('..', 'bin', 'libmf6')
+    target += soext
     fc, cc = pymake.set_compiler('mf6')
 
     fflags = None

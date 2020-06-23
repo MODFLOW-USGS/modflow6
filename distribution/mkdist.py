@@ -649,7 +649,7 @@ if __name__ == '__main__':
 
     # setup the examples
     expath = fd['examples']
-    exsrcpath = os.path.join('..', '..', 'modflow6-examples.git', 'mf6')
+    exsrcpath = os.path.join('..', '..', 'modflow6-testmodels.git', 'mf6')
     assert os.path.isdir(exsrcpath)
     examples_setup.setup_examples(exsrcpath, expath,
                                   win_target_os=win_target_os)
@@ -682,7 +682,7 @@ if __name__ == '__main__':
     for url in ['https://pubs.usgs.gov/tm/06/a57/tm6a57.pdf',
                 'https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf',
                 'https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf',
-                'https://github.com/MODFLOW-USGS/modflow6-examples/releases/download/6.1.0/csubexamples.pdf',
+                'https://github.com/MODFLOW-USGS/modflow6-testmodels/releases/download/6.1.0/csubexamples.pdf',
                 ]:
         print('  downloading {}'.format(url))
         download_and_unzip(url, pth=fd['doc'], delete_zip=False, verify=False)

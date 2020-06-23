@@ -69,13 +69,13 @@ python makebin.py -mc ../src/ ../bin/mf6
 
 ## Running Tests Locally
 
-(Optional) For complete testing as done on Travis, clone the modflow6-examples repository:
+(Optional) For complete testing as done on Travis, clone the modflow6-testmodels repository:
 
 ```shell
 # Clone your GitHub repository:
-git clone git@github.com:<github username>/modflow6-examples.git
+git clone git@github.com:<github username>/modflow6-testmodels.git
 ```
-* The modflow6-examples repository must be cloned in the same directory that contains the modflow6 repository.
+* The modflow6-testmodels repository must be cloned in the same directory that contains the modflow6 repository.
 
 To run tests:
 
@@ -84,10 +84,10 @@ To run tests:
 cd modflow6/autotest
 
 # Run all modflow6 tests (including building executables and the mfio documentation - requires installation of LaTeX
-nosetests -v                 
+nosetests -v
 
 # Build MODFLOW 6, MODFLOW 6 utilities, and all versions of MODFLOW used in comparison tests
-nosetests -v test000_setup.py                
+nosetests -v test000_setup.py
 
 # Build MODFLOW 6 tests generated using flopy
 nosetests -v test_*
