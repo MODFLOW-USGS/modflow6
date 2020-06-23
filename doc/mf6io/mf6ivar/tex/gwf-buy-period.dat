@@ -1,0 +1,6 @@
+BEGIN PERIOD <iper>
+  [ELEVATION [LAYERED]
+    <elevation(ncol*nrow*nlay; ncpl*nlay)> -- READARRAY]
+  [CONCENTRATION [LAYERED]
+    <concentration(ncol*nrow*nlay; ncpl*nlay)> -- READARRAY]
+END PERIOD

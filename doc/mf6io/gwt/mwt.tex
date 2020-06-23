@@ -1,0 +1,55 @@
+Multi-Aquifer Well Transport (MWT) Package information is read from the file that is specified by ``MWT6'' as the file type.  There can be as many MWT Packages as necessary for a GWT model. Each MWT Package is designed to work with flows from a corresponding GWF MAW Package. By default \mf uses the MWT package name to determine which MAW Package corresponds to the MWT Package.  Therefore, the package name of the MWT Package (as specified in the GWT name file) must match with the name of the corresponding MAW Package (as specified in the GWF name file).  Alternatively, the name of the flow package can be specified using the FLOW\_PACKAGE\_NAME keyword in the options block.  The GWT MWT Package cannot be used without a corresponding GWF MAW Package.
+
+The MWT Package does not have a dimensions block; instead, dimensions for the MWT Package are set using the dimensions from the corresponding MAW Package.  For example, the MAW Package requires specification of the number of wells (NMAWWELLS).  MWT sets the number of wells equal to NMAWWELLS.  Therefore, the PACKAGEDATA block below must have NMAWWELLS entries in it.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-mwt-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-mwt-packagedata.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-mwt-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwt-mwt-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-mwt-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Multi-Aquifer Well Transport Package observations include well concentration and all of the terms that contribute to the continuity equation for each well. Additional MWT Package observations include mass flow rates for individual wells, or groups of wells; the well volume (\texttt{volume}); and the conductance for a well-aquifer connection conductance (\texttt{conductance}). The data required for each MWT Package observation type is defined in table~\ref{table:gwt-mwtobstype}. Negative and positive values for \texttt{mwt} observations represent a loss from and gain to the GWT model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the MWT package, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available MWT Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available MWT Package observation types.---Continued} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+
+\hline
+\endfoot
+
+\input{../Common/gwt-mwttobs.tex}
+\label{table:gwt-mwtobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-mwt-example-obs.dat}
+
+

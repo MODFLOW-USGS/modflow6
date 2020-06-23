@@ -1,0 +1,21 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{PRINT\_FLOWS}---keyword to indicate that the list of SSM flow rates will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control.  If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period.
+
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that SSM flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
+
+\end{description}
+\item \textbf{Block: SOURCES}
+
+\begin{description}
+\item \texttt{pname}---name of the package for which an auxiliary variable contains a source concentration.
+
+\item \texttt{srctype}---type of the source.  Must be AUX.
+
+\item \texttt{auxname}---name of the auxiliary variable in the package PNAME that contains the source concentration.
+
+\end{description}
+
