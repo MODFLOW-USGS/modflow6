@@ -36,8 +36,8 @@ jobs:
         gfortran --version
     - name: Install python packages
       run: |
-        pip install requests appdirs
-        pip install numpy matplotlib
+        conda info
+        conda install pip requests appdirs numpy matplotlib
         pip install https://github.com/modflowpy/flopy/zipball/develop
         pip install https://github.com/modflowpy/pymake/zipball/master
     - name: Run t000_setup.py
