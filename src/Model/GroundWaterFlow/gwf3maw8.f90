@@ -2276,19 +2276,16 @@ contains
     integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: hgwf
-    real(DP) :: bmaw
     real(DP) :: cfw
     real(DP) :: cmaw
     real(DP) :: cterm
+    real(DP) :: term
     real(DP) :: scale
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: rate
     real(DP) :: ratefw
     real(DP) :: flow
-    real(DP) :: amatnn
-    real(DP) :: amatnm
-    real(DP) :: rhsterm
 ! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
@@ -2374,14 +2371,15 @@ contains
           hgwf = this%xnew(igwfnode)
           !
           ! -- calculate connection terms
-          call this%maw_calculate_conn_terms(n, j, icflow, cterm, cmaw)
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
+                                             flow)
           this%simcond(jpos) = cmaw
           !
           ! -- add to maw row
           iposd = this%idxdglo(idx)
           iposoffd = this%idxoffdglo(idx)
-          amatsln(iposd) = amatsln(iposd) - cmaw
-          amatsln(iposoffd) = cmaw
+          amatsln(iposd) = amatsln(iposd) - term
+          amatsln(iposoffd) = term
           !
           ! -- add correction term
           rhs(iloc) = rhs(iloc) - cterm
@@ -2391,32 +2389,11 @@ contains
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
           ipossymoffd = this%idxsymoffdglo(idx)
-          amatsln(ipossymd) = amatsln(ipossymd) - cmaw
-          amatsln(ipossymoffd) = cmaw
+          amatsln(ipossymd) = amatsln(ipossymd) - term
+          amatsln(ipossymoffd) = term
           !
           ! -- add correction term to gwf row 
           rhs(isymnode) = rhs(isymnode) + cterm
-          !
-          ! -- add density terms
-          if (this%idense /= 0) then
-            !
-            ! -- call density routine to calculate terms
-            call this%maw_calculate_density_exchange(idx, hmaw,                &
-                                                     this%xnew(igwfnode),      &
-                                                     cmaw, bmaw, flow,         &
-                                                     amatnn, amatnm, rhsterm)
-            !
-            ! -- add to maw row
-            rhs(iloc) = rhs(iloc) !+ xxx
-            amatsln(iposd) = amatsln(iposd) !+ xxx
-            amatsln(iposoffd) = amatsln(iposoffd) !+ xxx
-            !
-            ! -- add to gwf row            
-            rhs(isymnode) = rhs(isymnode) !+ xxx
-            amatsln(ipossymd) = amatsln(ipossymd) !+ xxx
-            amatsln(ipossymoffd) = amatsln(ipossymoffd) !+ xxx
-            !
-          end if
         end if
         !
         ! -- increment maw connection counter
@@ -2467,8 +2444,10 @@ contains
     real(DP) :: rterm
     real(DP) :: derv
     real(DP) :: drterm
+    real(DP) :: cmaw
     real(DP) :: cterm
     real(DP) :: term
+    real(DP) :: flow
     real(DP) :: term2
     real(DP) :: rhsterm
 ! --------------------------------------------------------------------------
@@ -2541,7 +2520,8 @@ contains
           ipossymoffd = this%idxsymoffdglo(idx)
           !
           ! -- calculate newton terms
-          call this%maw_calculate_conn_terms(n, j, icflow, cterm, term, term2)
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
+                                             flow, term2)
           !
           ! -- maw is upstream
           if (hmaw > hgwf) then
@@ -2682,15 +2662,13 @@ contains
     ! -- for budget
     integer(I4B) :: j
     integer(I4B) :: n
-    integer(I4B) :: jpos
-    integer(I4B) :: igwfnode
     integer(I4B) :: ibnd
+    integer(I4B) :: icflow
     real(DP) :: hmaw
-    real(DP) :: hgwf
     real(DP) :: cfw
-    real(DP) :: bmaw
     real(DP) :: cmaw
     real(DP) :: cterm
+    real(DP) :: term
     real(DP) :: v
     real(DP) :: d
     ! -- for observations
@@ -2763,19 +2741,10 @@ contains
       do j = 1, this%ngwfnodes(n)
         this%qleak(ibnd) = DZERO
         if (this%iboundpak(n) == 0) cycle
-        jpos = this%get_jpos(n, j)
-        igwfnode = this%get_gwfnode(n, j)
-        hgwf = this%xnew(igwfnode)
-        cmaw = this%simcond(jpos)
-
-        bmaw = this%botscrn(jpos)
         !
-        ! -- calculate cterm - relative to gwf
-        cterm = DZERO
-        if (hmaw < bmaw) then
-          cterm = cmaw * (bmaw - hmaw)
-        end if
-        rrate = -(cmaw * (hmaw - hgwf) + cterm)
+        ! -- calculate budget term relative to gwf
+        call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,    &
+                                           rrate)
         !
         ! -- add density contribution
         if (this%idense /= 0) then
@@ -3752,22 +3721,36 @@ contains
     return
   end subroutine maw_calculate_saturation
   
-  subroutine maw_calculate_conn_terms(this, n, j, icflow, cterm, term, term2)
-! **************************************************************************
+  subroutine maw_calculate_conn_terms(this, n, j, icflow, cmaw, cterm, term,   &
+                                      flow, term2)
+! ******************************************************************************
 ! maw_calculate_conn_terms-- Calculate matrix terms for a multi-aquifer well
 !                            connection. Terms for fc and fn methods are 
 !                            calculated based on whether term2 is passed
-! **************************************************************************
+!
+! -- Arguments are as follows:
+!     n       : maw well number
+!     j       : connection number for well n
+!     icflow  : flag indicating that flow should be corrected
+!     cmaw    : maw-gwf conducance
+!     cterm   : correction term for flow to dry cell
+!     term    : xxx
+!     flow    : calculated flow for this connection, positive into well
+!     term2   : xxx
+!
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: j
     integer(I4B), intent(inout) :: icflow
+    real(DP), intent(inout) :: cmaw
     real(DP), intent(inout) :: cterm
     real(DP), intent(inout) :: term
+    real(DP), intent(inout) :: flow
     real(DP), intent(inout), optional :: term2
     ! -- local
     logical(LGP) :: correct_flow
@@ -3781,17 +3764,20 @@ contains
     real(DP) :: sat
     real(DP) :: tmaw
     real(DP) :: bmaw
-    real(DP) :: cmaw
     real(DP) :: en
     real(DP) :: hbar
     real(DP) :: drterm
     real(DP) :: dhbarterm
-! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- initialize terms
     cterm = DZERO
     icflow = 0
-    inewton = 0
+    if (present(term2)) then
+      inewton = 1
+    else
+      inewton = 0
+    end if
     !
     ! -- set common terms
     jpos = this%get_jpos(n, j)
@@ -3806,8 +3792,7 @@ contains
     cmaw = this%satcond(jpos) * sat
     !
     ! -- set upstream head, term, and term2 if returning newton terms
-    if (present(term2)) then
-      inewton = 1
+    if (inewton == 1) then
       term = DZERO
       term2 = DZERO
       hups = hmaw
@@ -3833,6 +3818,9 @@ contains
       if (hgwf < en .and. this%icelltype(igwfnode) /= 0) then
         correct_flow = .TRUE.
       end if
+      !
+      ! -- if flow should be corrected because hgwf or hmaw is below bottom
+      !    then calculate correction term (cterm)
       if (correct_flow) then
         icflow = 1
         hdowns = min(hmaw, hgwf)
@@ -3843,6 +3831,8 @@ contains
           cterm = cmaw * (hbar - hgwf)
         end if
       end if
+      !
+      ! -- if newton formulation then calculate newton terms
       if (inewton /= 0) then
         !
         ! -- maw is upstream
@@ -3861,10 +3851,25 @@ contains
         end if
       end if
     else
+      !
+      ! -- flow is not corrected, so calculate term for newton formulation
       if (inewton /= 0) then
         term = drterm * this%satcond(jpos) * (hmaw - hgwf)
       end if
     end if
+    !
+    ! -- calculate flow relative to maw for fc and bd
+    flow = DZERO
+    if (inewton == 0) then
+      flow = term * (hgwf - hmaw) + cterm
+    end if
+    !
+    ! -- add density part here
+    if (this%idense /= 0 .and. inewton == 0) then
+      call this%maw_calculate_density_exchange(jpos, hmaw, hgwf, cmaw,        &
+                                               bmaw, flow, term, cterm)    
+    end if  
+    
     !
     ! -- return
     return
@@ -4137,14 +4142,15 @@ contains
       ! -- local
       integer(I4B) :: j
       integer(I4B) :: n
-      integer(I4B) :: node
       integer(I4B) :: jpos
+      integer(I4B) :: icflow
       integer(I4B) :: ibnd
-      real(DP) :: sat
+      real(DP) :: flow
       real(DP) :: cmaw
       real(DP) :: hmaw
-      real(DP) :: bmaw
-  ! ------------------------------------------------------------------------------
+      real(DP) :: cterm
+      real(DP) :: term
+! ------------------------------------------------------------------------------
   !
   ! -- Return if no maw wells
       if(this%nbound.eq.0) return
@@ -4158,31 +4164,19 @@ contains
         hmaw = this%xnewpak(n)
         do j = 1, this%ngwfnodes(n)
           jpos = this%get_jpos(n, j)
-          node = this%nodelist(ibnd)
           this%hcof(ibnd) = DZERO
           this%rhs(ibnd) = DZERO
           !
           ! -- set bound, hcof, and rhs components
-          call this%maw_calculate_saturation(n, j, node, sat)
-          if (this%iboundpak(n) == 0) then
-            cmaw = DZERO
-          else
-            cmaw = this%satcond(jpos) * sat
-          end if
-          this%simcond(jpos) = cmaw
-
-          this%bound(2,ibnd) = cmaw
-
-          bmaw = this%bound(3,ibnd)
-          
-          this%hcof(ibnd) = -cmaw
           !
-          ! -- fill rhs
-          if (hmaw < bmaw) then
-            this%rhs(ibnd) = -cmaw * bmaw
-          else
-            this%rhs(ibnd) = -cmaw * hmaw
-          end if
+          ! -- use connection method so the gwf-maw budget flows
+          !    are consistent with the maw-gwf budget flows
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
+                                             flow)
+          this%simcond(jpos) = cmaw
+          this%bound(2,ibnd) = cmaw
+          this%hcof(ibnd) = -term
+          this%rhs(ibnd) = -term * hmaw + cterm
           !
           ! -- increment boundary number
           ibnd = ibnd + 1
@@ -4753,7 +4747,7 @@ contains
   end subroutine maw_activate_density
 
   subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond,     &
-                                            bmaw, flow, amatnn, amatnm, rhsterm)
+                                            bmaw, flow, hcofterm, rhsterm)
 ! ******************************************************************************
 ! maw_calculate_density_exchange -- Calculate the groundwater-maw density 
 !                                   exchange terms.
@@ -4765,8 +4759,7 @@ contains
 !     cond        : conductance
 !     bmaw        : bottom elevation of this connection
 !     flow        : calculated flow, updated here with density terms, + into maw
-!     amatnn      : diagonal amat term, updated here with density terms
-!     amatnm      : off-diagonal amat term, updated here with density terms
+!     hcofterm    : head coefficient term
 !     rhsterm     : right-hand-side value, updated here with density terms
 !
 ! -- Member variable used here
@@ -4774,11 +4767,9 @@ contains
 !                     col 1 is relative density of maw (densemaw / denseref)
 !                     col 2 is relative density of gwf cell (densegwf / denseref)
 !                     col 3 is elevation of gwf cell
-
 ! 
 ! -- Upon return, amat and rhs for maw row should be updated as:
-!    amat(idiag) = amat(idiag) - amatnn
-!    amat(ioffd) = amat(ioffd) + amatnm
+!    amat(idiag) = amat(idiag) - hcofterm
 !    rhs(n) = rhs(n) + rhsterm
 !
 ! ******************************************************************************
@@ -4793,95 +4784,59 @@ contains
     real(DP), intent(in) :: cond
     real(DP), intent(in) :: bmaw
     real(DP), intent(inout) :: flow
-    real(DP), intent(inout) :: amatnn
-    real(DP), intent(inout) :: amatnm
+    real(DP), intent(inout) :: hcofterm
     real(DP), intent(inout) :: rhsterm
     ! -- local
-    real(DP) :: ss
-    real(DP) :: hh
+    real(DP) :: t
     real(DP) :: havg
     real(DP) :: rdensemaw
     real(DP) :: rdensegwf
     real(DP) :: rdenseavg
-    real(DP) :: elevmaw
-    real(DP) :: elevgwf
     real(DP) :: elevavg
-    logical :: hmaw_below_bot
-    logical :: hgwf_below_bot
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set maw density to maw density or gwf density
-    if (hmaw >= bmaw) then
-      ss = hmaw
-      hmaw_below_bot = .false.
-      rdensemaw = this%denseterms(1, iconn)  ! lak rel density
-    else
-      ss = bmaw
-      hmaw_below_bot = .true.
-      rdensemaw = this%denseterms(2, iconn)  ! gwf rel density
-    end if
-    !
-    ! -- set hh to hgwf or botl
-    if (hgwf >= bmaw) then
-      hh = hgwf
-      hgwf_below_bot = .false.
-      rdensegwf = this%denseterms(2, iconn)  ! gwf rel density
-    else
-      hh = bmaw
-      hgwf_below_bot = .true.
-      rdensegwf = this%denseterms(1, iconn)  ! lak rel density
-    end if
-    !
-    ! -- todo: hack because denseterms not updated in a cf calculation
+    ! -- assign relative density terms, return if zero which means not avail yet
+    rdensemaw = this%denseterms(1, iconn)
+    rdensegwf = this%denseterms(2, iconn)
     if (rdensegwf == DZERO) return
     !
-    ! -- Update flow
-    if (hmaw_below_bot .and. hgwf_below_bot) then
+    ! -- update rhsterm with density contribution
+    if (hmaw > bmaw .and. hgwf > bmaw) then
       !
-      ! -- flow is zero, so no terms are updated
+      ! -- hmaw and hgwf both above bmaw
+      rdenseavg = DHALF * (rdensemaw + rdensegwf)
+      !
+      ! -- update rhsterm with first density term
+      t = cond * (rdenseavg - DONE) * (hgwf - hmaw)
+      rhsterm = rhsterm + t
+      flow = flow + t
+      !
+      ! -- update rhterm with second density term
+      havg = DHALF * (hgwf + hmaw)
+      elevavg = this%denseterms(3, iconn)
+      t = cond * (havg - elevavg) * (rdensegwf - rdensemaw)
+      rhsterm = rhsterm + t
+      flow = flow + t
+    else if (hmaw > bmaw) then
+      !
+      ! -- if only hmaw is above bmaw, then increase correction term by density
+      t = (rdensemaw - DONE) * rhsterm
+      rhsterm = rhsterm + t
+      !
+    else if (hgwf > bmaw) then
+      !
+      ! -- if only hgwf is above bmaw, then increase correction term by density
+      t = (rdensegwf - DONE) * rhsterm
+      rhsterm = rhsterm + t
       !
     else
       !
-      ! -- calulate averages
-      rdenseavg = DHALF * (rdensemaw + rdensegwf)
-      !
-      ! -- Add contribution of first density term: 
-      !      cond * (denseavg/denseref - 1) * (hgwf - hmaw)
-      amatnn = cond * (rdenseavg - DONE)
-      amatnm = amatnn
-      flow = flow + amatnm * hgwf - amatnn * hmaw
-      !
-      ! -- if hmaw < bmaw, then reduce flow by correction term
-      if (hmaw < bmaw) then
-        rhsterm = amatnn * (bmaw - hmaw)
-        flow = flow - rhsterm
-      end if
-      !
-      ! -- Add second density term if hmaw and hgwf not below bottom
-      !      cond * (havg - elevavg) * (densegwf - denselak) / denseref
-      if (.not. hmaw_below_bot .and. .not. hgwf_below_bot) then
-        !
-        ! -- Add head contribution of second density term:
-        amatnn = amatnn - DHALF * (rdensegwf - rdensemaw)
-        amatnm = amatnm + DHALF * (rdensegwf - rdensemaw)
-        !
-        ! -- rhs for non-head dep terms
-        elevgwf = this%denseterms(3, iconn)
-        elevmaw = elevgwf
-        elevavg = DHALF * (elevmaw + elevgwf)
-        rhsterm = rhsterm + cond * elevavg * (rdensegwf - rdensemaw)
-        !
-        ! -- flow update
-        havg = DHALF * (hgwf + hmaw)
-        flow = flow + cond * (havg - elevavg) * (rdensegwf - rdensemaw)
-      end if
-      
+      ! -- Flow should be zero so do nothing
     end if
     !
     ! -- return
     return
   end subroutine maw_calculate_density_exchange
-
 
 end module MawModule
