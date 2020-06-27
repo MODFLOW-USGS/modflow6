@@ -21,7 +21,6 @@ jobs:
       with:
         auto-update-conda: true
         miniconda-version: "latest"
-    - run: conda --version
     - name: Install and print system dependencies (Linux)
       if: runner.os == 'Linux'
       run: |
@@ -42,7 +41,15 @@ jobs:
         # use pip to install numpy and matplotlib because of a windows issue
         pip install numpy
         pip install https://github.com/modflowpy/pymake/zipball/master
+    - name: Print conda version
+      run: conda --version
+    - name: Print python package versions
+      run: |
+        python --version
+        nosetests --version
+        python -c "import numpy as np; print('numpy version {}'.format(np.__version__))"
         python -c "import pymake; print('pymake: {}'.format(pymake.__version__))"
+        python -c "import pymake; pymakepth = pymake.__path__[0]; print('pymake is installed in {}'.format(pymakepth))"
     - name: Build and zip applications
       run: |
         nosetests -v -w ./autotest build_nightly.py
