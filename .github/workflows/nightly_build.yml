@@ -1,0 +1,88 @@
+name: MODFLOW 6 nightly build
+
+on:
+  schedule:
+    # - cron: '0 2 * * *' # run at 2 AM UTC
+    - cron: '*/10 * * * *' # run every 10 minutes
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: setup-conda
+      uses: s-weigand/setup-conda@v1.0.3
+      with:
+        auto-update-conda: true
+        miniconda-version: "latest"
+    - run: conda --version
+    - name: Install and print system dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo ln -fs /usr/bin/gfortran-9 /usr/local/bin/gfortran
+        gfortran --version
+    - name: Install and print system dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        gfortran --version
+    - name: Install and print system dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        gfortran --version
+    - name: Install python packages
+      run: |
+        conda info
+        conda install pip requests appdirs nose
+        # use pip to install numpy and matplotlib because of a windows issue
+        pip install numpy
+        pip install https://github.com/modflowpy/pymake/zipball/master
+        python -c "import pymake; print('pymake: {}'.format(pymake.__version__))"
+    - name: Build and zip applications
+      run: |
+        nosetests -v -w ./autotest build_nightly.py
+
+    # Deploy releases
+    - name: Deploy Linux release
+      if: matrix.os == 'ubuntu-latest'
+      uses: WebFreak001/deploy-nightly@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
+      with:
+        upload_url: https://uploads.github.com/repos/jdhughes-usgs/modflow6/releases/27988336/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 27988336 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        asset_path: ./autotest/temp/linux.zip # path to archive to upload
+        asset_name: modflow6-linux-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_content_type: application/zip # required by GitHub API
+        max_releases: 2 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted    - name: Deploy Mac release
+
+    - name: Deploy Mac release
+      if: matrix.os == 'macos-latest'
+      uses: WebFreak001/deploy-nightly@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
+      with:
+        upload_url: https://uploads.github.com/repos/jdhughes-usgs/modflow6/releases/27988336/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 27988336 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        asset_path: ./autotest/temp/mac.zip # path to archive to upload
+        asset_name: modflow6-mac-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_content_type: application/zip # required by GitHub API
+        max_releases: 2 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
+
+    - name: Deploy Windows release
+      if: matrix.os == 'windows-latest'
+      uses: WebFreak001/deploy-nightly@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
+      with:
+        upload_url: https://uploads.github.com/repos/jdhughes-usgs/modflow6/releases/27988336/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 27988336 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        asset_path: ./autotest/temp/win32.zip # path to archive to upload
+        asset_name: modflow6-windows-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_content_type: application/zip # required by GitHub API
+        max_releases: 2 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
