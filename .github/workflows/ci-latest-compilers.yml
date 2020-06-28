@@ -1,0 +1,71 @@
+name: MODFLOW 6 nightly build
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        GCC_V: [5, 6, 7, 8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: setup-conda
+      uses: s-weigand/setup-conda@v1.0.3
+      with:
+        auto-update-conda: true
+        miniconda-version: "latest"
+    - name: Set up gfortran ${{ matrix.GCC_V }}
+      run: |
+        sudo apt-get install -y --no-install-recommends gcc-${{ matrix.GCC_V }} g++-${{ matrix.GCC_V }} gfortran-${{ matrix.GCC_V }}
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.GCC_V }} 100 \
+        --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.GCC_V }} \
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.GCC_V }} \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.GCC_V }}
+    - name: Print gcc versions
+      run: |
+        gcc --version
+        gfortran --version
+        g++ --version
+        gcov --version
+    - name: Install python packages
+      run: |
+        conda info
+        conda install pip requests appdirs nose
+        pip install nose-timer
+        # use pip to install numpy and matplotlib because of a windows issue
+        pip install numpy matplotlib
+        pip install https://github.com/modflowpy/flopy/zipball/develop
+        pip install https://github.com/modflowpy/pymake/zipball/master
+        pip install https://github.com/Deltares/amipy/zipball/master
+    - name: Print conda version
+      run: conda --version
+    - name: Print python package versions
+      run: |
+        python --version
+        nosetests --version
+        python -c "import numpy as np; print('numpy version {}'.format(np.__version__))"
+        python -c "import matplotlib as mpl; print('matplotlib version {}'.format(mpl.__version__))"
+        python -c "import flopy; print('flopy: {}'.format(flopy.__version__))"
+        python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
+        python -c "import pymake; print('pymake: {}'.format(pymake.__version__))"
+        python -c "import pymake; pymakepth = pymake.__path__[0]; print('pymake is installed in {}'.format(pymakepth))"
+    - name: Update flopy MODFLOW 6 classes
+      run: |
+        cd autotest
+        python update_flopy.py
+        cd ..
+    - name: Build and test applications
+      run: |
+        nosetests -v --with-id --with-timer -w ./autotest
+      env:
+        repo-token: ${{secrets.GITHUB_TOKEN}}
