@@ -3,8 +3,8 @@ name: MODFLOW 6 nightly build
 on:
   schedule:
     # - cron: '0 2 * * *' # run at 2 AM UTC
-    # - cron: '*/10 * * * *' # run every 10 minutes
-    - cron: '20 */1 * * *' # run every hour at 20 minutes past the hour
+    - cron: '*/10 * * * *' # run every 10 minutes
+    # - cron: '20 */1 * * *' # run every hour at 20 minutes past the hour
 
 jobs:
   test:
@@ -58,39 +58,39 @@ jobs:
     # Deploy releases
     - name: Deploy Linux release
       if: matrix.os == 'ubuntu-latest'
-      uses: WebFreak001/deploy-nightly@v1.0.1
+      uses: WebFreak001/deploy-nightly@v1.0.3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
       with:
         upload_url: https://uploads.github.com/repos/jdhughes-usgs/modflow6/releases/27988336/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
         release_id: 27988336 # same as above (id can just be taken out the upload_url, it's used to find old releases)
         asset_path: ./autotest/temp/linux.zip # path to archive to upload
-        asset_name: $$-nightly-modflow6-linux$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_name: nightly-modflow6-linux$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
         asset_content_type: application/zip # required by GitHub API
         max_releases: 1 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted    - name: Deploy Mac release
 
     - name: Deploy Mac release
       if: matrix.os == 'macos-latest'
-      uses: WebFreak001/deploy-nightly@v1.0.1
+      uses: WebFreak001/deploy-nightly@v1.0.3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
       with:
         upload_url: https://uploads.github.com/repos/jdhughes-usgs/modflow6/releases/27988336/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
         release_id: 27988336 # same as above (id can just be taken out the upload_url, it's used to find old releases)
         asset_path: ./autotest/temp/mac.zip # path to archive to upload
-        asset_name: $$-nightly-modflow6-mac.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_name: nightly-modflow6-mac.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
         asset_content_type: application/zip # required by GitHub API
         max_releases: 1 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
 
     - name: Deploy Windows release
       if: matrix.os == 'windows-latest'
-      uses: WebFreak001/deploy-nightly@v1.0.1
+      uses: WebFreak001/deploy-nightly@v1.0.3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
       with:
         upload_url: https://uploads.github.com/repos/jdhughes-usgs/modflow6/releases/27988336/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
         release_id: 27988336 # same as above (id can just be taken out the upload_url, it's used to find old releases)
         asset_path: ./autotest/temp/win32.zip # path to archive to upload
-        asset_name: $$-nightly-modflow6-windows.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_name: nightly-modflow6-windows.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
         asset_content_type: application/zip # required by GitHub API
         max_releases: 1 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
