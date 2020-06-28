@@ -1,4 +1,4 @@
-name: MODFLOW 6 nightly build
+name: MODFLOW 6 CI with latest gfortran
 
 on:
   push:

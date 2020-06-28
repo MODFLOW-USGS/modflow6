@@ -2,8 +2,8 @@ name: MODFLOW 6 nightly build
 
 on:
   schedule:
-    # - cron: '0 2 * * *' # run at 2 AM UTC
-    - cron: '*/10 * * * *' # run every 10 minutes
+    - cron: '0 2 * * *' # run at 2 AM UTC
+    # - cron: '*/10 * * * *' # run every 10 minutes
 
 jobs:
   test:
