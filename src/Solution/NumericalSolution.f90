@@ -8,7 +8,8 @@ module NumericalSolutionModule
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20, DNODATA,       &
                                      TABLEFT, TABRIGHT,                        &
-                                     MNORMAL, MVALIDATE
+                                     MNORMAL, MVALIDATE,                       &
+                                     AXSREADONLY, AXSREADWRITE
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
@@ -353,8 +354,8 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%name)
-    call mem_allocate(this%x, this%neq, 'X', this%name)
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%name, AXSREADONLY)
+    call mem_allocate(this%x, this%neq, 'X', this%name, AXSREADWRITE)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%name)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%name)
     call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%name)
@@ -433,9 +434,9 @@ contains
     ! -- Go through each model and point x, ibound, and rhs to solution
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
-      call mp%set_xptr(this%x)
-      call mp%set_rhsptr(this%rhs)
-      call mp%set_iboundptr(this%active)
+      call mp%set_xptr(this%x, 'X', this%name)
+      call mp%set_rhsptr(this%rhs, 'RHS', this%name)
+      call mp%set_iboundptr(this%active, 'IBOUND', this%name)
     enddo
     !
     ! -- Create the sparsematrix instance
