@@ -4220,17 +4220,6 @@ contains
         igwfnode = this%cellid(j)
         hgwf = this%xnew(igwfnode)
         call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate)
-        !blak = this%belev(j)
-        !if (-this%hcof(j) > DZERO) then
-        !  if (hgwf >= blak) then
-        !    s = max(hlak, blak)
-        !    rrate = this%hcof(j) * (s - hgwf)
-        !  else
-        !    rrate = this%rhs(j)
-        !  end if
-        !else
-        !  rrate = this%rhs(j)
-        !end if
         this%qleak(j) = rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
       end do

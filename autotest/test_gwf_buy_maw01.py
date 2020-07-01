@@ -205,6 +205,29 @@ def eval_results(sim):
         errmsg = 'kstp {}: current volume ({}) not equal initial volume ({})'.format(kstp, v0, vnow)
         assert np.allclose(v0, vnow), errmsg
 
+    # compare the maw-gwf flows in maw budget file with the gwf-maw flows in
+    # gwf budget file.  Values should be the same but reversed in sign
+    fname = gwfname + '.maw.bud'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    mbud = flopy.utils.CellBudgetFile(fname, precision='double')
+    maw_gwf = mbud.get_data(text='GWF')
+
+    fname = gwfname + '.cbc'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    gbud = flopy.utils.CellBudgetFile(fname, precision='double')
+    gwf_maw = gbud.get_data(text='MAW')
+
+    assert len(maw_gwf) == len(gwf_maw), 'number of budget records not equal'
+
+    for istp, (ra_maw, ra_gwf) in enumerate(zip(maw_gwf, gwf_maw)):
+        for i in range(ra_maw.shape[0]):
+            qmaw = ra_maw[i]['q']
+            qgwf = ra_gwf[i]['q']
+            msg = 'step {} record {} comparing qmaw with qgwf: {} {}'.format(istp, i, qmaw, qgwf)
+            print(msg)
+            assert np.allclose(qmaw, -qgwf), msg
 
     return
 

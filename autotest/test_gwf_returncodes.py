@@ -103,12 +103,6 @@ def idomain_runtime_error():
                                   icelltype=1,
                                   k=hk)
 
-    # chd files
-    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                   maxbound=maxchd,
-                                                   stress_period_data=cd6,
-                                                   save_flows=False)
-
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
                                 budget_filerecord='{}.cbc'.format(name),
