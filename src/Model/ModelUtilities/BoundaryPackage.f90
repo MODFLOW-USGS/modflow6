@@ -6,7 +6,8 @@ module BndModule
                                           LENMODELNAME, LENPACKAGENAME,        &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
-                                          TABLEFT, TABCENTER
+                                          TABLEFT, TABCENTER,                  &
+                                          AXSREADONLY, AXSREADWRITE
   use SimVariablesModule,           only: errmsg
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
@@ -1062,7 +1063,7 @@ module BndModule
     !
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
-                      this%origin)
+                      this%origin, AXSREADWRITE)
     !
     ! -- Allocate hcof and rhs
     call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%origin)

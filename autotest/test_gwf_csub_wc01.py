@@ -60,6 +60,8 @@ shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 nactive = np.count_nonzero(ib0) * nlay
 
+print(nlay, nrow, ncol)
+
 delr, delc = 2000., 2000.
 top = 150.
 botm = [50., -100., -150., -350.]
@@ -69,7 +71,8 @@ strt = 100.
 ib = []
 for k in range(nlay):
     ib.append(ib0.astype(np.int).copy())
-
+ib = np.array(ib)
+print(ib[0])
 
 hnoflo = 1e30
 hdry = -1e30
@@ -95,12 +98,15 @@ w1 = []
 ws0 = []
 ws1 = []
 for idx, (k, i, j) in enumerate(zip(wnlays, wnrows, wncols)):
+    if ib0[i, j] < 1:
+        continue
     w0.append((k, i, j, wrates0[idx]))
     w1.append((k, i, j, wrates1[idx]))
     ws0.append(((k, i, j), wrates0[idx]))
     ws1.append(((k, i, j), wrates1[idx]))
 wd = {0: w0, 1: w1, 2: w0}
 wd6 = {0: ws0, 1: ws1, 2: ws0}
+print(wd6)
 
 # build chd stress period data
 chead = 100.

@@ -1,7 +1,8 @@
 module NumericalModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC,   &
+                             AXSREADONLY, AXSREADWRITE
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
   use SparseModule, only: sparsematrix
@@ -231,9 +232,9 @@ module NumericalModelModule
     deallocate(this%bndlist)
     !
     ! -- nullify pointers
-    nullify(this%x)
-    nullify(this%rhs)
-    nullify(this%ibound)
+    call mem_deallocate(this%x)
+    call mem_deallocate(this%rhs)
+    call mem_deallocate(this%ibound)
     !
     ! -- Return
     return
@@ -291,9 +292,12 @@ module NumericalModelModule
     class(NumericalModelType) :: this
     integer(I4B) :: i
     !
-    call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name))
-    call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name))
-    call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name))
+    call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name),          &
+                      AXSREADONLY)
+    call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name),          &
+                      AXSREADONLY)
+    call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name),          &
+                      AXSREADONLY)
     !
     ! -- initialize
     do i = 1, size(this%flowja)
@@ -304,22 +308,44 @@ module NumericalModelModule
     return
   end subroutine allocate_arrays
 
-  subroutine set_xptr(this, xsln)
+  subroutine set_xptr(this, xsln, name2, origin2)
+    use MemoryManagerModule, only: mem_checkin
+    ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: xsln
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    ! -- local
+    ! -- code
     this%x => xsln(this%moffset + 1:this%moffset + this%neq)
+    call mem_checkin(this%x, 'X', this%name, name2, origin2, AXSREADONLY)
   end subroutine set_xptr
 
-  subroutine set_rhsptr(this, rhssln)
+  subroutine set_rhsptr(this, rhssln, name2, origin2)
+    use MemoryManagerModule, only: mem_checkin
+    ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: rhssln
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    ! -- local
+    ! -- code
     this%rhs => rhssln(this%moffset + 1:this%moffset + this%neq)
+    call mem_checkin(this%rhs, 'RHS', this%name, name2, origin2, AXSREADONLY)
   end subroutine set_rhsptr
 
-  subroutine set_iboundptr(this, iboundsln)
+  subroutine set_iboundptr(this, iboundsln, name2, origin2)
+    use MemoryManagerModule, only: mem_checkin
+    ! -- dummy
     class(NumericalModelType) :: this
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iboundsln
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    ! -- local
+    ! -- code
     this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
+    call mem_checkin(this%ibound, 'IBOUND', this%name, name2, origin2,           &
+                     AXSREADONLY)
   end subroutine set_iboundptr
 
   subroutine get_mcellid(this, node, mcellid)
