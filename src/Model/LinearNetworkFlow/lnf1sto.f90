@@ -1,7 +1,7 @@
 module LnfStoModule
 
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT
+  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, DCOMPRESS, LENBUDTXT
   use SmoothingModule,        only: sQuadraticSaturation,                      &
                                     sQuadraticSaturationDerivative,            &
                                     sQSaturation, sLinearSaturation
@@ -22,11 +22,11 @@ module LnfStoModule
     integer(I4B), pointer                            :: iss => null()            !steady state flag
     integer(I4B), pointer                            :: iusesy => null()         !flag set if any cell is convertible (0, 1)
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !confined (0) or convertible (1)
-    real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !primary storage capacity (when cell is fully saturated)
-    real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !secondary storage capacity (when cell is partially saturated)
     real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !vector of specific storage rates
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !pointer to model ibound
+    real(DP), pointer                                :: sc1 => null()            !primary storage capacity (when cell is fully saturated)
+    real(DP), pointer                                :: sc2 => null()            !secondary storage capacity (when cell is partially saturated)
     real(DP), pointer                                :: satomega => null()       !newton-raphson saturation omega
     type(LnfDislType), pointer                       :: disl     => null()       !reference to disl
 
@@ -281,7 +281,7 @@ module LnfStoModule
       idiag = this%disl%con%ia(n)
       if(this%ibound(n) <= 0) cycle
       ! -- storage coefficients
-      rho1 = this%sc1(n) * tled
+      rho1 = this%sc1 * tled
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) == 0) then
@@ -292,7 +292,7 @@ module LnfStoModule
         rhs(n) = rhs(n) + rterm - drterm * hnew(n)
       !else
         ! -- For unconfined
-      !  rho2 = this%sc2(n) * tled ! * alength * area   CSP do the multiply by volume in prepare
+      !  rho2 = this%sc2 * tled ! * alength * area   CSP do the multiply by volume in prepare
       !  bbot = this%dis%felev(n)
         ! -- Get old and new saturations and derivative
       !  call this%thksat(n, hnew(n), bbot, satn)
@@ -389,8 +389,8 @@ module LnfStoModule
           end if
         end if
         ! -- storage coefficients
-        rho1 = this%sc1(n) * tled
-        rho2 = this%sc2(n) * tled
+        rho1 = this%sc1 * tled
+        rho2 = this%sc2 * tled
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
           rate = rho1 * ss0 * ssh0 - rho1 * ss1 * hnew(n) - rho1 * ssh1
@@ -541,12 +541,18 @@ module LnfStoModule
     call mem_allocate(this%isfac, 'ISFAC', this%origin)
     call mem_allocate(this%isseg, 'ISSEG', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
+    call mem_allocate(this%sc1, 'SC1', this%origin)
+    call mem_allocate(this%sc2, 'SC2', this%origin)
+
     !
     ! -- Initialize
     this%iusesy = 0
     this%isfac = 0
     this%isseg = 0
     this%satomega = DZERO
+    this%sc1 = DCOMPRESS
+    this%sc2 = DONE
+
     !
     ! -- Return
     return
@@ -572,8 +578,6 @@ module LnfStoModule
     ! -- Allocate
     !call mem_allocate(this%iss, 'ISS', this%name_model)
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%origin)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%origin)
-    call mem_allocate(this%sc2, nodes, 'SC2', this%origin)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%origin)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%origin)
     !
@@ -581,8 +585,6 @@ module LnfStoModule
     this%iss = 0
     do n = 1, nodes
       this%iconvert(n) = 1
-      this%sc1(n) = DZERO
-      this%sc2(n) = DZERO
       this%strgss(n) = DZERO
       this%strgsy(n) = DZERO
     enddo
@@ -613,12 +615,10 @@ module LnfStoModule
       "WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*),parameter :: fmtflow =                                    &
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
-    character(len=*), parameter :: fmtstoc =                                   &
-      "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
-      &1X,'Read storage coefficient rather than specific storage')"
-    character(len=*), parameter :: fmtstoseg =                                 &
-      "(4X,'OLDSTORAGEFORMULATION OPTION:',/,                                  &
-      &1X,'Specific storage changes only occur above cell top')"
+    character(len=*),parameter :: fmtcompress = &
+      "(4x, 'COMPRESSIBILITY VALUE (',g15.7,') SPECIFIED.')"
+    character(len=*),parameter :: fmtyield = &
+      "(4x, 'SPECIFIC YIELD VALUE (',g15.7,') SPECIFIED.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -636,6 +636,12 @@ module LnfStoModule
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtisvflow)
+          case ('COMPRESSIBILITY')
+            this%sc1 = this%parser%GetDouble()
+            write(this%iout, fmtcompress) this%sc1
+          case ('SY')
+            this%sc2 = this%parser%GetDouble()
+            write(this%iout, fmtyield) this%sc2
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN STO OPTION: ',         &
                                      trim(keyword)
@@ -670,15 +676,12 @@ module LnfStoModule
     logical :: readss
     logical :: readsy
     logical :: isconv
-    character(len=24), dimension(4) :: aname
+    character(len=24), dimension(1) :: aname
     integer(I4B) :: n, cellnum
     real(DP) :: area, thick
     ! -- formats
     !data
     data aname(1) /'                ICONVERT'/
-    data aname(2) /'        SPECIFIC STORAGE'/
-    data aname(3) /'          SPECIFIC YIELD'/
-    data aname(4) /'     STORAGE COEFFICIENT'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -704,16 +707,6 @@ module LnfStoModule
                                          this%parser%iuactive, this%iconvert, &
                                          aname(1))
             readiconv = .true.
-          case ('SS')
-            call this%disl%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%sc1, &
-                                         aname(2))
-            readss = .true.
-          case ('SY')
-            call this%disl%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%sc2, &
-                                         aname(3))
-            readsy = .true.
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
                                      trim(keyword)
@@ -746,62 +739,43 @@ module LnfStoModule
       end do
     end if
     !
-    ! -- Check for SS
-    if(.not. readss) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                   &
-                                 trim(adjustl(aname(2))), ' not found.'
-      call store_error(errmsg)
-    endif
-    !
-    ! -- Check for SY
-    if(.not. readsy .and. isconv) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                   &
-                                 trim(adjustl(aname(3))), ' not found.'
-      call store_error(errmsg)
-    endif
-    !
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
     !
-    ! -- Check SS and SY for negative values
-    do n = 1, this%disl%nodes
-      if (this%sc1(n) < DZERO) then
+    ! -- Check Storage Coefficient and SY for negative values
+    if (this%sc1 < DZERO) then
+      call this%disl%noder_to_string(n, cellstr)
+      write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                                 &
+        'Error in SS DATA: SS value in cell', trim(adjustl(cellstr)),         &
+        'is less than zero (', this%sc1, ').'
+      call store_error(errmsg)
+    end if
+    if (readsy) then
+      if (this%sc2 < DZERO) then
         call this%disl%noder_to_string(n, cellstr)
-        write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                                 &
-          'Error in SS DATA: SS value in cell', trim(adjustl(cellstr)),         &
-          'is less than zero (', this%sc1(n), ').'
+        write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                               &
+        'Error in SY DATA: SY value in cell', trim(adjustl(cellstr)),       &
+        'is less than zero (', this%sc2, ').'
         call store_error(errmsg)
       end if
-      if (readsy) then
-        if (this%sc2(n) < DZERO) then
-          call this%disl%noder_to_string(n, cellstr)
-          write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                               &
-            'Error in SY DATA: SY value in cell', trim(adjustl(cellstr)),       &
-            'is less than zero (', this%sc2(n), ').'
-          call store_error(errmsg)
-        end if
-      end if
-    end do
+    end if
     
     !
     ! -- calculate sc1
     if (readss) then
-      do n = 1, this%disl%nodes
-        cellnum = this%disl%iageocellnum(n)
-        area = this%disl%jametries(this%disl%iageom(n))%obj%area_sat(cellnum)
-        this%sc1(n) = this%sc1(n) * this%disl%celllen(n) * area
-      end do
+      cellnum = this%disl%iageocellnum(n)
+      area = this%disl%jametries(this%disl%iageom(n))%obj%area_sat(cellnum)
+      this%sc1 = this%sc1 * this%disl%celllen(n) * area * this%disl%convlength * &
+        this%disl%convlength * this%disl%convlength
     endif
     !
     ! -- calculate sc2
     if(readsy) then
-      do n=1, this%disl%nodes
-        cellnum = this%disl%iageocellnum(n)
-        area = this%disl%jametries(this%disl%iageom(n))%obj%area_sat(cellnum)
-        this%sc2(n) = this%sc2(n) * area
-      enddo
+      cellnum = this%disl%iageocellnum(n)
+      area = this%disl%jametries(this%disl%iageom(n))%obj%area_sat(cellnum)
+      this%sc2 = this%sc2 * area
     endif
     !
     ! -- Return

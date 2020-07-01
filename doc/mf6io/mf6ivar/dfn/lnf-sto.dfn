@@ -1,0 +1,78 @@
+# --------------------- gwf sto options ---------------------
+
+block options
+name save_flows
+type keyword
+reader urword
+optional true
+longname keyword to save NPF flows
+description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
+
+block options
+name compressibility
+type double precision
+in_record true
+reader urword
+optional false
+longname compressibility of fluid
+description is a keyword and constant that is used in the calculation of LNF flow.  compressibility is in units of 1 / (meters cubed)
+
+block options
+name sy
+type double precision
+in_record true
+reader urword
+optional false
+longname specific yield
+description is a keyword and constant that is used in the calculation of LNF flow.  sy is the percentage of space available in the linear feature for the flow of water.  it is expressed as a fraction between 0 and 1.  sy default value is 1.
+
+
+# --------------------- gwf sto griddata ---------------------
+
+block griddata
+name iconvert
+type integer
+shape (nodes)
+valid
+reader readarray
+layered true
+optional false
+longname convertible indicator
+description is a flag for each cell that specifies whether or not a cell is convertible for the storage calculation. 0 indicates confined storage is used. $>$0 indicates confined storage is used when head is above cell top and a mixed formulation of unconfined and confined storage is used when head is below cell top.
+default_value 0
+
+# --------------------- gwf sto period ---------------------
+
+block period
+name iper
+type integer
+block_variable True
+in_record true
+tagged false
+shape
+valid
+reader urword
+optional false
+longname stress period number
+description REPLACE iper {}
+
+block period
+name steady-state
+type keyword
+shape
+valid
+reader urword
+optional true
+longname steady state indicator
+description keyword to indicate that stress period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. If the CSUB Package is included in the GWF model, only the first and last stress period can be steady-state.
+
+block period
+name transient
+type keyword
+shape
+valid
+reader urword
+optional true
+longname transient indicator
+description keyword to indicate that stress period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block.
+

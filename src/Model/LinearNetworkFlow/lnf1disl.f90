@@ -1,4 +1,4 @@
-module LnfDislModule
+Module LnfDislModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
@@ -38,15 +38,18 @@ module LnfDislModule
     integer(I4B), dimension(:), pointer, contiguous :: iageom  => null()         ! cell geometry pointer ia array (nodes))
     integer(I4B), dimension(:), pointer, contiguous :: iageocellnum  => null()   ! cell geometry number ia array (nodes))
     type(GeometryContainer), allocatable, dimension(:) :: jametries              ! active geometry classes ja array
+    real(DP), pointer                               :: convlength   => null()    ! conversion factor for length
+    real(DP), pointer                               :: convtime     => null()    ! conversion factor for time  
   contains
     procedure :: dis_df => disl_df
     procedure :: dis_da => disl_da
+    procedure :: dis_ar => disl_ar
     procedure :: get_cellxy => get_cellxy_disl
     procedure, public :: register_geometry
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
     ! -- helper functions
-    procedure :: get_nodenumber_idx1
+    procedure :: get_nodenumber_idx1 
     procedure :: nodeu_to_string
     procedure :: nodeu_from_string
     procedure :: nodeu_from_cellid
@@ -107,7 +110,7 @@ module LnfDislModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,   only: DZERO
+    use ConstantsModule,   only: DZERO, DNODATA
     class(LnfDislType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: iout
@@ -136,8 +139,6 @@ module LnfDislModule
     call mem_allocate(disext%idomain, disext%nodesuser, 'IDOMAIN', disext%origin)
     !
     ! -- Allocate vertices array
-    call mem_allocate(disext%cellcenters, 3, disext%nodesuser, 'CELLCENTERS', disext%origin)
-    call mem_allocate(disext%centerverts, 2, disext%nodesuser, 'CENTERVERTS', disext%origin)
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
     call mem_allocate(disext%cellfdc, disext%nodesuser, 'CELLFDC', disext%origin)
     ! -- Allocate geometries array
@@ -252,6 +253,48 @@ module LnfDislModule
     ! -- Return
     return
   end subroutine disl_df
+  
+subroutine disl_ar(this, icelltype)
+! ******************************************************************************
+! dis_ar -- Called from AR procedure.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DTWO, DNODATA
+    ! -- dummy
+    class(LnfDislType) :: this
+    integer(I4B), dimension(:), intent(in) :: icelltype
+    ! -- local
+    integer(I4B) :: j, k, cellnum, height
+! ------------------------------------------------------------------------------
+    !
+    ! -- call base class
+    !call this%DisBaseType%dis_ar(icelltype)
+    !
+    ! -- Calculate bottom elevations
+    do k = 1, this%nodesuser
+      this%bot(k) = DNODATA
+      this%top(k) = -DNODATA
+
+      do j = this%iavert(k), this%iavert(k+1) - 1
+        cellnum = this%iageocellnum(k)
+        height = this%jametries(this%iageom(k))%obj%csheight(cellnum)
+        if (this%vertices(3, this%javert(j)) < this%bot(k)) then
+          ! Assume vertex is halfway between the top and bottom of the linear feature
+          this%bot(k) = this%vertices(3, this%javert(j)) - (height / DTWO)
+        end if
+        if (this%vertices(3, this%javert(j)) > this%top(k)) then
+          ! Assume vertex is halfway between the top and bottom of the linear feature
+          this%top(k) = this%vertices(3, this%javert(j)) + (height / DTWO)
+        end if
+      end do
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine disl_ar
 
   subroutine disl_da(this)
 ! ******************************************************************************
@@ -272,6 +315,8 @@ module LnfDislModule
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%nvert)
+    call mem_deallocate(this%convlength)
+    call mem_deallocate(this%convtime)
     !
     ! -- Deallocate Arrays
     call mem_deallocate(this%nsupportedgeoms)
@@ -311,6 +356,10 @@ module LnfDislModule
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+    character(len=*),parameter :: fmtlengthconv = &
+      "(4x, 'LENGTH CONVERSION VALUE (',g15.7,') SPECIFIED.')"
+    character(len=*),parameter :: fmttimeconv = &
+      "(4x, 'TIME CONVERSION VALUE (',g15.7,') SPECIFIED.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -343,6 +392,12 @@ module LnfDislModule
               write(this%iout,'(4x,a)')'UNKNOWN UNIT: ',trim(keyword)
               write(this%iout,'(4x,a)')'SETTING TO: ','UNDEFINED'
             endif
+          case ('TIME_CONVERSION')
+            this%convtime = this%parser%GetDouble()
+            write(this%iout, fmttimeconv) this%convtime
+          case ('LENGTH_CONVERSION')
+            this%convlength = this%parser%GetDouble()
+            write(this%iout, fmtlengthconv) this%convlength             
           case('NOGRB')
             write(this%iout,'(4x,a)') 'BINARY GRB FILE WILL NOT BE WRITTEN'
             this%writegrb = .false.
@@ -386,7 +441,7 @@ module LnfDislModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule,  only: LINELENGTH, DZERO
+    use ConstantsModule,  only: LINELENGTH, DZERO, DNODATA
     ! -- dummy
     class(LnfDislType) :: this
     ! -- locals
@@ -443,6 +498,7 @@ module LnfDislModule
       call ustop()
     endif
     write(this%iout,'(1x,a)')'END OF DISCRETIZATION DIMENSIONS'
+
     !
     ! -- Allocate non-reduced vectors for disl
     call mem_allocate(this%idomain, this%nodesuser, 'IDOMAIN', this%origin)
@@ -637,11 +693,11 @@ module LnfDislModule
     ! calculate and fill cell center array
     do k = 1, this%nodesuser
       ! calculate node length
-      this%celllen(k) = DZERO
       do j = this%iavert(k), this%iavert(k+1) - 2
         this%celllen(k) = this%celllen(k) + calcdist(this%vertices, this%javert(j), &
           this%javert(j+1))
       end do
+
       ! calculate distance from start of node to cell center
       cendist = this%celllen(k) * this%cellfdc(k)
       ! calculate cell center location
@@ -1370,6 +1426,7 @@ module LnfDislModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use ConstantsModule,   only: DONE
     ! -- dummy
     class(LnfDislType) :: this
     character(len=*), intent(in) :: name_model
@@ -1382,11 +1439,16 @@ module LnfDislModule
     call mem_allocate(this%nvert, 'NVERT', this%origin)
     call mem_allocate(this%nsupportedgeoms, 'NSUPPORTEDGEOMS', this%origin)
     call mem_allocate(this%nactivegeoms, 'NACTIVEGEOMS', this%origin)
+    call mem_allocate(this%convlength, 'CONVLENGTH', this%origin)
+    call mem_allocate(this%convtime, 'CONVTIME', this%origin)
+
     !
     ! -- Initialize
     this%nvert = 0
     this%nactivegeoms = 0
     this%ndim = 1
+    this%convlength = DONE
+    this%convtime = DONE
     !
     ! -- Return
     return

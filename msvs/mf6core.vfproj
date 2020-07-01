@@ -48,6 +48,7 @@
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
+		<File RelativePath="..\src\Exchange\GwfLnfExchange.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Geometry">
@@ -81,6 +82,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
 		<Filter Name="LinearNetworkFlow">
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1.f90"/>
+		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1chd.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1disl.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1ic.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1npfl.f90"/>

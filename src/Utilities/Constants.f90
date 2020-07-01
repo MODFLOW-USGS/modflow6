@@ -96,6 +96,8 @@ module ConstantsModule
 
   real(DP), parameter :: DGRAVITY = 9.80665_DP
   real(DP), parameter :: DCD = 0.61_DP
+  real(DP), parameter :: DCOMPRESS = 4.6e-10_DP
+  real(DP), parameter :: DSMALLANG = 1.0e-5_DP
 
   character(len=10), dimension(3, 3), parameter :: cidxnames = reshape (       &
     [ '      NODE', '          ', '          ',                                &

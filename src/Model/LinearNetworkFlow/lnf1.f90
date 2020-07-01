@@ -198,7 +198,7 @@ module LnfModule
     ! -- Parse options in the LNF name file
     do i = 1, size(namefile_obj%opts)
       !write(iu,'(a)') trim(newline)
-      write(istdout, '(a)') namefile_obj%opts(i)
+      !write(istdout, '(a)') namefile_obj%opts(i)
       call ParseLine(namefile_obj%opts(i), nwords, words)
       call upcase(words(1))
       select case(words(1))
@@ -226,7 +226,7 @@ module LnfModule
         case ('SAVE_FLOWS')
           this%ipakcb = -1
           write(this%iout, '(4x,a)')                                           &
-            'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
+            'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'          
         case default
           write(errmsg,'(4x,a,a,a,a)')                                         &
             '****ERROR. UNKNOWN LNF NAMEFILE (',                               &
@@ -286,18 +286,18 @@ module LnfModule
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     !!
     !! -- Create stress packages
-    !ipakid = 1
-    !do i = 1, niunit
-    !  ipaknum = 1
-    !  do j = 1, namefile_obj%get_nval_for_row(i)
-    !    iu = namefile_obj%get_unitnumber_rowcol(i, j)
-    !    call namefile_obj%get_pakname(i, j, pakname)
-    !    call this%package_create(cunit(i), ipakid, ipaknum, pakname, iu,       &
-    !      this%iout)
-    !    ipaknum = ipaknum + 1
-    !    ipakid = ipakid + 1
-    !  enddo
-    !enddo
+    ipakid = 1
+    do i = 1, niunit
+      ipaknum = 1
+      do j = 1, namefile_obj%get_nval_for_row(i)
+        iu = namefile_obj%get_unitnumber_rowcol(i, j)
+        call namefile_obj%get_pakname(i, j, pakname)
+        call this%package_create(cunit(i), ipakid, ipaknum, pakname, iu,       &
+          this%iout)
+        ipaknum = ipaknum + 1
+        ipakid = ipakid + 1
+      enddo
+    enddo
     !
     ! -- return
     return
@@ -338,10 +338,10 @@ module LnfModule
     call this%allocate_arrays()
     !!
     !! -- Define packages and assign iout for time series managers
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_df(this%neq, this%disl)
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_df(this%neq, this%dis)
+    enddo
     !!
     !! -- Store information needed for observations
     !call this%obs%obs_df(this%iout, this%name, 'LNF', this%disl)
@@ -374,10 +374,10 @@ module LnfModule
     if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse)
     !!
     !! -- Add any package connections
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_ac(this%moffset, sparse)
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ac(this%moffset, sparse)
+    enddo
     !!
     ! -- return
     return
@@ -408,10 +408,10 @@ module LnfModule
     if(this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
     !!
     !! -- Map any package connections
-    !do ip=1,this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_mc(this%moffset, iasln, jasln)
-    !enddo
+    do ip=1,this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_mc(this%moffset, iasln, jasln)
+    enddo
     !
     ! -- return
     return
@@ -459,13 +459,13 @@ module LnfModule
     call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
     !!
     !! -- Package input files now open, so allocate and read
-    !do ip = 1,this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%set_pointers(this%disl%nodes, this%ibound, this%x,           &
-    !                            this%xold, this%flowja)
-    !  ! -- Read and allocate package
-    !  call packobj%bnd_ar()
-    !enddo
+    do ip = 1,this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%set_pointers(this%disl%nodes, this%ibound, this%x,           &
+                                this%xold, this%flowja)
+      ! -- Read and allocate package
+      call packobj%bnd_ar()
+    enddo
     !
     ! -- return
     return
@@ -494,11 +494,11 @@ module LnfModule
     !! -- Read and prepare
     if(this%inoc > 0)  call this%oc%oc_rp()
     if(this%insto > 0) call this%sto%sto_rp()
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_rp()
-    !  call packobj%bnd_rp_obs()
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_rp()
+      call packobj%bnd_rp_obs()
+    enddo
     !
     ! -- Return
     return
@@ -530,15 +530,15 @@ module LnfModule
     !!
     !! -- Advance
     if(this%innpf > 0) call this%npf%npf_ad(this%disl%nodes, this%xold)
-    !!if(this%insto > 0) call this%sto%sto_ad()
+    if(this%insto > 0) call this%sto%sto_ad()
     !!if(this%inmvr > 0) call this%mvr%mvr_ad()
-    !do ip=1,this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_ad()
-    !  if (isimcheck > 0) then
-    !    call packobj%bnd_ck()
-    !  end if
-    !enddo
+    do ip=1,this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ad()
+      if (isimcheck > 0) then
+        call packobj%bnd_ck()
+      end if
+    enddo
     !!
     !! -- Push simulated values to preceding time/subtime step
     !call this%obs%obs_ad()
@@ -564,10 +564,10 @@ module LnfModule
     !!
     !! -- Call package cf routines
     if(this%innpf > 0) call this%npf%npf_cf(kiter, this%disl%nodes, this%x)
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_cf()
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cf()
+    enddo
     !
     ! -- return
     return
@@ -699,10 +699,10 @@ module LnfModule
     !if (this%inmvr > 0) call this%mvr%mvr_cc(kiter, iend, icnvg)
     !!
     !! -- Call package cc routines
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_cc(iend, icnvg, hclose, rclose)
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cc(kiter, iend, icnvgmod, cpak, dpak)
+    enddo
     !
     ! -- return
     return
@@ -905,7 +905,7 @@ module LnfModule
 
   subroutine lnf_cq(this, icnvg, isuppress_output)
 ! ******************************************************************************
-! lnf_cq --Groundwater flow model calculate flow
+! lnf_cq --Linear network flow model calculate flow
 ! Subroutine: (1) Calculate intercell flows (flowja)
 ! ******************************************************************************
 !
@@ -993,11 +993,11 @@ module LnfModule
     !if(this%inmvr > 0) call this%mvr%mvr_bd(icbcfl, ibudfl, isuppress_output)
     !!
     !! -- Boundary packages calculate budget and total flows to model budget
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_bd(this%x, idvfl, icbcfl, ibudfl, icbcun, iprobs,       &
-    !                      isuppress_output, this%budget)
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_bd(this%x, idvfl, icbcfl, ibudfl, icbcun, iprobs,       &
+                          isuppress_output, this%budget)
+    enddo
     !!
     !! -- Calculate and write simulated values for observations
 !    if(iprobs /= 0) then
@@ -1065,10 +1065,10 @@ module LnfModule
       ipflg = 1
     !  !
     !  ! -- Package budget output
-    !  do ip = 1, this%bndlist%Count()
-    !    packobj => GetBndFromList(this%bndlist, ip)
-    !    call packobj%bnd_ot(kstp, kper, this%iout, ihedfl, ibudfl)
-    !  enddo
+      do ip = 1, this%bndlist%Count()
+        packobj => GetBndFromList(this%bndlist, ip)
+        call packobj%bnd_ot(kstp, kper, this%iout, ihedfl, ibudfl)
+      enddo
     !  !
       if (ibudfl /= 0) then
     !    !
@@ -1154,18 +1154,18 @@ module LnfModule
     deallocate(this%disl)
     deallocate(this%ic)
     deallocate(this%npf)
-    !deallocate(this%sto)
+    deallocate(this%sto)
     deallocate(this%budget)
     !deallocate(this%mvr)
     !deallocate(this%obs)
     deallocate(this%oc)
     !!
     !! -- Boundary packages
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_da()
-    !  deallocate(packobj)
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_da()
+      deallocate(packobj)
+    enddo
     !
     ! -- Scalars
     call mem_deallocate(this%inic)
@@ -1258,10 +1258,10 @@ module LnfModule
     endif
     !!
     !! -- Check for any packages that introduce matrix asymmetry
-    !do ip=1,this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  if (packobj%iasym /= 0) iasym = 1
-    !enddo
+    do ip=1,this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      if (packobj%iasym /= 0) iasym = 1
+    enddo
     !
     ! -- return
     return
@@ -1326,7 +1326,7 @@ module LnfModule
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, ustop
-    use ChdModule, only: chd_create
+    use ChdlModule, only: chd_create
     ! -- dummy
     class(LnfModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1345,7 +1345,7 @@ module LnfModule
     ! -- This part creates the package object
     select case(filtyp)
     case('CHD6')
-      !call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)

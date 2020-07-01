@@ -44,17 +44,23 @@ module LnfNpflModule  ! Npf package for laminar flow
     real(DP), dimension(:), pointer, contiguous     :: condsat      => null()    ! saturated conductance (symmetric array)
     real(DP), pointer                               :: satmin       => null()    ! minimum saturated thickness
     integer(I4B), dimension(:), pointer, contiguous :: ibotnode     => null()    ! bottom node used if igwfnewtonur /= 0
+    integer(I4B), pointer                           :: ithickstrt   => null()    ! thickstrt option flag
+
     !
     integer(I4B), pointer                           :: iwetdry      => null()    ! flag to indicate angle1 was read
     real(DP), dimension(:), pointer, contiguous     :: wetdry       => null()    ! wetdry array
+    integer(I4B),pointer                            :: irewet       => null()    ! rewetting (0:off, 1:on)
+    integer(I4B),pointer                            :: iwetit       => null()    ! wetting interval (default is 1)
+    integer(I4B),pointer                            :: ihdwet       => null()    ! (0 or not 0)
+    real(DP), pointer                               :: wetfct       => null()    ! wetting factor
     !
     real(DP), dimension(:, :), pointer, contiguous  :: spdis        => null()    ! specific discharge : qx, qy, qz (nodes, 3)
     type(LnfDislType), pointer                      :: disl         => null()
-    !integer(I4B), pointer                           :: nedges       => null()    ! number of cell edges
-    !integer(I4B), pointer                           :: lastedge     => null()    ! last edge number
-    !integer(I4B), dimension(:), pointer, contiguous :: nodedge      => null()    ! array of node numbers that have edges
-    !integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    ! edge type (horizontal or vertical)
-    !real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    ! edge properties (Q, area, nx, ny, distance)
+    integer(I4B), pointer                           :: nedges       => null()    ! number of cell edges
+    integer(I4B), pointer                           :: lastedge     => null()    ! last edge number
+    integer(I4B), dimension(:), pointer, contiguous :: nodedge      => null()    ! array of node numbers that have edges
+    integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    ! edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    ! edge properties (Q, area, nx, ny, distance)
     !
   contains
     procedure                               :: npf_df
@@ -71,24 +77,25 @@ module LnfNpflModule  ! Npf package for laminar flow
     !procedure                               :: npf_nur
     procedure                               :: npf_ot
     procedure                               :: npf_da
+    procedure, private                      :: thksat     => sgwf_npf_thksat    
     procedure, private                      :: qcalc      => slnf_npf_qcalc
     !procedure, private                      :: wd         => slnf_npf_wetdry
     !procedure, private                      :: wdmsg      => slnf_npf_wdmsg
     procedure                               :: allocate_scalars
     procedure, private                      :: allocate_arrays
     procedure, private                      :: read_options
-    !procedure, private                      :: rewet_options
-    !procedure, private                      :: check_options
+    procedure, private                      :: rewet_options
+    procedure, private                      :: check_options
     procedure, private                      :: prepcheck
-    !procedure, public                       :: rewet_check
+    procedure, public                       :: rewet_check
     !procedure, public                       :: hy_eff
     !procedure, public                       :: calc_spdis
     procedure, public                       :: sav_spdis
     procedure, public                       :: sav_sat
     procedure, public                       :: condmean
     procedure, public                       :: lcondsat
-    !procedure, public                       :: increase_edge_count
-    !procedure, public                       :: set_edge_properties
+    procedure, public                       :: increase_edge_count
+    procedure, public                       :: set_edge_properties
   endtype
 
   contains
@@ -158,12 +165,11 @@ module LnfNpflModule  ! Npf package for laminar flow
     !
     ! -- set, read, and check options
     call this%read_options()
-    !call this%check_options()
+    call this%check_options()
     !
     ! -- Return
     return
   end subroutine npf_df
-
 
   subroutine npf_ac(this, moffset, sparse)
 ! ******************************************************************************
@@ -246,7 +252,7 @@ module LnfNpflModule  ! Npf package for laminar flow
     ! -- fill wetdry data
     if (present(wetdry)) then
       this%iwetdry = 1
-      !this%irewet = 1
+      this%irewet = 1
     end if
     !
     ! -- Return
@@ -317,13 +323,13 @@ module LnfNpflModule  ! Npf package for laminar flow
 ! ------------------------------------------------------------------------------
     !
     ! -- loop through all cells and set hold=bot if wettable cell is dry
-    !if(this%irewet > 0) then
-    !  do n = 1, this%disl%nodes
-    !    if(this%wetdry(n) == DZERO) cycle
-    !    if(this%ibound(n) /= 0) cycle
-    !    hold(n) = this%disl%bot(n)
-    !  enddo
-    !endif
+    if(this%irewet > 0) then
+      do n = 1, this%disl%nodes
+        if(this%wetdry(n) == DZERO) cycle
+        if(this%ibound(n) /= 0) cycle
+        hold(n) = this%disl%bot(n)
+      enddo
+    endif
     !
     ! -- Return
     return
@@ -480,6 +486,37 @@ module LnfNpflModule  ! Npf package for laminar flow
     return
   end subroutine npf_flowja
 
+  subroutine sgwf_npf_thksat(this, n, hn, thksat)
+! ******************************************************************************
+! sgwf_npf_thksat -- Fractional cell saturation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(LnfNpflType) :: this
+    integer(I4B),intent(in) :: n
+    real(DP),intent(in) :: hn
+    real(DP),intent(inout) :: thksat
+! ------------------------------------------------------------------------------
+    !
+    ! -- Standard Formulation
+    if(hn >= this%dis%top(n)) then
+      thksat = DONE
+    else
+      thksat = (hn - this%dis%bot(n)) / (this%dis%top(n) - this%dis%bot(n))
+    endif
+    !
+    ! -- Newton-Raphson Formulation
+    !if(this%inewton /= 0) then
+    !  thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn,      &
+    !                                this%satomega, this%satmin)
+    !endif
+    !
+    ! -- Return
+    return
+    end subroutine sgwf_npf_thksat
+    
   subroutine slnf_npf_qcalc(this, n, m, hn, hm, icon, qnm)
 ! ******************************************************************************
 ! slnf_npf_qcalc -- Flow between two cells
@@ -655,7 +692,15 @@ module LnfNpflModule  ! Npf package for laminar flow
     call mem_deallocate(this%isavspdis)
     call mem_deallocate(this%isavsat)
     call mem_deallocate(this%satmin)
+    call mem_deallocate(this%ithickstrt)
     call mem_deallocate(this%iwetdry)
+    call mem_deallocate(this%irewet)
+    call mem_deallocate(this%wetfct)
+    call mem_deallocate(this%iwetit)
+    call mem_deallocate(this%ihdwet)
+
+    call mem_deallocate(this%nedges)
+
     
     !call mem_deallocate(this%ivisc)
     !
@@ -666,6 +711,10 @@ module LnfNpflModule  ! Npf package for laminar flow
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%spdis)
     call mem_deallocate(this%wetdry)
+    call mem_deallocate(this%nodedge)
+    call mem_deallocate(this%ihcedge)
+    call mem_deallocate(this%propsedge)
+  
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -699,11 +748,16 @@ module LnfNpflModule  ! Npf package for laminar flow
     call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%origin)
     call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%origin)
     call mem_allocate(this%isavsat, 'ISAVSAT', this%origin)
-    !call mem_allocate(this%irewet, 'IREWET', this%origin)
-    !call mem_allocate(this%wetfct, 'WETFCT', this%origin)
-    !call mem_allocate(this%iwetit, 'IWETIT', this%origin)
+    call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%origin)
+    call mem_allocate(this%irewet, 'IREWET', this%origin)
+    call mem_allocate(this%wetfct, 'WETFCT', this%origin)
+    call mem_allocate(this%iwetit, 'IWETIT', this%origin)
+    call mem_allocate(this%ihdwet, 'IHDWET', this%origin)
     call mem_allocate(this%satmin, 'SATMIN', this%origin)
     call mem_allocate(this%iwetdry, 'IWETDRY', this%origin)
+    call mem_allocate(this%nedges, 'NEDGES', this%origin)
+    
+    !
     ! -- Initialize value
     this%iname = 2
     this%hnoflo = DHNOFLO !1.d30
@@ -713,13 +767,14 @@ module LnfNpflModule  ! Npf package for laminar flow
     this%icalcspdis = 0
     this%isavspdis = 0
     this%isavsat = 0
-    !this%irewet = 0
-    !this%wetfct = DONE
-    !this%iwetit = 1
-    !this%ihdwet = 0
+    this%ithickstrt = 0
+    this%irewet = 0
+    this%wetfct = DONE
+    this%iwetit = 1
+    this%ihdwet = 0
     this%satmin = DZERO ! DEM7
     this%iwetdry = 0
-    !this%nedges = 0
+    this%nedges = 0
     !this%lastedge = 0
     !
     ! -- Return
@@ -758,6 +813,22 @@ module LnfNpflModule  ! Npf package for laminar flow
     else
       call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%origin))
     endif
+    
+    !
+    ! -- Specific discharge
+    if (this%icalcspdis == 1) then
+      call mem_allocate(this%spdis, 3, ncells, 'SPDIS', trim(this%origin))
+      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', trim(this%origin))
+      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%origin))
+      call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE',           &
+        trim(this%origin))
+    else
+      call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%origin))
+      call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%origin))
+      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%origin))
+      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%origin))
+    endif
+
     !
     ! -- initialize wetdry
     do n = 1, ncells
@@ -843,8 +914,11 @@ module LnfNpflModule  ! Npf package for laminar flow
             end select
             write(this%iout,'(4x,a,a)')                                        &
               'CELL AVERAGING METHOD HAS BEEN SET TO: ', keyword
-          !case ('REWET')
-          !  call this%rewet_options()
+          case ('REWET')
+            call this%rewet_options()
+          case ('THICKSTRT')
+            this%ithickstrt = 1
+            write(this%iout, '(4x,a)') 'THICKSTRT OPTION HAS BEEN ACTIVATED.'
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
             this%isavspdis = 1
@@ -859,7 +933,7 @@ module LnfNpflModule  ! Npf package for laminar flow
           case ('VISCOSITY')
             this%visc = this%parser%GetDouble()
             write(this%iout,'(4x,a,1pg24.15)') 'VISCOSITY SPECIFIED AS ',      &
-                                              this%visc
+                                              this%visc 
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF OPTION: ',         &
                                      trim(keyword)
@@ -889,6 +963,148 @@ module LnfNpflModule  ! Npf package for laminar flow
     return
   end subroutine read_options
 
+  subroutine rewet_options(this)
+! ******************************************************************************
+! rewet_options -- Set rewet options
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: store_error, ustop
+    use ConstantsModule, only: LINELENGTH
+    ! -- dummy
+    class(LnfNpfltype) :: this
+    ! -- local
+    integer(I4B) :: ival
+    character(len=LINELENGTH) :: keyword, errmsg
+    logical, dimension(3) :: lfound = .false.
+! ------------------------------------------------------------------------------
+    !
+    ! -- If rewet already set, then terminate with error
+    if (this%irewet == 1) then
+      write(errmsg, '(a)') 'ERROR WITH NPF REWET OPTION.  REWET WAS ' //       &
+                           'ALREADY SET.  REMOVE DUPLICATE REWET ENTRIES ' //  &
+                           'FROM NPF OPTIONS BLOCK.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    this%irewet = 1
+    write(this%iout,'(4x,a)')'REWETTING IS ACTIVE.'
+    !
+    ! -- Parse rewet options
+    do
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == '') exit
+      select case (keyword)
+        case ('WETFCT')
+          this%wetfct = this%parser%GetDouble()
+          write(this%iout,'(4x,a,1pg15.6)')                                    &
+                          'WETTING FACTOR HAS BEEN SET TO: ', this%wetfct
+          lfound(1) = .true.
+        case ('IWETIT')
+          if (.not. lfound(1)) then
+            write(errmsg,'(4x,a)')                                             &
+              '****ERROR. NPF REWETTING FLAGS MUST BE SPECIFIED IN ORDER. ' // &
+              'FOUND IWETIT BUT WETFCT NOT SPECIFIED.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+          endif
+          ival = this%parser%GetInteger()
+          if(ival <= 0) ival = 1
+          this%iwetit = ival
+          write(this%iout,'(4x,a,i5)') 'IWETIT HAS BEEN SET TO: ',             &
+                                        this%iwetit
+          lfound(2) = .true.
+        case ('IHDWET')
+          if (.not. lfound(2)) then
+            write(errmsg,'(4x,a)')                                             &
+              '****ERROR. NPF REWETTING FLAGS MUST BE SPECIFIED IN ORDER. ' // &
+              'FOUND IHDWET BUT IWETIT NOT SPECIFIED.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+          endif
+          this%ihdwet =  this%parser%GetInteger()
+          write(this%iout,'(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ',             &
+                                        this%ihdwet
+          lfound(3) = .true.
+        case default
+          write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF REWET OPTION: ',     &
+                                    trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+          call ustop()
+      end select
+    enddo
+    !
+    if (.not. lfound(3)) then
+      write(errmsg,'(4x,a)')                                                   &
+        '****ERROR. NPF REWETTING FLAGS MUST BE SPECIFIED IN ORDER. ' //       &
+        'DID NOT FIND IHDWET AS LAST REWET SETTING.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- Write rewet settings
+    write(this%iout, '(4x, a)') 'THE FOLLOWING REWET SETTINGS WILL BE USED.'
+    write(this%iout, '(6x, a,1pg15.6)') '  WETFCT = ', this%wetfct
+    write(this%iout, '(6x, a,i0)') '  IWETIT = ', this%iwetit
+    write(this%iout, '(6x, a,i0)') '  IHDWET = ', this%ihdwet
+    !
+    ! -- Return
+    return
+  end subroutine rewet_options
+  
+  subroutine check_options(this)
+! ******************************************************************************
+! check_options -- Check for conflicting NPF options
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: store_error, count_errors, ustop
+    use ConstantsModule, only: LINELENGTH
+    ! -- dummy
+    class(LnfNpfltype) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+! ------------------------------------------------------------------------------
+    !
+    !if(this%inewton > 0) then
+    !  if(this%iperched > 0) then
+    !    write(errmsg, '(a)') 'ERROR IN NPF OPTIONS. NEWTON OPTION CANNOT ' //  &
+    !                         'BE USED WITH PERCHED OPTION.'
+    !    call store_error(errmsg)
+    !  endif
+    !  if(this%ivarcv > 0) then
+    !    write(errmsg, '(a)') 'ERROR IN NPF OPTIONS. NEWTON OPTION CANNOT ' //  &
+    !                         'BE USED WITH VARIABLECV OPTION.'
+    !    call store_error(errmsg)
+    !  endif
+    !  if(this%irewet > 0) then
+    !    write(errmsg, '(a)') 'ERROR IN NPF OPTIONS. NEWTON OPTION CANNOT ' //  &
+    !                         'BE USED WITH REWET OPTION.'
+    !    call store_error(errmsg)
+    !  endif
+    !endif
+    !
+
+    !
+    ! -- Terminate if errors
+    if(count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine check_options
+  
   subroutine prepcheck(this)
 ! ******************************************************************************
 ! prepcheck -- Initialize and check NPF data
@@ -933,16 +1149,16 @@ module LnfNpflModule  ! Npf package for laminar flow
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
-    !aname => this%aname
+    aname => this%aname
     !
     ! -- check for wetdry conflicts
-    !if(this%irewet == 1) then
-    !  if(this%iwetdry == 0) then
-    !    write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
-    !                                trim(adjustl(aname(5))), ' not found.'
-    !    call store_error(errmsg)
-    !  end if
-    !endif
+    if(this%irewet == 1) then
+      if(this%iwetdry == 0) then
+        write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+                                    trim(adjustl(aname(5))), ' not found.'
+        call store_error(errmsg)
+      end if
+    endif
     !
     ! -- terminate if data errors
     if(count_errors() > 0) then
@@ -977,21 +1193,29 @@ module LnfNpflModule  ! Npf package for laminar flow
     do n = 1, this%disl%nodes
       if(this%ibound(n) == 0) then
         this%sat(n) = DONE
+            if(this%icelltype(n) < 0 .and. this%ithickstrt /= 0) then
+          ithickstartflag(n) = 1
+          this%icelltype(n) = 0
+        endif
+
       else
-        !if(this%icelltype(n) < 0 .and. this%ithickstrt /= 0) then
-          !call this%thksat(n, this%ic%strt(n), satn)
-          !if(botn > this%ic%strt(n)) then
-          !  call this%disl%noder_to_string(n, cellstr)
-          !  write(errmsg, fmtnct) trim(adjustl(cellstr))
-          !  call store_error(errmsg)
-          !  write(errmsg, fmtihbe) this%ic%strt(n), botn
-          !  call store_error(errmsg)
-          !endif
-          !ithickstartflag(n) = 1
-          !this%icelltype(n) = 0
-        !else
-        satn = DONE
-        this%sat(n) = satn
+        topn = this%disl%top(n)
+        botn = this%disl%bot(n)
+        if(this%icelltype(n) < 0 .and. this%ithickstrt /= 0) then
+          call this%thksat(n, this%ic%strt(n), satn)
+          if(botn > this%ic%strt(n)) then
+            call this%dis%noder_to_string(n, cellstr)
+            write(errmsg, fmtnct) trim(adjustl(cellstr))
+            call store_error(errmsg)
+            write(errmsg, fmtihbe) this%ic%strt(n), botn
+            call store_error(errmsg)
+          endif
+          ithickstartflag(n) = 1
+          this%icelltype(n) = 0
+        else
+          satn = DONE
+          this%sat(n) = satn
+        endif
       endif
     enddo
     if(count_errors() > 0) then
@@ -1007,8 +1231,6 @@ module LnfNpflModule  ! Npf package for laminar flow
     !    that saturation is 1 (except for case where icelltype was entered
     !    as a negative value and THCKSTRT option in effect)
     do n = 1, this%disl%nodes
-      !
-      !topn = this%disl%top(n)
       !
       ! -- Go through the connecting cells
       do ii = this%disl%con%ia(n) + 1, this%disl%con%ia(n + 1) - 1
@@ -1033,6 +1255,80 @@ module LnfNpflModule  ! Npf package for laminar flow
     return
   end subroutine prepcheck
 
+  subroutine rewet_check(this, kiter, node, hm, ibdm, ihc, hnew, irewet)
+! ******************************************************************************
+! rewet_check -- Determine if a cell should rewet.  This method can
+!   be called from any external object that has a head that can be used to
+!   rewet the GWF cell node.  The ihc value is used to determine if it is a
+!   vertical or horizontal connection, which can operate differently depending
+!   on user settings.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(LnfNpflType) :: this
+    integer(I4B),intent(in) :: kiter
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: hm
+    integer(I4B), intent(in) :: ibdm
+    integer(I4B), intent(in) :: ihc
+    real(DP), intent(inout), dimension(:) :: hnew
+    integer(I4B), intent(out) :: irewet
+    ! -- local
+    integer(I4B) :: itflg
+    real(DP) :: wd, awd, turnon, bbot
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    irewet = 0
+    !
+    ! -- Convert a dry cell to wet if it meets the criteria
+    if(this%irewet > 0) then
+      itflg=mod(kiter, this%iwetit)
+      if(itflg == 0) then
+        if(this%ibound(node) == 0 .and. this%wetdry(node) /= DZERO) then
+          !
+          ! -- Calculate wetting elevation
+          bbot = this%dis%bot(node)
+          wd = this%wetdry(node)
+          awd = wd
+          if(wd < 0) awd=-wd
+          turnon = bbot + awd
+          !
+          ! -- Check head in adjacent cells to see if wetting elevation has
+          !    been reached
+          if(ihc == 0) then
+            !
+            ! -- check cell below
+            if(ibdm > 0 .and. hm >= turnon) irewet = 1
+          else
+            if(wd > DZERO) then
+              !
+              ! -- check horizontally adjacent cells
+              if(ibdm > 0 .and. hm >= turnon) irewet = 1
+            end if
+          endif
+          !
+          if(irewet == 1) then
+            ! -- rewet cell; use equation 3a if ihdwet=0; use equation 3b if
+            !    ihdwet is not 0.
+            if(this%ihdwet==0) then
+              hnew(node) = bbot + this%wetfct * (hm - bbot)
+            else
+              hnew(node) = bbot + this%wetfct * awd !(hm - bbot)
+            endif
+            this%ibound(node) = 30000
+          endif
+        endif
+      endif
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine rewet_check
+    
   function lcondsat(this, cell1, cell2)           &
                  result(condsatnm)
 ! ******************************************************************************
@@ -1043,7 +1339,7 @@ module LnfNpflModule  ! Npf package for laminar flow
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
+    use ConstantsModule,   only: LINELENGTH, DGRAVITY
     use SimModule, only: store_error, store_error_unit, ustop
     ! -- return
     real(DP) :: condsatnm
@@ -1053,7 +1349,8 @@ module LnfNpflModule  ! Npf package for laminar flow
     integer(I4B), intent(in) :: cell2
     ! -- local
     integer(I4B) :: ii, cellnum1, cellnum2
-    real(DP) :: area1, area2, cl1, cl2
+    real(DP) :: area1, area2, cl1, cl2, g
+    real(DP) :: permsat1, permsat2, ck1, ck2, k
     character(len=LINELENGTH) :: errmsg
     class(GeometryContainer), pointer :: geo
 !  ------------------------------------------------------------------------------
@@ -1070,6 +1367,8 @@ module LnfNpflModule  ! Npf package for laminar flow
       cellnum2 = this%disl%iageocellnum(cell2)
       area1 = this%disl%jametries(this%disl%iageom(cell1))%obj%area_sat(cellnum1)
       area2 = this%disl%jametries(this%disl%iageom(cell2))%obj%area_sat(cellnum2)
+      permsat1 =  this%disl%jametries(this%disl%iageom(cell1))%obj%perimeter_sat(cellnum1)
+      permsat2 =  this%disl%jametries(this%disl%iageom(cell2))%obj%perimeter_sat(cellnum2)
       cl1 = 0.0
       outer: do ii = this%disl%con%ia(cell1) + 1, this%disl%con%ia(cell1 + 1) - 1
         if (this%disl%con%ja(ii) == cell2) then
@@ -1086,7 +1385,14 @@ module LnfNpflModule  ! Npf package for laminar flow
         call this%parser%StoreErrorUnit()
         call ustop()
       end if
-      condsatnm = this%condmean(area1, area2, cl1, cl2, this%icellavg)
+      g = DGRAVITY * (this%disl%convtime * this%disl%convtime) / this%disl%convlength
+      ck1 = (0.5 * g / this%visc) * (area1 / permsat1) ** 2
+      ck2 = (0.5 * g / this%visc) * (area2 / permsat2) ** 2
+      call kmean(this%icellavg, ck1, ck2, k)
+      k = k / (cl1 + cl2)
+      condsatnm = k * min(area1, area2)
+      
+      !condsatnm = this%condmean(area1, area2, cl1, cl2, this%icellavg)
       !ck1 = 0.5 * this%grav / this%visc * area1 / 
     end if
     !
@@ -1094,6 +1400,32 @@ module LnfNpflModule  ! Npf package for laminar flow
     return
   end function lcondsat
 
+  subroutine kmean(iavgmeth,ck1,ck2,ck)
+    ! **************************************************************************
+    ! -- compute average (harmonic, arith, log) depending on averaging method
+    ! **************************************************************************
+  integer, intent(in) :: iavgmeth
+  double precision, intent(in) :: ck1, ck2
+  double precision, intent(out) :: ck
+ !C-------------------------------------------------------------------------------------- 
+  !
+      ! -- Averaging -----------------------------
+      select case (iavgmeth)
+      case(0)
+      ! -- Weighted harmonic mean
+       ck = 2.0 * ck1 * ck2 / (ck1 + ck2)             
+      case(1)
+      ! -- Log mean of LEAKANCES
+        ck = logmean(ck1, ck2)
+      case(2)
+      ! -- Arithmetic mean of LEAKANCES
+        ck = DHALF * (ck1 + ck2)
+      end select
+      ! ------------------------------------------
+  ! ------RETURN
+      return
+  end subroutine kmean                 
+                 
   function lcond(ibdn, ibdm, ictn, ictm, inewton, condsat)           &
                  result(condnm)
 ! ******************************************************************************
@@ -1152,7 +1484,7 @@ module LnfNpflModule  ! Npf package for laminar flow
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,   only: DPI
+    use ConstantsModule,   only: DPI, DGRAVITY
     ! -- return
     real(DP) :: condmean
     ! -- dummy
@@ -1163,14 +1495,14 @@ module LnfNpflModule  ! Npf package for laminar flow
     real(DP), intent(in) :: cl2
     integer(I4B), intent(in) :: iavgmeth
     ! -- local
-    real(DP) :: t1
-    real(DP) :: t2
+    real(DP) :: g, t1, t2
     real(DP) :: tmean, amean, denom
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    t1 = (area1 * area1) / (8 * DPI * this%visc)
-    t2 = (area2 * area2) / (8 * DPI * this%visc)
+    g = DGRAVITY * (this%disl%convtime * this%disl%convtime) / this%disl%convlength
+    t1 = (area1 * area1 * g) / (8 * DPI * this%visc)
+    t2 = (area2 * area2 * g) / (8 * DPI * this%visc)
     !
     ! -- Averaging
     select case (iavgmeth)
@@ -1319,4 +1651,66 @@ module LnfNpflModule  ! Npf package for laminar flow
     return
   end subroutine sav_sat
 
+  subroutine increase_edge_count(this, nedges)
+! ******************************************************************************
+! increase_edge_count -- reserve space for nedges cells that have an edge on them.
+!   This must be called before the npf%allocate_arrays routine, which is called
+!   from npf%ar.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(LnfNpflType) :: this
+    integer(I4B), intent(in) :: nedges
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    this%nedges = this%nedges + nedges
+    !
+    ! -- return
+    return
+  end subroutine increase_edge_count
+  
+  subroutine set_edge_properties(this, nodedge, ihcedge, q, area, nx, ny,      &
+                                 distance)
+! ******************************************************************************
+! edge_count -- provide the npf package with edge properties.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(LnfNpflType) :: this
+    integer(I4B), intent(in) :: nodedge
+    integer(I4B), intent(in) :: ihcedge
+    real(DP), intent(in) :: q
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: nx
+    real(DP), intent(in) :: ny
+    real(DP), intent(in) :: distance
+    ! -- local
+    integer(I4B) :: lastedge
+! ------------------------------------------------------------------------------
+    !
+    this%lastedge = this%lastedge + 1
+    lastedge = this%lastedge
+    this%nodedge(lastedge) = nodedge
+    this%ihcedge(lastedge) = ihcedge
+    this%propsedge(1, lastedge) = q
+    this%propsedge(2, lastedge) = area
+    this%propsedge(3, lastedge) = nx
+    this%propsedge(4, lastedge) = ny
+    this%propsedge(5, lastedge) = distance
+    !
+    ! -- If this is the last edge, then the next call must be starting a new
+    !    edge properties assignment loop, so need to reset lastedge to 0
+    if (this%lastedge == this%nedges) this%lastedge = 0
+    !
+    ! -- return
+    return
+  end subroutine set_edge_properties
+                                 
 end module LnfNpflModule
