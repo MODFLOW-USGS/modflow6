@@ -377,7 +377,6 @@ contains
       ng = this%nodem1(n)
       nl = this%nodem2(n)        
       ifcon = this%iflowtype(n)
-      !igeon = this%lnfmodel%disl%geo%igeotype(nl)
 
       cellnum = this%lnfmodel%disl%iageocellnum(nl)
       area = this%lnfmodel%disl%jametries(this%lnfmodel%disl%iageom(nl))%obj%area_sat(cellnum)
@@ -569,6 +568,7 @@ contains
           this%akrc(n) = pw / psat
         else
           ! -- fill akrc for vertical or angled LNF cell using upstream wetted perimeter
+          ! SRP FIX: Support vertical connections - alnfdir not defined
           if(abs(alnfdir - DPI/2.) > DSMALLANG) then
             ! -- adjust effective length for angled segment
             eff_leng = this%flengw(n) * sin(alnfdir)
@@ -921,6 +921,7 @@ contains
         psat =  this%lnfmodel%disl%jametries(this%lnfmodel%disl%iageom(nl))%obj%perimeter_sat(cellnum)
         this%dkdhc(n) = pw / psat
       else
+        ! SRP FIX: handle vertical connections with angle alnfdir - need to calculate
         ! -- fill dkdhc for vertical or angled LNF cell using upstream wetted perimeter
         if(abs(alnfdir - pi/2.) > 1.0e-6) then
           ! -- adjust effective length for angled segment

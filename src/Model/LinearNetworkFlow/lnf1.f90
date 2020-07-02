@@ -87,7 +87,7 @@ module LnfModule
   integer(I4B), parameter :: NIUNIT=100
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/   'IC6  ', 'DISL6', '     ', 'OC6  ', '     ', & !  5
-                'STO6 ', '     ', '     ', 'NPFL6', '     ', & ! 10
+                'STO6 ', '     ', 'WEL6 ', 'NPFL6', '     ', & ! 10
                 'CGEO6', 'RGEO6', 'NGEO6', '     ', '     ', & ! 15
                 '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', '     ', '     ', '     ', '     ', & ! 25
@@ -597,9 +597,9 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- newton flags
-    !inwt = inwtflag
-    !if(inwtflag == 1) inwt = this%npf%inewton
-    !inwtsto = inwtflag
+    inwt = inwtflag
+    if(inwtflag == 1) inwt = this%npf%inewton
+    inwtsto = inwtflag
     !if(this%insto > 0) then
     !  if(inwtflag == 1) inwtsto = this%sto%inewton
     !endif
@@ -643,6 +643,10 @@ module LnfModule
     !                       this%idxglo, this%rhs)
     !end if
     !if(this%inmvr > 0) call this%mvr%mvr_fc()
+    do n = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, n)
+      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
+    enddo
     !!
     !!--Fill newton terms
     !if(this%innpf > 0) then
@@ -661,14 +665,14 @@ module LnfModule
     !end if
     !!
     !! -- Fill Newton terms for packages
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  inwtpak = inwtflag
-    !  if(inwtflag == 1) inwtpak = packobj%inewton
-    !  if (inwtpak /= 0) then
-    !    call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, amatsln)
-    !  end if
-    !enddo
+    do n = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, n)
+      inwtpak = inwtflag
+      if(inwtflag == 1) inwtpak = packobj%inewton
+      if (inwtpak /= 0) then
+        call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, amatsln)
+      end if
+    enddo
     !
     ! -- return
     return
@@ -1327,6 +1331,7 @@ module LnfModule
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, ustop
     use ChdlModule, only: chd_create
+    use WellModule, only: wel_create
     ! -- dummy
     class(LnfModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1346,6 +1351,8 @@ module LnfModule
     select case(filtyp)
     case('CHD6')
       call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+    case('WEL6')
+      call wel_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)     
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)
