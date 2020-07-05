@@ -1,7 +1,6 @@
-# Test maw package ability to equalize.
-# maw_05a - well and aquifer start at 4; should be now flow
-# maw_05b - well starts at 3.5 and aquifer starts at 4; should equalize
-# maw_05c - well starts at or below 3.0; not working yet
+# Test maw package ability to equalize and the flow correction.
+# maw_06a - well start at .25, aquifer starts at 2
+# maw_06b - well starts at 2, aquifer starts at .25
 
 import os
 import numpy as np

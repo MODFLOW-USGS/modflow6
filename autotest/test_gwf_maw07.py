@@ -1,4 +1,6 @@
-# Test to make sure inactive well has no gwf flows
+# Modifiy the previous test by having a first stress period where the
+# MAW well is inactive.  Test ensures that gwf-maw and maw-gwf flows reported
+# in the gwf and maw budget files are zero for this first period.
 
 import os
 import numpy as np
