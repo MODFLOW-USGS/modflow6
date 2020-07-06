@@ -68,8 +68,16 @@ jobs:
         print("flopy is installed in:  {}".format(flopypth))
         print("pymake is installed in: {}".format(pymakepth))
       shell: python
-    - name: Print branch name
-      run: echo running on branch ${GITHUB_REF##*/}
+    - name: Set and print branch name
+      run: |
+        echo GITHUB_REF branch name ${GITHUB_REF##*/}
+        echo GITHUB_REF=${GITHUB_REF}
+        echo GITHUB_HEAD_REF=${GITHUB_HEAD_REF}
+        echo GITHUB_BASE_REF=${GITHUB_BASE_REF}
+        if [ -z "$GITHUB_BASE_REF" ]; then
+          export BRANCH=${GITHUB_HEAD_REF};
+        else export BRANCH=${GITHUB_REF##*/}; fi
+        echo BRANCH=${BRANCH}
       shell: bash
     - name: Get regression test files
       run: |
@@ -79,12 +87,9 @@ jobs:
       shell: bash
     - name: Check out the correct regression test branch
       run: |
-        echo ${GITHUB_REF}
-        echo ${GITHUB_HEAD_REF}
-        echo ${GITHUB_BASE_REF}
         cd ../modflow6-testmodels
-        if git show-ref -q --heads ${GITHUB_REF##*/}; then
-          git checkout ${GITHUB_REF##*/}; echo switched to modflow6-testmodels branch ${GITHUB_REF##*/};
+        if git show-ref -q --heads ${BRANCH}; then
+          git checkout ${BRANCH}; echo switched to modflow6-testmodels branch ${BRANCH};
         else echo using modflow6-testmodels branch master;  fi
         git branch
         cd ../modflow6
