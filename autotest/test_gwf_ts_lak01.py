@@ -30,7 +30,7 @@ for s in ex:
 ddir = 'data'
 
 # run all examples on Travis
-travis = [True for idx in range(len(exdirs))]
+continuous_integration = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 replace_exe = None

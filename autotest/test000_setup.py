@@ -3,9 +3,10 @@ import sys
 import shutil
 import pymake
 
-os.environ["TRAVIS"] = "1"
+from framework import running_on_CI
 
-if 'TRAVIS' in os.environ:
+if running_on_CI():
+    print('running on CI environment')
     os.environ['PYMAKE_DOUBLE'] = '1'
 
 # paths to executables for  previous versions of MODFLOW

@@ -1,4 +1,5 @@
 import os
+
 try:
     import pymake
 except:
@@ -14,6 +15,10 @@ except:
     msg += 'Try installing using the following command:\n'
     msg += ' pip install flopy'
     raise Exception(msg)
+
+
+def running_on_CI():
+    return 'TRAVIS' in os.environ or 'CI' in os.environ
 
 
 class testing_framework(object):

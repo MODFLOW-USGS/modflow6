@@ -64,6 +64,7 @@ jobs:
       run: |
         pwd
         git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
+      shell: bash
     - name: Check out the correct regression test branch
       run: |
         cd ../modflow6-testmodels
@@ -73,6 +74,7 @@ jobs:
         git branch
         cd ../modflow6
         ls ../
+      shell: bash
     - name: Update flopy MODFLOW 6 classes
       run: |
         cd autotest
