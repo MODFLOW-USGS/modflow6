@@ -1337,7 +1337,7 @@ module BndModule
         ' OPTION BLOCK DETECTED.'
     end if
     !
-    ! -- SFAC was specified, so find column of auxvar that will be multiplier
+    ! -- AUXMULTNAME was specified, so find column of auxvar that will be multiplier
     if(this%iauxmultcol < 0) then
       !
       ! -- Error if no aux variable specified
