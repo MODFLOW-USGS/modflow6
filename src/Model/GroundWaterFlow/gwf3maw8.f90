@@ -4171,8 +4171,14 @@ contains
           !
           ! -- use connection method so the gwf-maw budget flows
           !    are consistent with the maw-gwf budget flows
-          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
-                                             flow)
+          if (this%iboundpak(n) == 0) then
+            cmaw = DZERO
+            term = DZERO
+            cterm = DZERO
+          else
+            call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm,      &
+                                               term, flow)
+          end if
           this%simcond(jpos) = cmaw
           this%bound(2,ibnd) = cmaw
           this%hcof(ibnd) = -term

@@ -1,3 +1,7 @@
+# Get executables and build targets
+# can compile mf6 direcetly using this command:
+#  python -c "import test000_setup; test000_setup.test_build_modflow6()"
+
 import os
 import sys
 import shutil

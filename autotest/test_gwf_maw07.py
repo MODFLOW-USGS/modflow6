@@ -1,6 +1,6 @@
-# Test maw package ability to equalize and the flow correction.
-# maw_06a - well start at .25, aquifer starts at 2
-# maw_06b - well starts at 2, aquifer starts at .25
+# Modifiy the previous test by having a first stress period where the
+# MAW well is inactive.  Test ensures that gwf-maw and maw-gwf flows reported
+# in the gwf and maw budget files are zero for this first period.
 
 import os
 import numpy as np
@@ -16,7 +16,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['maw_06a', 'maw_06b']
+ex = ['maw_07a', 'maw_07b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -50,10 +50,10 @@ mawradius = np.sqrt(mawarea / np.pi) #.65
 mawcond = Kh * delc * dz / (0.5 * delr)
 
 def get_model(idx, dir):
-    nper = 1
-    perlen = [10.0]
-    nstp = [100]
-    tsmult = [1.005]
+    nper = 2
+    perlen = [10.0, 10.0]
+    nstp = [1, 100]
+    tsmult = [1, 1.005]
 
     tdis_rc = []
     for i in range(nper):
@@ -122,7 +122,9 @@ def get_model(idx, dir):
     mawconnectiondata = [[0, icon, (icon, 0, 0), top, bot, mawcond, -999]
                          for icon in range(nlay)]
     # <wellno> <mawsetting>
-    mawperioddata = [[0, 'STATUS', 'ACTIVE']]
+    mawperioddata = {}
+    mawperioddata[0] = [[0, 'STATUS', 'INACTIVE']]
+    mawperioddata[1] = [[0, 'STATUS', 'ACTIVE']]
     mbin = '{}.maw.bin'.format(gwfname)
     mbud = '{}.maw.bud'.format(gwfname)
     maw = flopy.mf6.ModflowGwfmaw(gwf,
@@ -177,13 +179,13 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text='HEAD')
-    stage = bobj.get_alldata().flatten()
+    stage = bobj.get_alldata().flatten()[1:]
 
     fname = gwfname + '.hds'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
-    head = hobj.get_alldata()
+    head = hobj.get_alldata()[1:]
 
     # calculate initial volume of water in well and aquifer
     v0maw = mawstrt[sim.idxsim] * mawarea
@@ -238,6 +240,8 @@ def eval_results(sim):
         for i in range(ra_maw.shape[0]):
             qmaw = ra_maw[i]['q']
             qgwf = ra_gwf[i]['q']
+            if istp == 0:
+                assert np.allclose(qmaw, 0.), 'inactive well, flow should be 0.'
             msg = 'step {} record {} comparing qmaw with qgwf: {} {}'.format(istp, i, qmaw, qgwf)
             print(msg)
             assert np.allclose(qmaw, -qgwf), msg
