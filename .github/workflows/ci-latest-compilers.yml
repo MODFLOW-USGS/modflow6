@@ -97,4 +97,3 @@ jobs:
         nosetests -v --with-id --with-timer -w ./autotest
       env:
         repo-token: ${{secrets.GITHUB_TOKEN}}
-      shell: bash
