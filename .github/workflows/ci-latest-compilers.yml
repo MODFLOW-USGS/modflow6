@@ -80,6 +80,9 @@ jobs:
       shell: bash
     - name: Check out the correct regression test branch
       run: |
+        echo ${GITHUB_REF}
+        echo ${GITHUB_HEAD_REF}
+        echo ${GITHUB_BASE_REF}
         cd ../modflow6-testmodels
         if git show-ref -q --heads ${GITHUB_REF##*/}; then
           git checkout ${GITHUB_REF##*/}; echo switched to modflow6-testmodels branch ${GITHUB_REF##*/};
