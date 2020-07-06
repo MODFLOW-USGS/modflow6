@@ -59,6 +59,21 @@ jobs:
         python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
         python -c "import pymake; print('pymake: {}'.format(pymake.__version__))"
         python -c "import pymake; pymakepth = pymake.__path__[0]; print('pymake is installed in {}'.format(pymakepth))"
+    - name: Print branch name
+      run: echo running on branch ${GITHUB_REF##*/}
+    - name: Get regression test files
+      run: |
+        pwd
+        git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
+    - name: Check out the correct regression test branch
+      run: |
+        cd ../modflow6-testmodels
+        if git show-ref -q --heads ${GITHUB_REF##*/}; then
+          git checkout ${GITHUB_REF##*/}; echo switched to modflow6-testmodels branch ${GITHUB_REF##*/};
+        else echo using modflow6-testmodels branch master;  fi
+        git branch
+        cd ../modflow6
+        ls ../
     - name: Update flopy MODFLOW 6 classes
       run: |
         cd autotest

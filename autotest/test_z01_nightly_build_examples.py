@@ -31,9 +31,9 @@ for root, dirs, files in os.walk(home):
             break
     if exdir is not None:
         break
-testpaths = os.path.join('..', exdir)
-assert os.path.isdir(testpaths)
-
+if exdir is not None:
+    testpaths = os.path.join('..', exdir)
+    assert os.path.isdir(testpaths)
 
 def get_branch():
     try:
@@ -60,10 +60,16 @@ def get_mf6_models():
     """
     # determine if running on travis
     is_travis = 'TRAVIS' in os.environ
+    is_github_action = 'CI' in os.environ
 
     # get current branch
+    is_CI = False
     if is_travis:
+        is_CI = True
         branch = os.environ['BRANCH']
+    elif is_github_action:
+        is_CI = True
+        branch = os.path.basename(os.environ['GITHUB_REF'])
     else:
         branch = get_branch()
     print('On branch {}'.format(branch))
@@ -72,10 +78,10 @@ def get_mf6_models():
     exclude = (None,)
 
     # update exclude
-    if is_travis:
-        exclude_travis = ('test022_MNW2_Fig28',
+    if is_CI:
+        exclude_CI = ('test022_MNW2_Fig28',
                           'test007_751x751_confined')
-        exclude = exclude + exclude_travis
+        exclude = exclude + exclude_CI
     exclude = list(exclude)
 
     # write a summary of the files to exclude
@@ -84,8 +90,11 @@ def get_mf6_models():
         print('    {}: {}'.format(idx + 1, ex))
 
     # build list of directories with valid example files
-    dirs = [d for d in os.listdir(exdir)
-            if 'test' in d and d not in exclude]
+    if exdir is not None:
+        dirs = [d for d in os.listdir(exdir)
+                if 'test' in d and d not in exclude]
+    else:
+        dirs = []
 
     # exclude dev examples on master or release branches
     if 'master' in branch.lower() or 'release' in branch.lower():
@@ -97,7 +106,8 @@ def get_mf6_models():
             dirs.remove(d)
 
     # sort in numerical order for case sensitive os
-    dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if len(dirs) > 0:
+        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
 
     # determine if only a selection of models should be run
     select_dirs = None

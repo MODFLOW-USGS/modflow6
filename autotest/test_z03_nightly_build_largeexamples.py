@@ -33,8 +33,6 @@ for root, dirs, files in os.walk(home):
         break
 if exdir is not None:
     testpaths = os.path.join('..', exdir)
-else:
-    testpaths = None
 
 
 def get_mf6_models():
@@ -43,14 +41,15 @@ def get_mf6_models():
     """
     # determine if running on travis
     is_travis = 'TRAVIS' in os.environ
+    is_github_action = 'CI' in os.environ
 
     # tuple of example files to exclude
     exclude = (None,)
 
     # update exclude
-    if is_travis:
-        exclude_travis = (None, )
-        exclude = exclude + exclude_travis
+    if is_travis or is_github_action:
+        exclude_CI = (None,)
+        exclude = exclude + exclude_CI
     exclude = list(exclude)
 
     # write a summary of the files to exclude
@@ -159,7 +158,7 @@ def dir_avail():
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print('no need to run {}'.format(os.path.basename(__file__)))
-    if os.getenv('TRAVIS'):
+    if 'TRAVIS' in os.environ or 'CI' in os.environ:
         avail = False
     return avail
 

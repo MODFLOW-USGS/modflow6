@@ -35,8 +35,9 @@ for root, dirs, files in os.walk(home):
             break
     if exdir is not None:
         break
-testpaths = os.path.join('..', exdir)
-assert os.path.isdir(testpaths)
+if exdir is not None:
+    testpaths = os.path.join('..', exdir)
+    assert os.path.isdir(testpaths)
 
 sfmt = '{:25s} - {}'
 
@@ -62,11 +63,13 @@ def get_mf5to6_models():
         print('    {}: {}'.format(idx + 1, ex))
 
     # build list of directories with valid example files
-    dirs = [d for d in os.listdir(exdir)
-            if 'test' in d and d not in exclude]
-
-    # sort in numerical order for case sensitive os
-    dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if exdir is not None:
+        dirs = [d for d in os.listdir(exdir)
+                if 'test' in d and d not in exclude]
+        # sort in numerical order for case sensitive os
+        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    else:
+        dirs = []
 
     # determine if only a selection of models should be run
     select_dirs = None
