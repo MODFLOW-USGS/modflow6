@@ -1,5 +1,6 @@
 import os
 import sys
+import pathlib
 
 import time
 import shutil
@@ -24,20 +25,32 @@ from simulation import Simulation
 
 from targets import target_dict as target_dict
 
+
+def get_example_directory(base, fdir, subdir='mf6'):
+    exdir = None
+    for root, dirs, files in os.walk(base):
+        for d in dirs:
+            if d.startswith(fdir):
+                exdir = os.path.abspath(os.path.join(root, d, subdir))
+                break
+        if exdir is not None:
+            break
+    return exdir
+
 # find path to modflow6-testmodels or modflow6-testmodels.git directory
 home = os.path.expanduser('~')
+print('$HOME={}'.format(home))
+
 fdir = 'modflow6-testmodels'
-exdir = None
-for root, dirs, files in os.walk(home):
-    for d in dirs:
-        if d.startswith(fdir):
-            exdir = os.path.join(root, d, 'mf5to6')
-            break
-    if exdir is not None:
-        break
+exdir = get_example_directory(home, fdir, subdir='mf5to6')
+if exdir is None:
+    p = pathlib.Path(os.getcwd())
+    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
+    print('$HOME={}'.format(home))
+    exdir = get_example_directory(home, fdir, subdir='mf5to6')
+
 if exdir is not None:
-    testpaths = os.path.join('..', exdir)
-    assert os.path.isdir(testpaths)
+    assert os.path.isdir(exdir)
 
 sfmt = '{:25s} - {}'
 

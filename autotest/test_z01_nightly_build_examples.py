@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import pathlib
 
 try:
     import pymake
@@ -20,20 +21,34 @@ except:
 
 from simulation import Simulation
 
+
+def get_example_directory(base, fdir, subdir='mf6'):
+    exdir = None
+    for root, dirs, files in os.walk(base):
+        for d in dirs:
+            if d.startswith(fdir):
+                exdir = os.path.abspath(os.path.join(root, d, subdir))
+                break
+        if exdir is not None:
+            break
+    return exdir
+
+
 # find path to modflow6-testmodels or modflow6-testmodels.git directory
 home = os.path.expanduser('~')
+print('$HOME={}'.format(home))
+
 fdir = 'modflow6-testmodels'
-exdir = None
-for root, dirs, files in os.walk(home):
-    for d in dirs:
-        if d.startswith(fdir):
-            exdir = os.path.join(root, d, 'mf6')
-            break
-    if exdir is not None:
-        break
+exdir = get_example_directory(home, fdir, subdir='mf6')
+if exdir is None:
+    p = pathlib.Path(os.getcwd())
+    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
+    print('$HOME={}'.format(home))
+    exdir = get_example_directory(home, fdir, subdir='mf6')
+
 if exdir is not None:
-    testpaths = os.path.join('..', exdir)
-    assert os.path.isdir(testpaths)
+    assert os.path.isdir(exdir)
+
 
 def get_branch():
     try:
@@ -80,7 +95,7 @@ def get_mf6_models():
     # update exclude
     if is_CI:
         exclude_CI = ('test022_MNW2_Fig28',
-                          'test007_751x751_confined')
+                      'test007_751x751_confined')
         exclude = exclude + exclude_CI
     exclude = list(exclude)
 

@@ -27,12 +27,10 @@ exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
         if d == fdir or d == fdir + '.git':
-            exdir = os.path.join(root, d)
+            exdir = os.path.abspath(os.path.join(root, d))
             break
     if exdir is not None:
         break
-if exdir is not None:
-    testpaths = os.path.join('..', exdir)
 
 
 def get_mf6_models():
