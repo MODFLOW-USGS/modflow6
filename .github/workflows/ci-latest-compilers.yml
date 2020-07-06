@@ -69,15 +69,15 @@ jobs:
         print("flopy is installed in:  {}".format(flopypth))
         print("pymake is installed in: {}".format(pymakepth))
       shell: python
-    - name: Print branch name
+    - name: Set and print branch name
       run: |
         echo GITHUB_REF branch name ${GITHUB_REF##*/}
         echo GITHUB_REF=${GITHUB_REF}
         echo GITHUB_HEAD_REF=${GITHUB_HEAD_REF}
         echo GITHUB_BASE_REF=${GITHUB_BASE_REF}
         if [ -z ${GITHUB_BASE_REF+x} ]; then
-          export BRANCH=${GITHUB_HEAD_REF};
-        else export BRANCH=${GITHUB_REF##*/}; fi
+          export BRANCH=${GITHUB_REF##*/};
+        else export BRANCH=${GITHUB_HEAD_REF}; fi
         echo BRANCH=${BRANCH}
       shell: bash
     - name: Get regression test files
