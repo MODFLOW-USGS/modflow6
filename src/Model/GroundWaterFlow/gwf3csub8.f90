@@ -2145,7 +2145,7 @@ contains
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: urword, getunit, urdaux, openfile
+    use InputOutputModule, only: getunit, urdaux, openfile
     implicit none
     ! -- dummy
     class(GwfCsubType),   intent(inout) :: this
@@ -3058,8 +3058,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use ConstantsModule, only: LINELENGTH
     use KindModule, only: I4B
-    use InputOutputModule, only: urword, uget_block, u8rdcom, &
-                                 uterminate_block
     implicit none
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this

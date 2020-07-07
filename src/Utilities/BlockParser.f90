@@ -4,7 +4,7 @@ module BlockParserModule
   use ConstantsModule,   only: LENHUGELINE, LINELENGTH, MAXCHARLEN
   use VersionModule,     only: IDEVELOPMODE
   use InputOutputModule, only: uget_block, uget_any_block, uterminate_block, &
-                               u8rdcom, urword, upcase
+                               u9rdcom, urword, upcase
   use SimModule,         only: store_error, store_error_unit, ustop
   
   implicit none
@@ -22,7 +22,8 @@ module BlockParserModule
     character(len=LINELENGTH), private :: blockName
     character(len=LINELENGTH), private :: blockNameFound
     character(len=LENHUGELINE), private :: laststring
-    character(len=LENHUGELINE), private :: line
+    !character(len=LENHUGELINE), private :: line
+    character(len=:), allocatable :: line
   contains
     procedure, public :: Initialize
     procedure, public :: Clear
@@ -162,7 +163,7 @@ contains
     lineread = .false.
     loop1: do
       if (lineread) exit loop1
-      call u8rdcom(this%iuext, this%iout, this%line, ierr)
+      call u9rdcom(this%iuext, this%iout, this%line, ierr)
       this%lloc = 1
       call urword(this%line, this%lloc, istart, istop, 0, ival, rval, &
                   this%iout, this%iuext)
