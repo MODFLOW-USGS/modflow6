@@ -148,7 +148,6 @@ module ObsModule
   use OpenSpecModule,      only: ACCESS, FORM
   use SimModule,           only: count_errors, store_error, store_error_unit,    &
                                  ustop
-  use StringListModule,    only: AddStringToList, GetStringFromList
   use TdisModule,          only: totim
 
   implicit none

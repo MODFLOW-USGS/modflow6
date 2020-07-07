@@ -405,7 +405,7 @@ module InputOutputModule
           isfound = .true.
           if (supportoc) then
             ! Look for OPEN/CLOSE on 1st line after line starting with BEGIN
-            call u9rdcom(iin,iout,line2,ierr)
+            call u9rdcom(iin, iout, line2, ierr)
             if (ierr < 0) exit
             lloc2 = 1
             call urword(line2, lloc2, istart, istop, 1, ival, rval, iin, iout)
