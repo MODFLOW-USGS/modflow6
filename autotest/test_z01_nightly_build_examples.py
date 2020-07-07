@@ -183,6 +183,14 @@ def get_mf6_models():
     return dirs
 
 
+def get_htol(dir):
+    htol = None
+    if dir == 'test059_mvlake_laksfr_tr':
+        if sys.platform.lower() == 'darwin':
+            htol = 0.002
+    return htol
+
+
 def run_mf6(sim):
     """
     Run the MODFLOW 6 simulation and compare to existing head file or
@@ -209,7 +217,7 @@ def test_mf6model():
 
     # run the test models
     for dir in dirs:
-        yield run_mf6, Simulation(dir)
+        yield run_mf6, Simulation(dir, htol=get_htol(dir))
 
     return
 
@@ -240,7 +248,7 @@ def main():
 
     # run the test models
     for dir in dirs:
-        sim = Simulation(dir)
+        sim = Simulation(dir, htol=get_htol(dir))
         run_mf6(sim)
 
     return

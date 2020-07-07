@@ -37,6 +37,7 @@ def get_example_directory(base, fdir, subdir='mf6'):
             break
     return exdir
 
+
 # find path to modflow6-testmodels or modflow6-testmodels.git directory
 home = os.path.expanduser('~')
 print('$HOME={}'.format(home))
@@ -59,8 +60,8 @@ def get_mf5to6_models():
     """
         Get a list of test models
     """
-    # tuple of example files to exclude
-    exclude = ('test1ss_ic1',
+    # list of example files to exclude
+    exclude = ['test1ss_ic1',
                'test9.5-3layer',
                'testmm2',
                'testmm3',
@@ -68,7 +69,7 @@ def get_mf5to6_models():
                'testps3a',
                'testTwri',
                'testTwrip',
-               'test028_sfr_simple')
+               'test028_sfr_simple']
 
     # write a summary of the files to exclude
     print('list of tests to exclude:')

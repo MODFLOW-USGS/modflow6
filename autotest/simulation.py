@@ -1,6 +1,5 @@
 import os
 import sys
-import platform
 import shutil
 import time
 
@@ -71,6 +70,10 @@ class Simulation(object):
         # set htol for comparisons
         if htol is None:
             htol = 0.001
+        else:
+            msg = sfmt.format('User specified comparison htol', htol)
+            print(msg)
+
         self.htol = htol
 
         # set index for multi-simulation comparisons
@@ -82,10 +85,7 @@ class Simulation(object):
         # set allow failure
         self.require_failure = require_failure
 
-        sysinfo = platform.system()
         self.delFiles = delFiles
-        if sysinfo.lower() == 'windows':
-            self.delFiles = False
         self.success = False
         return
 
@@ -352,6 +352,11 @@ class Simulation(object):
             if self.delFiles:
                 msg = sfmt.format('Teardown test', self.name)
                 print(msg)
+
+                # wait to delete on windows
+                if sys.platform.lower() == "win32":
+                    time.sleep(3)
+
                 try:
                     shutil.rmtree(self.simpath)
                     success = True
