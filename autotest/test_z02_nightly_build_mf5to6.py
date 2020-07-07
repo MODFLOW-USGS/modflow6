@@ -70,6 +70,8 @@ def get_mf5to6_models():
                'testTwri',
                'testTwrip',
                'test028_sfr_simple']
+    if sys.platform.lower() == 'win32':
+        exclude.append('testlgrsfr')
 
     # write a summary of the files to exclude
     print('list of tests to exclude:')

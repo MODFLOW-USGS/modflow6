@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 import shutil
 import pymake
 
@@ -23,6 +24,9 @@ def get_zipname():
         zipname = "linux"
     elif zipname == "darwin":
         zipname = "mac"
+    elif zipname == "win32":
+        if platform.architecture()[0] == "64bit":
+            zipname = "win64"
     return zipname
 
 
