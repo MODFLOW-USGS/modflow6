@@ -18,7 +18,7 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
-from framework import testing_framework
+from framework import testing_framework, running_on_CI
 from simulation import Simulation
 
 ex = ['maw_iss305a', 'maw_iss305b', 'maw_iss305c', 'maw_iss305d',
@@ -35,7 +35,7 @@ require_failure = [True for i in range(len(exdirs))]
 require_failure[0] = False
 
 # set travis to True when version 1.13.0 is released
-travis = [True for n in ex]
+continuous_integration = [True for n in ex]
 
 # set replace_exe to None to use default executable
 replace_exe = None
@@ -221,8 +221,8 @@ def build_models():
 
 
 def test_mf6model():
-    # determine if running on Travis
-    is_travis = 'TRAVIS' in os.environ
+    # determine if running on Travis or GitHub actions
+    is_CI = running_on_CI()
 
     # initialize testing framework
     test = testing_framework()
@@ -232,7 +232,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if is_travis and not travis[idx]:
+        if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(dir,
                                        require_failure=require_failure[idx])

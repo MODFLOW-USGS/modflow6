@@ -19,7 +19,7 @@ for s in ex:
     exdirs.append(os.path.join('temp', s))
 
 # run all examples on Travis
-travis = [True for idx in range(len(exdirs))]
+continuous_integration = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 replace_exe = None

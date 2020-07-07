@@ -17,7 +17,7 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
-from framework import testing_framework
+from framework import testing_framework, running_on_CI
 from simulation import Simulation
 
 ex = ['csub_wtgeoa', 'csub_wtgeob',
@@ -42,7 +42,7 @@ delay = [False, False, False, True, True, True, True]
 ddir = 'data'
 
 ## run all examples on Travis
-travis = [True for idx in range(len(exdirs))]
+continuous_integration = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 replace_exe = None
@@ -699,10 +699,10 @@ def build_models():
 
 
 def test_mf6model():
-    # determine if running on Travis
-    is_travis = 'TRAVIS' in os.environ
+    # determine if running on Travis or GitHub actions
+    is_CI = running_on_CI()
     r_exe = None
-    if not is_travis:
+    if not is_CI:
         if replace_exe is not None:
             r_exe = replace_exe
 
@@ -714,7 +714,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if is_travis and not travis[idx]:
+        if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(dir, exfunc=eval_comp,
                                        exe_dict=r_exe,

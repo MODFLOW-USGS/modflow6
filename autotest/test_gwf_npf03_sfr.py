@@ -10,7 +10,7 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
-from framework import testing_framework
+from framework import testing_framework, running_on_CI
 from simulation import Simulation
 
 ex = ['npf03_sfra', 'npf03_sfrb']
@@ -19,9 +19,9 @@ for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-# run all examples on Travis
-travis = [True for idx in range(len(exdirs))]
-# travis = [False for idx in range(len(exdirs))]
+# run all examples on CI
+continuous_integration = [True for idx in range(len(exdirs))]
+# continuous_integration = [False for idx in range(len(exdirs))]
 
 # read hk data
 fpth = os.path.join(ddir, 'npf03_hk.ref')
@@ -3052,8 +3052,8 @@ def eval_hds(sim):
 
 # - No need to change any code below
 def test_mf6model():
-    # determine if running on Travis
-    is_travis = 'TRAVIS' in os.environ
+    # determine if running on Travis or GitHub actions
+    is_CI = running_on_CI()
 
     # initialize testing framework
     test = testing_framework()
@@ -3063,7 +3063,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if is_travis and not travis[idx]:
+        if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(dir, exfunc=eval_hds, idxsim=idx)
 

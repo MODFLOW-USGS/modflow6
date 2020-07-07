@@ -32,16 +32,15 @@ def get_mf6_models():
                'test018_NAC',
                'test051_uzf1d_a')
 
-    exclude_travis = ('test006_gwf3_transport',
-                      'test006_Gwf1-Lnf1')
+    exclude_continuous_integration = ('test006_gwf3_transport',
+                                      'test006_Gwf1-Lnf1')
 
     # build list of directories with valid example files
-    exclude = list(exclude + exclude_travis)
+    exclude = list(exclude + exclude_continuous_integration)
     dirs = [d for d in os.listdir(exdir)
             if 'test' in d and d not in exclude]
     # sort in numerical order for case sensitive os
     dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
-
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -93,7 +92,6 @@ def get_mf6_models():
                 msg += ' {}'.format(pak)
             msg += ']'
             print(msg)
-
 
     return dirs
 
@@ -172,4 +170,3 @@ if __name__ == "__main__":
 
     # run main routine
     main()
-

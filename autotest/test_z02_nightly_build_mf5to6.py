@@ -1,5 +1,6 @@
 import os
 import sys
+import pathlib
 
 import time
 import shutil
@@ -24,19 +25,33 @@ from simulation import Simulation
 
 from targets import target_dict as target_dict
 
+
+def get_example_directory(base, fdir, subdir='mf6'):
+    exdir = None
+    for root, dirs, files in os.walk(base):
+        for d in dirs:
+            if d.startswith(fdir):
+                exdir = os.path.abspath(os.path.join(root, d, subdir))
+                break
+        if exdir is not None:
+            break
+    return exdir
+
+
 # find path to modflow6-testmodels or modflow6-testmodels.git directory
 home = os.path.expanduser('~')
+print('$HOME={}'.format(home))
+
 fdir = 'modflow6-testmodels'
-exdir = None
-for root, dirs, files in os.walk(home):
-    for d in dirs:
-        if d.startswith(fdir):
-            exdir = os.path.join(root, d, 'mf5to6')
-            break
-    if exdir is not None:
-        break
-testpaths = os.path.join('..', exdir)
-assert os.path.isdir(testpaths)
+exdir = get_example_directory(home, fdir, subdir='mf5to6')
+if exdir is None:
+    p = pathlib.Path(os.getcwd())
+    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
+    print('$HOME={}'.format(home))
+    exdir = get_example_directory(home, fdir, subdir='mf5to6')
+
+if exdir is not None:
+    assert os.path.isdir(exdir)
 
 sfmt = '{:25s} - {}'
 
@@ -45,8 +60,8 @@ def get_mf5to6_models():
     """
         Get a list of test models
     """
-    # tuple of example files to exclude
-    exclude = ('test1ss_ic1',
+    # list of example files to exclude
+    exclude = ['test1ss_ic1',
                'test9.5-3layer',
                'testmm2',
                'testmm3',
@@ -54,7 +69,9 @@ def get_mf5to6_models():
                'testps3a',
                'testTwri',
                'testTwrip',
-               'test028_sfr_simple')
+               'test028_sfr_simple']
+    if sys.platform.lower() == 'win32':
+        exclude.append('testlgrsfr')
 
     # write a summary of the files to exclude
     print('list of tests to exclude:')
@@ -62,11 +79,13 @@ def get_mf5to6_models():
         print('    {}: {}'.format(idx + 1, ex))
 
     # build list of directories with valid example files
-    dirs = [d for d in os.listdir(exdir)
-            if 'test' in d and d not in exclude]
-
-    # sort in numerical order for case sensitive os
-    dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if exdir is not None:
+        dirs = [d for d in os.listdir(exdir)
+                if 'test' in d and d not in exclude]
+        # sort in numerical order for case sensitive os
+        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    else:
+        dirs = []
 
     # determine if only a selection of models should be run
     select_dirs = None
