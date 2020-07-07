@@ -1254,7 +1254,7 @@ module MemoryManagerModule
     !
     ! -- set master information
     mt%master = .false.
-    mt%mastername = name
+    mt%mastername = name2
     mt%masterorigin = origin2
     !
     ! -- set memory access permission

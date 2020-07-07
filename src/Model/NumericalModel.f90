@@ -211,10 +211,7 @@ module NumericalModelModule
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     class(NumericalModelType) :: this
-    !
-    ! -- BaseModelType
-    call this%BaseModelType%model_da()
-    !
+
     ! -- Scalars
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
@@ -232,9 +229,13 @@ module NumericalModelModule
     deallocate(this%bndlist)
     !
     ! -- nullify pointers
-    call mem_deallocate(this%x)
-    call mem_deallocate(this%rhs)
-    call mem_deallocate(this%ibound)
+    call mem_deallocate(this%x, 'X', this%name)
+    call mem_deallocate(this%rhs, 'RHS', this%name)
+    call mem_deallocate(this%ibound, 'IBOUND', this%name)
+    !
+    ! -- BaseModelType
+    call this%BaseModelType%model_da()
+    !
     !
     ! -- Return
     return
