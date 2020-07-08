@@ -200,7 +200,10 @@ def test_update_mf6io():
     # build simple model
     name = 'mymodel'
     ws = os.path.join(temppth, name)
-    exe_name = os.path.join(binpth, 'mf6')
+    exe_name = 'mf6'
+    if sys.platform.lower == 'win32':
+        exe_name += '.exe'
+    exe_name = os.path.join(binpth, exe_name)
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=exe_name)
     tdis = flopy.mf6.ModflowTdis(sim)
     ims = flopy.mf6.ModflowIms(sim)
