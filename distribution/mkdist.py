@@ -437,7 +437,7 @@ def rebuild_tex_from_dfn():
     return
 
 
-def update_mf6io_tex_files(distfolder, mf6pth):
+def update_mf6io_tex_files(distfolder, mf6pth, expth=None):
 
     texpth = '../doc/mf6io'
     fname1 = os.path.join(texpth, 'mf6output.tex')
@@ -445,18 +445,26 @@ def update_mf6io_tex_files(distfolder, mf6pth):
     fname3 = os.path.join(texpth, 'mf6switches.tex')
     #mf6pth = os.path.join(distfolder, 'bin', 'mf6.exe')
     #mf6pth = os.path.abspath(mf6pth)
-    expth = os.path.join(distfolder, 'examples', 'ex01-twri')
+    local = False
+    if expth is None:
+        local = True
+        expth = os.path.join(distfolder, 'examples', 'ex01-twri')
     expth = os.path.abspath(expth)
 
     assert os.path.isfile(mf6pth)
     assert os.path.isdir(expth)
 
     # run an example model
-    if os.path.isdir('./temp'):
-        shutil.rmtree('./temp')
-    shutil.copytree(expth, './temp')
+    if local:
+        if os.path.isdir('./temp'):
+            shutil.rmtree('./temp')
+        shutil.copytree(expth, './temp')
     cmd = [os.path.abspath(mf6pth)]
-    buff, ierr = run_command(cmd, './temp')
+    if local:
+        simpth = './temp'
+    else:
+        simpth = expth
+    buff, ierr = run_command(cmd, simpth)
     lines = buff.split('\r\n')
     with open(fname1, 'w') as f:
         f.write('{}\n'.format('{\\small'))

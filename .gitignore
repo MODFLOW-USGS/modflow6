@@ -73,6 +73,7 @@ autotest/tempbin/
 autotest/*.html
 autotest/notebooks/
 
+distribution/temp/
 distribution/*.zip
 
 mod_temp/
