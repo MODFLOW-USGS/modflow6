@@ -10,8 +10,8 @@ from collections import OrderedDict
 
 # update files and paths so that there are the same number of
 # path and file entries in the paths and files list. Enter '.'
-# as the path if the file is in the root repository directory 
-paths = ['../', '../doc', '../', '../', 
+# as the path if the file is in the root repository directory
+paths = ['../', '../doc', '../', '../',
          '../', '../src/Utilities']
 files = ['version.txt', 'version.tex', 'README.md', 'DISCLAIMER.md',
          'code.json', 'version.f90']
@@ -108,7 +108,7 @@ def get_disclaimerfmt():
     else:
         disclaimer = preliminaryfmt
         is_approved = False
-        
+
     return is_approved, disclaimer
 
 
@@ -134,7 +134,7 @@ def get_branch():
             for line in b.splitlines():
                 if 'On branch' in line:
                     branch = line.replace('On branch ', '').rstrip()
-            
+
             if branch is not None:
                 if 'master' in branch or 'release' in branch:
                     branch = 'master'
@@ -199,12 +199,16 @@ def update_version():
         f.close()
         print('Successfully updated version.py')
 
+
         # update latex version file
         version = get_version_str(vmajor, vminor, vmicro)
+        version_type = get_version_type(get_branch()).strip()
+        if len(version_type) > 0:
+            version += '---{}'.format(version_type)
         pth = os.path.join(paths[1], files[1])
         f = open(pth, 'w')
         line = '\\newcommand{\\modflowversion}{mf' + \
-               '{}'.format(version) + '}' 
+               '{}'.format(version) + '}'
         f.write('{}\n'.format(line))
         line = '\\newcommand{\\modflowdate}{' + \
                '{}'.format(now.strftime('%B %d, %Y')) + \
@@ -218,7 +222,7 @@ def update_version():
     except:
         msg = 'There was a problem updating the version file'
         raise IOError(msg)
-        
+
     # update version.f90
     update_mf6_version(vmajor, vminor, vmicro)
 
@@ -229,21 +233,31 @@ def update_version():
     update_codejson(vmajor, vminor, vmicro)
 
 
+def get_version_type(branch):
+    version_type = ' '
+    if 'release' not in branch.lower() and 'master' not in branch.lower():
+        version_type = ' release candidate '
+    return version_type
+
+
 def update_mf6_version(vmajor, vminor, vmicro):
     branch = get_branch()
-        
+
     # create version
     version = get_tag(vmajor, vminor, vmicro)
     idevelopmode = 0
     if 'release' not in branch.lower() and 'master' not in branch.lower():
         idevelopmode = 1
-    
+
+    # get version type
+    version_type = get_version_type(branch)
+
     # develop date text
     sdate = now.strftime('%m/%d/%Y')
-    
+
     # create disclaimer text
     is_approved, disclaimerfmt = get_disclaimerfmt()
-    
+
     # read version.f90 into memory
     fpth = os.path.join(paths[5], files[5])
     with open(fpth, 'r') as file:
@@ -263,7 +277,7 @@ def update_mf6_version(vmajor, vminor, vmicro):
                    'IDEVELOPMODE = {}'.format(idevelopmode)
         elif 'VERSION' in line:
             line = "  character(len=40), parameter :: " + \
-                   "VERSION = '{} {}'".format(version, sdate)
+                   "VERSION = '{}{}{}'".format(version, version_type, sdate)
         elif 'FMTDISCLAIMER' in line:
             line = disclaimerfmt
             skip = True
@@ -274,16 +288,15 @@ def update_mf6_version(vmajor, vminor, vmicro):
 
 
 def update_readme_markdown(vmajor, vminor, vmicro):
-
     # get branch
     branch = get_branch()
-        
+
     # create version
     version = get_tag(vmajor, vminor, vmicro)
-    
+
     # create disclaimer text
     is_approved, disclaimer = get_disclaimer()
-    
+
     if is_approved:
         sb = ''
     else:
@@ -324,7 +337,7 @@ def update_readme_markdown(vmajor, vminor, vmicro):
         if terminate:
             break
     f.close()
-    
+
     # write disclaimer markdown file
     fpth = os.path.join(paths[3], files[3])
     f = open(fpth, 'w')
