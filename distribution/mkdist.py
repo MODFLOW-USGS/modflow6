@@ -451,8 +451,8 @@ def update_mf6io_tex_files(distfolder, mf6pth, expth=None):
         expth = os.path.join(distfolder, 'examples', 'ex01-twri')
     expth = os.path.abspath(expth)
 
-    assert os.path.isfile(mf6pth)
-    assert os.path.isdir(expth)
+    assert os.path.isfile(mf6pth), '{} does not exist'.format(mf6pth)
+    assert os.path.isdir(expth), '{} does not exist'.format(expth)
 
     # run an example model
     if local:
