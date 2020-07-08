@@ -9,7 +9,7 @@ module NumericalSolutionModule
                                      DONE, DTHREE, DEP6, DEP20, DNODATA,       &
                                      TABLEFT, TABRIGHT,                        &
                                      MNORMAL, MVALIDATE,                       &
-                                     AXSREADONLY, AXSREADWRITE
+                                     MEMREADONLY, MEMREADWRITE
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
@@ -255,7 +255,7 @@ contains
     call mem_allocate(this%icnvg, 'ICNVG', solutionname)
     call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', solutionname)
     call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', solutionname)
-    call mem_allocate(this%mxiter, 'MXITER', solutionname)
+    call mem_allocate(this%mxiter, 'MXITER', solutionname, MEMREADWRITE)
     call mem_allocate(this%linmeth, 'LINMETH', solutionname)
     call mem_allocate(this%nonmeth, 'NONMETH', solutionname)
     call mem_allocate(this%iprims, 'IPRIMS', solutionname)
@@ -354,8 +354,8 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%name, AXSREADONLY)
-    call mem_allocate(this%x, this%neq, 'X', this%name, AXSREADWRITE)
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%name, MEMREADONLY)
+    call mem_allocate(this%x, this%neq, 'X', this%name)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%name)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%name)
     call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%name)

@@ -5,7 +5,7 @@ module MemoryTypeModule
                              MAXMEMRANK, LENMEMTYPE,                             &
                              TABSTRING, TABINTEGER,                              &
                              TABCENTER, TABLEFT, TABRIGHT,                       &
-                             AXSHIDDEN, AXSREADONLY, AXSREADWRITE
+                             MEMHIDDEN, MEMREADONLY, MEMREADWRITE
   use TableModule, only: TableType
   implicit none
   private
@@ -20,7 +20,7 @@ module MemoryTypeModule
     integer(I4B)                                           :: id                     !id, not used
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array
-    integer(I4B)                                           :: memaccess = AXSHIDDEN  !memory permissions
+    integer(I4B)                                           :: memaccess = MEMHIDDEN  !memory permissions
     logical(LGP)                                           :: master = .true.        !master copy, others point to this one
     logical(LGP), pointer                                  :: logicalsclr => null()  !pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !pointer to the integer
@@ -66,11 +66,11 @@ module MemoryTypeModule
     !
     ! -- set bmi access
     select case(this%memaccess)
-      case(AXSHIDDEN)
+      case(MEMHIDDEN)
         cbmi = '--'
-      case(AXSREADONLY)
+      case(MEMREADONLY)
         cbmi = 'READ'
-      case(AXSREADWRITE)
+      case(MEMREADWRITE)
         cbmi = 'READ/WRITE'
     end select
     !

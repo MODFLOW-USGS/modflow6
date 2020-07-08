@@ -191,7 +191,7 @@ def bmifunc(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get pointer to simulated heads
-    head = mf6.get_value_ptr("SLN_1/X")
+    head = mf6.get_value_ptr("LIBGWF_EVT01/X")
 
     # maximum outer iterations
     max_iter = mf6.get_value_ptr("SLN_1/MXITER")
