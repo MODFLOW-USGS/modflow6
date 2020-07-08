@@ -1,7 +1,8 @@
 module GwfStoModule
 
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT
+  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT,        &
+                                    MEMREADWRITE
   use SmoothingModule,        only: sQuadraticSaturation,                      &
                                     sQuadraticSaturationDerivative,            &
                                     sQSaturation, sLinearSaturation
@@ -667,8 +668,8 @@ module GwfStoModule
     call mem_allocate(this%isfac, 'ISFAC', this%origin)
     call mem_allocate(this%isseg, 'ISSEG', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
-    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%origin)
-    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%origin)
+    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%origin, MEMREADWRITE)
+    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%origin, MEMREADWRITE)
     !
     ! -- Initialize
     this%iusesy = 0
@@ -702,8 +703,8 @@ module GwfStoModule
     ! -- Allocate
     !call mem_allocate(this%iss, 'ISS', this%name_model)
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%origin)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%origin)
-    call mem_allocate(this%sc2, nodes, 'SC2', this%origin)
+    call mem_allocate(this%sc1, nodes, 'SC1', this%origin, MEMREADWRITE)
+    call mem_allocate(this%sc2, nodes, 'SC2', this%origin, MEMREADWRITE)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%origin)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%origin)
     !

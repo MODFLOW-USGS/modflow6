@@ -7,7 +7,7 @@ module MemoryManagerModule
                                     LINELENGTH, LENMEMTYPE,                      &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                                     TABCENTER, TABLEFT, TABRIGHT,                &
-                                    AXSHIDDEN, AXSREADONLY, AXSREADWRITE
+                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE
   use SimVariablesModule,     only: errmsg
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
@@ -614,7 +614,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_str1d
 
-  subroutine allocate_int(sclr, name, origin, axstype)
+  subroutine allocate_int(sclr, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a integer scalar 
 !
@@ -622,9 +622,9 @@ module MemoryManagerModule
 !       SCLR         : returned integer scalar
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -634,7 +634,7 @@ module MemoryManagerModule
     integer(I4B), pointer, intent(inout) :: sclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -663,8 +663,8 @@ module MemoryManagerModule
     write(mt%memtype, "(a)") 'INTEGER'
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -674,7 +674,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_int
   
-  subroutine allocate_int1d(aint, nrow, name, origin, axstype)
+  subroutine allocate_int1d(aint, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 1-dimensional integer array 
 !
@@ -683,9 +683,9 @@ module MemoryManagerModule
 !       NROW        : integer array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -696,7 +696,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -729,8 +729,8 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -740,7 +740,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_int1d
   
-  subroutine allocate_int2d(aint, ncol, nrow, name, origin, axstype)
+  subroutine allocate_int2d(aint, ncol, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 2-dimensional integer array 
 !
@@ -750,9 +750,9 @@ module MemoryManagerModule
 !       NROW         : integer array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -764,7 +764,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -797,8 +797,8 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -807,7 +807,7 @@ module MemoryManagerModule
     ! -- return
   end subroutine allocate_int2d
     
-  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, origin, axstype)
+  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 3-dimensional integer array 
 !
@@ -818,9 +818,9 @@ module MemoryManagerModule
 !       NLAY         : integer array number of layers
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -833,7 +833,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nlay
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -867,8 +867,8 @@ module MemoryManagerModule
                                                        nrow, nlay
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -878,7 +878,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_int3d
 
-  subroutine allocate_dbl(sclr, name, origin, axstype)
+  subroutine allocate_dbl(sclr, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a real scalar 
 !
@@ -886,9 +886,9 @@ module MemoryManagerModule
 !       SCLR         : returned real scalar
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -898,7 +898,7 @@ module MemoryManagerModule
     real(DP), pointer, intent(inout) :: sclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -927,8 +927,8 @@ module MemoryManagerModule
     write(mt%memtype, "(a)") 'DOUBLE'
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -938,7 +938,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl
   
-  subroutine allocate_dbl1d(adbl, nrow, name, origin, axstype)
+  subroutine allocate_dbl1d(adbl, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 1-dimensional real array 
 !
@@ -947,9 +947,9 @@ module MemoryManagerModule
 !       NROW         : real array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -960,7 +960,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -993,8 +993,8 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -1004,7 +1004,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl1d
   
-  subroutine allocate_dbl2d(adbl, ncol, nrow, name, origin, axstype)
+  subroutine allocate_dbl2d(adbl, ncol, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 2-dimensional real array 
 !
@@ -1014,9 +1014,9 @@ module MemoryManagerModule
 !       NROW         : real array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -1028,7 +1028,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1061,8 +1061,8 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -1072,7 +1072,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl2d
   
-  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, origin, axstype)
+  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 3-dimensional real array 
 !
@@ -1083,9 +1083,9 @@ module MemoryManagerModule
 !       NLAY         : real array number of layers
 !       NAME         : variable name
 !       ORIGIN       : variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -1098,7 +1098,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nlay
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1132,8 +1132,8 @@ module MemoryManagerModule
                                                        nrow, nlay
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -1143,7 +1143,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl3d
   
-  subroutine checkin_int1d(aint, name, origin, name2, origin2, axstype)
+  subroutine checkin_int1d(aint, name, origin, name2, origin2, memtype)
 ! ******************************************************************************
 ! Check in am existing 1-dimensional integer array to the memory manager
 !
@@ -1153,9 +1153,9 @@ module MemoryManagerModule
 !       ORIGIN       : variable origin
 !       NAME2        : second variable name
 !       ORIGIN2      : second variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -1167,7 +1167,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: origin
     character(len=*), intent(in) :: name2
     character(len=*), intent(in) :: origin2
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: isize
@@ -1195,8 +1195,8 @@ module MemoryManagerModule
     mt%masterorigin = origin2
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list
@@ -1206,7 +1206,7 @@ module MemoryManagerModule
     return
   end subroutine checkin_int1d
   
-  subroutine checkin_dbl1d(adbl, name, origin, name2, origin2, axstype)
+  subroutine checkin_dbl1d(adbl, name, origin, name2, origin2, memtype)
 ! ******************************************************************************
 ! Check in an existing 1-dimensional real array to the memory manager
 !
@@ -1216,9 +1216,9 @@ module MemoryManagerModule
 !       ORIGIN       : variable origin
 !       NAME2        : second variable name
 !       ORIGIN2      : second variable origin
-!       AXSTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are AXSHIDDEN, AXSREADONLY, 
-!                      and AXSREADWRITE.  
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -1230,7 +1230,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: origin
     character(len=*), intent(in) :: name2
     character(len=*), intent(in) :: origin2
-    integer(I4B), intent(in), optional :: axstype
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: isize
@@ -1258,8 +1258,8 @@ module MemoryManagerModule
     mt%masterorigin = origin2
     !
     ! -- set memory access permission
-    if (present(axstype)) then
-      mt%memaccess = axstype
+    if (present(memtype)) then
+      mt%memaccess = memtype
     end if
     !
     ! -- add memory type to the memory list

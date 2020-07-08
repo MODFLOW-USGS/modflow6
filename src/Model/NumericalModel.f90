@@ -2,7 +2,7 @@ module NumericalModelModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC,   &
-                             AXSREADONLY, AXSREADWRITE
+                             MEMREADONLY, MEMREADWRITE
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
   use SparseModule, only: sparsematrix
@@ -294,11 +294,9 @@ module NumericalModelModule
     integer(I4B) :: i
     !
     call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name),          &
-                      AXSREADONLY)
-    call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name),          &
-                      AXSREADONLY)
-    call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name),          &
-                      AXSREADONLY)
+                      MEMREADONLY)
+    call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name))
+    call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name))
     !
     ! -- initialize
     do i = 1, size(this%flowja)
@@ -319,7 +317,7 @@ module NumericalModelModule
     ! -- local
     ! -- code
     this%x => xsln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%x, 'X', this%name, name2, origin2, AXSREADONLY)
+    call mem_checkin(this%x, 'X', this%name, name2, origin2, MEMREADWRITE)
   end subroutine set_xptr
 
   subroutine set_rhsptr(this, rhssln, name2, origin2)
@@ -332,7 +330,7 @@ module NumericalModelModule
     ! -- local
     ! -- code
     this%rhs => rhssln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%rhs, 'RHS', this%name, name2, origin2, AXSREADONLY)
+    call mem_checkin(this%rhs, 'RHS', this%name, name2, origin2, MEMREADWRITE)
   end subroutine set_rhsptr
 
   subroutine set_iboundptr(this, iboundsln, name2, origin2)
@@ -346,7 +344,7 @@ module NumericalModelModule
     ! -- code
     this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
     call mem_checkin(this%ibound, 'IBOUND', this%name, name2, origin2,           &
-                     AXSREADONLY)
+                     MEMREADWRITE)
   end subroutine set_iboundptr
 
   subroutine get_mcellid(this, node, mcellid)
