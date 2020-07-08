@@ -29,6 +29,8 @@ def get_zipname():
     elif zipname == "win32":
         if platform.architecture()[0] == "64bit":
             zipname = "win64"
+
+    # return
     return zipname
 
 
@@ -53,12 +55,15 @@ def create_dir(pth):
     msg = 'could not create... {}'.format(os.path.abspath(pth))
     assert os.path.exists(pth), msg
 
+    # return
     return
 
 
 def test_update_version():
     from make_release import update_version
     update_version()
+
+    # return
     return
 
 
@@ -68,6 +73,7 @@ def test_create_dirs():
     for pth in pths:
         create_dir(pth)
 
+    # return
     return
 
 
@@ -94,6 +100,9 @@ def test_build_modflow6():
 
     msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
+
+    # return
+    return
 
 
 def test_build_modflow6_so():
@@ -123,6 +132,9 @@ def test_build_modflow6_so():
     msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
 
+    # return
+    return
+
 
 def test_build_mf5to6():
     # determine if app should be build
@@ -146,6 +158,9 @@ def test_build_mf5to6():
 
     msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
+
+    # return
+    return
 
 
 def test_build_zonebudget():
@@ -174,17 +189,7 @@ def test_build_zonebudget():
     msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
 
-
-def test_zip_assets():
-    # zip assets
-    env = 'GITHUB_ACTIONS'
-    # os.environ[env] = "true"
-    if env in os.environ:
-        fpth = get_zipname() + '.zip'
-        # zip up exe's using directories
-        zip_pth = os.path.join(temppth, fpth)
-        success = pymake.zip_all(zip_pth, dir_pths=binpth)
-        assert success, "could not create '{}'".format(zip_pth)
+    # return
     return
 
 
@@ -212,6 +217,26 @@ def test_update_mf6io():
     # update the mf6io simulation output for LaTeX
     update_mf6io_tex_files(None, exe_name, expth=ws)
 
+    # return
+    return
+
+
+def test_zip_assets():
+    # create temppth if it does not exist
+    if not os.path.isdir(temppth):
+        os.makedirs(temppth)
+
+    # zip assets
+    env = 'GITHUB_ACTIONS'
+    os.environ[env] = "true"
+    if env in os.environ:
+        fpth = get_zipname() + '.zip'
+        # zip up exe's using directories
+        zip_pth = os.path.join(temppth, fpth)
+        success = pymake.zip_all(zip_pth, dir_pths=binpth)
+        assert success, "could not create '{}'".format(zip_pth)
+    return
+
 
 if __name__ == "__main__":
     test_update_version()
@@ -220,5 +245,5 @@ if __name__ == "__main__":
     test_build_modflow6_so()
     test_build_mf5to6()
     test_build_zonebudget()
-    test_zip_assets()
     test_update_mf6io()
+    test_zip_assets()
