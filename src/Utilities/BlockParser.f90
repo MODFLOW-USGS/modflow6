@@ -310,12 +310,12 @@ contains
   subroutine GetRemainingLine(this, line)
     ! -- dummy
     class(BlockParserType), intent(inout) :: this
-    character(len=*),       intent(out)   :: line
+    character(len=:), allocatable, intent(out)   :: line
     ! -- local
     integer(I4B) :: linelen
     !
     linelen = len_trim(this%line)
-    line = this%line(this%lloc:linelen)
+    line = this%line(this%lloc:linelen) // ' '
     !
     return
   end subroutine GetRemainingLine

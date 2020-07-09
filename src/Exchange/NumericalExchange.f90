@@ -480,7 +480,7 @@ contains
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound

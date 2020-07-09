@@ -932,7 +932,8 @@ module GwtMstModule
     ! -- dummy
     class(GwtMstType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     logical, dimension(7) :: lname

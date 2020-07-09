@@ -1703,7 +1703,8 @@ module GwfBuyModule
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, keyword, errmsg
+    character(len=LINELENGTH) :: keyword, errmsg
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc
     logical :: endOfBlock
     character(len=24) :: aname(2)

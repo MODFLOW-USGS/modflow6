@@ -1203,7 +1203,7 @@ contains
     real(DP) :: sfaclocal
     character(len=40) :: keyword, keyvalue
     character(len=LINELENGTH) :: ermsg
-    character(len=LENHUGELINE)     :: line
+    character(len=:), allocatable :: line
     character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: words
 ! ------------------------------------------------------------------------------
     !

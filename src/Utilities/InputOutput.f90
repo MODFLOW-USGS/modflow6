@@ -1834,7 +1834,8 @@ module InputOutputModule
     endif
     auxloop: do
       call urword(line, lloc, istart, istop, 1, n, rval, iout, inunit)
-      if(lloc >= linelen) exit auxloop
+      !if(lloc >= linelen) exit auxloop
+      if (istart >= linelen) exit auxloop
       naux = naux + 1
       call ExpandArray(auxname)
       auxname(naux) = line(istart:istop)
@@ -2245,11 +2246,12 @@ module InputOutputModule
     character (len=:), allocatable, intent(inout) :: line
     integer(I4B),        intent(out) :: ierr
     ! -- local definitions
+    character (len=:), allocatable :: linetemp
     character (len=2), parameter :: comment = '//'
     character(len=LINELENGTH)    :: errmsg
     character(len=1), parameter  :: tab = CHAR(9)
     logical :: iscomment
-    integer(I4B) :: i, l
+    integer(I4B) :: i, j, l, istart, lsize
 ! ------------------------------------------------------------------------------
     !code
     !
@@ -2278,7 +2280,22 @@ module InputOutputModule
       !
       ! Ensure that any initial tab characters are treated as spaces
       cleartabs: do
-        line(:) = trim(adjustl(line))
+        !
+        ! -- adjustl manually to avoid stack overflow
+        lsize = len(line)
+        allocate(character(len=lsize) :: linetemp)
+        do j = 1, lsize
+          if (line(j:j) /= ' ' .and. line(j:j) /= ',' .and. line(j:j) /= char(9)) then
+            istart = j
+            exit
+          end if
+        end do
+        linetemp(:) = ' '
+        linetemp(:) = line(istart:)
+        line(:) = linetemp(:)
+        deallocate(linetemp)
+        !
+        ! -- check for comment
         iscomment = .false.
         select case (line(1:1))
           case ('#')
@@ -2317,16 +2334,30 @@ module InputOutputModule
   end subroutine u9rdcom
 
   subroutine get_line(lun, line, iostat)
+! ******************************************************************************
+! Read an unlimited length line from unit number lun into a deferred-length
+! characater string (line).  Tack on a single space to the end so that 
+! routines like URWORD continue to function as before.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     integer(I4B), intent(in) :: lun
     character(len=:), intent(out), allocatable :: line
     integer(I4B), intent(out) :: iostat
+    ! -- local
     integer(I4B), parameter :: buffer_len = MAXCHARLEN
     character(len=buffer_len) :: buffer
     character(len=:), allocatable :: linetemp
     integer(I4B) :: size_read, linesize
-
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
     line = ''
     linetemp = ''
+    !
+    ! -- process
     do
       read ( lun, '(A)',  &
           iostat = iostat,  &
@@ -2359,7 +2390,5 @@ module InputOutputModule
       end if
     end do
   end subroutine get_line  
-  
-  
 
 END MODULE InputOutputModule

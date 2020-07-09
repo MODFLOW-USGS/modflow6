@@ -2151,7 +2151,7 @@ contains
     class(GwfCsubType),   intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=MAXCHARLEN) :: fname
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound
@@ -3065,7 +3065,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     logical :: isfound, endOfBlock
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=20) :: cellid
     integer(I4B) :: iske
