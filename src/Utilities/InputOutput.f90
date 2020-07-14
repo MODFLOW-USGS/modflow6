@@ -2283,6 +2283,7 @@ module InputOutputModule
         !
         ! -- adjustl manually to avoid stack overflow
         lsize = len(line)
+        istart = 1
         allocate(character(len=lsize) :: linetemp)
         do j = 1, lsize
           if (line(j:j) /= ' ' .and. line(j:j) /= ',' .and. line(j:j) /= char(9)) then
