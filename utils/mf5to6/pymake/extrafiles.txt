@@ -6,6 +6,7 @@
 ../../../src/Utilities/BlockParser.f90
 ../../../src/Utilities/Constants.f90
 ../../../src/Utilities/SimVariables.f90
+../../../src/Utilities/compilerversion.fpp
 ../../../src/Utilities/genericutils.f90
 ../../../src/Utilities/InputOutput.f90
 ../../../src/Utilities/kind.f90
