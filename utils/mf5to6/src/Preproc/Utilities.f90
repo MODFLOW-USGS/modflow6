@@ -881,7 +881,8 @@ contains
     ! local
     integer :: ierr, istart, istop, iu, idum, icol
     double precision :: rdum
-    character(len=MAXCHARLEN) :: ermsg, line
+    character(len=MAXCHARLEN) :: ermsg
+    character(len=:), allocatable :: line
     character(len=10) :: stype
     logical :: continueread=.true., found
     integer :: iuext

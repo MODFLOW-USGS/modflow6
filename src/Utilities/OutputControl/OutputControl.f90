@@ -94,7 +94,7 @@ module OutputControlModule
     ! -- local
     integer(I4B) :: ierr, ival, ipos
     logical :: isfound, found, endOfBlock
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: ermsg, keyword1, keyword2
     character(len=LINELENGTH) :: printsave
     class(OutputControlDataType), pointer :: ocdobjptr
@@ -329,7 +329,8 @@ module OutputControlModule
     ! -- dummy
     class(OutputControlType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: ierr
     integer(I4B) :: ipos
     logical :: isfound, found, endOfBlock

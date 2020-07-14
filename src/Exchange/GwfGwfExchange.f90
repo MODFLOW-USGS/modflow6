@@ -1179,7 +1179,7 @@ contains
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname
     character(len=LENAUXNAME), dimension(:), allocatable :: caux

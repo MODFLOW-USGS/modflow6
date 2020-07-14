@@ -75,7 +75,7 @@ def test_getmfexes():
 
 
 def test_build_modflow6():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nomf6':
             txt = 'Command line cancel of MODFLOW 6 build'
@@ -103,7 +103,7 @@ def test_build_modflow6():
 
 
 def test_build_modflow6_so():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nomf6':
             txt = 'Command line cancel of MODFLOW 6 build'
@@ -134,7 +134,7 @@ def test_build_modflow6_so():
 
 
 def test_build_mf5to6():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nomf5to6':
             txt = 'Command line cancel of MODFLOW 5 to 6 converter build'
@@ -158,7 +158,7 @@ def test_build_mf5to6():
 
 
 def test_build_zonebudget():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nozonebudget':
             txt = 'Command line cancel of ZONEBUDGET for MODFLOW 6 build'
