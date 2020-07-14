@@ -28,7 +28,8 @@ module VersionModule
   
   contains
 
-  subroutine write_listfile_header(iout, cmodel_type)
+  subroutine write_listfile_header(iout, cmodel_type, write_sys_command, &
+                                   write_kind_info)
 ! ******************************************************************************
 ! write_listfile_header -- write a header to the simulation or model list file
 ! ******************************************************************************
@@ -40,12 +41,16 @@ module VersionModule
     use GenericUtilitiesModule, only: write_centered
     use CompilerVersion, only: get_compiler
     ! -- dummy
-    character(len=*), intent(in), optional :: cmodel_type
     integer(I4B), intent(in) :: iout
+    character(len=*), intent(in), optional :: cmodel_type
+    logical(LGP), intent(in), optional :: write_sys_command
+    logical(LGP), intent(in), optional :: write_kind_info
     ! -- local
     character(len=LENBIGLINE) :: syscmd
     character(len=80) :: compiler
     integer(I4B) :: iheader_width = 80
+    logical(LGP) :: wki
+    logical(LGP) :: wsc
 ! ------------------------------------------------------------------------------
     !
     ! -- Write title to list file
@@ -74,13 +79,21 @@ module VersionModule
     write(iout, FMTDISCLAIMER)
     !
     ! -- Write the system command used to initiate simulation
-    call GET_COMMAND(syscmd)
-    write(iout, '(/,a,/,a)') 'System command used to initiate simulation:',    &
-                             trim(syscmd)
+    wsc = .true.
+    if (present(write_sys_command)) wsc = write_sys_command
+    if (wsc) then
+      call GET_COMMAND(syscmd)
+      write(iout, '(/,a,/,a)') 'System command used to initiate simulation:',  &
+                               trim(syscmd)
+    end if
     !
     ! -- Write precision of real variables
-    write(iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
-    call write_kindinfo(iout)
+    wki = .true.
+    if (present(write_kind_info)) wki = write_kind_info
+    if (wki) then
+      write(iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
+      call write_kindinfo(iout)
+    end if
     write(iout, *)
     !
     ! -- return
