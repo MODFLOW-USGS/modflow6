@@ -3,7 +3,8 @@ module TimeSeriesManagerModule
   use KindModule,                only: DP, I4B
   use ConstantsModule,           only: DZERO, LENPACKAGENAME, MAXCHARLEN, &
                                        LINELENGTH, LENTIMESERIESNAME
-  use HashTableModule,           only: HashTableType
+  use HashTableModule,           only: HashTableType, hash_table_cr, &
+                                       hash_table_da
   use InputOutputModule,         only: same_word, UPCASE
   use ListModule,                only: ListType
   use SimModule,                 only: store_error, store_error_unit, ustop
@@ -29,10 +30,10 @@ module TimeSeriesManagerModule
     integer(I4B), public :: iout = 0                                             ! output unit number
     type(TimeSeriesFileListType), pointer, public :: tsfileList => null()        ! list of ts files objs
     type(ListType), pointer, public :: boundTsLinks => null()                    ! links to bound and aux
-    integer(I4B) :: numtsfiles = 0       ! number of ts files
+    integer(I4B) :: numtsfiles = 0                                               ! number of ts files
     character(len=MAXCHARLEN), allocatable, dimension(:) :: tsfiles              ! list of ts files
     type(ListType), pointer, private :: auxvarTsLinks => null()                  ! list of aux links
-    type(HashTableType), private :: BndTsHashTable                               ! hash of ts to tsobj
+    type(HashTableType), pointer, private :: BndTsHashTable => null()            ! hash of ts to tsobj
     type(TimeSeriesContainerType), allocatable, dimension(:),                   &
                                    private :: TsContainers
   contains
@@ -86,7 +87,7 @@ module TimeSeriesManagerModule
 ! ------------------------------------------------------------------------------
     !
     if (this%numtsfiles > 0) then
-      call this%HashBndTimeSeries(this%numtsfiles)
+      call this%HashBndTimeSeries()
     endif
     !
     ! -- return
@@ -305,7 +306,9 @@ module TimeSeriesManagerModule
     deallocate(this%tsfileList)
     !
     ! -- Deallocate the hash table
-    call this%BndTsHashTable%FreeHash()
+    if (associated(this%BndTsHashTable)) then
+      call hash_table_da(this%BndTsHashTable)
+    end if
     !
     deallocate(this%tsfiles)
     !
@@ -483,7 +486,7 @@ module TimeSeriesManagerModule
     ! Get index from hash table, get time series from TsContainers,
     !     and assign result to time series contained in link.
     res => null()
-    call this%BndTsHashTable%GetHash(name, indx)
+    indx = this%BndTsHashTable%get_index(name)
     if (indx > 0) then
       res => this%TsContainers(indx)%timeSeries
     endif
@@ -491,7 +494,7 @@ module TimeSeriesManagerModule
     return
   end function get_time_series
 
-  subroutine HashBndTimeSeries(this, ivecsize)
+  subroutine HashBndTimeSeries(this)
 ! ******************************************************************************
 ! HashBndTimeSeries -- 
 !   Store all boundary (stress) time series links in
@@ -502,7 +505,6 @@ module TimeSeriesManagerModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class (TimeSeriesManagerType), intent(inout) :: this
-    integer(I4B), intent(in) :: ivecsize
     ! -- local
     integer(I4B) :: i, j, k, numtsfiles, numts
     character(len=LENTIMESERIESNAME) :: name
@@ -510,7 +512,7 @@ module TimeSeriesManagerModule
 ! ------------------------------------------------------------------------------
     !
     ! Initialize the hash table
-    call this%BndTsHashTable%InitHash(ivecsize)
+    call hash_table_cr(this%BndTsHashTable)
     !
     ! Allocate the TsContainers array to accommodate all time-series links.
     numts = this%tsfileList%CountTimeSeries()
@@ -528,7 +530,7 @@ module TimeSeriesManagerModule
         this%TsContainers(k)%timeSeries => tsfile%GetTimeSeries(j)
         if (associated(this%TsContainers(k)%timeSeries)) then
           name = this%TsContainers(k)%timeSeries%Name
-          call this%BndTsHashTable%PutHash(name, k)
+          call this%BndTsHashTable%add_entry(name, k)
         endif
       enddo
     enddo
