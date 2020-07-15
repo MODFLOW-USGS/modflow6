@@ -117,24 +117,24 @@ module GwfMvrModule
   public :: GwfMvrType, mvr_cr
 
   type, extends(NumericalPackageType) :: GwfMvrType
-    integer(I4B), pointer                            :: ibudgetout => null()     !binary budget output file
-    integer(I4B), pointer                            :: maxmvr => null()         !max number of movers to be specified
-    integer(I4B), pointer                            :: maxpackages => null()    !max number of packages to be specified
-    integer(I4B), pointer                            :: maxcomb => null()        !max number of combination of packages
-    integer(I4B), pointer                            :: nmvr => null()           !number of movers for current stress period
-    integer(I4B), pointer                            :: iexgmvr => null()        !indicate mover is for an exchange (not for a single model)
-    integer(I4B), pointer                            :: imodelnames => null()    !indicate package input file has model names in it
-    real(DP), pointer                                :: omega => null()          !temporal weighting factor (not presently used)
-    integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !number of entries for each combination
+    integer(I4B), pointer                            :: ibudgetout => null()     !< binary budget output file
+    integer(I4B), pointer                            :: maxmvr => null()         !< max number of movers to be specified
+    integer(I4B), pointer                            :: maxpackages => null()    !< max number of packages to be specified
+    integer(I4B), pointer                            :: maxcomb => null()        !< max number of combination of packages
+    integer(I4B), pointer                            :: nmvr => null()           !< number of movers for current stress period
+    integer(I4B), pointer                            :: iexgmvr => null()        !< indicate mover is for an exchange (not for a single model)
+    integer(I4B), pointer                            :: imodelnames => null()    !< indicate package input file has model names in it
+    real(DP), pointer                                :: omega => null()          !< temporal weighting factor (not presently used)
+    integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !< number of entries for each combination
     character(len=LENORIGIN+1),                                                &
-      dimension(:), pointer, contiguous              :: pakorigins               !array of model//package names
+      dimension(:), pointer, contiguous              :: pakMemPaths              !< memory paths of all packages used in this mover
     character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous              :: paknames => null()       !array of package names
-    type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !array of movers
-    type(BudgetType), pointer                        :: budget => null()         !mover budget object (used to write table)
-    type(BudgetObjectType), pointer                  :: budobj => null()         !new budget container (used to write binary file)
+      dimension(:), pointer, contiguous              :: paknames => null()       !< array of package names
+    type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !< array of movers
+    type(BudgetType), pointer                        :: budget => null()         !< mover budget object (used to write table)
+    type(BudgetObjectType), pointer                  :: budobj => null()         !< new budget container (used to write binary file)
     type(PackageMoverType),                                                    &
-      dimension(:), pointer, contiguous    :: pakmovers => null()                !pointer to package mover objects
+      dimension(:), pointer, contiguous    :: pakmovers => null()                !< pointer to package mover objects
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
@@ -349,7 +349,7 @@ module GwfMvrModule
         !
         ! -- Process the water mover line (mname = '' if this is an exchange)
         call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
-                             this%pakorigins, this%pakmovers)
+                             this%pakMemPaths, this%pakmovers)
         !
         ! -- Echo input
         if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
@@ -365,15 +365,15 @@ module GwfMvrModule
       write(this%iout, '(4x, i0, a, i0)') this%nmvr,                           &
         ' MOVERS READ FOR PERIOD ', kper
       !
-      ! -- Check to make sure all providers and receivers are in pakorigins
+      ! -- Check to make sure all providers and receivers are properly stored
       do i = 1, this%nmvr
-        ipos = ifind(this%pakorigins, this%mvr(i)%pname1)
+        ipos = ifind(this%pakMemPaths, this%mvr(i)%pname1)
         if(ipos < 1) then
           write(errmsg,'(4x,a,a,a)') 'ERROR. PROVIDER ',                       &
             trim(this%mvr(i)%pname1), ' NOT LISTED IN PACKAGES BLOCK.'
           call store_error(errmsg)
         endif
-        ipos = ifind(this%pakorigins, this%mvr(i)%pname2)
+        ipos = ifind(this%pakMemPaths, this%mvr(i)%pname2)
         if(ipos < 1) then
           write(errmsg,'(4x,a,a,a)') 'ERROR. RECEIVER ',                       &
             trim(this%mvr(i)%pname2), ' NOT LISTED IN PACKAGES BLOCK.'
@@ -392,8 +392,8 @@ module GwfMvrModule
       !
       ! --
       do i = 1, this%nmvr
-        ii = ifind(this%pakorigins, this%mvr(i)%pname1)
-        jj = ifind(this%pakorigins, this%mvr(i)%pname2)
+        ii = ifind(this%pakMemPaths, this%mvr(i)%pname1)
+        jj = ifind(this%pakMemPaths, this%mvr(i)%pname2)
         ipos = (ii - 1) * this%maxpackages + jj
         this%ientries(ipos) = this%ientries(ipos) + 1
       end do
@@ -565,10 +565,10 @@ module GwfMvrModule
     ! -- Accumulate the rates
     do i = 1, this%nmvr
       do j = 1, this%maxpackages
-        if(this%pakorigins(j) == this%mvr(i)%pname1) then
+        if(this%pakMemPaths(j) == this%mvr(i)%pname1) then
           ratin(j) = ratin(j) + this%mvr(i)%qpactual
         endif
-        if(this%pakorigins(j) == this%mvr(i)%pname2) then
+        if(this%pakMemPaths(j) == this%mvr(i)%pname2) then
           ratout(j) = ratout(j) + this%mvr(i)%qpactual
         endif
       enddo
@@ -578,7 +578,7 @@ module GwfMvrModule
     call this%budget%reset()
     do j = 1, this%maxpackages
       if((this%iexgmvr) == 1) then
-        pname = this%pakorigins(j)
+        pname = this%pakMemPaths(j)
       else
         pname = this%paknames(j)
       endif
@@ -620,7 +620,7 @@ module GwfMvrModule
     if (this%inunit > 0) then
       call mem_deallocate(this%ientries)
       deallocate(this%mvr)
-      deallocate(this%pakorigins)
+      deallocate(this%pakMemPaths)
       deallocate(this%paknames)
       deallocate(this%pakmovers)
       !
@@ -903,19 +903,19 @@ module GwfMvrModule
           call ustop()
         endif
         if(this%iexgmvr == 0) then
-          this%pakorigins(npak) = trim(adjustl(this%name_model)) // ' ' // &
+          this%pakMemPaths(npak) = trim(adjustl(this%name_model)) // ' ' // &
             trim(word1)
           word = word1
         else
-          this%pakorigins(npak) = trim(word1)
+          this%pakMemPaths(npak) = trim(word1)
           call this%parser%GetStringCaps(word2)
-          this%pakorigins(npak) = trim(this%pakorigins(npak)) // ' ' //    &
+          this%pakMemPaths(npak) = trim(this%pakMemPaths(npak)) // ' ' //    &
             trim(word2)
           word = word2
         endif
         this%paknames(npak) = trim(word)
         write(this%iout,'(3x,a,a)')'INCLUDING PACKAGE: ',                  &
-          trim(this%pakorigins(npak))
+          trim(this%pakMemPaths(npak))
       end do
       write(this%iout,'(1x,a)')'END OF MVR PACKAGES'
     else
@@ -959,13 +959,13 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Check to make sure mover is activated for each package
-    do i = 1, size(this%pakorigins)
+    do i = 1, size(this%pakMemPaths)
       imover_ptr => null()
-      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pakorigins(i)))
+      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pakMemPaths(i)))
       if (imover_ptr == 0) then
         write(errmsg, '(a, a, a)') &
                           'ERROR.  MODEL AND PACKAGE "', &
-                          trim(this%pakorigins(i)), &
+                          trim(this%pakMemPaths(i)), &
                           '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
         call store_error(errmsg)
       end if
@@ -998,10 +998,10 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Assign the package mover pointer if it hasn't been assigned yet
-    do i = 1, size(this%pakorigins)
-      if (this%pakmovers(i)%origin == '') then
+    do i = 1, size(this%pakMemPaths)
+      if (this%pakmovers(i)%memoryPath == '') then
         call set_packagemover_pointer(this%pakmovers(i), &
-                                      trim(this%pakorigins(i)))
+                                      trim(this%pakMemPaths(i)))
       end if
     end do
     !
@@ -1070,7 +1070,7 @@ module GwfMvrModule
     !
     ! -- Allocate
     allocate(this%mvr(this%maxmvr))
-    allocate(this%pakorigins(this%maxpackages))
+    allocate(this%pakMemPaths(this%maxpackages))
     allocate(this%paknames(this%maxpackages))
     allocate(this%pakmovers(this%maxpackages))
     !
@@ -1144,19 +1144,19 @@ module GwfMvrModule
     naux = 0
     do i = 1, this%maxpackages
       lloc = 1
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
+      call urword(this%pakMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakMemPaths(i)
       modelname1 = pakoriginsdummy(istart:istop)
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
+      call urword(this%pakMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakMemPaths(i)
       packagename1 = pakoriginsdummy(istart:istop)
       do j = 1, this%maxpackages
         lloc = 1
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
+        call urword(this%pakMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakMemPaths(j)
         modelname2 = pakoriginsdummy(istart:istop)
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
+        call urword(this%pakMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakMemPaths(j)
         packagename2 = pakoriginsdummy(istart:istop)
         idx = idx + 1
         call this%budobj%budterm(idx)%initialize(text, &
@@ -1209,20 +1209,20 @@ module GwfMvrModule
     do i = 1, this%maxpackages
       ! -- Retrieve modelname1 and packagename1
       lloc = 1
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
+      call urword(this%pakMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakMemPaths(i)
       modelname1 = pakoriginsdummy(istart:istop)
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
+      call urword(this%pakMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakMemPaths(i)
       packagename1 = pakoriginsdummy(istart:istop)
       do j = 1, this%maxpackages
         ! -- Retrieve modelname2 and packagename2
         lloc = 1
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
+        call urword(this%pakMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakMemPaths(j)
         modelname2 = pakoriginsdummy(istart:istop)
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
+        call urword(this%pakMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakMemPaths(j)
         packagename2 = pakoriginsdummy(istart:istop)
         ipos = (i - 1) * this%maxpackages + j
         nitems = this%ientries(ipos)
@@ -1236,8 +1236,8 @@ module GwfMvrModule
           !
           ! -- pname1 is provider, pname2 is receiver
           !    flow is always negative because it is coming from provider
-          if(this%pakorigins(i) == this%mvr(n)%pname1) then
-            if(this%pakorigins(j) == this%mvr(n)%pname2) then
+          if(this%pakMemPaths(i) == this%mvr(n)%pname1) then
+            if(this%pakMemPaths(j) == this%mvr(n)%pname2) then
               !
               ! -- set q to qpactual
               q = -this%mvr(n)%qpactual
