@@ -2743,7 +2743,7 @@ module MemoryManagerModule
   !! @param[in]   subcomponent    the name of the package (optional)
   !! @return      memory_path      the path to the memory object
   !!
-  !! NB: no need to trim the input variables
+  !! NB: no need to trim the input parameters
   !<
   function create_mem_path(component, subcomponent) result(memory_path)
     character(len=*), intent(in) :: component

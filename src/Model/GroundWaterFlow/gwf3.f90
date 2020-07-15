@@ -107,6 +107,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ListsModule,                only: basemodellist
+    use MemoryManagerModule,        only: create_mem_path
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
     use GenericUtilitiesModule,     only: write_centered
@@ -150,6 +151,10 @@ module GwfModule
     !
     ! -- Allocate a new GWF Model (this) and add it to basemodellist
     allocate(this)
+    !
+    ! -- Set memory path before allocation in memory manager can be done
+    this%memoryPath = create_mem_path(modelname)
+    !
     call this%allocate_scalars(modelname)
     model => this
     call AddBaseModelToList(basemodellist, model)
@@ -1322,18 +1327,18 @@ module GwfModule
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic,  'INIC',  modelname)
-    call mem_allocate(this%inoc,  'INOC',  modelname)
-    call mem_allocate(this%innpf, 'INNPF', modelname)
-    call mem_allocate(this%inbuy, 'INBUY', modelname)
-    call mem_allocate(this%insto, 'INSTO', modelname)
-    call mem_allocate(this%incsub, 'INCSUB', modelname)
-    call mem_allocate(this%inmvr, 'INMVR', modelname)
-    call mem_allocate(this%inhfb, 'INHFB', modelname)
-    call mem_allocate(this%ingnc, 'INGNC', modelname)
-    call mem_allocate(this%inobs, 'INOBS', modelname)
-    call mem_allocate(this%iss,   'ISS',   modelname)
-    call mem_allocate(this%inewtonur, 'INEWTONUR', modelname)
+    call mem_allocate(this%inic,  'INIC',  this%memoryPath)
+    call mem_allocate(this%inoc,  'INOC',  this%memoryPath)
+    call mem_allocate(this%innpf, 'INNPF', this%memoryPath)
+    call mem_allocate(this%inbuy, 'INBUY', this%memoryPath)
+    call mem_allocate(this%insto, 'INSTO', this%memoryPath)
+    call mem_allocate(this%incsub, 'INCSUB', this%memoryPath)
+    call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
+    call mem_allocate(this%inhfb, 'INHFB', this%memoryPath)
+    call mem_allocate(this%ingnc, 'INGNC', this%memoryPath)
+    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    call mem_allocate(this%iss,   'ISS',   this%memoryPath)
+    call mem_allocate(this%inewtonur, 'INEWTONUR', this%memoryPath)
     !
     this%inic = 0
     this%inoc = 0

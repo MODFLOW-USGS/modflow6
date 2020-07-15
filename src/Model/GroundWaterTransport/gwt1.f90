@@ -135,7 +135,7 @@ module GwtModule
                                           FMTDISCLAIMER, IDEVELOPMODE
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
-    use MemoryManagerModule,        only: mem_allocate
+    use MemoryManagerModule,        only: mem_allocate, create_mem_path
     use GwfDisModule,               only: dis_cr
     use GwfDisvModule,              only: disv_cr
     use GwfDisuModule,              only: disu_cr
@@ -170,6 +170,10 @@ module GwtModule
     !
     ! -- Allocate a new GWT Model (this) and add it to basemodellist
     allocate(this)
+    !
+    ! -- Set this before any allocs in the memory manager can be done
+    this%memoryPath = create_mem_path(modelname)
+    !
     call this%allocate_scalars(modelname)
     model => this
     call AddBaseModelToList(basemodellist, model)
@@ -1026,15 +1030,15 @@ module GwtModule
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic , 'INIC',  modelname)
-    call mem_allocate(this%infmi, 'INFMI', modelname)
-    call mem_allocate(this%inmvt, 'INMVT', modelname)
-    call mem_allocate(this%inmst, 'INMST', modelname)
-    call mem_allocate(this%inadv, 'INADV', modelname)
-    call mem_allocate(this%indsp, 'INDSP', modelname)
-    call mem_allocate(this%inssm, 'INSSM', modelname)
-    call mem_allocate(this%inoc,  'INOC ', modelname)
-    call mem_allocate(this%inobs, 'INOBS', modelname)
+    call mem_allocate(this%inic , 'INIC',  this%memoryPath)
+    call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
+    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
+    call mem_allocate(this%inmst, 'INMST', this%memoryPath)
+    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
+    call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
+    call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
+    call mem_allocate(this%inoc,  'INOC ', this%memoryPath)
+    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
     this%inic  = 0
     this%infmi = 0

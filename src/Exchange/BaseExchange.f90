@@ -13,7 +13,7 @@ module BaseExchangeModule
   
   type, abstract :: BaseExchangeType
     character(len=LENEXCHANGENAME)   :: name                !< the name of this exchange
-    character(len=LENMEMPATH) :: memoryPath          !< the location in the memory manager where the variables are stored
+    character(len=LENMEMPATH)        :: memoryPath          !< the location in the memory manager where the variables are stored
     class(BaseSolutionType), pointer :: solution => null()
     integer(I4B)                     :: id
   contains
