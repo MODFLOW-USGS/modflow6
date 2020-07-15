@@ -453,7 +453,7 @@ module GwtMstModule
     !
     ! -- Add contributions to model budget
     call model_budget%addentry(rin, rout, delt, budtxt(1), isuppress_output,   &
-                               rowlabel=this%name)
+                               rowlabel=this%packName)
     !
     ! -- Return
     return
@@ -524,7 +524,7 @@ module GwtMstModule
     !
     ! -- Add decay contributions to model budget
     call model_budget%addentry(rdcyin, rdcyout, delt, budtxt(2),               &
-                                isuppress_output, rowlabel=this%name)
+                                isuppress_output, rowlabel=this%packName)
     !
     ! -- Return
     return
@@ -603,7 +603,7 @@ module GwtMstModule
     !
     ! -- Add sorbtion contributions to model budget
     call model_budget%addentry(rsrbin, rsrbout, delt, budtxt(3),               &
-                                isuppress_output, rowlabel=this%name)
+                                isuppress_output, rowlabel=this%packName)
     !
     ! -- Calculate sorbed decay change
     if (this%idcy /= 0) then
@@ -642,7 +642,7 @@ module GwtMstModule
       ! -- Add decay contributions to model budget
       if (this%idcy > 0) then
         call model_budget%addentry(rrctin, rrctout, delt, budtxt(4),           &
-                                   isuppress_output, rowlabel=this%name)
+                                   isuppress_output, rowlabel=this%packName)
       endif
     endif
     !
@@ -770,8 +770,8 @@ module GwtMstModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%isrb, 'ISRB', this%origin)
-    call mem_allocate(this%idcy, 'IDCY', this%origin)
+    call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
+    call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     !
     ! -- Initialize
     this%isrb = 0
@@ -800,36 +800,36 @@ module GwtMstModule
     !
     ! -- Allocate
     ! -- sto
-    call mem_allocate(this%porosity, nodes, 'POROSITY', this%origin)
-    call mem_allocate(this%prsity2, nodes, 'PRSITY2', this%origin)
-    call mem_allocate(this%ratesto, nodes, 'RATESTO', this%origin)
+    call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
+    call mem_allocate(this%prsity2, nodes, 'PRSITY2', this%memoryPath)
+    call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
     if (this%idcy == 0) then
-      call mem_allocate(this%ratedcy, 1, 'RATEDCY', this%origin)
-      call mem_allocate(this%decay, 1, 'DECAY', this%origin)
+      call mem_allocate(this%ratedcy, 1, 'RATEDCY', this%memoryPath)
+      call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
     else
-      call mem_allocate(this%ratedcy, this%dis%nodes, 'RATEDCY', this%origin)
-      call mem_allocate(this%decay, nodes, 'DECAY', this%origin)
+      call mem_allocate(this%ratedcy, this%dis%nodes, 'RATEDCY', this%memoryPath)
+      call mem_allocate(this%decay, nodes, 'DECAY', this%memoryPath)
     end if
     if (this%idcy /= 0 .and. this%isrb /= 0) then
         call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS',           &
-                          this%origin)
+                          this%memoryPath)
     else
-        call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%origin)
+        call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
     endif
     call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED',                    &
-                      this%origin)
+                      this%memoryPath)
     !
     ! -- srb
     if (this%isrb == 0) then
-      call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%origin)
-      call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%origin)
-      call mem_allocate(this%ratesrb, 1, 'RATESRB', this%origin)
+      call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
+      call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%memoryPath)
+      call mem_allocate(this%ratesrb, 1, 'RATESRB', this%memoryPath)
     else
-      call mem_allocate(this%bulk_density, nodes, 'BULK_DENSITY', this%origin)
-      call mem_allocate(this%distcoef,  nodes, 'DISTCOEF', this%origin)
-      call mem_allocate(this%ratesrb, nodes, 'RATESRB', this%origin)
+      call mem_allocate(this%bulk_density, nodes, 'BULK_DENSITY', this%memoryPath)
+      call mem_allocate(this%distcoef,  nodes, 'DISTCOEF', this%memoryPath)
+      call mem_allocate(this%ratesrb, nodes, 'RATESRB', this%memoryPath)
     end if
     !
     ! -- Initialize
@@ -969,7 +969,7 @@ module GwtMstModule
           case ('BULK_DENSITY')
             if (this%isrb == 0) &
               call mem_reallocate(this%bulk_density, this%dis%nodes,           &
-                                  'BULK_DENSITY', trim(this%origin))
+                                  'BULK_DENSITY', trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive,                 &
                                          this%bulk_density, aname(2))
@@ -977,7 +977,7 @@ module GwtMstModule
           case ('DISTCOEF')
             if (this%isrb == 0) &
               call mem_reallocate(this%distcoef, this%dis%nodes, 'DISTCOEF',   &
-                                trim(this%origin))
+                                trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%distcoef,  &
                                          aname(3))
@@ -985,14 +985,14 @@ module GwtMstModule
           case ('DECAY')
             if (this%idcy == 0) &
               call mem_reallocate(this%decay, this%dis%nodes, 'DECAY',         &
-                                 trim(this%origin))
+                                 trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%decay,     &
                                          aname(4))
             lname(4) = .true.
           case ('DECAY_SORBED')
             call mem_reallocate(this%decay_sorbed, this%dis%nodes,             &
-                                'DECAY_SORBED', trim(this%origin))
+                                'DECAY_SORBED', trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive,                 &
                                          this%decay_sorbed, aname(5))
@@ -1062,7 +1062,7 @@ module GwtMstModule
           write(this%iout, '(1x, a)') 'DECAY_SORBED not provided in GRIDDATA &
             &block. Assuming DECAY_SORBED=DECAY'
           call mem_reassignptr(this%decay_sorbed, 'DECAY_SORBED',              &
-                               trim(this%origin), 'DECAY', trim(this%origin))
+                               trim(this%memoryPath), 'DECAY', trim(this%memoryPath))
         endif
       endif
     else

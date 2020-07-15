@@ -667,11 +667,11 @@ module GhostNodeModule
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
     !
-    call mem_allocate(this%smgnc, 'SMGNC', this%origin)
-    call mem_allocate(this%implicit, 'IMPLICIT', this%origin)
-    call mem_allocate(this%i2kn, 'I2KN', this%origin)
-    call mem_allocate(this%nexg, 'NEXG', this%origin)
-    call mem_allocate(this%numjs, 'NUMJS', this%origin)
+    call mem_allocate(this%smgnc, 'SMGNC', this%memoryPath)
+    call mem_allocate(this%implicit, 'IMPLICIT', this%memoryPath)
+    call mem_allocate(this%i2kn, 'I2KN', this%memoryPath)
+    call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
+    call mem_allocate(this%numjs, 'NUMJS', this%memoryPath)
     !
     ! -- Initialize values
     this%smgnc = .true.
@@ -699,25 +699,25 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate memory for arrays
-    call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%origin)
-    call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%origin)
+    call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
+    call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
     call mem_allocate(this%nodesj, this%numjs, this%nexg, 'NODESJ',            &
-                      this%origin)
+                      this%memoryPath)
     call mem_allocate(this%alphasj, this%numjs, this%nexg, 'ALPHASJ',          &
-                      this%origin)
-    call mem_allocate(this%cond, this%nexg, 'COND', this%origin)
-    call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%origin)
-    call mem_allocate(this%idiagn, this%nexg, 'IDIAGN', this%origin)
-    call mem_allocate(this%idiagm, this%nexg, 'IDIAGM', this%origin)
-    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%origin)
+                      this%memoryPath)
+    call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
+    call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
+    call mem_allocate(this%idiagn, this%nexg, 'IDIAGN', this%memoryPath)
+    call mem_allocate(this%idiagm, this%nexg, 'IDIAGM', this%memoryPath)
+    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)
     if(this%implicit) then
       call mem_allocate(this%jposinrown, this%numjs, this%nexg, 'JPOSINROWN',  &
-                        this%origin)
+                        this%memoryPath)
       call mem_allocate(this%jposinrowm, this%numjs, this%nexg, 'JPOSINROWM',  &
-                        this%origin)
+                        this%memoryPath)
     else
-      call mem_allocate(this%jposinrown, 0, 0, 'JPOSINROWN', this%origin)
-      call mem_allocate(this%jposinrowm, 0, 0, 'JPOSINROWM', this%origin)
+      call mem_allocate(this%jposinrown, 0, 0, 'JPOSINROWN', this%memoryPath)
+      call mem_allocate(this%jposinrowm, 0, 0, 'JPOSINROWM', this%memoryPath)
     endif
     !
     ! -- Return

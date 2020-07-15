@@ -172,7 +172,7 @@ module GwtSftModule
         !    this transport package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-          if (packobj%name == this%flowpackagename) then
+          if (packobj%packName == this%flowpackagename) then
             found = .true.
             !
             ! -- store BndType pointer to packobj, and then
@@ -200,11 +200,11 @@ module GwtSftModule
     ! -- allocate space for idxbudssm, which indicates whether this is a 
     !    special budget term or one that is a general source and sink
     nbudterm = this%flowbudptr%nbudterm
-    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%origin)
+    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
     write(this%iout, '(/, a, a)') &
-      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%name
+      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%packName
     write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN ' // flowtype // ' PACKAGE'
     write(this%iout, '(a, i0)') &
       '  NUMBER OF ' // flowtype // ' = ', this%flowbudptr%ncv
@@ -450,9 +450,9 @@ end subroutine find_sft_package
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -463,9 +463,9 @@ end subroutine find_sft_package
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -476,9 +476,9 @@ end subroutine find_sft_package
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -489,9 +489,9 @@ end subroutine find_sft_package
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -502,9 +502,9 @@ end subroutine find_sft_package
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -611,11 +611,11 @@ end subroutine find_sft_package
     call this%GwtAptType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%origin)
-    call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%origin)
-    call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
-    call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
-    call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
+    call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%memoryPath)
+    call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%memoryPath)
+    call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%memoryPath)
+    call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
+    call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
     ! 
     ! -- Initialize
     this%idxbudrain = 0
@@ -644,10 +644,10 @@ end subroutine find_sft_package
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
-    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%origin)
-    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%origin)
-    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%origin)
-    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%origin)
+    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%memoryPath)
+    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%memoryPath)
+    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%memoryPath)
+    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%memoryPath)
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
@@ -1001,7 +1001,7 @@ end subroutine find_sft_package
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%concrain(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RAINFALL')
       case ('EVAPORATION')
@@ -1012,7 +1012,7 @@ end subroutine find_sft_package
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%concevap(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'EVAPORATION')
       case ('RUNOFF')
@@ -1023,7 +1023,7 @@ end subroutine find_sft_package
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%concroff(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RUNOFF')
       case ('INFLOW')
@@ -1034,7 +1034,7 @@ end subroutine find_sft_package
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%conciflw(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INFLOW')
       case default

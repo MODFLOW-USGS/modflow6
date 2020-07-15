@@ -110,7 +110,7 @@ module GwtMvtModule
     call this%parser%Initialize(this%inunit, this%iout)
     !
     ! -- initialize the budget table writer
-    call budget_cr(this%budget, this%origin)
+    call budget_cr(this%budget, this%memoryPath)
     !
     ! -- Read mvt options
     call this%read_options()
@@ -277,7 +277,7 @@ module GwtMvtModule
     if (associated(this%fmi%mvrbudobj)) then
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
-        cpak = trim(this%name)
+        cpak = trim(this%packName)
         write(this%iout, fmtmvrcnvg)
       endif
     endif
@@ -472,8 +472,8 @@ module GwtMvtModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%origin)
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     !
     ! -- Initialize
     this%maxpackages = 0
@@ -749,9 +749,9 @@ module GwtMvtModule
       maxrow = 0
       !
       ! -- initialize the output table object
-      title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) // &
+      title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) // &
               ') FLOW RATES'
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(maxrow, ntabcol, this%iout, &
                                     transient=.TRUE.)
       text = 'NUMBER'
@@ -804,7 +804,7 @@ module GwtMvtModule
     end do
     !
     ! -- Add terms and print the table
-    title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) //     &
+    title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) //     &
             ') FLOW RATES'
     call this%outputtab%set_title(title)
     call this%outputtab%set_maxbound(ntabrows)

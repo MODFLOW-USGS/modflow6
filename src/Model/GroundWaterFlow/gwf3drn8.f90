@@ -131,8 +131,8 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%iauxddrncol, 'IAUXDDRNCOL', this%origin)
-    call mem_allocate(this%icubic_scaling, 'ICUBIC_SCALING', this%origin)
+    call mem_allocate(this%iauxddrncol, 'IAUXDDRNCOL', this%memoryPath)
+    call mem_allocate(this%icubic_scaling, 'ICUBIC_SCALING', this%memoryPath)
     !
     ! -- Set values
     this%iauxddrncol = 0

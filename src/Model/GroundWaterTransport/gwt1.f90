@@ -1117,7 +1117,7 @@ module GwtModule
     ! -- position of packages.
       do ip = 1, this%bndlist%Count()
         packobj2 => GetBndFromList(this%bndlist, ip)
-        if(packobj2%name == pakname) then
+        if(packobj2%packName == pakname) then
           write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
             'already exists: ', trim(pakname)
           call store_error(errmsg)

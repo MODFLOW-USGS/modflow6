@@ -468,9 +468,9 @@ module GwtAptModule
         !
         ! -- reset the input table object
         title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
-        call table_cr(this%inputtab, this%name, title)
+        call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
@@ -587,7 +587,7 @@ module GwtAptModule
         call this%parser%GetString(text)
         jj = 1    ! For feature concentration
         bndElem => this%concfeat(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'CONCENTRATION')
       case ('AUXILIARY')
@@ -602,7 +602,7 @@ module GwtAptModule
           ii = itemno
           bndElem => this%lauxvar(jj, ii)
           call read_value_or_time_series_adv(text, itemno, jj, bndElem,          &
-                                             this%name, 'AUX', this%tsManager,   &
+                                             this%packName, 'AUX', this%tsManager,   &
                                              this%iprpak, this%auxname(jj))
           exit
         end do
@@ -1118,7 +1118,7 @@ module GwtAptModule
     !
     ! -- write feature concentration
     if (ihedfl /= 0 .and. this%iprconc /= 0) then
-      write (iout, fmthdr) 'FEATURE (', trim(this%name), ') CONCENTRATION', kper, kstp
+      write (iout, fmthdr) 'FEATURE (', trim(this%packName), ') CONCENTRATION', kper, kstp
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
@@ -1193,20 +1193,20 @@ module GwtAptModule
     call this%BndType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%iauxfpconc, 'IAUXFPCONC', this%origin)
-    call mem_allocate(this%imatrows, 'IMATROWS', this%origin)
-    call mem_allocate(this%iprconc, 'IPRCONC', this%origin)
-    call mem_allocate(this%iconcout, 'ICONCOUT', this%origin)
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%origin)
-    call mem_allocate(this%ncv, 'NCV', this%origin)
-    call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
-    call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
-    call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
-    call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%origin)
-    call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%origin)
-    call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
-    call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
+    call mem_allocate(this%iauxfpconc, 'IAUXFPCONC', this%memoryPath)
+    call mem_allocate(this%imatrows, 'IMATROWS', this%memoryPath)
+    call mem_allocate(this%iprconc, 'IPRCONC', this%memoryPath)
+    call mem_allocate(this%iconcout, 'ICONCOUT', this%memoryPath)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%memoryPath)
+    call mem_allocate(this%ncv, 'NCV', this%memoryPath)
+    call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%memoryPath)
+    call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%memoryPath)
+    call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%memoryPath)
+    call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%memoryPath)
+    call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%memoryPath)
+    call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%memoryPath)
+    call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%memoryPath)
     ! 
     ! -- Initialize
     this%iauxfpconc = 0
@@ -1250,30 +1250,30 @@ module GwtAptModule
     !
     ! -- allocate and initialize dbuff
     if (this%iconcout > 0) then
-      call mem_allocate(this%dbuff, this%ncv, 'DBUFF', this%origin)
+      call mem_allocate(this%dbuff, this%ncv, 'DBUFF', this%memoryPath)
       do n = 1, this%ncv
         this%dbuff(n) = DZERO
       end do
     else
-      call mem_allocate(this%dbuff, 0, 'DBUFF', this%origin)
+      call mem_allocate(this%dbuff, 0, 'DBUFF', this%memoryPath)
     end if
     !
     ! -- allocate character array for status
     allocate(this%status(this%ncv))
     !
     ! -- time series
-    call mem_allocate(this%concfeat, this%ncv, 'CONCFEAT', this%origin)
+    call mem_allocate(this%concfeat, this%ncv, 'CONCFEAT', this%memoryPath)
     !
     ! -- budget terms
-    call mem_allocate(this%qsto, this%ncv, 'QSTO', this%origin)
-    call mem_allocate(this%ccterm, this%ncv, 'CCTERM', this%origin)
+    call mem_allocate(this%qsto, this%ncv, 'QSTO', this%memoryPath)
+    call mem_allocate(this%ccterm, this%ncv, 'CCTERM', this%memoryPath)
     !
     ! -- concentration for budget terms
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%ncv, &
-      'CONCBUDSSM', this%origin)
+      'CONCBUDSSM', this%memoryPath)
     !
     ! -- mass added from the mover transport package
-    call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%origin)
+    call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%memoryPath)
     !
     ! -- initialize arrays
     do n = 1, this%ncv
@@ -1483,7 +1483,7 @@ module GwtAptModule
     !
     ! -- Set a pointer to the GWF LAK Package budobj
     if (this%flowpackagename == '') then
-      this%flowpackagename = this%name
+      this%flowpackagename = this%packName
       write(this%iout,'(4x,a)') &
         'THE FLOW PACKAGE NAME FOR '//trim(adjustl(this%text))//' WAS NOT &
         &SPECIFIED.  SETTING FLOW PACKAGE NAME TO '// &
@@ -1496,7 +1496,7 @@ module GwtAptModule
     this%ncv = this%flowbudptr%ncv
     this%maxbound = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound
-    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR PACKAGE ', this%name
+    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR PACKAGE ', this%packName
     write(this%iout,'(2x,a,i0)')'NUMBER OF CONTROL VOLUMES = ', this%ncv
     write(this%iout,'(2x,a,i0)')'MAXBOUND = ', this%maxbound
     write(this%iout,'(2x,a,i0)')'NBOUND = ', this%nbound
@@ -1572,15 +1572,15 @@ module GwtAptModule
     itmp = 0
     !
     ! -- allocate apt data
-    call mem_allocate(this%strt, this%ncv, 'STRT', this%origin)
-    call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', this%origin)
+    call mem_allocate(this%strt, this%ncv, 'STRT', this%memoryPath)
+    call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', this%memoryPath)
     !
     ! -- lake boundary and concentrations
     if (this%imatrows == 0) then
-      call mem_allocate(this%iboundpak, this%ncv, 'IBOUND', this%origin)
-      call mem_allocate(this%xnewpak, this%ncv, 'XNEWPAK', this%origin)
+      call mem_allocate(this%iboundpak, this%ncv, 'IBOUND', this%memoryPath)
+      call mem_allocate(this%xnewpak, this%ncv, 'XNEWPAK', this%memoryPath)
     end if
-    call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%origin)
+    call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%memoryPath)
     !
     ! -- allocate character storage not managed by the memory manager
     allocate(this%featname(this%ncv)) ! ditch after boundnames allocated??
@@ -1659,7 +1659,7 @@ module GwtAptModule
           text = caux(jj)
           ii = n
           bndElem => this%lauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,   &
                                              'AUX', this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
@@ -2106,7 +2106,7 @@ module GwtAptModule
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
-    call budgetobject_cr(this%budobj, this%name)
+    call budgetobject_cr(this%budobj, this%packName)
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
                                      bddim_opt='M')
     idx = 0
@@ -2120,9 +2120,9 @@ module GwtAptModule
       ordered_id1 = this%flowbudptr%budterm(this%idxbudfjf)%ordered_id1
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, ordered_id1=ordered_id1)
       !
@@ -2143,7 +2143,7 @@ module GwtAptModule
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
                                              this%name_model, &
                                              maxlist, .false., .true., &
@@ -2167,9 +2167,9 @@ module GwtAptModule
     auxtxt(1) = '            MASS'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
     if (this%idxbudtmvr /= 0) then
@@ -2182,9 +2182,9 @@ module GwtAptModule
       ordered_id1 = this%flowbudptr%budterm(this%idxbudtmvr)%ordered_id1
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, ordered_id1=ordered_id1)
     end if
@@ -2197,9 +2197,9 @@ module GwtAptModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -2211,9 +2211,9 @@ module GwtAptModule
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     
@@ -2228,9 +2228,9 @@ module GwtAptModule
       maxlist = this%ncv
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
     end if
@@ -2712,7 +2712,7 @@ subroutine apt_rp_obs(this)
             end do
           end if
           if (.not. jfound) then
-            write(ermsg,10) trim(bname), trim(obsrv%Name), trim(this%name)
+            write(ermsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
             call store_error(ermsg)
           end if
         end if

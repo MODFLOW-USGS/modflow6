@@ -501,8 +501,8 @@ module GwfHfbModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- allocate scalars
-    call mem_allocate(this%maxhfb, 'MAXHFB', this%origin)
-    call mem_allocate(this%nhfb, 'NHFB', this%origin)
+    call mem_allocate(this%maxhfb, 'MAXHFB', this%memoryPath)
+    call mem_allocate(this%nhfb, 'NHFB', this%memoryPath)
     !
     ! -- initialize
     this%maxhfb = 0
@@ -527,12 +527,12 @@ module GwfHfbModule
     integer(I4B) :: ihfb
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%noden, this%maxhfb, 'NODEN', this%origin)
-    call mem_allocate(this%nodem, this%maxhfb, 'NODEM', this%origin)
-    call mem_allocate(this%hydchr, this%maxhfb, 'HYDCHR', this%origin)
-    call mem_allocate(this%idxloc, this%maxhfb, 'IDXLOC', this%origin)
-    call mem_allocate(this%csatsav, this%maxhfb, 'CSATSAV', this%origin)
-    call mem_allocate(this%condsav, this%maxhfb, 'CONDSAV', this%origin)
+    call mem_allocate(this%noden, this%maxhfb, 'NODEN', this%memoryPath)
+    call mem_allocate(this%nodem, this%maxhfb, 'NODEM', this%memoryPath)
+    call mem_allocate(this%hydchr, this%maxhfb, 'HYDCHR', this%memoryPath)
+    call mem_allocate(this%idxloc, this%maxhfb, 'IDXLOC', this%memoryPath)
+    call mem_allocate(this%csatsav, this%maxhfb, 'CSATSAV', this%memoryPath)
+    call mem_allocate(this%condsav, this%maxhfb, 'CONDSAV', this%memoryPath)
     !
     ! -- initialize idxloc to 0
     do ihfb = 1, this%maxhfb

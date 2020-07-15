@@ -284,7 +284,7 @@ module GwfModule
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
-    call csub_cr(this%csub, this%name, this%insto, this%sto%name,               &
+    call csub_cr(this%csub, this%name, this%insto, this%sto%packName,               &
                  this%incsub, this%iout)
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, this%dis)
@@ -1425,7 +1425,7 @@ module GwfModule
     !    pointer to the package in the model bndlist
     do ip = 1, this%bndlist%Count()
       packobj2 => GetBndFromList(this%bndlist, ip)
-      if(packobj2%name == pakname) then
+      if(packobj2%packName == pakname) then
         write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
           'already exists: ', trim(pakname)
         call store_error(errmsg)

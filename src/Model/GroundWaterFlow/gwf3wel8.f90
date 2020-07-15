@@ -124,8 +124,8 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%iflowred, 'IFLOWRED', this%origin)
-    call mem_allocate(this%flowred, 'FLOWRED', this%origin)
+    call mem_allocate(this%iflowred, 'IFLOWRED', this%memoryPath)
+    call mem_allocate(this%flowred, 'FLOWRED', this%memoryPath)
     !
     ! -- Set values
     this%iflowred = 0

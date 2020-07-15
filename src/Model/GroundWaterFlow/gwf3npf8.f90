@@ -1048,8 +1048,8 @@ module GwfNpfModule
     deallocate(this%aname)
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
-    call mem_deallocate(this%k22, 'K22', trim(this%origin))
-    call mem_deallocate(this%k33, 'K33', trim(this%origin))
+    call mem_deallocate(this%k22, 'K22', trim(this%memoryPath))
+    call mem_deallocate(this%k33, 'K33', trim(this%memoryPath))
     call mem_deallocate(this%sat)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
@@ -1085,36 +1085,36 @@ module GwfNpfModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate scalars
-    call mem_allocate(this%iname, 'INAME', this%origin)
-    call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
-    call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
-    call mem_allocate(this%hnoflo, 'HNOFLO', this%origin)
-    call mem_allocate(this%hdry, 'HDRY', this%origin)
-    call mem_allocate(this%icellavg, 'ICELLAVG', this%origin)
-    call mem_allocate(this%ik22, 'IK22', this%origin)
-    call mem_allocate(this%ik33, 'IK33', this%origin)
-    call mem_allocate(this%ik22overk, 'IK22OVERK', this%origin)
-    call mem_allocate(this%ik33overk, 'IK33OVERK', this%origin)
-    call mem_allocate(this%iperched, 'IPERCHED', this%origin)
-    call mem_allocate(this%ivarcv, 'IVARCV', this%origin)
-    call mem_allocate(this%idewatcv, 'IDEWATCV', this%origin)
-    call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%origin)
-    call mem_allocate(this%iusgnrhc, 'IUSGNRHC', this%origin)
-    call mem_allocate(this%inwtupw, 'INWTUPW', this%origin)
-    call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%origin)
-    call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%origin)
-    call mem_allocate(this%isavsat, 'ISAVSAT', this%origin)
-    call mem_allocate(this%irewet, 'IREWET', this%origin)
-    call mem_allocate(this%wetfct, 'WETFCT', this%origin)
-    call mem_allocate(this%iwetit, 'IWETIT', this%origin)
-    call mem_allocate(this%ihdwet, 'IHDWET', this%origin)
-    call mem_allocate(this%satmin, 'SATMIN', this%origin)
-    call mem_allocate(this%iangle1, 'IANGLE1', this%origin)
-    call mem_allocate(this%iangle2, 'IANGLE2', this%origin)
-    call mem_allocate(this%iangle3, 'IANGLE3', this%origin)
-    call mem_allocate(this%iwetdry, 'IWETDRY', this%origin)
-    call mem_allocate(this%nedges, 'NEDGES', this%origin)
-    call mem_allocate(this%lastedge, 'LASTEDGE', this%origin)
+    call mem_allocate(this%iname, 'INAME', this%memoryPath)
+    call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
+    call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
+    call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
+    call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
+    call mem_allocate(this%ik22, 'IK22', this%memoryPath)
+    call mem_allocate(this%ik33, 'IK33', this%memoryPath)
+    call mem_allocate(this%ik22overk, 'IK22OVERK', this%memoryPath)
+    call mem_allocate(this%ik33overk, 'IK33OVERK', this%memoryPath)
+    call mem_allocate(this%iperched, 'IPERCHED', this%memoryPath)
+    call mem_allocate(this%ivarcv, 'IVARCV', this%memoryPath)
+    call mem_allocate(this%idewatcv, 'IDEWATCV', this%memoryPath)
+    call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%memoryPath)
+    call mem_allocate(this%iusgnrhc, 'IUSGNRHC', this%memoryPath)
+    call mem_allocate(this%inwtupw, 'INWTUPW', this%memoryPath)
+    call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%memoryPath)
+    call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%memoryPath)
+    call mem_allocate(this%isavsat, 'ISAVSAT', this%memoryPath)
+    call mem_allocate(this%irewet, 'IREWET', this%memoryPath)
+    call mem_allocate(this%wetfct, 'WETFCT', this%memoryPath)
+    call mem_allocate(this%iwetit, 'IWETIT', this%memoryPath)
+    call mem_allocate(this%ihdwet, 'IHDWET', this%memoryPath)
+    call mem_allocate(this%satmin, 'SATMIN', this%memoryPath)
+    call mem_allocate(this%iangle1, 'IANGLE1', this%memoryPath)
+    call mem_allocate(this%iangle2, 'IANGLE2', this%memoryPath)
+    call mem_allocate(this%iangle3, 'IANGLE3', this%memoryPath)
+    call mem_allocate(this%iwetdry, 'IWETDRY', this%memoryPath)
+    call mem_allocate(this%nedges, 'NEDGES', this%memoryPath)
+    call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
     !
     ! -- set pointer to inewtonur
     call mem_setptr(this%igwfnewtonur, 'INEWTONUR', trim(this%name_model))
@@ -1175,37 +1175,37 @@ module GwfNpfModule
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', trim(this%origin))
-    call mem_allocate(this%k11, ncells, 'K11', trim(this%origin))
-    call mem_allocate(this%sat, ncells, 'SAT', trim(this%origin))
-    call mem_allocate(this%condsat, njas, 'CONDSAT', trim(this%origin))
+    call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', trim(this%memoryPath))
+    call mem_allocate(this%k11, ncells, 'K11', trim(this%memoryPath))
+    call mem_allocate(this%sat, ncells, 'SAT', trim(this%memoryPath))
+    call mem_allocate(this%condsat, njas, 'CONDSAT', trim(this%memoryPath))
     !
     ! -- Optional arrays dimensioned to full size initially
-    call mem_allocate(this%k22, ncells, 'K22', trim(this%origin))
-    call mem_allocate(this%k33, ncells, 'K33', trim(this%origin))
-    call mem_allocate(this%wetdry, ncells, 'WETDRY', trim(this%origin))
-    call mem_allocate(this%angle1, ncells, 'ANGLE1', trim(this%origin))
-    call mem_allocate(this%angle2, ncells, 'ANGLE2', trim(this%origin))
-    call mem_allocate(this%angle3, ncells, 'ANGLE3', trim(this%origin))
+    call mem_allocate(this%k22, ncells, 'K22', trim(this%memoryPath))
+    call mem_allocate(this%k33, ncells, 'K33', trim(this%memoryPath))
+    call mem_allocate(this%wetdry, ncells, 'WETDRY', trim(this%memoryPath))
+    call mem_allocate(this%angle1, ncells, 'ANGLE1', trim(this%memoryPath))
+    call mem_allocate(this%angle2, ncells, 'ANGLE2', trim(this%memoryPath))
+    call mem_allocate(this%angle3, ncells, 'ANGLE3', trim(this%memoryPath))
     !
     ! -- Optional arrays
-    call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
+    call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%memoryPath))
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
-      call mem_allocate(this%spdis, 3, ncells, 'SPDIS', trim(this%origin))
-      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', trim(this%origin))
-      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%origin))
+      call mem_allocate(this%spdis, 3, ncells, 'SPDIS', trim(this%memoryPath))
+      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', trim(this%memoryPath))
+      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%memoryPath))
       call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE',           &
-        trim(this%origin))
+        trim(this%memoryPath))
       do n = 1, ncells
         this%spdis(:, n) = DZERO
       end do
     else
-      call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%origin))
-      call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%origin))
-      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%origin))
-      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%origin))
+      call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%memoryPath))
+      call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%memoryPath))
+      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%memoryPath))
+      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%memoryPath))
     endif
     !
     ! -- initialize iangle1, iangle2, iangle3, and wetdry
@@ -1694,8 +1694,8 @@ module GwfNpfModule
         call store_error(errmsg)
       endif
       write(this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
-      call mem_reassignptr(this%k33, 'K33', trim(this%origin),                 &
-                                     'K11', trim(this%origin))
+      call mem_reassignptr(this%k33, 'K33', trim(this%memoryPath),                 &
+                                     'K11', trim(this%memoryPath))
     endif
     !
     ! -- set ik22 flag
@@ -1707,15 +1707,15 @@ module GwfNpfModule
         call store_error(errmsg)
       endif
       write(this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
-      call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
-                                     'K11', trim(this%origin))
+      call mem_reassignptr(this%k22, 'K22', trim(this%memoryPath),                 &
+                                     'K11', trim(this%memoryPath))
     endif
     !
     ! -- Set WETDRY
     if (lname(5)) then
       this%iwetdry = 1
     else
-      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
+      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%memoryPath))        
     end if
     !
     ! -- set angle flags
@@ -1723,21 +1723,21 @@ module GwfNpfModule
       this%iangle1 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%origin))        
+        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))        
       end if
     endif
     if (lname(7)) then
       this%iangle2 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%origin))        
+        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))        
       end if
     endif
     if (lname(8)) then
       this%iangle3 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%origin))        
+        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))        
       end if
     endif
     !
@@ -1933,7 +1933,7 @@ module GwfNpfModule
     !
     ! -- allocate temporary storage to handle thickstart option
     call mem_allocate(ithickstartflag, this%dis%nodes, 'ITHICKSTARTFLAG',      &
-                      trim(this%origin))
+                      trim(this%memoryPath))
     do n = 1, this%dis%nodes
       ithickstartflag(n) = 0
     end do
@@ -2111,7 +2111,7 @@ module GwfNpfModule
     ! -- Determine the lower most node
     if (this%igwfnewtonur /= 0) then
       call mem_reallocate(this%ibotnode, this%dis%nodes, 'IBOTNODE',            &
-                          trim(this%origin))
+                          trim(this%memoryPath))
       do n = 1, this%dis%nodes
         !
         minbot = this%dis%bot(n)
@@ -3251,8 +3251,8 @@ module GwfNpfModule
     text = '      DATA-SPDIS'
     naux = 3
     auxtxt(:) = ['              qx', '              qy', '              qz']
-    call this%dis%record_srcdst_list_header(text, this%name_model, this%name,  &
-      this%name_model, this%name, naux, auxtxt, ibinun, this%dis%nodes,        &
+    call this%dis%record_srcdst_list_header(text, this%name_model, this%packName,  &
+      this%name_model, this%packName, naux, auxtxt, ibinun, this%dis%nodes,        &
       this%iout)
     !
     ! -- Write a zero for Q, and then write qx, qy, qz as aux variables
@@ -3288,8 +3288,8 @@ module GwfNpfModule
     text = '        DATA-SAT'
     naux = 1
     auxtxt(:) = ['             sat']
-    call this%dis%record_srcdst_list_header(text, this%name_model, this%name,  &
-      this%name_model, this%name, naux, auxtxt, ibinun, this%dis%nodes,        &
+    call this%dis%record_srcdst_list_header(text, this%name_model, this%packName,  &
+      this%name_model, this%packName, naux, auxtxt, ibinun, this%dis%nodes,        &
       this%iout)
     !
     ! -- Write a zero for Q, and then write saturation as an aux variables

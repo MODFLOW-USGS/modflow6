@@ -132,8 +132,8 @@ module EvtModule
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%inievt, 'INIEVT', this%origin)
-    call mem_allocate(this%nseg, 'NSEG', this%origin)
+    call mem_allocate(this%inievt, 'INIEVT', this%memoryPath)
+    call mem_allocate(this%nseg, 'NSEG', this%memoryPath)
     !
     ! -- Set values
     this%inievt = 0
@@ -422,8 +422,8 @@ module EvtModule
     if (this%ionper == kper) then
       !
       ! -- Remove all time-series links associated with this package
-      call this%TsManager%Reset(this%name)
-      call this%TasManager%Reset(this%name)
+      call this%TsManager%Reset(this%packName)
+      call this%TasManager%Reset(this%packName)
       !
       ! -- Read IEVT, SURFACE, RATE, DEPTH, PXDP, PETM, and AUX
       !    variables, if any
@@ -813,7 +813,7 @@ module EvtModule
           ! Make a time-array-series link and add it to the list of links
           ! contained in the TimeArraySeriesManagerType object.
           convertflux = .true.
-          call this%TasManager%MakeTasLink(this%name, bndArrayPtr,             &
+          call this%TasManager%MakeTasLink(this%packName, bndArrayPtr,             &
                                   this%iprpak, tasName, 'RATE',                &
                                   convertFlux, this%nodelist,                  &
                                   this%parser%iuactive)
@@ -928,7 +928,7 @@ module EvtModule
             ! Make a time-array-series link and add it to the list of links
             ! contained in the TimeArraySeriesManagerType object.
             convertflux = .false.
-            call this%TasManager%MakeTasLink(this%name, auxArrayPtr,           &
+            call this%TasManager%MakeTasLink(this%packName, auxArrayPtr,           &
                                     this%iprpak, tasName,                      &
                                     this%auxname(ipos), convertFlux,           &
                                     this%nodelist, this%parser%iuactive)
@@ -1016,7 +1016,7 @@ module EvtModule
                              nlist, this%inamedbound, this%iauxmultcol,        &
                              this%nodelist, this%bound, this%auxvar,           &
                              this%auxname, this%boundname, this%listlabel,     &
-                             this%name, this%tsManager, this%iscloc,           &
+                             this%packName, this%tsManager, this%iscloc,           &
                              this%indxconvertflux)
     this%nbound = nlist
     if (this%maxbound > maxboundorig) then

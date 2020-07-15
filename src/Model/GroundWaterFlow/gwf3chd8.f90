@@ -290,7 +290,7 @@ contains
     if(ibinun /= 0) then
       naux = this%naux
       call this%dis%record_srcdst_list_header(this%text, this%name_model,  &
-                  this%name_model, this%name_model, this%name, naux,           &
+                  this%name_model, this%name_model, this%packName, naux,           &
                   this%auxname, ibinun, this%nbound, this%iout)
     endif
     !
@@ -364,7 +364,7 @@ contains
     !
     ! -- Store the rates
     call model_budget%addentry(chin, chout, delt, this%text,                   &
-                               isuppress_output, this%name)
+                               isuppress_output, this%packName)
     !
     ! -- Save the simulated values to the ObserveType objects
     if (this%obs%npakobs > 0 .and. iprobs > 0) then

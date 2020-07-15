@@ -3,11 +3,12 @@ module MemoryManagerModule
   use KindModule,             only: DP, LGP, I4B, I8B
   use ConstantsModule,        only: DZERO, DONE,                                 &
                                     DEM3, DEM6, DEM9, DEP3, DEP6, DEP9,          &
-                                    LENORIGIN, LENVARNAME,                       &
+                                    LENMEMPATH, LENMEMSEPARATOR, LENVARNAME,     &
                                     LINELENGTH, LENMEMTYPE,                      &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                                     TABCENTER, TABLEFT, TABRIGHT,                &
-                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE
+                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE,        &
+                                    LENORIGIN ! TODO_MJR: get rid of this
   use SimVariablesModule,     only: errmsg
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
@@ -27,6 +28,7 @@ module MemoryManagerModule
   public :: mem_da
   public :: mem_set_print_option
   
+  public :: create_mem_path
   public :: get_mem_type
   public :: get_mem_rank
   public :: get_mem_size
@@ -42,6 +44,8 @@ module MemoryManagerModule
   integer(I8B) :: nvalues_aint = 0
   integer(I8B) :: nvalues_adbl = 0
   integer(I4B) :: iprmem = 0
+
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'   !<used to build up the memory path for the stored variables
 
   interface mem_allocate
     module procedure allocate_logical,                                           &
@@ -2730,6 +2734,32 @@ module MemoryManagerModule
     return
   end subroutine deallocate_dbl3d
   
+  !> @brief returns the path to the memory object
+  !!
+  !! Returns the path to the location in the memory manager where
+  !! the variables for this (sub)component are stored, the 'memoryPath' 
+  !!
+  !! @param[in]   component       the name of the solution, model, or exchange
+  !! @param[in]   subcomponent    the name of the package (optional)
+  !! @return      memory_path      the path to the memory object
+  !!
+  !! NB: no need to trim the input variables
+  !<
+  function create_mem_path(component, subcomponent) result(memory_path)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in), optional :: subcomponent
+    character(len=LENMEMPATH) :: memory_path
+    
+    ! add check on lenghts, see check_var_name in mem mng
+    
+    if (present(subcomponent)) then
+      memory_path = trim(component) // memPathSeparator // trim(subcomponent)    
+    else
+      memory_path = trim(component)
+    end if
+    
+  end function create_mem_path
+
   subroutine mem_set_print_option(iout, keyword, errmsg)
 ! ******************************************************************************
 ! Set the memory print option 

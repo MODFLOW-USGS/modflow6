@@ -348,48 +348,48 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- allocate character variables
-    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%origin)
-    call mem_allocate(this%stoname, LENORIGIN, 'STONAME', this%origin)
+    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%memoryPath)
+    call mem_allocate(this%stoname, LENORIGIN, 'STONAME', this%memoryPath)
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%istounit, 'ISTOUNIT', this%origin)
-    call mem_allocate(this%inobspkg, 'INOBSPKG', this%origin)
-    call mem_allocate(this%ninterbeds, 'NINTERBEDS', this%origin)
-    call mem_allocate(this%maxsig0, 'MAXSIG0', this%origin)
-    call mem_allocate(this%nbound, 'NBOUND', this%origin)
-    call mem_allocate(this%iscloc, 'ISCLOC', this%origin)
-    call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%origin)
-    call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%origin)
-    call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
-    call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
-    call mem_allocate(this%ieslag, 'IESLAG', this%origin)
-    call mem_allocate(this%ipch, 'IPCH', this%origin)
-    call mem_allocate(this%lhead_based, 'LHEAD_BASED', this%origin)
-    call mem_allocate(this%iupdatestress, 'IUPDATESTRESS', this%origin)
-    call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
-    call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
-    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
-    call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
-    call mem_allocate(this%naux, 'NAUX', this%origin)
-    call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
-    call mem_allocate(this%istrainib, 'ISTRAINIB', this%origin)
-    call mem_allocate(this%istrainsk, 'ISTRAINSK', this%origin)
-    call mem_allocate(this%ioutcomp, 'IOUTCOMP', this%origin)
-    call mem_allocate(this%ioutcompi, 'IOUTCOMPI', this%origin)
-    call mem_allocate(this%ioutcompe, 'IOUTCOMPE', this%origin)
-    call mem_allocate(this%ioutcompib, 'IOUTCOMPIB', this%origin)
-    call mem_allocate(this%ioutcomps, 'IOUTCOMPS', this%origin)
-    call mem_allocate(this%ioutzdisp, 'IOUTZDISP', this%origin)
-    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
-    call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
-    call mem_allocate(this%epsilon, 'EPSILON', this%origin)
-    call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
-    call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
-    call mem_allocate(this%beta, 'BETA', this%origin)
-    call mem_allocate(this%brg, 'BRG', this%origin)
-    call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
-    call mem_allocate(this%icellf, 'ICELLF', this%origin)
-    call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
+    call mem_allocate(this%istounit, 'ISTOUNIT', this%memoryPath)
+    call mem_allocate(this%inobspkg, 'INOBSPKG', this%memoryPath)
+    call mem_allocate(this%ninterbeds, 'NINTERBEDS', this%memoryPath)
+    call mem_allocate(this%maxsig0, 'MAXSIG0', this%memoryPath)
+    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
+    call mem_allocate(this%iscloc, 'ISCLOC', this%memoryPath)
+    call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
+    call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%memoryPath)
+    call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%memoryPath)
+    call mem_allocate(this%initialized, 'INITIALIZED', this%memoryPath)
+    call mem_allocate(this%ieslag, 'IESLAG', this%memoryPath)
+    call mem_allocate(this%ipch, 'IPCH', this%memoryPath)
+    call mem_allocate(this%lhead_based, 'LHEAD_BASED', this%memoryPath)
+    call mem_allocate(this%iupdatestress, 'IUPDATESTRESS', this%memoryPath)
+    call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%memoryPath)
+    call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%memoryPath)
+    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
+    call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
+    call mem_allocate(this%naux, 'NAUX', this%memoryPath)
+    call mem_allocate(this%istoragec, 'ISTORAGEC', this%memoryPath)
+    call mem_allocate(this%istrainib, 'ISTRAINIB', this%memoryPath)
+    call mem_allocate(this%istrainsk, 'ISTRAINSK', this%memoryPath)
+    call mem_allocate(this%ioutcomp, 'IOUTCOMP', this%memoryPath)
+    call mem_allocate(this%ioutcompi, 'IOUTCOMPI', this%memoryPath)
+    call mem_allocate(this%ioutcompe, 'IOUTCOMPE', this%memoryPath)
+    call mem_allocate(this%ioutcompib, 'IOUTCOMPIB', this%memoryPath)
+    call mem_allocate(this%ioutcomps, 'IOUTCOMPS', this%memoryPath)
+    call mem_allocate(this%ioutzdisp, 'IOUTZDISP', this%memoryPath)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
+    call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%memoryPath)
+    call mem_allocate(this%epsilon, 'EPSILON', this%memoryPath)
+    call mem_allocate(this%cc_crit, 'CC_CRIT', this%memoryPath)
+    call mem_allocate(this%gammaw, 'GAMMAW', this%memoryPath)
+    call mem_allocate(this%beta, 'BETA', this%memoryPath)
+    call mem_allocate(this%brg, 'BRG', this%memoryPath)
+    call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
+    call mem_allocate(this%icellf, 'ICELLF', this%memoryPath)
+    call mem_allocate(this%gwfiss0, 'GWFISS0', this%memoryPath)
     !
     ! -- allocate TS object
     allocate(this%TsManager)
@@ -530,7 +530,7 @@ contains
           ntabcols = 9
           !
           ! -- setup table
-          call table_cr(this%pakcsvtab, this%name, '')
+          call table_cr(this%pakcsvtab, this%packName, '')
           call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
                                        lineseparator=.FALSE., separator=',',       &
                                        finalize=.FALSE.)
@@ -624,7 +624,7 @@ contains
       if (abs(dhmax) > abs(dpak)) then
         ipak = locdhmax
         dpak = dhmax
-        write(cloc, "(a,'-',a)") trim(this%name), 'head'
+        write(cloc, "(a,'-',a)") trim(this%packName), 'head'
         cpak = cloc
       end if
       !
@@ -632,7 +632,7 @@ contains
       if (abs(rmax) > abs(dpak)) then
         ipak = locrmax
         dpak = rmax
-        write(cloc, "(a,'-',a)") trim(this%name), 'storage'
+        write(cloc, "(a,'-',a)") trim(this%packName), 'storage'
         cpak = cloc
       end if
       !
@@ -1053,7 +1053,7 @@ contains
         naux = 0
         ! -- interbed elastic storage
         call this%dis%record_srcdst_list_header(budtxt(2), this%name_model,     &
-                    this%name_model, this%name_model, this%name, naux,          &
+                    this%name_model, this%name_model, this%packName, naux,          &
                     this%auxname, ibinun, this%ninterbeds, this%iout)
         do ib = 1, this%ninterbeds
           q = this%storagee(ib)
@@ -1063,7 +1063,7 @@ contains
         end do
         ! -- interbed inelastic storage
         call this%dis%record_srcdst_list_header(budtxt(3), this%name_model,     &
-                    this%name_model, this%name_model, this%name, naux,          &
+                    this%name_model, this%name_model, this%packName, naux,          &
                     this%auxname, ibinun, this%ninterbeds, this%iout)
         do ib = 1, this%ninterbeds
           q = this%storagei(ib)
@@ -1355,14 +1355,14 @@ contains
         !
         ! -- interbed strain data
         ! -- set title
-        title = trim(adjustl(this%name)) // ' PACKAGE INTERBED STRAIN SUMMARY'
+        title = trim(adjustl(this%packName)) // ' PACKAGE INTERBED STRAIN SUMMARY'
         !
         ! -- determine the number of columns and rows
         ntabrows = nlen
         ntabcols = 9
         !
         ! -- setup table
-        call table_cr(this%outputtab, this%name, title)
+        call table_cr(this%outputtab, this%packName, title)
         call this%outputtab%table_df(ntabrows, ntabcols, this%iout)
         !
         ! add columns
@@ -1442,7 +1442,7 @@ contains
         ntabcols = ntabcols + this%dis%ndim
         !
         ! -- setup table
-        call table_cr(this%outputtab, this%name, '')
+        call table_cr(this%outputtab, this%packName, '')
         call this%outputtab%table_df(ntabrows, ntabcols, this%istrainib,         &
                                      lineseparator=.FALSE., separator=',')
         !
@@ -1544,7 +1544,7 @@ contains
       call sim_message(msg, this%iout, skipbefore=1)
       !
       ! -- set title
-      title = trim(adjustl(this%name)) //                                        &
+      title = trim(adjustl(this%packName)) //                                        &
               ' PACKAGE COARSE-GRAINED STRAIN SUMMARY'
       !
       ! -- determine the number of columns and rows
@@ -1552,7 +1552,7 @@ contains
       ntabcols = 7
       !
       ! -- setup table
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(ntabrows, ntabcols, this%iout)
       !
       ! add columns
@@ -1620,7 +1620,7 @@ contains
       ntabcols = ntabcols + this%dis%ndim
       !
       ! -- setup table
-      call table_cr(this%outputtab, this%name, '')
+      call table_cr(this%outputtab, this%packName, '')
       call this%outputtab%table_df(ntabrows, ntabcols, this%istrainsk,         &
                                     lineseparator=.FALSE., separator=',')
       !
@@ -1737,7 +1737,7 @@ contains
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%name))//     &
+      write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%packName))//     &
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -1909,13 +1909,13 @@ contains
       end do
 
       write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%name)) // ' PACKAGEDATA'
+        'END OF ' // trim(adjustl(this%packName)) // ' PACKAGEDATA'
     end if
     !
     ! -- write summary of interbed data
     if (this%iprpak == 1) then
       ! -- set title
-      title = trim(adjustl(this%name)) // ' PACKAGE INTERBED DATA'
+      title = trim(adjustl(this%packName)) // ' PACKAGE INTERBED DATA'
       !
       ! -- determine the number of columns and rows
       ntabrows = this%ninterbeds
@@ -1925,7 +1925,7 @@ contains
       end if
       !
       ! -- setup table
-      call table_cr(this%inputtab, this%name, title)
+      call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
       !
       ! add columns
@@ -2011,68 +2011,68 @@ contains
       ! -- reallocate and initialize delay interbed arrays
       if (ierr == 0) then
         call mem_allocate(this%idbconvert, this%ndelaycells, ndelaybeds,         & 
-                            'idbconvert', trim(this%origin))
+                            'idbconvert', trim(this%memoryPath))
         call mem_allocate(this%dbdhmax, ndelaybeds,                              &
-                            'dbdhmax', trim(this%origin))
+                            'dbdhmax', trim(this%memoryPath))
         call mem_allocate(this%dbz, this%ndelaycells, ndelaybeds,                &  
-                            'dbz', trim(this%origin))
+                            'dbz', trim(this%memoryPath))
         call mem_allocate(this%dbrelz, this%ndelaycells, ndelaybeds,             &
-                            'dbrelz', trim(this%origin))
+                            'dbrelz', trim(this%memoryPath))
         call mem_allocate(this%dbh, this%ndelaycells, ndelaybeds,                &
-                            'dbh', trim(this%origin))
+                            'dbh', trim(this%memoryPath))
         call mem_allocate(this%dbh0, this%ndelaycells, ndelaybeds,               &
-                            'dbh0', trim(this%origin))
+                            'dbh0', trim(this%memoryPath))
         call mem_allocate(this%dbgeo, this%ndelaycells, ndelaybeds,              &  
-                            'dbgeo', trim(this%origin))
+                            'dbgeo', trim(this%memoryPath))
         call mem_allocate(this%dbes, this%ndelaycells, ndelaybeds,               &
-                            'dbes', trim(this%origin))
+                            'dbes', trim(this%memoryPath))
         call mem_allocate(this%dbes0, this%ndelaycells, ndelaybeds,              &
-                            'dbes0', trim(this%origin))
+                            'dbes0', trim(this%memoryPath))
         call mem_allocate(this%dbpcs, this%ndelaycells, ndelaybeds,              &
-                            'dbpcs', trim(this%origin))
+                            'dbpcs', trim(this%memoryPath))
         call mem_allocate(this%dbflowtop, ndelaybeds,                            &
-                            'dbflowtop', trim(this%origin))
+                            'dbflowtop', trim(this%memoryPath))
         call mem_allocate(this%dbflowbot, ndelaybeds,                            &  
-                            'dbflowbot', trim(this%origin))
+                            'dbflowbot', trim(this%memoryPath))
         call mem_allocate(this%dbdzini, this%ndelaycells, ndelaybeds,            &
-                            'dbdzini', trim(this%origin))
+                            'dbdzini', trim(this%memoryPath))
         call mem_allocate(this%dbthetaini, this%ndelaycells, ndelaybeds,         &  
-                            'dbthetaini', trim(this%origin))
+                            'dbthetaini', trim(this%memoryPath))
         call mem_allocate(this%dbcomp, this%ndelaycells, ndelaybeds,             &
-                            'dbcomp', trim(this%origin))
+                            'dbcomp', trim(this%memoryPath))
         call mem_allocate(this%dbtcomp, this%ndelaycells, ndelaybeds,            &  
-                            'dbtcomp', trim(this%origin))
+                            'dbtcomp', trim(this%memoryPath))
         !
         ! -- allocate delay bed arrays
         if (this%iupdatematprop == 0) then
-          call mem_setptr(this%dbdz, 'dbdzini', trim(this%origin))
-          call mem_setptr(this%dbdz0, 'dbdzini', trim(this%origin))
-          call mem_setptr(this%dbtheta, 'dbthetaini', trim(this%origin))
-          call mem_setptr(this%dbtheta0, 'dbthetaini', trim(this%origin))
+          call mem_setptr(this%dbdz, 'dbdzini', trim(this%memoryPath))
+          call mem_setptr(this%dbdz0, 'dbdzini', trim(this%memoryPath))
+          call mem_setptr(this%dbtheta, 'dbthetaini', trim(this%memoryPath))
+          call mem_setptr(this%dbtheta0, 'dbthetaini', trim(this%memoryPath))
         else
           call mem_allocate(this%dbdz, this%ndelaycells, ndelaybeds,             &
-                              'dbdz', trim(this%origin))
+                              'dbdz', trim(this%memoryPath))
           call mem_allocate(this%dbdz0, this%ndelaycells, ndelaybeds,            & 
-                              'dbdz0', trim(this%origin))  
+                              'dbdz0', trim(this%memoryPath))  
           call mem_allocate(this%dbtheta, this%ndelaycells, ndelaybeds,          & 
-                              'dbtheta', trim(this%origin))
+                              'dbtheta', trim(this%memoryPath))
           call mem_allocate(this%dbtheta0, this%ndelaycells, ndelaybeds,         & 
-                              'dbtheta0', trim(this%origin))
+                              'dbtheta0', trim(this%memoryPath))
         end if
         !
         ! -- allocate delay interbed solution arrays
         call mem_allocate(this%dbal, this%ndelaycells,                           &
-                            'dbal', trim(this%origin))
+                            'dbal', trim(this%memoryPath))
         call mem_allocate(this%dbad, this%ndelaycells,                           &
-                            'dbad', trim(this%origin))
+                            'dbad', trim(this%memoryPath))
         call mem_allocate(this%dbau, this%ndelaycells,                           &
-                            'dbau', trim(this%origin))
+                            'dbau', trim(this%memoryPath))
         call mem_allocate(this%dbrhs, this%ndelaycells,                          & 
-                            'dbrhs', trim(this%origin))
+                            'dbrhs', trim(this%memoryPath))
         call mem_allocate(this%dbdh, this%ndelaycells,                           & 
-                            'dbdh', trim(this%origin))
+                            'dbdh', trim(this%memoryPath))
         call mem_allocate(this%dbaw, this%ndelaycells,                           &
-                            'dbaw', trim(this%origin))
+                            'dbaw', trim(this%memoryPath))
         !
         ! -- initialize delay bed storage
         do ib = 1, this%ninterbeds
@@ -2208,9 +2208,9 @@ contains
             call this%parser%GetRemainingLine(line)
             lloc = 1
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
-                        istart, istop, caux, line, this%name)
+                        istart, istop, caux, line, this%packName)
             call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
-                              'AUXNAME', this%origin)
+                              'AUXNAME', this%memoryPath)
             do n = 1, this%naux
               this%auxname(n) = caux(n)
             end do
@@ -2220,15 +2220,15 @@ contains
             write(this%iout, fmtflow2)
           case ('PRINT_INPUT')
             this%iprpak = 1
-            write(this%iout,'(4x,a)') 'LISTS OF '//trim(adjustl(this%name))//    &
+            write(this%iout,'(4x,a)') 'LISTS OF '//trim(adjustl(this%packName))//    &
               ' CELLS WILL BE PRINTED.'
           case ('PRINT_FLOWS')
             this%iprflow = 1
-            write(this%iout,'(4x,a)') trim(adjustl(this%name))// &
+            write(this%iout,'(4x,a)') trim(adjustl(this%packName))// &
               ' FLOWS WILL BE PRINTED TO LISTING FILE.'
           case ('BOUNDNAMES')
             this%inamedbound = 1
-            write(this%iout,'(4x,a)') trim(adjustl(this%name))//                &
+            write(this%iout,'(4x,a)') trim(adjustl(this%packName))//                &
               ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'          ! user specified boundnames
           case ('TS6')
             call this%parser%GetStringCaps(keyword)
@@ -2261,7 +2261,7 @@ contains
             this%obs%inUnitObs = inobs
             this%inobspkg = inobs
             
-            call this%obs%obs_df(this%iout, this%name, this%filtyp, this%dis)
+            call this%obs%obs_df(this%iout, this%packName, this%filtyp, this%dis)
             call this%csub_df_obs()
           !
           ! -- CSUB specific options
@@ -2460,17 +2460,17 @@ contains
           ! default case
           case default
             write(errmsg,'(a,3(1x,a),a)')                                        &
-              'Unknown', trim(adjustl(this%name)), "option '",                   &
+              'Unknown', trim(adjustl(this%packName)), "option '",                   &
               trim(keyword), "'."
             call store_error(errmsg)
         end select
       end do
       write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%name)) // ' OPTIONS'
+        'END OF ' // trim(adjustl(this%packName)) // ' OPTIONS'
     end if
     !
     ! -- write messages for options
-    write(this%iout, '(//2(1X,A))') trim(adjustl(this%name)),                    &
+    write(this%iout, '(//2(1X,A))') trim(adjustl(this%packName)),                    &
                                     'PACKAGE SETTINGS'
     write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =',                         &
                               this%ndelaycells
@@ -2601,54 +2601,54 @@ contains
     if (this%ioutcomp == 0 .and. this%ioutcompi == 0 .and.                      &
         this%ioutcompe == 0 .and. this%ioutcompib == 0 .and.                    &
         this%ioutcomps == 0 .and. this%ioutzdisp == 0) then
-      call mem_allocate(this%buff, 1, 'BUFF', trim(this%origin))
+      call mem_allocate(this%buff, 1, 'BUFF', trim(this%memoryPath))
     else
-      call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%origin))
+      call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%memoryPath))
     end if
     if (this%ioutcomp == 0 .and. this%ioutzdisp == 0) then
-      call mem_allocate(this%buffusr, 1, 'buffusr', trim(this%origin))
+      call mem_allocate(this%buffusr, 1, 'buffusr', trim(this%memoryPath))
     else
       call mem_allocate(this%buffusr, this%dis%nodesuser, 'buffusr',             &
-                        trim(this%origin))
+                        trim(this%memoryPath))
     end if
-    call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
-    call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
+    call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%memoryPath))
+    call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%memoryPath))
     call mem_allocate(this%cg_ske_cr, this%dis%nodes, 'cg_ske_cr',               &
-                      trim(this%origin))
-    call mem_allocate(this%cg_es, this%dis%nodes, 'cg_es', trim(this%origin))
-    call mem_allocate(this%cg_es0, this%dis%nodes, 'cg_es0', trim(this%origin))
-    call mem_allocate(this%cg_pcs, this%dis%nodes, 'cg_pcs', trim(this%origin))
-    call mem_allocate(this%cg_comp, this%dis%nodes, 'cg_comp', trim(this%origin))
+                      trim(this%memoryPath))
+    call mem_allocate(this%cg_es, this%dis%nodes, 'cg_es', trim(this%memoryPath))
+    call mem_allocate(this%cg_es0, this%dis%nodes, 'cg_es0', trim(this%memoryPath))
+    call mem_allocate(this%cg_pcs, this%dis%nodes, 'cg_pcs', trim(this%memoryPath))
+    call mem_allocate(this%cg_comp, this%dis%nodes, 'cg_comp', trim(this%memoryPath))
     call mem_allocate(this%cg_tcomp, this%dis%nodes, 'cg_tcomp',                 & 
-                      trim(this%origin))
-    call mem_allocate(this%cg_stor, this%dis%nodes, 'cg_stor', trim(this%origin))
-    call mem_allocate(this%cg_ske, this%dis%nodes, 'cg_ske', trim(this%origin))
-    call mem_allocate(this%cg_sk, this%dis%nodes, 'cg_sk', trim(this%origin))
+                      trim(this%memoryPath))
+    call mem_allocate(this%cg_stor, this%dis%nodes, 'cg_stor', trim(this%memoryPath))
+    call mem_allocate(this%cg_ske, this%dis%nodes, 'cg_ske', trim(this%memoryPath))
+    call mem_allocate(this%cg_sk, this%dis%nodes, 'cg_sk', trim(this%memoryPath))
     call mem_allocate(this%cg_thickini, this%dis%nodes, 'cg_thickini',           & 
-                      trim(this%origin))
+                      trim(this%memoryPath))
     call mem_allocate(this%cg_thetaini, this%dis%nodes, 'cg_thetaini',           & 
-                      trim(this%origin))
+                      trim(this%memoryPath))
     if (this%iupdatematprop == 0) then
-      call mem_setptr(this%cg_thick, 'cg_thickini', trim(this%origin))
-      call mem_setptr(this%cg_thick0, 'cg_thickini', trim(this%origin))
-      call mem_setptr(this%cg_theta, 'cg_thetaini', trim(this%origin))
-      call mem_setptr(this%cg_theta0, 'cg_thetaini', trim(this%origin))
+      call mem_setptr(this%cg_thick, 'cg_thickini', trim(this%memoryPath))
+      call mem_setptr(this%cg_thick0, 'cg_thickini', trim(this%memoryPath))
+      call mem_setptr(this%cg_theta, 'cg_thetaini', trim(this%memoryPath))
+      call mem_setptr(this%cg_theta0, 'cg_thetaini', trim(this%memoryPath))
     else
       call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick',               &
-                        trim(this%origin))
+                        trim(this%memoryPath))
       call mem_allocate(this%cg_thick0, this%dis%nodes, 'cg_thick0',             &
-                        trim(this%origin))
+                        trim(this%memoryPath))
       call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta',               &
-                        trim(this%origin))
+                        trim(this%memoryPath))
       call mem_allocate(this%cg_theta0, this%dis%nodes, 'cg_theta0',             &
-                        trim(this%origin))
+                        trim(this%memoryPath))
     end if
     !
     ! -- cell storage data
     call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor',           &
-                      trim(this%origin))
+                      trim(this%memoryPath))
     call mem_allocate(this%cell_thick, this%dis%nodes, 'cell_thick',             &
-                      trim(this%origin))
+                      trim(this%memoryPath))
     !
     ! -- interbed data
     iblen = 1
@@ -2659,44 +2659,44 @@ contains
     if (this%naux > 0) then
       naux = this%naux
     end if
-    call mem_allocate(this%auxvar, naux, iblen, 'AUXVAR', this%origin)
+    call mem_allocate(this%auxvar, naux, iblen, 'AUXVAR', this%memoryPath)
     do n = 1, iblen
       do j = 1, naux
         this%auxvar(j, n) = DZERO
       end do
     end do
-    call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%origin))
-    call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
-    call mem_allocate(this%cg_gs, this%dis%nodes, 'cg_gs', trim(this%origin))
-    call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
-    call mem_allocate(this%rnb, iblen, 'rnb', trim(this%origin))
-    call mem_allocate(this%kv, iblen, 'kv', trim(this%origin))
-    call mem_allocate(this%h0, iblen, 'h0', trim(this%origin))
-    call mem_allocate(this%ci, iblen, 'ci', trim(this%origin))
-    call mem_allocate(this%rci, iblen, 'rci', trim(this%origin))
-    call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
-    call mem_allocate(this%ielastic, iblen, 'ielastic', trim(this%origin))
-    call mem_allocate(this%iconvert, iblen, 'iconvert', trim(this%origin))
-    call mem_allocate(this%comp, iblen, 'comp', trim(this%origin))
-    call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%origin))
-    call mem_allocate(this%tcompi, iblen, 'tcompi', trim(this%origin))
-    call mem_allocate(this%tcompe, iblen, 'tcompe', trim(this%origin))
-    call mem_allocate(this%storagee, iblen, 'storagee', trim(this%origin))
-    call mem_allocate(this%storagei, iblen, 'storagei', trim(this%origin))
-    call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
-    call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
-    call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
-    call mem_allocate(this%thetaini, iblen, 'thetaini', trim(this%origin))
+    call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%memoryPath))
+    call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%memoryPath))
+    call mem_allocate(this%cg_gs, this%dis%nodes, 'cg_gs', trim(this%memoryPath))
+    call mem_allocate(this%pcs, iblen, 'pcs', trim(this%memoryPath))
+    call mem_allocate(this%rnb, iblen, 'rnb', trim(this%memoryPath))
+    call mem_allocate(this%kv, iblen, 'kv', trim(this%memoryPath))
+    call mem_allocate(this%h0, iblen, 'h0', trim(this%memoryPath))
+    call mem_allocate(this%ci, iblen, 'ci', trim(this%memoryPath))
+    call mem_allocate(this%rci, iblen, 'rci', trim(this%memoryPath))
+    call mem_allocate(this%idelay, iblen, 'idelay', trim(this%memoryPath))
+    call mem_allocate(this%ielastic, iblen, 'ielastic', trim(this%memoryPath))
+    call mem_allocate(this%iconvert, iblen, 'iconvert', trim(this%memoryPath))
+    call mem_allocate(this%comp, iblen, 'comp', trim(this%memoryPath))
+    call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%memoryPath))
+    call mem_allocate(this%tcompi, iblen, 'tcompi', trim(this%memoryPath))
+    call mem_allocate(this%tcompe, iblen, 'tcompe', trim(this%memoryPath))
+    call mem_allocate(this%storagee, iblen, 'storagee', trim(this%memoryPath))
+    call mem_allocate(this%storagei, iblen, 'storagei', trim(this%memoryPath))
+    call mem_allocate(this%ske, iblen, 'ske', trim(this%memoryPath))
+    call mem_allocate(this%sk, iblen, 'sk', trim(this%memoryPath))
+    call mem_allocate(this%thickini, iblen, 'thickini', trim(this%memoryPath))
+    call mem_allocate(this%thetaini, iblen, 'thetaini', trim(this%memoryPath))
     if (this%iupdatematprop == 0) then
-      call mem_setptr(this%thick, 'thickini', trim(this%origin))
-      call mem_setptr(this%thick0, 'thickini', trim(this%origin))
-      call mem_setptr(this%theta, 'thetaini', trim(this%origin))
-      call mem_setptr(this%theta0, 'thetaini', trim(this%origin))
+      call mem_setptr(this%thick, 'thickini', trim(this%memoryPath))
+      call mem_setptr(this%thick0, 'thickini', trim(this%memoryPath))
+      call mem_setptr(this%theta, 'thetaini', trim(this%memoryPath))
+      call mem_setptr(this%theta0, 'thetaini', trim(this%memoryPath))
     else
-      call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
-      call mem_allocate(this%thick0, iblen, 'thick0', trim(this%origin))
-      call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
-      call mem_allocate(this%theta0, iblen, 'theta0', trim(this%origin))
+      call mem_allocate(this%thick, iblen, 'thick', trim(this%memoryPath))
+      call mem_allocate(this%thick0, iblen, 'thick0', trim(this%memoryPath))
+      call mem_allocate(this%theta, iblen, 'theta', trim(this%memoryPath))
+      call mem_allocate(this%theta0, iblen, 'theta0', trim(this%memoryPath))
     end if
     !
     ! -- delay bed storage - allocated in csub_read_packagedata
@@ -2705,7 +2705,7 @@ contains
     ! -- allocate boundname
     if (this%inamedbound /= 0) then
       call mem_allocate(this%boundname, LENBOUNDNAME, this%ninterbeds,           &
-                        'BOUNDNAME', trim(this%origin))
+                        'BOUNDNAME', trim(this%memoryPath))
     end if
     !
     ! -- allocate the nodelist and bound arrays
@@ -2714,8 +2714,8 @@ contains
     else
       ilen = 1
     end if
-    call mem_allocate(this%nodelistsig0, ilen, 'NODELISTSIG0', this%origin)
-    call mem_allocate(this%sig0, ilen, 'SIG0', this%origin)
+    call mem_allocate(this%nodelistsig0, ilen, 'NODELISTSIG0', this%memoryPath)
+    call mem_allocate(this%sig0, ilen, 'SIG0', this%memoryPath)
     !
     ! -- set pointers to gwf variables
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
@@ -2805,8 +2805,8 @@ contains
       call mem_deallocate(this%cell_thick)
       !
       ! -- interbed storage
-      call mem_deallocate(this%boundname, 'BOUNDNAME', this%origin)
-      call mem_deallocate(this%auxname, 'AUXNAME', this%origin)
+      call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
+      call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
       call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
@@ -2909,8 +2909,8 @@ contains
     end if
     !
     ! -- deallocate character variables
-    call mem_deallocate(this%listlabel, 'LISTLABEL', this%origin)
-    call mem_deallocate(this%stoname, 'STONAME', this%origin)
+    call mem_deallocate(this%listlabel, 'LISTLABEL', this%memoryPath)
+    call mem_deallocate(this%stoname, 'STONAME', this%memoryPath)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%istounit)
@@ -3001,7 +3001,7 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%name))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%packName))// &
         ' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -3016,12 +3016,12 @@ contains
             write(this%iout,'(4x,a,i0)') 'MAXSIG0 = ', this%maxsig0
           case default
             write(errmsg,'(a,3(1x,a),a)') &
-              'Unknown', trim(this%name), "dimension '", trim(keyword), "'."
+              'Unknown', trim(this%packName), "dimension '", trim(keyword), "'."
             call store_error(errmsg)
         end select
       end do
       write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%name)) // ' DIMENSIONS'
+        'END OF ' // trim(adjustl(this%packName)) // ' DIMENSIONS'
     else
       call store_error('Required dimensions block not found.')
     end if
@@ -3231,7 +3231,7 @@ contains
     if (istoerr /= 0) then
       write(errmsg,'(a,3(1x,a))')                                                &
         'Specific storage values in the storage (STO) package must',             &
-        'be zero in all active cells when using the', trim(adjustl(this%name)),  &
+        'be zero in all active cells when using the', trim(adjustl(this%packName)),  &
         'package.'
       call store_error(errmsg)
     end if
@@ -3762,9 +3762,9 @@ contains
         !
         ! -- reset the input table object
         title = 'CSUB' // ' PACKAGE (' //                                        &
-                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
-        call table_cr(this%inputtab, this%name, title)
+        call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(1, 2, this%iout, finalize=.FALSE.)
         text = 'CELLID'
         call this%inputtab%initialize_column(text, 20)
@@ -3776,7 +3776,7 @@ contains
       nlist = 0
       !
       ! -- Remove all time-series links associated with this package.
-      call this%TsManager%Reset(this%name)
+      call this%TsManager%Reset(this%packName)
       !
       ! -- read data
       readdata: do
@@ -3818,7 +3818,7 @@ contains
         call this%parser%GetString(text)
         jj = 1  ! For 'SIG0'
         bndElem => this%sig0(nlist)
-        call read_value_or_time_series_adv(text, nlist, jj, bndElem, this%name,  &
+        call read_value_or_time_series_adv(text, nlist, jj, bndElem, this%packName,  &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'SIG0')
         !
@@ -4178,7 +4178,7 @@ contains
     ! -- write current stress and initial preconsolidation stress
     if (this%iprpak == 1) then
       ! -- set title
-      title = trim(adjustl(this%name)) //                                        &
+      title = trim(adjustl(this%packName)) //                                        &
         ' PACKAGE CALCULATED INITIAL INTERBED STRESSES AT THE CELL BOTTOM'
       !
       ! -- determine the number of columns and rows
@@ -4189,7 +4189,7 @@ contains
       end if
       !
       ! -- setup table
-      call table_cr(this%inputtab, this%name, title)
+      call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
       !
       ! add columns
@@ -4228,7 +4228,7 @@ contains
       ! -- write effective stress and preconsolidation stress 
       !    for delay beds
       ! -- set title
-      title = trim(adjustl(this%name)) //                                        &
+      title = trim(adjustl(this%packName)) //                                        &
         ' PACKAGE CALCULATED INITIAL DELAY INTERBED STRESSES'
       !
       ! -- determine the number of columns and rows
@@ -4245,7 +4245,7 @@ contains
       end if
       !
       ! -- setup table
-      call table_cr(this%inputtab, this%name, title)
+      call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
       !
       ! add columns
@@ -4302,7 +4302,7 @@ contains
       if (this%istoragec == 1) then
         if (this%lhead_based .EQV. .FALSE.) then
           ! -- set title
-          title = trim(adjustl(this%name)) //                                    &
+          title = trim(adjustl(this%packName)) //                                    &
             ' PACKAGE COMPRESSION INDICES'
           !
           ! -- determine the number of columns and rows
@@ -4313,7 +4313,7 @@ contains
           end if
           !
           ! -- setup table
-          call table_cr(this%inputtab, this%name, title)
+          call table_cr(this%inputtab, this%packName, title)
           call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
           !
           ! add columns

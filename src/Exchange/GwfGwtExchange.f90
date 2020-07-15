@@ -117,8 +117,8 @@ module GwfGwtExchangeModule
     ! -- Assign values in the fmi package
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%name)
-      gwtmodel%fmi%flowpacknamearray(ip) = packobj%name
+      call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%packName)
+      gwtmodel%fmi%flowpacknamearray(ip) = packobj%packName
     end do
     !
     ! -- return
@@ -323,7 +323,7 @@ module GwfGwtExchangeModule
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
       call gwtmodel%fmi%gwfpackages(ip)%set_pointers( &
-                           packobj%name, &
+                           packobj%packName, &
                            packobj%auxname, &
                            packobj%nbound, &
                            packobj%naux, &

@@ -201,7 +201,7 @@ module GwfMvrModule
     !
     ! -- Create the budget object
     if (inunit > 0) then
-      call budget_cr(mvrobj%budget, mvrobj%origin)
+      call budget_cr(mvrobj%budget, mvrobj%memoryPath)
       !
       ! -- Initialize block parser
       call mvrobj%parser%Initialize(mvrobj%inunit, mvrobj%iout)
@@ -482,7 +482,7 @@ module GwfMvrModule
     if (this%nmvr > 0) then
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
-        cpak = trim(this%name)
+        cpak = trim(this%packName)
         write(this%iout, fmtmvrcnvg)
       endif
     endif
@@ -1028,14 +1028,14 @@ module GwfMvrModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%omega, 'OMEGA', this%origin)
-    call mem_allocate(this%maxmvr, 'MAXMVR', this%origin)
-    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%origin)
-    call mem_allocate(this%maxcomb, 'MAXCOMB', this%origin)
-    call mem_allocate(this%nmvr, 'NMVR', this%origin)
-    call mem_allocate(this%iexgmvr, 'IEXGMVR', this%origin)
-    call mem_allocate(this%imodelnames, 'IMODELNAMES', this%origin)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%omega, 'OMEGA', this%memoryPath)
+    call mem_allocate(this%maxmvr, 'MAXMVR', this%memoryPath)
+    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
+    call mem_allocate(this%maxcomb, 'MAXCOMB', this%memoryPath)
+    call mem_allocate(this%nmvr, 'NMVR', this%memoryPath)
+    call mem_allocate(this%iexgmvr, 'IEXGMVR', this%memoryPath)
+    call mem_allocate(this%imodelnames, 'IMODELNAMES', this%memoryPath)
     !
     ! -- Initialize
     this%ibudgetout = 0
@@ -1080,7 +1080,7 @@ module GwfMvrModule
     end do
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%origin)
+    call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%memoryPath)
     !
     ! -- setup the output table
     call this%mvr_setup_outputtab()
@@ -1287,9 +1287,9 @@ module GwfMvrModule
       ntabcol = 7
       !
       ! -- initialize the output table object
-      title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &
+      title = 'WATER MOVER PACKAGE (' // trim(this%packName) //     &
               ') FLOW RATES'
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(this%maxmvr, ntabcol, this%iout,            &
                                     transient=.TRUE.)
       text = 'NUMBER'
@@ -1334,7 +1334,7 @@ module GwfMvrModule
     call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
-    title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &
+    title = 'WATER MOVER PACKAGE (' // trim(this%packName) //     &
             ') FLOW RATES'
     call this%outputtab%set_title(title)
     call this%outputtab%set_maxbound(this%nmvr)

@@ -32,7 +32,7 @@ module Xt3dModule
     real(DP), dimension(:), pointer, contiguous     :: amatpcx     => null()     !saved contributions to amat from permanently confined connections, extended neighbors
     integer(I4B), dimension(:), pointer, contiguous :: iallpc      => null()     !indicates for each node whether all connections processed by xt3d are permanently confined (0 no, 1 yes)
     logical, pointer                                :: lamatsaved  => null()     !indicates whether amat has been saved for permanently confined connections
-    class(DisBaseType), pointer                     :: dis         => null()     !discretization object
+    class(DisBaseType), pointer                     :: dis         => null()     !>discretization object
     ! pointers to npf variables
     real(DP), dimension(:), pointer, contiguous     :: k11         => null()     !horizontal hydraulic conductivity
     real(DP), dimension(:),pointer, contiguous      :: k22         => null()     !minor axis of horizontal hydraulic conductivity ellipse
