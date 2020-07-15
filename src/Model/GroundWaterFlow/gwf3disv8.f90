@@ -137,14 +137,14 @@ module GwfDisvModule
     !
     ! -- Allocate non-reduced vectors for disv
     call mem_allocate(disext%idomain, disext%ncpl, 1, disext%nlay, 'IDOMAIN',    &
-                      disext%origin)
-    call mem_allocate(disext%top2d, disext%ncpl, 1, 'TOP2D', disext%origin)
+                      disext%memoryPath)
+    call mem_allocate(disext%top2d, disext%ncpl, 1, 'TOP2D', disext%memoryPath)
     call mem_allocate(disext%bot3d, disext%ncpl, 1, disext%nlay, 'BOT3D',        &
-                      disext%origin)
+                      disext%memoryPath)
     !
     ! -- Allocate vertices array
-    call mem_allocate(disext%vertices, 2, disext%nvert, 'VERTICES', disext%origin)
-    call mem_allocate(disext%cellxy, 2, disext%ncpl, 'CELLXY', disext%origin)
+    call mem_allocate(disext%vertices, 2, disext%nvert, 'VERTICES', disext%memoryPath)
+    call mem_allocate(disext%cellxy, 2, disext%ncpl, 'CELLXY', disext%memoryPath)
     !
     ! -- fill data
     do k = 1, disext%nlay
@@ -416,13 +416,13 @@ module GwfDisvModule
     !
     ! -- Allocate non-reduced vectors for disv
     call mem_allocate(this%idomain, this%ncpl, 1, this%nlay, 'IDOMAIN',          &
-                      this%origin)
-    call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%origin)
-    call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', this%origin)
+                      this%memoryPath)
+    call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%memoryPath)
+    call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', this%memoryPath)
     !
     ! -- Allocate vertices array
-    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
-    call mem_allocate(this%cellxy, 2, this%ncpl, 'CELLXY', this%origin)
+    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
+    call mem_allocate(this%cellxy, 2, this%ncpl, 'CELLXY', this%memoryPath)
     !
     ! -- initialize all cells to be active (idomain = 1)
     do k = 1, this%nlay
@@ -892,8 +892,8 @@ module GwfDisvModule
     end if
     !
     ! -- Convert vertspm into ia/ja form
-    call mem_allocate(this%iavert, this%ncpl+1, 'IAVERT', this%origin)
-    call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%origin)
+    call mem_allocate(this%iavert, this%ncpl+1, 'IAVERT', this%memoryPath)
+    call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%memoryPath)
     call vertspm%filliaja(this%iavert, this%javert, ierr)
     call vertspm%destroy()
     !
@@ -1449,9 +1449,9 @@ module GwfDisvModule
     call this%DisBaseType%allocate_scalars(name_model)
     !
     ! -- Allocate
-    call mem_allocate(this%nlay, 'NLAY', this%origin)
-    call mem_allocate(this%ncpl, 'NCPL', this%origin)
-    call mem_allocate(this%nvert, 'NVERT', this%origin)
+    call mem_allocate(this%nlay, 'NLAY', this%memoryPath)
+    call mem_allocate(this%ncpl, 'NCPL', this%memoryPath)
+    call mem_allocate(this%nvert, 'NVERT', this%memoryPath)
     !
     ! -- Initialize
     this%nlay = 0
@@ -1481,12 +1481,12 @@ module GwfDisvModule
     !
     ! -- Allocate arrays for GwfDisvType
     if(this%nodes < this%nodesuser) then
-      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%origin)
+      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
-                        this%origin)
+                        this%memoryPath)
     else
-      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%origin)
-      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%origin)
+      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
+      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
     !!
     !! -- Allocate vertices array

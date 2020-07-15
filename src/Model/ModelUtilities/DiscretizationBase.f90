@@ -18,31 +18,31 @@ module BaseDisModule
   public :: DisBaseType
 
   type :: DisBaseType
-    character(len=LENORIGIN), pointer               :: origin     => null()      !origin name for mem allocation
-    character(len=LENMODELNAME), pointer            :: name_model => null()      !name of the model
-    integer(I4B), pointer                           :: inunit     => null()      !unit number for input file
-    integer(I4B), pointer                           :: iout       => null()      !unit number for output file
-    integer(I4B), pointer                           :: nodes      => null()      !number of nodes in solution
-    integer(I4B), pointer                           :: nodesuser  => null()      !number of user nodes (same as nodes for disu grid)
-    integer(I4B), pointer                           :: nja        => null()      !number of connections plus number of nodes
-    integer(I4B), pointer                           :: njas       => null()      !(nja-nodes)/2
-    integer(I4B), pointer                           :: lenuni     => null()      !length unit
-    integer(I4B), pointer                           :: ndim       => null()      !number of spatial model dimensions (1 for disu grid)
-    integer(I4B), pointer                           :: icondir    => null()      !flag indicating if grid has enough info to calculate connection vectors
-    logical, pointer                                :: writegrb   => null()      !write binary grid file
-    real(DP), pointer                               :: yorigin    => null()      ! y-position of the lower-left grid corner (default is 0.)
-    real(DP), pointer                               :: xorigin    => null()      ! x-position of the lower-left grid corner (default is 0.)
-    real(DP), pointer                               :: angrot     => null()      ! counter-clockwise rotation angle of the lower-left corner (default is 0.0)
-    integer(I4B), dimension(:), pointer, contiguous :: mshape     => null()      !shape of the model; (nodes) for DisBaseType
-    real(DP), dimension(:), pointer, contiguous     :: top        => null()      !(size:nodes) cell top elevation
-    real(DP), dimension(:), pointer, contiguous     :: bot        => null()      !(size:nodes) cell bottom elevation
-    real(DP), dimension(:), pointer, contiguous     :: area       => null()      !(size:nodes) cell area, in plan view
-    type(ConnectionsType), pointer                  :: con        => null()      !connections object
-    type(BlockParserType)                           :: parser                    !object to read blocks
-    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()      !helper double array of size nodesuser
-    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()      !helper int array of size nodesuser
-    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    character(len=LENORIGIN), pointer               :: memoryPath => null()      !< origin name for mem allocation
+    character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model
+    integer(I4B), pointer                           :: inunit     => null()      !< unit number for input file
+    integer(I4B), pointer                           :: iout       => null()      !< unit number for output file
+    integer(I4B), pointer                           :: nodes      => null()      !< number of nodes in solution
+    integer(I4B), pointer                           :: nodesuser  => null()      !< number of user nodes (same as nodes for disu grid)
+    integer(I4B), pointer                           :: nja        => null()      !< number of connections plus number of nodes
+    integer(I4B), pointer                           :: njas       => null()      !< (nja-nodes)/2
+    integer(I4B), pointer                           :: lenuni     => null()      !< length unit
+    integer(I4B), pointer                           :: ndim       => null()      !< number of spatial model dimensions (1 for disu grid)
+    integer(I4B), pointer                           :: icondir    => null()      !< flag indicating if grid has enough info to calculate connection vectors
+    logical, pointer                                :: writegrb   => null()      !< write binary grid file
+    real(DP), pointer                               :: yorigin    => null()      !< y-position of the lower-left grid corner (default is 0.)
+    real(DP), pointer                               :: xorigin    => null()      !< x-position of the lower-left grid corner (default is 0.)
+    real(DP), pointer                               :: angrot     => null()      !< counter-clockwise rotation angle of the lower-left corner (default is 0.0)
+    integer(I4B), dimension(:), pointer, contiguous :: mshape     => null()      !< shape of the model; (nodes) for DisBaseType
+    real(DP), dimension(:), pointer, contiguous     :: top        => null()      !< (size:nodes) cell top elevation
+    real(DP), dimension(:), pointer, contiguous     :: bot        => null()      !< (size:nodes) cell bottom elevation
+    real(DP), dimension(:), pointer, contiguous     :: area       => null()      !< (size:nodes) cell area, in plan view
+    type(ConnectionsType), pointer                  :: con        => null()      !< connections object
+    type(BlockParserType)                           :: parser                    !< object to read blocks
+    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()      !< helper double array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()      !< helper int array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     !< (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        !< (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -259,7 +259,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate(this%origin)
+    deallocate(this%memoryPath)
     deallocate(this%name_model)
     !
     ! -- Scalars
@@ -554,7 +554,7 @@ module BaseDisModule
     origin = trim(adjustl(name_model)) // ' DIS'
     !
     ! -- Allocate
-    allocate(this%origin)
+    allocate(this%memoryPath)
     allocate(this%name_model)
     call mem_allocate(this%inunit, 'INUNIT', origin)
     call mem_allocate(this%iout, 'IOUT', origin)
@@ -571,7 +571,7 @@ module BaseDisModule
     call mem_allocate(this%lenuni, 'LENUNI', origin)
     !
     ! -- Initialize
-    this%origin = origin
+    this%memoryPath = origin
     this%name_model = name_model
     this%inunit = 0
     this%iout = 0
@@ -606,10 +606,10 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%origin)
-    call mem_allocate(this%top, this%nodes, 'TOP', this%origin)
-    call mem_allocate(this%bot, this%nodes, 'BOT', this%origin)
-    call mem_allocate(this%area, this%nodes, 'AREA', this%origin)
+    call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%memoryPath)
+    call mem_allocate(this%top, this%nodes, 'TOP', this%memoryPath)
+    call mem_allocate(this%bot, this%nodes, 'BOT', this%memoryPath)
+    call mem_allocate(this%area, this%nodes, 'AREA', this%memoryPath)
     !
     ! -- Initialize
     this%mshape(1) = this%nodes
