@@ -1,7 +1,7 @@
   MODULE IMSLinearModule
   
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME,                      &
+  use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, LENMEMPATH,          &
                              IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
                              DHALF, DONE, DTWO,                                &
@@ -14,7 +14,7 @@
   private
   
   TYPE, PUBLIC :: IMSLINEAR_DATA
-    CHARACTER (LEN=20) :: ORIGIN
+    character(len=LENMEMPATH) :: memoryPath                !< the path for storing variables in the memory manager
     integer(I4B), POINTER :: iout => NULL()
     integer(I4B), POINTER :: IPRIMS => NULL()
     integer(I4B), POINTER :: ILINMETH => NULL()
@@ -106,7 +106,7 @@
 !
 !        SPECIFICATIONS:
 !     ------------------------------------------------------------------
-      use MemoryManagerModule, only: mem_allocate
+      use MemoryManagerModule, only: mem_allocate, create_mem_path
       use SimModule, only: ustop, store_error, count_errors,            &
                            deprecation_warning
       !IMPLICIT NONE
@@ -158,8 +158,8 @@
         lreaddata = .TRUE.
       END IF
 !
-!-------DEFINE NAME
-      THIS%ORIGIN = TRIM(NAME) // ' IMSLINEAR'
+!-------DEFINE NAME      
+      this%memoryPath = create_mem_path(name, 'IMSLinear')
 !
 !-------SET POINTERS TO SOLUTION STORAGE
       THIS%IPRIMS => IPRIMS
@@ -395,8 +395,8 @@
 !-------ALLOCATE AND INITIALIZE MEMORY FOR IMSLINEAR
       iscllen  = 1
       IF (THIS%ISCL.NE.0 ) iscllen  = NEQ
-      CALL mem_allocate(THIS%DSCALE, iscllen, 'DSCALE', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%DSCALE2, iscllen, 'DSCALE2', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%DSCALE, iscllen, 'DSCALE', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%DSCALE2, iscllen, 'DSCALE2', TRIM(THIS%memoryPath))
       
 !-------ALLOCATE MEMORY FOR PRECONDITIONING MATRIX
       ijlu      = 1
@@ -429,16 +429,16 @@
       THIS%NJW  = ijw
       THIS%NWLU = iwlu
 !-------ALLOCATE BASE PRECONDITIONER VECTORS
-      CALL mem_allocate(THIS%IAPC, THIS%NIAPC+1, 'IAPC', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%JAPC, THIS%NJAPC, 'JAPC', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%APC, THIS%NJAPC, 'APC', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%IAPC, THIS%NIAPC+1, 'IAPC', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%JAPC, THIS%NJAPC, 'JAPC', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%APC, THIS%NJAPC, 'APC', TRIM(THIS%memoryPath))
 !-------ALLOCATE MEMORY FOR ILU0 AND MILU0 NON-ZERO ROW ENTRY VECTOR
-      CALL mem_allocate(THIS%IW, THIS%NIAPC, 'IW', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%W, THIS%NIAPC, 'W', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%IW, THIS%NIAPC, 'IW', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%W, THIS%NIAPC, 'W', TRIM(THIS%memoryPath))
 !-------ALLOCATE MEMORY FOR ILUT VECTORS
-      CALL mem_allocate(THIS%JLU, ijlu, 'JLU', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%JW, ijw, 'JW', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%WLU, iwlu, 'WLU', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%JLU, ijlu, 'JLU', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%JW, ijw, 'JW', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%WLU, iwlu, 'WLU', TRIM(THIS%memoryPath))
 !-------GENERATE IAPC AND JAPC FOR ILU0 AND MILU0
       IF (THIS%IPC ==  1 .OR. THIS%IPC ==  2) THEN
         CALL IMSLINEARSUB_PCCRS(THIS%NEQ,THIS%NJA,THIS%IA,THIS%JA,              &
@@ -451,27 +451,27 @@
         i0     = THIS%NEQ
         iolen  = THIS%NJA
       END IF
-      CALL mem_allocate(THIS%LORDER, i0, 'LORDER', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%IORDER, i0, 'IORDER', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%IARO, i0+1, 'IARO', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%JARO, iolen, 'JARO', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%ARO, iolen, 'ARO', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%LORDER, i0, 'LORDER', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%IORDER, i0, 'IORDER', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%IARO, i0+1, 'IARO', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%JARO, iolen, 'JARO', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%ARO, iolen, 'ARO', TRIM(THIS%memoryPath))
 !-------ALLOCATE WORKING VECTORS FOR IMSLINEAR SOLVER
-      CALL mem_allocate(THIS%ID, THIS%NEQ, 'ID', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%D, THIS%NEQ, 'D', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%P, THIS%NEQ, 'P', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%Q, THIS%NEQ, 'Q', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%Z, THIS%NEQ, 'Z', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%ID, THIS%NEQ, 'ID', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%D, THIS%NEQ, 'D', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%P, THIS%NEQ, 'P', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%Q, THIS%NEQ, 'Q', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%Z, THIS%NEQ, 'Z', TRIM(THIS%memoryPath))
 !-------ALLOCATE MEMORY FOR BCGS WORKING ARRAYS
       THIS%NIABCGS = 1
       IF (THIS%ILINMETH ==  2) THEN
         THIS%NIABCGS = THIS%NEQ
       END IF
-      CALL mem_allocate(THIS%T, THIS%NIABCGS, 'T', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%V, THIS%NIABCGS, 'V', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%DHAT, THIS%NIABCGS, 'DHAT', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%PHAT, THIS%NIABCGS, 'PHAT', TRIM(THIS%ORIGIN))
-      CALL mem_allocate(THIS%QHAT, THIS%NIABCGS, 'QHAT', TRIM(THIS%ORIGIN))
+      CALL mem_allocate(THIS%T, THIS%NIABCGS, 'T', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%V, THIS%NIABCGS, 'V', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%DHAT, THIS%NIABCGS, 'DHAT', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%PHAT, THIS%NIABCGS, 'PHAT', TRIM(THIS%memoryPath))
+      CALL mem_allocate(THIS%QHAT, THIS%NIABCGS, 'QHAT', TRIM(THIS%memoryPath))
 !-------INITIALIZE IMSLINEAR VECTORS
       DO n = 1, iscllen
         THIS%DSCALE(n)  = DONE
@@ -644,29 +644,29 @@
       class(IMSLINEAR_DATA), intent(inout) :: this
       !
       ! -- scalars
-      call mem_allocate(this%iout, 'IOUT', this%origin)
-      call mem_allocate(this%ilinmeth, 'ILINMETH', this%origin)
-      call mem_allocate(this%iter1, 'ITER1', this%origin)
-      call mem_allocate(this%ipc, 'IPC', this%origin)
-      call mem_allocate(this%iscl, 'ISCL', this%origin)
-      call mem_allocate(this%iord, 'IORD', this%origin)
-      call mem_allocate(this%north, 'NORTH', this%origin)
-      call mem_allocate(this%icnvgopt, 'ICNVGOPT', this%origin)
-      call mem_allocate(this%iacpc, 'IACPC', this%origin)
-      call mem_allocate(this%niterc, 'NITERC', this%origin)
-      call mem_allocate(this%niabcgs, 'NIABCGS', this%origin)
-      call mem_allocate(this%niapc, 'NIAPC', this%origin)
-      call mem_allocate(this%njapc, 'NJAPC', this%origin)
-      call mem_allocate(this%dvclose, 'DVCLOSE', this%origin)
-      call mem_allocate(this%rclose, 'RCLOSE', this%origin)
-      call mem_allocate(this%relax, 'RELAX', this%origin)
-      call mem_allocate(this%epfact, 'EPFACT', this%origin)
-      call mem_allocate(this%l2norm0, 'L2NORM0', this%origin)
-      call mem_allocate(this%droptol, 'DROPTOL', this%origin)
-      call mem_allocate(this%level, 'LEVEL', this%origin)
-      call mem_allocate(this%njlu, 'NJLU', this%origin)
-      call mem_allocate(this%njw, 'NJW', this%origin)
-      call mem_allocate(this%nwlu, 'NWLU', this%origin)
+      call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+      call mem_allocate(this%ilinmeth, 'ILINMETH', this%memoryPath)
+      call mem_allocate(this%iter1, 'ITER1', this%memoryPath)
+      call mem_allocate(this%ipc, 'IPC', this%memoryPath)
+      call mem_allocate(this%iscl, 'ISCL', this%memoryPath)
+      call mem_allocate(this%iord, 'IORD', this%memoryPath)
+      call mem_allocate(this%north, 'NORTH', this%memoryPath)
+      call mem_allocate(this%icnvgopt, 'ICNVGOPT', this%memoryPath)
+      call mem_allocate(this%iacpc, 'IACPC', this%memoryPath)
+      call mem_allocate(this%niterc, 'NITERC', this%memoryPath)
+      call mem_allocate(this%niabcgs, 'NIABCGS', this%memoryPath)
+      call mem_allocate(this%niapc, 'NIAPC', this%memoryPath)
+      call mem_allocate(this%njapc, 'NJAPC', this%memoryPath)
+      call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
+      call mem_allocate(this%rclose, 'RCLOSE', this%memoryPath)
+      call mem_allocate(this%relax, 'RELAX', this%memoryPath)
+      call mem_allocate(this%epfact, 'EPFACT', this%memoryPath)
+      call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
+      call mem_allocate(this%droptol, 'DROPTOL', this%memoryPath)
+      call mem_allocate(this%level, 'LEVEL', this%memoryPath)
+      call mem_allocate(this%njlu, 'NJLU', this%memoryPath)
+      call mem_allocate(this%njw, 'NJW', this%memoryPath)
+      call mem_allocate(this%nwlu, 'NWLU', this%memoryPath)
       !
       ! -- initialize
       this%iout = 0
