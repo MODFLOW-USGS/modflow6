@@ -1,6 +1,6 @@
 module GwtObsModule
 
-  use KindModule, only: DP, I4B
+  use KindModule,       only: DP, I4B
   use ConstantsModule,  only: LINELENGTH, MAXOBSTYPES
   use BaseDisModule,    only: DisBaseType
   use GwtIcModule,      only: GwtIcType

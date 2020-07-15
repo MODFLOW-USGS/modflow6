@@ -126,7 +126,7 @@
 !-------------------------------------------------------------------------------
 module ObsModule
 
-  use KindModule, only: DP, I4B
+  use KindModule,          only: DP, I4B
   use ArrayHandlersModule, only: ExpandArray
   use BaseDisModule,       only: DisBaseType
   use BlockParserModule,   only: BlockParserType
@@ -222,10 +222,10 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     type(ObsType), pointer, intent(out)   :: obs
     integer(I4B), pointer, intent(in) :: inobs
+! ------------------------------------------------------------------------------
     !
     allocate(obs)
     call obs%allocate_scalars()
@@ -246,7 +246,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     type(ObserveType),  intent(inout) :: obsrv
     class(DisBaseType), intent(in)    :: dis
@@ -257,6 +256,7 @@ contains
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: ermsg, strng
     logical :: flag_string
+! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -295,13 +295,13 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ObsType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: pkgname
     character(len=*), intent(in) :: filtyp
     class(DisBaseType), pointer  :: dis
+! ------------------------------------------------------------------------------
     !
     this%iout = iout
     this%pkgName = pkgname
@@ -323,9 +323,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ObsType) :: this
+! ------------------------------------------------------------------------------
     !
     call this%obs_ar1(this%pkgName)
     if (this%active) then
@@ -343,12 +343,12 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ObsType) :: this
     ! -- local
     integer(I4B) :: i, n
     class(ObserveType), pointer :: obsrv => null()
+! ------------------------------------------------------------------------------
     !
     n = this%get_num()
     do i=1,n
@@ -360,18 +360,18 @@ contains
   end subroutine obs_ad
 
   subroutine obs_bd_clear(this)
-! **************************************************************************
+! ******************************************************************************
 ! obs_bd_clear -- Clear output lines in preparation for new rows of
 !                 continuous observations
 ! Subroutine: (1) Clears contents of all lineout members of obsOutputList
 !                 at start of a new time step
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), target :: this
+! ------------------------------------------------------------------------------
     !
     call this%obsOutputList%ClearOutputLines()
     !
@@ -390,9 +390,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ObsType), intent(inout) :: this
+! ------------------------------------------------------------------------------
     !
     if (this%npakobs > 0) then
       call this%write_continuous_simvals()
@@ -413,6 +413,7 @@ contains
     class(ObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
+! ------------------------------------------------------------------------------
     !
     deallocate(this%active)
     deallocate(this%inputFilename)
@@ -454,15 +455,14 @@ contains
   end subroutine obs_da
 
   subroutine SaveOneSimval(this, obsrv, simval)
-! **************************************************************************
+! ******************************************************************************
 ! SaveOneSimval
 ! Subroutine: (1) saves or accumulates a simulated value to its ObserveType
 !                 object
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType)         :: this
     class(ObserveType), intent(inout) :: obsrv
@@ -470,6 +470,7 @@ contains
     ! -- local
     character(len=LENOBSTYPE) :: obsTypeID
     type(ObsDataType), pointer :: obsDatum => null()
+! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     obsTypeID = obsrv%ObsTypeId
@@ -489,16 +490,15 @@ contains
   end subroutine SaveOneSimval
 
   subroutine StoreObsType(this, obsrvType, cumulative, indx)
-! **************************************************************************
+! ******************************************************************************
 ! StoreObsType
 ! Subroutine: (1) stores type name and related information for an
 !                 observation type that belongs to a package or model in
 !                 the obsData array
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     character(len=*), intent(in)  :: obsrvType
@@ -509,6 +509,7 @@ contains
     integer(I4B) :: i
     character(len=LENOBSTYPE)  :: obsTypeUpper
     character(len=100) :: msg
+! ------------------------------------------------------------------------------
     !
     ! -- Ensure that obsrvType is not blank
     if (obsrvType=='') then
@@ -572,14 +573,13 @@ contains
   end subroutine allocate_scalars
 
   subroutine obs_ar1(this, pkgname)
-! **************************************************************************
+! ******************************************************************************
 ! obs_ar1
 !   -- read OPTIONS block of OBS input file and define output formats.
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     character(len=*), intent(in) :: pkgname
@@ -604,15 +604,14 @@ contains
   end subroutine obs_ar1
 
   subroutine obs_ar2(this, dis)
-! **************************************************************************
+! ******************************************************************************
 ! obs_ar2
 !   -- Call procedure provided by package to interpret IDstring and
 !      store required data.
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     class(DisBaseType)            :: dis
@@ -621,6 +620,7 @@ contains
     type(ObsDataType), pointer  :: obsDat => null()
     character(len=LENOBSTYPE)   :: obsTypeID
     class(ObserveType), pointer :: obsrv => null()
+! ------------------------------------------------------------------------------
     !
     call this%read_observations()
     ! -- allocate and populate observations array
@@ -649,14 +649,13 @@ contains
   end subroutine obs_ar2
 
   subroutine read_obs_options(this)
-! **************************************************************************
+! ******************************************************************************
 ! read_obs_options
 !   -- read OPTIONS block of OBS input file
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! -- local
@@ -673,6 +672,7 @@ contains
 10  format('No options block found in OBS input. Defaults will be used.')
 40  format('Text output number of digits of precision set to: ',i2)
 60  format(/,'Processing observation options:',/)
+! ------------------------------------------------------------------------------
     !
     localprecision = 0
     localdigits = 0
@@ -756,35 +756,35 @@ contains
   end subroutine read_obs_options
 
   subroutine define_fmts(this)
-! **************************************************************************
+! ******************************************************************************
 ! define_fmts
 !   -- define output formats for single and continuous observations
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! formats
     50 format('(g',i2.2,'.',i2.2,')')
+! ------------------------------------------------------------------------------
     !
     write(this%obsfmtcont,50)this%idigits+7, this%idigits
     return
   end subroutine define_fmts
 
   subroutine read_observations(this)
-! **************************************************************************
+! ******************************************************************************
 ! read_observations
 !   -- read CONTINUOUS blocks from OBS input file
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! -- local
+! ------------------------------------------------------------------------------
     !
     ! -- Read CONTINUOUS blocks and store observations
     call this%read_obs_blocks(this%outputFilename)
@@ -796,34 +796,35 @@ contains
   end subroutine read_observations
 
   function get_num(this)
-! **************************************************************************
+! ******************************************************************************
 ! get_num
 !   -- Return the number of observations contained in this ObsType object
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: get_num
     ! -- dummy
     class(ObsType) :: this
+! ------------------------------------------------------------------------------
+    !
     get_num = this%obsList%Count()
     return
   end function get_num
 
   subroutine build_headers(this)
-! **************************************************************************
+! ******************************************************************************
 ! build_headers
 ! -- Build headers for CSV-formatted and unformatted continuous-observation
 ! output files and write them to those files.
 ! Each formatted header will have the form: "time,obsname-1,obsname-2, ..."
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
+    ! -- module
     use iso_fortran_env, only: int32
-    implicit none
     ! -- dummy
     class(ObsType), target :: this
     ! -- local
@@ -834,6 +835,7 @@ contains
     character(len=4)                   :: clenobsname
     type(ObserveType),         pointer :: obsrv => null()
     type(ObsOutputType),       pointer :: obsOutput => null()
+! ------------------------------------------------------------------------------
     !
     ! --
     num = this%obsList%Count()
@@ -904,19 +906,19 @@ contains
   end subroutine build_headers
 
   subroutine get_obs_array(this, nObs, obsArray)
-! **************************************************************************
+! ******************************************************************************
 ! get_obs_array
 !   -- Get an array containing all observations in this ObsType object
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     integer(I4B), intent(out)   :: nObs
     type(ObsContainerType), dimension(:), pointer, intent(inout) :: obsArray
     ! -- local
+! ------------------------------------------------------------------------------
     !
     nObs = this%get_num()
     if (associated(obsArray)) deallocate(obsArray)
@@ -931,14 +933,13 @@ contains
   end subroutine get_obs_array
 
   function get_obs_datum(this, obsTypeID) result(obsDatum)
-! **************************************************************************
+! ******************************************************************************
 ! get_obs_datum
 !   -- Return an ObsDataType object for the specified observation type
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     character(len=*), intent(in) :: obsTypeID
@@ -946,6 +947,7 @@ contains
     ! -- local
     integer(I4B) :: i
     character( len=MAXCHARLEN) :: ermsg
+! ------------------------------------------------------------------------------
     !
     obsDatum => null()
     do i=1,MAXOBSTYPES
@@ -966,18 +968,18 @@ contains
   end function get_obs_datum
 
   subroutine populate_obs_array(this, nObs, obsArray)
-! **************************************************************************
+! ******************************************************************************
 ! populate_obs_array
 !   -- Populate obsArray with observations for specified package
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     integer(I4B),               intent(in)    :: nObs
     type(ObsContainerType), dimension(nObs), intent(inout) :: obsArray
+! ------------------------------------------------------------------------------
     !
     ! -- local
     integer(I4B) :: i, n
@@ -993,19 +995,19 @@ contains
   end subroutine populate_obs_array
 
   function get_obs(this, indx) result(obsrv)
-! **************************************************************************
+! ******************************************************************************
 ! get_obs
 !   -- Return the specified ObserveType object from the list of observations
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     integer(I4B), intent(in)   :: indx
     class(ObserveType), pointer :: obsrv
     ! -- local
+! ------------------------------------------------------------------------------
     !
     obsrv => GetObsFromList(this%obsList, indx)
     !
@@ -1013,14 +1015,13 @@ contains
   end function get_obs
 
   subroutine read_obs_blocks(this, fname)
-! **************************************************************************
+! ******************************************************************************
 ! read_obs_blocks
 !   -- read CONTINUOUS blocks from the OBS input file
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     character(len=*), intent(inout) :: fname
@@ -1038,6 +1039,7 @@ contains
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     ! -- formats
+! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     numspec = -1
@@ -1174,14 +1176,13 @@ contains
   end subroutine read_obs_blocks
 
   subroutine write_continuous_simvals(this)
-! **************************************************************************
+! ******************************************************************************
 ! write_continuous_simvals
 ! Subroutine: (1) for each continuous observation, writes value to output
-! **************************************************************************
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    implicit none
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     ! -- local
@@ -1189,7 +1190,7 @@ contains
     character(len=20)           :: fmtc
     real(DP)                    :: simval
     class(ObserveType), pointer :: obsrv => null()
-    !---------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! Write simulated values for observations
     iprec = this%iprecision
