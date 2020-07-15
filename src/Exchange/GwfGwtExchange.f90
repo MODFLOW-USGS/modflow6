@@ -59,6 +59,7 @@ module GwfGwtExchangeModule
     exchange%id = id
     write(cint, '(i0)') id
     exchange%name = 'GWF-GWT_' // trim(adjustl(cint))
+    exchange%memoryPath = exchange%name
     !
     ! -- allocate scalars
     call exchange%allocate_scalars()
@@ -277,8 +278,8 @@ module GwfGwtExchangeModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%m1id, 'M1ID', this%name)
-    call mem_allocate(this%m2id, 'M2ID', this%name)
+    call mem_allocate(this%m1id, 'M1ID', this%memoryPath)
+    call mem_allocate(this%m2id, 'M2ID', this%memoryPath)
     this%m1id = 0
     this%m2id = 0
     !
