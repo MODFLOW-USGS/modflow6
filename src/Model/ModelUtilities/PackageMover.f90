@@ -69,7 +69,7 @@ module PackageMoverModule
     integer, intent(in) :: nreceivers
     character(len=*), intent(in) :: memoryPath
     !
-    call this%allocate_scalars(memoryPath)
+    call this%allocate_scalars()
     this%nproviders = nproviders
     this%nreceivers = nreceivers
     !
