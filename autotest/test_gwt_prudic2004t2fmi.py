@@ -529,8 +529,8 @@ def test_prudic2004t2fmi():
     run_flow_model()
     run_transport_model()
     d = os.path.join(testdir, testgroup)
-    #if os.path.isdir(d):
-    #    shutil.rmtree(d)
+    if os.path.isdir(d):
+        shutil.rmtree(d)
     return
 
 

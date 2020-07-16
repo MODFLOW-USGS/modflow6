@@ -2677,9 +2677,9 @@ subroutine apt_rp_obs(this)
       if (nn1 == NAMEDBOUNDFLAG) then
         bname = obsrv%FeatureName
         if (bname /= '') then
-          ! -- Observation lake is based on a boundary name.
-          !    Iterate through all lakes to identify and store
-          !    corresponding index in bound array.
+          ! -- Observation is based on a boundary name.
+          !    Iterate through all features (lak/maw/sfr/uzf) to identify and
+          !    store corresponding index in bound array.
           jfound = .false.
           if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
             do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
