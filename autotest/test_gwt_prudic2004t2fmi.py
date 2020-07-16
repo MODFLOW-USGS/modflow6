@@ -162,6 +162,18 @@ def run_flow_model():
         sfrconnectiondata.append(c)
     sfrperioddata = {0: [[0, 'inflow', 86400], [18, 'inflow', 8640.]]}
 
+    sfr_obs = {(gwfname + '.sfr.obs.csv',):
+        [
+            ('reach1leakage', 'SFR', 'LONGESTRIVERINTHEWORLD1'),
+            ('reach2leakage', 'SFR', 'LONGESTRIVERINTHEWORLD2'),
+            ('reach3leakage', 'SFR', 'LONGESTRIVERINTHEWORLD3'),
+            ('reach4leakage', 'SFR', 'LONGESTRIVERINTHEWORLD4'),
+        ],
+    }
+    sfr_obs['digits'] = 7
+    sfr_obs['print_input'] = True
+    sfr_obs['filename'] = gwfname + '.sfr.obs'
+
     sfr_on = True
     if sfr_on:
         sfr = flopy.mf6.ModflowGwfsfr(gwf,
@@ -174,7 +186,8 @@ def run_flow_model():
                                       boundnames=True, nreaches=len(rivlist),
                                       packagedata=sfrpackagedata,
                                       connectiondata=sfrconnectiondata,
-                                      perioddata=sfrperioddata)
+                                      perioddata=sfrperioddata,
+                                      observations=sfr_obs)
 
     fname = os.path.join(data_ws, 'lakibd.dat')
     lakibd = np.loadtxt(fname, dtype=np.int)
@@ -352,6 +365,10 @@ def run_transport_model():
         [
             ('lkt1conc', 'CONCENTRATION', 1),
             ('lkt2conc', 'CONCENTRATION', 2),
+            ('lkt1frommvr', 'FROM-MVR', (0,)),
+            ('lkt2frommvr', 'FROM-MVR', (1,)),
+            ('lkt1tomvr', 'TO-MVR', (0,)),
+            ('lkt1bntomvr', 'TO-MVR', 'mylake1'),
         ],
     }
     lkt_obs['digits'] = 7
@@ -421,7 +438,7 @@ def run_transport_model():
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=pd)
 
     # mover transport package
-    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt)
+    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, print_flows=True)
 
     oc = flopy.mf6.ModflowGwtoc(gwt,
                                 budget_filerecord='{}.cbc'.format(gwtname),
@@ -481,7 +498,6 @@ def run_transport_model():
     msg = '{} {} {}'.format(res_sfr3, ans_sfr3, d)
     assert np.allclose(res_sfr3, ans_sfr3, atol=0.01), msg
 
-
     res_sfr4 = sfaconc[:, 37]
     ans_sfr4 = \
         [-3.81844339e-18,  3.77280297e-02,  2.61266478e-01,  9.22679324e-01,
@@ -496,6 +512,16 @@ def run_transport_model():
     msg = '{} {} {}'.format(res_sfr4, ans_sfr4, d)
     assert np.allclose(res_sfr4, ans_sfr4, atol=0.01), msg
 
+    # make some checks on lake obs csv file
+    fname = gwtname + '.lkt.obs.csv'
+    fname = os.path.join(wst, fname)
+    try:
+        tc = np.genfromtxt(fname, names=True, delimiter=',')
+    except:
+        assert False, 'could not load data from "{}"'.format(fname)
+    errmsg = 'to-mvr boundname and outlet number do not match for {}'.format(fname)
+    assert np.allclose(tc['LKT1TOMVR'], tc['LKT1BNTOMVR']), errmsg
+
     return
 
 
@@ -503,8 +529,8 @@ def test_prudic2004t2fmi():
     run_flow_model()
     run_transport_model()
     d = os.path.join(testdir, testgroup)
-    if os.path.isdir(d):
-        shutil.rmtree(d)
+    #if os.path.isdir(d):
+    #    shutil.rmtree(d)
     return
 
 

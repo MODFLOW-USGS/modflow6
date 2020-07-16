@@ -247,10 +247,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ObserveType),  intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B),            intent(in)    :: inunitobs
-    integer(I4B),            intent(in)    :: iout
+    type(ObserveType), intent(inout) :: obsrv
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: icol, istart, istop
@@ -264,7 +264,7 @@ contains
     flag_string = .true.   ! Allow strng to contain a boundary name
     !
     n = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                   iout, strng, flag_string)
+                              iout, strng, flag_string)
     !
     if (n > 0) then
       obsrv%NodeNumber = n

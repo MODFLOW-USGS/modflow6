@@ -784,6 +784,8 @@ module GwtMvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- module
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtMvttype),intent(inout) :: this
     ! -- local
@@ -802,6 +804,9 @@ module GwtMvtModule
       nlist = this%budobj%budterm(i)%nlist
       ntabrows = ntabrows + nlist
     end do
+    !
+    ! -- set table kstp and kper
+    call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
     title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) //     &

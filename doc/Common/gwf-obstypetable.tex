@@ -6,6 +6,8 @@
 \xdef\LT@i{\LT@ii}
 \fi
 \endgroup
+
+% model observations
 \begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
 \caption{Available observation types for the GWF Model} \tabularnewline
 
@@ -31,10 +33,11 @@
 \end{longtable}
 \addtocounter{table}{-1}
 
+% internal packages
 \begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
 \hline
 \hline
-\textbf{Exchange} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\textbf{Internal Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
 \hline
 \endfirsthead
 
@@ -43,17 +46,18 @@
 
 \hline
 \hline
-\textbf{Model} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\textbf{Internal Package} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
 \hline
 \endhead
 
 \hline
 \endfoot
 
-\input{../Common/gwf-gwfobs.tex}
+\input{../Common/gwf-csubobs.tex}
 \end{longtable}
 \addtocounter{table}{-1}
 
+% stress packages
 \begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
 \hline
 \hline
@@ -89,6 +93,30 @@
 \hline
 \input{../Common/gwf-uzfobs.tex}
 \label{table:gwf-obstypetable}
+\end{longtable}
+\addtocounter{table}{-1}
+
+% exchange
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\hline
+\hline
+\textbf{Exchange} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available observation types.---Continued} \\
+
+\hline
+\hline
+\textbf{Exchange} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-gwfobs.tex}
 \end{longtable}
 
 \normalsize

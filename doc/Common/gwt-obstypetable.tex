@@ -6,6 +6,8 @@
 \xdef\LT@i{\LT@ii}
 \fi
 \endgroup
+
+% model observations
 \begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
 \caption{Available observation types for the GWT Model} \tabularnewline
 
@@ -31,29 +33,7 @@
 \end{longtable}
 \addtocounter{table}{-1}
 
-\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
-\hline
-\hline
-\textbf{Exchange} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
-\hline
-\endfirsthead
-
-\captionsetup{textformat=simple}
-\caption*{\textbf{Table \arabic{table}.}{\quad}Available observation types.---Continued} \\
-
-\hline
-\hline
-\textbf{Model} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
-\hline
-\endhead
-
-\hline
-\endfoot
-
-%\input{../Common/gwf-gwfobs.tex}
-\end{longtable}
-\addtocounter{table}{-1}
-
+% stress packages
 \begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
 \hline
 \hline
@@ -74,6 +54,7 @@
 \endfoot
 
 \input{../Common/gwt-cncobs.tex} \\
+\hline
 \input{../Common/gwt-srcobs.tex} \\
 \hline
 \input{../Common/gwt-lktobs.tex} \\
@@ -81,9 +62,11 @@
 \input{../Common/gwt-mwtobs.tex} \\
 \hline
 %\input{../Common/gwt-sftobs.tex} \\
-\hline
+%\hline
 \input{../Common/gwt-uztobs.tex}
 \label{table:gwt-obstypetable}
 \end{longtable}
+%\addtocounter{table}{-1}
+
 
 \normalsize
