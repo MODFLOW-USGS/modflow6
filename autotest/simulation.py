@@ -194,7 +194,7 @@ class Simulation(object):
                     self.nam_cmp = nam
                     try:
                         if self.bmifunc is None:
-                            success_cmp, buff = flopy.run_model(exe, nam,
+                            success_cmp, buff = flopy.run_model("mf2005dbl.exe", nam,
                                                                 model_ws=cpth,
                                                                 silent=False,
                                                                 report=True)
@@ -208,7 +208,8 @@ class Simulation(object):
                             print(msg)
                         else:
                             print(msg)
-                    except:
+                    except Exception as e:
+                        print(e)
                         success_cmp = False
                         msg = sfmt.format('Comparison run',
                                           self.name + '/' + key)

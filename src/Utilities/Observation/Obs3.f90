@@ -839,7 +839,7 @@ contains
     num = this%obsList%Count()
     ! -- Cycle through observations to build the header(s)
     if (num>0) then
-        ! jwhite: get the current size of the obsnames array
+        ! jwhite: get the current size of the obsnames ar        
         obsrv => this%get_obs(1)
         ! -- header for file of continuous observations
         indx = obsrv%indxObsOutput

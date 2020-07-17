@@ -21,8 +21,8 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
-from framework import testing_framework
-from simulation import Simulation
+#from framework import testing_framework
+#from simulation import Simulation
 
 ex = ['buy_lak_01a', 'buy_lak_01b', 'buy_lak_01c']
 buy_on_list = [False, True, True]
@@ -280,7 +280,9 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    #print('standalone run of {}'.format(os.path.basename(__file__)))
 
     # run main routine
-    main()
+    #main()
+
+    build_models()
