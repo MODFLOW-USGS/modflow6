@@ -827,7 +827,7 @@ contains
     ! -- dummy
     class(ObsType), target :: this
     ! -- local
-    integer(I4B) :: i, ii, idx, indx, iu, num, nunit
+    integer(I4B) :: i, ii, idx, indx, iu, num, nunit,iidx
     integer(int32) :: nobs
     character(len=LENOBSNAME), pointer :: headr => null()
     character(len=LENOBSNAME)          :: nam
@@ -839,6 +839,14 @@ contains
     num = this%obsList%Count()
     ! -- Cycle through observations to build the header(s)
     if (num>0) then
+        ! jwhite: get the current size of the obsnames array
+        obsrv => this%get_obs(1)
+        ! -- header for file of continuous observations
+        indx = obsrv%indxObsOutput
+        obsOutput => this%obsOutputList%Get(indx)
+        iidx = size(obsOutput%obsnames)
+        ! jwhite: now expand the obsnames array by num
+        call ExpandArray(obsOutput%obsnames,num)
       do i=1,num
         obsrv => this%get_obs(i)
         ! -- header for file of continuous observations
@@ -849,8 +857,9 @@ contains
           headr = 'time'
         endif
         nam = obsrv%Name
-        call ExpandArray(obsOutput%obsnames)
-        idx = size(obsOutput%obsnames)
+        !call ExpandArray(obsOutput%obsnames)
+        !idx = size(obsOutput%obsnames)
+        idx = iidx + i
         obsOutput%obsnames(idx) = nam
       enddo
     endif
