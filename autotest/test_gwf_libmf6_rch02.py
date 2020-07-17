@@ -7,7 +7,7 @@ simulated head in the non-bmi simulation.
 
 import os
 import numpy as np
-from amipy import AmiWrapper
+from xmipy import XmiWrapper
 
 try:
     import pymake

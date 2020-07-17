@@ -10,7 +10,7 @@ IRCH is specified as 1, and in test c IRCH is specified as [2, 2, 1, 2, 2]
 
 import os
 import numpy as np
-from amipy import AmiWrapper
+from xmipy import XmiWrapper
 
 try:
     import pymake
