@@ -159,7 +159,7 @@ module NumericalSolutionModule
     procedure, private :: writeCSVHeader
     procedure, private :: writePTCInfoToFile
     
-    ! Expose these for use through the BMI/AMI:
+    ! Expose these for use through the BMI/XMI:
     procedure, public :: prepareSolve
     procedure, public :: solve
     procedure, public :: finalizeSolve
