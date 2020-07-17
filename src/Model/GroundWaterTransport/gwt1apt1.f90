@@ -2883,13 +2883,15 @@ subroutine apt_rp_obs(this)
                 v = this%ccterm(jj)
               end if
             case ('FROM-MVR')
-              if (this%iboundpak(jj) /= 0) then
+              if (this%iboundpak(jj) /= 0 .and. this%idxbudfmvr > 0) then
                 v = this%qmfrommvr(jj)
               end if
             case ('TO-MVR')
-              n = this%flowbudptr%budterm(this%idxbudtmvr)%id1(jj)
-              if (this%iboundpak(n) /= 0) then
-                call this%apt_tmvr_term(jj, n1, n2, v)
+              if (this%idxbudtmvr > 0) then
+                n = this%flowbudptr%budterm(this%idxbudtmvr)%id1(jj)
+                if (this%iboundpak(n) /= 0) then
+                  call this%apt_tmvr_term(jj, n1, n2, v)
+                end if
               end if
             case default
               found = .false.

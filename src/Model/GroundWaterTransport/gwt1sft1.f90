@@ -906,13 +906,8 @@ end subroutine find_sft_package
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for withdrawal observation type.
-    call this%obs%StoreObsType('withdrawal', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
     !    for ext-outflow observation type.
-    call this%obs%StoreObsType('outflow', .true., indx)
+    call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
