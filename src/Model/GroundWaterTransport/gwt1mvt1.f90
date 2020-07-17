@@ -821,11 +821,11 @@ module GwtMvtModule
       do n = 1, nlist
         cloc1 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
                 trim(adjustl(this%budobj%budterm(i)%text2id1))
-        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
-                trim(adjustl(this%budobj%budterm(i)%text2id1))
+        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id2)) // ' ' // &
+                trim(adjustl(this%budobj%budterm(i)%text2id2))
         call this%outputtab%add_term(inum)
         call this%outputtab%add_term(cloc1)
-        call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
+        call this%outputtab%add_term(this%budobj%budterm(i)%id1(n))
         call this%outputtab%add_term(-this%fmi%mvrbudobj%budterm(i)%flow(n))
         call this%outputtab%add_term(this%budobj%budterm(i)%flow(n))
         call this%outputtab%add_term(cloc2)
