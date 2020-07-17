@@ -169,7 +169,7 @@ def bmifunc(exe, idx, model_ws=None):
         os.chdir(model_ws)
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
-    mf6 = AmiWrapper(exe)
+    mf6 = XmiWrapper(exe)
 
     # initialize the model
     try:

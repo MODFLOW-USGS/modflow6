@@ -1,6 +1,6 @@
 ! this module contains entry points for the mf6 dll to expose functionality
 ! that is _beyond_ the basic model interface: https://bmi-spec.readthedocs.io/en/latest/
-module mf6ami
+module mf6xmi
   use Mf6CoreModule
   use KindModule
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
@@ -13,27 +13,27 @@ module mf6ami
     
   contains
   
-  function ami_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_time_step
+  function xmi_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_prepare_time_step
     double precision, intent(in) :: dt ! we cannot set the timestep (yet), ignore for now
     integer(kind=c_int) :: bmi_status
       
     call Mf6PrepareTimestep()    
     bmi_status = BMI_SUCCESS
     
-  end function ami_prepare_time_step
+  end function xmi_prepare_time_step
     
-  function ami_do_time_step() result(bmi_status) bind(C, name="do_time_step")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_do_time_step
+  function xmi_do_time_step() result(bmi_status) bind(C, name="do_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_do_time_step
     integer(kind=c_int) :: bmi_status
     
     call Mf6DoTimestep()
     bmi_status = BMI_SUCCESS
     
-  end function ami_do_time_step
+  end function xmi_do_time_step
   
-  function ami_finalize_time_step() result(bmi_status) bind(C, name="finalize_time_step")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_time_step
+  function xmi_finalize_time_step() result(bmi_status) bind(C, name="finalize_time_step")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_finalize_time_step
     integer(kind=c_int) :: bmi_status
     ! local
     logical :: hasConverged
@@ -45,12 +45,12 @@ module mf6ami
       bmi_status = BMI_FAILURE
     end if
     
-  end function ami_finalize_time_step
+  end function xmi_finalize_time_step
   
   ! returns the number of NumericalSolutions in the simulation. 
   ! It works if there is only one SolutionGroup used.
-  function ami_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_get_subcomponent_count
+  function xmi_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_get_subcomponent_count
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: istdout
     integer(kind=c_int) :: bmi_status
@@ -70,21 +70,21 @@ module mf6ami
     count = sgp%nsolutions    
     bmi_status = BMI_SUCCESS
     
-  end function ami_get_subcomponent_count
+  end function xmi_get_subcomponent_count
     
   ! this prepares for running a loop over outer iterations 
   ! on the specific subcomponent (=NumericalSolution)
-  function ami_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_solve   
+  function xmi_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_prepare_solve   
     use ListsModule, only: solutiongrouplist
     use NumericalSolutionModule
     use SimVariablesModule, only: istdout
-    integer(kind=c_int) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
+    integer(kind=c_int) :: subcomponent_idx ! 1,2,...,xmi_get_subcomponent_count()
     integer(kind=c_int) :: bmi_status
     ! local
     class(NumericalSolutionType), pointer :: ns
     
-     ! people might not call 'ami_get_subcomponent_count' first, so let's repeat this:
+     ! people might not call 'xmi_get_subcomponent_count' first, so let's repeat this:
     if (solutiongrouplist%Count() /= 1) then
       write(istdout,*) 'Error: BMI does not support the use of multiple solution groups'
       bmi_status = BMI_FAILURE
@@ -103,14 +103,14 @@ module mf6ami
     
     bmi_status = BMI_SUCCESS
     
-  end function ami_prepare_solve
+  end function xmi_prepare_solve
   
   ! execute a single outer iteration on the specified 
   ! subcomponent (=NumericalSolution)
-  function ami_solve(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="solve")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_solve  
+  function xmi_solve(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="solve")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_solve  
     use NumericalSolutionModule
-    integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
+    integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,xmi_get_subcomponent_count()
     integer(kind=c_int), intent(out) :: has_converged
     integer(kind=c_int) :: bmi_status
     ! local
@@ -132,14 +132,14 @@ module mf6ami
     
     bmi_status = BMI_SUCCESS
     
-  end function ami_solve
+  end function xmi_solve
   
   ! after the outer iteration loop on the subcomponent is exited,
   ! call this to report, clean up, etc.
-  function ami_finalize_solve(subcomponent_idx) result(bmi_status) bind(C, name="finalize_solve")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_solve   
+  function xmi_finalize_solve(subcomponent_idx) result(bmi_status) bind(C, name="finalize_solve")
+  !DEC$ ATTRIBUTES DLLEXPORT :: xmi_finalize_solve   
     use NumericalSolutionModule
-    integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
+    integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,xmi_get_subcomponent_count()
     integer(kind=c_int) :: bmi_status
     ! local
     class(NumericalSolutionType), pointer :: ns
@@ -165,7 +165,7 @@ module mf6ami
     ! clear this for safety
     deallocate(iterationCounter)
     
-  end function ami_finalize_solve
+  end function xmi_finalize_solve
   
   ! the subcomponent_idx runs from 1 to the nr of 
   ! solutions in the solution group
@@ -186,4 +186,4 @@ module mf6ami
     
   end function getSolution
 
-end module mf6ami
+end module mf6xmi
