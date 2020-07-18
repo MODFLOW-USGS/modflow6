@@ -36,18 +36,17 @@
 module GwtAptModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
+  use ConstantsModule, only: DZERO, DONE, DEP20, LENFTYPE, LINELENGTH,         &
                              LENBOUNDNAME, LENPACKAGENAME, NAMEDBOUNDFLAG,     &
                              DNODATA, TABLEFT, TABCENTER, TABRIGHT,            &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              LENAUXNAME
   use SimModule, only: store_error, store_error_unit, count_errors, ustop
   use SimVariablesModule, only: errmsg
-  use BndModule, only: BndType, GetBndFromList
+  use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
-  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: table_cr
-  use BudgetFileReaderModule, only: BudgetFileReaderType
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
@@ -109,9 +108,6 @@ module GwtAptModule
     ! -- budget objects
     type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
     type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! GWF flow budget object
-    !
-    ! -- budget file reader
-    type(BudgetFileReaderType)                         :: bfr                   ! budget file reader
     
   contains
   
@@ -1582,7 +1578,6 @@ module GwtAptModule
     !allocate(this%status(this%ncv))
     !
     do n = 1, this%ncv
-      !this%status(n) = 'ACTIVE'
       this%strt(n) = DEP20
       this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
@@ -2831,8 +2826,7 @@ subroutine apt_rp_obs(this)
   
   subroutine apt_bd_obs(this)
 ! ******************************************************************************
-! apt_bd_obs -- 
-!   -- Calculate observations this time step and call
+! apt_bd_obs -- Calculate observations common to SFT/LKT/MWT/UZT
 !      ObsType%SaveOneSimval for each GwtAptType observation.
 ! ******************************************************************************
 !

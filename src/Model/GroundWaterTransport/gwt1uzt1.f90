@@ -28,8 +28,8 @@
 module GwtUztModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENBOUNDNAME
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use UzfModule, only: UzfType
@@ -41,7 +41,7 @@ module GwtUztModule
   
   character(len=*), parameter :: ftype = 'UZT'
   character(len=*), parameter :: flowtype = 'UZF'
-  character(len=16)       :: text  = '             UZT'
+  character(len=16)           :: text  = '             UZT'
   
   type, extends(GwtAptType) :: GwtUztType
     

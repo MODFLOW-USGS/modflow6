@@ -1,3 +1,7 @@
+! -- Groundwater Transport Mover Module
+! -- This module is responsible for sending mass from providers into
+! -- receiver qmfrommvr arrays and writing a mover transport budget
+  
 module GwtMvtModule
   
   use KindModule, only: DP, I4B

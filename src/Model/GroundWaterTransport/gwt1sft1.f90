@@ -33,8 +33,8 @@
 module GwtSftModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENBOUNDNAME
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use SfrModule, only: SfrType
@@ -46,7 +46,7 @@ module GwtSftModule
   
   character(len=*), parameter :: ftype = 'SFT'
   character(len=*), parameter :: flowtype = 'SFR'
-  character(len=16)       :: text  = '             SFT'
+  character(len=16)           :: text  = '             SFT'
   
   type, extends(GwtAptType) :: GwtSftType
     

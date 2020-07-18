@@ -35,8 +35,8 @@
 module GwtMwtModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LINELENGTH, LENBOUNDNAME, DNODATA
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
@@ -48,7 +48,7 @@ module GwtMwtModule
   
   character(len=*), parameter :: ftype = 'MWT'
   character(len=*), parameter :: flowtype = 'MAW'
-  character(len=16)       :: text  = '             MWT'
+  character(len=16)           :: text  = '             MWT'
   
   type, extends(GwtAptType) :: GwtMwtType
     

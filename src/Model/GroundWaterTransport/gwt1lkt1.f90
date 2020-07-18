@@ -34,8 +34,8 @@
 module GwtLktModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENBOUNDNAME
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use LakModule, only: LakType
@@ -47,7 +47,7 @@ module GwtLktModule
   
   character(len=*), parameter :: ftype = 'LKT'
   character(len=*), parameter :: flowtype = 'LAK'
-  character(len=16)       :: text  = '             LKT'
+  character(len=16)           :: text  = '             LKT'
   
   type, extends(GwtAptType) :: GwtLktType
     
@@ -1076,7 +1076,7 @@ end subroutine find_lkt_package
     ! RAINFALL <rainfall>
     ! EVAPORATION <evaporation>
     ! RUNOFF <runoff>
-    ! INFLOW <inflow>
+    ! EXT-INFLOW <inflow>
     ! WITHDRAWAL <withdrawal>
     !
     found = .true.
