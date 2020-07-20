@@ -89,7 +89,7 @@ module LnfModule
   data cunit/   'IC6  ', 'DISL6', '     ', 'OC6  ', '     ', & !  5
                 'STO6 ', '     ', 'WEL6 ', 'NPFL6', '     ', & ! 10
                 'CGEO6', 'RGEO6', 'NGEO6', '     ', '     ', & ! 15
-                '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
+                'GHB6 ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', '     ', '     ', '     ', '     ', & ! 25
                 '     ', 'MVR6 ', '     ', '     ', '     ', & ! 30
                 70 * '     '/
@@ -1331,6 +1331,7 @@ module LnfModule
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, ustop
     use ChdlModule, only: chd_create
+    use ghblmodule, only: ghb_create
     use WellModule, only: wel_create
     ! -- dummy
     class(LnfModelType) :: this
@@ -1351,6 +1352,8 @@ module LnfModule
     select case(filtyp)
     case('CHD6')
       call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+    case('GHB6')
+      call ghb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case('WEL6')
       call wel_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)     
     case default

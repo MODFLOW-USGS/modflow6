@@ -358,16 +358,7 @@ contains
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
-    else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
+    write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
     if(this%inamedbound == 1) then
       write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'

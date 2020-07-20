@@ -9,6 +9,22 @@ longname model length units
 description is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
 
 block options
+name length_conversion
+type double precision
+reader urword
+optional true
+longname length conversion factor
+description conversion factor that is used in converting constants used by MODFLOW into model length units.  All constants are by default in units of "meters". Constants that use length_conversion include GRAVITY and STORAGE COEFFICIENT values.
+
+block options
+name time_conversion
+type double precision
+reader urword
+optional true
+longname time conversion factor
+description conversion factor that is used in converting constants used by MODFLOW into model time units.  All constants are by default in units of "seconds". TIME_CONVERSION is used to convert the GRAVITY constant from seconds to the model's units.
+
+block options
 name nogrb
 type keyword
 reader urword

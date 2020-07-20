@@ -84,6 +84,7 @@
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1chd.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1disl.f90"/>
+		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1ghb.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1ic.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1npfl.f90"/>
 		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1oc.f90"/>
