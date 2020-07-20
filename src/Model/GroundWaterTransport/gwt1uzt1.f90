@@ -28,8 +28,8 @@
 module GwtUztModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENBOUNDNAME
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use UzfModule, only: UzfType
@@ -41,7 +41,7 @@ module GwtUztModule
   
   character(len=*), parameter :: ftype = 'UZT'
   character(len=*), parameter :: flowtype = 'UZF'
-  character(len=16)       :: text  = '             UZT'
+  character(len=16)           :: text  = '             UZT'
   
   type, extends(GwtAptType) :: GwtUztType
     
@@ -817,8 +817,23 @@ module GwtUztModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
-    !    for rainfall observation type.
+    !    for observation type.
     call this%obs%StoreObsType('infiltration', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('rej-inf', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('uzet', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('rej-inf-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
@@ -844,8 +859,20 @@ module GwtUztModule
     found = .true.
     select case (obstypeid)
       case ('INFILTRATION')
-        if (this%iboundpak(jj) /= 0) then
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudinfl > 0) then
           call this%uzt_infl_term(jj, n1, n2, v)
+        end if
+      case ('REJ-INF')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudrinf > 0) then
+          call this%uzt_rinf_term(jj, n1, n2, v)
+        end if
+      case ('UZET')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbuduzet > 0) then
+          call this%uzt_uzet_term(jj, n1, n2, v)
+        end if
+      case ('REJ-INF-TO-MVR')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudritm > 0) then
+          call this%uzt_ritm_term(jj, n1, n2, v)
         end if
       case default
         found = .false.
