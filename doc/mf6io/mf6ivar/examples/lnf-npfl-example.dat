@@ -1,0 +1,6 @@
+# The options block is optional
+BEGIN options
+  PRINT_FLOWS
+  VISCOSITY  1.00000000E-06
+END options
+

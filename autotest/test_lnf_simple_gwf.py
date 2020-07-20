@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['lnf_disl01']
+ex = ['lnf_smp_gwf']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -33,82 +33,44 @@ replace_exe = None
 
 # static model data
 # spatial discretization
-nodes, nvert = 8, 29
+nodes, nvert = 3, 4
 
 # all cells are active
 ib = 1
 
 # vertices and cell1d
-vertices = [(0, 0., 6000., 100.),
-            (1, 1000., 5000., 99.),
-            (2, 2000., 4000., 98.),
-            (3, 2000., 3000., 98.),
-            (4, 2000., 3000., 98.),
-            (5, 3000., 1000., 97.),
-            (6, 4000., 1000., 96.),
-            (7, 5000., 1000., 95.),
-            (8, 6000., 1000., 94.),
-            (9, 7000., 1000., 93.),
-            (10, 8000., 2000., 92.),
-            (11, 3000., 4000., 97.),
-            (12, 4000., 4000., 97.),
-            (13, 5000., 4000., 95.),
-            (14, 6000., 5000., 94.),
-            (15, 7000., 5000., 93.),
-            (16, 8000., 5000., 92.),
-            (17, 9000., 5000., 91.),
-            (18, 10000., 5000., 90.),
-            (19, 11000., 5000., 89.),
-            (20, 12000., 5000., 88.),
-            (21, 6000., 3000., 94.),
-            (22, 7000., 2000., 93.),
-            (23, 9000., 2000., 91.),
-            (24, 10000., 2000., 90.),
-            (25, 11000., 2000., 89.),
-            (26, 12000., 2000., 88.),
-            (27, 13000., 5000., 87.),
-            (28, 13000., 2000., 87.)]
+vertices = [(0, 0., 5000., 100.),
+            (1, 0., 4000., 100.),
+            (2, 0., 3000., 100.),
+            (3, 0., 2000., 100.)]
 
-cell1d = [(0, 0.5, 3, 0, 1, 2),
-          (1, 0.5, 9, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-          (2, 0.5, 4, 2, 11, 12, 13),
-          (3, 0.5, 8, 13, 14, 15, 16, 17, 18, 19, 20),
-          (4, 0.5, 4, 13, 21, 22, 10),
-          (5, 0.5, 5, 26, 25, 24, 23, 10),
-          (6, 1.0, 2, 20, 27),
-          (7, 0.0, 2, 28, 26)]
+cell1d = [(0, 0.5, 2, 0, 1),
+          (1, 0.5, 2, 1, 2),
+          (2, 0.5, 2, 2, 3)]
 
 # geometry data
-gdc = [((0,), 0.5),
-       ((1,), 0.6),
-       ((2,), 0.7),
-       ((3,), 1.5)]
-gdr = [((4,), 1.5, 1.4),
-       ((6,), 1.5, 1.5),
-       ((5,), 1.4, 1.3),
-       ((7,), 1.2, 1.1)]
-gdn = [(7, 5, 1., 1., 2.5, 2.5, 1., 1.5, 0., 0., 1.5, 1.5)]
+gdc = [((0,), 0.1),
+       ((1,), 0.1),
+       ((2,), 0.1)]
 
 # temporal discretization
 nper = 1
-perlen, nstp, tsmult = 1., 1, 1.
+perlen, nstp, tsmult = 6., 2, 1.
 tdis_rc = [[perlen, nstp, tsmult]]
 
 # solver parameters
 nouter, ninner = 500, 300
-hclose, rclose, relax = 1e-9, 1e-6, 1.
+hclose, rclose, relax = 1e-6, 1e-5, 1.
 
 # starting heads
 strt = 101.
-
-# chd data
-chd_dict = {0: [((6,), 88., 'coastal'),
-                ((7,), 88.25, 'coastal')]}
 
 
 # SUB package problem 3
 def get_model(idx, dir):
     name = ex[idx]
+    lnfname = '{}_lnf'.format(name)
+    gwfname = '{}_gwf'.format(name)
 
     # build MODFLOW 6 files
     ws = dir
@@ -128,10 +90,10 @@ def get_model(idx, dir):
                                linear_acceleration='CG',
                                relaxation_factor=relax)
 
-    # create gwf model
-    lnf = flopy.mf6.ModflowLnf(sim, modelname=name, save_flows=True)
+    # create lnf model
+    lnf = flopy.mf6.ModflowLnf(sim, modelname=lnfname, save_flows=True)
 
-    dis = flopy.mf6.ModflowLnfdisl(lnf, length_units='METERS',
+    disl = flopy.mf6.ModflowLnfdisl(lnf, length_units='METERS',
                                    time_conversion=86400.0,
                                    length_conversion=3.28081,
                                    nodes=nodes, nvert=nvert,
@@ -142,22 +104,14 @@ def get_model(idx, dir):
     # create geometry packages # for scott to fix
     cgeo = flopy.mf6.ModflowLnfcgeo(lnf, print_input=True,
                                     ngeo=len(gdc), geometry_data=gdc)
-    rgeo = flopy.mf6.ModflowLnfrgeo(lnf, print_input=True,
-                                    ngeo=len(gdr), geometry_data=gdr)
-    #ngeo = flopy.mf6.ModflowLnfngeo(lnf, print_input=True,
-    #                                ngeo=len(gdn), geometry_data=gdn)
 
     # initial conditions
-    ic = flopy.mf6.ModflowLnfic(lnf, strt=strt)
+    ic = flopy.mf6.ModflowLnfic(lnf, strt=101.0)
 
     # flow and storage
     npf = flopy.mf6.ModflowLnfnpfl(lnf, print_flows=True, viscosity=1.0e-6)
     sto = flopy.mf6.ModflowLnfsto(lnf, save_flows=True, iconvert=0,
                                   transient={0: True})
-
-    # # chd files
-    # chd = flopy.mf6.ModflowLnfchd(lnf, stress_period_data=chd_dict,
-    #                               boundnames=True)
 
     # output control
     oc = flopy.mf6.ModflowLnfoc(lnf,
@@ -170,6 +124,48 @@ def get_model(idx, dir):
                                             ('BUDGET', 'ALL')],
                                 printrecord=[('HEAD', 'LAST'),
                                              ('BUDGET', 'ALL')])
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname,
+                               model_nam_file='{}.nam'.format(gwfname))
+    dis_package = flopy.mf6.ModflowGwfdis(
+        gwf, length_units='FEET', nlay=1, nrow=1, ncol=10, delr=500.0,
+        delc=500.0, top=100.0, botm=50.0, filename='{}.dis'.format(gwfname),
+        pname='mydispkg')
+    strt = [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+            100.0]
+    ic_package = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+                                        filename='{}.ic'.format(gwfname))
+    npf_package = flopy.mf6.ModflowGwfnpf(
+        gwf, pname='npf_1', save_flows=True,
+        alternative_cell_averaging='logarithmic', icelltype=1, k=5.0)
+    oc_package = flopy.mf6.ModflowGwfoc(
+        gwf, budget_filerecord=[('np001_mod.cbc',)],
+        head_filerecord=[('np001_mod.hds',)],
+        saverecord={0: [('HEAD', 'ALL'), ('BUDGET', 'ALL')]},
+        printrecord={0: [('HEAD', 'ALL'), ('BUDGET', 'ALL')]})
+    sto_package = flopy.mf6.ModflowGwfsto(gwf, save_flows=True, iconvert=1,
+                                          ss=0.000001, sy=0.15)
+    well_spd = {0: [((0, 0, 4), -2000.0), ((0, 0, 7), -2.0)]}
+    wel_package = flopy.mf6.ModflowGwfwel(
+        gwf, print_input=True, print_flows=True, save_flows=True, maxbound=2,
+        stress_period_data=well_spd)
+    drn_package = flopy.mf6.ModflowGwfdrn(
+        gwf, print_input=True, print_flows=True, save_flows=True, maxbound=1,
+        stress_period_data=[((0, 0, 0), 80, 60.0)])
+    riv_spd = {0: [((0, 0, 9), 110, 90.0, 100.0, 1.0, 2.0, 3.0)]}
+    riv_package = flopy.mf6.ModflowGwfriv(
+        gwf, print_input=True, print_flows=True, save_flows=True, maxbound=1,
+        auxiliary=['var1', 'var2', 'var3'], stress_period_data=riv_spd)
+
+    # build exchange
+    exchange_data = [((0,0,0), (2,), 1, 0, 0, 0, 5.0, 10.0, 10.0),
+                     ((0,0,9), (0,), 1, 0, 0, 0, 5.0, 10.0, 10.0)]
+    exg_package = flopy.mf6.ModflowGwflnf(sim, print_input=True, print_flows=True,
+                                save_flows=True,
+                                nexg=2, exchangedata=exchange_data,
+                                exgtype='gwf6-lnf6', exgmnamea=gwfname,
+                                exgmnameb=lnfname)
 
     return sim, None
 

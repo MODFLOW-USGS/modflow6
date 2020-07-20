@@ -22,6 +22,7 @@ module BaseGeometryModule
     integer(I4B), pointer                           :: iprpak     => null()      !integer flag to echo input
     integer(I4B), pointer                           :: ngeo       => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodelist   => null()      !vector of reduced node numbers
+    real(DP), dimension(:), pointer, contiguous     :: csheight   => null()      !the height from the center of cross section to edge
     type(BlockParserType)                           :: parser                    !object to read blocks
     !
     ! -- table objects
@@ -65,6 +66,7 @@ module BaseGeometryModule
     !
     ! -- deallocate arrays
     call mem_deallocate(this%nodelist)
+    call mem_deallocate(this%csheight)
     !
     ! -- input table object
     if (associated(this%inputtab)) then
@@ -138,6 +140,7 @@ module BaseGeometryModule
     !
     ! -- Allocate arrays
     call mem_allocate(this%nodelist, this%ngeo, 'NODELIST', this%origin)
+    call mem_allocate(this%csheight, this%ngeo, 'CSHEIGHT', this%origin)
     !
     ! -- return
     return

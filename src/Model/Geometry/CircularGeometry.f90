@@ -235,7 +235,7 @@ module CircularGeometryModule
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, DTWO
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(CircularGeometryType),intent(inout) :: this
@@ -284,6 +284,7 @@ module CircularGeometryModule
         this%nodelist(idx) = n
         ! -- get radius
         this%radius(idx) = this%parser%GetDouble()
+        this%csheight(idx) = this%radius(idx)
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else

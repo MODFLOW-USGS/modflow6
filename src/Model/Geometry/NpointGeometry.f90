@@ -244,7 +244,7 @@ module NpointGeometryModule
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, DTWO
     use SimModule, only: ustop, store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
@@ -335,6 +335,7 @@ module NpointGeometryModule
             this%zmax(idx) = z0
           end if
         end do
+        this%csheight(idx) = (this%zmax(idx) - this%zmin(idx)) / DTWO
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else

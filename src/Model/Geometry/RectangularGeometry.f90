@@ -236,7 +236,7 @@ module RectangularGeometryModule
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, DTWO
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(RectangularGeometryType),intent(inout) :: this
@@ -287,6 +287,7 @@ module RectangularGeometryModule
         this%width(idx) = this%parser%GetDouble()
         ! -- get width
         this%height(idx) = this%parser%GetDouble()
+        this%csheight(idx) = this%height(idx) / DTWO
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else
