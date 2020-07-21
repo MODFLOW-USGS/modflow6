@@ -6,6 +6,7 @@ module SimulationCreateModule
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule,              only: ustop, store_error, count_errors,            &
                                     store_error_unit, MaxErrors
+  use VersionModule,          only: write_listfile_header
   use InputOutputModule,      only: getunit, urword, openfile
   use ArrayHandlersModule,    only: expandarray, ifind
   use BaseModelModule,        only: BaseModelType
@@ -52,7 +53,7 @@ module SimulationCreateModule
     write(line,'(2(1x,A))') 'Writing simulation list file:',                     &
                             trim(adjustl(simlstfile))
     call sim_message(line)
-    call write_simulation_header()
+    call write_listfile_header(iout)
     !
     ! -- Read the simulation name file and create objects
     call read_simulation_namefile(trim(adjustl(simfile)))
@@ -78,56 +79,6 @@ module SimulationCreateModule
     ! -- Return
     return
   end subroutine simulation_da
-
-  subroutine write_simulation_header()
-! ******************************************************************************
-! Write header information for the simulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use ConstantsModule,        only: LENBIGLINE
-    use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,  & 
-                                      IDEVELOPMODE
-    use CompilerVersion
-    use GenericUtilitiesModule, only: write_centered
-    ! -- dummy
-    ! -- local
-    character(len=LENBIGLINE) :: syscmd
-    character(len=80) :: compiler
-! ------------------------------------------------------------------------------
-    !
-    ! -- Write header lines to simulation list file.
-    call write_centered('MODFLOW'//MFVNAM, 80, iunit=iout)
-    call write_centered(MFTITLE, 80, iunit=iout)
-    call write_centered('VERSION '//VERSION, 80, iunit=iout)
-    !
-    ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) then
-      call write_centered('***DEVELOP MODE***', 80, iunit=iout)
-    end if
-    !
-    ! -- Write compiler version
-    call get_compiler(compiler)
-    call write_centered(' ', 80, iunit=iout)
-    call write_centered(trim(adjustl(compiler)), 80, iunit=iout)
-    !
-    ! -- Write disclaimer
-    write(iout, FMTDISCLAIMER)
-    !
-    ! -- Write the system command used to initiate simulation
-    call GET_COMMAND(syscmd)
-    write(iout, '(/,a,/,a)') 'System command used to initiate simulation:',    &
-                             trim(syscmd)
-    !
-    ! -- Write precision of real variables
-    write(iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
-    call write_kindinfo(iout)
-    write(iout, *)
-    !
-    ! -- Return
-    return
-  end subroutine write_simulation_header
 
   subroutine read_simulation_namefile(simfile)
 ! ******************************************************************************

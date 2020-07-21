@@ -23,19 +23,31 @@ jobs:
       with:
         auto-update-conda: true
         miniconda-version: "latest"
-    - name: Install and print system dependencies (Linux)
+
+    - name: Setup symbolic links on Linux
       if: runner.os == 'Linux'
       run: |
         sudo ln -fs /usr/bin/gfortran-9 /usr/local/bin/gfortran
-        gfortran --version
-    - name: Install and print system dependencies (macOS)
+        sudo ln -fs /usr/bin/gcc-9 /usr/local/bin/gcc
+        sudo ln -fs /usr/bin/g++-9 /usr/local/bin/g++
+
+    - name: Install gfortran and setup symbolic links on MacOS
+      shell: bash
       if: runner.os == 'macOS'
       run: |
-        gfortran --version
-    - name: Install and print system dependencies (Windows)
-      if: runner.os == 'Windows'
+        brew cask info gfortran
+        brew cask install gfortran
+        ls -l /usr/local/gfortran/bin/
+        sudo ln -fs /usr/local/gfortran/bin/gfortran /usr/local/bin/gfortran
+        sudo ln -fs /usr/local/gfortran/bin/gcc /usr/local/bin/gcc
+        sudo ln -fs /usr/local/gfortran/bin/g++ /usr/local/bin/g++
+
+    - name: Print GNU compiler versions
       run: |
         gfortran --version
+        gcc --version
+        g++ --version
+
     - name: Install python packages
       run: |
         conda info
@@ -45,10 +57,13 @@ jobs:
         pip install numpy matplotlib
         pip install https://github.com/modflowpy/flopy/zipball/develop
         pip install https://github.com/modflowpy/pymake/zipball/master
-        pip install https://github.com/Deltares/amipy/zipball/master
+        pip install https://github.com/Deltares/xmipy/zipball/master
+
     - name: Print conda version
       run: conda --version
+
     - name: Print python package versions
+      shell: python
       run: |
         import sys
         import nose
@@ -67,8 +82,9 @@ jobs:
         print("")
         print("flopy is installed in:  {}".format(flopypth))
         print("pymake is installed in: {}".format(pymakepth))
-      shell: python
+
     - name: Set and print branch name
+      shell: bash
       run: |
         echo GITHUB_REF branch name ${GITHUB_REF##*/}
         echo GITHUB_REF=${GITHUB_REF}
@@ -78,14 +94,16 @@ jobs:
           export BRANCH=${GITHUB_REF##*/};
         else export BRANCH=${GITHUB_HEAD_REF}; fi
         echo BRANCH=${BRANCH}
-      shell: bash
+
     - name: Get regression test files
+      shell: bash
       run: |
         echo $HOME
         pwd
         git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
-      shell: bash
+
     - name: Check out the correct regression test branch
+      shell: bash
       run: |
         cd ../modflow6-testmodels
         if git show-ref -q --heads ${BRANCH}; then
@@ -94,12 +112,13 @@ jobs:
         git branch
         cd ../modflow6
         ls ../
-      shell: bash
+
     - name: Update flopy MODFLOW 6 classes
       run: |
         cd autotest
         python update_flopy.py
         cd ..
+
     - name: Build and test applications
       run: |
         nosetests -v --with-id --with-timer -w ./autotest

@@ -1,3 +1,7 @@
+! -- Groundwater Transport Mover Module
+! -- This module is responsible for sending mass from providers into
+! -- receiver qmfrommvr arrays and writing a mover transport budget
+  
 module GwtMvtModule
   
   use KindModule, only: DP, I4B
@@ -784,6 +788,8 @@ module GwtMvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- module
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtMvttype),intent(inout) :: this
     ! -- local
@@ -803,6 +809,9 @@ module GwtMvtModule
       ntabrows = ntabrows + nlist
     end do
     !
+    ! -- set table kstp and kper
+    call this%outputtab%set_kstpkper(kstp, kper)
+    !
     ! -- Add terms and print the table
     title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) //     &
             ') FLOW RATES'
@@ -816,11 +825,11 @@ module GwtMvtModule
       do n = 1, nlist
         cloc1 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
                 trim(adjustl(this%budobj%budterm(i)%text2id1))
-        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
-                trim(adjustl(this%budobj%budterm(i)%text2id1))
+        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id2)) // ' ' // &
+                trim(adjustl(this%budobj%budterm(i)%text2id2))
         call this%outputtab%add_term(inum)
         call this%outputtab%add_term(cloc1)
-        call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
+        call this%outputtab%add_term(this%budobj%budterm(i)%id1(n))
         call this%outputtab%add_term(-this%fmi%mvrbudobj%budterm(i)%flow(n))
         call this%outputtab%add_term(this%budobj%budterm(i)%flow(n))
         call this%outputtab%add_term(cloc2)

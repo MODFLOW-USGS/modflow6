@@ -3,6 +3,7 @@ module GwfModule
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
   use ConstantsModule,             only: LENFTYPE, LENPAKLOC, DZERO, DEM1, DTEN, DEP20
+  use VersionModule,               only: write_listfile_header
   use NumericalModelModule,        only: NumericalModelType
   use BaseDisModule,               only: DisBaseType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -112,9 +113,6 @@ module GwfModule
     use SimModule,                  only: ustop, store_error, count_errors
     use GenericUtilitiesModule,     only: write_centered
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
-    use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
-                                          FMTDISCLAIMER, IDEVELOPMODE
-    use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
     use GwfDisModule,               only: dis_cr
     use GwfDisvModule,              only: disv_cr
@@ -145,7 +143,6 @@ module GwfModule
     class(BaseModelType), pointer       :: model
     integer(I4B) :: nwords
     character(len=LINELENGTH), allocatable, dimension(:) :: words
-    character(len=80) :: compiler
     ! -- format
 ! ------------------------------------------------------------------------------
     !
@@ -171,29 +168,8 @@ module GwfModule
     call namefile_obj%add_cunit(niunit, cunit)
     call namefile_obj%openlistfile(this%iout)
     !
-    ! -- Write title to list file
-    call write_centered('MODFLOW'//MFVNAM, 80, iunit=this%iout)
-    call write_centered(MFTITLE, 80, iunit=this%iout)
-    call write_centered('GROUNDWATER FLOW MODEL (GWF)', 80, iunit=this%iout)
-    call write_centered('VERSION '//VERSION, 80, iunit=this%iout)
-    !
-    ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) then
-      call write_centered('***DEVELOP MODE***', 80, iunit=this%iout)
-    end if
-    !
-    ! -- Write compiler version
-    call get_compiler(compiler)
-    call write_centered(' ', 80, iunit=this%iout)
-    call write_centered(trim(adjustl(compiler)), 80, iunit=this%iout)
-    !
-    ! -- Write disclaimer
-    write(this%iout, FMTDISCLAIMER)
-    !
-    ! -- Write precision of real variables
-    write(this%iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
-    write(this%iout, '(a,i0,/)') 'Precision of REAL variables: ',              &
-                                 precision(DZERO)
+    ! -- Write header to model list file
+    call write_listfile_header(this%iout, 'GROUNDWATER FLOW MODEL (GWF)')
     !
     ! -- Open files
     call namefile_obj%openfiles(this%iout)

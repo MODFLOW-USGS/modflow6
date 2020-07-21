@@ -7,7 +7,7 @@
 !---------------------------------------------------------------------------------
 
 ! -- terms from MAW that will be handled by parent APT Package
-! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
+! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv  (note that this doesn't exist for MAW)
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
 ! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
@@ -35,8 +35,8 @@
 module GwtMwtModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LINELENGTH, LENBOUNDNAME
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
@@ -48,7 +48,7 @@ module GwtMwtModule
   
   character(len=*), parameter :: ftype = 'MWT'
   character(len=*), parameter :: flowtype = 'MAW'
-  character(len=16)       :: text  = '             MWT'
+  character(len=16)           :: text  = '             MWT'
   
   type, extends(GwtAptType) :: GwtMwtType
     
@@ -810,8 +810,23 @@ module GwtMwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
-    !    for rainfall observation type.
+    !    for rate observation type.
     call this%obs%StoreObsType('rate', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('fw-rate', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('rate-to-mvr', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
@@ -839,6 +854,18 @@ module GwtMwtModule
       case ('RATE')
         if (this%iboundpak(jj) /= 0) then
           call this%mwt_rate_term(jj, n1, n2, v)
+        end if
+      case ('FW-RATE')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudfwrt > 0) then
+          call this%mwt_fwrt_term(jj, n1, n2, v)
+        end if
+      case ('RATE-TO-MVR')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudrtmv > 0) then
+          call this%mwt_rtmv_term(jj, n1, n2, v)
+        end if
+      case ('FW-RATE-TO-MVR')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudfrtm > 0) then
+          call this%mwt_frtm_term(jj, n1, n2, v)
         end if
       case default
         found = .false.

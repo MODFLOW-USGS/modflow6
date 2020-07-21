@@ -2,14 +2,10 @@
   ! velocity is incorrect for a triangular corner cell if two edges are on model perimeter
   ! newton-raphson (head below bottom); more testing
   ! transport when cells are dry (IBOUND=0)
-  ! sub timing; what to do about output control
-  ! systematic approach to testing
   ! verify that idomain is working (can transport have a different idomain?)
   ! check that discretization is the same between both models 
   ! now that immobile domain is separate package, should sorbtion and decay be split?
-  ! move the fmi flow error term into the ssm package?
   ! Add internal GWF flows to the diagonal postion of the flowja array
-  ! Write CQ transport routine and add internal GWT flows to flowja array
   ! gwt obs
   ! adv obs
   ! dsp obs
@@ -18,23 +14,14 @@
   ! ssm obs
   ! src obs
   ! cnc obs
-  ! variable density flow package
-  ! heat transport input
-  ! memory deallocation
-  ! code profiling (how do run times compare with mt3d/seawat?)
   ! GWF-GWF exchange transport
   ! transient flow case; verify that its working properly, test with goode 1990
-  ! transport-only (using saved flow budget files)
-  ! transport for SFR, LAK, MAW, UZF
-  ! What to do about MVR?  Should go into SSM.
   ! implement steady-state transport (affects MST, IST)
   ! update user guide to reflect changes to MST, and IST
   ! update user guide to include conceptual sketch of the packages
   ! refactor code to use the MST and IST packages to replace STO, SRB, DCY, and IMD
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
-  ! add separate heat transport model?
   ! xt3d dispersion areas need to be consistent with non-xt3d case
-  ! the gwf_fc routines need updating for the mover calculation to hcof and rhs
   
   
 module GwtModule
@@ -42,6 +29,7 @@ module GwtModule
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
   use ConstantsModule,             only: LENFTYPE, DZERO, LENPAKLOC
+  use VersionModule,               only: write_listfile_header
   use NumericalModelModule,        only: NumericalModelType  
   use BaseModelModule,             only: BaseModelType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -130,9 +118,6 @@ module GwtModule
     use ListsModule,                only: basemodellist
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
-    use GenericUtilitiesModule,     only: write_centered
-    use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
-                                          FMTDISCLAIMER, IDEVELOPMODE
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
@@ -165,8 +150,6 @@ module GwtModule
     class(BaseModelType), pointer       :: model
     integer(I4B) :: nwords
     character(len=LINELENGTH), allocatable, dimension(:) :: words
-    character(len=80) :: compiler
-    ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate a new GWT Model (this) and add it to basemodellist
@@ -190,29 +173,8 @@ module GwtModule
     call namefile_obj%add_cunit(niunit, cunit)
     call namefile_obj%openlistfile(this%iout)
     !
-    ! -- Write title to list file
-    call write_centered('MODFLOW'//MFVNAM, 80, iunit=this%iout)
-    call write_centered(MFTITLE, 80, iunit=this%iout)
-    call write_centered('GROUNDWATER TRANSPORT MODEL (GWT)', 80, iunit=this%iout)
-    call write_centered('VERSION '//VERSION, 80, iunit=this%iout)
-    !
-    ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) then
-      call write_centered('***DEVELOP MODE***', 80, iunit=this%iout)
-    end if
-    !
-    ! -- Write compiler version
-    call get_compiler(compiler)
-    call write_centered(' ', 80, iunit=this%iout)
-    call write_centered(trim(adjustl(compiler)), 80, iunit=this%iout)
-    !
-    ! -- Write disclaimer
-    write(this%iout, FMTDISCLAIMER)
-    !
-    ! -- Write precision of real variables
-    write(this%iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
-    write(this%iout, '(a,i0,/)') 'Precision of REAL variables: ',              &
-                                 precision(DZERO)
+    ! -- Write header to model list file
+    call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
     !
     ! -- Open files
     call namefile_obj%openfiles(this%iout)

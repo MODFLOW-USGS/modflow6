@@ -25,7 +25,7 @@ module InputOutputModule
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, uget_block_line, print_format, BuildFixedFormat,           &
             BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
-            get_nwords
+            get_nwords, u9rdcom
 
   contains
 
@@ -225,7 +225,7 @@ module InputOutputModule
     ! -- Return
     return
   end function getunit
-
+  
   subroutine u8rdcom(iin, iout, line, ierr)
 ! ******************************************************************************
 ! Read until non-comment line found and then return line
@@ -253,7 +253,6 @@ module InputOutputModule
     line = comment
     pcomments: do
       read (iin,'(a)', iostat=ierr) line
-      !read (iin,'(a)', iostat=ierr, iomsg=readerrmsg) line
       if (ierr == IOSTAT_END) then
         ! -- End of file reached.
         ! -- Backspace is needed for gfortran.
@@ -265,8 +264,6 @@ module InputOutputModule
         call store_error('******Error in u8rdcom.')
         write(errmsg, *) 'Could not read from unit: ',iin
         call store_error(errmsg)
-        !write(errmsg,*)'Error reported as: ',trim(readerrmsg)
-        !call store_error(errmsg)
         call unitinquire(iin)
         call ustop()
       endif
@@ -370,7 +367,7 @@ module InputOutputModule
     integer(I4B),        intent(out) :: ierr
     logical,           intent(inout) :: isfound
     integer(I4B),      intent(inout) :: lloc
-    character (len=*), intent(inout) :: line
+    character (len=:), allocatable, intent(inout) :: line
     integer(I4B),      intent(inout) :: iuext
     logical, optional,    intent(in) :: blockRequired
     logical, optional,    intent(in) :: supportopenclose
@@ -380,7 +377,8 @@ module InputOutputModule
     integer(I4B) :: ival
     integer(I4B) :: lloc2
     real(DP) :: rval
-    character(len=LINELENGTH) :: fname, line2
+    character (len=:), allocatable :: line2
+    character(len=LINELENGTH) :: fname
     character(len=MAXCHARLEN) :: ermsg
     logical :: supportoc, blockRequiredLocal
 ! ------------------------------------------------------------------------------
@@ -398,7 +396,7 @@ module InputOutputModule
     isfound = .false.
     mainloop: do
       lloc = 1
-      call u8rdcom(iin, iout, line, ierr)
+      call u9rdcom(iin, iout, line, ierr)
       if (ierr < 0) exit
       call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
       if (line(istart:istop) == 'BEGIN') then
@@ -407,7 +405,7 @@ module InputOutputModule
           isfound = .true.
           if (supportoc) then
             ! Look for OPEN/CLOSE on 1st line after line starting with BEGIN
-            call u8rdcom(iin,iout,line2,ierr)
+            call u9rdcom(iin, iout, line2, ierr)
             if (ierr < 0) exit
             lloc2 = 1
             call urword(line2, lloc2, istart, istop, 1, ival, rval, iin, iout)
@@ -473,7 +471,7 @@ module InputOutputModule
     integer(I4B), intent(in) :: iout
     logical, intent(inout) :: isfound
     integer(I4B), intent(inout) :: lloc
-    character (len=*), intent(inout) :: line
+    character (len=:), allocatable, intent(inout) :: line
     character(len=*), intent(out) :: ctagfound
     integer(I4B), intent(inout) :: iuext
     ! -- local
@@ -481,7 +479,8 @@ module InputOutputModule
     integer(I4B) :: ival, lloc2
     real(DP) :: rval
     character(len=100) :: ermsg
-    character(len=LINELENGTH) :: line2, fname
+    character (len=:), allocatable :: line2
+    character(len=LINELENGTH) :: fname
 ! ------------------------------------------------------------------------------
     !code
     isfound = .false.
@@ -489,7 +488,7 @@ module InputOutputModule
     iuext = iin
     do
       lloc = 1
-      call u8rdcom(iin,iout,line,ierr)
+      call u9rdcom(iin,iout,line,ierr)
       if (ierr < 0) exit
       call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
       if (line(istart:istop) == 'BEGIN') then
@@ -497,7 +496,7 @@ module InputOutputModule
         if (line(istart:istop) /= '') then
           isfound = .true.
           ctagfound = line(istart:istop)
-          call u8rdcom(iin,iout,line2,ierr)
+          call u9rdcom(iin,iout,line2,ierr)
           if (ierr < 0) exit
           lloc2 = 1
           call urword(line2,lloc2,istart,istop,1,ival,rval,iout,iin)
@@ -1835,7 +1834,8 @@ module InputOutputModule
     endif
     auxloop: do
       call urword(line, lloc, istart, istop, 1, n, rval, iout, inunit)
-      if(lloc >= linelen) exit auxloop
+      !if(lloc >= linelen) exit auxloop
+      if (istart >= linelen) exit auxloop
       naux = naux + 1
       call ExpandArray(auxname)
       auxname(naux) = line(istart:istop)
@@ -2229,6 +2229,167 @@ module InputOutputModule
     return
   end subroutine fseek_stream
   
-  
+  subroutine u9rdcom(iin, iout, line, ierr)
+! ******************************************************************************
+! Read until non-comment line found and then return line.  Different from
+! u8rdcom in that line is a deferred length character string, which allows
+! any length lines to be read using the get_line subroutine.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use, intrinsic :: iso_fortran_env, only: IOSTAT_END
+    implicit none
+    ! -- dummy
+    integer(I4B),         intent(in) :: iin
+    integer(I4B),         intent(in) :: iout
+    character (len=:), allocatable, intent(inout) :: line
+    integer(I4B),        intent(out) :: ierr
+    ! -- local definitions
+    character (len=:), allocatable :: linetemp
+    character (len=2), parameter :: comment = '//'
+    character(len=LINELENGTH)    :: errmsg
+    character(len=1), parameter  :: tab = CHAR(9)
+    logical :: iscomment
+    integer(I4B) :: i, j, l, istart, lsize
+! ------------------------------------------------------------------------------
+    !code
+    !
+    !readerrmsg = ''
+    line = comment
+    pcomments: do
+      call get_line(iin, line, ierr)
+      if (ierr == IOSTAT_END) then
+        ! -- End of file reached.
+        ! -- Backspace is needed for gfortran.
+        backspace(iin)
+        line = ' '
+        exit pcomments
+      elseif (ierr /= 0) then
+        ! -- Other error...report it
+        call store_error('******Error in u9rdcom.')
+        write(errmsg, *) 'Could not read from unit: ',iin
+        call store_error(errmsg)
+        call unitinquire(iin)
+        call ustop()
+      endif
+      if (len_trim(line).lt.1) then
+        line = comment
+        cycle
+      end if
+      !
+      ! Ensure that any initial tab characters are treated as spaces
+      cleartabs: do
+        !
+        ! -- adjustl manually to avoid stack overflow
+        lsize = len(line)
+        istart = 1
+        allocate(character(len=lsize) :: linetemp)
+        do j = 1, lsize
+          if (line(j:j) /= ' ' .and. line(j:j) /= ',' .and. line(j:j) /= char(9)) then
+            istart = j
+            exit
+          end if
+        end do
+        linetemp(:) = ' '
+        linetemp(:) = line(istart:)
+        line(:) = linetemp(:)
+        deallocate(linetemp)
+        !
+        ! -- check for comment
+        iscomment = .false.
+        select case (line(1:1))
+          case ('#')
+            iscomment = .true.
+            exit cleartabs
+          case ('!')
+            iscomment = .true.
+            exit cleartabs
+          case (tab)
+            line(1:1) = ' '
+            cycle cleartabs
+          case default
+            if (line(1:2).eq.comment) iscomment = .true.
+            if (len_trim(line) < 1) iscomment = .true.
+            exit cleartabs
+        end select
+      end do cleartabs
+      !
+      if (.not.iscomment) then
+        exit pcomments
+      else
+        if (iout > 0) then
+          !find the last non-blank character.
+          l=len(line)
+          do i = l, 1, -1
+            if(line(i:i).ne.' ') then
+              exit
+            end if
+          end do
+          !print the line up to the last non-blank character.
+          write(iout,'(1x,a)') line(1:i)
+        end if
+      end if
+    end do pcomments
+    return
+  end subroutine u9rdcom
+
+  subroutine get_line(lun, line, iostat)
+! ******************************************************************************
+! Read an unlimited length line from unit number lun into a deferred-length
+! characater string (line).  Tack on a single space to the end so that 
+! routines like URWORD continue to function as before.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    integer(I4B), intent(in) :: lun
+    character(len=:), intent(out), allocatable :: line
+    integer(I4B), intent(out) :: iostat
+    ! -- local
+    integer(I4B), parameter :: buffer_len = MAXCHARLEN
+    character(len=buffer_len) :: buffer
+    character(len=:), allocatable :: linetemp
+    integer(I4B) :: size_read, linesize
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    line = ''
+    linetemp = ''
+    !
+    ! -- process
+    do
+      read ( lun, '(A)',  &
+          iostat = iostat,  &
+          advance = 'no',  &
+          size = size_read ) buffer
+      if (is_iostat_eor(iostat)) then
+        linesize = len(line)
+        deallocate(linetemp)
+        allocate(character(len=linesize) :: linetemp)
+        linetemp(:) = line(:)
+        deallocate(line)
+        allocate(character(len=linesize + size_read + 1) :: line)
+        line(:) = linetemp(:)
+        line(linesize+1:) = buffer(:size_read)
+        linesize = len(line)
+        line(linesize:linesize) = ' '
+        iostat = 0
+        exit
+      else if (iostat == 0) then
+        linesize = len(line)
+        deallocate(linetemp)
+        allocate(character(len=linesize) :: linetemp)
+        linetemp(:) = line(:)
+        deallocate(line)
+        allocate(character(len=linesize + size_read) :: line)
+        line(:) = linetemp(:)
+        line(linesize+1:) = buffer(:size_read)
+      else
+        exit
+      end if
+    end do
+  end subroutine get_line  
 
 END MODULE InputOutputModule

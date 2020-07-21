@@ -1177,7 +1177,7 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: fname
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME) :: sfacauxname

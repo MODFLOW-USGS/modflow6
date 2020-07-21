@@ -689,7 +689,7 @@ contains
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
-            bndName = bndNameTemp(1:16)
+            bndName = bndNameTemp
           end if
         end if
         nametxt(n) = bndName

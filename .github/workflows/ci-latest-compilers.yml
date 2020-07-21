@@ -24,6 +24,7 @@ jobs:
       with:
         auto-update-conda: true
         miniconda-version: "latest"
+
     - name: Set up gfortran ${{ matrix.GCC_V }}
       run: |
         sudo apt-get install -y --no-install-recommends gcc-${{ matrix.GCC_V }} g++-${{ matrix.GCC_V }} gfortran-${{ matrix.GCC_V }}
@@ -31,12 +32,14 @@ jobs:
         --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.GCC_V }} \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.GCC_V }} \
         --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.GCC_V }}
-    - name: Print gcc versions
+
+    - name: Print GNU compiler versions
       run: |
         gcc --version
         gfortran --version
         g++ --version
         gcov --version
+
     - name: Install python packages
       run: |
         conda info
@@ -46,10 +49,13 @@ jobs:
         pip install numpy matplotlib
         pip install https://github.com/modflowpy/flopy/zipball/develop
         pip install https://github.com/modflowpy/pymake/zipball/master
-        pip install https://github.com/Deltares/amipy/zipball/master
+        pip install https://github.com/Deltares/xmipy/zipball/master
+
     - name: Print conda version
       run: conda --version
+
     - name: Print python package versions
+      shell: python
       run: |
         import sys
         import nose
@@ -68,8 +74,9 @@ jobs:
         print("")
         print("flopy is installed in:  {}".format(flopypth))
         print("pymake is installed in: {}".format(pymakepth))
-      shell: python
+
     - name: Set and print branch name
+      shell: bash
       run: |
         echo GITHUB_REF branch name ${GITHUB_REF##*/}
         echo GITHUB_REF=${GITHUB_REF}
@@ -79,14 +86,16 @@ jobs:
           export BRANCH=${GITHUB_REF##*/};
         else export BRANCH=${GITHUB_HEAD_REF}; fi
         echo BRANCH=${BRANCH}
-      shell: bash
+
     - name: Get regression test files
+      shell: bash
       run: |
         echo $HOME
         pwd
         git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
-      shell: bash
+
     - name: Check out the correct regression test branch
+      shell: bash
       run: |
         cd ../modflow6-testmodels
         if git show-ref -q --heads ${BRANCH}; then
@@ -95,12 +104,13 @@ jobs:
         git branch
         cd ../modflow6
         ls ../
-      shell: bash
+
     - name: Update flopy MODFLOW 6 classes
       run: |
         cd autotest
         python update_flopy.py
         cd ..
+
     - name: Build and test applications
       run: |
         nosetests -v --with-id --with-timer -w ./autotest

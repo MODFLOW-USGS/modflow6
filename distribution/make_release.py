@@ -272,13 +272,13 @@ def update_mf6_version(vmajor, vminor, vmicro):
             if ',/)"' in line:
                 skip = False
             continue
-        elif 'IDEVELOPMODE' in line:
+        elif ':: IDEVELOPMODE =' in line:
             line = '  integer(I4B), parameter :: ' + \
                    'IDEVELOPMODE = {}'.format(idevelopmode)
-        elif 'VERSION' in line:
+        elif ':: VERSION =' in line:
             line = "  character(len=40), parameter :: " + \
                    "VERSION = '{}{}{}'".format(version, version_type, sdate)
-        elif 'FMTDISCLAIMER' in line:
+        elif ':: FMTDISCLAIMER =' in line:
             line = disclaimerfmt
             skip = True
         f.write('{}\n'.format(line))

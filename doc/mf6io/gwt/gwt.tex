@@ -7,7 +7,7 @@ The GWT Model is designed to permit input to be gathered, as it is needed, from 
 The GWT Model reads a file called the Name File, which specifies most of the files that will be used in a simulation. Several files are always required whereas other files are optional depending on the simulation. The Output Control Package receives instructions from the user to control the amount and frequency of output.  Details about the Name File and the Output Control Package are described in this section.
 
 \subsection{Multi-Species Transport Simulation}
-TODO: Multi-species transport not implemented yet.  Only a single species can be represented at the moment.
+The present implementation of the GWT Model does not directly support transport of multiple solute species.  However, a simulation can include multiple models, including multiple GWT models.  Thus, multi-species transport simulations are possible by using a separate GWT model for each species.
 
 \subsection{Units of Length and Time}
 The GWF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.

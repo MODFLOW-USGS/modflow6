@@ -1,0 +1,25 @@
+BEGIN options
+  DIGITS  7
+  PRINT_INPUT
+END options
+
+BEGIN continuous  FILEOUT  gwt_lkt02.lkt.obs.csv
+  sft-1-conc  CONCENTRATION  1
+  sft-1-extinflow  EXT-INFLOW  1
+  sft-1-rain  RAINFALL  1
+  sft-1-roff  RUNOFF  1
+  sft-1-evap  EVAPORATION  1
+  sft-1-stor  STORAGE  1
+  sft-1-const  CONSTANT  1
+  sft-1-gwt1  SFT  1  1
+  sft-1-gwt2  SFT  1  2
+  sft-2-gwt1  SFT  2  1
+  sft-1-mylake1  SFT  MYREACHES
+  sft-1-fjf  FLOW-JA-FACE  1  2
+  sft-2-fjf  FLOW-JA-FACE  2  1
+  sft-3-fjf  FLOW-JA-FACE  2  3
+  sft-4-fjf  FLOW-JA-FACE  3  2
+  sft-5-fjf  FLOW-JA-FACE  MYREACH1
+  sft-6-fjf  FLOW-JA-FACE  MYREACH2
+  sft-7-fjf  FLOW-JA-FACE  MYREACH3
+END continuous

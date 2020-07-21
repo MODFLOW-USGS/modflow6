@@ -205,11 +205,42 @@ def get_model(idx, dir):
 
         mwt_obs = {(gwtname + '.mwt.obs.csv', ):
                        [
-                        ('mwt-1-rate', 'RATE', 1),
-                        ('mwt-1-conc', 'CONCENTRATION', 1),
-                        ('mwt-2-conc', 'CONCENTRATION', 2),
-                        ('mwt-3-conc', 'CONCENTRATION', 3),
-                        ('mwt-4-conc', 'CONCENTRATION', 4),
+                        ('mwt1mwt',  'MWT', (0,), (0,)),
+                        ('mwt2mwt',  'MWT', (1,), (0,)),
+                        ('mwt3mwt',  'MWT', (2,), (0,)),
+                        ('mwt4mwt',  'MWT', (3,), (0,)),
+                        ('mwt1conc', 'CONCENTRATION', (0,)),
+                        ('mwt2conc', 'CONCENTRATION', (1,)),
+                        ('mwt3conc', 'CONCENTRATION', (2,)),
+                        ('mwt4conc', 'CONCENTRATION', (3,)),
+                        ('mwt1stor', 'STORAGE', (0,)),
+                        ('mwt2stor', 'STORAGE', (1,)),
+                        ('mwt3stor', 'STORAGE', (2,)),
+                        ('mwt4stor', 'STORAGE', (3,)),
+                        ('mwt1cnst', 'CONSTANT', (0,)),
+                        ('mwt2cnst', 'CONSTANT', (1,)),
+                        ('mwt3cnst', 'CONSTANT', (2,)),
+                        ('mwt4cnst', 'CONSTANT', (3,)),
+                        ('mwt1fmvr', 'FROM-MVR', (0,)),
+                        ('mwt2fmvr', 'FROM-MVR', (1,)),
+                        ('mwt3fmvr', 'FROM-MVR', (2,)),
+                        ('mwt4fmvr', 'FROM-MVR', (3,)),
+                        ('mwt1rate', 'RATE', (0,)),
+                        ('mwt2rate', 'RATE', (1,)),
+                        ('mwt3rate', 'RATE', (2,)),
+                        ('mwt4rate', 'RATE', (3,)),
+                        ('mwt1rtmv', 'RATE-TO-MVR', (0,)),
+                        ('mwt2rtmv', 'RATE-TO-MVR', (1,)),
+                        ('mwt3rtmv', 'RATE-TO-MVR', (2,)),
+                        ('mwt4rtmv', 'RATE-TO-MVR', (3,)),
+                        ('mwt1fwrt', 'FW-RATE', (0,)),
+                        ('mwt2fwrt', 'FW-RATE', (1,)),
+                        ('mwt3fwrt', 'FW-RATE', (2,)),
+                        ('mwt4fwrt', 'FW-RATE', (3,)),
+                        ('mwt1frtm', 'FW-RATE-TO-MVR', (0,)),
+                        ('mwt2frtm', 'FW-RATE-TO-MVR', (1,)),
+                        ('mwt3frtm', 'FW-RATE-TO-MVR', (2,)),
+                        ('mwt4frtm', 'FW-RATE-TO-MVR', (3,)),
                        ],
                    }
         # append additional obs attributes to obs dictionary
@@ -245,7 +276,7 @@ def get_model(idx, dir):
                                                   pname='MAW-1',
                                                   auxiliary=['aux1', 'aux2'])
 
-            mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt)
+            mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, print_flows=True)
 
         # sources
         sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'), ]

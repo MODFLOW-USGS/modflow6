@@ -611,7 +611,8 @@ module GwtIstModule
     ! -- dummy
     class(GwtIstType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, keyword2
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: keyword2
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -683,7 +684,8 @@ module GwtIstModule
     ! -- dummy
     class(GwtIstType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     logical, dimension(7) :: lname

@@ -236,7 +236,8 @@ module NumericalPackageModule
     integer(I4B) :: nsize
     integer(I4B) :: j
     character(len=LENVARNAME) :: varname
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc
     integer(I4B), dimension(:), pointer, contiguous :: aint
     real(DP), dimension(:), pointer, contiguous     :: adbl

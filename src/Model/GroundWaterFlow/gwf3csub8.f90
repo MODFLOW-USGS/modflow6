@@ -2149,13 +2149,13 @@ contains
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: urword, getunit, urdaux, openfile
+    use InputOutputModule, only: getunit, urdaux, openfile
     implicit none
     ! -- dummy
     class(GwfCsubType),   intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=MAXCHARLEN) :: fname
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound
@@ -3060,8 +3060,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use ConstantsModule, only: LINELENGTH
     use KindModule, only: I4B
-    use InputOutputModule, only: urword, uget_block, u8rdcom, &
-                                 uterminate_block
     implicit none
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
@@ -3069,7 +3067,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     logical :: isfound, endOfBlock
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=20) :: cellid
     integer(I4B) :: iske

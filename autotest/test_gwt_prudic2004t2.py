@@ -33,7 +33,7 @@ def get_model(idx, dir):
     gwfname = 'gwf_' + name
     gwtname = 'gwt_' + name
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name='mf6', sim_ws=ws, continue_=True)
+                                 exe_name='mf6', sim_ws=ws, continue_=False)
 
     # number of time steps for period 2 are reduced from 12 * 25 to 25 in
     # order to speed up this autotest
@@ -268,8 +268,9 @@ def get_model(idx, dir):
         imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
                                       outer_dvclose=hclose,
                                       outer_maximum=nouter,
-                                      under_relaxation='NONE',
                                       inner_maximum=ninner,
+                                      under_relaxation='DBD',
+                                      under_relaxation_theta=0.7,
                                       inner_dvclose=hclose,
                                       rcloserecord=rclose,
                                       linear_acceleration='BICGSTAB',
@@ -462,6 +463,9 @@ def eval_results(sim):
     times = bobj.times
     bobj.file.close()
 
+    # set atol
+    atol = 0.02
+
     # check simulated concentration in lak 1 and 2 sfr reaches
     res_lak1 = lkaconc[:, 0]
     ans_lak1 = \
@@ -475,7 +479,7 @@ def eval_results(sim):
     ans_lak1 = np.array(ans_lak1)
     d = res_lak1 - ans_lak1
     msg = '{} {} {}'.format(res_lak1, ans_lak1, d)
-    assert np.allclose(res_lak1, ans_lak1), msg
+    assert np.allclose(res_lak1, ans_lak1, atol=atol), msg
 
     res_sfr3 = sfaconc[:, 30]
     ans_sfr3 = \
@@ -489,7 +493,7 @@ def eval_results(sim):
     ans_sfr3 = np.array(ans_sfr3)
     d = res_sfr3 - ans_sfr3
     msg = '{} {} {}'.format(res_sfr3, ans_sfr3, d)
-    assert np.allclose(res_sfr3, ans_sfr3, atol=0.01), msg
+    assert np.allclose(res_sfr3, ans_sfr3, atol=atol), msg
 
 
     res_sfr4 = sfaconc[:, 37]
@@ -504,7 +508,7 @@ def eval_results(sim):
     ans_sfr4 = np.array(ans_sfr4)
     d = res_sfr4 - ans_sfr4
     msg = '{} {} {}'.format(res_sfr4, ans_sfr4, d)
-    assert np.allclose(res_sfr4, ans_sfr4, atol=0.01), msg
+    assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
     # uncomment when testing
     # assert False
