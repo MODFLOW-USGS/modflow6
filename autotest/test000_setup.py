@@ -26,8 +26,12 @@ if sys.platform.lower() == 'win32':
     eext = '.exe'
     soext = '.dll'
 
-download_version = '3.0'
 mfexe_pth = 'temp/mfexes'
+
+# some flags to check for errors in the code
+# add -Werror for compilation to terminate if errors are found
+strict_flags = ('-Wtabs -Wline-truncation -Wunused-label '
+                '-Wunused-variable -pedantic -std=f2008')
 
 
 def relpath_fallback(pth):
@@ -75,71 +79,52 @@ def test_getmfexes():
 
 
 def test_build_modflow6():
-    # determine if app should be built
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nomf6':
-            txt = 'Command line cancel of MODFLOW 6 build'
-            print(txt)
-            return
+    pm = pymake.Pymake()
+    pm.target = "mf6" + eext
+    pm.srcdir = os.path.join('..', 'src')
+    pm.appdir = os.path.join('..', 'bin')
+    pm.include_subdirs = True
+    pm.inplace = True
+    if pm.fc == "gfortran":
+        pm.fflags = strict_flags
 
-    # set source and target paths
-    srcdir = os.path.join('..', 'src')
-    target = os.path.join('..', 'bin', 'mf6')
-    target += eext
-    fc, cc = pymake.set_compiler('mf6')
+    # build the application
+    pm.build()
 
-    fflags = None
-    if fc == 'gfortran':
-        # some flags to check for errors in the code
-        # add -Werror for compilation to terminate if errors are found
-        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
-                  '-Wunused-variable -pedantic -std=f2008')
-
-    pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
-                fflags=fflags)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
+    msg = '{} does not exist.'.format(pm.target)
+    assert pm.returncode == 0, msg
 
 
 def test_build_modflow6_so():
-    # determine if app should be built
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nomf6':
-            txt = 'Command line cancel of MODFLOW 6 build'
-            print(txt)
-            return
+    pm = pymake.Pymake()
+    pm.target = "libmf6" + soext
+    pm.srcdir = os.path.join('..', 'srcbmi')
+    pm.srcdir2 = os.path.join('..', 'src')
+    pm.appdir = os.path.join('..', 'bin')
+    pm.excludefiles = [os.path.join(pm.srcdir2, 'mf6.f90')]
+    pm.include_subdirs = True
+    pm.sharedobject = True
+    pm.inplace = True
+    if pm.fc == "gfortran":
+        pm.fflags = strict_flags
 
-    # set source and target paths
-    srcdir = os.path.join('..', 'srcbmi')
-    comdir = os.path.join('..', 'src')
-    excludefiles = [os.path.join(comdir, 'mf6.f90')]
-    target = os.path.join('..', 'bin', 'libmf6')
-    target += soext
-    fc, cc = pymake.set_compiler('mf6')
+    # build the application
+    pm.build()
 
-    fflags = None
-    if fc == 'gfortran':
-        # some flags to check for errors in the code
-        # add -Werror for compilation to terminate if errors are found
-        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
-                  '-Wunused-variable -pedantic -std=f2008')
-
-    pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
-                fflags=fflags, srcdir2=comdir, excludefiles=excludefiles,
-                sharedobject=True)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
+    msg = '{} does not exist.'.format(pm.target)
+    assert pm.returncode == 0, msg
 
 
 def test_build_mf5to6():
-    # determine if app should be built
+    # define default compilers
+    fc = "gfortran"
+    cc = None
+
+    # determine if fortran compiler specified on the command line
     for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nomf5to6':
-            txt = 'Command line cancel of MODFLOW 5 to 6 converter build'
-            print(txt)
-            return
+        if arg == '-fc':
+            fc = sys.argv[idx + 1]
+            break
 
     # set source and target paths
     srcdir = os.path.join('..', 'utils', 'mf5to6', 'src')
@@ -147,44 +132,31 @@ def test_build_mf5to6():
     target += eext
     extrafiles = os.path.join('..', 'utils', 'mf5to6', 'pymake',
                               'extrafiles.txt')
-    fc, cc = pymake.set_compiler('mf6')
 
     # build modflow 5 to 6 converter
     pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
-                extrafiles=extrafiles)
+                extrafiles=extrafiles, inplace=True)
 
     msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
 
 
 def test_build_zonebudget():
-    # determine if app should be built
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nozonebudget':
-            txt = 'Command line cancel of ZONEBUDGET for MODFLOW 6 build'
-            print(txt)
-            return
+    pm = pymake.Pymake()
+    pm.target = "zbud6" + eext
+    pm.srcdir = os.path.join('..', 'utils', 'zonebudget', 'src')
+    pm.appdir = os.path.join('..', 'bin')
+    pm.extrafiles = os.path.join('..', 'utils', 'zonebudget', 'pymake',
+                                 'extrafiles.txt')
+    pm.inplace = True
+    if pm.fc == "gfortran":
+        pm.fflags = strict_flags
 
-    # set source and target paths
-    srcdir = os.path.join('..', 'utils', 'zonebudget', 'src')
-    target = os.path.join('..', 'bin', 'zbud6')
-    target += eext
-    extrafiles = os.path.join('..', 'utils', 'zonebudget', 'pymake',
-                              'extrafiles.txt')
-    fc, cc = pymake.set_compiler('mf6')
+    # build the application
+    pm.build()
 
-    fflags = None
-    if fc == 'gfortran':
-        # some flags to check for errors in the code
-        # add -Werror for compilation to terminate if errors are found
-        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
-                  '-Wunused-variable -pedantic -std=f2008')
-
-    pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles,
-                fflags=fflags)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
+    msg = '{} does not exist.'.format(pm.target)
+    assert pm.returncode == 0, msg
 
 
 if __name__ == "__main__":
