@@ -2707,8 +2707,8 @@ subroutine apt_rp_obs(this)
             end do
           end if
           if (.not. jfound) then
-            write(ermsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
-            call store_error(ermsg)
+            write(errmsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
+            call store_error(errmsg)
           end if
         end if
       else
@@ -2898,7 +2898,7 @@ subroutine apt_rp_obs(this)
                 errmsg = 'Unrecognized observation type "' // &
                           trim(obsrv%ObsTypeId) // '" for ' // &
                           trim(adjustl(this%text)) // ' package ' // &
-                          trim(this%name)
+                          trim(this%packName)
                 call store_error(errmsg)
                 call store_error_unit(this%obs%inunitobs)
                 call ustop()
