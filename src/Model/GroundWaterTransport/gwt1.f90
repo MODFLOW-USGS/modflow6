@@ -2,14 +2,10 @@
   ! velocity is incorrect for a triangular corner cell if two edges are on model perimeter
   ! newton-raphson (head below bottom); more testing
   ! transport when cells are dry (IBOUND=0)
-  ! sub timing; what to do about output control
-  ! systematic approach to testing
   ! verify that idomain is working (can transport have a different idomain?)
   ! check that discretization is the same between both models 
   ! now that immobile domain is separate package, should sorbtion and decay be split?
-  ! move the fmi flow error term into the ssm package?
   ! Add internal GWF flows to the diagonal postion of the flowja array
-  ! Write CQ transport routine and add internal GWT flows to flowja array
   ! gwt obs
   ! adv obs
   ! dsp obs
@@ -18,23 +14,14 @@
   ! ssm obs
   ! src obs
   ! cnc obs
-  ! variable density flow package
-  ! heat transport input
-  ! memory deallocation
-  ! code profiling (how do run times compare with mt3d/seawat?)
   ! GWF-GWF exchange transport
   ! transient flow case; verify that its working properly, test with goode 1990
-  ! transport-only (using saved flow budget files)
-  ! transport for SFR, LAK, MAW, UZF
-  ! What to do about MVR?  Should go into SSM.
   ! implement steady-state transport (affects MST, IST)
   ! update user guide to reflect changes to MST, and IST
   ! update user guide to include conceptual sketch of the packages
   ! refactor code to use the MST and IST packages to replace STO, SRB, DCY, and IMD
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
-  ! add separate heat transport model?
   ! xt3d dispersion areas need to be consistent with non-xt3d case
-  ! the gwf_fc routines need updating for the mover calculation to hcof and rhs
   
   
 module GwtModule

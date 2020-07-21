@@ -225,14 +225,14 @@ description REPLACE obs6_filename {'{#1}': 'UZT'}
 
 block packagedata
 name packagedata
-type recarray mawno strt aux boundname
+type recarray uzfno strt aux boundname
 shape (maxbound)
 reader urword
 longname
 description
 
 block packagedata
-name mawno
+name uzfno
 type integer
 shape
 tagged false

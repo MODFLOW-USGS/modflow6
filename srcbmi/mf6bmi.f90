@@ -702,7 +702,7 @@ module mf6bmi
   ! convenience functions follow here, TODO_MJR: move to dedicated module?
   ! -----------------------------------------------------------------------
   
-  ! Validation of the MODFLOW 6 simulation for use with BMI/AMI.  
+  ! Validation of the MODFLOW 6 simulation for use with BMI/XMI.  
   function validateSimulation() result(isValid)
       logical :: isValid
   
