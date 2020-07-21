@@ -3,6 +3,7 @@ module ChdModule
   use KindModule,           only: DP, I4B
   use ConstantsModule,      only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE,         &
                                   LINELENGTH, LENPACKAGENAME
+  use MemoryHelperModule,   only: create_mem_path                                
   use ObsModule,            only: DefaultObsIdProcessor
   use BndModule,            only: BndType
   use ObserveModule,        only: ObserveType
@@ -76,7 +77,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return

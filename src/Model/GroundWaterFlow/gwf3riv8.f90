@@ -1,6 +1,7 @@
 module rivmodule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -72,7 +73,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=3  ! stage, conductance, rbot
     packobj%iscloc=2   !sfac applies to conductance
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return

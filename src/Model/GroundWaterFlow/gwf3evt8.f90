@@ -2,6 +2,7 @@ module EvtModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit, ustop
   use ObsModule, only: DefaultObsIdProcessor
@@ -105,7 +106,7 @@ module EvtModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3 ! Assumes NSEG = 1
     packobj%iscloc = 2  ! sfac applies to max. ET rate
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 2

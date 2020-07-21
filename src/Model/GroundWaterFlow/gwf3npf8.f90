@@ -1175,37 +1175,37 @@ module GwfNpfModule
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', trim(this%memoryPath))
-    call mem_allocate(this%k11, ncells, 'K11', trim(this%memoryPath))
-    call mem_allocate(this%sat, ncells, 'SAT', trim(this%memoryPath))
-    call mem_allocate(this%condsat, njas, 'CONDSAT', trim(this%memoryPath))
+    call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', this%memoryPath)
+    call mem_allocate(this%k11, ncells, 'K11', this%memoryPath)
+    call mem_allocate(this%sat, ncells, 'SAT', this%memoryPath)
+    call mem_allocate(this%condsat, njas, 'CONDSAT', this%memoryPath)
     !
     ! -- Optional arrays dimensioned to full size initially
-    call mem_allocate(this%k22, ncells, 'K22', trim(this%memoryPath))
-    call mem_allocate(this%k33, ncells, 'K33', trim(this%memoryPath))
-    call mem_allocate(this%wetdry, ncells, 'WETDRY', trim(this%memoryPath))
-    call mem_allocate(this%angle1, ncells, 'ANGLE1', trim(this%memoryPath))
-    call mem_allocate(this%angle2, ncells, 'ANGLE2', trim(this%memoryPath))
-    call mem_allocate(this%angle3, ncells, 'ANGLE3', trim(this%memoryPath))
+    call mem_allocate(this%k22, ncells, 'K22', this%memoryPath)
+    call mem_allocate(this%k33, ncells, 'K33', this%memoryPath)
+    call mem_allocate(this%wetdry, ncells, 'WETDRY', this%memoryPath)
+    call mem_allocate(this%angle1, ncells, 'ANGLE1', this%memoryPath)
+    call mem_allocate(this%angle2, ncells, 'ANGLE2', this%memoryPath)
+    call mem_allocate(this%angle3, ncells, 'ANGLE3', this%memoryPath)
     !
     ! -- Optional arrays
-    call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%memoryPath))
+    call mem_allocate(this%ibotnode, 0, 'IBOTNODE', this%memoryPath)
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
-      call mem_allocate(this%spdis, 3, ncells, 'SPDIS', trim(this%memoryPath))
-      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', trim(this%memoryPath))
-      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%memoryPath))
+      call mem_allocate(this%spdis, 3, ncells, 'SPDIS',this%memoryPath)
+      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
+      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
       call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE',           &
-        trim(this%memoryPath))
+        this%memoryPath)
       do n = 1, ncells
         this%spdis(:, n) = DZERO
       end do
     else
-      call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%memoryPath))
-      call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%memoryPath))
-      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%memoryPath))
-      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%memoryPath))
+      call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
+      call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
+      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
+      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     endif
     !
     ! -- initialize iangle1, iangle2, iangle3, and wetdry

@@ -2,6 +2,7 @@ module DrnModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DTWO,                                  &
                              LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
+  use MemoryHelperModule, only: create_mem_path
   use SmoothingModule,  only: sQSaturation, sQSaturationDerivative,              &
                               sQuadraticSaturation
   use BndModule, only: BndType
@@ -85,7 +86,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=2  ! drnelev, conductance
     packobj%iscloc=2   !sfac applies to conductance
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path('NPF', namemodel)
     !
     ! -- return
     return

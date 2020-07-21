@@ -4,7 +4,7 @@ module BndModule
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, DONE,                         &
                                           LENMODELNAME, LENPACKAGENAME,        &
-                                          LENORIGIN, MAXCHARLEN, LINELENGTH,   &
+                                          LENMEMPATH, MAXCHARLEN, LINELENGTH,  &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
                                           TABLEFT, TABCENTER,                  &
                                           MEMREADONLY, MEMREADWRITE
@@ -83,7 +83,7 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: xold => null()                !dependent variable for last time step
     real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
-    character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
+    character(len=LENMEMPATH) :: ictMemPath = ''                                 !< memory path to the icelltype data (for GWF this is in NPF)
     !
     ! -- table objects
     type(TableType), pointer :: inputtab => null()
@@ -1102,10 +1102,8 @@ module BndModule
     ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
     !    this%ictorigin will be 'NPF'.  If boundary packages do not set
     !    this%ictorigin, then icelltype will remain as null()
-    if (this%ictorigin /= '') then
-      call mem_setptr(this%icelltype, 'ICELLTYPE',                             &
-                      trim(adjustl(this%name_model)) // ' ' //                 &
-                      trim(adjustl(this%ictorigin)))
+    if (this%ictMemPath /= '') then
+      call mem_setptr(this%icelltype, 'ICELLTYPE', this%ictMemPath)
     end if
     !
     ! -- Initialize values

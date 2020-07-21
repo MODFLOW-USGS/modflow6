@@ -10,6 +10,7 @@ module SfrModule
                              LENPACKAGENAME, LENPAKLOC, MAXCHARLEN,              &
                              DHNOFLO, DHDRY, DNODATA,                            &
                              TABLEFT, TABCENTER, TABRIGHT
+  use MemoryHelperModule, only: create_mem_path                          
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
                               sQuadraticSaturationDerivative,                    &
                               sQSaturationDerivative,                            &
@@ -229,7 +230,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return

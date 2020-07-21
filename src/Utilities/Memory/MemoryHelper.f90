@@ -4,7 +4,7 @@ module MemoryHelperModule
   implicit none
   private
 
-  public :: create_mem_path
+  public :: create_mem_path, create_mem_address
 
   character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'   !<used to build up the memory address for the stored variables
 

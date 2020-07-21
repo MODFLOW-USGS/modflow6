@@ -13,6 +13,7 @@ module LakModule
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
+  use MemoryHelperModule, only: create_mem_path
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
                               sQuadraticSaturationDerivative,                  &
                               sQSaturationDerivative
@@ -300,7 +301,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3
     packobj%iscloc = 0  ! not supported
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return

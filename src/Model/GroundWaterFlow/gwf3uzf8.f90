@@ -14,6 +14,7 @@ module UzfModule
   use GenericUtilitiesModule, only: sim_message
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,      &
                                  mem_deallocate
+  use MemoryHelperModule, only: create_mem_path
   use SparseModule, only: sparsematrix
   use BndModule, only: BndType
   use UzfCellGroupModule, only: UzfCellGroupType
@@ -217,7 +218,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 0  ! not supported
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return
@@ -245,8 +246,8 @@ contains
     call this%BndType%allocate_arrays()
     !
     ! -- set pointers now that data is available
-    call mem_setptr(this%gwfhcond, 'CONDSAT', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
+    call mem_setptr(this%gwfhcond, 'CONDSAT', create_mem_path(this%name_model,'NPF'))
+    call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- set boundname for each connection
     if (this%inamedbound /= 0) then

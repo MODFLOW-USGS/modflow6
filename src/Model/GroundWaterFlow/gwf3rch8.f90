@@ -2,6 +2,7 @@ module RchModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit, ustop
   use ObsModule, only: DefaultObsIdProcessor
@@ -86,7 +87,7 @@ module RchModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1   ! sfac applies to recharge rate
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 1
