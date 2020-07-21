@@ -3,12 +3,13 @@ module GwfCsubModule
   use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM8, DEM7,     &
                              DEM6, DEM4, DP9, DHALF, DEM1, DONE, DTWO, DTHREE,  &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
-                             LENFTYPE, LENPACKAGENAME,                          &
+                             LENFTYPE, LENPACKAGENAME, LENMEMPATH,              &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
-                             LENBUDTXT, LENAUXNAME, LENORIGIN, LENPAKLOC,       &
+                             LENBUDTXT, LENAUXNAME, LENPAKLOC,                  &
                              LENLISTLABEL,                                      &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+  use MemoryHelperModule, only: create_mem_path
   use GenericUtilitiesModule, only: is_same, sim_message
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
@@ -36,11 +37,11 @@ module GwfCsubModule
   public :: csub_cr
   public :: GwfCsubType
   !
-  character(len=LENBUDTXT), dimension(4) :: budtxt =                            & !text labels for budget terms
+  character(len=LENBUDTXT), dimension(4) :: budtxt =                            & !< text labels for budget terms
       [' CSUB-CGELASTIC',                                                       & 
        '   CSUB-ELASTIC', ' CSUB-INELASTIC',                                    &
        ' CSUB-WATERCOMP']
-  character(len=LENBUDTXT), dimension(6) :: comptxt =                           & !text labels for compaction terms
+  character(len=LENBUDTXT), dimension(6) :: comptxt =                           & !< text labels for compaction terms
       ['CSUB-COMPACTION', ' CSUB-INELASTIC', '   CSUB-ELASTIC',                 &
        '  CSUB-INTERBED', '    CSUB-COARSE', ' CSUB-ZDISPLACE']
   
@@ -51,13 +52,13 @@ module GwfCsubModule
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
     ! -- characters scalars
-    character(len=LENLISTLABEL), pointer :: listlabel => null()                  !title of table written for RP
-    character(len=LENORIGIN), pointer :: stoname => null()
+    character(len=LENLISTLABEL), pointer :: listlabel => null()                  !< title of table written for RP
+    character(len=LENMEMPATH), pointer :: stoMemPath => null()                    !< memory path of storage package
     ! -- character arrays
     character(len=LENBOUNDNAME), dimension(:),                                  &
-                                 pointer, contiguous :: boundname => null()      !vector of boundnames
+                                 pointer, contiguous :: boundname => null()      !< vector of boundnames
     character(len=LENAUXNAME), dimension(:),                                    &
-                                 pointer, contiguous :: auxname => null()        !vector of auxname
+                                 pointer, contiguous :: auxname => null()        !< vector of auxname
     ! -- logical scalars
     logical, pointer :: lhead_based => null()
     ! -- integer scalars
@@ -290,7 +291,7 @@ module GwfCsubModule
 
 contains
 
-  subroutine csub_cr(csubobj, name_model, istounit, stoname, inunit, iout)
+  subroutine csub_cr(csubobj, name_model, istounit, stoPckName, inunit, iout)
 ! ******************************************************************************
 ! csub_cr -- Create a New CSUB Object
 ! ******************************************************************************
@@ -303,7 +304,7 @@ contains
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: istounit
-    character(len=*), intent(in) :: stoname
+    character(len=*), intent(in) :: stoPckName
     integer(I4B), intent(in) :: iout
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -317,9 +318,12 @@ contains
     ! -- Allocate scalars
     call csubobj%csub_allocate_scalars()
     !
+    !
+    ! -- Create memory path to variables from STO package     
+    csubobj%stoMemPath = create_mem_path(name_model, stoPckName)
+    !
     ! -- Set variables
-    csubobj%istounit = istounit
-    csubobj%stoname = stoname
+    csubobj%istounit = istounit   
     csubobj%inunit = inunit
     csubobj%iout = iout
     !
@@ -349,7 +353,7 @@ contains
     !
     ! -- allocate character variables
     call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%memoryPath)
-    call mem_allocate(this%stoname, LENORIGIN, 'STONAME', this%memoryPath)
+    call mem_allocate(this%stoMemPath, LENMEMPATH, 'STONAME', this%memoryPath)
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%istounit, 'ISTOUNIT', this%memoryPath)
@@ -2590,7 +2594,6 @@ contains
     implicit none
     class(GwfCsubType),   intent(inout) :: this
     ! -- local variables
-    character(len=LENORIGIN) :: stoname
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: iblen
@@ -2721,9 +2724,8 @@ contains
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
     !
     ! -- set pointers to variables in the storage package
-    stoname = trim(this%name_model) // ' ' // trim(this%stoname)
-    call mem_setptr(this%stoiconv, 'ICONVERT', trim(stoname))
-    call mem_setptr(this%stosc1, 'SC1', trim(stoname))
+    call mem_setptr(this%stoiconv, 'ICONVERT', this%stoMemPath)
+    call mem_setptr(this%stosc1, 'SC1', this%stoMemPath)
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
@@ -2910,7 +2912,7 @@ contains
     !
     ! -- deallocate character variables
     call mem_deallocate(this%listlabel, 'LISTLABEL', this%memoryPath)
-    call mem_deallocate(this%stoname, 'STONAME', this%memoryPath)
+    call mem_deallocate(this%stoMemPath, 'STONAME', this%memoryPath)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%istounit)

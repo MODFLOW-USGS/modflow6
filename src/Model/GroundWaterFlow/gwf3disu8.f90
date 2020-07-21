@@ -2,7 +2,7 @@ module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LENORIGIN, LINELENGTH
+  use ConstantsModule, only: LENMODELNAME, LINELENGTH
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, ustop

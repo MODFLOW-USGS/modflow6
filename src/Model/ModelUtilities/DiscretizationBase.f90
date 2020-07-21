@@ -1,7 +1,7 @@
 module BaseDisModule
   
   use KindModule,              only: DP, I4B
-  use ConstantsModule,         only: LENMODELNAME, LENAUXNAME, LENORIGIN, LINELENGTH, DZERO
+  use ConstantsModule,         only: LENMODELNAME, LENAUXNAME, LINELENGTH, DZERO, LENMEMPATH
   use SmoothingModule,         only: sQuadraticSaturation
   use ConnectionsModule,       only: ConnectionsType
   use InputOutputModule,       only: URWORD, ubdsv1
@@ -9,6 +9,7 @@ module BaseDisModule
                                      store_error_unit, ustop
   use BlockParserModule,       only: BlockParserType
   use MemoryManagerModule,     only: mem_allocate
+  use MemoryHelperModule,      only: create_mem_path
   use TdisModule,              only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
 
@@ -18,7 +19,7 @@ module BaseDisModule
   public :: DisBaseType
 
   type :: DisBaseType
-    character(len=LENORIGIN), pointer               :: memoryPath => null()      !< origin name for mem allocation
+    character(len=LENMEMPATH), pointer              :: memoryPath => null()     !< origin name for mem allocation
     character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model
     integer(I4B), pointer                           :: inunit     => null()      !< unit number for input file
     integer(I4B), pointer                           :: iout       => null()      !< unit number for output file
@@ -547,31 +548,29 @@ module BaseDisModule
     class(DisBaseType) :: this
     character(len=*), intent(in) :: name_model
     ! -- local
-    character(len=LENORIGIN) :: origin
 ! ------------------------------------------------------------------------------
     !
-    ! -- Assign origin name
-    origin = trim(adjustl(name_model)) // ' DIS'
+    ! -- Create memory path
+    this%memoryPath = create_mem_path(name_model, 'DIS')
     !
     ! -- Allocate
-    allocate(this%memoryPath)
     allocate(this%name_model)
-    call mem_allocate(this%inunit, 'INUNIT', origin)
-    call mem_allocate(this%iout, 'IOUT', origin)
-    call mem_allocate(this%nodes, 'NODES', origin)
-    call mem_allocate(this%nodesuser, 'NODESUSER', origin)
-    call mem_allocate(this%ndim, 'NDIM', origin)
-    call mem_allocate(this%icondir, 'ICONDIR', origin)
-    call mem_allocate(this%writegrb, 'WRITEGRB', origin)
-    call mem_allocate(this%xorigin, 'XORIGIN', origin)
-    call mem_allocate(this%yorigin, 'YORIGIN', origin)
-    call mem_allocate(this%angrot, 'ANGROT', origin)
-    call mem_allocate(this%nja, 'NJA', origin)
-    call mem_allocate(this%njas, 'NJAS', origin)
-    call mem_allocate(this%lenuni, 'LENUNI', origin)
+    !
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%nodes, 'NODES', this%memoryPath)
+    call mem_allocate(this%nodesuser, 'NODESUSER', this%memoryPath)
+    call mem_allocate(this%ndim, 'NDIM', this%memoryPath)
+    call mem_allocate(this%icondir, 'ICONDIR', this%memoryPath)
+    call mem_allocate(this%writegrb, 'WRITEGRB', this%memoryPath)
+    call mem_allocate(this%xorigin, 'XORIGIN', this%memoryPath)
+    call mem_allocate(this%yorigin, 'YORIGIN', this%memoryPath)
+    call mem_allocate(this%angrot, 'ANGROT', this%memoryPath)
+    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%njas, 'NJAS', this%memoryPath)
+    call mem_allocate(this%lenuni, 'LENUNI', this%memoryPath)
     !
     ! -- Initialize
-    this%memoryPath = origin
     this%name_model = name_model
     this%inunit = 0
     this%iout = 0
@@ -622,7 +621,7 @@ module BaseDisModule
     endif
     !
     ! -- Allocate the arrays
-    call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model)
+    call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model) ! TODO_MJR: is this correct??
     call mem_allocate(this%ibuff, isize, 'IBUFF', this%name_model)
     !
     ! -- Return

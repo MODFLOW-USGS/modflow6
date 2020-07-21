@@ -2,7 +2,7 @@ module ConnectionsModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LENORIGIN
+  use ConstantsModule, only: LENMODELNAME, LENMEMPATH
   use GenericUtilitiesModule, only: sim_message
   use BlockParserModule, only: BlockParserType
   
@@ -12,25 +12,25 @@ module ConnectionsModule
   public :: iac_to_ia
 
   type ConnectionsType
-    character(len=LENMODELNAME), pointer            :: name_model => null()      !name of the model
-    character(len=LENORIGIN), pointer               :: cid        => null()      !character id of this object
-    integer(I4B), pointer                           :: nodes      => null()      !number of nodes
-    integer(I4B), pointer                           :: nja        => null()      !number of connections
-    integer(I4B), pointer                           :: njas       => null()      !number of symmetric connections
-    integer(I4B), pointer                           :: ianglex    => null()      !indicates whether or not anglex was read
-    integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !(size:nodes+1) csr index array
-    integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !(size:nja) csr pointer array
-    integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !(size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!    
-    real(DP), dimension(:), pointer, contiguous     :: cl1        => null()      !(size:njas) connection length between node n and shared face with node m
-    real(DP), dimension(:), pointer, contiguous     :: cl2        => null()      !(size:njas) connection length between node m and shared face with node n
-    real(DP), dimension(:), pointer, contiguous     :: hwva       => null()      !(size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
-    real(DP), dimension(:), pointer, contiguous     :: anglex     => null()      !(size:njas) connection angle of face normal with x axis (read in degrees, stored as radians)
-    integer(I4B), dimension(:), pointer, contiguous :: isym       => null()      !(size:nja) returns csr index of symmetric counterpart
-    integer(I4B), dimension(:), pointer, contiguous :: jas        => null()      !(size:nja) map any connection to upper triangle (for pulling out of symmetric array)
-    integer(I4B), dimension(:), pointer, contiguous :: ihc        => null()      !(size:njas) horizontal connection (0:vertical, 1:mean thickness, 2:staggered)
-    integer(I4B), dimension(:), pointer, contiguous :: iausr      => null()      !(size:nodesusr+1) 
-    integer(I4B), dimension(:), pointer, contiguous :: jausr      => null()      !(size:nja)
-    type(BlockParserType)                           :: parser                    !block parser
+    character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model
+    character(len=LENMEMPATH), pointer               :: memoryPath => null()      !< memory path of the connections data
+    integer(I4B), pointer                           :: nodes      => null()      !< number of nodes
+    integer(I4B), pointer                           :: nja        => null()      !< number of connections
+    integer(I4B), pointer                           :: njas       => null()      !< number of symmetric connections
+    integer(I4B), pointer                           :: ianglex    => null()      !< indicates whether or not anglex was read
+    integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !< (size:nodes+1) csr index array
+    integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !< (size:nja) csr pointer array
+    integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !< (size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!    
+    real(DP), dimension(:), pointer, contiguous     :: cl1        => null()      !< (size:njas) connection length between node n and shared face with node m
+    real(DP), dimension(:), pointer, contiguous     :: cl2        => null()      !< (size:njas) connection length between node m and shared face with node n
+    real(DP), dimension(:), pointer, contiguous     :: hwva       => null()      !< (size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
+    real(DP), dimension(:), pointer, contiguous     :: anglex     => null()      !< (size:njas) connection angle of face normal with x axis (read in degrees, stored as radians)
+    integer(I4B), dimension(:), pointer, contiguous :: isym       => null()      !< (size:nja) returns csr index of symmetric counterpart
+    integer(I4B), dimension(:), pointer, contiguous :: jas        => null()      !< (size:nja) map any connection to upper triangle (for pulling out of symmetric array)
+    integer(I4B), dimension(:), pointer, contiguous :: ihc        => null()      !< (size:njas) horizontal connection (0:vertical, 1:mean thickness, 2:staggered)
+    integer(I4B), dimension(:), pointer, contiguous :: iausr      => null()      !< (size:nodesusr+1) 
+    integer(I4B), dimension(:), pointer, contiguous :: jausr      => null()      !< (size:nja)
+    type(BlockParserType)                           :: parser                    !< block parser
   contains
     procedure :: con_da
     procedure :: allocate_scalars
@@ -63,7 +63,7 @@ module ConnectionsModule
     !
     ! -- Strings
     deallocate(this%name_model)
-    deallocate(this%cid)
+    deallocate(this%memoryPath)
     !
     ! -- Scalars
     call mem_deallocate(this%nodes)
@@ -120,12 +120,12 @@ module ConnectionsModule
     !
     ! -- allocate
     allocate(this%name_model)
-    allocate(this%cid)
-    this%cid = trim(adjustl(name_model)) // ' CON'
-    call mem_allocate(this%nodes, 'NODES', this%cid)
-    call mem_allocate(this%nja, 'NJA', this%cid)
-    call mem_allocate(this%njas, 'NJAS', this%cid)
-    call mem_allocate(this%ianglex, 'IANGLEX', this%cid)
+    allocate(this%memoryPath)
+    this%memoryPath = trim(adjustl(name_model)) // ' CON'
+    call mem_allocate(this%nodes, 'NODES', this%memoryPath)
+    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%njas, 'NJAS', this%memoryPath)
+    call mem_allocate(this%ianglex, 'IANGLEX', this%memoryPath)
     this%name_model = name_model
     this%nodes = 0
     this%nja = 0
@@ -149,17 +149,17 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate space for connection arrays
-    call mem_allocate(this%ia, this%nodes+1, 'IA', this%cid)
-    call mem_allocate(this%ja, this%nja, 'JA', this%cid)
-    call mem_allocate(this%isym, this%nja, 'ISYM', this%cid)
-    call mem_allocate(this%jas, this%nja, 'JAS', this%cid)
-    call mem_allocate(this%hwva, this%njas, 'HWVA', this%cid)
-    call mem_allocate(this%anglex, this%njas, 'ANGLEX', this%cid)
-    call mem_allocate(this%ihc, this%njas, 'IHC', this%cid)
-    call mem_allocate(this%cl1, this%njas, 'CL1', this%cid)
-    call mem_allocate(this%cl2, this%njas, 'CL2', this%cid)
-    call mem_allocate(this%iausr, 1, 'IAUSR', this%cid)
-    call mem_allocate(this%jausr, 1, 'JAUSR', this%cid)
+    call mem_allocate(this%ia, this%nodes+1, 'IA', this%memoryPath)
+    call mem_allocate(this%ja, this%nja, 'JA', this%memoryPath)
+    call mem_allocate(this%isym, this%nja, 'ISYM', this%memoryPath)
+    call mem_allocate(this%jas, this%nja, 'JAS', this%memoryPath)
+    call mem_allocate(this%hwva, this%njas, 'HWVA', this%memoryPath)
+    call mem_allocate(this%anglex, this%njas, 'ANGLEX', this%memoryPath)
+    call mem_allocate(this%ihc, this%njas, 'IHC', this%memoryPath)
+    call mem_allocate(this%cl1, this%njas, 'CL1', this%memoryPath)
+    call mem_allocate(this%cl2, this%njas, 'CL2', this%memoryPath)
+    call mem_allocate(this%iausr, 1, 'IAUSR', this%memoryPath)
+    call mem_allocate(this%jausr, 1, 'JAUSR', this%memoryPath)
     ! 
     ! -- let mask point to ja, which is always nonzero, 
     !    until someone decides to do a 'set_mask'
@@ -1029,7 +1029,7 @@ module ConnectionsModule
       !
       ! -- Create the iausr array of size nodesuser + 1.  For excluded cells,
       !    iausr(n) and iausr(n + 1) should be equal to indicate no connections.
-      call mem_reallocate(this%iausr, nodesuser+1, 'IAUSR', this%cid)
+      call mem_reallocate(this%iausr, nodesuser+1, 'IAUSR', this%memoryPath)
       this%iausr(nodesuser + 1) = this%ia(this%nodes + 1)
       do n = nodesuser, 1, -1
         nr = nodereduced(n)
@@ -1042,7 +1042,7 @@ module ConnectionsModule
       !
       ! -- Create the jausr array, which is the same size as ja, but it
       !    contains user node numbers instead of reduced node numbers
-      call mem_reallocate(this%jausr, this%nja, 'JAUSR', this%cid)
+      call mem_reallocate(this%jausr, this%nja, 'JAUSR', this%memoryPath)
       do ipos = 1, this%nja
         nr = this%ja(ipos)
         n = nodeuser(nr)
@@ -1052,8 +1052,8 @@ module ConnectionsModule
       ! -- iausr and jausr will be pointers
       call mem_deallocate(this%iausr)
       call mem_deallocate(this%jausr)
-      call mem_setptr(this%iausr, 'IA', this%cid)
-      call mem_setptr(this%jausr, 'JA', this%cid)
+      call mem_setptr(this%iausr, 'IA', this%memoryPath)
+      call mem_setptr(this%jausr, 'JA', this%memoryPath)
     endif
     !
     ! -- Return
@@ -1312,7 +1312,7 @@ module ConnectionsModule
     !
     ! if we still point to this%ja, we first need to allocate space
     if (associated(this%mask, this%ja)) then
-      call mem_allocate(this%mask, this%nja, 'MASK', this%cid)
+      call mem_allocate(this%mask, this%nja, 'MASK', this%memoryPath)
       ! and initialize with unmasked
       do i = 1, this%nja
         this%mask(i) = 1 

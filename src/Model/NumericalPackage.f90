@@ -3,7 +3,7 @@ module NumericalPackageModule
   use KindModule, only: DP, I4B
   use ConstantsModule,              only: LENPACKAGENAME, LENMODELNAME,        &
                                           LENMEMPATH, LENFTYPE, LINELENGTH,    &
-                                          LENORIGIN
+                                          LENVARNAME
   use SimModule,                    only: store_error, ustop
   use BlockParserModule,            only: BlockParserType
   use BaseDisModule,                only: DisBaseType
@@ -16,7 +16,7 @@ module NumericalPackageModule
   type :: NumericalPackageType
 
     ! -- strings
-    character(len=LENMODELNAME)                      :: name_model      = '' !TODO_MJR: remove this
+    character(len=LENMODELNAME)                        :: name_model      = ''       !TODO_MJR: remove this??
     character(len=LENPACKAGENAME)                      :: packName        = ''       !< name of the package
     character(len=LENMEMPATH)                          :: memoryPath      = ''       !< the location in the memory manager where the variables are stored
     character(len=LENMEMPATH)                          :: memoryPathModel = ''       !< the location in the memory manager where the variables
@@ -235,7 +235,7 @@ module NumericalPackageModule
     logical :: endOfBlock
     integer(I4B) :: nsize
     integer(I4B) :: j
-    character(len=LENORIGIN) :: name
+    character(len=LENVARNAME) :: varname
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc
     integer(I4B), dimension(:), pointer, contiguous :: aint
@@ -255,16 +255,16 @@ module NumericalPackageModule
           lkeyword = .true.
           lfound(j) = .true.
           if (present(varinames)) then
-            name = adjustl(varinames(j))
+            varname = adjustl(varinames(j))
           else
-            name = adjustl(tags(j))
+            varname = adjustl(tags(j))
           end if
           if (keyword(1:1) == 'I') then
-            call mem_setptr(aint, trim(name), trim(this%memoryPath))
+            call mem_setptr(aint, trim(varname), trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                 this%parser%iuactive, aint, tags(j))
           else
-            call mem_setptr(adbl, trim(name), trim(this%memoryPath))
+            call mem_setptr(adbl, trim(varname), trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                 this%parser%iuactive, adbl, tags(j))
           end if

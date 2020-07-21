@@ -1,7 +1,7 @@
 module OutputControlModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,    only: LENMODELNAME, LENORIGIN
+  use ConstantsModule,    only: LENMODELNAME, LENMEMPATH
   use OutputControlData, only: OutputControlDataType, ocd_cr
   use BlockParserModule, only: BlockParserType
 
@@ -9,14 +9,14 @@ module OutputControlModule
   private
   public OutputControlType, oc_cr
 
-  type OutputControlType
-    character(len=LENMODELNAME), pointer                :: name_model => null() !name of the model
-    character(len=LENORIGIN), pointer                   :: cid        => null() !character id of this object
-    integer(I4B), pointer                               :: inunit     => null() !unit number for input file
-    integer(I4B), pointer                               :: iout       => null() !unit number for output file
-    integer(I4B), pointer                               :: iperoc     => null() !stress period number for next output control
-    integer(I4B), pointer                               :: iocrep     => null() !output control repeat flag (period 0 step 0)
-    type(OutputControlDataType), dimension(:), pointer, contiguous  :: ocdobj     => null() !output control objects
+  type OutputControlType  
+    character(len=LENMEMPATH), pointer                  :: memoryPath                       !< path to data stored in the memory manager
+    character(len=LENMODELNAME), pointer                :: name_model => null()             !< name of the model
+    integer(I4B), pointer                               :: inunit     => null()             !< unit number for input file
+    integer(I4B), pointer                               :: iout       => null()             !< unit number for output file
+    integer(I4B), pointer                               :: iperoc     => null()             !< stress period number for next output control
+    integer(I4B), pointer                               :: iocrep     => null()             !< output control repeat flag (period 0 step 0)
+    type(OutputControlDataType), dimension(:), pointer, contiguous  :: ocdobj     => null() !< output control objects
     type(BlockParserType)                               :: parser
   contains
     procedure :: oc_df
@@ -274,7 +274,7 @@ module OutputControlModule
     deallocate(this%ocdobj)
     !
     deallocate(this%name_model)
-    deallocate(this%cid)
+    deallocate(this%memoryPath)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%iperoc)
@@ -293,18 +293,19 @@ module OutputControlModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(OutputControlType) :: this
     character(len=*), intent(in) :: name_model
 ! ------------------------------------------------------------------------------
     !
-    allocate(this%name_model)
-    allocate(this%cid)
-    this%cid = trim(adjustl(name_model)) // ' OC'
-    call mem_allocate(this%inunit, 'INUNIT', this%cid)
-    call mem_allocate(this%iout, 'IOUT', this%cid)
-    call mem_allocate(this%iperoc, 'IPEROC', this%cid)
-    call mem_allocate(this%iocrep, 'IOCREP', this%cid)
+    this%memoryPath = create_mem_path(name_model, 'OC')
+    !
+    allocate(this%name_model)    
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%iperoc, 'IPEROC', this%memoryPath)
+    call mem_allocate(this%iocrep, 'IOCREP', this%memoryPath)
     !
     this%name_model = name_model
     this%inunit = 0

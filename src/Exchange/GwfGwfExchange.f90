@@ -1851,7 +1851,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN
     ! -- dummy
     class(GwfExchangeType) :: this
     ! -- local

@@ -4,11 +4,10 @@ module MemoryManagerModule
   use ConstantsModule,        only: DZERO, DONE,                                 &
                                     DEM3, DEM6, DEM9, DEP3, DEP6, DEP9,          &
                                     LENMEMPATH, LENMEMSEPARATOR, LENVARNAME,     &
-                                    LINELENGTH, LENMEMTYPE,                      &
+                                    LINELENGTH, LENMEMTYPE, LENMEMADDRESS,       &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                                     TABCENTER, TABLEFT, TABRIGHT,                &
-                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE,        &
-                                    LENORIGIN ! TODO_MJR: get rid of this
+                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE
   use SimVariablesModule,     only: errmsg
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
@@ -2849,11 +2848,9 @@ module MemoryManagerModule
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
-    integer(I4B) :: iptrlen
     integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    iptrlen = LENORIGIN + LENVARNAME
     nterms = 6
     !
     ! -- set up table title
@@ -2865,7 +2862,7 @@ module MemoryManagerModule
     !
     ! -- origin
     text = 'ORIGIN'
-    call memtab%initialize_column(text, LENORIGIN, alignment=TABLEFT)
+    call memtab%initialize_column(text, LENMEMPATH, alignment=TABLEFT)
     !
     ! -- variable
     text = 'VARIABLE NAME'
@@ -2881,7 +2878,7 @@ module MemoryManagerModule
     !
     ! -- is it a pointer
     text = 'ASSOCIATED VARIABLE'
-    call memtab%initialize_column(text, iptrlen, alignment=TABLEFT)
+    call memtab%initialize_column(text, LENMEMADDRESS, alignment=TABLEFT)
     !
     ! -- is it a pointer
     text = 'MEMORY ACCESS PERMISSION'
@@ -3086,7 +3083,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: iout
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENORIGIN), allocatable, dimension(:) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique ! TODO_MJR: refactor this name??
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -3229,10 +3226,10 @@ module MemoryManagerModule
     use ArrayHandlersModule, only: ExpandArray, ifind
     use InputOutputModule, only: ParseLine
     ! -- dummy
-    character(len=LENORIGIN), allocatable, dimension(:), intent(inout) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENORIGIN), allocatable, dimension(:) :: words
+    character(len=LENMEMPATH), allocatable, dimension(:) :: words
     integer(I4B) :: ipos
     integer(I4B) :: ipa
     integer(I4B) :: nwords

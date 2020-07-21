@@ -1,7 +1,7 @@
 module GhostNodeModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,        only: LINELENGTH, LENORIGIN
+  use ConstantsModule,        only: LINELENGTH
   use NumericalModelModule,   only: NumericalModelType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
@@ -692,7 +692,6 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
