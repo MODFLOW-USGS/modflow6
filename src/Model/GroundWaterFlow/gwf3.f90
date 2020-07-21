@@ -107,7 +107,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ListsModule,                only: basemodellist
-    use MemoryManagerModule,        only: create_mem_path
+    use MemoryHelperModule,         only: create_mem_path
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
     use GenericUtilitiesModule,     only: write_centered

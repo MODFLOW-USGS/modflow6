@@ -99,7 +99,7 @@ contains
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
-    use MemoryManagerModule, only: create_mem_path
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     character(len=*),intent(in) :: filename
     integer(I4B), intent(in) :: id, m1id, m2id

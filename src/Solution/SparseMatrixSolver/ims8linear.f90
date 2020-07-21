@@ -106,7 +106,8 @@
 !
 !        SPECIFICATIONS:
 !     ------------------------------------------------------------------
-      use MemoryManagerModule, only: mem_allocate, create_mem_path
+      use MemoryManagerModule, only: mem_allocate
+      use MemoryHelperModule,  only: create_mem_path
       use SimModule, only: ustop, store_error, count_errors,            &
                            deprecation_warning
       !IMPLICIT NONE

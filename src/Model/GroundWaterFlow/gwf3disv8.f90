@@ -1488,11 +1488,6 @@ module GwfDisvModule
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
-    !!
-    !! -- Allocate vertices array
-    !call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
-    !call mem_allocate(this%cellxy, 2, this%ncpl, 'CELLXY', this%origin)
-    !
     ! -- Initialize
     this%mshape(1) = this%nlay
     this%mshape(2) = this%ncpl

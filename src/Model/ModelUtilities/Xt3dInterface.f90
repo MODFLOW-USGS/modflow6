@@ -3,7 +3,7 @@ module Xt3dModule
   use KindModule,              only: DP, I4B
   use ConstantsModule,         only: DZERO, DHALF, DONE, LENMEMPATH
   use BaseDisModule,           only: DisBaseType
-  use MemoryManagerModule,     only: create_mem_path
+  use MemoryHelperModule,      only: create_mem_path
   implicit none
 
   public Xt3dType

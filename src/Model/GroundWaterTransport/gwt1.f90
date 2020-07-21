@@ -135,7 +135,8 @@ module GwtModule
                                           FMTDISCLAIMER, IDEVELOPMODE
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
-    use MemoryManagerModule,        only: mem_allocate, create_mem_path
+    use MemoryManagerModule,        only: mem_allocate
+    use MemoryHelperModule,         only: create_mem_path
     use GwfDisModule,               only: dis_cr
     use GwfDisvModule,              only: disv_cr
     use GwfDisuModule,              only: disu_cr

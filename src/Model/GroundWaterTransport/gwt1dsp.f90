@@ -723,31 +723,18 @@ module GwtDspModule
       !
       ! -- If alv not specified then point it to alh
       if(.not. lname(3)) then
-        !call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                   &
-        !                    trim(this%origin))
-        !call mem_copyptr(this%alv, 'ALH', trim(this%name_model)//' DSP')
         call mem_reassignptr(this%alv, 'ALV', trim(this%memoryPath),                 &
                                        'ALH', trim(this%memoryPath))
       endif
       !
       ! -- If ath2 not specified then assign it to ath1
       if (.not. lname(5)) then
-        !call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                 &
-        !                    trim(this%origin))
-        !do n = 1, size(this%ath2)
-        !  this%ath2(n) = this%ath1(n)
-        !enddo
         call mem_reassignptr(this%ath2, 'ATH2', trim(this%memoryPath),                 &
                                         'ATH1', trim(this%memoryPath))
       endif
       !
       ! -- If atv not specified then assign it to ath2
       if (.not. lname(6)) then
-        !call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                   &
-        !                    trim(this%origin))
-        !do n = 1, size(this%atv)
-        !  this%atv(n) = this%ath2(n)
-        !enddo
         call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath),                 &
                                        'ATH2', trim(this%memoryPath))
       endif

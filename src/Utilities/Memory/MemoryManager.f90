@@ -28,7 +28,6 @@ module MemoryManagerModule
   public :: mem_da
   public :: mem_set_print_option
   
-  public :: create_mem_path
   public :: get_mem_type
   public :: get_mem_rank
   public :: get_mem_size
@@ -44,8 +43,6 @@ module MemoryManagerModule
   integer(I8B) :: nvalues_aint = 0
   integer(I8B) :: nvalues_adbl = 0
   integer(I4B) :: iprmem = 0
-
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'   !<used to build up the memory path for the stored variables
 
   interface mem_allocate
     module procedure allocate_logical,                                           &
@@ -333,7 +330,7 @@ module MemoryManagerModule
     ! -- iterate over the memory list
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      if(mt%name == name .and. mt%origin == origin) then
+      if(mt%name == name .and. mt%path == origin) then
         found = .true.
         exit
       end if
@@ -467,7 +464,7 @@ module MemoryManagerModule
     mt%logicalsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
@@ -530,7 +527,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = ilen
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
@@ -608,7 +605,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
@@ -663,7 +660,7 @@ module MemoryManagerModule
     mt%intsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'INTEGER'
     !
     ! -- set memory access permission
@@ -729,7 +726,7 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set memory access permission
@@ -797,7 +794,7 @@ module MemoryManagerModule
     mt%aint2d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- set memory access permission
@@ -866,7 +863,7 @@ module MemoryManagerModule
     mt%aint3d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
                                                        nrow, nlay
     !
@@ -927,7 +924,7 @@ module MemoryManagerModule
     mt%dblsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'DOUBLE'
     !
     ! -- set memory access permission
@@ -993,7 +990,7 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set memory access permission
@@ -1061,7 +1058,7 @@ module MemoryManagerModule
     mt%adbl2d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
     ! -- set memory access permission
@@ -1131,7 +1128,7 @@ module MemoryManagerModule
     mt%adbl3d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'DOUBLE', ncol,           &
                                                        nrow, nlay
     !
@@ -1190,13 +1187,13 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- set memory access permission
     if (present(memtype)) then
@@ -1253,13 +1250,13 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- set memory access permission
     if (present(memtype)) then
@@ -2062,7 +2059,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2113,7 +2110,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2160,7 +2157,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2211,7 +2208,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2733,32 +2730,6 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_dbl3d
-  
-  !> @brief returns the path to the memory object
-  !!
-  !! Returns the path to the location in the memory manager where
-  !! the variables for this (sub)component are stored, the 'memoryPath' 
-  !!
-  !! @param[in]   component       the name of the solution, model, or exchange
-  !! @param[in]   subcomponent    the name of the package (optional)
-  !! @return      memory_path      the path to the memory object
-  !!
-  !! NB: no need to trim the input parameters
-  !<
-  function create_mem_path(component, subcomponent) result(memory_path)
-    character(len=*), intent(in) :: component
-    character(len=*), intent(in), optional :: subcomponent
-    character(len=LENMEMPATH) :: memory_path
-    
-    ! add check on lenghts, see check_var_name in mem mng
-    
-    if (present(subcomponent)) then
-      memory_path = trim(component) // memPathSeparator // trim(subcomponent)    
-    else
-      memory_path = trim(component)
-    end if
-    
-  end function create_mem_path
 
   subroutine mem_set_print_option(iout, keyword, errmsg)
 ! ******************************************************************************
@@ -3159,7 +3130,7 @@ module MemoryManagerModule
         ilen = len_trim(cunique(icomp))
         do ipos = 1, memorylist%count()
           mt => memorylist%Get(ipos)
-          if (cunique(icomp) /= mt%origin(1:ilen)) cycle
+          if (cunique(icomp) /= mt%path(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
             nchars = nchars + mt%isize
@@ -3225,7 +3196,7 @@ module MemoryManagerModule
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
         if (mt%mt_associated() .and. mt%isize > 0) then
-          errmsg = trim(adjustl(mt%origin)) // ' ' // &
+          errmsg = trim(adjustl(mt%path)) // ' ' // &
                    trim(adjustl(mt%name)) // ' not deallocated'
           call store_error(trim(errmsg))
         end if
@@ -3273,7 +3244,7 @@ module MemoryManagerModule
     ! -- find unique origins
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      call ParseLine(mt%origin, nwords, words)
+      call ParseLine(mt%path, nwords, words)
       ipa = ifind(cunique, words(1))
       if(ipa < 1) then
         call ExpandArray(cunique, 1)

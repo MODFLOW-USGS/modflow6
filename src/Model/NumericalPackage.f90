@@ -7,7 +7,7 @@ module NumericalPackageModule
   use SimModule,                    only: store_error, ustop
   use BlockParserModule,            only: BlockParserType
   use BaseDisModule,                only: DisBaseType
-  use MemoryManagerModule,          only: create_mem_path
+  use MemoryHelperModule,           only: create_mem_path
 
   implicit none
   private
