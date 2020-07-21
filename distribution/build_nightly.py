@@ -5,6 +5,11 @@ import shutil
 import flopy
 import pymake
 
+# add path to build script in autotest directory and reuse mf6 build scripts
+sys.path.append(os.path.join("..", "autotest"))
+from test000_setup import test_build_modflow6, test_build_modflow6_so, \
+    test_build_mf5to6, test_build_zonebudget
+
 # make sure exe extension is used on windows
 eext = ''
 soext = '.so'
@@ -13,12 +18,6 @@ if sys.platform.lower() == 'win32':
     soext = '.dll'
 
 binpth, temppth = os.path.join('..', 'bin'), os.path.join('temp')
-
-# some flags to check for errors in the code
-# add -Werror for compilation to terminate if errors are found
-strict_flags = ('-Wtabs -Wline-truncation -Wunused-label '
-                '-Wunused-variable -pedantic -std=f2008')
-
 
 def get_zipname():
     zipname = sys.platform.lower()
@@ -77,120 +76,20 @@ def test_create_dirs():
     return
 
 
-def test_build_modflow6():
-    # determine if app should be build
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nomf6':
-            txt = 'Command line cancel of MODFLOW 6 build'
-            print(txt)
-            return
-
-    # set source and target paths
-    srcdir = os.path.join('..', 'src')
-    target = os.path.join('..', 'bin', 'mf6')
-    target += eext
-    fc, cc = pymake.set_compiler('mf6')
-
-    fflags = None
-    if fc == 'gfortran':
-        fflags = strict_flags
-
-    pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
-                fflags=fflags)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
-
-    # return
-    return
+def test_mf6():
+    test_build_modflow6()
 
 
-def test_build_modflow6_so():
-    # determine if app should be build
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nomf6so':
-            txt = 'Command line cancel of MODFLOW 6 shared object build'
-            print(txt)
-            return
-
-    # set source and target paths
-    srcdir = os.path.join('..', 'srcbmi')
-    comdir = os.path.join('..', 'src')
-    excludefiles = [os.path.join(comdir, 'mf6.f90')]
-    target = os.path.join('..', 'bin', 'libmf6')
-    target += soext
-    fc, cc = pymake.set_compiler('mf6')
-
-    fflags = None
-    if fc == 'gfortran':
-        fflags = strict_flags
-
-    pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
-                fflags=fflags, srcdir2=comdir, excludefiles=excludefiles,
-                sharedobject=True)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
-
-    # return
-    return
+def test_libmf6():
+    test_build_modflow6_so()
 
 
-def test_build_mf5to6():
-    # determine if app should be build
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nomf5to6':
-            txt = 'Command line cancel of MODFLOW 5 to 6 converter build'
-            print(txt)
-            return
-
-    # set source and target paths
-    srcdir = os.path.join('..', 'utils', 'mf5to6', 'src')
-    target = os.path.join('..', 'bin', 'mf5to6')
-    target += eext
-    extrafiles = os.path.join('..', 'utils', 'mf5to6', 'pymake',
-                              'extrafiles.txt')
-    fc, cc = pymake.set_compiler('mf6')
-
-    # build modflow 5 to 6 converter
-    pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
-                extrafiles=extrafiles)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
-
-    # return
-    return
+def test_mf5to6():
+    test_mf5to6()
 
 
-def test_build_zonebudget():
-    # determine if app should be build
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--nozonebudget':
-            txt = 'Command line cancel of ZONEBUDGET for MODFLOW 6 build'
-            print(txt)
-            return
-
-    # set source and target paths
-    srcdir = os.path.join('..', 'utils', 'zonebudget', 'src')
-    target = os.path.join('..', 'bin', 'zbud6')
-    target += eext
-    extrafiles = os.path.join('..', 'utils', 'zonebudget', 'pymake',
-                              'extrafiles.txt')
-    fc, cc = pymake.set_compiler('mf6')
-
-    fflags = None
-    if fc == 'gfortran':
-        fflags = strict_flags
-
-    pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles,
-                fflags=fflags)
-
-    msg = '{} does not exist.'.format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
-
-    # return
-    return
+def test_zbud6():
+    test_build_zonebudget()
 
 
 def test_update_mf6io():
