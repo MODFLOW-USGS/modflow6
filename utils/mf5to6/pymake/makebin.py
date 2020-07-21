@@ -9,35 +9,15 @@ except:
     raise Exception()
 import os
 
-#get the arguments
+# get the arguments
 args = pymake.parser()
 
 args.subdirs = True
-
-extrafiles = os.path.join('extrafiles.txt')
+extrafiles = os.path.join("extrafiles.txt")
 args.extrafiles = extrafiles
-
-print(
-    'srcdir=', args.srcdir, '\n',
-    'target=', args.target, '\n',
-    'fc=', args.fc, '\n',
-    'cc=', args.cc, '\n',
-    'makeclean=', args.makeclean, '\n',
-    'expedite=', args.expedite, '\n',
-    'dryrun=', args.dryrun, '\n',
-    'double=', args.double, '\n',
-    'debug=', args.debug, '\n',
-    'include_subdirs=', args.subdirs, '\n',
-    'fflags=', args.fflags, '\n',
-    'cflags=', args.cflags, '\n',
-    'syslibs=', args.syslibs, '\n',
-    'arch=', args.arch, '\n',
-    'makefile=', args.makefile, '\n',
-    'srcdir2=', args.commonsrc, '\n',
-    'extrafiles=', args.extrafiles, '\n',
-    'excludefiles=', args.excludefiles, '\n',
-    'sharedobject=', args.sharedobject, '\n',
-)
+args.verbose = True
+args.inplace = True
+args.appdir = os.path.join("..", "..", "..", "bin")
 
 pymake.main(
     args.srcdir,
@@ -59,6 +39,9 @@ pymake.main(
     extrafiles=args.extrafiles,
     excludefiles=args.excludefiles,
     sharedobject=args.sharedobject,
+    appdir=args.appdir,
+    verbose=args.verbose,
+    inplace=args.inplace,
 )
 
 #  Windows:
