@@ -1,7 +1,7 @@
 module DnmDisBaseModule
   use ArrayReadersMF5Module, only: ReadArray
   use BlockParserModule,  only: BlockParserType
-  use ConstantsModule,    only: LENMODELNAME, LENORIGIN, LINELENGTH, DONE, DZERO
+  use ConstantsModule,    only: LENMODELNAME, LENMEMPATH, LINELENGTH, DONE, DZERO
   use InputOutputModule,  only: URWORD
   use SimModule,          only: count_errors, store_error, store_error_unit, &
                                 ustop
@@ -11,26 +11,26 @@ module DnmDisBaseModule
   public :: dis_cr
 
   type :: DisBaseType
-    character(len=LENORIGIN), pointer                   :: origin     => null()  !origin name for mem allocation
-    character(len=LENMODELNAME), pointer                :: name_model => null()  !name of the model
-    integer, pointer                                    :: inunit     => null()  !unit number for input file
-    integer, pointer                                    :: iout       => null()  !unit number for output file
-    integer, pointer                                    :: nodes      => null()  !number of nodes in solution
-    integer, pointer                                    :: nodesuser  => null()  !number of user nodes (same as nodes for unstructured model)
-    integer, pointer                                    :: ndim       => null()  !number of spatial model dimensions (1 for unstructured)
-    integer, pointer, dimension(:), contiguous          :: mshape     => null()  !shape of the model; (nodes) for DisBaseType
-    integer, pointer                                    :: nja        => null()  !number of connections plus number of nodes
-    integer, pointer                                    :: njas       => null()  !(nja-nodes)/2
-    integer, pointer                                    :: lenuni     => null()  !length unit
-    integer, pointer                                    :: idsymrd    => null()  !indicates how symmetric arrays are read
-    double precision, dimension(:), pointer, contiguous :: top        => null()  !(size:nodes) cell top elevation
-    double precision, dimension(:), pointer, contiguous :: bot        => null()  !(size:nodes) cell bottom elevation
-    double precision, dimension(:), pointer, contiguous :: area       => null()  !(size:nodes) cell area, in plan view
+    character(len=LENMEMPATH)                           :: memoryPath            !< origin name for mem allocation
+    character(len=LENMODELNAME), pointer                :: name_model => null()  !< name of the model
+    integer, pointer                                    :: inunit     => null()  !< unit number for input file
+    integer, pointer                                    :: iout       => null()  !< unit number for output file
+    integer, pointer                                    :: nodes      => null()  !< number of nodes in solution
+    integer, pointer                                    :: nodesuser  => null()  !< number of user nodes (same as nodes for unstructured model)
+    integer, pointer                                    :: ndim       => null()  !< number of spatial model dimensions (1 for unstructured)
+    integer, pointer, dimension(:), contiguous          :: mshape     => null()  !< shape of the model; (nodes) for DisBaseType
+    integer, pointer                                    :: nja        => null()  !< number of connections plus number of nodes
+    integer, pointer                                    :: njas       => null()  !< (nja-nodes)/2
+    integer, pointer                                    :: lenuni     => null()  !< length unit
+    integer, pointer                                    :: idsymrd    => null()  !< indicates how symmetric arrays are read
+    double precision, dimension(:), pointer, contiguous :: top        => null()  !< (size:nodes) cell top elevation
+    double precision, dimension(:), pointer, contiguous :: bot        => null()  !< (size:nodes) cell bottom elevation
+    double precision, dimension(:), pointer, contiguous :: area       => null()  !< (size:nodes) cell area, in plan view
     ! for PreHeadsMF
     ! For structured DIS, origin is outside corner of cell at row 1, column 1.
-    double precision :: Xorigin = DZERO ! X coordinate of grid origin
-    double precision :: Yorigin = DZERO ! Y coordinate of grid origin
-    double precision :: Theta = DZERO   ! Rotation of rows CCW from horizontal, in radians
+    double precision :: Xorigin = DZERO !< X coordinate of grid origin
+    double precision :: Yorigin = DZERO !< Y coordinate of grid origin
+    double precision :: Theta = DZERO   !< Rotation of rows CCW from horizontal, in radians
     double precision :: ConvertFactor = DONE
     !
     type(BlockParserType) :: parser
@@ -142,7 +142,6 @@ module DnmDisBaseModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate(this%origin)
     deallocate(this%name_model)
     !
     ! -- Scalars
@@ -620,31 +619,29 @@ module DnmDisBaseModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(DisBaseType) :: this
     character(len=*), intent(in) :: name_model
     ! -- local
-    character(len=LENORIGIN) :: origin
 ! ------------------------------------------------------------------------------
     !
     ! -- Assign origin name
-    origin = trim(adjustl(name_model)) // ' DIS'
+    this%memoryPath = create_mem_path(name_model, 'DIS')
     !
     ! -- Allocate
-    allocate(this%origin)
     allocate(this%name_model)
-    call mem_allocate(this%inunit, 'INUNIT', origin)
-    call mem_allocate(this%iout, 'IOUT', origin)
-    call mem_allocate(this%nodes, 'NODES', origin)
-    call mem_allocate(this%nodesuser, 'NODESUSER', origin)
-    call mem_allocate(this%ndim, 'NDIM', origin)
-    call mem_allocate(this%nja, 'NJA', origin)
-    call mem_allocate(this%njas, 'NJAS', origin)
-    call mem_allocate(this%lenuni, 'LENUNI', origin)
-    call mem_allocate(this%idsymrd, 'IDSYMRD', origin)
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%nodes, 'NODES', this%memoryPath)
+    call mem_allocate(this%nodesuser, 'NODESUSER', this%memoryPath)
+    call mem_allocate(this%ndim, 'NDIM', this%memoryPath)
+    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%njas, 'NJAS', this%memoryPath)
+    call mem_allocate(this%lenuni, 'LENUNI', this%memoryPath)
+    call mem_allocate(this%idsymrd, 'IDSYMRD', this%memoryPath)
     !
     ! -- Initialize
-    this%origin = origin
     this%name_model = name_model
     this%inunit = 0
     this%iout = 0
@@ -674,10 +671,10 @@ module DnmDisBaseModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%origin)
-    call mem_allocate(this%top, this%nodes, 'TOP', this%origin)
-    call mem_allocate(this%bot, this%nodes, 'BOT', this%origin)
-    call mem_allocate(this%area, this%nodes, 'AREA', this%origin)
+    call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%memoryPath)
+    call mem_allocate(this%top, this%nodes, 'TOP', this%memoryPath)
+    call mem_allocate(this%bot, this%nodes, 'BOT', this%memoryPath)
+    call mem_allocate(this%area, this%nodes, 'AREA', this%memoryPath)
     !
     ! -- Initialize
     this%mshape(1) = this%nodes

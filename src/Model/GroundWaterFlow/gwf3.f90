@@ -108,6 +108,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ListsModule,                only: basemodellist
+    use MemoryHelperModule,         only: create_mem_path
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
     use GenericUtilitiesModule,     only: write_centered
@@ -147,6 +148,10 @@ module GwfModule
     !
     ! -- Allocate a new GWF Model (this) and add it to basemodellist
     allocate(this)
+    !
+    ! -- Set memory path before allocation in memory manager can be done
+    this%memoryPath = create_mem_path(modelname)
+    !
     call this%allocate_scalars(modelname)
     model => this
     call AddBaseModelToList(basemodellist, model)
@@ -260,7 +265,7 @@ module GwfModule
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
-    call csub_cr(this%csub, this%name, this%insto, this%sto%name,               &
+    call csub_cr(this%csub, this%name, this%insto, this%sto%packName,               &
                  this%incsub, this%iout)
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, this%dis)
@@ -1298,18 +1303,18 @@ module GwfModule
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic,  'INIC',  modelname)
-    call mem_allocate(this%inoc,  'INOC',  modelname)
-    call mem_allocate(this%innpf, 'INNPF', modelname)
-    call mem_allocate(this%inbuy, 'INBUY', modelname)
-    call mem_allocate(this%insto, 'INSTO', modelname)
-    call mem_allocate(this%incsub, 'INCSUB', modelname)
-    call mem_allocate(this%inmvr, 'INMVR', modelname)
-    call mem_allocate(this%inhfb, 'INHFB', modelname)
-    call mem_allocate(this%ingnc, 'INGNC', modelname)
-    call mem_allocate(this%inobs, 'INOBS', modelname)
-    call mem_allocate(this%iss,   'ISS',   modelname)
-    call mem_allocate(this%inewtonur, 'INEWTONUR', modelname)
+    call mem_allocate(this%inic,  'INIC',  this%memoryPath)
+    call mem_allocate(this%inoc,  'INOC',  this%memoryPath)
+    call mem_allocate(this%innpf, 'INNPF', this%memoryPath)
+    call mem_allocate(this%inbuy, 'INBUY', this%memoryPath)
+    call mem_allocate(this%insto, 'INSTO', this%memoryPath)
+    call mem_allocate(this%incsub, 'INCSUB', this%memoryPath)
+    call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
+    call mem_allocate(this%inhfb, 'INHFB', this%memoryPath)
+    call mem_allocate(this%ingnc, 'INGNC', this%memoryPath)
+    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    call mem_allocate(this%iss,   'ISS',   this%memoryPath)
+    call mem_allocate(this%inewtonur, 'INEWTONUR', this%memoryPath)
     !
     this%inic = 0
     this%inoc = 0
@@ -1401,7 +1406,7 @@ module GwfModule
     !    pointer to the package in the model bndlist
     do ip = 1, this%bndlist%Count()
       packobj2 => GetBndFromList(this%bndlist, ip)
-      if(packobj2%name == pakname) then
+      if(packobj2%packName == pakname) then
         write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
           'already exists: ', trim(pakname)
         call store_error(errmsg)

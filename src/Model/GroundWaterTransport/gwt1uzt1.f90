@@ -162,7 +162,7 @@ module GwtUztModule
         !    this transport package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-          if (packobj%name == this%flowpackagename) then
+          if (packobj%packName == this%flowpackagename) then
             found = .true.
             !
             ! -- store BndType pointer to packobj, and then
@@ -190,11 +190,11 @@ module GwtUztModule
     ! -- allocate space for idxbudssm, which indicates whether this is a 
     !    special budget term or one that is a general source and sink
     nbudterm = this%flowbudptr%nbudterm
-    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%origin)
+    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
     write(this%iout, '(/, a, a)') &
-      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%name
+      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%packName
     write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN ' // flowtype // ' PACKAGE'
     write(this%iout, '(a, i0)') &
       '  NUMBER OF ' // flowtype // ' = ', this%flowbudptr%ncv
@@ -424,9 +424,9 @@ module GwtUztModule
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     
@@ -439,9 +439,9 @@ module GwtUztModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -455,9 +455,9 @@ module GwtUztModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -471,9 +471,9 @@ module GwtUztModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -573,10 +573,10 @@ module GwtUztModule
     call this%GwtAptType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%idxbudinfl, 'IDXBUDINFL', this%origin)
-    call mem_allocate(this%idxbudrinf, 'IDXBUDRINF', this%origin)
-    call mem_allocate(this%idxbuduzet, 'IDXBUDUZET', this%origin)
-    call mem_allocate(this%idxbudritm, 'IDXBUDRITM', this%origin)
+    call mem_allocate(this%idxbudinfl, 'IDXBUDINFL', this%memoryPath)
+    call mem_allocate(this%idxbudrinf, 'IDXBUDRINF', this%memoryPath)
+    call mem_allocate(this%idxbuduzet, 'IDXBUDUZET', this%memoryPath)
+    call mem_allocate(this%idxbudritm, 'IDXBUDRITM', this%memoryPath)
     ! 
     ! -- Initialize
     this%idxbudinfl = 0
@@ -604,8 +604,8 @@ module GwtUztModule
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
-    call mem_allocate(this%concinfl, this%ncv, 'CONCINFL', this%origin)
-    call mem_allocate(this%concuzet, this%ncv, 'CONCUZET', this%origin)
+    call mem_allocate(this%concinfl, this%ncv, 'CONCINFL', this%memoryPath)
+    call mem_allocate(this%concuzet, this%ncv, 'CONCUZET', this%memoryPath)
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
@@ -915,7 +915,7 @@ module GwtUztModule
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%concinfl(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INFILTRATION')
       case ('UZET')
@@ -926,7 +926,7 @@ module GwtUztModule
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%concuzet(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'UZET')
       case default

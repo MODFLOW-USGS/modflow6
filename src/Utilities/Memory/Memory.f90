@@ -1,36 +1,38 @@
 module MemoryTypeModule
   
   use KindModule, only: DP, LGP, I4B
-  use ConstantsModule, only: LENORIGIN, LENTIMESERIESNAME, LENVARNAME,           &
-                             MAXMEMRANK, LENMEMTYPE,                             &
+  use ConstantsModule, only: LENMEMPATH, LENMEMADDRESS, LENTIMESERIESNAME,       &
+                             LENVARNAME, MAXMEMRANK, LENMEMTYPE,                 &
                              TABSTRING, TABINTEGER,                              &
                              TABCENTER, TABLEFT, TABRIGHT,                       &
                              MEMHIDDEN, MEMREADONLY, MEMREADWRITE
   use TableModule, only: TableType
+  use MemoryHelperModule, only: create_mem_address
+  
   implicit none
   private
   public :: MemoryType
  
   type MemoryType
-    character(len=LENVARNAME)                              :: name                   !name of the array
-    character(len=LENVARNAME)                              :: mastername = 'none'    !name of the master array
-    character(len=LENORIGIN)                               :: origin                 !name of origin
-    character(len=LENORIGIN)                               :: masterorigin = 'none'  !name of master origin
-    character(len=LENMEMTYPE)                              :: memtype                !type (INTEGER or DOUBLE)
-    integer(I4B)                                           :: id                     !id, not used
-    integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
-    integer(I4B)                                           :: isize                  !size of the array
-    integer(I4B)                                           :: memaccess = MEMHIDDEN  !memory permissions
-    logical(LGP)                                           :: master = .true.        !master copy, others point to this one
-    logical(LGP), pointer                                  :: logicalsclr => null()  !pointer to the logical
-    integer(I4B), pointer                                  :: intsclr     => null()  !pointer to the integer
-    real(DP), pointer                                      :: dblsclr     => null()  !pointer to the double
-    integer(I4B), dimension(:), pointer, contiguous        :: aint1d      => null()  !pointer to 1d integer array
-    integer(I4B), dimension(:, :), pointer, contiguous     :: aint2d      => null()  !pointer to 2d integer array
-    integer(I4B), dimension(:, :, :), pointer, contiguous  :: aint3d      => null()  !pointer to 3d integer array
-    real(DP), dimension(:), pointer, contiguous            :: adbl1d      => null()  !pointer to 1d double array
-    real(DP), dimension(:, :), pointer, contiguous         :: adbl2d      => null()  !pointer to 2d double array
-    real(DP), dimension(:, :, :), pointer, contiguous      :: adbl3d      => null()  !pointer to 3d double array
+    character(len=LENVARNAME)                              :: name                   !< name of the array
+    character(len=LENVARNAME)                              :: mastername = 'none'    !< name of the master array
+    character(len=LENMEMPATH)                              :: path                   !< path to memory object
+    character(len=LENMEMPATH)                              :: masterPath = 'none'    !< path to master memory object
+    character(len=LENMEMTYPE)                              :: memtype                !< type (INTEGER or DOUBLE)
+    integer(I4B)                                           :: id                     !< id, not used
+    integer(I4B)                                           :: nrealloc = 0           !< number of times reallocated
+    integer(I4B)                                           :: isize                  !< size of the array
+    integer(I4B)                                           :: memaccess = MEMHIDDEN  !< memory permissions
+    logical(LGP)                                           :: master = .true.        !< master copy, others point to this one
+    logical(LGP), pointer                                  :: logicalsclr => null()  !< pointer to the logical
+    integer(I4B), pointer                                  :: intsclr     => null()  !< pointer to the integer
+    real(DP), pointer                                      :: dblsclr     => null()  !< pointer to the double
+    integer(I4B), dimension(:), pointer, contiguous        :: aint1d      => null()  !< pointer to 1d integer array
+    integer(I4B), dimension(:, :), pointer, contiguous     :: aint2d      => null()  !< pointer to 2d integer array
+    integer(I4B), dimension(:, :, :), pointer, contiguous  :: aint3d      => null()  !< pointer to 3d integer array
+    real(DP), dimension(:), pointer, contiguous            :: adbl1d      => null()  !< pointer to 1d double array
+    real(DP), dimension(:, :), pointer, contiguous         :: adbl2d      => null()  !< pointer to 2d double array
+    real(DP), dimension(:, :, :), pointer, contiguous      :: adbl3d      => null()  !< pointer to 3d double array
   contains
     procedure :: table_entry
     procedure :: mt_associated
@@ -44,7 +46,7 @@ module MemoryTypeModule
     type(TableType), intent(inout) :: memtab
     ! -- local
     character(len=16) :: cmem
-    character(len=LENORIGIN+LENVARNAME) :: cptr
+    character(len=LENMEMADDRESS) :: cptr
     character(len=16) :: cbmi
     integer(I4B) :: ipos
     ! -- formats
@@ -61,7 +63,7 @@ module MemoryTypeModule
     ! -- Set pointer string
     cptr = '--'
     if (.not. this%master) then
-      cptr = trim(this%masterorigin) // '/' // trim(this%mastername)
+      cptr = create_mem_address(this%masterPath, this%mastername)
     end if
     !
     ! -- set bmi access
@@ -75,7 +77,7 @@ module MemoryTypeModule
     end select
     !
     ! -- write data to the table
-    call memtab%add_term(this%origin)
+    call memtab%add_term(this%path)
     call memtab%add_term(this%name)
     call memtab%add_term(cmem)
     call memtab%add_term(this%isize)

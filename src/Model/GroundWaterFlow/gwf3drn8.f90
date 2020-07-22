@@ -2,6 +2,7 @@ module DrnModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DTWO,                                  &
                              LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
+  use MemoryHelperModule, only: create_mem_path
   use SmoothingModule,  only: sQSaturation, sQSaturationDerivative,              &
                               sQuadraticSaturation
   use BndModule, only: BndType
@@ -85,7 +86,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=2  ! drnelev, conductance
     packobj%iscloc=2   !sfac applies to conductance
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
@@ -131,8 +132,8 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%iauxddrncol, 'IAUXDDRNCOL', this%origin)
-    call mem_allocate(this%icubic_scaling, 'ICUBIC_SCALING', this%origin)
+    call mem_allocate(this%iauxddrncol, 'IAUXDDRNCOL', this%memoryPath)
+    call mem_allocate(this%icubic_scaling, 'ICUBIC_SCALING', this%memoryPath)
     !
     ! -- Set values
     this%iauxddrncol = 0

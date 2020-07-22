@@ -460,7 +460,7 @@ module GwtFmiModule
       !
       ! -- Add contributions to model budget
       call model_budget%addentry(rin, rout, delt, ' FLOW-CORRECTION',          &
-                                 isuppress_output, rowlabel=this%name)
+                                 isuppress_output, rowlabel=this%packName)
     end if
     !
     ! -- Return
@@ -535,14 +535,14 @@ module GwtFmiModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%flows_from_file, 'FLOWS_FROM_FILE', this%origin)
-    call mem_allocate(this%iflowerr, 'IFLOWERR', this%origin)
-    call mem_allocate(this%igwfstrgss, 'IGWFSTRGSS', this%origin)
-    call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%origin)
-    call mem_allocate(this%iubud, 'IUBUD', this%origin)
-    call mem_allocate(this%iuhds, 'IUHDS', this%origin)
-    call mem_allocate(this%iumvr, 'IUMVR', this%origin)
-    call mem_allocate(this%nflowpack, 'NFLOWPACK', this%origin)
+    call mem_allocate(this%flows_from_file, 'FLOWS_FROM_FILE', this%memoryPath)
+    call mem_allocate(this%iflowerr, 'IFLOWERR', this%memoryPath)
+    call mem_allocate(this%igwfstrgss, 'IGWFSTRGSS', this%memoryPath)
+    call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%memoryPath)
+    call mem_allocate(this%iubud, 'IUBUD', this%memoryPath)
+    call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
+    call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
+    call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
     !
     ! -- Although not a scalar, allocate the advanced package transport
     !    budget object to zero so that it can be dynamically resized later
@@ -581,9 +581,9 @@ module GwtFmiModule
     !
     ! -- Allocate variables needed for all cases
     if (this%iflowerr == 0) then
-      call mem_allocate(this%flowerr, 1, 'FLOWERR', this%origin)
+      call mem_allocate(this%flowerr, 1, 'FLOWERR', this%memoryPath)
     else
-      call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
+      call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%memoryPath)
     end if
     do n = 1, size(this%flowerr)
       this%flowerr(n) = DZERO
@@ -592,13 +592,13 @@ module GwtFmiModule
     ! -- Allocate differently depending on whether or not flows are
     !    being read from a file.
     if (this%flows_from_file) then
-      call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%origin)
-      call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
-      call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%origin)
-      call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%origin)
-      call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%origin)
-      call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%origin)
-      call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%origin)
+      call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%memoryPath)
+      call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%memoryPath)
+      call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%memoryPath)
+      call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%memoryPath)
+      call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%memoryPath)
+      call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%memoryPath)
+      call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%memoryPath)
       this%igwfinwtup = 0
       do n = 1, nodes
         this%gwfsat(n) = DONE
@@ -613,14 +613,14 @@ module GwtFmiModule
       !
       ! -- allocate and initialize storage arrays
       if (this%igwfstrgss == 0) then
-        call mem_allocate(this%gwfstrgss, 1, 'GWFSTRGSS', this%origin)
+        call mem_allocate(this%gwfstrgss, 1, 'GWFSTRGSS', this%memoryPath)
       else
-        call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%origin)
+        call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%memoryPath)
       end if
       if (this%igwfstrgsy == 0) then
-        call mem_allocate(this%gwfstrgsy, 1, 'GWFSTRGSY', this%origin)
+        call mem_allocate(this%gwfstrgsy, 1, 'GWFSTRGSY', this%memoryPath)
       else
-        call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%origin)
+        call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%memoryPath)
       end if
       do n = 1, size(this%gwfstrgss)
         this%gwfstrgss(n) = DZERO
@@ -1294,7 +1294,7 @@ module GwtFmiModule
     allocate(this%datp(nflowpack))
     !
     ! -- mem_allocate
-    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    call mem_allocate(this%iatp, nflowpack, 'IATP', this%memoryPath)
     !
     ! -- initialize
     this%nflowpack = nflowpack
@@ -1328,7 +1328,7 @@ module GwtFmiModule
     if (associated(this%gwfbndlist)) then
       do ip = 1, this%gwfbndlist%Count()
         packobj => GetBndFromList(this%gwfbndlist, ip)
-        if (packobj%name == name) then
+        if (packobj%packName == name) then
           idx = ip
           exit
         end if

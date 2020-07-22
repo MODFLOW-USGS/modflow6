@@ -1,7 +1,7 @@
 module BaseExchangeModule
   
   use KindModule,         only: DP, I4B
-  use ConstantsModule,    only: LENPACKAGENAME
+  use ConstantsModule,    only: LENEXCHANGENAME, LENMEMPATH
   use BaseSolutionModule, only: BaseSolutionType
   use ListModule,         only: ListType
   
@@ -12,7 +12,8 @@ module BaseExchangeModule
   private :: CastAsBaseExchangeClass
   
   type, abstract :: BaseExchangeType
-    character(len=LENPACKAGENAME)    :: name
+    character(len=LENEXCHANGENAME)   :: name                !< the name of this exchange
+    character(len=LENMEMPATH)        :: memoryPath          !< the location in the memory manager where the variables are stored
     class(BaseSolutionType), pointer :: solution => null()
     integer(I4B)                     :: id
   contains

@@ -3,8 +3,8 @@ module MemoryManagerModule
   use KindModule,             only: DP, LGP, I4B, I8B
   use ConstantsModule,        only: DZERO, DONE,                                 &
                                     DEM3, DEM6, DEM9, DEP3, DEP6, DEP9,          &
-                                    LENORIGIN, LENVARNAME,                       &
-                                    LINELENGTH, LENMEMTYPE,                      &
+                                    LENMEMPATH, LENMEMSEPARATOR, LENVARNAME,     &
+                                    LINELENGTH, LENMEMTYPE, LENMEMADDRESS,       &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                                     TABCENTER, TABLEFT, TABRIGHT,                &
                                     MEMHIDDEN, MEMREADONLY, MEMREADWRITE
@@ -329,7 +329,7 @@ module MemoryManagerModule
     ! -- iterate over the memory list
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      if(mt%name == name .and. mt%origin == origin) then
+      if(mt%name == name .and. mt%path == origin) then
         found = .true.
         exit
       end if
@@ -463,7 +463,7 @@ module MemoryManagerModule
     mt%logicalsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
@@ -526,7 +526,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = ilen
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
@@ -604,7 +604,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
@@ -659,7 +659,7 @@ module MemoryManagerModule
     mt%intsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'INTEGER'
     !
     ! -- set memory access permission
@@ -725,7 +725,7 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set memory access permission
@@ -793,7 +793,7 @@ module MemoryManagerModule
     mt%aint2d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- set memory access permission
@@ -862,7 +862,7 @@ module MemoryManagerModule
     mt%aint3d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
                                                        nrow, nlay
     !
@@ -923,7 +923,7 @@ module MemoryManagerModule
     mt%dblsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'DOUBLE'
     !
     ! -- set memory access permission
@@ -989,7 +989,7 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set memory access permission
@@ -1057,7 +1057,7 @@ module MemoryManagerModule
     mt%adbl2d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
     ! -- set memory access permission
@@ -1127,7 +1127,7 @@ module MemoryManagerModule
     mt%adbl3d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'DOUBLE', ncol,           &
                                                        nrow, nlay
     !
@@ -1186,13 +1186,13 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- set memory access permission
     if (present(memtype)) then
@@ -1249,13 +1249,13 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- set memory access permission
     if (present(memtype)) then
@@ -2058,7 +2058,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2109,7 +2109,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2156,7 +2156,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2207,7 +2207,7 @@ module MemoryManagerModule
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterorigin = origin2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2729,7 +2729,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_dbl3d
-  
+
   subroutine mem_set_print_option(iout, keyword, errmsg)
 ! ******************************************************************************
 ! Set the memory print option 
@@ -2848,11 +2848,9 @@ module MemoryManagerModule
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
-    integer(I4B) :: iptrlen
     integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    iptrlen = LENORIGIN + LENVARNAME
     nterms = 6
     !
     ! -- set up table title
@@ -2864,7 +2862,7 @@ module MemoryManagerModule
     !
     ! -- origin
     text = 'ORIGIN'
-    call memtab%initialize_column(text, LENORIGIN, alignment=TABLEFT)
+    call memtab%initialize_column(text, LENMEMPATH, alignment=TABLEFT)
     !
     ! -- variable
     text = 'VARIABLE NAME'
@@ -2880,7 +2878,7 @@ module MemoryManagerModule
     !
     ! -- is it a pointer
     text = 'ASSOCIATED VARIABLE'
-    call memtab%initialize_column(text, iptrlen, alignment=TABLEFT)
+    call memtab%initialize_column(text, LENMEMADDRESS, alignment=TABLEFT)
     !
     ! -- is it a pointer
     text = 'MEMORY ACCESS PERMISSION'
@@ -3085,7 +3083,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: iout
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENORIGIN), allocatable, dimension(:) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique ! TODO_MJR: refactor this name??
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -3129,7 +3127,7 @@ module MemoryManagerModule
         ilen = len_trim(cunique(icomp))
         do ipos = 1, memorylist%count()
           mt => memorylist%Get(ipos)
-          if (cunique(icomp) /= mt%origin(1:ilen)) cycle
+          if (cunique(icomp) /= mt%path(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
             nchars = nchars + mt%isize
@@ -3195,7 +3193,7 @@ module MemoryManagerModule
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
         if (mt%mt_associated() .and. mt%isize > 0) then
-          errmsg = trim(adjustl(mt%origin)) // ' ' // &
+          errmsg = trim(adjustl(mt%path)) // ' ' // &
                    trim(adjustl(mt%name)) // ' not deallocated'
           call store_error(trim(errmsg))
         end if
@@ -3228,10 +3226,10 @@ module MemoryManagerModule
     use ArrayHandlersModule, only: ExpandArray, ifind
     use InputOutputModule, only: ParseLine
     ! -- dummy
-    character(len=LENORIGIN), allocatable, dimension(:), intent(inout) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENORIGIN), allocatable, dimension(:) :: words
+    character(len=LENMEMPATH), allocatable, dimension(:) :: words
     integer(I4B) :: ipos
     integer(I4B) :: ipa
     integer(I4B) :: nwords
@@ -3243,7 +3241,7 @@ module MemoryManagerModule
     ! -- find unique origins
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      call ParseLine(mt%origin, nwords, words)
+      call ParseLine(mt%path, nwords, words)
       ipa = ifind(cunique, words(1))
       if(ipa < 1) then
         call ExpandArray(cunique, 1)

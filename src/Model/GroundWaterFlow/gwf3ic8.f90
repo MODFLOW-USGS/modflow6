@@ -140,7 +140,7 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%strt, nodes, 'STRT', this%origin)
+    call mem_allocate(this%strt, nodes, 'STRT', this%memoryPath)
     !
     ! -- Return
     return

@@ -125,7 +125,7 @@ module GwtDspModule
     !
     ! -- xt3d create
     if(this%ixt3d > 0) then
-      call xt3d_cr(this%xt3d, trim(this%origin), this%inunit, this%iout,       &
+      call xt3d_cr(this%xt3d, trim(this%memoryPath), this%inunit, this%iout,       &
                    ldispopt=.true.)
       this%xt3d%ixt3d = this%ixt3d
       call this%xt3d%xt3d_df(dis)
@@ -425,14 +425,14 @@ module GwtDspModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%idiffc, 'IDIFFC', this%origin)
-    call mem_allocate(this%idisp, 'IDISP', this%origin)
-    call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
-    call mem_allocate(this%id22, 'ID22', this%origin)
-    call mem_allocate(this%id33, 'ID33', this%origin)
-    call mem_allocate(this%iangle1, 'IANGLE1', this%origin)
-    call mem_allocate(this%iangle2, 'IANGLE2', this%origin)
-    call mem_allocate(this%iangle3, 'IANGLE3', this%origin)
+    call mem_allocate(this%idiffc, 'IDIFFC', this%memoryPath)
+    call mem_allocate(this%idisp, 'IDISP', this%memoryPath)
+    call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%id22, 'ID22', this%memoryPath)
+    call mem_allocate(this%id33, 'ID33', this%memoryPath)
+    call mem_allocate(this%iangle1, 'IANGLE1', this%memoryPath)
+    call mem_allocate(this%iangle2, 'IANGLE2', this%memoryPath)
+    call mem_allocate(this%iangle3, 'IANGLE3', this%memoryPath)
     !
     ! -- Initialize
     this%idiffc = 0
@@ -466,27 +466,27 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%alh, 0, 'ALH', trim(this%origin))
-    call mem_allocate(this%alv, 0, 'ALV', trim(this%origin))
-    call mem_allocate(this%ath1, 0, 'ATH1', trim(this%origin))
-    call mem_allocate(this%ath2, 0, 'ATH2', trim(this%origin))
-    call mem_allocate(this%atv, 0, 'ATV', trim(this%origin))
-    call mem_allocate(this%diffc, 0, 'DIFFC', trim(this%origin))
-    call mem_allocate(this%d11, nodes, 'D11', trim(this%origin))
-    call mem_allocate(this%d22, nodes, 'D22', trim(this%origin))
-    call mem_allocate(this%d33, nodes, 'D33', trim(this%origin))
-    call mem_allocate(this%angle1, nodes, 'ANGLE1', trim(this%origin))
-    call mem_allocate(this%angle2, nodes, 'ANGLE2', trim(this%origin))
-    call mem_allocate(this%angle3, nodes, 'ANGLE3', trim(this%origin))
+    call mem_allocate(this%alh, 0, 'ALH', trim(this%memoryPath))
+    call mem_allocate(this%alv, 0, 'ALV', trim(this%memoryPath))
+    call mem_allocate(this%ath1, 0, 'ATH1', trim(this%memoryPath))
+    call mem_allocate(this%ath2, 0, 'ATH2', trim(this%memoryPath))
+    call mem_allocate(this%atv, 0, 'ATV', trim(this%memoryPath))
+    call mem_allocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath))
+    call mem_allocate(this%d11, nodes, 'D11', trim(this%memoryPath))
+    call mem_allocate(this%d22, nodes, 'D22', trim(this%memoryPath))
+    call mem_allocate(this%d33, nodes, 'D33', trim(this%memoryPath))
+    call mem_allocate(this%angle1, nodes, 'ANGLE1', trim(this%memoryPath))
+    call mem_allocate(this%angle2, nodes, 'ANGLE2', trim(this%memoryPath))
+    call mem_allocate(this%angle3, nodes, 'ANGLE3', trim(this%memoryPath))
     call mem_allocate(this%gwfflowjaold, this%dis%con%nja, 'GWFFLOWJAOLD',     &
-      trim(this%origin))
+      trim(this%memoryPath))
     !
     ! -- Allocate dispersion coefficient array if xt3d not in use
     if (this%ixt3d == 0) then
       call mem_allocate(this%dispcoef, this%dis%njas, 'DISPCOEF',              &
-        trim(this%origin))
+        trim(this%memoryPath))
     else
-      call mem_allocate(this%dispcoef, 0, 'DISPCOEF', trim(this%origin))
+      call mem_allocate(this%dispcoef, 0, 'DISPCOEF', trim(this%memoryPath))
     endif
     !
     ! -- Initialize gwfflowjaold
@@ -515,10 +515,10 @@ module GwtDspModule
     ! -- deallocate arrays
     if (this%inunit /= 0) then
       call mem_deallocate(this%alh)
-      call mem_deallocate(this%alv, 'ALV', trim(this%origin))
+      call mem_deallocate(this%alv, 'ALV', trim(this%memoryPath))
       call mem_deallocate(this%ath1)
-      call mem_deallocate(this%ath2, 'ATH2', trim(this%origin))
-      call mem_deallocate(this%atv, 'ATV', trim(this%origin))
+      call mem_deallocate(this%ath2, 'ATH2', trim(this%memoryPath))
+      call mem_deallocate(this%atv, 'ATV', trim(this%memoryPath))
       call mem_deallocate(this%diffc)
       call mem_deallocate(this%d11)
       call mem_deallocate(this%d22)
@@ -645,42 +645,42 @@ module GwtDspModule
         select case (keyword)
         case ('DIFFC')
             call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC',           &
-                              trim(this%origin))
+                              trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%diffc,     &
                                          aname(1))
             lname(1) = .true.
         case ('ALH')
           call mem_reallocate(this%alh, this%dis%nodes, 'ALH',                 &
-                            trim(this%origin))
+                            trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                          this%parser%iuactive, this%alh,       &
                                          aname(2))
             lname(2) = .true.
         case ('ALV')
           call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                 &
-                            trim(this%origin))
+                            trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                          this%parser%iuactive, this%alv,       &
                                          aname(3))
             lname(3) = .true.
         case ('ATH1')
           call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1',               &
-                            trim(this%origin))
+                            trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                          this%parser%iuactive, this%ath1,      &
                                          aname(4))
           lname(4) = .true.
         case ('ATH2')
           call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',               &
-                            trim(this%origin))
+                            trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                          this%parser%iuactive, this%ath2,      &
                                          aname(5))
           lname(5) = .true.
         case ('ATV')
           call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                 &
-                            trim(this%origin))
+                            trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                          this%parser%iuactive, this%atv,       &
                                          aname(6))
@@ -724,33 +724,20 @@ module GwtDspModule
       !
       ! -- If alv not specified then point it to alh
       if(.not. lname(3)) then
-        !call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                   &
-        !                    trim(this%origin))
-        !call mem_copyptr(this%alv, 'ALH', trim(this%name_model)//' DSP')
-        call mem_reassignptr(this%alv, 'ALV', trim(this%origin),                 &
-                                       'ALH', trim(this%origin))
+        call mem_reassignptr(this%alv, 'ALV', trim(this%memoryPath),                 &
+                                       'ALH', trim(this%memoryPath))
       endif
       !
       ! -- If ath2 not specified then assign it to ath1
       if (.not. lname(5)) then
-        !call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                 &
-        !                    trim(this%origin))
-        !do n = 1, size(this%ath2)
-        !  this%ath2(n) = this%ath1(n)
-        !enddo
-        call mem_reassignptr(this%ath2, 'ATH2', trim(this%origin),                 &
-                                        'ATH1', trim(this%origin))
+        call mem_reassignptr(this%ath2, 'ATH2', trim(this%memoryPath),                 &
+                                        'ATH1', trim(this%memoryPath))
       endif
       !
       ! -- If atv not specified then assign it to ath2
       if (.not. lname(6)) then
-        !call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                   &
-        !                    trim(this%origin))
-        !do n = 1, size(this%atv)
-        !  this%atv(n) = this%ath2(n)
-        !enddo
-        call mem_reassignptr(this%atv, 'ATV', trim(this%origin),                 &
-                                       'ATH2', trim(this%origin))
+        call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath),                 &
+                                       'ATH2', trim(this%memoryPath))
       endif
     endif
     !

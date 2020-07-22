@@ -132,14 +132,14 @@ module GwfDisModule
     disext%nodesuser = disext%nlay * disext%nrow * disext%ncol
     !
     ! -- Allocate delr, delc, and non-reduced vectors for dis
-    call mem_allocate(disext%delr, disext%ncol, 'DELR', disext%origin)
-    call mem_allocate(disext%delc, disext%nrow, 'DELC', disext%origin)
+    call mem_allocate(disext%delr, disext%ncol, 'DELR', disext%memoryPath)
+    call mem_allocate(disext%delc, disext%nrow, 'DELC', disext%memoryPath)
     call mem_allocate(disext%idomain, disext%ncol, disext%nrow, disext%nlay,     &
-                      'IDOMAIN',disext%origin)
+                      'IDOMAIN',disext%memoryPath)
     call mem_allocate(disext%top2d, disext%ncol, disext%nrow, 'TOP2D',           &
-                      disext%origin)
+                      disext%memoryPath)
     call mem_allocate(disext%bot3d, disext%ncol, disext%nrow, disext%nlay,       &
-                      'BOT3D', disext%origin)
+                      'BOT3D', disext%memoryPath)
     ! -- fill data
     do i = 1, disext%nrow
       disext%delc(i) = delc(i)
@@ -401,15 +401,15 @@ module GwfDisModule
     this%nodesuser = this%nlay * this%nrow * this%ncol
     !
     ! -- Allocate delr, delc, and non-reduced vectors for dis
-    call mem_allocate(this%delr, this%ncol, 'DELR', this%origin)
-    call mem_allocate(this%delc, this%nrow, 'DELC', this%origin)
+    call mem_allocate(this%delr, this%ncol, 'DELR', this%memoryPath)
+    call mem_allocate(this%delc, this%nrow, 'DELC', this%memoryPath)
     call mem_allocate(this%idomain, this%ncol, this%nrow, this%nlay, 'IDOMAIN',  &
-                      this%origin)
-    call mem_allocate(this%top2d, this%ncol, this%nrow, 'TOP2D', this%origin)
+                      this%memoryPath)
+    call mem_allocate(this%top2d, this%ncol, this%nrow, 'TOP2D', this%memoryPath)
     call mem_allocate(this%bot3d, this%ncol, this%nrow, this%nlay, 'BOT3D',      &
-                      this%origin)
-    call mem_allocate(this%cellx, this%ncol, 'CELLX', this%origin)
-    call mem_allocate(this%celly, this%nrow, 'CELLY', this%origin)
+                      this%memoryPath)
+    call mem_allocate(this%cellx, this%ncol, 'CELLX', this%memoryPath)
+    call mem_allocate(this%celly, this%nrow, 'CELLY', this%memoryPath)
     !
     ! -- initialize all cells to be active (idomain = 1)
     do k = 1, this%nlay
@@ -1021,9 +1021,9 @@ module GwfDisModule
     call this%DisBaseType%allocate_scalars(name_model)
     !
     ! -- Allocate
-    call mem_allocate(this%nlay, 'NLAY', this%origin)
-    call mem_allocate(this%nrow, 'NROW', this%origin)
-    call mem_allocate(this%ncol, 'NCOL', this%origin)
+    call mem_allocate(this%nlay, 'NLAY', this%memoryPath)
+    call mem_allocate(this%nrow, 'NROW', this%memoryPath)
+    call mem_allocate(this%ncol, 'NCOL', this%memoryPath)
     !
     ! -- Initialize
     this%nlay = 0
@@ -1053,12 +1053,12 @@ module GwfDisModule
     !
     ! -- Allocate arrays for GwfDisType
     if(this%nodes < this%nodesuser) then
-      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%origin)
+      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
-                        this%origin)
+                        this%memoryPath)
     else
-      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%origin)
-      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%origin)
+      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
+      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
     !
     ! -- Initialize

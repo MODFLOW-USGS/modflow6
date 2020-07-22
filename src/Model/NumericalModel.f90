@@ -229,9 +229,9 @@ module NumericalModelModule
     deallocate(this%bndlist)
     !
     ! -- nullify pointers
-    call mem_deallocate(this%x, 'X', this%name)
-    call mem_deallocate(this%rhs, 'RHS', this%name)
-    call mem_deallocate(this%ibound, 'IBOUND', this%name)
+    call mem_deallocate(this%x, 'X', this%memoryPath)
+    call mem_deallocate(this%rhs, 'RHS', this%memoryPath)
+    call mem_deallocate(this%ibound, 'IBOUND', this%memoryPath)
     !
     ! -- BaseModelType
     call this%BaseModelType%model_da()
@@ -270,10 +270,10 @@ module NumericalModelModule
     call this%BaseModelType%allocate_scalars(modelname)
     !
     ! -- allocate members from this type
-    call mem_allocate(this%neq, 'NEQ', modelname)
-    call mem_allocate(this%nja, 'NJA', modelname)
-    call mem_allocate(this%icnvg, 'ICNVG', modelname)
-    call mem_allocate(this%moffset, 'MOFFSET', modelname)
+    call mem_allocate(this%neq, 'NEQ', this%memoryPath)
+    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
+    call mem_allocate(this%moffset, 'MOFFSET', this%memoryPath)
     allocate(this%filename)
     allocate(this%bndlist)
     !
@@ -293,10 +293,10 @@ module NumericalModelModule
     class(NumericalModelType) :: this
     integer(I4B) :: i
     !
-    call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name),          &
+    call mem_allocate(this%xold, this%neq, 'XOLD', this%memoryPath,     &
                       MEMREADONLY)
-    call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name))
-    call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name))
+    call mem_allocate(this%flowja, this%nja, 'FLOWJA', this%memoryPath)
+    call mem_allocate(this%idxglo, this%nja, 'IDXGLO', this%memoryPath)
     !
     ! -- initialize
     do i = 1, size(this%flowja)
@@ -307,43 +307,43 @@ module NumericalModelModule
     return
   end subroutine allocate_arrays
 
-  subroutine set_xptr(this, xsln, name2, origin2)
+  subroutine set_xptr(this, xsln, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: xsln
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+    character(len=*), intent(in) :: varNameTgt
+    character(len=*), intent(in) :: memPathTgt
     ! -- local
     ! -- code
     this%x => xsln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%x, 'X', this%name, name2, origin2, MEMREADWRITE)
+    call mem_checkin(this%x, 'X', this%memoryPath, varNameTgt, memPathTgt, MEMREADWRITE)
   end subroutine set_xptr
 
-  subroutine set_rhsptr(this, rhssln, name2, origin2)
+  subroutine set_rhsptr(this, rhssln, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: rhssln
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+    character(len=*), intent(in) :: varNameTgt
+    character(len=*), intent(in) :: memPathTgt
     ! -- local
     ! -- code
     this%rhs => rhssln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%rhs, 'RHS', this%name, name2, origin2, MEMREADWRITE)
+    call mem_checkin(this%rhs, 'RHS', this%memoryPath, varNameTgt, memPathTgt, MEMREADWRITE)
   end subroutine set_rhsptr
 
-  subroutine set_iboundptr(this, iboundsln, name2, origin2)
+  subroutine set_iboundptr(this, iboundsln, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iboundsln
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+    character(len=*), intent(in) :: varNameTgt
+    character(len=*), intent(in) :: memPathTgt
     ! -- local
     ! -- code
     this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%ibound, 'IBOUND', this%name, name2, origin2,           &
+    call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, memPathTgt,           &
                      MEMREADWRITE)
   end subroutine set_iboundptr
 

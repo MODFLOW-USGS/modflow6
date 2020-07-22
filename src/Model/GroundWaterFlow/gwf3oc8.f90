@@ -2,7 +2,7 @@ module GwfOcModule
 
   use BaseDisModule,       only: DisBaseType
   use KindModule,          only: DP, I4B
-  use ConstantsModule,     only: LENMODELNAME, LENORIGIN
+  use ConstantsModule,     only: LENMODELNAME
   use OutputControlModule, only: OutputControlType
   use OutputControlData,   only: OutputControlDataType, ocd_cr
 
