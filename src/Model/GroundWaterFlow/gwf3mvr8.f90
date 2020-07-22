@@ -872,6 +872,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
+    use MemoryHelperModule, only: create_mem_path
     use SimModule, only: ustop, store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwfMvrType),intent(inout) :: this
@@ -903,14 +904,12 @@ module GwfMvrModule
           call ustop()
         endif
         if(this%iexgmvr == 0) then
-          this%pckMemPaths(npak) = trim(adjustl(this%name_model)) // ' ' // &
-            trim(word1)
+          this%pckMemPaths(npak) = create_mem_path(this%name_model, word1)
           word = word1
         else
           this%pckMemPaths(npak) = trim(word1)
           call this%parser%GetStringCaps(word2)
-          this%pckMemPaths(npak) = trim(this%pckMemPaths(npak)) // ' ' //    &
-            trim(word2)
+          this%pckMemPaths(npak) = create_mem_path(this%pckMemPaths(npak), word2)
           word = word2
         endif
         this%paknames(npak) = trim(word)
