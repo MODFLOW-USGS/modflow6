@@ -7,8 +7,7 @@ import pymake
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from test000_setup import test_build_modflow6, test_build_modflow6_so, \
-    test_build_mf5to6, test_build_zonebudget
+from test000_setup import build_mf6, build_mf6_so, build_mf5to6, build_zbud6
 
 # make sure exe extension is used on windows
 eext = ''
@@ -18,6 +17,7 @@ if sys.platform.lower() == 'win32':
     soext = '.dll'
 
 binpth, temppth = os.path.join('..', 'bin'), os.path.join('temp')
+
 
 def get_zipname():
     zipname = sys.platform.lower()
@@ -77,19 +77,19 @@ def test_create_dirs():
 
 
 def test_mf6():
-    test_build_modflow6()
+    build_mf6()
 
 
 def test_libmf6():
-    test_build_modflow6_so()
+    build_mf6_so()
 
 
 def test_mf5to6():
-    test_build_mf5to6()
+    build_mf5to6()
 
 
 def test_zbud6():
-    test_build_zonebudget()
+    build_zbud6()
 
 
 def test_update_mf6io():
