@@ -968,6 +968,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(BndType) :: this
     ! -- local
@@ -1020,7 +1021,7 @@ module BndModule
     this%ioffset = 0
     !
     ! -- Set pointer to model inewton variable
-    call mem_setptr(imodelnewton, 'INEWTON', trim(this%name_model))
+    call mem_setptr(imodelnewton, 'INEWTON', create_mem_path(this%name_model))
     this%inewton = imodelnewton
     imodelnewton => null()
     !

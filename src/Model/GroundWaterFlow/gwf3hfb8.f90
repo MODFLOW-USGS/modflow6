@@ -96,6 +96,7 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(GwfHfbType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
@@ -114,16 +115,17 @@ module GwfHfbModule
     this%dis => dis
     this%ibound => ibound
     this%xt3d => xt3d
-    call mem_setptr(this%icelltype, 'ICELLTYPE', trim(adjustl(this%name_model))//' NPF')
-    call mem_setptr(this%ihc, 'IHC', trim(adjustl(this%name_model))//' CON')
-    call mem_setptr(this%ia, 'IA', trim(adjustl(this%name_model))//' CON')
-    call mem_setptr(this%ja, 'JA', trim(adjustl(this%name_model))//' CON')
-    call mem_setptr(this%jas, 'JAS', trim(adjustl(this%name_model))//' CON')
-    call mem_setptr(this%isym, 'ISYM', trim(adjustl(this%name_model))//' CON')
-    call mem_setptr(this%condsat, 'CONDSAT', trim(adjustl(this%name_model))//' NPF')
-    call mem_setptr(this%top, 'TOP', trim(adjustl(this%name_model))//' DIS')
-    call mem_setptr(this%bot, 'BOT', trim(adjustl(this%name_model))//' DIS')
-    call mem_setptr(this%hwva, 'HWVA', trim(adjustl(this%name_model))//' CON')
+
+    call mem_setptr(this%icelltype, 'ICELLTYPE', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%icelltype, 'IHC', create_mem_path(this%name_model, 'CON'))
+    call mem_setptr(this%icelltype, 'IA', create_mem_path(this%name_model, 'CON'))
+    call mem_setptr(this%icelltype, 'JA', create_mem_path(this%name_model, 'CON'))
+    call mem_setptr(this%icelltype, 'JAS', create_mem_path(this%name_model, 'CON'))
+    call mem_setptr(this%icelltype, 'ISYM', create_mem_path(this%name_model, 'CON'))
+    call mem_setptr(this%icelltype, 'CONDSAT', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%icelltype, 'TOP', create_mem_path(this%name_model, 'DIS'))
+    call mem_setptr(this%icelltype, 'BOT', create_mem_path(this%name_model, 'DIS'))
+    call mem_setptr(this%icelltype, 'HWVA', create_mem_path(this%name_model, 'CON'))
     !
     call this%read_options()
     call this%read_dimensions()

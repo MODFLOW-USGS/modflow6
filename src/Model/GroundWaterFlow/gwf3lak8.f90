@@ -1647,6 +1647,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
+    use MemoryHelperModule, only: create_mem_path
     use SimModule, only: ustop, store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
@@ -1716,11 +1717,11 @@ contains
     endif
     !
     ! -- set pointer to gwf iss and gwf hk
-    call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
-    call mem_setptr(this%gwfk11, 'K11', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfk33, 'K33', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfik33, 'IK33', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfsat, 'SAT', trim(this%name_model)//' NPF')
+    call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
+    call mem_setptr(this%gwfk11, 'K11', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfk33, 'K33', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfik33, 'IK33', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfsat, 'SAT', create_mem_path(this%name_model, 'NPF'))
     !
     ! -- allocate temporary storage
     allocate(clb(this%MAXBOUND))

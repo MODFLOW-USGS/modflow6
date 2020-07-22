@@ -1077,6 +1077,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(GwfNpftype) :: this
 ! ------------------------------------------------------------------------------
@@ -1117,7 +1118,7 @@ module GwfNpfModule
     call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
     !
     ! -- set pointer to inewtonur
-    call mem_setptr(this%igwfnewtonur, 'INEWTONUR', trim(this%name_model))
+    call mem_setptr(this%igwfnewtonur, 'INEWTONUR', create_mem_path(this%name_model))
     !
     ! -- Initialize value
     this%iname = 8

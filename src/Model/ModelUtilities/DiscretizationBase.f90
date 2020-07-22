@@ -19,7 +19,7 @@ module BaseDisModule
   public :: DisBaseType
 
   type :: DisBaseType
-    character(len=LENMEMPATH), pointer              :: memoryPath => null()     !< origin name for mem allocation
+    character(len=LENMEMPATH)                       :: memoryPath                !< origin name for mem allocation
     character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model
     integer(I4B), pointer                           :: inunit     => null()      !< unit number for input file
     integer(I4B), pointer                           :: iout       => null()      !< unit number for output file
@@ -260,7 +260,6 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate(this%memoryPath)
     deallocate(this%name_model)
     !
     ! -- Scalars

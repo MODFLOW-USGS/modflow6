@@ -12,8 +12,8 @@ module ConnectionsModule
   public :: iac_to_ia
 
   type ConnectionsType
-    character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model
-    character(len=LENMEMPATH), pointer               :: memoryPath => null()      !< memory path of the connections data
+    character(len=LENMEMPATH)                       :: memoryPath                !< memory path of the connections data
+    character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model    
     integer(I4B), pointer                           :: nodes      => null()      !< number of nodes
     integer(I4B), pointer                           :: nja        => null()      !< number of connections
     integer(I4B), pointer                           :: njas       => null()      !< number of symmetric connections
@@ -63,7 +63,6 @@ module ConnectionsModule
     !
     ! -- Strings
     deallocate(this%name_model)
-    deallocate(this%memoryPath)
     !
     ! -- Scalars
     call mem_deallocate(this%nodes)
@@ -120,7 +119,6 @@ module ConnectionsModule
     !
     ! -- allocate
     allocate(this%name_model)
-    allocate(this%memoryPath)
     this%memoryPath = trim(adjustl(name_model)) // ' CON'
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)

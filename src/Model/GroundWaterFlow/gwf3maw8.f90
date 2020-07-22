@@ -1185,11 +1185,11 @@ contains
     end if
     !
     ! -- set pointer to gwf iss and gwf hk
-    call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
-    call mem_setptr(this%gwfk11, 'K11', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfk22, 'K22', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfik22, 'IK22', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfsat, 'SAT', trim(this%name_model)//' NPF')
+    call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
+    call mem_setptr(this%gwfk11, 'K11', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfk22, 'K22', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfik22, 'IK22', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfsat, 'SAT', create_mem_path(this%name_model, 'NPF'))
     !
     ! -- qa data
     call this%maw_check_attributes()

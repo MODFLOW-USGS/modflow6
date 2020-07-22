@@ -639,9 +639,9 @@ contains
     call this%uzfobjwork%init(1, this%nwav)
     !
     ! -- Set pointers to GWF model arrays
-    call mem_setptr(this%gwftop, 'TOP', trim(this%name_model)//' DIS') ! TODO_MJR: should we do this, or pass 'memoryPathDis' from the owning model??
-    call mem_setptr(this%gwfbot, 'BOT', trim(this%name_model)//' DIS')
-    call mem_setptr(this%gwfarea, 'AREA', trim(this%name_model)//' DIS')
+    call mem_setptr(this%gwftop, 'TOP', create_mem_path(this%name_model, 'DIS'))
+    call mem_setptr(this%gwfbot, 'BOT', create_mem_path(this%name_model, 'DIS'))
+    call mem_setptr(this%gwfarea, 'AREA', create_mem_path(this%name_model, 'DIS'))
     !
     !--Read uzf cell properties and set values
     call this%read_cell_properties()

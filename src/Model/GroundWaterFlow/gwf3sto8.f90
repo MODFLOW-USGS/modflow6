@@ -91,6 +91,7 @@ module GwfStoModule
 ! ------------------------------------------------------------------------------
     !modules
     use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(GwfStoType)                       :: this
     class(DisBaseType), pointer, intent(in) :: dis
@@ -110,7 +111,7 @@ module GwfStoModule
     this%ibound  => ibound
     !
     ! -- set pointer to gwf iss
-    call mem_setptr(this%iss, 'ISS', trim(this%name_model))
+    call mem_setptr(this%iss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)

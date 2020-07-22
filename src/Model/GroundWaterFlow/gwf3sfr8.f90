@@ -9,8 +9,7 @@ module SfrModule
                              NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,             &
                              LENPACKAGENAME, LENPAKLOC, MAXCHARLEN,              &
                              DHNOFLO, DHDRY, DNODATA,                            &
-                             TABLEFT, TABCENTER, TABRIGHT
-  use MemoryHelperModule, only: create_mem_path                          
+                             TABLEFT, TABCENTER, TABRIGHT                
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
                               sQuadraticSaturationDerivative,                    &
                               sQSaturationDerivative,                            &
@@ -198,6 +197,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B),intent(in) :: id
@@ -244,6 +244,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(SfrType),   intent(inout) :: this
 ! ------------------------------------------------------------------------------
@@ -270,7 +271,7 @@ contains
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
     !
     ! -- set pointer to gwf iss
-    call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model)) ! TODO_MJR: should be 'this%memoryPathModel'??
+    call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Set values
     this%iprhed = 0

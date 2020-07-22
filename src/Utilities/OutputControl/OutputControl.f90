@@ -10,7 +10,7 @@ module OutputControlModule
   public OutputControlType, oc_cr
 
   type OutputControlType  
-    character(len=LENMEMPATH), pointer                  :: memoryPath                       !< path to data stored in the memory manager
+    character(len=LENMEMPATH)                           :: memoryPath                       !< path to data stored in the memory manager
     character(len=LENMODELNAME), pointer                :: name_model => null()             !< name of the model
     integer(I4B), pointer                               :: inunit     => null()             !< unit number for input file
     integer(I4B), pointer                               :: iout       => null()             !< unit number for output file
@@ -274,7 +274,6 @@ module OutputControlModule
     deallocate(this%ocdobj)
     !
     deallocate(this%name_model)
-    deallocate(this%memoryPath)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%iperoc)
