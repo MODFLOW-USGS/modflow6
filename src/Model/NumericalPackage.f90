@@ -82,7 +82,7 @@ module NumericalPackageModule
       !
       this%packName = pakname
     endif
-    this%memoryPath = create_mem_path(name_model, pakname)
+    this%memoryPath = create_mem_path(name_model, this%packName)
     this%memoryPathModel = create_mem_path(name_model)
     !
     ! -- Return
