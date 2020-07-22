@@ -86,7 +86,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=2  ! drnelev, conductance
     packobj%iscloc=2   !sfac applies to conductance
-    packobj%ictMemPath = create_mem_path('NPF', namemodel)
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
