@@ -57,28 +57,7 @@ def create_dir(pth):
     return
 
 
-def test_create_dirs():
-    pths = [os.path.join('..', 'bin'),
-            os.path.join('temp')]
-
-    for pth in pths:
-        create_dir(pth)
-
-    return
-
-
-def test_getmfexes():
-    pymake.getmfexes(mfexe_pth)
-    for target in os.listdir(mfexe_pth):
-        srcpth = os.path.join(mfexe_pth, target)
-        if os.path.isfile(srcpth):
-            dstpth = os.path.join(ebindir, target)
-            print('copying {} -> {}'.format(srcpth, dstpth))
-            shutil.copy(srcpth, dstpth)
-    return
-
-
-def test_build_modflow6():
+def build_mf6():
     pm = pymake.Pymake()
     pm.target = "mf6" + eext
     pm.srcdir = os.path.join('..', 'src')
@@ -95,7 +74,7 @@ def test_build_modflow6():
     assert pm.returncode == 0, msg
 
 
-def test_build_modflow6_so():
+def build_mf6_so():
     pm = pymake.Pymake()
     pm.target = "libmf6" + soext
     pm.srcdir = os.path.join('..', 'srcbmi')
@@ -115,7 +94,7 @@ def test_build_modflow6_so():
     assert pm.returncode == 0, msg
 
 
-def test_build_mf5to6():
+def build_mf5to6():
     # define default compilers
     fc = "gfortran"
     cc = None
@@ -141,7 +120,7 @@ def test_build_mf5to6():
     assert os.path.isfile(target), msg
 
 
-def test_build_zonebudget():
+def build_zbud6():
     pm = pymake.Pymake()
     pm.target = "zbud6" + eext
     pm.srcdir = os.path.join('..', 'utils', 'zonebudget', 'src')
@@ -159,10 +138,47 @@ def test_build_zonebudget():
     assert pm.returncode == 0, msg
 
 
+def test_create_dirs():
+    pths = [os.path.join('..', 'bin'),
+            os.path.join('temp')]
+
+    for pth in pths:
+        create_dir(pth)
+
+    return
+
+
+def test_getmfexes():
+    pymake.getmfexes(mfexe_pth)
+    for target in os.listdir(mfexe_pth):
+        srcpth = os.path.join(mfexe_pth, target)
+        if os.path.isfile(srcpth):
+            dstpth = os.path.join(ebindir, target)
+            print('copying {} -> {}'.format(srcpth, dstpth))
+            shutil.copy(srcpth, dstpth)
+    return
+
+
+def test_build_modflow6():
+    build_mf6()
+
+
+def test_build_modflow6_so():
+    build_mf6_so()
+
+
+def test_build_mf5to6():
+    build_mf5to6()
+
+
+def test_build_zbud6():
+    build_zbud6()
+
+
 if __name__ == "__main__":
     test_create_dirs()
     test_getmfexes()
     test_build_modflow6()
     test_build_modflow6_so()
     test_build_mf5to6()
-    test_build_zonebudget()
+    test_build_zbud6()
