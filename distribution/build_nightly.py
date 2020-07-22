@@ -85,7 +85,7 @@ def test_libmf6():
 
 
 def test_mf5to6():
-    test_mf5to6()
+    test_build_mf5to6()
 
 
 def test_zbud6():
