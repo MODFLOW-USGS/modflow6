@@ -6,7 +6,7 @@ module MemoryHelperModule
 
   public :: create_mem_path, create_mem_address
 
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'   !<used to build up the memory address for the stored variables
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = ' '   !<used to build up the memory address for the stored variables
 
 contains
 

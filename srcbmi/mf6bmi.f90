@@ -656,7 +656,7 @@ module mf6bmi
     if (.not. confirm_grid_type(grid_id, "unstructured")) return
     
     model_name = get_model_name(grid_id)
-    call mem_setptr(javert_ptr, "JAVERT", trim(model_name) // " DIS")
+    call mem_setptr(javert_ptr, "JAVERT", create_mem_path(model_name, 'DIS'))
     face_nodes = c_loc(javert_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_face_nodes
@@ -677,7 +677,7 @@ module mf6bmi
     if (.not. confirm_grid_type(grid_id, "unstructured")) return
     
     model_name = get_model_name(grid_id)
-    call mem_setptr(iavert_ptr, "IAVERT", trim(model_name) // " DIS")
+    call mem_setptr(iavert_ptr, "IAVERT", create_mem_path(model_name, 'DIS'))
     
     do i = 1, size(iavert_ptr)-1
       nodes_per_face(i) = iavert_ptr(i+1) - iavert_ptr(i) - 1
