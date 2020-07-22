@@ -21,7 +21,7 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, LENMODELNAME, MAXCHARLEN, LINELENGTH
-  use MemoryManagerModule, only: mem_setptr, get_mem_size, get_isize, get_mem_rank, get_mem_shape
+  use MemoryManagerModule, only: mem_setptr, get_mem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
   use MemoryHelperModule, only: create_mem_path
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
