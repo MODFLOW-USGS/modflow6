@@ -20,7 +20,9 @@ module mf6bmi
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN, LINELENGTH
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME, LENMODELNAME, MAXCHARLEN, LINELENGTH
+  use MemoryManagerModule, only: mem_setptr, get_mem_size, get_isize, get_mem_rank, get_mem_shape
+  use MemoryHelperModule, only: create_mem_path
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
   use GenericUtilitiesModule, only: sim_message
@@ -147,18 +149,17 @@ module mf6bmi
   ! Get memory use per array element, in bytes.
   function get_var_itemsize(c_var_name, var_size) result(bmi_status) bind(C, name="get_var_itemsize")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_itemsize
-    use MemoryManagerModule, only: get_mem_size
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer, intent(out) :: var_size
     integer(kind=c_int) :: bmi_status
     ! local
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
         
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_size(var_name_only, origin, var_size)    
+    call get_mem_size(var_name_only, memPath, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
         
   end function get_var_itemsize
@@ -166,21 +167,20 @@ module mf6bmi
   ! Get size of the given variable, in bytes.
   function get_var_nbytes(c_var_name, var_nbytes) result(bmi_status) bind(C, name="get_var_nbytes")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_nbytes
-    use MemoryManagerModule, only: get_mem_size, get_isize
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer, intent(out) :: var_nbytes
     integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B) :: var_size, isize
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
         
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_size(var_name_only, origin, var_size)    
+    call get_mem_size(var_name_only, memPath, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
-    call get_isize(var_name_only, origin, isize)
+    call get_isize(var_name_only, memPath, isize)
     if (isize == -1) bmi_status = BMI_FAILURE
     
     var_nbytes = var_size*isize
@@ -192,30 +192,29 @@ module mf6bmi
   ! is no copying of data involved!!
   function get_value_ptr_double(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
-    use MemoryManagerModule, only: mem_setptr, get_mem_rank
     character (kind=c_char), intent(in) :: c_var_name(*)
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
     real(DP), pointer :: dblptr
     real(DP), dimension(:), pointer, contiguous :: arrayptr
     real(DP), dimension(:,:), pointer, contiguous :: arrayptr2D
     integer(I4B) :: rank
     
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
     rank = -1
-    call get_mem_rank(var_name_only, origin, rank)
+    call get_mem_rank(var_name_only, memPath, rank)
     if (rank == 0) then
-      call mem_setptr(dblptr, var_name_only, origin)
+      call mem_setptr(dblptr, var_name_only, memPath)
       x = c_loc(dblptr)
     else if (rank == 1) then
-      call mem_setptr(arrayptr, var_name_only, origin)
+      call mem_setptr(arrayptr, var_name_only, memPath)
       x = c_loc(arrayptr)
     else if (rank == 2) then
-      call mem_setptr(arrayptr2D, var_name_only, origin)
+      call mem_setptr(arrayptr2D, var_name_only, memPath)
       x = c_loc(arrayptr2D)
     else
       bmi_status = BMI_FAILURE
@@ -232,31 +231,30 @@ module mf6bmi
   ! dispatch on the type ourselves and the c_ptr will work for both...  
   function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
-    use MemoryManagerModule, only: mem_setptr, get_mem_rank
     character (kind=c_char), intent(in) :: c_var_name(*)    
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
     integer(I4B) :: rank
     integer(I4B), pointer :: scalarptr
     integer(I4B), dimension(:), pointer, contiguous :: arrayptr
     integer(I4B), dimension(:,:), pointer, contiguous :: arrayptr2D
     
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
     rank = -1
-    call get_mem_rank(var_name_only, origin, rank)
+    call get_mem_rank(var_name_only, memPath, rank)
         
     if (rank == 0) then
-      call mem_setptr(scalarptr, var_name_only, origin)      
+      call mem_setptr(scalarptr, var_name_only, memPath)      
       x = c_loc(scalarptr)
     else if (rank == 1) then
-      call mem_setptr(arrayptr, var_name_only, origin)
+      call mem_setptr(arrayptr, var_name_only, memPath)
       x = c_loc(arrayptr)
     else if (rank == 2) then
-      call mem_setptr(arrayptr, var_name_only, origin)
+      call mem_setptr(arrayptr, var_name_only, memPath)
       x = c_loc(arrayptr2D)
     else
       bmi_status = BMI_FAILURE
@@ -269,37 +267,35 @@ module mf6bmi
   
   function get_var_type(c_var_name, c_var_type) result(bmi_status) bind(C, name="get_var_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_type
-    use MemoryManagerModule, only: get_mem_type
     use ConstantsModule, only: LENMEMTYPE
     character (kind=c_char), intent(in) :: c_var_name(*)
     character (kind=c_char), intent(out) :: c_var_type(MAXSTRLEN)
     integer(kind=c_int) :: bmi_status    
     ! local
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
     character(len=LENMEMTYPE) :: mem_type
     
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_type(var_name_only, origin, mem_type)
+    call get_mem_type(var_name_only, memPath, mem_type)
     c_var_type(1:len(trim(mem_type))+1) = string_to_char_array(trim(mem_type), len(trim(mem_type)))    
   end function get_var_type
   
   ! TODO_MJR: this isn't BMI, move?
   function get_var_rank(c_var_name, c_var_rank) result(bmi_status) bind(C, name="get_var_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_rank
-    use MemoryManagerModule, only: get_mem_rank
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer(kind=c_int), intent(out) :: c_var_rank
     integer(kind=c_int) :: bmi_status
     ! local
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
     
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
-    call get_mem_rank(var_name_only, origin, c_var_rank)
+    call get_mem_rank(var_name_only, memPath, c_var_rank)
     if (c_var_rank == -1) then
         bmi_status = BMI_FAILURE
         return
@@ -313,22 +309,21 @@ module mf6bmi
   function get_var_shape(c_var_name, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
     use ConstantsModule, only: MAXMEMRANK
-    use MemoryManagerModule, only: get_mem_shape, get_mem_rank
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer(c_int), intent(inout) :: c_var_shape(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B), dimension(MAXMEMRANK) :: var_shape
     integer(I4B) :: var_rank
-    character(len=LENORIGIN) :: origin
+    character(len=LENMEMPATH) :: memPath
     character(len=LENVARNAME) :: var_name_only
         
-    call split_c_var_name(c_var_name, origin, var_name_only)
+    call split_c_var_name(c_var_name, memPath, var_name_only)
     
     var_shape = 0
     var_rank = 0
-    call get_mem_rank(var_name_only, origin, var_rank)
-    call get_mem_shape(var_name_only, origin, var_shape)
+    call get_mem_rank(var_name_only, memPath, var_rank)
+    call get_mem_shape(var_name_only, memPath, var_shape)
     if (var_shape(1) == -1 .or. var_rank == -1) then
       bmi_status = BMI_FAILURE
       return
@@ -354,12 +349,12 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
-    character(len=LENORIGIN) :: var_name
+    character(len=LENMEMPATH) :: var_address
     integer(I4B) :: i
     class(BaseModelType), pointer :: baseModel
     
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
-    model_name = extract_model_name(var_name)
+    var_address = char_array_to_string(c_var_name, strlen(c_var_name))    
+    model_name = extract_model_name(var_address)
     
     var_grid = 0
     do i = 1,basemodellist%Count()
@@ -433,7 +428,6 @@ module mf6bmi
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
     integer(kind=c_int) :: bmi_status
@@ -448,7 +442,7 @@ module mf6bmi
     
     ! get shape array
     model_name = get_model_name(grid_id)
-    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape, "MSHAPE", create_mem_path(model_name, 'DIS'))
     
     if (grid_shape(1) == 1) then
       grid_rank = 2
@@ -462,7 +456,6 @@ module mf6bmi
   ! Get the total number of elements in the computational grid.
   function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_size
     integer(kind=c_int) :: bmi_status
@@ -481,7 +474,7 @@ module mf6bmi
     model_name = get_model_name(grid_id)
     
     if (grid_type_f == "rectilinear") then
-      call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+      call mem_setptr(grid_shape, "MSHAPE", create_mem_path(model_name, 'DIS'))
       grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
       bmi_status = BMI_SUCCESS
     else if (grid_type_f == "unstructured") then
@@ -495,7 +488,6 @@ module mf6bmi
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_shape(*)
     integer(kind=c_int) :: bmi_status
@@ -510,7 +502,7 @@ module mf6bmi
     
     ! get shape array
     model_name = get_model_name(grid_id)
-    call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape_ptr, "MSHAPE", create_mem_path(model_name, 'DIS'))
     
     if (grid_shape_ptr(1) == 1) then
       grid_shape(1:2) = grid_shape_ptr(2:3)  ! 2D
@@ -525,7 +517,6 @@ module mf6bmi
   ! Provides an array (whose length is the number of rows) that gives the x-coordinate for each row.
   function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     real(kind=c_double), intent(out) :: grid_x(*)
     integer(kind=c_int) :: bmi_status
@@ -545,13 +536,13 @@ module mf6bmi
     
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then      
-      call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
+      call mem_setptr(grid_shape_ptr, "MSHAPE", create_mem_path(model_name, 'DIS'))
       ! The dimension of x is in the last element of the shape array.
       ! + 1 because we count corners, not centers.
       x_size = grid_shape_ptr(size(grid_shape_ptr)) + 1
       grid_x(1:x_size) = [ (i, i=0,x_size-1) ]
     else if (grid_type_f == "unstructured") then
-      call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
+      call mem_setptr(vertices_ptr, "VERTICES", create_mem_path(model_name, 'DIS'))
       ! x-coordinates are in the 1st column
       x_size = size(vertices_ptr(1, :))
       grid_x(1:x_size) = vertices_ptr(1, :)
@@ -565,7 +556,6 @@ module mf6bmi
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_y
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     real(kind=c_double), intent(out) :: grid_y(*)
     integer(kind=c_int) :: bmi_status
@@ -585,13 +575,13 @@ module mf6bmi
     
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then      
-      call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
+      call mem_setptr(grid_shape_ptr, "MSHAPE", create_mem_path(model_name, 'DIS'))
       ! The dimension of y is in the second last element of the shape array.
       ! + 1 because we count corners, not centers.
       y_size = grid_shape_ptr(size(grid_shape_ptr-1)) + 1
       grid_y(1:y_size) = [ (i, i=y_size-1,0,-1) ]
     else if (grid_type_f == "unstructured") then
-      call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
+      call mem_setptr(vertices_ptr, "VERTICES", create_mem_path(model_name, 'DIS'))
       ! y-coordinates are in the 2nd column
       y_size = size(vertices_ptr(2, :))
       grid_y(1:y_size) = vertices_ptr(2, :)
@@ -605,8 +595,7 @@ module mf6bmi
   ! NOTE: node in BMI-terms is a vertex in Modflow terms
   ! Get the number of nodes in an unstructured grid.
   function get_grid_node_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_node_count")
-  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_node_count
-    use MemoryManagerModule, only: mem_setptr
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_node_count    
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: count
     integer(kind=c_int) :: bmi_status
@@ -619,7 +608,7 @@ module mf6bmi
     if (.not. confirm_grid_type(grid_id, "unstructured")) return   
     
     model_name = get_model_name(grid_id)
-    call mem_setptr(nvert_ptr, "NVERT", trim(model_name) // " DIS")
+    call mem_setptr(nvert_ptr, "NVERT", create_mem_path(model_name, 'DIS'))
     count = nvert_ptr
     bmi_status = BMI_SUCCESS  
   end function get_grid_node_count
@@ -655,7 +644,6 @@ module mf6bmi
   ! Get the face-node connectivity.
   function get_grid_face_nodes(grid_id, face_nodes) result(bmi_status) bind(C, name="get_grid_face_nodes")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_nodes
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: face_nodes
     integer(kind=c_int) :: bmi_status
@@ -676,7 +664,6 @@ module mf6bmi
   ! Get the number of nodes for each face.
   function get_grid_nodes_per_face(grid_id, nodes_per_face) result(bmi_status) bind(C, name="get_grid_nodes_per_face")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
-    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     real(kind=c_double), intent(out) :: nodes_per_face(*)
     integer(kind=c_int) :: bmi_status
@@ -736,23 +723,23 @@ module mf6bmi
   
   ! splits the variable name from the full address string into
   ! an origin and name as used by the memory manager
-  subroutine split_c_var_name(c_var_name, origin, var_name_only)
+  subroutine split_c_var_name(c_var_name, memPath, var_name_only)
     character (kind=c_char), intent(in) :: c_var_name(*)
-    character(len=LENORIGIN), intent(out) :: origin
+    character(len=LENMEMPATH), intent(out) :: memPath
     character(len=LENVARNAME), intent(out) :: var_name_only    
     ! local
     integer(I4B) :: idx
-    character(len=LENORIGIN) :: var_name    
+    character(len=LENMEMPATH) :: var_name    
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
     idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
+    memPath = var_name(:idx-1)
     var_name_only = var_name(idx+1:)
     
   end subroutine split_c_var_name
   
   integer(c_int) pure function strlen(char_array)
-    character(c_char), intent(in) :: char_array(LENORIGIN)
+    character(c_char), intent(in) :: char_array(LENMEMPATH)
     integer(I4B) :: i
     
     strlen = 0
