@@ -721,6 +721,7 @@ module GwtMstModule
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
+      ctosrb = this%distcoef(n)
       if (this%idcy == 1) then
         hhcof = - this%decay_sorbed(n) * vcell * this%bulk_density(n) * ctosrb
       elseif (this%idcy == 2) then
