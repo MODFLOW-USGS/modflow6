@@ -451,7 +451,7 @@ module GwtMstModule
     end if
     !
     ! -- decay sorbed
-    if (this%isrb /= 0) then
+    if (this%isrb /= 0 .and. this%idcy /= 0) then
       call this%mst_bdcalc_dcy_srb(nodes, cnew, cold, isuppress_output,        &
                                    model_budget)
     end if
