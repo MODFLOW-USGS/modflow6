@@ -496,7 +496,7 @@ module GwtIstModule
     deallocate(this%ocd)
     !
     ! -- deallocate parent
-    call this%BndType%da()
+    call this%BndType%bnd_da()
     !
     ! -- Return
     return
