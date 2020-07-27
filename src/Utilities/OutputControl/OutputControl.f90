@@ -28,6 +28,7 @@ module OutputControlModule
     procedure :: oc_save
     procedure :: oc_print
     procedure :: oc_save_unit
+    procedure :: set_print_flag
   end type OutputControlType
 
   contains
@@ -477,5 +478,42 @@ module OutputControlModule
     ! -- Return
     return
   end function oc_save_unit
+
+  function set_print_flag(this, cname, icnvg, endofperiod) result(iprint_flag)
+! ******************************************************************************
+! set_print_flag -- determine if cname should be printed
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimVariablesModule, only: isimcontinue
+    ! -- return
+    integer(I4B) :: iprint_flag
+    ! -- dummy
+    class(OutputControlType) :: this
+    character(len=*), intent(in) :: cname
+    integer(I4B), intent(in) :: icnvg
+    logical, intent(in) :: endofperiod
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- default is to not print
+    iprint_flag = 0
+    !
+    ! -- if the output control file indicates that cname should be printed
+    if(this%oc_print(cname)) iprint_flag = 1
+    !
+    ! -- if it is not a CONTINUE run, then set to print if not converged
+    if (isimcontinue == 0) then
+      if(icnvg == 0) iprint_flag = 1
+    end if
+    !
+    ! -- if it's the end of the period, then set flag to print
+    if(endofperiod) iprint_flag = 1
+    !
+    ! -- Return
+    return
+  end function set_print_flag
 
 end module OutputControlModule

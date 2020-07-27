@@ -749,9 +749,7 @@ module GwtModule
     !
     ! -- Calculate and write simulated values for observations
     if(iprobs /= 0) then
-      if (icnvg > 0) then
-        call this%obs%obs_bd()
-      endif
+      call this%obs%obs_bd()
     endif
     !
     ! -- Return
@@ -817,17 +815,9 @@ module GwtModule
       &I0,' OF STRESS PERIOD ',I0,'****')"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set ibudfl flag for printing budget information
-    ibudfl = 0
-    if(this%oc%oc_print('BUDGET')) ibudfl = 1
-    if(this%icnvg == 0) ibudfl = 1
-    if(endofperiod) ibudfl = 1
-    !
-    ! -- Set ibudfl flag for printing dependent variable information
-    ihedfl = 0
-    if(this%oc%oc_print('CONCENTRATION')) ihedfl = 1
-    if(this%icnvg == 0) ihedfl = 1
-    if(endofperiod) ihedfl = 1
+    ! -- Set ibudfl and ihedfl flags for printing budget and conc information
+    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
+    ihedfl = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
     !
     ! -- Output individual flows if requested
     if(ibudfl /= 0) then
