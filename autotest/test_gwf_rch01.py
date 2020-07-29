@@ -32,7 +32,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['rch01a', 'rch01b', 'rch01c']
-irch = [None, 1, [1, 1, 0, 1, 1]]
+irch = [None, 0, [1, 1, 0, 1, 1]]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
