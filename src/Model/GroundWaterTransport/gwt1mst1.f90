@@ -1,7 +1,17 @@
+! -- Mobile Storage and Transfer (MST) Module
+!    GwtMstType is responsible for adding the effects of
+!      1. Changes in dissolved solute mass
+!      2. Decay of dissolved solute mass
+!      3. Sorbtion
+!      4. Decay of sorbed solute mass
+
 module GwtMstModule
   
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, LENBUDTXT
+  use SimVariablesModule,     only: errmsg, warnmsg
+  use SimModule,              only: ustop, store_error, count_errors,          &
+                                    store_warning
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
@@ -118,7 +128,7 @@ module GwtMstModule
     ! -- formats
     character(len=*), parameter :: fmtmst =                                    &
       "(1x,/1x,'MST -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
-      &6/12/2019 INPUT READ FROM UNIT ', i0, //)"
+      &7/29/2020 INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the immobile domain package.
@@ -956,11 +966,10 @@ module GwtMstModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
     ! -- dummy
     class(GwtMstType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -980,7 +989,7 @@ module GwtMstModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING MOBILE STORAGE AND TRANSFER OPTIONS'
+      write(this%iout,'(1x,a)') 'PROCESSING MOBILE STORAGE AND TRANSFER OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -999,14 +1008,13 @@ module GwtMstModule
             this%idcy = 2
             write(this%iout, fmtidcy2)
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN MST OPTION: ',         &
-                                     trim(keyword)
+            write(errmsg,'(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
     end if
     !
     ! -- Return
@@ -1022,12 +1030,11 @@ module GwtMstModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
     class(GwtMstType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
@@ -1094,16 +1101,15 @@ module GwtMstModule
                                          this%decay_sorbed, aname(5))
             lname(5) = .true.
           case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
-                                     trim(keyword)
+            write(errmsg,'(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
+      write(this%iout,'(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write(errmsg,'(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()
@@ -1111,41 +1117,44 @@ module GwtMstModule
     !
     ! -- Check for rquired porosity
     if(.not. lname(1)) then
-      write(errmsg, '(1x, a)') 'ERROR. POROSITY NOT SPECIFIED IN &
-        &GRIDDATA BLOCK. '
+      write(errmsg, '(a)') 'POROSITY NOT SPECIFIED IN GRIDDATA BLOCK.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for required sorbtion variables
     if (this%isrb > 0) then
       if (.not. lname(2)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT BULK_DENSITY &
+        write(errmsg, '(a)') 'SORBTION IS ACTIVE BUT BULK_DENSITY &
           &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(3)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT DISTRIBUTION &
+        write(errmsg, '(a)') 'SORBTION IS ACTIVE BUT DISTRIBUTION &
           &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
           &GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
     else
       if (lname(2)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
+        write(warnmsg, '(a)') 'SORBTION IS NOT ACTIVE BUT &
           &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
           &SIMULATION RESULTS.'
+        call store_warning(warnmsg)
+        write(this%iout, '(1x,a)') 'WARNING.  ' // warnmsg
       endif
       if (lname(3)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
+        write(warnmsg, '(a)') 'SORBTION IS NOT ACTIVE BUT &
           &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
           &NO AFFECT ON SIMULATION RESULTS.'
+        call store_warning(warnmsg)
+        write(this%iout, '(1x,a)') 'WARNING.  ' // warnmsg
       endif
     endif
     !
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(4)) then
-        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY IS &
+        write(errmsg, '(a)') 'FIRST OR ZERO ORDER DECAY IS &
           &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  DECAY &
           &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
@@ -1163,14 +1172,18 @@ module GwtMstModule
       endif
     else
       if (lname(4)) then
-        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
+        write(warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
           &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
           &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        call store_warning(warnmsg)
+        write(this%iout, '(1x,a)') 'WARNING.  ' // warnmsg
       endif
       if (lname(5)) then
-        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
+        write(warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
           &IS NOT ACTIVE BUT DECAY_SORBED WAS SPECIFIED.  &
           &DECAY_SORBED WILL HAVE NO AFFECT ON SIMULATION RESULTS.'
+        call store_warning(warnmsg)
+        write(this%iout, '(1x,a)') 'WARNING.  ' // warnmsg
       endif
     endif
     !

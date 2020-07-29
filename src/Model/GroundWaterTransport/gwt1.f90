@@ -17,9 +17,6 @@
   ! GWF-GWF exchange transport
   ! transient flow case; verify that its working properly, test with goode 1990
   ! implement steady-state transport (affects MST, IST)
-  ! update user guide to reflect changes to MST, and IST
-  ! update user guide to include conceptual sketch of the packages
-  ! refactor code to use the MST and IST packages to replace STO, SRB, DCY, and IMD
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
   ! xt3d dispersion areas need to be consistent with non-xt3d case
   
