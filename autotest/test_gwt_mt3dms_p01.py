@@ -400,6 +400,7 @@ def test_mt3dmsp01a():
 
     # ensure storage sorbed is zero
     storage_sorbed = bobj.get_data(kstpkper=(9, 0), text='STORAGE-SORBED')[0]
+    bobj.file.close()
     assert np.allclose(0., storage_sorbed), '{}'.format(storage_sorbed)
 
     if remove_files:
