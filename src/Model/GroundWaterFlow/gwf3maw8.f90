@@ -2122,13 +2122,9 @@ contains
         jpos = this%get_jpos(n, j)
         node = this%get_gwfnode(n, j)
         this%nodelist(ibnd) = node
-
         this%bound(1,ibnd) = this%xnewpak(n)
-
         this%bound(2,ibnd) = this%satcond(jpos)
-
         this%bound(3,ibnd) = this%botscrn(jpos)
-
         if (this%iboundpak(n) > 0) then
           this%bound(4,ibnd) = this%rate(n)
         else
@@ -2736,21 +2732,17 @@ contains
     ! -- gwf and constant flow
     ibnd = 1
     do n = 1, this%nmawwells
-      rrate = DZERO
       hmaw = this%xnewpak(n)
       this%qconst(n) = DZERO
       do j = 1, this%ngwfnodes(n)
         this%qleak(ibnd) = DZERO
-        if (this%iboundpak(n) == 0) cycle
         !
-        ! -- calculate budget term relative to gwf
-        call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,    &
-                                           rrate)
-        !
-        ! -- add density contribution
-        if (this%idense /= 0) then
-          ! -- todo
-          
+        ! -- Calculate the rate for this well connection relative to gwf
+        if (this%iboundpak(n) == 0) then
+          rrate = DZERO
+        else
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
+                                             rrate)
         end if
         !
         this%qleak(ibnd) = rrate
@@ -2762,6 +2754,8 @@ contains
             this%qout(n) = this%qout(n) - rrate
           end if
         end if
+        !
+        ! -- increment ibnd counter
         ibnd = ibnd + 1
       end do
       !
