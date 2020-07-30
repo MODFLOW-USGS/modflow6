@@ -921,7 +921,7 @@ contains
     call mem_reallocate(this%lrch, 3, this%mxiter, 'LRCH', this%name)
 
     ! delta-bar-delta under-relaxation
-    if(this%nonmeth.eq.3)then
+    if(this%nonmeth == 3)then
       call mem_reallocate(this%wsave, this%neq, 'WSAVE', this%name)
       call mem_reallocate(this%hchold, this%neq, 'HCHOLD', this%name)
       call mem_reallocate(this%deold, this%neq, 'DEOLD', this%name)
