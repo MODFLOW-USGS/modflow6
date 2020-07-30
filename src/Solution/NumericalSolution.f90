@@ -2854,10 +2854,10 @@ contains
     !
     ! -- option for using cooley underrelaxation
     else if (this%nonmeth == 2) then
+      this%bigch = bigch
       if (kiter == 1) then
-        relax = done
+        relax = DONE
         this%relaxold = DONE
-        this%bigch = bigch
         this%bigchold = bigch
       else
         ! -- compute relaxation factor
