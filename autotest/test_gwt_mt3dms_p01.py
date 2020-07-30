@@ -247,7 +247,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm, zeta=None, prsity2=None,
 
     # create gwt model
     gwtname = 'gwt_' + name
-    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
+    gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname, save_flows=True,
                             model_nam_file='{}.nam'.format(gwtname))
     gwt.name_file.save_flows = True
 
@@ -322,7 +322,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm, zeta=None, prsity2=None,
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
-                                budget_filerecord='{}.cbc'.format(gwtname),
+                                budget_filerecord='{}.bud'.format(gwtname),
                                 concentration_filerecord='{}.ucn'.format(
                                     gwtname),
                                 concentrationprintrecord=[
@@ -346,6 +346,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm, zeta=None, prsity2=None,
     if not success:
         print(buff)
 
+    # load concentrations
     fname = os.path.join(model_ws, gwtname + '.ucn')
     ucnobj = flopy.utils.HeadFile(fname, precision='double',
                                   text='CONCENTRATION')
@@ -376,6 +377,32 @@ def test_mt3dmsp01a():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert  np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+
+    # load transport budget
+    # budget text:
+    #     STORAGE-AQUEOUS, DECAY-AQUEOUS, STORAGE-SORBED,
+    #     DECAY-SORBED, FLOW-JA-FACE, SOURCE-SINK MIX, CONSTANT CONC
+    gwtname = 'gwt_p01'
+    fname = os.path.join(mf6_ws, '{}.bud'.format(gwtname))
+    try:
+        bobj = flopy.utils.CellBudgetFile(fname, precision='double')
+        budra = bobj.get_data(kstpkper=(9, 0), text='DECAY-AQUEOUS')[0]
+    except:
+        assert False, 'could not load data from "{}"'.format(fname)
+
+    # ensure decay aqueous is zero
+    decay_aqueous = bobj.get_data(kstpkper=(9, 0), text='DECAY-AQUEOUS')[0]
+    assert np.allclose(0., decay_aqueous)
+
+    # ensure decay sorbed is zero
+    decay_sorbed = bobj.get_data(kstpkper=(9, 0), text='DECAY-SORBED')[0]
+    assert np.allclose(0., decay_sorbed)
+
+    # ensure storage sorbed is zero
+    storage_sorbed = bobj.get_data(kstpkper=(9, 0), text='STORAGE-SORBED')[0]
+    bobj.file.close()
+    assert np.allclose(0., storage_sorbed), '{}'.format(storage_sorbed)
+
     if remove_files:
         shutil.rmtree(mf6_ws)
     return

@@ -1,5 +1,11 @@
+"""
+Test the MST Package and its ability to calculate simple mixing for a one-cell
+model.  Patterned after the simple test presented in the MT3D-USGS manual on
+pages 9-10.
+
+"""
+
 import os
-import sys
 import numpy as np
 
 try:
@@ -21,34 +27,32 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['mst01']
+ex = ['mst03']
 laytyp = [1]
-ss = [0.]
+ss = [1.e-10]
 sy = [0.1]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-nlay, nrow, ncol = 4, 1, 1
+nlay, nrow, ncol = 1, 1, 1
 
 
 def build_models():
 
-    nper = 1
-    perlen = [3.0]
-    nstp = [3]
-    tsmult = [1.]
-    delr = 1.
-    delc = 1.
-    top = 4.
-    botm = [3., 2., 1., 0.]
-    hnoflo = 1e30
-    hdry = -1e30
-    strt = [hdry, hdry, hdry, 0.5]
+    nper = 2
+    perlen = [2., 2.]
+    nstp = [14, 14]
+    tsmult = [1., 1.]
+    delr = 10.
+    delc = 10.
+    top = 10.
+    botm = [0.]
+    strt = top
     hk = 1.0
 
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 1.
+    hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
     tdis_rc = []
     for idx in range(nper):
@@ -68,17 +72,19 @@ def build_models():
 
         # create gwf model
         gwfname = 'gwf_' + name
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
-                                model_nam_file='{}.nam'.format(gwfname))
+        newtonoptions = ['NEWTON', 'UNDER_RELAXATION']
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname,
+                                   newtonoptions=newtonoptions,)
 
         # create iterative model solution and register the gwf model with it
         imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
                                       outer_dvclose=hclose,
                                       outer_maximum=nouter,
-                                      under_relaxation='NONE',
+                                      under_relaxation='DBD',
+                                      under_relaxation_theta=0.7,
                                       inner_maximum=ninner,
                                       inner_dvclose=hclose, rcloserecord=rclose,
-                                      linear_acceleration='CG',
+                                      linear_acceleration='BICGSTAB',
                                       scaling_method='NONE',
                                       reordering_method='NONE',
                                       relaxation_factor=relax,
@@ -88,22 +94,16 @@ def build_models():
         dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
                                       top=top, botm=botm,
-                                      idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
-                                      filename='{}.dis'.format(gwfname))
+                                      idomain=np.ones((nlay, nrow, ncol),
+                                                      dtype=np.int))
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                    filename='{}.ic'.format(gwfname))
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
                                       icelltype=laytyp[idx],
-                                      k=hk,
-                                      k33=hk,
-                                      rewet_record=[('WETFCT', 0.01,
-                                                     'IWETIT', 1,
-                                                     'IHDWET', 0)],
-                                      wetdry=0.01)
+                                      k=hk, k33=hk)
         # storage
         sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
                                       iconvert=laytyp[idx],
@@ -112,8 +112,8 @@ def build_models():
                                       transient={0: True})
 
         # wel files
-        welspdict = {0: [[(3, 0, 0), 0.1, 1.]],
-                     1: [[(3, 0, 0), -0.1, 0.]]}
+        welspdict = {0: [[(0, 0, 0), -25., 0.]],
+                     1: [[(0, 0, 0), 25., 0.]]}
         wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
                                       stress_period_data=welspdict,
                                       save_flows=False,
@@ -156,16 +156,15 @@ def build_models():
                                       filename='{}.dis'.format(gwtname))
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=1.,
-                                    filename='{}.ic'.format(gwtname))
+        ic = flopy.mf6.ModflowGwtic(gwt, strt=100.)
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
-                                      filename='{}.adv'.format(gwtname))
+                                    filename='{}.adv'.format(gwtname))
 
         # mass storage and transfer
         mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy[idx],
-                                      filename='{}.mst'.format(gwtname))
+                                    filename='{}.mst'.format(gwtname))
 
         # sources
         sourcerecarray = [('WEL-1', 'AUX', 'CONCENTRATION')]
@@ -199,19 +198,76 @@ def eval_transport(sim):
 
     name = ex[sim.idxsim]
     gwtname = 'gwt_' + name
+    gwfname = 'gwf_' + name
+
+    fpth = os.path.join(sim.simpath, '{}.hds'.format(gwfname))
+    try:
+        hobj = flopy.utils.HeadFile(fpth, precision='double')
+        head = hobj.get_alldata().flatten()
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
 
     fpth = os.path.join(sim.simpath, '{}.ucn'.format(gwtname))
     try:
         cobj = flopy.utils.HeadFile(fpth, precision='double',
                                     text='CONCENTRATION')
-        conc1 = cobj.get_data(totim=3.)
+        conc = cobj.get_alldata().flatten()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # end of stress period 1
-    cres1 = np.ones((nlay, nrow, ncol), np.float)
-    assert np.allclose(cres1, conc1), ('simulated concentrations do not match '
-                                       'with known solution.')
+    # calculations
+    times = hobj.get_times()
+    print('times', times)
+    nstp = len(times)
+    print('nstp', nstp)
+    dt = 4. / nstp
+    print('dt', dt)
+    volume_calc = []
+    head_calc = []
+    concentration_calc = []
+    vold = 1000 * .1
+    mass_old = vold * 100.
+    csrc = 0.
+    cold = mass_old / vold
+    for t in times:
+        q = -25.
+        if t > 2.:
+            q = 25.
+        v = vold + q * dt
+        vold = v
+        volume_calc.append(v)
+        h = v / 0.1 / 10. / 10.
+        head_calc.append(h)
+
+        csrc = cold
+        if t > 2.:
+            csrc = 0.
+        mass_stored = mass_old + q * csrc * dt
+        mass_old = mass_stored
+        concentration = mass_stored / v
+        concentration_calc.append(concentration)
+        cold = concentration
+
+    # compare calculated and simulated volume
+    volume_sim = head * 10 * 1.
+    print('volume sim', volume_sim)
+    print('volume calc', volume_calc)
+    errmsg = '{}\n{}'.format(volume_calc, volume_sim, atol=1.e-8)
+    assert np.allclose(volume_calc, volume_sim), errmsg
+
+    # compare calculated and simulated head
+    hanswer = np.array(head_calc)
+    print('head sim', head)
+    print('head calc', hanswer)
+    errmsg = '{}\n{}'.format(head, hanswer, atol=1.e-8)
+    assert np.allclose(head, hanswer), errmsg
+
+    # compare calculated and simulated concentration
+    print('concentration sim', conc)
+    print('concentration calc', concentration_calc)
+    canswer = np.array(concentration_calc)
+    errmsg = '{}\n{}'.format(conc, canswer)
+    assert np.allclose(conc, canswer, atol=1.e-8), errmsg
 
     return
 
