@@ -12,7 +12,7 @@ module BndModule
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
-  use ArrayHandlersModule,          only: ExpandArray
+  !use ArrayHandlersModule,          only: ExpandArray
   use ObsModule,                    only: ObsType, obs_cr
   use TdisModule,                   only: delt, totimc
   use ObserveModule,                only: ObserveType
@@ -1589,7 +1589,9 @@ module BndModule
     ! -- dummy
     class(BndType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !integer(I4B) :: n
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     logical(LGP) :: jfound
@@ -1602,9 +1604,10 @@ module BndModule
       ! -- indxbnds needs to be deallocated and reallocated (using
       !    ExpandArray) each stress period because list of boundaries
       !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      endif
+      !if (allocated(obsrv%indxbnds)) then
+      !  deallocate(obsrv%indxbnds)
+      !endif
+      call obsrv%ResetObsIndex()
       obsrv%BndFound = .false.
       !
       bname = obsrv%FeatureName
@@ -1618,11 +1621,12 @@ module BndModule
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          endif
-        enddo
+            !call ExpandArray(obsrv%indxbnds)
+            !n = size(obsrv%indxbnds)
+            !obsrv%indxbnds(n) = j
+            call obsrv%AddObsIndex(j)
+          end if
+        end do
       else
         ! -- Observation location is a single node number
         jfound = .false.
@@ -1631,13 +1635,14 @@ module BndModule
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          endif
-        enddo jloop
-      endif
-    enddo
+            !call ExpandArray(obsrv%indxbnds)
+            !n = size(obsrv%indxbnds)
+            !obsrv%indxbnds(n) = j
+            call obsrv%AddObsIndex(j)
+          end if
+        end do jloop
+      end if
+    end do
     !
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)

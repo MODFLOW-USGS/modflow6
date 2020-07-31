@@ -23,7 +23,7 @@ module GwfCsubModule
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop 
   use SimVariablesModule, only: errmsg
-  use ArrayHandlersModule, only: ExpandArray
+  !use ArrayHandlersModule, only: ExpandArray, ExpandArrayWrapper
   use SortModule, only: qsort, selectn
   !
   use TimeSeriesLinkModule,         only: TimeSeriesLinkType
@@ -6718,7 +6718,8 @@ contains
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
         if (obsrv%BndFound) then
-          nn = size(obsrv%indxbnds)
+          !nn = size(obsrv%indxbnds)
+          nn = obsrv%indxbnds_count
           if (obsrv%ObsTypeId == 'SKE' .or.                                      &
               obsrv%ObsTypeId == 'SK' .or.                                       &
               obsrv%ObsTypeId == 'SKE-CELL' .or.                                 &
@@ -6916,6 +6917,7 @@ contains
 
 
   subroutine csub_rp_obs(this)
+    use TdisModule, only: kper
     ! -- dummy
     class(GwfCsubType), intent(inout) :: this
     ! -- local
@@ -6931,160 +6933,171 @@ contains
     end if
     !
     ! -- process each package observation
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      !
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      end if
-      !
-      ! -- initialize BndFound to .false.
-      obsrv%BndFound = .false.
-      !
-      bname = obsrv%FeatureName
-      if (bname /= '') then
+    !    only done the first stress period since boundaries are fixed
+    !    for the simulation
+    if (kper == 1) then
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        !!
+        !! -- indxbnds needs to be deallocated and reallocated (using
+        !!    ExpandArray) each stress period because list of boundaries
+        !!    can change each stress period.
+        !!if (allocated(obsrv%indxbnds)) then
+        !!  deallocate(obsrv%indxbnds)
+        !!end if
+        !call obsrv%ResetObsIndex()
         !
-        ! -- Observation location(s) is(are) based on a boundary name.
-        !    Iterate through all boundaries to identify and store
-        !    corresponding index(indices) in bound array.
-        do j = 1, this%ninterbeds
-          if (this%boundname(j) == bname) then
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
+        ! -- initialize BndFound to .false.
+        obsrv%BndFound = .false.
+        !
+        bname = obsrv%FeatureName
+        if (bname /= '') then
+          !
+          ! -- Observation location(s) is(are) based on a boundary name.
+          !    Iterate through all boundaries to identify and store
+          !    corresponding index(indices) in bound array.
+          do j = 1, this%ninterbeds
+            if (this%boundname(j) == bname) then
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              !!call ExpandArray(obsrv%indxbnds)
+              !!n = size(obsrv%indxbnds)
+              !!obsrv%indxbnds(n) = j
+              call obsrv%AddObsIndex(j)
+            end if
+          end do
+        !
+        ! -- one value per cell
+        else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or.                          &
+                 obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                          &
+                 obsrv%ObsTypeId == 'THICKNESS-CELL' .or.                        &
+                 obsrv%ObsTypeId == 'COARSE-CSUB' .or.                           &
+                 obsrv%ObsTypeId == 'WCOMP-CSUB-CELL' .or.                       &
+                 obsrv%ObsTypeId == 'COARSE-COMPACTION' .or.                     &
+                 obsrv%ObsTypeId == 'COARSE-THETA' .or.                          &
+                 obsrv%ObsTypeId == 'COARSE-THICKNESS') then
+          obsrv%BndFound = .true.
+          obsrv%CurrentTimeStepEndValue = DZERO
+          !!call ExpandArray(obsrv%indxbnds)
+          !!n = size(obsrv%indxbnds)
+          !!obsrv%indxbnds(n) = obsrv%NodeNumber
+          call obsrv%AddObsIndex(obsrv%NodeNumber)
+        else if (obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or.                    &
+                 obsrv%ObsTypeId == 'DELAY-HEAD' .or.                            &
+                 obsrv%ObsTypeId == 'DELAY-GSTRESS' .or.                         &
+                 obsrv%ObsTypeId == 'DELAY-ESTRESS' .or.                         &
+                 obsrv%ObsTypeId == 'DELAY-COMPACTION' .or.                      &
+                 obsrv%ObsTypeId == 'DELAY-THICKNESS' .or.                       &
+                 obsrv%ObsTypeId == 'DELAY-THETA') then
+          if (this%ninterbeds > 0) then
+            n = obsrv%NodeNumber
+            idelay = this%idelay(n)
+            if (idelay /= 0) then
+              j = (idelay - 1) * this%ndelaycells + 1
+              n2 = obsrv%NodeNumber2
+              if (n2 < 1 .or. n2 > this%ndelaycells) then
+                write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                    &
+                  trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be ',      &
+                  'greater than 0 and less than or equal to', this%ndelaycells,  &
+                  '(specified value is ', n2, ').'
+                call store_error(errmsg)
+              else
+                j = (idelay - 1) * this%ndelaycells + n2
+              end if
+              obsrv%BndFound = .true.
+              !!call ExpandArray(obsrv%indxbnds)
+              !!obsrv%indxbnds(1) = j
+              call obsrv%AddObsIndex(j)
+            end if
           end if
-        end do
-      !
-      ! -- one value per cell
-      else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or.                           &
-               obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                           &
-               obsrv%ObsTypeId == 'THICKNESS-CELL' .or.                         &
-               obsrv%ObsTypeId == 'COARSE-CSUB' .or.                            &
-               obsrv%ObsTypeId == 'WCOMP-CSUB-CELL' .or.                        &
-               obsrv%ObsTypeId == 'COARSE-COMPACTION' .or.                      &
-               obsrv%ObsTypeId == 'COARSE-THETA' .or.                           &
-               obsrv%ObsTypeId == 'COARSE-THICKNESS') then
-        obsrv%BndFound = .true.
-        obsrv%CurrentTimeStepEndValue = DZERO
-        call ExpandArray(obsrv%indxbnds)
-        n = size(obsrv%indxbnds)
-        obsrv%indxbnds(n) = obsrv%NodeNumber
-      else if (obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or.                     &
-               obsrv%ObsTypeId == 'DELAY-HEAD' .or.                             &
-               obsrv%ObsTypeId == 'DELAY-GSTRESS' .or.                          &
-               obsrv%ObsTypeId == 'DELAY-ESTRESS' .or.                          &
-               obsrv%ObsTypeId == 'DELAY-COMPACTION' .or.                       &
-               obsrv%ObsTypeId == 'DELAY-THICKNESS' .or.                        &
-               obsrv%ObsTypeId == 'DELAY-THETA') then
-        if (this%ninterbeds > 0) then
-          n = obsrv%NodeNumber
-          idelay = this%idelay(n)
-          if (idelay /= 0) then
-            j = (idelay - 1) * this%ndelaycells + 1
-            n2 = obsrv%NodeNumber2
-            if (n2 < 1 .or. n2 > this%ndelaycells) then
+        !
+        ! -- interbed value
+        else if (obsrv%ObsTypeId == 'CSUB' .or.                                  &
+                 obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                        &
+                 obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                          &
+                 obsrv%ObsTypeId == 'SK' .or.                                    &
+                 obsrv%ObsTypeId == 'SKE' .or.                                   &
+                 obsrv%ObsTypeId == 'THICKNESS' .or.                             &
+                 obsrv%ObsTypeId == 'THETA' .or.                                 &
+                 obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                   &
+                 obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                  &
+                 obsrv%ObsTypeId == 'ELASTIC-COMPACTION') then
+          if (this%ninterbeds > 0) then
+            j = obsrv%NodeNumber
+            if (j < 1 .or. j > this%ninterbeds) then
               write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                      &
-                trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be ',        &
-                'greater than 0 and less than or equal to', this%ndelaycells,    &
-                '(specified value is ', n2, ').'
+                trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be greater', &
+                'than 0 and less than or equal to', this%ninterbeds,             &
+                '(specified value is ', j, ').'
               call store_error(errmsg)
             else
-              j = (idelay - 1) * this%ndelaycells + n2
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              !!call ExpandArray(obsrv%indxbnds)
+              !!n = size(obsrv%indxbnds)
+              call obsrv%AddObsIndex(j)
             end if
-            obsrv%BndFound = .true.
-            call ExpandArray(obsrv%indxbnds)
-            obsrv%indxbnds(1) = j
           end if
+        else if (obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or.                         &
+                 obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
+          if (this%ninterbeds > 0) then
+            j = obsrv%NodeNumber
+            if (j < 1 .or. j > this%ninterbeds) then
+              write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                      &
+                trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be greater ',&
+                'than 0 and less than or equal to', this%ninterbeds,             &
+                '(specified value is ', j, ').'
+              call store_error(errmsg)
+            end if
+            idelay = this%idelay(j)
+            if (idelay /= 0) then
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              !!call ExpandArray(obsrv%indxbnds)
+              !!n = size(obsrv%indxbnds)
+              !!obsrv%indxbnds(n) = j
+              call obsrv%AddObsIndex(j)
+            end if
+          end if
+        else
+          !
+          ! -- Accumulate values in a single cell
+          ! -- Observation location is a single node number
+          ! -- save node number in first position
+          if (obsrv%ObsTypeId == 'CSUB-CELL' .or.                                &
+              obsrv%ObsTypeId == 'SKE-CELL' .or.                                 &
+              obsrv%ObsTypeId == 'SK-CELL' .or.                                  &
+              obsrv%ObsTypeId == 'THETA-CELL' .or.                               &
+              obsrv%ObsTypeId == 'INELASTIC-COMPACTION-CELL' .or.                &
+              obsrv%ObsTypeId == 'ELASTIC-COMPACTION-CELL' .or.                  &
+              obsrv%ObsTypeId == 'COMPACTION-CELL') then 
+            if (.NOT. obsrv%BndFound) then
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              !call ExpandArray(obsrv%indxbnds)
+              !n = size(obsrv%indxbnds)
+              !obsrv%indxbnds(n) = obsrv%NodeNumber
+              call obsrv%AddObsIndex(obsrv%NodeNumber)
+            end if
+          end if
+          jloop: do j = 1, this%ninterbeds
+            if (this%nodelist(j) == obsrv%NodeNumber) then
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              !call ExpandArray(obsrv%indxbnds)
+              !n = size(obsrv%indxbnds)
+              !obsrv%indxbnds(n) = j
+              call obsrv%AddObsIndex(j)
+            end if
+          end do jloop
         end if
-      !
-      ! -- interbed value
-      else if (obsrv%ObsTypeId == 'CSUB' .or.                                    &
-               obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                          &
-               obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                            &
-               obsrv%ObsTypeId == 'SK' .or.                                      &
-               obsrv%ObsTypeId == 'SKE' .or.                                     &
-               obsrv%ObsTypeId == 'THICKNESS' .or.                               &
-               obsrv%ObsTypeId == 'THETA' .or.                                   &
-               obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                     &
-               obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                    &
-               obsrv%ObsTypeId == 'ELASTIC-COMPACTION') then
-        if (this%ninterbeds > 0) then
-          j = obsrv%NodeNumber
-          if (j < 1 .or. j > this%ninterbeds) then
-            write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                        &
-              trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be greater',   &
-              'than 0 and less than or equal to', this%ninterbeds,               &
-              '(specified value is ', j, ').'
-            call store_error(errmsg)
-          else
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          end if
-        end if
-      else if (obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or.                           &
-               obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
-        if (this%ninterbeds > 0) then
-          j = obsrv%NodeNumber
-          if (j < 1 .or. j > this%ninterbeds) then
-            write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                        &
-              trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be greater ',  &
-              'than 0 and less than or equal to', this%ninterbeds,               &
-              '(specified value is ', j, ').'
-            call store_error(errmsg)
-          end if
-          idelay = this%idelay(j)
-          if (idelay /= 0) then
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          end if
-        end if
-      else
-        !
-        ! -- Accumulate values in a single cell
-        ! -- Observation location is a single node number
-        ! -- save node number in first position
-        if (obsrv%ObsTypeId == 'CSUB-CELL' .or.                                 &
-            obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
-            obsrv%ObsTypeId == 'SK-CELL' .or.                                   &
-            obsrv%ObsTypeId == 'THETA-CELL' .or.                                &
-            obsrv%ObsTypeId == 'INELASTIC-COMPACTION-CELL' .or.                 &
-            obsrv%ObsTypeId == 'ELASTIC-COMPACTION-CELL' .or.                   &
-            obsrv%ObsTypeId == 'COMPACTION-CELL') then 
-          if (.NOT. obsrv%BndFound) then
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = obsrv%NodeNumber
-          end if
-        end if
-        jloop: do j = 1, this%ninterbeds
-          if (this%nodelist(j) == obsrv%NodeNumber) then
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          endif
-        end do jloop
-      endif
-    enddo
+      end do
+    end if
     !
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)
       call ustop()
-    endif
+    end if
     !
     return
   end subroutine csub_rp_obs
