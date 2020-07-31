@@ -6703,7 +6703,7 @@ contains
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: n
-    integer(I4B) :: nn
+    !integer(I4B) :: nn
     integer(I4B) :: idelay
     integer(I4B) :: ncol
     integer(I4B) :: node
@@ -6719,7 +6719,7 @@ contains
         obsrv => this%obs%pakobs(i)%obsrv
         if (obsrv%BndFound) then
           !nn = size(obsrv%indxbnds)
-          nn = obsrv%indxbnds_count
+          !nn = obsrv%indxbnds_count
           if (obsrv%ObsTypeId == 'SKE' .or.                                      &
               obsrv%ObsTypeId == 'SK' .or.                                       &
               obsrv%ObsTypeId == 'SKE-CELL' .or.                                 &
@@ -6733,7 +6733,8 @@ contains
               call this%obs%SaveOneSimval(obsrv, DNODATA)
             else
               v = DZERO
-              do j = 1, nn
+              !do j = 1, nn
+              do j = 1, obsrv%indxbnds_count
                 n = obsrv%indxbnds(j)
                 select case (obsrv%ObsTypeId)
                   case ('SKE')
@@ -6788,7 +6789,8 @@ contains
             end if
           else
             v = DZERO
-            do j = 1, nn
+            !do j = 1, nn
+            do j = 1, obsrv%indxbnds_count
               n = obsrv%indxbnds(j)
               select case (obsrv%ObsTypeId)
                 case ('CSUB')
@@ -6904,12 +6906,12 @@ contains
           call this%obs%SaveOneSimval(obsrv, DNODATA)
         end if
       end do
-    end if
-    !
-    ! -- write summary of package block error messages
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
+      !
+      ! -- write summary of package error messages
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
     end if
     !
     return
@@ -7033,8 +7035,6 @@ contains
             else
               obsrv%BndFound = .true.
               obsrv%CurrentTimeStepEndValue = DZERO
-              !!call ExpandArray(obsrv%indxbnds)
-              !!n = size(obsrv%indxbnds)
               call obsrv%AddObsIndex(j)
             end if
           end if
@@ -7053,9 +7053,6 @@ contains
             if (idelay /= 0) then
               obsrv%BndFound = .true.
               obsrv%CurrentTimeStepEndValue = DZERO
-              !!call ExpandArray(obsrv%indxbnds)
-              !!n = size(obsrv%indxbnds)
-              !!obsrv%indxbnds(n) = j
               call obsrv%AddObsIndex(j)
             end if
           end if
@@ -7074,9 +7071,6 @@ contains
             if (.NOT. obsrv%BndFound) then
               obsrv%BndFound = .true.
               obsrv%CurrentTimeStepEndValue = DZERO
-              !call ExpandArray(obsrv%indxbnds)
-              !n = size(obsrv%indxbnds)
-              !obsrv%indxbnds(n) = obsrv%NodeNumber
               call obsrv%AddObsIndex(obsrv%NodeNumber)
             end if
           end if
@@ -7084,20 +7078,19 @@ contains
             if (this%nodelist(j) == obsrv%NodeNumber) then
               obsrv%BndFound = .true.
               obsrv%CurrentTimeStepEndValue = DZERO
-              !call ExpandArray(obsrv%indxbnds)
-              !n = size(obsrv%indxbnds)
-              !obsrv%indxbnds(n) = j
               call obsrv%AddObsIndex(j)
             end if
           end do jloop
         end if
       end do
+      !
+      ! -- evaluate if there are any observation errors
+      if (count_errors() > 0) then
+        call store_error_unit(this%inunit)
+        call ustop()
+      end if
     end if
     !
-    if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
-      call ustop()
-    end if
     !
     return
   end subroutine csub_rp_obs

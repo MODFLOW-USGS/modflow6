@@ -25,7 +25,7 @@ module SfrModule
                        store_warning, ustop
   use SimVariablesModule, only: errmsg, warnmsg
   use GenericUtilitiesModule, only: sim_message
-  use ArrayHandlersModule, only: ExpandArray
+  !use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   !
   implicit none
@@ -2435,19 +2435,23 @@ contains
     ! -- dummy
     class(SfrType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n
+    !integer(I4B) :: nn
     real(DP) :: v
     character(len=100) :: msg
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
     ! Write simulated values for all sfr observations
-    if (this%obs%npakobs>0) then
+    if (this%obs%npakobs > 0) then
       call this%obs%obs_bd_clear()
       do i=1 ,this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        nn = size(obsrv%indxbnds)
-        do j = 1,nn
+        !nn = size(obsrv%indxbnds)
+        !do j = 1,nn
+        do j = 1, obsrv%indxbnds_count
           n = obsrv%indxbnds(j)
           v = DZERO
           select case (obsrv%ObsTypeId)
@@ -2499,12 +2503,12 @@ contains
           call this%obs%SaveOneSimval(obsrv, v)
         end do
       end do
-    end if
-    !
-    ! -- write summary of package block error messages
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
+      !
+      ! -- write summary of package error messages
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
     end if
     !
     return
@@ -2512,10 +2516,14 @@ contains
 
 
   subroutine sfr_rp_obs(this)
+    use TdisModule, only: kper
     ! -- dummy
     class(SfrType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !integer(I4B) :: n
+    integer(I4B) :: nn1
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -2525,91 +2533,98 @@ contains
            '" is invalid in package "',a,'"')
 30  format('Boundary name not provided for observation "',a,                     &
            '" in package "',a,'"')
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      !
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      end if
-      !
-      ! -- get node number 1
-      nn1 = obsrv%NodeNumber
-      if (nn1 == NAMEDBOUNDFLAG) then
-        bname = obsrv%FeatureName
-        if (bname /= '') then
-          ! -- Observation location(s) is(are) based on a boundary name.
-          !    Iterate through all boundaries to identify and store
-          !    corresponding index(indices) in bound array.
-          jfound = .false.
-          do j = 1, this%maxbound
-            if (this%boundname(j) == bname) then
-              jfound = .true.
-              call ExpandArray(obsrv%indxbnds)
-              n = size(obsrv%indxbnds)
-              obsrv%indxbnds(n) = j
-            endif
-          enddo
-          if (.not. jfound) then
-            write(errmsg,10) trim(bname), trim(obsrv%name), trim(this%packName)
-            call store_error(errmsg)
-          endif
-        else
-          write(errmsg,30) trim(obsrv%name), trim(this%packName)
-          call store_error(errmsg)
-        endif
-      elseif (nn1 < 1 .or. nn1 > this%maxbound) then
-        write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                             &
-          trim(adjustl(obsrv%ObsTypeId)),                                        &
-          'reach must be greater than 0 and less than or equal to',              &
-          this%maxbound, '(specified value is ', nn1, ')'
-        call store_error(errmsg)
-      else
-        call ExpandArray(obsrv%indxbnds)
-        n = size(obsrv%indxbnds)
-        if (n == 1) then
-          obsrv%indxbnds(1) = nn1
-        else
-          errmsg = 'Programming error in sfr_rp_obs'
-          call store_error(errmsg)
-        endif
-      end if
-      !
-      ! -- catch non-cumulative observation assigned to observation defined
-      !    by a boundname that is assigned to more than one element
-      if (obsrv%ObsTypeId == 'STAGE') then
+    !
+    ! -- process each package observation
+    !    only done the first stress period since boundaries are fixed
+    !    for the simulation
+    if (kper == 1) then
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        !
+        ! -- get node number 1
         nn1 = obsrv%NodeNumber
         if (nn1 == NAMEDBOUNDFLAG) then
-          n = size(obsrv%indxbnds)
-          if (n > 1) then
-            write(errmsg, '(a,3(1x,a))')                                         &
-              trim(adjustl(obsrv%ObsTypeId)),                                    &
-              'for observation', trim(adjustl(obsrv%Name)),                      &
-              ' must be assigned to a reach with a unique boundname.'
+          bname = obsrv%FeatureName
+          if (bname /= '') then
+            ! -- Observation location(s) is(are) based on a boundary name.
+            !    Iterate through all boundaries to identify and store
+            !    corresponding index(indices) in bound array.
+            jfound = .false.
+            do j = 1, this%maxbound
+              if (this%boundname(j) == bname) then
+                jfound = .true.
+                call obsrv%AddObsIndex(j)
+              endif
+            enddo
+            if (.not. jfound) then
+              write(errmsg,10) trim(bname), trim(obsrv%name), trim(this%packName)
+              call store_error(errmsg)
+            endif
+          else
+            write(errmsg,30) trim(obsrv%name), trim(this%packName)
+            call store_error(errmsg)
+          endif
+        else if (nn1 < 1 .or. nn1 > this%maxbound) then
+          write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                             &
+            trim(adjustl(obsrv%ObsTypeId)),                                        &
+            'reach must be greater than 0 and less than or equal to',              &
+            this%maxbound, '(specified value is ', nn1, ')'
+          call store_error(errmsg)
+        else
+          !call ExpandArray(obsrv%indxbnds)
+          !n = size(obsrv%indxbnds)
+          !if (n == 1) then
+          !  obsrv%indxbnds(1) = nn1
+          !else
+          !  errmsg = 'Programming error in sfr_rp_obs'
+          !  call store_error(errmsg)
+          !endif
+          if (obsrv%indxbnds_count == 0) then
+            call obsrv%AddObsIndex(nn1)
+          else
+            errmsg = 'Programming error in sfr_rp_obs'
             call store_error(errmsg)
           end if
         end if
-      end if
-      !
-      ! -- check that node number 1 is valid; call store_error if not
-      n = size(obsrv%indxbnds)
-      do j = 1, n
-        nn1 = obsrv%indxbnds(j)
-        if (nn1 < 1 .or. nn1 > this%maxbound) then
-          write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                           &
-            trim(adjustl(obsrv%ObsTypeId)),                                      &
-            'reach must be greater than 0 and less than or equal to',            &
-            this%maxbound, '(specified value is ', nn1, ')'
-          call store_error(errmsg)
+        !
+        ! -- catch non-cumulative observation assigned to observation defined
+        !    by a boundname that is assigned to more than one element
+        if (obsrv%ObsTypeId == 'STAGE') then
+          nn1 = obsrv%NodeNumber
+          if (nn1 == NAMEDBOUNDFLAG) then
+            !n = size(obsrv%indxbnds)
+            !if (n > 1) then
+            if (obsrv%indxbnds_count > 1) then
+              write(errmsg, '(a,3(1x,a))')                                         &
+                trim(adjustl(obsrv%ObsTypeId)),                                    &
+                'for observation', trim(adjustl(obsrv%Name)),                      &
+                ' must be assigned to a reach with a unique boundname.'
+              call store_error(errmsg)
+            end if
+          end if
         end if
+        !
+        ! -- check that node number 1 is valid; call store_error if not
+        !n = size(obsrv%indxbnds)
+        !do j = 1, n
+        do j = 1, obsrv%indxbnds_count
+          nn1 = obsrv%indxbnds(j)
+          if (nn1 < 1 .or. nn1 > this%maxbound) then
+            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                           &
+              trim(adjustl(obsrv%ObsTypeId)),                                      &
+              'reach must be greater than 0 and less than or equal to',            &
+              this%maxbound, '(specified value is ', nn1, ')'
+            call store_error(errmsg)
+          end if
+        end do
       end do
-    end do
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
+      !
+      ! -- evaluate if there are any observation errors
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
+    end if
     !
     return
   end subroutine sfr_rp_obs

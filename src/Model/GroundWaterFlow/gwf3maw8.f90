@@ -23,7 +23,7 @@ module MawModule
   use BaseDisModule, only: DisBaseType
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
                               store_warning, ustop
-  use ArrayHandlersModule, only: ExpandArray
+  !use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
                                  mem_deallocate
@@ -3193,8 +3193,9 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        nn = size(obsrv%indxbnds)
-        do j = 1, nn
+        !nn = size(obsrv%indxbnds)
+        !do j = 1, nn
+        do j = 1, obsrv%indxbnds_count
           v = DNODATA
           jj = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
@@ -3291,6 +3292,8 @@ contains
           call this%obs%SaveOneSimval(obsrv, v)
         end do
       end do
+      !
+      ! -- write summary of error messages
       if (count_errors() > 0) then
         call ustop()
       end if
@@ -3302,6 +3305,7 @@ contains
 
 
   subroutine maw_rp_obs(this)
+    use TdisModule, only: kper
     ! -- dummy
     class(MawType), intent(inout) :: this
     ! -- local
@@ -3320,118 +3324,123 @@ contains
 10  format('Boundary "',a,'" for observation "',a,                               &
            '" is invalid in package "',a,'"')
     !
-    !
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      !
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      end if
-      !
-      ! -- get node number 1
-      nn1 = obsrv%NodeNumber
-      if (nn1 == NAMEDBOUNDFLAG) then
-        bname = obsrv%FeatureName
-        if (bname /= '') then
-          ! -- Observation maw is based on a boundary name.
-          !    Iterate through all multi-aquifer wells to identify and store
-          !    corresponding index in bound array.
-          jfound = .false.
-          if (obsrv%ObsTypeId=='MAW' .or.   &
-               obsrv%ObsTypeId=='CONDUCTANCE') then
-            do j = 1, this%nmawwells
-              do jj = this%iaconn(j), this%iaconn(j+1) - 1
-                if (this%boundname(jj) == bname) then
+    ! -- process each package observation
+    !    only done the first stress period since boundaries are fixed
+    !    for the simulation
+    if (kper == 1) then
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        !
+        ! -- get node number 1
+        nn1 = obsrv%NodeNumber
+        if (nn1 == NAMEDBOUNDFLAG) then
+          bname = obsrv%FeatureName
+          if (bname /= '') then
+            ! -- Observation maw is based on a boundary name.
+            !    Iterate through all multi-aquifer wells to identify and store
+            !    corresponding index in bound array.
+            jfound = .false.
+            if (obsrv%ObsTypeId=='MAW' .or.   &
+                 obsrv%ObsTypeId=='CONDUCTANCE') then
+              do j = 1, this%nmawwells
+                do jj = this%iaconn(j), this%iaconn(j+1) - 1
+                  if (this%boundname(jj) == bname) then
+                    jfound = .true.
+                    !call ExpandArray(obsrv%indxbnds)
+                    !n = size(obsrv%indxbnds)
+                    !obsrv%indxbnds(n) = jj
+                    call obsrv%AddObsIndex(jj)
+                  end if
+                end do
+              end do
+            else
+              do j = 1, this%nmawwells
+                if (this%cmawname(j) == bname) then
                   jfound = .true.
-                  call ExpandArray(obsrv%indxbnds)
-                  n = size(obsrv%indxbnds)
-                  obsrv%indxbnds(n) = jj
+                  !call ExpandArray(obsrv%indxbnds)
+                  !n = size(obsrv%indxbnds)
+                  !obsrv%indxbnds(n) = j
+                  call obsrv%AddObsIndex(j)
                 end if
               end do
-            end do
-          else
-            do j = 1, this%nmawwells
-              if (this%cmawname(j) == bname) then
-                jfound = .true.
-                call ExpandArray(obsrv%indxbnds)
-                n = size(obsrv%indxbnds)
-                obsrv%indxbnds(n) = j
-              end if
-            end do
-          end if
-          if (.not. jfound) then
-            write(errmsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
-            call store_error(errmsg)
-          end if
-        end if
-      else
-        call ExpandArray(obsrv%indxbnds)
-        n = size(obsrv%indxbnds)
-        if (n == 1) then
-          if (obsrv%ObsTypeId=='MAW' .or.   &
-               obsrv%ObsTypeId=='CONDUCTANCE') then
-            nn2 = obsrv%NodeNumber2
-            j = this%iaconn(nn1) + nn2 - 1
-            obsrv%indxbnds(1) = j
-          else
-            obsrv%indxbnds(1) = nn1
+            end if
+            if (.not. jfound) then
+              write(errmsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
+              call store_error(errmsg)
+            end if
           end if
         else
-          errmsg = 'Programming error in maw_rp_obs'
-          call store_error(errmsg)
-        end if
-      end if
-      !
-      ! -- catch non-cumulative observation assigned to observation defined
-      !    by a boundname that is assigned to more than one element
-      if (obsrv%ObsTypeId == 'HEAD') then
-        n = size(obsrv%indxbnds)
-        if (n > 1) then
-          write (errmsg, '(a,3(1x,a))')                                         &
-            trim(adjustl(obsrv%ObsTypeId)),                                     &
-            'for observation', trim(adjustl(obsrv%Name)),                       &
-            'must be assigned to a multi-aquifer well with a unique boundname.'
-          call store_error(errmsg)
-        end if
-      end if
-      !
-      ! -- check that index values are valid
-      if (obsrv%ObsTypeId=='MAW' .or.   &
-          obsrv%ObsTypeId=='CONDUCTANCE') then
-        do j = 1, size(obsrv%indxbnds)
-          nn1 =  obsrv%indxbnds(j)
-          n = this%imap(nn1)
-          nn2 = nn1 - this%iaconn(n) + 1
-          jj = this%iaconn(n+1) - this%iaconn(n)
-          if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write (errmsg, '(3(a,1x),i0,1x,a,i0,a)')                             &
-              trim(adjustl(obsrv%ObsTypeId)),                                    &
-              'multi-aquifer well connection number must be greater than 0',     &
-              'and less than', jj, '(specified value is ', nn2, ').'
+          !call ExpandArray(obsrv%indxbnds)
+          !n = size(obsrv%indxbnds)
+          !if (n == 1) then
+          if (obsrv%indxbnds_count == 0) then
+            if (obsrv%ObsTypeId=='MAW' .or.   &
+                 obsrv%ObsTypeId=='CONDUCTANCE') then
+              nn2 = obsrv%NodeNumber2
+              j = this%iaconn(nn1) + nn2 - 1
+              !obsrv%indxbnds(1) = j
+              call obsrv%AddObsIndex(j)
+            else
+              !obsrv%indxbnds(1) = nn1
+              call obsrv%AddObsIndex(nn1)
+            end if
+          else
+            errmsg = 'Programming error in maw_rp_obs'
             call store_error(errmsg)
           end if
-        end do
-      else
-        do j = 1, size(obsrv%indxbnds)
-          nn1 =  obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%nmawwells) then
-            write (errmsg, '(3(a,1x),i0,1x,a,i0,a)')                             &
+        end if
+        !
+        ! -- catch non-cumulative observation assigned to observation defined
+        !    by a boundname that is assigned to more than one element
+        if (obsrv%ObsTypeId == 'HEAD') then
+          !n = size(obsrv%indxbnds)
+          !if (n > 1) then
+          if (obsrv%indxbnds_count > 1) then
+            write (errmsg, '(a,3(1x,a))')                                        &
               trim(adjustl(obsrv%ObsTypeId)),                                    &
-              'multi-aquifer well must be greater than 0 ',                      &
-              'and less than or equal to', this%nmawwells,                       &
-              '(specified value is ', nn1, ').'
+              'for observation', trim(adjustl(obsrv%Name)),                      &
+              'must be assigned to a multi-aquifer well with a unique boundname.'
             call store_error(errmsg)
           end if
-        end do
+        end if
+        !
+        ! -- check that index values are valid
+        if (obsrv%ObsTypeId=='MAW' .or.   &
+            obsrv%ObsTypeId=='CONDUCTANCE') then
+          !do j = 1, size(obsrv%indxbnds)
+          do j = 1, obsrv%indxbnds_count
+            nn1 =  obsrv%indxbnds(j)
+            n = this%imap(nn1)
+            nn2 = nn1 - this%iaconn(n) + 1
+            jj = this%iaconn(n+1) - this%iaconn(n)
+            if (nn1 < 1 .or. nn1 > this%maxbound) then
+              write (errmsg, '(3(a,1x),i0,1x,a,i0,a)')                           &
+                trim(adjustl(obsrv%ObsTypeId)),                                  &
+                'multi-aquifer well connection number must be greater than 0',   &
+                'and less than', jj, '(specified value is ', nn2, ').'
+              call store_error(errmsg)
+            end if
+          end do
+        else
+          !do j = 1, size(obsrv%indxbnds)
+          do j = 1, obsrv%indxbnds_count
+            nn1 =  obsrv%indxbnds(j)
+            if (nn1 < 1 .or. nn1 > this%nmawwells) then
+              write (errmsg, '(3(a,1x),i0,1x,a,i0,a)')                           &
+                trim(adjustl(obsrv%ObsTypeId)),                                  &
+                'multi-aquifer well must be greater than 0 ',                    &
+                'and less than or equal to', this%nmawwells,                     &
+                '(specified value is ', nn1, ').'
+              call store_error(errmsg)
+            end if
+          end do
+        end if
+      end do
+      !
+      ! -- evaluate if there are any observation errors
+      if (count_errors() > 0) then
+        call ustop()
       end if
-    end do
-    !
-    ! -- check if error condition occurred
-    if (count_errors() > 0) then
-      call ustop()
     end if
     !
     ! -- return

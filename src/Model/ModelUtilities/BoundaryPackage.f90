@@ -12,7 +12,6 @@ module BndModule
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
-  !use ArrayHandlersModule,          only: ExpandArray
   use ObsModule,                    only: ObsType, obs_cr
   use TdisModule,                   only: delt, totimc
   use ObserveModule,                only: ObserveType
@@ -1591,27 +1590,23 @@ module BndModule
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
-    !integer(I4B) :: n
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     logical(LGP) :: jfound
     !
     if (.not. this%bnd_obs_supported()) return
     !
-    do i=1,this%obs%npakobs
+    do i = 1, this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       !
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
-      !if (allocated(obsrv%indxbnds)) then
-      !  deallocate(obsrv%indxbnds)
-      !endif
+      ! -- indxbnds needs to be reset each stress period because 
+      !    list of boundaries can change each stress period.
       call obsrv%ResetObsIndex()
       obsrv%BndFound = .false.
       !
       bname = obsrv%FeatureName
       if (bname /= '') then
+        !
         ! -- Observation location(s) is(are) based on a boundary name.
         !    Iterate through all boundaries to identify and store
         !    corresponding index(indices) in bound array.
@@ -1621,13 +1616,11 @@ module BndModule
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            !call ExpandArray(obsrv%indxbnds)
-            !n = size(obsrv%indxbnds)
-            !obsrv%indxbnds(n) = j
             call obsrv%AddObsIndex(j)
           end if
         end do
       else
+        !
         ! -- Observation location is a single node number
         jfound = .false.
         jloop: do j=1,this%nbound
@@ -1635,9 +1628,6 @@ module BndModule
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            !call ExpandArray(obsrv%indxbnds)
-            !n = size(obsrv%indxbnds)
-            !obsrv%indxbnds(n) = j
             call obsrv%AddObsIndex(j)
           end if
         end do jloop
@@ -1669,7 +1659,8 @@ module BndModule
     do i=1,this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       if (obsrv%BndFound) then
-        do n=1,size(obsrv%indxbnds)
+        !do n = 1, size(obsrv%indxbnds)
+        do n = 1, obsrv%indxbnds_count
           if (obsrv%ObsTypeId == 'TO-MVR') then
             if (this%imover == 1) then
               v = this%pakmvrobj%get_qtomvr(obsrv%indxbnds(n))
