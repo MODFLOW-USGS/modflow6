@@ -145,37 +145,19 @@ def get_model(idx, dir):
     return sim
 
 
-def build_models(idx, dir):
-    sim = get_model(idx, dir)
-    sim.write_simulation()
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim = get_model(idx, dir)
+        sim.write_simulation()
     return
 
 
 def eval_model(sim):
     print('evaluating model observations...')
-    #
-    # name = ex[sim.idxsim]
-    # gwfname = name
-    #
-    # fpth = os.path.join(sim.simpath, '{}.hds'.format(gwfname))
-    # try:
-    #     hobj = flopy.utils.HeadFile(fpth)
-    #     head = hobj.get_data().flatten()
-    # except:
-    #     assert False, 'could not load data from "{}"'.format(fpth)
-
-    # This is the answer to this problem.
-    # hres = get_strt_array(sim.idxsim).flatten()
-    # assert np.allclose(hres,
-    #                    head), 'simulated head do not match with known solution.'
-    #
     hres = get_strt_array(sim.idxsim).flatten()
     obs = get_obs_out(sim)
     msg = "simulated head observations do not match with known solution."
     assert np.allclose(hres, obs), msg
-
-    # comment when done testing
-    # assert False
 
     return
 
@@ -185,9 +167,11 @@ def test_mf6model():
     # initialize testing framework
     test = testing_framework()
 
+    # build all of the models
+    build_models()
+
     # run the test models
     for idx, dir in enumerate(exdirs):
-        yield build_models, idx, dir
         yield test.run_mf6, Simulation(dir, exfunc=eval_model, idxsim=idx)
 
     return
@@ -197,9 +181,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
+    # build all of the models
+    build_models()
+
     # run the test models
     for idx, dir in enumerate(exdirs):
-        build_models(idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
 

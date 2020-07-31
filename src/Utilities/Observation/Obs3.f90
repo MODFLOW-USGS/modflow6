@@ -831,105 +831,65 @@ contains
     integer(I4B) :: i
     integer(I4B) :: ii
     integer(I4B) :: idx
-    integer(I4B) :: indx
     integer(I4B) :: iu
     integer(I4B) :: num
-    integer(I4B) :: nunit
     integer(int32) :: nobs
-    !character(len=LENOBSNAME), pointer :: headr => null()
-    !character(len=LENOBSNAME)          :: nam
     character(len=4)                   :: clenobsname
-    character(len=LENOBSNAME), dimension(:), pointer :: obsnames => null()
     type(ObserveType),         pointer :: obsrv => null()
     type(ObsOutputType),       pointer :: obsOutput => null()
 ! ------------------------------------------------------------------------------
     !
-    ! -- determine the number of observations
-    num = this%obsList%Count()
-    !
-    ! -- allocate obsOutput%obsnames to known size
-    allocate(obsnames(num))
-    !    
-    ! -- Cycle through observations to build the header(s)
-    if (num > 0) then
-      do i = 1, num
-        obsrv => this%get_obs(i)
-        ! -- header for file of continuous observations
-        indx = obsrv%indxObsOutput
-        obsOutput => this%obsOutputList%Get(indx)
-        !headr => obsOutput%header
-        !if (headr == '') then
-        !  headr = 'time'
-        !endif
-        !nam = obsrv%Name
-        !call ExpandArray(obsOutput%obsnames)
-        !idx = size(obsOutput%obsnames)
-        !obsOutput%obsnames(idx) = nam
-        obsnames(i) = obsrv%Name
-      end do
-    end if
-    !
     ! -- Cycle through ObsOutputList to write headers
     !    to formatted and unformatted file(s).
     num = this%obsOutputList%Count()
-    idx = 1
-    do i = 1, num
+    all_obsfiles: do i = 1, num
       obsOutput => this%obsOutputList%Get(i)
+      nobs = obsOutput%nobs
+      iu = obsOutput%nunit
+      !
+      ! -- write header information to the formatted file
       if (obsOutput%FormattedOutput) then
-        ! -- write header to formatted file
-        !headr => obsOutput%header
-        !if (headr /= '') then
-        !  nobs = obsOutput%nobs
-        !  iu = obsOutput%nunit
-        !  write(iu, '(a)', advance='NO') 'time'
-        !  do ii = 1, nobs
-        !    write(iu, '(a,a)', advance='NO') ',', trim(obsOutput%obsnames(ii))
-        !  end do
-        !  write(iu, '(a)', advance='YES') ''
-        !end if
-        nobs = obsOutput%nobs
-        iu = obsOutput%nunit
         write(iu, '(a)', advance='NO') 'time'
-        do ii = 1, nobs
-          write(iu, '(a,a)', advance='NO') ',', trim(obsnames(idx))
-          idx = idx + 1
-        end do
-        write(iu, '(a)', advance='YES') ''
       else
         ! -- write header to unformatted file
         !    First 11 bytes are obs type and precision
-        nunit = obsOutput%nunit
         if (this%iprecision==1) then
           ! -- single precision output
-          write(nunit) 'cont single'
+          write(iu) 'cont single'
         else if (this%iprecision==2) then
           ! -- double precision output
-          write(nunit) 'cont double'
+          write(iu) 'cont double'
         end if
         ! -- write LENOBSNAME to bytes 12-15
         write(clenobsname,'(i4)') LENOBSNAME
-        write(nunit) clenobsname
+        write(iu) clenobsname
         ! -- write blanks to complete 100-byte header
         do ii = 16, 100
-          write(nunit) ' '
+          write(iu) ' '
         end do
         ! -- write NOBS
-        nobs = obsOutput%nobs
-        write(nunit) nobs
-        ! -- write NOBS * (LENOBSNAME-character observation name)
-        do ii = 1, nobs
-          !write(nunit) obsOutput%obsnames(ii)
-          write(nunit) obsnames(idx)
-          idx = idx + 1
-        end do
+        write(iu) nobs
       end if
-    end do
+      !
+      ! -- write observation name
+      idx = 1
+      obsfile: do ii = 1, nobs
+        obsrv => this%get_obs(idx)
+        if (obsOutput%FormattedOutput) then
+          write(iu, '(a,a)', advance='NO') ',', trim(obsrv%Name)
+          !
+          ! -- terminate the line on the last observation in file
+          if (ii == nobs) then
+            write(iu, '(a)', advance='YES') ''
+          end if
+        else
+          write(iu) obsrv%Name
+        end if
+        idx = idx + 1
+      end do obsfile
+    end do all_obsfiles
     !
-    ! -- clean up local storage
-    if (associated(obsnames)) then
-      deallocate(obsnames)
-    end if
-    !
+    ! -- return
     return
   end subroutine build_headers
 
