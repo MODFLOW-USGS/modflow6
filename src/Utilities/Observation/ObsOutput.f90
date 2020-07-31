@@ -24,7 +24,7 @@ module ObsOutputModule
     integer(kind=4), public :: nobs = 0
     integer(I4B), public :: nunit = 0
     character(len=500), public :: filename = ''
-    character(len=LENOBSNAME), allocatable, dimension(:), public :: obsnames
+    !character(len=LENOBSNAME), allocatable, dimension(:), public :: obsnames
     character(len=LENOBSNAME), public :: header = ''
     character(len=LENOBSNAME), public :: lineout = ''
     logical, public :: FormattedOutput = .true.
@@ -32,7 +32,7 @@ module ObsOutputModule
     ! -- Public procedures
     procedure, public :: ClearLineout
     procedure, public :: WriteLineout
-    procedure, public :: DeallocObsOutput
+    !procedure, public :: DeallocObsOutput
   end type ObsOutputType
 
 contains
@@ -70,18 +70,18 @@ contains
     !
     return
   end subroutine WriteLineout
-
-  subroutine DeallocObsOutput(this)
-    implicit none
-    ! -- dummy
-    class(ObsOutputType), intent(inout) :: this
-    !
-    if (allocated(this%obsnames)) then
-      deallocate(this%obsnames)
-    endif
-    !
-    return
-  end subroutine DeallocObsOutput
+  !
+  !subroutine DeallocObsOutput(this)
+  !  implicit none
+  !  ! -- dummy
+  !  class(ObsOutputType), intent(inout) :: this
+  !  !
+  !  if (allocated(this%obsnames)) then
+  !    deallocate(this%obsnames)
+  !  endif
+  !  !
+  !  return
+  !end subroutine DeallocObsOutput
 
   ! Non-type-bound procedures
 

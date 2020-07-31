@@ -11,17 +11,18 @@
 !-----------------------------------------------------------------------
 module ObserveModule
 
-  use KindModule, only: DP, I4B
-  use BaseDisModule,     only: DisBaseType
-  use ConstantsModule,   only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
-                               MAXOBSTYPES, DNODATA, DZERO
-  use TableModule,       only: TableType
-  use InputOutputModule, only: urword
-  use ListModule,        only: ListType
-  use SimModule,         only: store_warning, store_error, &
-                               store_error_unit, ustop
-  use TdisModule,        only: totim, totalsimtime
-
+  use KindModule,          only: DP, I4B
+  use BaseDisModule,       only: DisBaseType
+  use ConstantsModule,     only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
+                                 MAXOBSTYPES, DNODATA, DZERO
+  use TableModule,         only: TableType
+  use InputOutputModule,   only: urword
+  use ListModule,          only: ListType
+  use SimModule,           only: store_warning, store_error, &
+                                store_error_unit, ustop
+  use TdisModule,          only: totim, totalsimtime
+  use ArrayHandlersModule, only: ExpandArrayWrapper
+  
   implicit none
 
   private
@@ -51,6 +52,7 @@ module ObserveModule
     !
     ! -- indxbnds is intended to hold indices of position(s) in bound
     !    array of boundaries included in the observation.
+    integer(I4B), public :: indxbnds_count = 0
     integer(I4B), allocatable, dimension(:), public :: indxbnds
     !
     ! -- Set FormattedOutput false if output unit is opened for unformatted i/o
@@ -68,6 +70,8 @@ module ObserveModule
     ! -- Public procedures
     procedure, public  :: ResetCurrent
     procedure, public  :: WriteTo
+    procedure, public  :: AddObsIndex
+    procedure, public  :: ResetObsIndex
   end type ObserveType
 
   type :: ObsDataType
@@ -109,7 +113,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ObserveType), intent(inout) :: this
     !
@@ -125,7 +128,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ObserveType), intent(inout) :: this
     type(TableType), intent(inout) :: obstab
@@ -161,6 +163,58 @@ contains
     return
   end subroutine WriteTo
 
+  subroutine ResetObsIndex(this)
+! **************************************************************************
+! ResetObsIndex -- Reset the observation index count and array.
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    ! -- dummy
+    class(ObserveType), intent(inout) :: this
+    !
+    ! -- Reset the index count
+    this%indxbnds_count = 0
+    !
+    ! -- Deallocate observation index array, if necessary
+    if (allocated(this%indxbnds)) then
+      deallocate(this%indxbnds)
+    end if
+    !
+    ! -- Allocate observation index array to size 0
+    allocate(this%indxbnds(0))
+    !
+    ! -- return
+    return
+  end subroutine ResetObsIndex
+
+  subroutine AddObsIndex(this, indx)
+! **************************************************************************
+! AddObsIndex -- Add the observation index to the observation index array
+!                (indbnds). The observation index count (indxbnds_count)  
+!                is also incremented by one and the observation index array
+!                is expanded, if necessary.
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    ! -- dummy
+    class(ObserveType), intent(inout) :: this
+    integer(I4B), intent(in) :: indx
+    !
+    ! -- Increment the index count
+    this%indxbnds_count = this%indxbnds_count + 1
+    !
+    ! -- Expand the observation index array, if necessary
+    call ExpandArrayWrapper(this%indxbnds_count, this%indxbnds, loginc=.TRUE.)
+    !
+    ! -- add index to observation index
+    this%indxbnds(this%indxbnds_count) = indx
+    !
+    ! -- return
+    return
+  end subroutine AddObsIndex
+
   ! Non-type-bound procedures
 
   subroutine ConstructObservation(newObservation, defLine, numunit, &
@@ -172,7 +226,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy variables
     type(ObserveType),    pointer :: newObservation
     character(len=*),  intent(in) :: defLine
@@ -193,6 +246,9 @@ contains
     ! -- Allocate an ObserveType object.
     allocate(newObservation)
     allocate(newObservation%indxbnds(0))
+    !
+    ! -- Set indxbnds_count to 0
+    newObservation%indxbnds_count = 0
     !
     ! -- Define the contents of the ObservationSingleType object based on the
     !    contents of defLine.
@@ -236,7 +292,6 @@ contains
   end subroutine ConstructObservation
 
   function CastAsObserveType(obj) result(res)
-    implicit none
     class(*), pointer, intent(inout) :: obj
     type(ObserveType), pointer :: res
     !
@@ -251,7 +306,6 @@ contains
   end function CastAsObserveType
 
   subroutine AddObsToList(list, obs)
-    implicit none
     ! -- dummy
     type(ListType),             intent(inout) :: list
     type(ObserveType), pointer, intent(inout) :: obs
@@ -265,7 +319,6 @@ contains
   end subroutine AddObsToList
 
   function GetObsFromList(list, idx) result (res)
-    implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B),        intent(in)    :: idx

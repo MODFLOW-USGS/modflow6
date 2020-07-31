@@ -5,7 +5,6 @@ Test that the obs concentrations match the oc concentrations
 """
 
 import os
-import sys
 import numpy as np
 
 try:
@@ -19,7 +18,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['obs01a',]
+ex = ['gwt_obs01a',]
 scheme = ['upstream']
 exdirs = []
 for s in ex:
