@@ -2744,7 +2744,8 @@ subroutine apt_rp_obs(this)
               if (this%flowbudptr%budterm(this%idxbudfjf)%id1(j) == nn1 .and. &
                   this%flowbudptr%budterm(this%idxbudfjf)%id2(j) == nn2) then
                 idx = j
-                obsrv%indxbnds(1) = idx
+                !obsrv%indxbnds(1) = idx
+                call obsrv%AddObsIndex(idx)
                 exit
               end if
             end do
@@ -2756,7 +2757,8 @@ subroutine apt_rp_obs(this)
               call store_error(errmsg)
             end if
           else
-            obsrv%indxbnds(1) = nn1
+            !obsrv%indxbnds(1) = nn1
+            call obsrv%AddObsIndex(nn1)
           end if
         else
           errmsg = 'Programming error in apt_rp_obs'
