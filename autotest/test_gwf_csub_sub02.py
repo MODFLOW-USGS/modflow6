@@ -16,7 +16,7 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
-from framework import testing_framework
+from framework import testing_framework, running_on_CI
 from simulation import Simulation
 
 ex = ['csub_sub02a', 'csub_sub02b', 'csub_sub02c', 'csub_sub02d',
@@ -33,10 +33,10 @@ cdelay = [False, True, False, True, True]
 ndelaycells = [None, 19, None, 19, 19]
 
 # run all examples on Travis
-# travis = [True for idx in range(len(exdirs))]
+# continuous_integration = [True for idx in range(len(exdirs))]
 # the delay bed problems only run on the development version of MODFLOW-2005
 # set travis to True when version 1.13.0 is released
-travis = [True, False, True, False, False]
+continuous_integration = [True, False, True, False, False]
 
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
@@ -232,10 +232,10 @@ def build_models():
 
 
 def test_mf6model():
-    # determine if running on Travis
-    is_travis = 'TRAVIS' in os.environ
+    # determine if running on Travis or GitHub actions
+    is_CI = running_on_CI()
     r_exe = None
-    if not is_travis:
+    if not is_CI:
         if replace_exe is not None:
             r_exe = replace_exe
 
@@ -247,7 +247,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if is_travis and not travis[idx]:
+        if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(dir, exe_dict=r_exe)
 

@@ -7,7 +7,7 @@ simulated head in the non-bmi simulation.
 
 import os
 import numpy as np
-from amipy import AmiWrapper
+from xmipy import XmiWrapper
 
 try:
     import pymake
@@ -203,7 +203,7 @@ def bmifunc(exe, idx, model_ws=None):
     hobs = np.genfromtxt(fpth, delimiter=',', names=True)['H1_6_6']
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
-    mf6 = AmiWrapper(exe)
+    mf6 = XmiWrapper(exe)
 
     # initialize the model
     try:
@@ -216,7 +216,7 @@ def bmifunc(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get pointer to simulated heads
-    head = mf6.get_value_ptr("SLN_1/X")
+    head = mf6.get_value_ptr("LIBGWF_RCH02/X")
 
     # maximum outer iterations
     max_iter = mf6.get_value_ptr("SLN_1/MXITER")

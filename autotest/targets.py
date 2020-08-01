@@ -1,5 +1,5 @@
 import os
-import platform
+import sys
 import flopy
 
 
@@ -13,8 +13,8 @@ def target_pth(target, pth):
 
 target_ext = ''
 target_so = '.so'
-sysinfo = platform.system()
-if sysinfo.lower() == 'windows':
+sysinfo = sys.platform.lower()
+if sysinfo.lower() == 'win32':
     target_ext = '.exe'
     target_so = '.dll'
 

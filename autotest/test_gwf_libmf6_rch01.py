@@ -10,7 +10,7 @@ IRCH is specified as 1, and in test c IRCH is specified as [2, 2, 1, 2, 2]
 
 import os
 import numpy as np
-from amipy import AmiWrapper
+from xmipy import XmiWrapper
 
 try:
     import pymake
@@ -169,7 +169,7 @@ def bmifunc(exe, idx, model_ws=None):
         os.chdir(model_ws)
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
-    mf6 = AmiWrapper(exe)
+    mf6 = XmiWrapper(exe)
 
     # initialize the model
     try:

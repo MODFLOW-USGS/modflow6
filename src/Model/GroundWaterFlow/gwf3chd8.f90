@@ -3,6 +3,7 @@ module ChdModule
   use KindModule,           only: DP, I4B
   use ConstantsModule,      only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE,         &
                                   LINELENGTH, LENPACKAGENAME
+  use MemoryHelperModule,   only: create_mem_path                                
   use ObsModule,            only: DefaultObsIdProcessor
   use BndModule,            only: BndType
   use ObserveModule,        only: ObserveType
@@ -76,7 +77,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return
@@ -290,7 +291,7 @@ contains
     if(ibinun /= 0) then
       naux = this%naux
       call this%dis%record_srcdst_list_header(this%text, this%name_model,  &
-                  this%name_model, this%name_model, this%name, naux,           &
+                  this%name_model, this%name_model, this%packName, naux,           &
                   this%auxname, ibinun, this%nbound, this%iout)
     endif
     !
@@ -364,7 +365,7 @@ contains
     !
     ! -- Store the rates
     call model_budget%addentry(chin, chout, delt, this%text,                   &
-                               isuppress_output, this%name)
+                               isuppress_output, this%packName)
     !
     ! -- Save the simulated values to the ObserveType objects
     if (this%obs%npakobs > 0 .and. iprobs > 0) then

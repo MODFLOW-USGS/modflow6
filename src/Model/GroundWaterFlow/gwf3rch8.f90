@@ -2,6 +2,7 @@ module RchModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit, ustop
   use ObsModule, only: DefaultObsIdProcessor
@@ -86,7 +87,7 @@ module RchModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1   ! sfac applies to recharge rate
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 1
@@ -113,7 +114,7 @@ module RchModule
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%inirch, 'INIRCH', this%origin)
+    call mem_allocate(this%inirch, 'INIRCH', this%memoryPath)
     !
     ! -- Set values
     this%inirch = 0
@@ -353,8 +354,8 @@ module RchModule
     if(this%ionper == kper) then
       !
       ! -- Remove all time-series links associated with this package
-      call this%TsManager%Reset(this%name)
-      call this%TasManager%Reset(this%name)
+      call this%TsManager%Reset(this%packName)
+      call this%TasManager%Reset(this%packName)
       !
       if (.not. this%read_as_arrays) then
         ! -- Read RECHARGE and other input as a list
@@ -449,7 +450,7 @@ module RchModule
           ! Make a time-array-series link and add it to the list of links
           ! contained in the TimeArraySeriesManagerType object.
           convertflux = .true.
-          call this%TasManager%MakeTasLink(this%name, bndArrayPtr,             &
+          call this%TasManager%MakeTasLink(this%packName, bndArrayPtr,             &
                                   this%iprpak, tasName, 'RECHARGE',            &
                                   convertFlux, this%nodelist,                  &
                                   this%parser%iuactive)
@@ -508,7 +509,7 @@ module RchModule
             ! Make a time-array-series link and add it to the list of links
             ! contained in the TimeArraySeriesManagerType object.
             convertflux = .false.
-            call this%TasManager%MakeTasLink(this%name, auxArrayPtr,           &
+            call this%TasManager%MakeTasLink(this%packName, auxArrayPtr,           &
                                     this%iprpak, tasName,                      &
                                     this%auxname(ipos), convertFlux,           &
                                     this%nodelist,                             &
@@ -591,7 +592,7 @@ module RchModule
                              nlist, this%inamedbound, this%iauxmultcol,        &
                              this%nodelist, this%bound, this%auxvar,           &
                              this%auxname, this%boundname, this%listlabel,     &
-                             this%name, this%tsManager, this%iscloc,           &
+                             this%packName, this%tsManager, this%iscloc,           &
                              this%indxconvertflux)
     this%nbound = nlist
     if (this%maxbound > maxboundorig) then

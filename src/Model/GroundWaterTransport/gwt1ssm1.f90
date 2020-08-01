@@ -402,7 +402,7 @@ module GwtSsmModule
       if (maxrows > 0) then
         call this%outputtab%set_maxbound(maxrows)
       end if
-      title = 'SSM PACKAGE (' // trim(this%name) //     &
+      title = 'SSM PACKAGE (' // trim(this%packName) //     &
               ') FLOW RATES'
       call this%outputtab%set_title(title)
     end if
@@ -422,7 +422,7 @@ module GwtSsmModule
     if(ibinun /= 0) then
       naux = 0
       call this%dis%record_srcdst_list_header(text, this%name_model,      &
-                  this%name_model, this%name_model, this%name, naux,           &
+                  this%name_model, this%name_model, this%packName, naux,           &
                   auxname, ibinun, this%nbound, this%iout)
     endif
     !
@@ -565,7 +565,7 @@ module GwtSsmModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%nbound, 'NBOUND', this%origin)
+    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
     !
     ! -- Initialize
     this%nbound = 0
@@ -592,7 +592,7 @@ module GwtSsmModule
     ! -- Allocate
     nflowpack = this%fmi%nflowpack
     call mem_allocate(this%iauxpak, nflowpack, 'IAUXPAK',                      &
-                      this%origin)
+                      this%memoryPath)
     !
     ! -- Initialize
     this%iauxpak(:) = 0
@@ -802,9 +802,9 @@ module GwtSsmModule
       !end if
       !
       ! -- initialize the output table object
-      title = 'SSM PACKAGE (' // trim(this%name) //     &
+      title = 'SSM PACKAGE (' // trim(this%packName) //     &
               ') FLOW RATES'
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(1, ntabcol, this%iout, transient=.TRUE.)
       text = 'NUMBER'
       call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)

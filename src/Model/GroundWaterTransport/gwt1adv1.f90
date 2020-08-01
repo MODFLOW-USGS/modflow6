@@ -381,7 +381,7 @@ module GwtAdvModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%iadvwt, 'IADVWT', this%origin)
+    call mem_allocate(this%iadvwt, 'IADVWT', this%memoryPath)
     !
     ! -- Initialize
     this%iadvwt = 0

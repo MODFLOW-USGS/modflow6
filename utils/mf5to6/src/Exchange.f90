@@ -674,22 +674,37 @@ contains
     !
     ! local
     ! row, column, layer indices of cell containing ghost node in parent
-    integer :: igp, jgp, kgp
+    integer :: igp = 0
+    integer :: jgp = 0
+    integer :: kgp = 0
     ! row, column, layer indices of contributing cells 1 and 2 in parent
-    integer :: icp1, jcp1, kcp1, icp2, jcp2, kcp2
+    integer :: icp1 = 0
+    integer :: jcp1 = 0
+    integer :: kcp1 = 0
+    integer :: icp2 = 0
+    integer :: jcp2 = 0
+    integer :: kcp2 = 0
     ! row, column, layer indices of child cell
-    integer :: ic, jc, kc
+    integer :: ic = 0
+    integer :: jc = 0
+    integer :: kc = 0
     ! indices used for off-corner cell
-    integer :: i12, j12, k12
+    integer :: i12 = 0
+    integer :: j12 = 0
+    integer :: k12 = 0
     ! position and # child cells w/r/t contributing cell directions 1 and 2
-    integer :: mc1, mc2, ncp1, ncp2
+    integer :: mc1 = 0
+    integer :: mc2 = 0
+    integer :: ncp1 = 0
+    integer :: ncp2 = 0
     !real :: rmc1, rmc2, rnpc1, rnpc2
     ! node locations in horizontal and vertical directions
     !integer :: nodeloch, nodelocv
     !logical :: oddh, oddv
     ! Is offset to contributing cells 1 and 2 forward or backward or at node?
-    integer :: ioff1, ioff2
-    integer :: ibound12  ! Iboundp for off-corner cell
+    integer :: ioff1 = 0
+    integer :: ioff2 = 0
+    integer :: ibound12 = 0 ! Iboundp for off-corner cell
     ! distances
     double precision :: d1c, d1p, d2c, d2p
     !  d1c = Distance from parent node (in cell where ghost node is

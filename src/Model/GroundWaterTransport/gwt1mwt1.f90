@@ -7,7 +7,7 @@
 !---------------------------------------------------------------------------------
 
 ! -- terms from MAW that will be handled by parent APT Package
-! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
+! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv  (note that this doesn't exist for MAW)
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
 ! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
@@ -35,8 +35,8 @@
 module GwtMwtModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LINELENGTH, LENBOUNDNAME
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use ConstantsModule, only: DZERO, LINELENGTH
+  use SimModule, only: store_error, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
@@ -48,7 +48,7 @@ module GwtMwtModule
   
   character(len=*), parameter :: ftype = 'MWT'
   character(len=*), parameter :: flowtype = 'MAW'
-  character(len=16)       :: text  = '             MWT'
+  character(len=16)           :: text  = '             MWT'
   
   type, extends(GwtAptType) :: GwtMwtType
     
@@ -168,7 +168,7 @@ module GwtMwtModule
         !    this transport package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-          if (packobj%name == this%flowpackagename) then
+          if (packobj%packName == this%flowpackagename) then
             found = .true.
             !
             ! -- store BndType pointer to packobj, and then
@@ -196,11 +196,11 @@ module GwtMwtModule
     ! -- allocate space for idxbudssm, which indicates whether this is a 
     !    special budget term or one that is a general source and sink
     nbudterm = this%flowbudptr%nbudterm
-    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%origin)
+    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
     write(this%iout, '(/, a, a)') &
-      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%name
+      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%packName
     write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN ' // flowtype // ' PACKAGE'
     write(this%iout, '(a, i0)') &
       '  NUMBER OF ' // flowtype // ' = ', this%flowbudptr%ncv
@@ -429,9 +429,9 @@ module GwtMwtModule
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     
@@ -444,9 +444,9 @@ module GwtMwtModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -460,9 +460,9 @@ module GwtMwtModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -476,9 +476,9 @@ module GwtMwtModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -578,10 +578,10 @@ module GwtMwtModule
     call this%GwtAptType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%idxbudrate, 'IDXBUDRATE', this%origin)
-    call mem_allocate(this%idxbudfwrt, 'IDXBUDFWRT', this%origin)
-    call mem_allocate(this%idxbudrtmv, 'IDXBUDRTMV', this%origin)
-    call mem_allocate(this%idxbudfrtm, 'IDXBUDFRTM', this%origin)
+    call mem_allocate(this%idxbudrate, 'IDXBUDRATE', this%memoryPath)
+    call mem_allocate(this%idxbudfwrt, 'IDXBUDFWRT', this%memoryPath)
+    call mem_allocate(this%idxbudrtmv, 'IDXBUDRTMV', this%memoryPath)
+    call mem_allocate(this%idxbudfrtm, 'IDXBUDFRTM', this%memoryPath)
     ! 
     ! -- Initialize
     this%idxbudrate = 0
@@ -609,7 +609,7 @@ module GwtMwtModule
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
-    call mem_allocate(this%concrate, this%ncv, 'CONCRATE', this%origin)
+    call mem_allocate(this%concrate, this%ncv, 'CONCRATE', this%memoryPath)
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
@@ -810,8 +810,23 @@ module GwtMwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
-    !    for rainfall observation type.
+    !    for rate observation type.
     call this%obs%StoreObsType('rate', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('fw-rate', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('rate-to-mvr', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
@@ -839,6 +854,18 @@ module GwtMwtModule
       case ('RATE')
         if (this%iboundpak(jj) /= 0) then
           call this%mwt_rate_term(jj, n1, n2, v)
+        end if
+      case ('FW-RATE')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudfwrt > 0) then
+          call this%mwt_fwrt_term(jj, n1, n2, v)
+        end if
+      case ('RATE-TO-MVR')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudrtmv > 0) then
+          call this%mwt_rtmv_term(jj, n1, n2, v)
+        end if
+      case ('FW-RATE-TO-MVR')
+        if (this%iboundpak(jj) /= 0 .and. this%idxbudfrtm > 0) then
+          call this%mwt_frtm_term(jj, n1, n2, v)
         end if
       case default
         found = .false.
@@ -880,7 +907,7 @@ module GwtMwtModule
         call this%parser%GetString(text)
         jj = 1
         bndElem => this%concrate(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RATE')
       case default

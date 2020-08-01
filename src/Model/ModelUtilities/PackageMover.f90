@@ -1,7 +1,7 @@
 module PackageMoverModule
   
   use KindModule,          only: DP, I4B
-  use ConstantsModule,     only: LENORIGIN, DZERO
+  use ConstantsModule,     only: LENMEMPATH, DZERO
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
 
@@ -13,10 +13,10 @@ module PackageMoverModule
   
   type PackageMoverType
     
-    character(len=LENORIGIN)                     :: origin
+    character(len=LENMEMPATH)                    :: memoryPath                !< the location in the memory manager where the variables are stored
     integer(I4B), pointer                        :: nproviders
     integer(I4B), pointer                        :: nreceivers
-    integer(I4B), dimension(:), pointer, contiguous :: iprmap => null()         ! map between id1 and feature (needed for lake to map from outlet to lake number)
+    integer(I4B), dimension(:), pointer, contiguous :: iprmap => null()       !< map between id1 and feature (needed for lake to map from outlet to lake number)
     real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
     real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
     real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
@@ -38,22 +38,22 @@ module PackageMoverModule
   
   contains
   
-  subroutine set_packagemover_pointer(packagemover, origin)
+  subroutine set_packagemover_pointer(packagemover, memPath)
     type(PackageMoverType), intent(inout) :: packagemover
-    character(len=*), intent(in) :: origin
-    packagemover%origin = origin
-    call mem_setptr(packagemover%nproviders, 'NPROVIDERS', origin)
-    call mem_setptr(packagemover%nreceivers, 'NRECEIVERS', origin)
-    call mem_setptr(packagemover%iprmap, 'IPRMAP', origin)
-    call mem_setptr(packagemover%qtformvr, 'QTFORMVR', origin)
-    call mem_setptr(packagemover%qformvr, 'QFORMVR', origin)
-    call mem_setptr(packagemover%qtomvr, 'QTOMVR', origin)
-    call mem_setptr(packagemover%qfrommvr, 'QFROMMVR', origin)
+    character(len=*), intent(in) :: memPath
+    packagemover%memoryPath = memPath
+    call mem_setptr(packagemover%nproviders, 'NPROVIDERS', packagemover%memoryPath)
+    call mem_setptr(packagemover%nreceivers, 'NRECEIVERS', packagemover%memoryPath)
+    call mem_setptr(packagemover%iprmap, 'IPRMAP', packagemover%memoryPath)
+    call mem_setptr(packagemover%qtformvr, 'QTFORMVR', packagemover%memoryPath)
+    call mem_setptr(packagemover%qformvr, 'QFORMVR', packagemover%memoryPath)
+    call mem_setptr(packagemover%qtomvr, 'QTOMVR', packagemover%memoryPath)
+    call mem_setptr(packagemover%qfrommvr, 'QFROMMVR', packagemover%memoryPath)
   end subroutine set_packagemover_pointer
 
   subroutine nulllify_packagemover_pointer(packagemover)
     type(PackageMoverType), intent(inout) :: packagemover
-    packagemover%origin = ''
+    packagemover%memoryPath = ''
     packagemover%nproviders => null()
     packagemover%nreceivers => null()
     packagemover%iprmap => null()
@@ -63,13 +63,14 @@ module PackageMoverModule
     packagemover%qfrommvr => null()
   end subroutine nulllify_packagemover_pointer
 
-  subroutine ar(this, nproviders, nreceivers, origin)
+  subroutine ar(this, nproviders, nreceivers, memoryPath)
     class(PackageMoverType) :: this
     integer, intent(in) :: nproviders
     integer, intent(in) :: nreceivers
-    character(len=*), intent(in) :: origin
+    character(len=*), intent(in) :: memoryPath
     !
-    call this%allocate_scalars(origin)
+    this%memoryPath = memoryPath
+    call this%allocate_scalars()
     this%nproviders = nproviders
     this%nreceivers = nreceivers
     !
@@ -144,16 +145,14 @@ module PackageMoverModule
     return
   end subroutine da
   
-  subroutine allocate_scalars(this, origin)
+  subroutine allocate_scalars(this)
     class(PackageMoverType) :: this
-    character(len=*), intent(in) :: origin
     !
-    call mem_allocate(this%nproviders, 'NPROVIDERS', origin)
-    call mem_allocate(this%nreceivers, 'NRECEIVERS', origin)
+    call mem_allocate(this%nproviders, 'NPROVIDERS', this%memoryPath)
+    call mem_allocate(this%nreceivers, 'NRECEIVERS', this%memoryPath)
     !
     this%nproviders = 0
     this%nreceivers = 0
-    this%origin = origin
     !
     ! -- return
     return
@@ -163,11 +162,11 @@ module PackageMoverModule
     class(PackageMoverType) :: this
     integer(I4B) :: i
     !
-    call mem_allocate(this%iprmap, this%nproviders, 'IPRMAP', this%origin)
-    call mem_allocate(this%qtformvr, this%nproviders, 'QTFORMVR', this%origin)
-    call mem_allocate(this%qformvr, this%nproviders, 'QFORMVR', this%origin)
-    call mem_allocate(this%qtomvr, this%nproviders, 'QTOMVR', this%origin)
-    call mem_allocate(this%qfrommvr, this%nreceivers, 'QFROMMVR', this%origin)
+    call mem_allocate(this%iprmap, this%nproviders, 'IPRMAP', this%memoryPath)
+    call mem_allocate(this%qtformvr, this%nproviders, 'QTFORMVR', this%memoryPath)
+    call mem_allocate(this%qformvr, this%nproviders, 'QFORMVR', this%memoryPath)
+    call mem_allocate(this%qtomvr, this%nproviders, 'QTOMVR', this%memoryPath)
+    call mem_allocate(this%qfrommvr, this%nreceivers, 'QFROMMVR', this%memoryPath)
     !
     ! -- initialize
     do i = 1, this%nproviders

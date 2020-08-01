@@ -1,3 +1,7 @@
+! -- Groundwater Transport Mover Module
+! -- This module is responsible for sending mass from providers into
+! -- receiver qmfrommvr arrays and writing a mover transport budget
+  
 module GwtMvtModule
   
   use KindModule, only: DP, I4B
@@ -110,7 +114,7 @@ module GwtMvtModule
     call this%parser%Initialize(this%inunit, this%iout)
     !
     ! -- initialize the budget table writer
-    call budget_cr(this%budget, this%origin)
+    call budget_cr(this%budget, this%memoryPath)
     !
     ! -- Read mvt options
     call this%read_options()
@@ -277,7 +281,7 @@ module GwtMvtModule
     if (associated(this%fmi%mvrbudobj)) then
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
-        cpak = trim(this%name)
+        cpak = trim(this%packName)
         write(this%iout, fmtmvrcnvg)
       endif
     endif
@@ -472,8 +476,8 @@ module GwtMvtModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%origin)
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     !
     ! -- Initialize
     this%maxpackages = 0
@@ -749,9 +753,9 @@ module GwtMvtModule
       maxrow = 0
       !
       ! -- initialize the output table object
-      title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) // &
+      title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) // &
               ') FLOW RATES'
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(maxrow, ntabcol, this%iout, &
                                     transient=.TRUE.)
       text = 'NUMBER'
@@ -784,6 +788,8 @@ module GwtMvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- module
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtMvttype),intent(inout) :: this
     ! -- local
@@ -803,8 +809,11 @@ module GwtMvtModule
       ntabrows = ntabrows + nlist
     end do
     !
+    ! -- set table kstp and kper
+    call this%outputtab%set_kstpkper(kstp, kper)
+    !
     ! -- Add terms and print the table
-    title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) //     &
+    title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) //     &
             ') FLOW RATES'
     call this%outputtab%set_title(title)
     call this%outputtab%set_maxbound(ntabrows)
@@ -816,11 +825,11 @@ module GwtMvtModule
       do n = 1, nlist
         cloc1 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
                 trim(adjustl(this%budobj%budterm(i)%text2id1))
-        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
-                trim(adjustl(this%budobj%budterm(i)%text2id1))
+        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id2)) // ' ' // &
+                trim(adjustl(this%budobj%budterm(i)%text2id2))
         call this%outputtab%add_term(inum)
         call this%outputtab%add_term(cloc1)
-        call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
+        call this%outputtab%add_term(this%budobj%budterm(i)%id1(n))
         call this%outputtab%add_term(-this%fmi%mvrbudobj%budterm(i)%flow(n))
         call this%outputtab%add_term(this%budobj%budterm(i)%flow(n))
         call this%outputtab%add_term(cloc2)

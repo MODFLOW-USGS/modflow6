@@ -161,37 +161,18 @@ contains
     !        
   end subroutine Mf6Finalize
   
-  subroutine printInfo()         
-    use CompilerVersion
-    use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,   &
-                                      IDEVELOPMODE
-    use TimerModule,            only: start_time    
-    use GenericUtilitiesModule, only: write_centered, sim_message
-    ! -- dummy
-    ! -- local
-    character(len=80) :: compiler
-    
+  subroutine printInfo()
+    use SimVariablesModule, only: istdout
+    use VersionModule, only: write_listfile_header
+    use TimerModule, only: start_time
+    !
     ! -- Write banner to screen (unit stdout) and start timer
-    call write_centered('MODFLOW'//MFVNAM, 80)
-    call write_centered(MFTITLE, 80)
-    call write_centered('VERSION '//VERSION, 80)
-    !
-    ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) then
-      call write_centered('***DEVELOP MODE***', 80)
-    end if
-    !
-    ! -- Write compiler version
-    call get_compiler(compiler)
-    call write_centered(' ', 80)
-    call write_centered(trim(adjustl(compiler)), 80)
-    !
-    ! -- Write disclaimer
-    call sim_message('', fmt=FMTDISCLAIMER)
+    call write_listfile_header(istdout, write_kind_info=.false., &
+                               write_sys_command=.false.)
     !
     ! -- get start time
     call start_time()
-    
+    return
   end subroutine printInfo
   
   subroutine simulation_df()

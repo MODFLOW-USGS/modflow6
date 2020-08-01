@@ -99,6 +99,7 @@ contains
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     character(len=*),intent(in) :: filename
     integer(I4B), intent(in) :: id, m1id, m2id
@@ -118,6 +119,7 @@ contains
     exchange%id = id
     write(cint, '(i0)') id
     exchange%name = 'GWF-GWF_' // trim(adjustl(cint))
+    exchange%memoryPath = create_mem_path(exchange%name)
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
@@ -1179,7 +1181,7 @@ contains
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
@@ -1214,7 +1216,7 @@ contains
             call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart,     &
                         istop, caux, line, 'GWF_GWF_Exchange')
             call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
-                                'AUXNAME', trim(this%name))
+                                'AUXNAME', trim(this%memoryPath))
             do n = 1, this%naux
               this%auxname(n) = caux(n)
             end do
@@ -1738,30 +1740,26 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN, DZERO
+    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwfExchangeType) :: this
     ! -- local
-    character(len=LENORIGIN) :: origin
 ! ------------------------------------------------------------------------------
-    !
-    ! -- create the origin name
-    origin = trim(this%name)
     !
     ! -- Call parent type allocate_scalars
     call this%NumericalExchangeType%allocate_scalars()
     !
-    call mem_allocate(this%icellavg, 'ICELLAVG', origin)
-    call mem_allocate(this%ivarcv, 'IVARCV', origin)
-    call mem_allocate(this%idewatcv, 'IDEWATCV', origin)
-    call mem_allocate(this%inewton, 'INEWTON', origin)
-    call mem_allocate(this%ianglex, 'IANGLEX', origin)
-    call mem_allocate(this%icdist, 'ICDIST', origin)
-    call mem_allocate(this%ingnc, 'INGNC', origin)
-    call mem_allocate(this%inmvr, 'INMVR', origin)
-    call mem_allocate(this%inobs, 'INOBS', origin)
-    call mem_allocate(this%inamedbound, 'INAMEDBOUND', origin)
-    call mem_allocate(this%satomega, 'SATOMEGA', origin)
+    call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
+    call mem_allocate(this%ivarcv, 'IVARCV', this%memoryPath)
+    call mem_allocate(this%idewatcv, 'IDEWATCV', this%memoryPath)
+    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
+    call mem_allocate(this%ianglex, 'IANGLEX', this%memoryPath)
+    call mem_allocate(this%icdist, 'ICDIST', this%memoryPath)
+    call mem_allocate(this%ingnc, 'INGNC', this%memoryPath)
+    call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
+    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
+    call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     this%icellavg = 0
     this%ivarcv = 0
     this%idewatcv = 0
@@ -1853,26 +1851,21 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN
     ! -- dummy
     class(GwfExchangeType) :: this
     ! -- local
     character(len=LINELENGTH) :: text
-    character(len=LENORIGIN) :: origin
     integer(I4B) :: ntabcol
 ! ------------------------------------------------------------------------------
-    !
-    ! -- create the origin name
-    origin = trim(this%name)
     !
     ! -- Call parent type allocate_scalars
     call this%NumericalExchangeType%allocate_arrays()
     !
-    call mem_allocate(this%ihc, this%nexg, 'IHC', origin)
-    call mem_allocate(this%cl1, this%nexg, 'CL1', origin)
-    call mem_allocate(this%cl2, this%nexg, 'CL2', origin)
-    call mem_allocate(this%hwva, this%nexg, 'HWVA', origin)
-    call mem_allocate(this%condsat, this%nexg, 'CONDSAT', origin)
+    call mem_allocate(this%ihc, this%nexg, 'IHC', this%memoryPath)
+    call mem_allocate(this%cl1, this%nexg, 'CL1', this%memoryPath)
+    call mem_allocate(this%cl2, this%nexg, 'CL2', this%memoryPath)
+    call mem_allocate(this%hwva, this%nexg, 'HWVA', this%memoryPath)
+    call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
     !
     ! -- Allocate boundname
     if(this%inamedbound==1) then

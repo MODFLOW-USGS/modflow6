@@ -83,12 +83,18 @@
 		<Filter Name="Utilities">
 		<Filter Name="Memory">
 		<File RelativePath="..\..\..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryHelper.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryManager.f90"/></Filter>
 		<Filter Name="TimeSeries">
 		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeries.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>
 		<File RelativePath="..\..\..\src\Utilities\BlockParser.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\compilerversion.fpp">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\..\..\src\Utilities\Constants.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>

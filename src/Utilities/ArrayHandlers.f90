@@ -1,13 +1,17 @@
 module ArrayHandlersModule
 
-  use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, MAXCHARLEN
+  use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, DTEN
   use SimVariablesModule, only: iout
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
-  public :: ExpandArray, ExtendPtrArray
+  public :: ExpandArray, ExpandArrayWrapper, ExtendPtrArray
   public :: ifind
   public :: remove_character
+  
+  interface ExpandArrayWrapper
+    module procedure expand_integer_wrapper
+  end interface
 
   interface ExpandArray
     ! This interface is for use with ALLOCATABLE arrays.
@@ -28,6 +32,64 @@ module ArrayHandlersModule
   end interface ifind
 
 contains
+
+  subroutine expand_integer_wrapper(nsize, array, minvalue, loginc)
+    implicit none
+    ! -- dummy
+    integer(I4B), intent(in) :: nsize
+    integer(I4B), allocatable, intent(inout) :: array(:)
+    integer(I4B), intent(in), optional :: minvalue
+    logical(LGP), intent(in), optional :: loginc
+    ! -- local
+    logical(LGP) :: log_increment
+    integer(I4B) :: minimum_increment
+    integer(I4B) :: increment
+    integer(I4B) :: isize
+    integer(I4B) :: n
+    !
+    ! -- process optional variables
+    if (present(minvalue)) then
+      minimum_increment = minvalue
+    else
+      minimum_increment = 100
+    end if
+    if (present(loginc)) then
+      log_increment = loginc
+    else
+      log_increment = .FALSE.
+    end if
+    !
+    ! -- determine current size of the array
+    isize = size(array)
+    !
+    ! -- expand the array if necessary
+    if (nsize > isize) then
+      !
+      ! -- increase array size by 1, 10, 100, 1000, etc.
+      !    from 1 to 9, 10 to 99, 100 to 999, 1000 to 10000, etc.
+      if (loginc) then
+        increment = int(log10(real(nsize, DP)), I4B)
+        increment = int(DTEN**increment, I4B)
+      !
+      ! -- increase increment by a multiplier and a value no
+      !    smaller than a default or specified minimum size
+      else
+        increment =  nsize * 0.2_DP
+        increment = max(minimum_increment, increment)
+      end if
+      !
+      ! -- expand the array
+      call ExpandArray(array, increment)
+      !
+      ! -- initialize expanded array elements
+      do n = isize + 1, size(array)
+        array(n) = 0
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine expand_integer_wrapper
 
   ! -- Specific procedures that implement ExpandArray for allocatable arrays
 

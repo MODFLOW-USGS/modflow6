@@ -135,7 +135,7 @@ def build_models():
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
-                                    budget_filerecord='{}.cbc'.format(gwfname),
+                                    budget_filerecord='{}.bud'.format(gwfname),
                                     head_filerecord='{}.hds'.format(gwfname),
                                     headprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
@@ -146,8 +146,8 @@ def build_models():
 
         # create gwt model
         gwtname = 'gwt_' + name
-        gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                                model_nam_file='{}.nam'.format(gwtname))
+        gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname,
+                                  save_flows=True)
 
         # create iterative model solution and register the gwt model with it
         imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -189,12 +189,13 @@ def build_models():
 
         # output control
         oc = flopy.mf6.ModflowGwtoc(gwt,
-                                    budget_filerecord='{}.cbc'.format(gwtname),
+                                    budget_filerecord='{}.bud'.format(gwtname),
                                     concentration_filerecord='{}.ucn'.format(gwtname),
                                     concentrationprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('CONCENTRATION', 'ALL')],
+                                    saverecord=[('CONCENTRATION', 'ALL'),
+                                                ('BUDGET', 'ALL')],
                                     printrecord=[('CONCENTRATION', 'ALL'),
                                                  ('BUDGET', 'ALL')])
 
@@ -227,6 +228,15 @@ def eval_transport(sim):
     # Check concentrations
     assert np.allclose(ts, tsanswers[idx]), ('simulated concentrations do not '
                                              'match with known solution.')
+
+    # Check budget file
+    fpth = os.path.join(sim.simpath, '{}.bud'.format(gwtname))
+    try:
+        bobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+        ra = bobj.get_data(totim=1.)
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+
     return
 
 

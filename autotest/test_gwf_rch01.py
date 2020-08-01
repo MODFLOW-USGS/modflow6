@@ -32,7 +32,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['rch01a', 'rch01b', 'rch01c']
-irch = [None, 1, [2, 2, 1, 2, 2]]
+irch = [None, 0, [1, 1, 0, 1, 1]]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -145,7 +145,6 @@ def eval_model(sim):
 
     answer = np.array([( 6, 1, 0. ), ( 7, 2, 0.1), ( 3, 3, 0.1), ( 9, 4, 0.1),
                        (10, 5, 0. )], dtype=records.dtype)
-
     assert np.allclose(records['node'], answer['node'])
     assert np.allclose(records['node2'], answer['node2'])
     assert np.allclose(records['q'], answer['q'])

@@ -1,21 +1,23 @@
 #! /usr/bin/env python
+import os
+
 try:
     import pymake
 except:
-    msg =  'Error. Pymake package is not available.\n'
+    msg = 'Error. Pymake package is not available.\n'
     msg += 'Try installing using the following command:\n'
     msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
     print(msg)
     raise Exception()
-import os
 
-#get the arguments
-args = pymake.pymake.parser()
+pmobj = pymake.Pymake()
+pmobj.target = "mf6"
+pmobj.appdir = os.path.join("..", "bin")
+pmobj.srcdir = os.path.join("..", "src")
+pmobj.cc = None
+pmobj.subdirs = True
+pmobj.inplace = True
+pmobj.verbose = True
+pmobj.makeclean = True
 
-args.subdirs = True
-
-pymake.pymake.main(args.srcdir, args.target, fc=args.fc, cc=args.cc,
-                   makeclean=args.makeclean, expedite=args.expedite,
-                   dryrun=args.dryrun, double=args.double, debug=args.debug,
-                   include_subdirs=args.subdirs, fflags=args.fflags,
-                   arch=args.arch, makefile=args.makefile, srcdir2=args.commonsrc)
+pmobj.build()

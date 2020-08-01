@@ -16,7 +16,7 @@ env:
       else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 matrix:
   include:
-  - env: FC=gfortran-4.9
+  - env: FC=gfortran-5
   - env: FC=gfortran-6
   - env: FC=gfortran-7
   - env: FC=gfortran-8

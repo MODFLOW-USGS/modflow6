@@ -36,17 +36,17 @@
 module GwtAptModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
+  use ConstantsModule, only: DZERO, DONE, DEP20, LENFTYPE, LINELENGTH,         &
                              LENBOUNDNAME, LENPACKAGENAME, NAMEDBOUNDFLAG,     &
                              DNODATA, TABLEFT, TABCENTER, TABRIGHT,            &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              LENAUXNAME
-  use SimModule, only: store_error, count_errors, ustop
-  use BndModule, only: BndType, GetBndFromList
+  use SimModule, only: store_error, store_error_unit, count_errors, ustop
+  use SimVariablesModule, only: errmsg
+  use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
-  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: table_cr
-  use BudgetFileReaderModule, only: BudgetFileReaderType
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
@@ -108,9 +108,6 @@ module GwtAptModule
     ! -- budget objects
     type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
     type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! GWF flow budget object
-    !
-    ! -- budget file reader
-    type(BudgetFileReaderType)                         :: bfr                   ! budget file reader
     
   contains
   
@@ -335,7 +332,6 @@ module GwtAptModule
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: j
     logical :: found
     ! -- formats
@@ -367,7 +363,7 @@ module GwtAptModule
     this%fmi%datp(this%igwfaptpak)%concpack => this%xnewpak
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
-    ! -- If there is an aassociated flow package and the user wishes to put
+    ! -- If there is an associated flow package and the user wishes to put
     !    simulated concentrations into a aux variable column, then find 
     !    the column number.
     if (associated(this%flowpackagebnd)) then
@@ -417,7 +413,6 @@ module GwtAptModule
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: itemno
     integer(I4B) :: igwfnode
     ! -- formats
@@ -468,9 +463,9 @@ module GwtAptModule
         !
         ! -- reset the input table object
         title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
-        call table_cr(this%inputtab, this%name, title)
+        call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
@@ -543,7 +538,6 @@ module GwtAptModule
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     integer(I4B) :: ii
     integer(I4B) :: jj
@@ -587,7 +581,7 @@ module GwtAptModule
         call this%parser%GetString(text)
         jj = 1    ! For feature concentration
         bndElem => this%concfeat(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'CONCENTRATION')
       case ('AUXILIARY')
@@ -602,7 +596,7 @@ module GwtAptModule
           ii = itemno
           bndElem => this%lauxvar(jj, ii)
           call read_value_or_time_series_adv(text, itemno, jj, bndElem,          &
-                                             this%name, 'AUX', this%tsManager,   &
+                                             this%packName, 'AUX', this%tsManager,   &
                                              this%iprpak, this%auxname(jj))
           exit
         end do
@@ -668,7 +662,6 @@ module GwtAptModule
     class(GwtAptType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 ! ------------------------------------------------------------------------------
     ierr = 0
@@ -1118,7 +1111,7 @@ module GwtAptModule
     !
     ! -- write feature concentration
     if (ihedfl /= 0 .and. this%iprconc /= 0) then
-      write (iout, fmthdr) 'FEATURE (', trim(this%name), ') CONCENTRATION', kper, kstp
+      write (iout, fmthdr) 'FEATURE (', trim(this%packName), ') CONCENTRATION', kper, kstp
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
@@ -1193,20 +1186,20 @@ module GwtAptModule
     call this%BndType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%iauxfpconc, 'IAUXFPCONC', this%origin)
-    call mem_allocate(this%imatrows, 'IMATROWS', this%origin)
-    call mem_allocate(this%iprconc, 'IPRCONC', this%origin)
-    call mem_allocate(this%iconcout, 'ICONCOUT', this%origin)
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%origin)
-    call mem_allocate(this%ncv, 'NCV', this%origin)
-    call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
-    call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
-    call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
-    call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%origin)
-    call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%origin)
-    call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
-    call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
+    call mem_allocate(this%iauxfpconc, 'IAUXFPCONC', this%memoryPath)
+    call mem_allocate(this%imatrows, 'IMATROWS', this%memoryPath)
+    call mem_allocate(this%iprconc, 'IPRCONC', this%memoryPath)
+    call mem_allocate(this%iconcout, 'ICONCOUT', this%memoryPath)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%memoryPath)
+    call mem_allocate(this%ncv, 'NCV', this%memoryPath)
+    call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%memoryPath)
+    call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%memoryPath)
+    call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%memoryPath)
+    call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%memoryPath)
+    call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%memoryPath)
+    call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%memoryPath)
+    call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%memoryPath)
     ! 
     ! -- Initialize
     this%iauxfpconc = 0
@@ -1250,30 +1243,30 @@ module GwtAptModule
     !
     ! -- allocate and initialize dbuff
     if (this%iconcout > 0) then
-      call mem_allocate(this%dbuff, this%ncv, 'DBUFF', this%origin)
+      call mem_allocate(this%dbuff, this%ncv, 'DBUFF', this%memoryPath)
       do n = 1, this%ncv
         this%dbuff(n) = DZERO
       end do
     else
-      call mem_allocate(this%dbuff, 0, 'DBUFF', this%origin)
+      call mem_allocate(this%dbuff, 0, 'DBUFF', this%memoryPath)
     end if
     !
     ! -- allocate character array for status
     allocate(this%status(this%ncv))
     !
     ! -- time series
-    call mem_allocate(this%concfeat, this%ncv, 'CONCFEAT', this%origin)
+    call mem_allocate(this%concfeat, this%ncv, 'CONCFEAT', this%memoryPath)
     !
     ! -- budget terms
-    call mem_allocate(this%qsto, this%ncv, 'QSTO', this%origin)
-    call mem_allocate(this%ccterm, this%ncv, 'CCTERM', this%origin)
+    call mem_allocate(this%qsto, this%ncv, 'QSTO', this%memoryPath)
+    call mem_allocate(this%ccterm, this%ncv, 'CCTERM', this%memoryPath)
     !
     ! -- concentration for budget terms
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%ncv, &
-      'CONCBUDSSM', this%origin)
+      'CONCBUDSSM', this%memoryPath)
     !
     ! -- mass added from the mover transport package
-    call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%origin)
+    call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%memoryPath)
     !
     ! -- initialize arrays
     do n = 1, this%ncv
@@ -1476,14 +1469,13 @@ module GwtAptModule
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- Set a pointer to the GWF LAK Package budobj
     if (this%flowpackagename == '') then
-      this%flowpackagename = this%name
+      this%flowpackagename = this%packName
       write(this%iout,'(4x,a)') &
         'THE FLOW PACKAGE NAME FOR '//trim(adjustl(this%text))//' WAS NOT &
         &SPECIFIED.  SETTING FLOW PACKAGE NAME TO '// &
@@ -1496,7 +1488,7 @@ module GwtAptModule
     this%ncv = this%flowbudptr%ncv
     this%maxbound = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound
-    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR PACKAGE ', this%name
+    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR PACKAGE ', this%packName
     write(this%iout,'(2x,a,i0)')'NUMBER OF CONTROL VOLUMES = ', this%ncv
     write(this%iout,'(2x,a,i0)')'MAXBOUND = ', this%maxbound
     write(this%iout,'(2x,a,i0)')'NBOUND = ', this%nbound
@@ -1551,7 +1543,6 @@ module GwtAptModule
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=9) :: cno
@@ -1572,22 +1563,21 @@ module GwtAptModule
     itmp = 0
     !
     ! -- allocate apt data
-    call mem_allocate(this%strt, this%ncv, 'STRT', this%origin)
-    call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', this%origin)
+    call mem_allocate(this%strt, this%ncv, 'STRT', this%memoryPath)
+    call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', this%memoryPath)
     !
     ! -- lake boundary and concentrations
     if (this%imatrows == 0) then
-      call mem_allocate(this%iboundpak, this%ncv, 'IBOUND', this%origin)
-      call mem_allocate(this%xnewpak, this%ncv, 'XNEWPAK', this%origin)
+      call mem_allocate(this%iboundpak, this%ncv, 'IBOUND', this%memoryPath)
+      call mem_allocate(this%xnewpak, this%ncv, 'XNEWPAK', this%memoryPath)
     end if
-    call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%origin)
+    call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%memoryPath)
     !
     ! -- allocate character storage not managed by the memory manager
     allocate(this%featname(this%ncv)) ! ditch after boundnames allocated??
     !allocate(this%status(this%ncv))
     !
     do n = 1, this%ncv
-      !this%status(n) = 'ACTIVE'
       this%strt(n) = DEP20
       this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
@@ -1648,7 +1638,7 @@ module GwtAptModule
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
-            bndName = bndNameTemp(1:16)
+            bndName = bndNameTemp
           endif
         end if
         this%featname(n) = bndName
@@ -1659,7 +1649,7 @@ module GwtAptModule
           text = caux(jj)
           ii = n
           bndElem => this%lauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,   &
                                              'AUX', this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
@@ -2106,7 +2096,7 @@ module GwtAptModule
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
-    call budgetobject_cr(this%budobj, this%name)
+    call budgetobject_cr(this%budobj, this%packName)
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
                                      bddim_opt='M')
     idx = 0
@@ -2120,9 +2110,9 @@ module GwtAptModule
       ordered_id1 = this%flowbudptr%budterm(this%idxbudfjf)%ordered_id1
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, ordered_id1=ordered_id1)
       !
@@ -2143,7 +2133,7 @@ module GwtAptModule
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
                                              this%name_model, &
                                              maxlist, .false., .true., &
@@ -2167,9 +2157,9 @@ module GwtAptModule
     auxtxt(1) = '            MASS'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
     if (this%idxbudtmvr /= 0) then
@@ -2182,9 +2172,9 @@ module GwtAptModule
       ordered_id1 = this%flowbudptr%budterm(this%idxbudtmvr)%ordered_id1
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, ordered_id1=ordered_id1)
     end if
@@ -2197,9 +2187,9 @@ module GwtAptModule
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
     end if
@@ -2211,9 +2201,9 @@ module GwtAptModule
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     
@@ -2228,9 +2218,9 @@ module GwtAptModule
       maxlist = this%ncv
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
     end if
@@ -2614,7 +2604,7 @@ module GwtAptModule
     call this%obs%StoreObsType('constant', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
-    ! -- call child contributions
+    ! -- call additional specific observations for lkt, sft, mwt, and uzt
     call this%pak_df_obs()
     !
     return
@@ -2652,14 +2642,19 @@ subroutine apt_rp_obs(this)
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1, nn2, idx
-    character(len=200) :: ermsg
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n
+    integer(I4B) :: nn1
+    integer(I4B) :: nn2
+    integer(I4B) :: idx
+    integer(I4B) :: ntmvr
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType), pointer :: obsrv => null()
 ! ------------------------------------------------------------------------------
     ! -- formats
-10  format('Error: Boundary "',a,'" for observation "',a, &
+10  format('Boundary "',a,'" for observation "',a, &
            '" is invalid in package "',a,'"')
     !
     do i = 1, this%obs%npakobs
@@ -2677,9 +2672,9 @@ subroutine apt_rp_obs(this)
       if (nn1 == NAMEDBOUNDFLAG) then
         bname = obsrv%FeatureName
         if (bname /= '') then
-          ! -- Observation lake is based on a boundary name.
-          !    Iterate through all lakes to identify and store
-          !    corresponding index in bound array.
+          ! -- Observation is based on a boundary name.
+          !    Iterate through all features (lak/maw/sfr/uzf) to identify and
+          !    store corresponding index in bound array.
           jfound = .false.
           if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
             do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
@@ -2712,8 +2707,8 @@ subroutine apt_rp_obs(this)
             end do
           end if
           if (.not. jfound) then
-            write(ermsg,10) trim(bname), trim(obsrv%Name), trim(this%name)
-            call store_error(ermsg)
+            write(errmsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
+            call store_error(errmsg)
           end if
         end if
       else
@@ -2732,11 +2727,11 @@ subroutine apt_rp_obs(this)
               end if
             end do
             if (this%flowbudptr%budterm(this%idxbudgwf)%id1(idx) /= nn1) then
-              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
                 ' connection number =', nn2, &
                 '(does not correspond to control volume ', nn1, ')'
-              call store_error(ermsg)
+              call store_error(errmsg)
             end if
           else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
             nn2 = obsrv%NodeNumber2
@@ -2752,18 +2747,18 @@ subroutine apt_rp_obs(this)
               end if
             end do
             if (idx == 0) then
-              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
                 ' lake number =', nn1, &
                 '(is not connected to lake ', nn2, ')'
-              call store_error(ermsg)
+              call store_error(errmsg)
             end if
           else
             obsrv%indxbnds(1) = nn1
           end if
         else
-          ermsg = 'Programming error in apt_rp_obs'
-          call store_error(ermsg)
+          errmsg = 'Programming error in apt_rp_obs'
+          call store_error(errmsg)
         endif
       end if
       !
@@ -2772,62 +2767,66 @@ subroutine apt_rp_obs(this)
       if (obsrv%ObsTypeId == 'CONCENTRATION') then
         n = size(obsrv%indxbnds)
         if (n > 1) then
-          write (ermsg, '(4x,a,4(1x,a))') &
+          write (errmsg, '(4x,a,4(1x,a))') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
             'for observation', trim(adjustl(obsrv%Name)), &
             ' must be assigned to a feature with a unique boundname.'
-          call store_error(ermsg)
+          call store_error(errmsg)
         end if
       end if
       !
       ! -- check that index values are valid
       if (obsrv%ObsTypeId=='TO-MVR' .or. &
           obsrv%ObsTypeId=='EXT-OUTFLOW') then
+        ntmvr = this%flowbudptr%budterm(this%idxbudtmvr)%nlist
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
-          ! -- todo: how do we replace noutlets here?
-          !if (nn1 < 1 .or. nn1 > this%noutlets) then
-          !  write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-          !    'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-          !    ' outlet must be > 0 and <=', this%noutlets, &
-          !    '(specified value is ', nn1, ')'
-            call store_error(ermsg)
-          !end if
+          if (nn1 < 1 .or. nn1 > ntmvr) then
+            write(errmsg, '(a, a, i0, a, i0, a)') &
+              trim(adjustl(obsrv%ObsTypeId)), &
+              ' must be > 0 or <= ', ntmvr, &
+              '. (specified value is ', nn1, ').'
+            call store_error(errmsg)
+          end if
         end do
       else if (obsrv%ObsTypeId == trim(adjustl(this%text)) .or. &
                obsrv%ObsTypeId == 'FLOW-JA-FACE') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' connection number must be > 0 and <=', this%maxbound, &
               '(specified value is ', nn1, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
       else
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%ncv) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' control volume must be > 0 and <=', this%ncv, &
               '(specified value is ', nn1, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
       end if
     end do
-    if (count_errors() > 0) call ustop()
+    !
+    ! -- check for errors
+    if (count_errors() > 0) then
+      call store_error_unit(this%obs%inunitobs)
+      call ustop()
+    end if
     !
     return
   end subroutine apt_rp_obs
   
   subroutine apt_bd_obs(this)
 ! ******************************************************************************
-! apt_bd_obs -- 
-!   -- Calculate observations this time step and call
+! apt_bd_obs -- Calculate observations common to SFT/LKT/MWT/UZT
 !      ObsType%SaveOneSimval for each GwtAptType observation.
 ! ******************************************************************************
 !
@@ -2839,7 +2838,6 @@ subroutine apt_rp_obs(this)
     integer(I4B) :: i, igwfnode, j, jj, n, nn
     integer(I4B) :: n1, n2
     real(DP) :: v
-    character(len=100) :: errmsg
     type(ObserveType), pointer :: obsrv => null()
     logical :: found
 ! ------------------------------------------------------------------------------
@@ -2878,6 +2876,17 @@ subroutine apt_rp_obs(this)
               if (this%iboundpak(jj) /= 0) then
                 v = this%ccterm(jj)
               end if
+            case ('FROM-MVR')
+              if (this%iboundpak(jj) /= 0 .and. this%idxbudfmvr > 0) then
+                v = this%qmfrommvr(jj)
+              end if
+            case ('TO-MVR')
+              if (this%idxbudtmvr > 0) then
+                n = this%flowbudptr%budterm(this%idxbudtmvr)%id1(jj)
+                if (this%iboundpak(n) /= 0) then
+                  call this%apt_tmvr_term(jj, n1, n2, v)
+                end if
+              end if
             case default
               found = .false.
               !
@@ -2886,9 +2895,12 @@ subroutine apt_rp_obs(this)
               !
               ! -- if none found then terminate with an error
               if (.not. found) then
-                errmsg = 'Error: Unrecognized observation type: ' // &
-                          trim(obsrv%ObsTypeId)
+                errmsg = 'Unrecognized observation type "' // &
+                          trim(obsrv%ObsTypeId) // '" for ' // &
+                          trim(adjustl(this%text)) // ' package ' // &
+                          trim(this%packName)
                 call store_error(errmsg)
+                call store_error_unit(this%obs%inunitobs)
                 call ustop()
               end if
           end select

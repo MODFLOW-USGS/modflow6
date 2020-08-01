@@ -1,7 +1,7 @@
 module OutputControlModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,    only: LENMODELNAME, LENORIGIN
+  use ConstantsModule,    only: LENMODELNAME, LENMEMPATH
   use OutputControlData, only: OutputControlDataType, ocd_cr
   use BlockParserModule, only: BlockParserType
 
@@ -9,14 +9,14 @@ module OutputControlModule
   private
   public OutputControlType, oc_cr
 
-  type OutputControlType
-    character(len=LENMODELNAME), pointer                :: name_model => null() !name of the model
-    character(len=LENORIGIN), pointer                   :: cid        => null() !character id of this object
-    integer(I4B), pointer                               :: inunit     => null() !unit number for input file
-    integer(I4B), pointer                               :: iout       => null() !unit number for output file
-    integer(I4B), pointer                               :: iperoc     => null() !stress period number for next output control
-    integer(I4B), pointer                               :: iocrep     => null() !output control repeat flag (period 0 step 0)
-    type(OutputControlDataType), dimension(:), pointer, contiguous  :: ocdobj     => null() !output control objects
+  type OutputControlType  
+    character(len=LENMEMPATH)                           :: memoryPath                       !< path to data stored in the memory manager
+    character(len=LENMODELNAME), pointer                :: name_model => null()             !< name of the model
+    integer(I4B), pointer                               :: inunit     => null()             !< unit number for input file
+    integer(I4B), pointer                               :: iout       => null()             !< unit number for output file
+    integer(I4B), pointer                               :: iperoc     => null()             !< stress period number for next output control
+    integer(I4B), pointer                               :: iocrep     => null()             !< output control repeat flag (period 0 step 0)
+    type(OutputControlDataType), dimension(:), pointer, contiguous  :: ocdobj     => null() !< output control objects
     type(BlockParserType)                               :: parser
   contains
     procedure :: oc_df
@@ -28,6 +28,7 @@ module OutputControlModule
     procedure :: oc_save
     procedure :: oc_print
     procedure :: oc_save_unit
+    procedure :: set_print_flag
   end type OutputControlType
 
   contains
@@ -94,7 +95,7 @@ module OutputControlModule
     ! -- local
     integer(I4B) :: ierr, ival, ipos
     logical :: isfound, found, endOfBlock
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: ermsg, keyword1, keyword2
     character(len=LINELENGTH) :: printsave
     class(OutputControlDataType), pointer :: ocdobjptr
@@ -274,7 +275,6 @@ module OutputControlModule
     deallocate(this%ocdobj)
     !
     deallocate(this%name_model)
-    deallocate(this%cid)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%iperoc)
@@ -293,18 +293,19 @@ module OutputControlModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(OutputControlType) :: this
     character(len=*), intent(in) :: name_model
 ! ------------------------------------------------------------------------------
     !
-    allocate(this%name_model)
-    allocate(this%cid)
-    this%cid = trim(adjustl(name_model)) // ' OC'
-    call mem_allocate(this%inunit, 'INUNIT', this%cid)
-    call mem_allocate(this%iout, 'IOUT', this%cid)
-    call mem_allocate(this%iperoc, 'IPEROC', this%cid)
-    call mem_allocate(this%iocrep, 'IOCREP', this%cid)
+    this%memoryPath = create_mem_path(name_model, 'OC')
+    !
+    allocate(this%name_model)    
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%iperoc, 'IPEROC', this%memoryPath)
+    call mem_allocate(this%iocrep, 'IOCREP', this%memoryPath)
     !
     this%name_model = name_model
     this%inunit = 0
@@ -329,7 +330,8 @@ module OutputControlModule
     ! -- dummy
     class(OutputControlType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: ierr
     integer(I4B) :: ipos
     logical :: isfound, found, endOfBlock
@@ -476,5 +478,42 @@ module OutputControlModule
     ! -- Return
     return
   end function oc_save_unit
+
+  function set_print_flag(this, cname, icnvg, endofperiod) result(iprint_flag)
+! ******************************************************************************
+! set_print_flag -- determine if cname should be printed
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimVariablesModule, only: isimcontinue
+    ! -- return
+    integer(I4B) :: iprint_flag
+    ! -- dummy
+    class(OutputControlType) :: this
+    character(len=*), intent(in) :: cname
+    integer(I4B), intent(in) :: icnvg
+    logical, intent(in) :: endofperiod
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- default is to not print
+    iprint_flag = 0
+    !
+    ! -- if the output control file indicates that cname should be printed
+    if(this%oc_print(cname)) iprint_flag = 1
+    !
+    ! -- if it is not a CONTINUE run, then set to print if not converged
+    if (isimcontinue == 0) then
+      if(icnvg == 0) iprint_flag = 1
+    end if
+    !
+    ! -- if it's the end of the period, then set flag to print
+    if(endofperiod) iprint_flag = 1
+    !
+    ! -- Return
+    return
+  end function set_print_flag
 
 end module OutputControlModule

@@ -161,11 +161,11 @@ def build_models():
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
-                                    filename='{}.adv'.format(gwtname))
+                                      filename='{}.adv'.format(gwtname))
 
         # mass storage and transfer
         mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy[idx],
-                                    filename='{}.mst'.format(gwtname))
+                                      filename='{}.mst'.format(gwtname))
 
         # sources
         sourcerecarray = [('WEL-1', 'AUX', 'CONCENTRATION')]

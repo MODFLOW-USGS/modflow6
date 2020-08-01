@@ -47,9 +47,8 @@ BEGIN PERIOD 5
          5   28   50 -12000    187.3           15.0  well_field
 END PERIOD
 
-#Use a list of wells in file wells.dat for stress period 6 until
-#the end of the simulation.  Use the SFAC variable to multiply
-#all pumping rates by 1000.
+#Use a list of wells in ASCII file wells_sp6.txt for stress period 6.
+#Use these wells until the end of the simulation.
 BEGIN PERIOD 6
-  OPEN/CLOSE wells.dat SFAC 1000.
+  OPEN/CLOSE wells_sp6.txt
 END PERIOD

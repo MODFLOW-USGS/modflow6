@@ -171,7 +171,7 @@ def run_transport_model():
     wst = os.path.join(testdir, testgroup, name)
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                  exe_name=exe_name_mf6, sim_ws=wst,
-                                 continue_=True)
+                                 continue_=False)
 
     tdis_rc = [(100., 10, 1.), (100., 10, 1.)]
     nper = len(tdis_rc)

@@ -140,7 +140,7 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%strt, nodes, 'STRT', this%origin)
+    call mem_allocate(this%strt, nodes, 'STRT', this%memoryPath)
     !
     ! -- Return
     return
@@ -205,7 +205,8 @@ module GwfIcModule
     ! -- dummy
     class(GwfIcType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     character(len=24) :: aname(1)

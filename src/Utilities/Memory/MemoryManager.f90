@@ -3,10 +3,11 @@ module MemoryManagerModule
   use KindModule,             only: DP, LGP, I4B, I8B
   use ConstantsModule,        only: DZERO, DONE,                                 &
                                     DEM3, DEM6, DEM9, DEP3, DEP6, DEP9,          &
-                                    LENORIGIN, LENVARNAME,                       &
-                                    LINELENGTH, LENMEMTYPE,                      &
+                                    LENMEMPATH, LENMEMSEPARATOR, LENVARNAME,     &
+                                    LINELENGTH, LENMEMTYPE, LENMEMADDRESS,       &
                                     TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
-                                    TABCENTER, TABLEFT, TABRIGHT
+                                    TABCENTER, TABLEFT, TABRIGHT,                &
+                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE
   use SimVariablesModule,     only: errmsg
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
@@ -16,6 +17,7 @@ module MemoryManagerModule
   implicit none
   private
   public :: mem_allocate
+  public :: mem_checkin
   public :: mem_reallocate
   public :: mem_setptr
   public :: mem_copyptr
@@ -49,6 +51,11 @@ module MemoryManagerModule
                      allocate_dbl, allocate_dbl1d, allocate_dbl2d,               &
                      allocate_dbl3d
   end interface mem_allocate
+  
+  interface mem_checkin
+    module procedure checkin_int1d,                                              &
+                     checkin_dbl1d
+  end interface mem_checkin
   
   interface mem_reallocate
     module procedure reallocate_int1d, reallocate_int2d, reallocate_dbl1d,       &
@@ -322,7 +329,7 @@ module MemoryManagerModule
     ! -- iterate over the memory list
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      if(mt%name == name .and. mt%origin == origin) then
+      if(mt%name == name .and. mt%path == origin) then
         found = .true.
         exit
       end if
@@ -456,7 +463,7 @@ module MemoryManagerModule
     mt%logicalsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
@@ -519,7 +526,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = ilen
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
@@ -597,7 +604,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
@@ -607,7 +614,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_str1d
 
-  subroutine allocate_int(sclr, name, origin)
+  subroutine allocate_int(sclr, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a integer scalar 
 !
@@ -615,6 +622,9 @@ module MemoryManagerModule
 !       SCLR         : returned integer scalar
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -624,6 +634,7 @@ module MemoryManagerModule
     integer(I4B), pointer, intent(inout) :: sclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -648,8 +659,13 @@ module MemoryManagerModule
     mt%intsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'INTEGER'
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -658,7 +674,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_int
   
-  subroutine allocate_int1d(aint, nrow, name, origin)
+  subroutine allocate_int1d(aint, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 1-dimensional integer array 
 !
@@ -667,6 +683,9 @@ module MemoryManagerModule
 !       NROW        : integer array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -677,6 +696,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -705,8 +725,13 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -715,7 +740,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_int1d
   
-  subroutine allocate_int2d(aint, ncol, nrow, name, origin)
+  subroutine allocate_int2d(aint, ncol, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 2-dimensional integer array 
 !
@@ -725,6 +750,9 @@ module MemoryManagerModule
 !       NROW         : integer array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -736,6 +764,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -764,8 +793,13 @@ module MemoryManagerModule
     mt%aint2d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -773,7 +807,7 @@ module MemoryManagerModule
     ! -- return
   end subroutine allocate_int2d
     
-  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, origin)
+  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 3-dimensional integer array 
 !
@@ -784,6 +818,9 @@ module MemoryManagerModule
 !       NLAY         : integer array number of layers
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -796,6 +833,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nlay
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -824,9 +862,14 @@ module MemoryManagerModule
     mt%aint3d => aint
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
                                                        nrow, nlay
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -835,7 +878,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_int3d
 
-  subroutine allocate_dbl(sclr, name, origin)
+  subroutine allocate_dbl(sclr, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a real scalar 
 !
@@ -843,6 +886,9 @@ module MemoryManagerModule
 !       SCLR         : returned real scalar
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -852,6 +898,7 @@ module MemoryManagerModule
     real(DP), pointer, intent(inout) :: sclr
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -876,8 +923,13 @@ module MemoryManagerModule
     mt%dblsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a)") 'DOUBLE'
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -886,7 +938,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl
   
-  subroutine allocate_dbl1d(adbl, nrow, name, origin)
+  subroutine allocate_dbl1d(adbl, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 1-dimensional real array 
 !
@@ -895,6 +947,9 @@ module MemoryManagerModule
 !       NROW         : real array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -905,6 +960,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -933,8 +989,13 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -943,7 +1004,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl1d
   
-  subroutine allocate_dbl2d(adbl, ncol, nrow, name, origin)
+  subroutine allocate_dbl2d(adbl, ncol, nrow, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 2-dimensional real array 
 !
@@ -953,6 +1014,9 @@ module MemoryManagerModule
 !       NROW         : real array number of rows
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -964,6 +1028,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -992,8 +1057,13 @@ module MemoryManagerModule
     mt%adbl2d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -1002,7 +1072,7 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl2d
   
-  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, origin)
+  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, origin, memtype)
 ! ******************************************************************************
 ! Allocate a 3-dimensional real array 
 !
@@ -1013,6 +1083,9 @@ module MemoryManagerModule
 !       NLAY         : real array number of layers
 !       NAME         : variable name
 !       ORIGIN       : variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
 !
 ! ******************************************************************************
 !
@@ -1025,6 +1098,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: nlay
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
+    integer(I4B), intent(in), optional :: memtype
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1053,9 +1127,14 @@ module MemoryManagerModule
     mt%adbl3d => adbl
     mt%isize = isize
     mt%name = name
-    mt%origin = origin
+    mt%path = origin
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'DOUBLE', ncol,           &
                                                        nrow, nlay
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -1063,6 +1142,132 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_dbl3d
+  
+  subroutine checkin_int1d(aint, name, origin, name2, origin2, memtype)
+! ******************************************************************************
+! Check in am existing 1-dimensional integer array to the memory manager
+!
+! -- Arguments are as follows:
+!       AINT         : returned 1-dimensional integer array
+!       NAME         : variable name
+!       ORIGIN       : variable origin
+!       NAME2        : second variable name
+!       ORIGIN2      : second variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: aint
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    integer(I4B), intent(in), optional :: memtype
+    ! --local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: isize
+    ! -- code
+    !
+    ! -- check variable name length
+    call check_varname(name)
+    !
+    ! -- set isize
+    isize = size(aint)
+    !
+    ! -- allocate memory type
+    allocate(mt)
+    !
+    ! -- set memory type
+    mt%aint1d => aint
+    mt%isize = isize
+    mt%name = name
+    mt%path = origin
+    write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = origin2
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_int1d
+  
+  subroutine checkin_dbl1d(adbl, name, origin, name2, origin2, memtype)
+! ******************************************************************************
+! Check in an existing 1-dimensional real array to the memory manager
+!
+! -- Arguments are as follows:
+!       ADBL         : returned 1-dimensional real array
+!       NAME         : variable name
+!       ORIGIN       : variable origin
+!       NAME2        : second variable name
+!       ORIGIN2      : second variable origin
+!       MEMTYPE      : optional integer value that defines memaccess for 
+!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+!                      and MEMREADWRITE.  
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    integer(I4B), intent(in), optional :: memtype
+    ! -- local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: isize
+    ! -- code
+    !
+    ! -- check the variable name length
+    call check_varname(name)
+    !
+    ! -- set isize
+    isize = size(adbl)
+    !
+    ! -- allocate memory type
+    allocate(mt)
+    !
+    ! -- set memory type
+    mt%adbl1d => adbl
+    mt%isize = isize
+    mt%name = name
+    mt%path = origin
+    write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = origin2
+    !
+    ! -- set memory access permission
+    if (present(memtype)) then
+      mt%memaccess = memtype
+    end if
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_dbl1d
   
   subroutine reallocate_str1d(astr, ilen, nrow, name, origin)
 ! ******************************************************************************
@@ -1847,10 +2052,13 @@ module MemoryManagerModule
     end if
     aint => mt2%aint1d
     mt%aint1d => aint
-    mt%isize = 0 
+    mt%isize = size(aint) 
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
+    !
+    ! -- set master information
     mt%master = .false.
     mt%mastername = name2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -1893,12 +2101,15 @@ module MemoryManagerModule
     end if
     aint => mt2%aint2d
     mt%aint2d => aint
-    mt%isize = 0 
+    mt%isize = size(aint)
     ncol = size(aint, dim=1)
     nrow = size(aint, dim=2)
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
+    !
+    ! -- set master information
     mt%master = .false.
     mt%mastername = name2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -1939,10 +2150,13 @@ module MemoryManagerModule
     end if
     adbl => mt2%adbl1d
     mt%adbl1d => adbl
-    mt%isize = 0 
+    mt%isize = size(adbl) 
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
+    !
+    ! -- set master information
     mt%master = .false.
     mt%mastername = name2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -1985,12 +2199,15 @@ module MemoryManagerModule
     end if
     adbl => mt2%adbl2d
     mt%adbl2d => adbl
-    mt%isize = 0 
+    mt%isize = size(adbl)
     ncol = size(adbl, dim=1)
     nrow = size(adbl, dim=2)
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
+    !
+    ! -- set master information
     mt%master = .false.
     mt%mastername = name2
+    mt%masterPath = origin2
     !
     ! -- return
     return
@@ -2512,7 +2729,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_dbl3d
-  
+
   subroutine mem_set_print_option(iout, keyword, errmsg)
 ! ******************************************************************************
 ! Set the memory print option 
@@ -2634,7 +2851,7 @@ module MemoryManagerModule
     integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    nterms = 5
+    nterms = 6
     !
     ! -- set up table title
     title = 'DETAILED INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
@@ -2645,7 +2862,7 @@ module MemoryManagerModule
     !
     ! -- origin
     text = 'ORIGIN'
-    call memtab%initialize_column(text, LENORIGIN, alignment=TABLEFT)
+    call memtab%initialize_column(text, LENMEMPATH, alignment=TABLEFT)
     !
     ! -- variable
     text = 'VARIABLE NAME'
@@ -2661,7 +2878,11 @@ module MemoryManagerModule
     !
     ! -- is it a pointer
     text = 'ASSOCIATED VARIABLE'
-    call memtab%initialize_column(text, LENVARNAME, alignment=TABLEFT)
+    call memtab%initialize_column(text, LENMEMADDRESS, alignment=TABLEFT)
+    !
+    ! -- is it a pointer
+    text = 'MEMORY ACCESS PERMISSION'
+    call memtab%initialize_column(text, 16, alignment=TABLEFT)
     !
     ! -- return
     return
@@ -2862,7 +3083,7 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: iout
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENORIGIN), allocatable, dimension(:) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique ! TODO_MJR: refactor this name??
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -2906,7 +3127,7 @@ module MemoryManagerModule
         ilen = len_trim(cunique(icomp))
         do ipos = 1, memorylist%count()
           mt => memorylist%Get(ipos)
-          if (cunique(icomp) /= mt%origin(1:ilen)) cycle
+          if (cunique(icomp) /= mt%path(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
             nchars = nchars + mt%isize
@@ -2972,7 +3193,7 @@ module MemoryManagerModule
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
         if (mt%mt_associated() .and. mt%isize > 0) then
-          errmsg = trim(adjustl(mt%origin)) // ' ' // &
+          errmsg = trim(adjustl(mt%path)) // ' ' // &
                    trim(adjustl(mt%name)) // ' not deallocated'
           call store_error(trim(errmsg))
         end if
@@ -3005,10 +3226,10 @@ module MemoryManagerModule
     use ArrayHandlersModule, only: ExpandArray, ifind
     use InputOutputModule, only: ParseLine
     ! -- dummy
-    character(len=LENORIGIN), allocatable, dimension(:), intent(inout) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENORIGIN), allocatable, dimension(:) :: words
+    character(len=LENMEMPATH), allocatable, dimension(:) :: words
     integer(I4B) :: ipos
     integer(I4B) :: ipa
     integer(I4B) :: nwords
@@ -3020,7 +3241,7 @@ module MemoryManagerModule
     ! -- find unique origins
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      call ParseLine(mt%origin, nwords, words)
+      call ParseLine(mt%path, nwords, words)
       ipa = ifind(cunique, words(1))
       if(ipa < 1) then
         call ExpandArray(cunique, 1)

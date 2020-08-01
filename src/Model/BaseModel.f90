@@ -3,7 +3,7 @@
 module BaseModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LINELENGTH
+  use ConstantsModule, only: LENMODELNAME, LINELENGTH, LENMEMPATH
   use ListModule, only: ListType
   implicit none
 
@@ -12,16 +12,18 @@ module BaseModelModule
             GetBaseModelFromList
 
   type :: BaseModelType
-    character(len=LENMODELNAME), pointer :: name             => null()           ! name of the model
-    character(len=3), pointer            :: macronym         => null()           ! 3 letter model acronym (GWF, GWT, ...)
-    integer(I4B), pointer                :: idsoln           => null()           ! id of the solution model is in
-    integer(I4B), pointer                :: id               => null()           ! model id
-    integer(I4B), pointer                :: iout             => null()           ! output unit number
-    integer(I4B), pointer                :: inewton          => null()           ! newton-raphson flag
-    integer(I4B), pointer                :: iprpak           => null()           ! integer flag to echo input
-    integer(I4B), pointer                :: iprflow          => null()           ! flag to print simulated flows
-    integer(I4B), pointer                :: ipakcb           => null()           ! save_flows flag
-    logical, pointer                     :: single_model_run => null()           ! indicate if it is a single model run
+    character(len=LENMEMPATH)            :: memoryPath                           !< the location in the memory manager where the variables are stored
+
+    character(len=LENMODELNAME), pointer :: name             => null()           !< name of the model    
+    character(len=3), pointer            :: macronym         => null()           !< 3 letter model acronym (GWF, GWT, ...)
+    integer(I4B), pointer                :: idsoln           => null()           !< id of the solution model is in
+    integer(I4B), pointer                :: id               => null()           !< model id
+    integer(I4B), pointer                :: iout             => null()           !< output unit number
+    integer(I4B), pointer                :: inewton          => null()           !< newton-raphson flag
+    integer(I4B), pointer                :: iprpak           => null()           !< integer flag to echo input
+    integer(I4B), pointer                :: iprflow          => null()           !< flag to print simulated flows
+    integer(I4B), pointer                :: ipakcb           => null()           !< save_flows flag
+    logical, pointer                     :: single_model_run => null()           !< indicate if it is a single model run
   contains
     procedure :: model_df
     procedure :: model_ar
@@ -151,13 +153,13 @@ module BaseModelModule
     allocate(this%name)
     allocate(this%macronym)
     allocate(this%single_model_run)
-    call mem_allocate(this%id, 'ID', modelname)
-    call mem_allocate(this%iout, 'IOUT', modelname)
-    call mem_allocate(this%inewton, 'INEWTON', modelname)
-    call mem_allocate(this%iprpak, 'IPRPAK', modelname)
-    call mem_allocate(this%iprflow, 'IPRFLOW', modelname)
-    call mem_allocate(this%ipakcb, 'IPAKCB', modelname)
-    call mem_allocate(this%idsoln, 'IDSOLN', modelname)
+    call mem_allocate(this%id, 'ID', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
+    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
+    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
+    call mem_allocate(this%idsoln, 'IDSOLN', this%memoryPath)
     !
     this%name = modelname
     this%macronym = ''

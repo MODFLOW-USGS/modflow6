@@ -2,7 +2,7 @@ module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LENORIGIN, LINELENGTH
+  use ConstantsModule, only: LENMODELNAME, LINELENGTH
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
@@ -710,21 +710,21 @@ module GwfDisuModule
     endif
     !
     ! -- allocate vectors that are the size of nodesuser
-    call mem_allocate(this%top1d, this%nodesuser, 'TOP1D', this%origin)
-    call mem_allocate(this%bot1d, this%nodesuser, 'BOT1D', this%origin)
-    call mem_allocate(this%area1d, this%nodesuser, 'AREA1D', this%origin)
-    call mem_allocate(this%idomain, this%nodesuser, 'IDOMAIN', this%origin)
-    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
-    call mem_allocate(this%iainp, this%nodesuser + 1, 'IAINP', this%origin)
-    call mem_allocate(this%jainp, this%njausr, 'JAINP', this%origin)
-    call mem_allocate(this%ihcinp, this%njausr, 'IHCINP', this%origin)
-    call mem_allocate(this%cl12inp, this%njausr, 'CL12INP', this%origin)
-    call mem_allocate(this%hwvainp, this%njausr, 'HWVAINP', this%origin)
-    call mem_allocate(this%angldegxinp, this%njausr, 'ANGLDEGXINP', this%origin)
+    call mem_allocate(this%top1d, this%nodesuser, 'TOP1D', this%memoryPath)
+    call mem_allocate(this%bot1d, this%nodesuser, 'BOT1D', this%memoryPath)
+    call mem_allocate(this%area1d, this%nodesuser, 'AREA1D', this%memoryPath)
+    call mem_allocate(this%idomain, this%nodesuser, 'IDOMAIN', this%memoryPath)
+    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
+    call mem_allocate(this%iainp, this%nodesuser + 1, 'IAINP', this%memoryPath)
+    call mem_allocate(this%jainp, this%njausr, 'JAINP', this%memoryPath)
+    call mem_allocate(this%ihcinp, this%njausr, 'IHCINP', this%memoryPath)
+    call mem_allocate(this%cl12inp, this%njausr, 'CL12INP', this%memoryPath)
+    call mem_allocate(this%hwvainp, this%njausr, 'HWVAINP', this%memoryPath)
+    call mem_allocate(this%angldegxinp, this%njausr, 'ANGLDEGXINP', this%memoryPath)
     if(this%nvert > 0) then
-      call mem_allocate(this%cellxy, 2, this%nodesuser, 'CELLXY', this%origin)
+      call mem_allocate(this%cellxy, 2, this%nodesuser, 'CELLXY', this%memoryPath)
     else
-      call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%origin)
+      call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%memoryPath)
     endif
     !
     ! -- initialize all cells to be active (idomain = 1)
@@ -1136,8 +1136,8 @@ module GwfDisuModule
     end if
     !
     ! -- Convert vertspm into ia/ja form
-    call mem_allocate(this%iavert, this%nodesuser + 1, 'IAVERT', this%origin)
-    call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%origin)
+    call mem_allocate(this%iavert, this%nodesuser + 1, 'IAVERT', this%memoryPath)
+    call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%memoryPath)
     
     call vertspm%filliaja(this%iavert, this%javert, ierr)
     call vertspm%destroy()
@@ -1497,8 +1497,8 @@ module GwfDisuModule
     call this%DisBaseType%allocate_scalars(name_model)
     !
     ! -- Allocate variables for DISU
-    call mem_allocate(this%njausr, 'NJAUSR', this%origin)
-    call mem_allocate(this%nvert, 'NVERT', this%origin)
+    call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
+    call mem_allocate(this%nvert, 'NVERT', this%memoryPath)
     !
     ! -- Set values
     this%ndim = 1
@@ -1528,12 +1528,12 @@ module GwfDisuModule
     !
     ! -- Allocate arrays in DISU
     if(this%nodes < this%nodesuser) then
-      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%origin)
+      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
-                        this%origin)
+                        this%memoryPath)
     else
-      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%origin)
-      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%origin)
+      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
+      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
     !
     ! -- Initialize

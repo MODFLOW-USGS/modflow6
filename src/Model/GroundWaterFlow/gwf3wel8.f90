@@ -2,6 +2,7 @@ module WelModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use SmoothingModule,  only: sQSaturation, sQSaturationDerivative
@@ -78,7 +79,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=1
     packobj%iscloc=1
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return
@@ -124,8 +125,8 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%iflowred, 'IFLOWRED', this%origin)
-    call mem_allocate(this%flowred, 'FLOWRED', this%origin)
+    call mem_allocate(this%iflowred, 'IFLOWRED', this%memoryPath)
+    call mem_allocate(this%flowred, 'FLOWRED', this%memoryPath)
     !
     ! -- Set values
     this%iflowred = 0

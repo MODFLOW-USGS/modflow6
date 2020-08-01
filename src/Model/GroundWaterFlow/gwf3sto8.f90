@@ -1,7 +1,8 @@
 module GwfStoModule
 
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT
+  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT,        &
+                                    MEMREADWRITE
   use SmoothingModule,        only: sQuadraticSaturation,                      &
                                     sQuadraticSaturationDerivative,            &
                                     sQSaturation, sLinearSaturation
@@ -90,6 +91,7 @@ module GwfStoModule
 ! ------------------------------------------------------------------------------
     !modules
     use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(GwfStoType)                       :: this
     class(DisBaseType), pointer, intent(in) :: dis
@@ -109,7 +111,7 @@ module GwfStoModule
     this%ibound  => ibound
     !
     ! -- set pointer to gwf iss
-    call mem_setptr(this%iss, 'ISS', trim(this%name_model))
+    call mem_setptr(this%iss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
@@ -663,12 +665,12 @@ module GwfStoModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%iusesy, 'IUSESY', this%origin)
-    call mem_allocate(this%isfac, 'ISFAC', this%origin)
-    call mem_allocate(this%isseg, 'ISSEG', this%origin)
-    call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
-    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%origin)
-    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%origin)
+    call mem_allocate(this%iusesy, 'IUSESY', this%memoryPath)
+    call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
+    call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
+    call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
+    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%memoryPath, MEMREADWRITE)
     !
     ! -- Initialize
     this%iusesy = 0
@@ -700,12 +702,12 @@ module GwfStoModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    !call mem_allocate(this%iss, 'ISS', this%name_model)
-    call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%origin)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%origin)
-    call mem_allocate(this%sc2, nodes, 'SC2', this%origin)
-    call mem_allocate(this%strgss, nodes, 'STRGSS', this%origin)
-    call mem_allocate(this%strgsy, nodes, 'STRGSY', this%origin)
+    !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
+    call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
+    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
+    call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
     !
     ! -- Initialize
     this%iss = 0
@@ -814,7 +816,8 @@ module GwfStoModule
     ! -- dummy
     class(GwfStotype) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: cellstr
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock

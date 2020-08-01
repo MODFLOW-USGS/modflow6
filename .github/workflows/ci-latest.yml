@@ -1,0 +1,124 @@
+name: MODFLOW 6 CI with latest gfortran
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: setup-conda
+      uses: s-weigand/setup-conda@v1.0.3
+      with:
+        auto-update-conda: true
+        miniconda-version: "latest"
+
+    - name: Setup symbolic links on Linux
+      if: runner.os == 'Linux'
+      run: |
+        sudo ln -fs /usr/bin/gfortran-9 /usr/local/bin/gfortran
+        sudo ln -fs /usr/bin/gcc-9 /usr/local/bin/gcc
+        sudo ln -fs /usr/bin/g++-9 /usr/local/bin/g++
+
+    - name: Install gfortran and setup symbolic links on MacOS
+      shell: bash
+      if: runner.os == 'macOS'
+      run: |
+        brew cask info gfortran
+        brew cask install gfortran
+        ls -l /usr/local/gfortran/bin/
+        sudo ln -fs /usr/local/gfortran/bin/gfortran /usr/local/bin/gfortran
+        sudo ln -fs /usr/local/gfortran/bin/gcc /usr/local/bin/gcc
+        sudo ln -fs /usr/local/gfortran/bin/g++ /usr/local/bin/g++
+
+    - name: Print GNU compiler versions
+      run: |
+        gfortran --version
+        gcc --version
+        g++ --version
+
+    - name: Install python packages
+      run: |
+        conda info
+        conda install pip requests appdirs nose
+        pip install nose-timer
+        # use pip to install numpy and matplotlib because of a windows issue
+        pip install numpy matplotlib
+        pip install https://github.com/modflowpy/flopy/zipball/develop
+        pip install https://github.com/modflowpy/pymake/zipball/master
+        pip install https://github.com/Deltares/xmipy/zipball/master
+
+    - name: Print conda version
+      run: conda --version
+
+    - name: Print python package versions
+      shell: python
+      run: |
+        import sys
+        import nose
+        import numpy as np
+        import matplotlib as mpl
+        import flopy
+        import pymake
+        flopypth = flopy.__path__[0]
+        pymakepth = pymake.__path__[0]
+        print("python version:     {}".format(sys.version))
+        print("nosetest version:   {}".format(nose.__version__))
+        print("numpy version:      {}".format(np.__version__))
+        print("matplotlib version: {}".format(mpl.__version__))
+        print("flopy version:      {}".format(flopy.__version__))
+        print("pymake version:     {}".format(pymake.__version__))
+        print("")
+        print("flopy is installed in:  {}".format(flopypth))
+        print("pymake is installed in: {}".format(pymakepth))
+
+    - name: Set and print branch name
+      shell: bash
+      run: |
+        echo GITHUB_REF branch name ${GITHUB_REF##*/}
+        echo GITHUB_REF=${GITHUB_REF}
+        echo GITHUB_HEAD_REF=${GITHUB_HEAD_REF}
+        echo GITHUB_BASE_REF=${GITHUB_BASE_REF}
+        if [ -z ${GITHUB_BASE_REF+x} ]; then
+          export BRANCH=${GITHUB_REF##*/};
+        else export BRANCH=${GITHUB_HEAD_REF}; fi
+        echo BRANCH=${BRANCH}
+
+    - name: Get regression test files
+      shell: bash
+      run: |
+        echo $HOME
+        pwd
+        git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
+
+    - name: Check out the correct regression test branch
+      shell: bash
+      run: |
+        cd ../modflow6-testmodels
+        if git show-ref -q --heads ${BRANCH}; then
+          git checkout ${BRANCH}; echo switched to modflow6-testmodels branch ${BRANCH};
+        else echo using modflow6-testmodels branch master;  fi
+        git branch
+        cd ../modflow6
+        ls ../
+
+    - name: Update flopy MODFLOW 6 classes
+      run: |
+        cd autotest
+        python update_flopy.py
+        cd ..
+
+    - name: Build and test applications
+      run: |
+        nosetests -v --with-id --with-timer -w ./autotest

@@ -368,7 +368,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN
     ! -- dummy
     class(NumericalExchangeType) :: this
     ! -- local
@@ -376,12 +375,12 @@ contains
     !
     allocate(this%filename)
     allocate(this%typename)
-    call mem_allocate(this%implicit, 'IMPLICIT', this%name)
-    call mem_allocate(this%iprpak, 'IPRPAK', this%name)
-    call mem_allocate(this%iprflow, 'IPRFLOW', this%name)
-    call mem_allocate(this%ipakcb, 'IPAKCB', this%name)
-    call mem_allocate(this%nexg, 'NEXG', this%name)
-    call mem_allocate(this%naux, 'NAUX', this%name)
+    call mem_allocate(this%implicit, 'IMPLICIT', this%memoryPath)
+    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
+    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
+    call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
+    call mem_allocate(this%naux, 'NAUX', this%memoryPath)
     this%filename = ''
     this%typename = ''
     this%implicit = .false.
@@ -404,22 +403,16 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN
     ! -- dummy
     class(NumericalExchangeType) :: this
-    ! -- local
-    character(len=LENORIGIN) :: origin
 ! ------------------------------------------------------------------------------
     !
-    ! -- create the origin name
-    origin = trim(this%name)
-    !
-    call mem_allocate(this%nodem1, this%nexg, 'NODEM1', origin)
-    call mem_allocate(this%nodem2, this%nexg, 'NODEM2', origin)
-    call mem_allocate(this%cond, this%nexg, 'COND', origin)
-    call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', origin)
-    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', origin)
-    call mem_allocate(this%auxvar, this%naux, this%nexg, 'AUXVAR', origin)
+    call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
+    call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
+    call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
+    call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
+    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)
+    call mem_allocate(this%auxvar, this%naux, this%nexg, 'AUXVAR', this%memoryPath)
     !
     ! -- return
     return
@@ -434,7 +427,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use ConstantsModule, only: LENORIGIN
     ! -- dummy
     class(NumericalExchangeType) :: this
     ! -- local
@@ -449,7 +441,7 @@ contains
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%nexg)
     call mem_deallocate(this%naux)
-    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%name))
+    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%memoryPath))
     !
     ! -- arrays
     call mem_deallocate(this%nodem1)
@@ -480,7 +472,7 @@ contains
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound

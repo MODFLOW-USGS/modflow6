@@ -198,7 +198,7 @@ contains
     n = this%Count()
     do i=1,n
       obsoutput => GetObsOutputFromList(this%ObsOutputs, i)
-      call obsoutput%DeallocObsOutput()
+      !call obsoutput%DeallocObsOutput()
     enddo
     !
     call this%ObsOutputs%Clear(.true.)

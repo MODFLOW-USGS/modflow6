@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import pathlib
 
 try:
     import pymake
@@ -20,19 +21,33 @@ except:
 
 from simulation import Simulation
 
-# find path to modflow6-examples or modflow6-examples.git directory
-home = os.path.expanduser('~')
-fdir = 'modflow6-examples'
-exdir = None
-for root, dirs, files in os.walk(home):
-    for d in dirs:
-        if d.startswith(fdir):
-            exdir = os.path.join(root, d, 'mf6')
+
+def get_example_directory(base, fdir, subdir='mf6'):
+    exdir = None
+    for root, dirs, files in os.walk(base):
+        for d in dirs:
+            if d.startswith(fdir):
+                exdir = os.path.abspath(os.path.join(root, d, subdir))
+                break
+        if exdir is not None:
             break
-    if exdir is not None:
-        break
-testpaths = os.path.join('..', exdir)
-assert os.path.isdir(testpaths)
+    return exdir
+
+
+# find path to modflow6-testmodels or modflow6-testmodels.git directory
+home = os.path.expanduser('~')
+print('$HOME={}'.format(home))
+
+fdir = 'modflow6-testmodels'
+exdir = get_example_directory(home, fdir, subdir='mf6')
+if exdir is None:
+    p = pathlib.Path(os.getcwd())
+    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
+    print('$HOME={}'.format(home))
+    exdir = get_example_directory(home, fdir, subdir='mf6')
+
+if exdir is not None:
+    assert os.path.isdir(exdir)
 
 
 def get_branch():
@@ -60,10 +75,16 @@ def get_mf6_models():
     """
     # determine if running on travis
     is_travis = 'TRAVIS' in os.environ
+    is_github_action = 'CI' in os.environ
 
     # get current branch
+    is_CI = False
     if is_travis:
+        is_CI = True
         branch = os.environ['BRANCH']
+    elif is_github_action:
+        is_CI = True
+        branch = os.path.basename(os.environ['GITHUB_REF'])
     else:
         branch = get_branch()
     print('On branch {}'.format(branch))
@@ -72,10 +93,10 @@ def get_mf6_models():
     exclude = (None,)
 
     # update exclude
-    if is_travis:
-        exclude_travis = ('test022_MNW2_Fig28',
-                          'test007_751x751_confined')
-        exclude = exclude + exclude_travis
+    if is_CI:
+        exclude_CI = ('test022_MNW2_Fig28',
+                      'test007_751x751_confined')
+        exclude = exclude + exclude_CI
     exclude = list(exclude)
 
     # write a summary of the files to exclude
@@ -84,8 +105,11 @@ def get_mf6_models():
         print('    {}: {}'.format(idx + 1, ex))
 
     # build list of directories with valid example files
-    dirs = [d for d in os.listdir(exdir)
-            if 'test' in d and d not in exclude]
+    if exdir is not None:
+        dirs = [d for d in os.listdir(exdir)
+                if 'test' in d and d not in exclude]
+    else:
+        dirs = []
 
     # exclude dev examples on master or release branches
     if 'master' in branch.lower() or 'release' in branch.lower():
@@ -97,7 +121,8 @@ def get_mf6_models():
             dirs.remove(d)
 
     # sort in numerical order for case sensitive os
-    dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if len(dirs) > 0:
+        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -158,6 +183,14 @@ def get_mf6_models():
     return dirs
 
 
+def get_htol(dir):
+    htol = None
+    if dir == 'test059_mvlake_laksfr_tr':
+        if sys.platform.lower() == 'darwin':
+            htol = 0.002
+    return htol
+
+
 def run_mf6(sim):
     """
     Run the MODFLOW 6 simulation and compare to existing head file or
@@ -184,7 +217,7 @@ def test_mf6model():
 
     # run the test models
     for dir in dirs:
-        yield run_mf6, Simulation(dir)
+        yield run_mf6, Simulation(dir, htol=get_htol(dir))
 
     return
 
@@ -215,7 +248,7 @@ def main():
 
     # run the test models
     for dir in dirs:
-        sim = Simulation(dir)
+        sim = Simulation(dir, htol=get_htol(dir))
         run_mf6(sim)
 
     return

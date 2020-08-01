@@ -703,9 +703,9 @@ module DnmDis3dModule
     call this%DisBaseType%allocate_scalars(name_model)
     !
     ! -- Allocate
-    call mem_allocate(this%nlay, 'NLAY', this%origin)
-    call mem_allocate(this%nrow, 'NROW', this%origin)
-    call mem_allocate(this%ncol, 'NCOL', this%origin)
+    call mem_allocate(this%nlay, 'NLAY', this%memoryPath)
+    call mem_allocate(this%nrow, 'NROW', this%memoryPath)
+    call mem_allocate(this%ncol, 'NCOL', this%memoryPath)
     !
     ! -- Initialize
     this%nlay = 0
@@ -735,12 +735,12 @@ module DnmDis3dModule
     !
     ! -- Allocate arrays for Dis3dType
     if(this%nodes < this%nodesuser) then
-      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%origin)
+      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
-                        this%origin)
+                        this%memoryPath)
     else
-      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%origin)
-      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%origin)
+      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
+      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
     !
     ! -- Initialize

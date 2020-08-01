@@ -4,14 +4,15 @@ module BndModule
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, DONE,                         &
                                           LENMODELNAME, LENPACKAGENAME,        &
-                                          LENORIGIN, MAXCHARLEN, LINELENGTH,   &
+                                          LENMEMPATH, MAXCHARLEN, LINELENGTH,  &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
-                                          TABLEFT, TABCENTER
+                                          TABLEFT, TABCENTER,                  &
+                                          MEMREADONLY, MEMREADWRITE
   use SimVariablesModule,           only: errmsg
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
-  use ArrayHandlersModule,          only: ExpandArray
+  !use ArrayHandlersModule,          only: ExpandArray
   use ObsModule,                    only: ObsType, obs_cr
   use TdisModule,                   only: delt, totimc
   use ObserveModule,                only: ObserveType
@@ -82,7 +83,7 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: xold => null()                !dependent variable for last time step
     real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
-    character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
+    character(len=LENMEMPATH) :: ictMemPath = ''                                 !< memory path to the icelltype data (for GWF this is in NPF)
     !
     ! -- table objects
     type(TableType), pointer :: inputtab => null()
@@ -189,7 +190,7 @@ module BndModule
     !
     ! -- Store information needed for observations
     if (this%bnd_obs_supported()) then
-      call this%obs%obs_df(this%iout, this%name, this%filtyp, this%dis)
+      call this%obs%obs_df(this%iout, this%packName, this%filtyp, this%dis)
       call this%bnd_df_obs()
     endif
     !
@@ -266,7 +267,7 @@ module BndModule
     ! -- setup pakmvrobj for standard stress packages
     if (this%imover == 1) then
       allocate(this%pakmvrobj)
-      call this%pakmvrobj%ar(this%maxbound, 0, this%origin)
+      call this%pakmvrobj%ar(this%maxbound, 0, this%memoryPath)
     endif
     !
     ! -- return
@@ -338,8 +339,8 @@ module BndModule
       nlist = -1
       ! -- Remove all time-series and time-array-series links associated with
       !    this package.
-      call this%TsManager%Reset(this%name)
-      call this%TasManager%Reset(this%name)
+      call this%TsManager%Reset(this%packName)
+      call this%TasManager%Reset(this%packName)
       !
       ! -- Read data as a list
       call this%dis%read_list(this%parser%iuactive, this%iout,                 &
@@ -347,7 +348,7 @@ module BndModule
                                this%iauxmultcol, this%nodelist,                &
                                this%bound, this%auxvar, this%auxname,          &
                                this%boundname, this%listlabel,                 &
-                               this%name, this%tsManager, this%iscloc)
+                               this%packName, this%tsManager, this%iscloc)
       this%nbound = nlist
       !
       ! Define the tsLink%Text value(s) appropriately.
@@ -619,7 +620,7 @@ module BndModule
       if (maxrows > 0) then
         call this%outputtab%set_maxbound(maxrows)
       end if
-      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //     &
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //     &
               ') FLOW RATES'
       call this%outputtab%set_title(title)
     end if
@@ -647,7 +648,7 @@ module BndModule
     if(ibinun /= 0) then
       naux = this%naux
       call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
-                  this%name_model, this%name_model, this%name, naux,           &
+                  this%name_model, this%name_model, this%packName, naux,           &
                   this%auxname, ibinun, this%nbound, this%iout)
     endif
     !
@@ -741,14 +742,14 @@ module BndModule
     !
     ! -- Store the rates
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
-                               isuppress_output, this%name)
+                               isuppress_output, this%packName)
     if (imover == 1) then
       ratin = DZERO
       ratout = DZERO
       text = trim(adjustl(this%text)) // '-TO-MVR'
       text = adjustr(text)
       if (ibudfl /= 0 .and. this%iprflow /= 0) then
-        title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //   &
+        title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //   &
                 ') FLOW RATES TO-MVR'
         call this%outputtab%set_title(title)
       end if
@@ -757,7 +758,7 @@ module BndModule
       if(ibinun /= 0) then
         naux = this%naux
         call this%dis%record_srcdst_list_header(text, this%name_model,       &
-                    this%name_model, this%name_model, this%name, naux,           &
+                    this%name_model, this%name_model, this%packName, naux,           &
                     this%auxname, ibinun, this%nbound, this%iout)
       end if
       !
@@ -831,7 +832,7 @@ module BndModule
       !
       ! -- Store the rates
       call model_budget%addentry(ratin, ratout, delt, text,                     &
-                                 isuppress_output, this%name)
+                                 isuppress_output, this%packName)
 
     end if
     !
@@ -888,8 +889,8 @@ module BndModule
     call mem_deallocate(this%simvals)
     call mem_deallocate(this%simtomvr)
     call mem_deallocate(this%auxvar)
-    call mem_deallocate(this%boundname, 'BOUNDNAME', this%origin)
-    call mem_deallocate(this%auxname, 'AUXNAME', this%origin)
+    call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
+    call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
     nullify(this%icelltype)
     !
     ! -- pakmvrobj
@@ -921,7 +922,7 @@ module BndModule
     end if
     !
     ! -- deallocate character variables
-    call mem_deallocate(this%listlabel, 'LISTLABEL', this%origin)
+    call mem_deallocate(this%listlabel, 'LISTLABEL', this%memoryPath)
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)
@@ -967,6 +968,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(BndType) :: this
     ! -- local
@@ -977,32 +979,32 @@ module BndModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- allocate character variables
-    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%origin)
+    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%memoryPath)
     !
     ! -- allocate integer variables
-    call mem_allocate(this%ibcnum, 'IBCNUM', this%origin)
-    call mem_allocate(this%maxbound, 'MAXBOUND', this%origin)
-    call mem_allocate(this%nbound, 'NBOUND', this%origin)
-    call mem_allocate(this%ncolbnd, 'NCOLBND', this%origin)
-    call mem_allocate(this%iscloc, 'ISCLOC', this%origin)
-    call mem_allocate(this%naux, 'NAUX', this%origin)
-    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
-    call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%origin)
-    call mem_allocate(this%inobspkg, 'INOBSPKG', this%origin)
+    call mem_allocate(this%ibcnum, 'IBCNUM', this%memoryPath)
+    call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath)
+    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
+    call mem_allocate(this%ncolbnd, 'NCOLBND', this%memoryPath)
+    call mem_allocate(this%iscloc, 'ISCLOC', this%memoryPath)
+    call mem_allocate(this%naux, 'NAUX', this%memoryPath)
+    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
+    call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
+    call mem_allocate(this%inobspkg, 'INOBSPKG', this%memoryPath)
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%imover, 'IMOVER', this%origin)
+    call mem_allocate(this%imover, 'IMOVER', this%memoryPath)
     !
     ! -- allocate scalars for packages that add rows to the matrix (e.g. MAW)
-    call mem_allocate(this%npakeq, 'NPAKEQ', this%origin)
-    call mem_allocate(this%ioffset, 'IOFFSET', this%origin)
+    call mem_allocate(this%npakeq, 'NPAKEQ', this%memoryPath)
+    call mem_allocate(this%ioffset, 'IOFFSET', this%memoryPath)
     !
     ! -- allocate TS objects
     allocate(this%TsManager)
     allocate(this%TasManager)
     !
     ! -- allocate text strings
-    call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%origin)
+    call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
     !
     ! -- Initialize variables
     this%ibcnum = 0
@@ -1019,7 +1021,7 @@ module BndModule
     this%ioffset = 0
     !
     ! -- Set pointer to model inewton variable
-    call mem_setptr(imodelnewton, 'INEWTON', trim(this%name_model))
+    call mem_setptr(imodelnewton, 'INEWTON', create_mem_path(this%name_model))
     this%inewton = imodelnewton
     imodelnewton => null()
     !
@@ -1051,32 +1053,32 @@ module BndModule
     if(present(nodelist)) then
       this%nodelist => nodelist
     else
-      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST', this%origin)
+      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST', this%memoryPath)
       this%nodelist = 0
     endif
     !
     ! -- noupdateauxvar (allows an external caller to stop auxvars from being
     !    recalculated
-    call mem_allocate(this%noupdateauxvar, this%naux, 'NOUPDATEAUXVAR', this%origin)
+    call mem_allocate(this%noupdateauxvar, this%naux, 'NOUPDATEAUXVAR', this%memoryPath)
     this%noupdateauxvar(:) = 0
     !
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
-                      this%origin)
+                      this%memoryPath, MEMREADWRITE)
     !
     ! -- Allocate hcof and rhs
-    call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%origin)
-    call mem_allocate(this%rhs, this%maxbound, 'RHS', this%origin)
+    call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)
+    call mem_allocate(this%rhs, this%maxbound, 'RHS', this%memoryPath)
     !
     ! -- Allocate the simvals array
-    call mem_allocate(this%simvals, this%maxbound, 'SIMVALS', this%origin)
+    call mem_allocate(this%simvals, this%maxbound, 'SIMVALS', this%memoryPath)
     if (this%imover == 1) then
-      call mem_allocate(this%simtomvr, this%maxbound, 'SIMTOMVR', this%origin)
+      call mem_allocate(this%simtomvr, this%maxbound, 'SIMTOMVR', this%memoryPath)
       do i = 1, this%maxbound
         this%simtomvr(i) = DZERO
       enddo
     else
-      call mem_allocate(this%simtomvr, 0, 'SIMTOMVR', this%origin)
+      call mem_allocate(this%simtomvr, 0, 'SIMTOMVR', this%memoryPath)
     endif
     !
     ! -- Point or allocate auxvar
@@ -1084,7 +1086,7 @@ module BndModule
       this%auxvar => auxvar
     else
       call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',         &
-                        this%origin)
+                        this%memoryPath)
       do i = 1, this%maxbound
         do j = 1, this%naux
           this%auxvar(j, i) = DZERO
@@ -1095,16 +1097,14 @@ module BndModule
     ! -- Allocate boundname
     if (this%inamedbound /= 0) then
       call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound,             &
-                        'BOUNDNAME', this%origin)
+                        'BOUNDNAME', this%memoryPath)
     end if
     !
     ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
     !    this%ictorigin will be 'NPF'.  If boundary packages do not set
     !    this%ictorigin, then icelltype will remain as null()
-    if (this%ictorigin /= '') then
-      call mem_setptr(this%icelltype, 'ICELLTYPE',                             &
-                      trim(adjustl(this%name_model)) // ' ' //                 &
-                      trim(adjustl(this%ictorigin)))
+    if (this%ictMemPath /= '') then
+      call mem_setptr(this%icelltype, 'ICELLTYPE', this%ictMemPath)
     end if
     !
     ! -- Initialize values
@@ -1178,7 +1178,7 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: fname
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME) :: sfacauxname
@@ -1228,7 +1228,7 @@ module BndModule
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
                         istart, istop, caux, line, this%text)
             call mem_reallocate(this%auxname, LENAUXNAME, this%naux,             &
-                                'AUXNAME', this%origin)
+                                'AUXNAME', this%memoryPath)
             do n = 1, this%naux
               this%auxname(n) = caux(n)
             end do
@@ -1336,7 +1336,7 @@ module BndModule
         ' OPTION BLOCK DETECTED.'
     end if
     !
-    ! -- SFAC was specified, so find column of auxvar that will be multiplier
+    ! -- AUXMULTNAME was specified, so find column of auxvar that will be multiplier
     if(this%iauxmultcol < 0) then
       !
       ! -- Error if no aux variable specified
@@ -1511,9 +1511,9 @@ module BndModule
       end if
       !
       ! -- initialize the output table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //     &
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //     &
               ') FLOW RATES'
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(this%maxbound, ntabcol, this%iout,            &
                                     transient=.TRUE.)
       text = 'NUMBER'
@@ -1589,7 +1589,9 @@ module BndModule
     ! -- dummy
     class(BndType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !integer(I4B) :: n
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     logical(LGP) :: jfound
@@ -1602,9 +1604,10 @@ module BndModule
       ! -- indxbnds needs to be deallocated and reallocated (using
       !    ExpandArray) each stress period because list of boundaries
       !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      endif
+      !if (allocated(obsrv%indxbnds)) then
+      !  deallocate(obsrv%indxbnds)
+      !endif
+      call obsrv%ResetObsIndex()
       obsrv%BndFound = .false.
       !
       bname = obsrv%FeatureName
@@ -1618,11 +1621,12 @@ module BndModule
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          endif
-        enddo
+            !call ExpandArray(obsrv%indxbnds)
+            !n = size(obsrv%indxbnds)
+            !obsrv%indxbnds(n) = j
+            call obsrv%AddObsIndex(j)
+          end if
+        end do
       else
         ! -- Observation location is a single node number
         jfound = .false.
@@ -1631,13 +1635,14 @@ module BndModule
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-          endif
-        enddo jloop
-      endif
-    enddo
+            !call ExpandArray(obsrv%indxbnds)
+            !n = size(obsrv%indxbnds)
+            !obsrv%indxbnds(n) = j
+            call obsrv%AddObsIndex(j)
+          end if
+        end do jloop
+      end if
+    end do
     !
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)

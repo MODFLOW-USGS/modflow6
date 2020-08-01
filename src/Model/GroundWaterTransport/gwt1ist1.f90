@@ -151,8 +151,8 @@ module GwtIstModule
     call this%mst%addto_prsity2(this%thetaim)
     !
     ! -- setup the immobile domain budget
-    call budget_cr(this%budget, this%origin)
-    call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%name)
+    call budget_cr(this%budget, this%memoryPath)
+    call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%packName)
     !
     ! -- Perform a check to ensure that sorbtion and decay are set 
     !    consistently between the MST and IST packages.
@@ -389,7 +389,7 @@ module GwtIstModule
     ! -- Store the rates for the GWT model budget, which is the transfer
     !    from the immobile domain to the mobile domain.
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
-                               isuppress_output, this%name)
+                               isuppress_output, this%packName)
     !
     ! -- Calculate and store the rates for the immobile domain
     budterm(:, :) = DZERO
@@ -496,7 +496,7 @@ module GwtIstModule
     deallocate(this%ocd)
     !
     ! -- deallocate parent
-    call this%BndType%da()
+    call this%BndType%bnd_da()
     !
     ! -- Return
     return
@@ -521,9 +521,9 @@ module GwtIstModule
     call this%BndType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%icimout, 'ICIMOUT', this%origin)
-    call mem_allocate(this%isrb, 'ISRB', this%origin)
-    call mem_allocate(this%idcy, 'IDCY', this%origin)
+    call mem_allocate(this%icimout, 'ICIMOUT', this%memoryPath)
+    call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
+    call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     !
     ! -- Initialize
     this%icimout = 0
@@ -560,24 +560,24 @@ module GwtIstModule
     call this%BndType%allocate_arrays()
     !
     ! -- allocate ist arrays of size nodes
-    call mem_allocate(this%strg, this%dis%nodes, 'STRG', this%origin)
-    call mem_allocate(this%cim, this%dis%nodes, 'CIM', this%origin)
-    call mem_allocate(this%zetaim, this%dis%nodes, 'ZETAIM', this%origin)
-    call mem_allocate(this%thetaim, this%dis%nodes, 'THETAIM', this%origin)
+    call mem_allocate(this%strg, this%dis%nodes, 'STRG', this%memoryPath)
+    call mem_allocate(this%cim, this%dis%nodes, 'CIM', this%memoryPath)
+    call mem_allocate(this%zetaim, this%dis%nodes, 'ZETAIM', this%memoryPath)
+    call mem_allocate(this%thetaim, this%dis%nodes, 'THETAIM', this%memoryPath)
     if (this%isrb == 0) then
-      call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%origin)
-      call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%origin)
+      call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
+      call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%memoryPath)
     else
       call mem_allocate(this%bulk_density, this%dis%nodes, 'BULK_DENSITY',     &
-                        this%origin)
-      call mem_allocate(this%distcoef,  this%dis%nodes, 'DISTCOEF', this%origin)
+                        this%memoryPath)
+      call mem_allocate(this%distcoef,  this%dis%nodes, 'DISTCOEF', this%memoryPath)
     endif
     if (this%idcy == 0) then
-      call mem_allocate(this%decay, 1, 'DECAY', this%origin)
+      call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
     else
-      call mem_allocate(this%decay, this%dis%nodes, 'DECAY', this%origin)
+      call mem_allocate(this%decay, this%dis%nodes, 'DECAY', this%memoryPath)
     endif
-    call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%origin)
+    call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%memoryPath)
     !
     ! -- initialize
     do n = 1, this%dis%nodes
@@ -611,7 +611,8 @@ module GwtIstModule
     ! -- dummy
     class(GwtIstType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, keyword2
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: keyword2
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -683,7 +684,8 @@ module GwtIstModule
     ! -- dummy
     class(GwtIstType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     logical, dimension(7) :: lname
@@ -717,7 +719,7 @@ module GwtIstModule
           case ('BULK_DENSITY')
             if (this%isrb == 0) &
               call mem_reallocate(this%bulk_density, this%dis%nodes,           &
-                                  'BULK_DENSITY', trim(this%origin))
+                                  'BULK_DENSITY', trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive,                 &
                                          this%bulk_density, aname(1))
@@ -725,7 +727,7 @@ module GwtIstModule
           case ('DISTCOEF')
             if (this%isrb == 0) &
               call mem_reallocate(this%distcoef, this%dis%nodes, 'DISTCOEF',   &
-                                trim(this%origin))
+                                trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%distcoef,  &
                                          aname(2))
@@ -733,14 +735,14 @@ module GwtIstModule
           case ('DECAY')
             if (this%idcy == 0) &
               call mem_reallocate(this%decay, this%dis%nodes, 'DECAY',         &
-                                  trim(this%origin))
+                                  trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%decay,     &
                                          aname(3))
             lname(3) = .true.
           case ('DECAY_SORBED')
             call mem_reallocate(this%decay_sorbed, this%dis%nodes,             &
-                                'DECAY_SORBED', trim(this%origin))
+                                'DECAY_SORBED', trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive,                 &
                                          this%decay_sorbed, aname(4))
@@ -818,7 +820,7 @@ module GwtIstModule
           write(this%iout, '(1x, a)') 'DECAY_SORBED not provided in GRIDDATA &
             &block. Assuming DECAY_SORBED=DECAY'
           call mem_reassignptr(this%decay_sorbed, 'DECAY_SORBED',              &
-                               trim(this%origin), 'DECAY', trim(this%origin))
+                               trim(this%memoryPath), 'DECAY', trim(this%memoryPath))
         endif
       endif
     else

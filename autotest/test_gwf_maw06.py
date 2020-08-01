@@ -1,7 +1,6 @@
-# Test maw package ability to equalize.
-# maw_05a - well and aquifer start at 4; should be now flow
-# maw_05b - well starts at 3.5 and aquifer starts at 4; should equalize
-# maw_05c - well starts at or below 3.0; not working yet
+# Test maw package ability to equalize and the flow correction.
+# maw_06a - well start at .25, aquifer starts at 2
+# maw_06b - well starts at 2, aquifer starts at .25
 
 import os
 import numpy as np
@@ -219,6 +218,29 @@ def eval_results(sim):
           '  Well:          {}\n'.format(vmaw) + \
           '  Total:         {}\n'.format(vnow) + \
           '  Initial Total: {}'.format(v0))
+
+    # compare the maw-gwf flows with the gwf-maw flows
+    fname = gwfname + '.maw.bud'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    mbud = flopy.utils.CellBudgetFile(fname, precision='double')
+    maw_gwf = mbud.get_data(text='GWF')
+
+    fname = gwfname + '.cbc'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    gbud = flopy.utils.CellBudgetFile(fname, precision='double')
+    gwf_maw = gbud.get_data(text='MAW')
+
+    assert len(maw_gwf) == len(gwf_maw), 'number of budget records not equal'
+
+    for istp, (ra_maw, ra_gwf) in enumerate(zip(maw_gwf, gwf_maw)):
+        for i in range(ra_maw.shape[0]):
+            qmaw = ra_maw[i]['q']
+            qgwf = ra_gwf[i]['q']
+            msg = 'step {} record {} comparing qmaw with qgwf: {} {}'.format(istp, i, qmaw, qgwf)
+            print(msg)
+            assert np.allclose(qmaw, -qgwf), msg
 
     return
 

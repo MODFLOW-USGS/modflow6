@@ -59,8 +59,8 @@ def setup_examples(srcdir, dstdir, win_target_os=True):
     for i, exdest in enumerate(examples_dict):
 
         exd = examples_dict[exdest]
-        exsrc = exd['examples_name']  # name in modflow6-examples repo
-        srcpath = os.path.join(srcdir, exsrc)  # path to modflow6-examples repo
+        exsrc = exd['examples_name']  # name in modflow6-testmodels repo
+        srcpath = os.path.join(srcdir, exsrc)  # path to modflow6-testmodels repo
 
         prefix = 'ex{:02d}-'.format(i + 1)
         destfoldername = prefix + exdest
@@ -246,7 +246,7 @@ def make_example_table(fname, examplespath):
 
 if __name__ == '__main__':
 
-    srcdir = os.path.join('..', '..', 'modflow6-examples.git', 'mf6')
+    srcdir = os.path.join('..', '..', 'modflow6-testmodels.git', 'mf6')
     assert os.path.isdir(srcdir)
 
     dstdir = './examples'

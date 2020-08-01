@@ -575,7 +575,7 @@ module BudgetObjectModule
       call this%budterm(i)%deallocate_arrays()
     end do
     !
-    ! --
+    ! -- destroy the flow table
     if (associated(this%flowtab)) then
       deallocate(this%add_cellids)
       deallocate(this%icellid)
@@ -585,6 +585,13 @@ module BudgetObjectModule
       call this%flowtab%table_da()
       deallocate(this%flowtab)
       nullify(this%flowtab)
+    end if
+    !
+    ! -- destroy the budget object table
+    if (associated(this%budtable)) then
+      call this%budtable%budget_da()
+      deallocate(this%budtable)
+      nullify(this%budtable)
     end if
     !
     ! -- Return

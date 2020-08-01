@@ -9,15 +9,15 @@ except:
     raise Exception()
 import os
 
-#get the arguments
-args = pymake.pymake.parser()
+pmobj = pymake.Pymake()
+pmobj.target = "zbud6"
+pmobj.appdir = os.path.join("..", "..", "..", "bin")
+pmobj.srcdir = os.path.join("..", "src")
+pmobj.extrafiles = os.path.join('extrafiles.txt')
+pmobj.cc = None
+pmobj.subdirs = True
+pmobj.inplace = True
+pmobj.verbose = True
+pmobj.makeclean = True
 
-args.subdirs = True
-
-extrafiles = os.path.join('extrafiles.txt')
-args.extrafiles = extrafiles
-
-pymake.pymake.main(args.srcdir, args.target, args.fc, args.cc, args.makeclean,
-                   args.expedite, args.dryrun, args.double, args.debug, 
-                   args.subdirs, args.fflags, args.arch, args.makefile,
-                   args.commonsrc, args.extrafiles)
+pmobj.build()

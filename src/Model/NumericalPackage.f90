@@ -2,11 +2,13 @@ module NumericalPackageModule
   ! -- modules
   use KindModule, only: DP, I4B
   use ConstantsModule,              only: LENPACKAGENAME, LENMODELNAME,        &
-                                          LENORIGIN, LENFTYPE, LINELENGTH
+                                          LENMEMPATH, LENFTYPE, LINELENGTH,    &
+                                          LENVARNAME
   use SimModule,                    only: store_error, ustop
   use BlockParserModule,            only: BlockParserType
   use BaseDisModule,                only: DisBaseType
-  
+  use MemoryHelperModule,           only: create_mem_path
+
   implicit none
   private
   public NumericalPackageType
@@ -14,25 +16,27 @@ module NumericalPackageModule
   type :: NumericalPackageType
 
     ! -- strings
-    character(len=LENPACKAGENAME)                      :: name        = ''       !name of the package
-    character(len=LENMODELNAME)                        :: name_model  = ''       !name of model to which package belongs
-    character(len=LENORIGIN)                           :: origin      = ''       !name of model // name of package
-    character(len=LENFTYPE)                            :: filtyp      = ''       !file type (CHD, DRN, RIV, etc.)
-    !
+    character(len=LENMODELNAME)                        :: name_model      = ''       !TODO_MJR: remove this??
+    character(len=LENPACKAGENAME)                      :: packName        = ''       !< name of the package
+    character(len=LENMEMPATH)                          :: memoryPath      = ''       !< the location in the memory manager where the variables are stored
+    character(len=LENMEMPATH)                          :: memoryPathModel = ''       !< the location in the memory manager where the variables
+                                                                                     ! of the parent model are stored
+    character(len=LENFTYPE)                            :: filtyp          = ''       !< file type (CHD, DRN, RIV, etc.)
+ 
     ! -- integers
-    integer(I4B), pointer                              :: id          => null()  !consecutive package number in model
-    integer(I4B), pointer                              :: inunit      => null()  !unit number for input file
-    integer(I4B), pointer                              :: iout        => null()  !unit number for writing package output
-    integer(I4B), pointer                              :: inewton     => null()  !newton flag
-    integer(I4B), pointer                              :: iasym       => null()  !package causes matrix asymmetry
-    integer(I4B), pointer                              :: iprpak      => null()  !integer flag to echo input
-    integer(I4B), pointer                              :: iprflow     => null()  !flag to print simulated flows
-    integer(I4B), pointer                              :: ipakcb      => null()  !output flows (-1, 0, 1) - save_flows
-    integer(I4B), pointer                              :: ionper      => null()  !stress period for next data
-    integer(I4B), pointer                              :: lastonper   => null()  !last value of ionper (for checking)
+    integer(I4B), pointer                              :: id          => null()  !< consecutive package number in model
+    integer(I4B), pointer                              :: inunit      => null()  !< unit number for input file
+    integer(I4B), pointer                              :: iout        => null()  !< unit number for writing package output
+    integer(I4B), pointer                              :: inewton     => null()  !< newton flag
+    integer(I4B), pointer                              :: iasym       => null()  !< package causes matrix asymmetry
+    integer(I4B), pointer                              :: iprpak      => null()  !< integer flag to echo input
+    integer(I4B), pointer                              :: iprflow     => null()  !< flag to print simulated flows
+    integer(I4B), pointer                              :: ipakcb      => null()  !< output flows (-1, 0, 1) - save_flows
+    integer(I4B), pointer                              :: ionper      => null()  !< stress period for next data
+    integer(I4B), pointer                              :: lastonper   => null()  !< last value of ionper (for checking)
     !
     ! -- derived types
-    type(BlockParserType)                              :: parser                 !parser object for reading blocks of information
+    type(BlockParserType)                              :: parser                 !< parser object for reading blocks of information
     class(DisBaseType), pointer                        :: dis => null()
     
   contains
@@ -61,10 +65,10 @@ module NumericalPackageModule
     ! -- locals
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
-    this%name_model = name_model
     this%filtyp = ftype
+    this%name_model = name_model
     if(pakname == '') then
-      write(this%name,'(a, i0)') trim(ftype) // '-', ibcnum
+      write(this%packName,'(a, i0)') trim(ftype) // '-', ibcnum
     else
       !
       ! -- Ensure pakname has no spaces
@@ -76,9 +80,10 @@ module NumericalPackageModule
         call ustop()
       endif
       !
-      this%name = pakname
+      this%packName = pakname
     endif
-    this%origin = trim(this%name_model) // ' ' // trim(this%name)
+    this%memoryPath = create_mem_path(name_model, this%packName)
+    this%memoryPathModel = create_mem_path(name_model)
     !
     ! -- Return
     return
@@ -103,24 +108,23 @@ module NumericalPackageModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate
-    call mem_allocate(this%id, 'ID', this%origin)
-    call mem_allocate(this%inunit, 'INUNIT', this%origin)
-    call mem_allocate(this%iout, 'IOUT', this%origin)
-    call mem_allocate(this%inewton, 'INEWTON', this%origin)
-    call mem_allocate(this%iasym, 'IASYM', this%origin)
-    call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
-    call mem_allocate(this%iprflow, 'IPRFLOW', this%origin)
-    call mem_allocate(this%ipakcb, 'IPAKCB', this%origin)
+    call mem_allocate(this%id, 'ID', this%memoryPath)
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
+    call mem_allocate(this%iasym, 'IASYM', this%memoryPath)
+    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
+    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
     !
-    ! -- set pointer to model inewton variable
-    call mem_setptr(imodelnewton, 'INEWTON', trim(this%name_model))
+    call mem_allocate(this%ionper, 'IONPER', this%memoryPath)
+    call mem_allocate(this%lastonper, 'LASTONPER', this%memoryPath)
     !
-    ! -- Set pointer to model iprpak, iprflow, and ipakcb variables
-    call mem_setptr(imodelprpak, 'IPRPAK', trim(this%name_model))
-    call mem_setptr(imodelprflow, 'IPRFLOW', trim(this%name_model))
-    call mem_setptr(imodelpakcb, 'IPAKCB', trim(this%name_model))
-    call mem_allocate(this%ionper, 'IONPER', this%origin)
-    call mem_allocate(this%lastonper, 'LASTONPER', this%origin)
+    ! -- set pointer to model variables
+    call mem_setptr(imodelnewton, 'INEWTON', this%memoryPathModel)
+    call mem_setptr(imodelprpak, 'IPRPAK', this%memoryPathModel)
+    call mem_setptr(imodelprflow, 'IPRFLOW', this%memoryPathModel)
+    call mem_setptr(imodelpakcb, 'IPAKCB', this%memoryPathModel)
     !
     ! -- initialize
     this%id = 0
@@ -231,8 +235,9 @@ module NumericalPackageModule
     logical :: endOfBlock
     integer(I4B) :: nsize
     integer(I4B) :: j
-    character(len=LENORIGIN) :: name
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LENVARNAME) :: varname
+    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc
     integer(I4B), dimension(:), pointer, contiguous :: aint
     real(DP), dimension(:), pointer, contiguous     :: adbl
@@ -251,16 +256,16 @@ module NumericalPackageModule
           lkeyword = .true.
           lfound(j) = .true.
           if (present(varinames)) then
-            name = adjustl(varinames(j))
+            varname = adjustl(varinames(j))
           else
-            name = adjustl(tags(j))
+            varname = adjustl(tags(j))
           end if
           if (keyword(1:1) == 'I') then
-            call mem_setptr(aint, trim(name), trim(this%origin))
+            call mem_setptr(aint, trim(varname), trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                 this%parser%iuactive, aint, tags(j))
           else
-            call mem_setptr(adbl, trim(name), trim(this%origin))
+            call mem_setptr(adbl, trim(varname), trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                 this%parser%iuactive, adbl, tags(j))
           end if

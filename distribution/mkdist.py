@@ -437,7 +437,7 @@ def rebuild_tex_from_dfn():
     return
 
 
-def update_mf6io_tex_files(distfolder, mf6pth):
+def update_mf6io_tex_files(distfolder, mf6pth, expth=None):
 
     texpth = '../doc/mf6io'
     fname1 = os.path.join(texpth, 'mf6output.tex')
@@ -445,18 +445,26 @@ def update_mf6io_tex_files(distfolder, mf6pth):
     fname3 = os.path.join(texpth, 'mf6switches.tex')
     #mf6pth = os.path.join(distfolder, 'bin', 'mf6.exe')
     #mf6pth = os.path.abspath(mf6pth)
-    expth = os.path.join(distfolder, 'examples', 'ex01-twri')
+    local = False
+    if expth is None:
+        local = True
+        expth = os.path.join(distfolder, 'examples', 'ex01-twri')
     expth = os.path.abspath(expth)
 
-    assert os.path.isfile(mf6pth)
-    assert os.path.isdir(expth)
+    assert os.path.isfile(mf6pth), '{} does not exist'.format(mf6pth)
+    assert os.path.isdir(expth), '{} does not exist'.format(expth)
 
     # run an example model
-    if os.path.isdir('./temp'):
-        shutil.rmtree('./temp')
-    shutil.copytree(expth, './temp')
+    if local:
+        if os.path.isdir('./temp'):
+            shutil.rmtree('./temp')
+        shutil.copytree(expth, './temp')
     cmd = [os.path.abspath(mf6pth)]
-    buff, ierr = run_command(cmd, './temp')
+    if local:
+        simpth = './temp'
+    else:
+        simpth = expth
+    buff, ierr = run_command(cmd, simpth)
     lines = buff.split('\r\n')
     with open(fname1, 'w') as f:
         f.write('{}\n'.format('{\\small'))
@@ -649,7 +657,7 @@ if __name__ == '__main__':
 
     # setup the examples
     expath = fd['examples']
-    exsrcpath = os.path.join('..', '..', 'modflow6-examples.git', 'mf6')
+    exsrcpath = os.path.join('..', '..', 'modflow6-testmodels.git', 'mf6')
     assert os.path.isdir(exsrcpath)
     examples_setup.setup_examples(exsrcpath, expath,
                                   win_target_os=win_target_os)
@@ -682,7 +690,7 @@ if __name__ == '__main__':
     for url in ['https://pubs.usgs.gov/tm/06/a57/tm6a57.pdf',
                 'https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf',
                 'https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf',
-                'https://github.com/MODFLOW-USGS/modflow6-examples/releases/download/6.1.0/csubexamples.pdf',
+                'https://github.com/MODFLOW-USGS/modflow6-testmodels/releases/download/6.1.0/csubexamples.pdf',
                 ]:
         print('  downloading {}'.format(url))
         download_and_unzip(url, pth=fd['doc'], delete_zip=False, verify=False)
