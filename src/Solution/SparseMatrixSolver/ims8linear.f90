@@ -574,17 +574,17 @@
 !       OUTPUT FORMATS
 02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
      &        /,1X,66('-'),/, &
-     &        ' MAXIMUM OF ',I6,' CALLS OF SOLUTION ROUTINE',/, &
-     &        ' MAXIMUM OF ',I6, &
+     &        ' MAXIMUM OF ',I0,' CALLS OF SOLUTION ROUTINE',/, &
+     &        ' MAXIMUM OF ',I0, &
      &        ' INTERNAL ITERATIONS PER CALL TO SOLUTION ROUTINE',/, &
      &        ' LINEAR ACCELERATION METHOD            =',1X,A,/, &
      &        ' MATRIX PRECONDITIONING TYPE           =',1X,A,/, &
      &        ' MATRIX SCALING APPROACH               =',1X,A,/, &
      &        ' MATRIX REORDERING APPROACH            =',1X,A,/, &
-     &        ' NUMBER OF ORTHOGONALIZATIONS          =',I9,/, &
+     &        ' NUMBER OF ORTHOGONALIZATIONS          =',1X,I0,/, &
      &        ' HEAD CHANGE CRITERION FOR CLOSURE     =',E15.5,/, &
      &        ' RESIDUAL CHANGE CRITERION FOR CLOSURE =',E15.5,/, &
-     &        ' RESIDUAL CONVERGENCE OPTION           =',I9,/, &
+     &        ' RESIDUAL CONVERGENCE OPTION           =',1X,I0,/, &
      &        ' RESIDUAL CONVERGENCE NORM             =',1X,A,/, &
      &        ' RELAXATION FACTOR                     =',E15.5)
 02015 FORMAT (' NUMBER OF LEVELS                      =',A15,/, &
