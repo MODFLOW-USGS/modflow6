@@ -26,9 +26,9 @@ module LakModule
   use BaseDisModule, only: DisBaseType
   use SimModule,           only: count_errors, store_error, ustop
   use GenericUtilitiesModule, only: sim_message
-  !use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
+  use SimVariablesModule, only: errmsg
   !
   implicit none
   !
@@ -451,7 +451,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=9) :: cno
@@ -688,7 +687,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword, cellid
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -990,7 +988,7 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg
+    character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1112,7 +1110,6 @@ contains
     character (len=*), intent(in) :: filename
 
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=13) :: arrName
     character(len=4) :: citem
@@ -1365,7 +1362,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text, keyword
     character(len=LENBOUNDNAME) :: bndName
     character(len=9) :: citem
@@ -1555,7 +1551,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -2998,7 +2993,6 @@ contains
     class(LakType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ival
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -3040,7 +3034,6 @@ contains
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     integer(I4B) :: ii
     integer(I4B) :: jj
@@ -3263,7 +3256,6 @@ contains
     character (len=*), intent(in) :: keyword
     character (len=*), intent(in) :: msg
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
@@ -3474,7 +3466,6 @@ contains
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: ierr
@@ -4728,12 +4719,10 @@ contains
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: n
-    !integer(I4B) :: nn
     real(DP) :: hgwf
     real(DP) :: hlak
     real(DP) :: v
     real(DP) :: v2
-    character(len=100) :: errmsg
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
@@ -4742,8 +4731,6 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        !nn = size(obsrv%indxbnds)
-        !do j = 1, nn
         do j = 1, obsrv%indxbnds_count
           v = DNODATA
           jj = obsrv%indxbnds(j)
@@ -4850,7 +4837,6 @@ contains
               n = this%imap(jj)
               if (this%iboundpak(n) /= 0) then
                 hlak = this%xnewpak(n)
-                !nn = size(obsrv%indxbnds)
                 igwfnode = this%cellid(jj)
                 hgwf = this%xnew(igwfnode)
                 call this%lak_calculate_conn_warea(n, jj, hlak, hgwf, v)
@@ -4859,7 +4845,6 @@ contains
               n = this%imap(jj)
               if (this%iboundpak(n) /= 0) then
                 hlak = this%xnewpak(n)
-                !nn = size(obsrv%indxbnds)
                 igwfnode = this%cellid(jj)
                 hgwf = this%xnew(igwfnode)
                 call this%lak_calculate_conn_conductance(n, jj, hlak, hgwf, v)
@@ -4889,11 +4874,9 @@ contains
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
-    !integer(I4B) :: n
     integer(I4B) :: nn1
     integer(I4B) :: nn2
     integer(I4B) :: jj
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -4925,9 +4908,6 @@ contains
                 do jj = this%idxlakeconn(j), this%idxlakeconn(j+1) - 1
                   if (this%boundname(jj) == bname) then
                     jfound = .true.
-                    !call ExpandArray(obsrv%indxbnds)
-                    !n = size(obsrv%indxbnds)
-                    !obsrv%indxbnds(n) = jj
                     call obsrv%AddObsIndex(jj)
                   end if
                 end do
@@ -4939,9 +4919,6 @@ contains
                 jj = this%lakein(j)
                 if (this%lakename(jj) == bname) then
                   jfound = .true.
-                  !call ExpandArray(obsrv%indxbnds)
-                  !n = size(obsrv%indxbnds)
-                  !obsrv%indxbnds(n) = j
                   call obsrv%AddObsIndex(j)
                 end if
               end do
@@ -4949,9 +4926,6 @@ contains
               do j = 1, this%nlakes
                 if (this%lakename(j) == bname) then
                   jfound = .true.
-                  !call ExpandArray(obsrv%indxbnds)
-                  !n = size(obsrv%indxbnds)
-                  !obsrv%indxbnds(n) = j
                   call obsrv%AddObsIndex(j)
                 end if
               end do
@@ -4962,19 +4936,14 @@ contains
             end if
           end if
         else
-          !call ExpandArray(obsrv%indxbnds)
-          !n = size(obsrv%indxbnds)
-          !if (n == 1) then
           if (obsrv%indxbnds_count == 0) then
             if (obsrv%ObsTypeId=='LAK' .or.                                      &
                  obsrv%ObsTypeId=='CONDUCTANCE' .or.                             &
                  obsrv%ObsTypeId=='WETTED-AREA') then
               nn2 = obsrv%NodeNumber2
               j = this%idxlakeconn(nn1) + nn2 - 1
-              !obsrv%indxbnds(1) = j
               call obsrv%AddObsIndex(j)
             else
-              !obsrv%indxbnds(1) = nn1
               call obsrv%AddObsIndex(nn1)
             end if
           else
@@ -4986,8 +4955,6 @@ contains
         ! -- catch non-cumulative observation assigned to observation defined
         !    by a boundname that is assigned to more than one element
         if (obsrv%ObsTypeId == 'STAGE') then
-          !n = size(obsrv%indxbnds)
-          !if (n > 1) then
           if (obsrv%indxbnds_count > 1) then
             write(errmsg, '(a,3(1x,a))')                                         &
               trim(adjustl(obsrv%ObsTypeId)),                                    &
@@ -5001,7 +4968,6 @@ contains
         if (obsrv%ObsTypeId=='TO-MVR' .or.                                       &
             obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                                  &
             obsrv%ObsTypeId=='OUTLET') then
-          !do j = 1, size(obsrv%indxbnds)
           do j = 1, obsrv%indxbnds_count
             nn1 =  obsrv%indxbnds(j)
             if (nn1 < 1 .or. nn1 > this%noutlets) then
@@ -5015,7 +4981,6 @@ contains
         else if (obsrv%ObsTypeId=='LAK' .or.                                     &
                  obsrv%ObsTypeId=='CONDUCTANCE' .or.                             &
                  obsrv%ObsTypeId=='WETTED-AREA') then
-          !do j = 1, size(obsrv%indxbnds)
           do j = 1, obsrv%indxbnds_count
             nn1 =  obsrv%indxbnds(j)
             if (nn1 < 1 .or. nn1 > this%maxbound) then
@@ -5027,7 +4992,6 @@ contains
             end if
           end do
         else
-          !do j = 1, size(obsrv%indxbnds)
           do j = 1, obsrv%indxbnds_count
             nn1 =  obsrv%indxbnds(j)
             if (nn1 < 1 .or. nn1 > this%nlakes) then

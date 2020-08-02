@@ -23,8 +23,8 @@ module MawModule
   use BaseDisModule, only: DisBaseType
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
                               store_warning, ustop
-  !use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
+  use SimVariablesModule, only: errmsg
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
@@ -540,7 +540,6 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: cstr
@@ -803,7 +802,6 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
     character(len=30) :: nodestr
     logical :: isfound
@@ -1016,7 +1014,6 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1348,7 +1345,6 @@ contains
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: imaw
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: errmsgr
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: cstr
@@ -1488,7 +1484,6 @@ contains
     character (len=*), intent(in) :: keyword
     character (len=*), intent(in) :: msg
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
@@ -1874,7 +1869,6 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: text
-    character(len=LINELENGTH) :: errmsg
     character (len=16) :: csteady
     logical :: isfound
     logical :: endOfBlock
@@ -3173,9 +3167,7 @@ contains
     ! -- dummy
     class(MawType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
-    !integer(I4B) :: igwfnode
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: n
@@ -3193,8 +3185,6 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        !nn = size(obsrv%indxbnds)
-        !do j = 1, nn
         do j = 1, obsrv%indxbnds_count
           v = DNODATA
           jj = obsrv%indxbnds(j)
@@ -3315,7 +3305,6 @@ contains
     integer(I4B) :: nn1
     integer(I4B) :: nn2
     integer(I4B) :: jj
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -3346,9 +3335,6 @@ contains
                 do jj = this%iaconn(j), this%iaconn(j+1) - 1
                   if (this%boundname(jj) == bname) then
                     jfound = .true.
-                    !call ExpandArray(obsrv%indxbnds)
-                    !n = size(obsrv%indxbnds)
-                    !obsrv%indxbnds(n) = jj
                     call obsrv%AddObsIndex(jj)
                   end if
                 end do
@@ -3357,9 +3343,6 @@ contains
               do j = 1, this%nmawwells
                 if (this%cmawname(j) == bname) then
                   jfound = .true.
-                  !call ExpandArray(obsrv%indxbnds)
-                  !n = size(obsrv%indxbnds)
-                  !obsrv%indxbnds(n) = j
                   call obsrv%AddObsIndex(j)
                 end if
               end do
@@ -3370,18 +3353,13 @@ contains
             end if
           end if
         else
-          !call ExpandArray(obsrv%indxbnds)
-          !n = size(obsrv%indxbnds)
-          !if (n == 1) then
           if (obsrv%indxbnds_count == 0) then
             if (obsrv%ObsTypeId=='MAW' .or.   &
                  obsrv%ObsTypeId=='CONDUCTANCE') then
               nn2 = obsrv%NodeNumber2
               j = this%iaconn(nn1) + nn2 - 1
-              !obsrv%indxbnds(1) = j
               call obsrv%AddObsIndex(j)
             else
-              !obsrv%indxbnds(1) = nn1
               call obsrv%AddObsIndex(nn1)
             end if
           else
@@ -3393,8 +3371,6 @@ contains
         ! -- catch non-cumulative observation assigned to observation defined
         !    by a boundname that is assigned to more than one element
         if (obsrv%ObsTypeId == 'HEAD') then
-          !n = size(obsrv%indxbnds)
-          !if (n > 1) then
           if (obsrv%indxbnds_count > 1) then
             write (errmsg, '(a,3(1x,a))')                                        &
               trim(adjustl(obsrv%ObsTypeId)),                                    &
@@ -3407,7 +3383,6 @@ contains
         ! -- check that index values are valid
         if (obsrv%ObsTypeId=='MAW' .or.   &
             obsrv%ObsTypeId=='CONDUCTANCE') then
-          !do j = 1, size(obsrv%indxbnds)
           do j = 1, obsrv%indxbnds_count
             nn1 =  obsrv%indxbnds(j)
             n = this%imap(nn1)
@@ -3422,7 +3397,6 @@ contains
             end if
           end do
         else
-          !do j = 1, size(obsrv%indxbnds)
           do j = 1, obsrv%indxbnds_count
             nn1 =  obsrv%indxbnds(j)
             if (nn1 < 1 .or. nn1 > this%nmawwells) then
@@ -3504,7 +3478,6 @@ contains
     integer(I4B), intent(in) :: j
     integer(I4B), intent(in) :: node
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: iTcontrastErr
     integer(I4B) :: jpos
     real(DP) :: c

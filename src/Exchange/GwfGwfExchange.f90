@@ -2,7 +2,6 @@ module GwfGwfExchangeModule
 
   use KindModule, only: DP, I4B
   use SimVariablesModule, only: errmsg
-  !use ArrayHandlersModule,     only: ExpandArray
   use BaseModelModule,         only: GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
@@ -1958,7 +1957,6 @@ contains
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
-    !integer(I4B) :: n
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     character(len=1000) :: ermsg
@@ -1988,9 +1986,6 @@ contains
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            !call ExpandArray(obsrv%indxbnds)
-            !n = size(obsrv%indxbnds)
-            !obsrv%indxbnds(n) = j
             call obsrv%AddObsIndex(j)
           endif
         enddo
@@ -2004,9 +1999,6 @@ contains
           jfound = .true.
           obsrv%BndFound = .true.
           obsrv%CurrentTimeStepEndValue = DZERO
-          !call ExpandArray(obsrv%indxbnds)
-          !n = size(obsrv%indxbnds)
-          !obsrv%indxbnds(n) = obsrv%intPak1
           call obsrv%AddObsIndex(obsrv%intPak1)
         else
           jfound = .false.
@@ -2110,7 +2102,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: n1
     integer(I4B) :: n2
-    !integer(I4B) :: nbndobs
     integer(I4B) :: iexg
     real(DP) :: v
     character(len=100) :: msg
@@ -2122,8 +2113,6 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        !nbndobs = size(obsrv%indxbnds)
-        !do j = 1,  nbndobs
         do j = 1,  obsrv%indxbnds_count
           iexg = obsrv%indxbnds(j)
           v = DZERO

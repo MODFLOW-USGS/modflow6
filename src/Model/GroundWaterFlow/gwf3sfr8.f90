@@ -2438,7 +2438,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: n
-    !integer(I4B) :: nn
     real(DP) :: v
     character(len=100) :: msg
     type(ObserveType), pointer :: obsrv => null()
@@ -2449,8 +2448,6 @@ contains
       call this%obs%obs_bd_clear()
       do i=1 ,this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        !nn = size(obsrv%indxbnds)
-        !do j = 1,nn
         do j = 1, obsrv%indxbnds_count
           n = obsrv%indxbnds(j)
           v = DZERO
@@ -2522,7 +2519,6 @@ contains
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
-    !integer(I4B) :: n
     integer(I4B) :: nn1
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
@@ -2571,14 +2567,6 @@ contains
             this%maxbound, '(specified value is ', nn1, ')'
           call store_error(errmsg)
         else
-          !call ExpandArray(obsrv%indxbnds)
-          !n = size(obsrv%indxbnds)
-          !if (n == 1) then
-          !  obsrv%indxbnds(1) = nn1
-          !else
-          !  errmsg = 'Programming error in sfr_rp_obs'
-          !  call store_error(errmsg)
-          !endif
           if (obsrv%indxbnds_count == 0) then
             call obsrv%AddObsIndex(nn1)
           else
@@ -2592,8 +2580,6 @@ contains
         if (obsrv%ObsTypeId == 'STAGE') then
           nn1 = obsrv%NodeNumber
           if (nn1 == NAMEDBOUNDFLAG) then
-            !n = size(obsrv%indxbnds)
-            !if (n > 1) then
             if (obsrv%indxbnds_count > 1) then
               write(errmsg, '(a,3(1x,a))')                                         &
                 trim(adjustl(obsrv%ObsTypeId)),                                    &
@@ -2605,8 +2591,6 @@ contains
         end if
         !
         ! -- check that node number 1 is valid; call store_error if not
-        !n = size(obsrv%indxbnds)
-        !do j = 1, n
         do j = 1, obsrv%indxbnds_count
           nn1 = obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then

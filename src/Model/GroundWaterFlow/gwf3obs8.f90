@@ -151,8 +151,6 @@ contains
         case default
           msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
           call store_error(msg)
-          !call store_error_unit(this%inUnitObs)
-          !call ustop()
         end select
       end do
       !

@@ -1648,7 +1648,8 @@ module BndModule
     !    all observations defined for a package.
     class(BndType) :: this
     ! -- local
-    integer(I4B) :: i, n
+    integer(I4B) :: i
+    integer(I4B) :: n
     real(DP) :: v
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
@@ -1659,7 +1660,6 @@ module BndModule
     do i=1,this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       if (obsrv%BndFound) then
-        !do n = 1, size(obsrv%indxbnds)
         do n = 1, obsrv%indxbnds_count
           if (obsrv%ObsTypeId == 'TO-MVR') then
             if (this%imover == 1) then

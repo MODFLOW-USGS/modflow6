@@ -50,7 +50,6 @@ module GwtAptModule
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  !use ArrayHandlersModule, only: ExpandArray
   
   implicit none
   
@@ -2678,9 +2677,6 @@ subroutine apt_rp_obs(this)
               n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
               if (this%boundname(n) == bname) then
                 jfound = .true.
-                !call ExpandArray(obsrv%indxbnds)
-                !n = size(obsrv%indxbnds)
-                !obsrv%indxbnds(n) = j
                 call obsrv%AddObsIndex(j)
               end if
             end do
@@ -2689,9 +2685,6 @@ subroutine apt_rp_obs(this)
               n = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
               if (this%featname(n) == bname) then
                 jfound = .true.
-                !call ExpandArray(obsrv%indxbnds)
-                !n = size(obsrv%indxbnds)
-                !obsrv%indxbnds(n) = j
                 call obsrv%AddObsIndex(j)
               end if
             end do
@@ -2699,9 +2692,6 @@ subroutine apt_rp_obs(this)
             do j = 1, this%ncv
               if (this%featname(j) == bname) then
                 jfound = .true.
-                !call ExpandArray(obsrv%indxbnds)
-                !n = size(obsrv%indxbnds)
-                !obsrv%indxbnds(n) = j
                 call obsrv%AddObsIndex(j)
               end if
             end do
@@ -2712,9 +2702,6 @@ subroutine apt_rp_obs(this)
           end if
         end if
       else
-        !call ExpandArray(obsrv%indxbnds)
-        !n = size(obsrv%indxbnds)
-        !if (n == 1) then
         if (obsrv%indxbnds_count == 0) then
           if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
             nn2 = obsrv%NodeNumber2
@@ -2723,7 +2710,6 @@ subroutine apt_rp_obs(this)
             do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
               if (this%flowbudptr%budterm(this%idxbudgwf)%id1(j) == nn1) then
                 idx = j + nn2 - 1
-                !obsrv%indxbnds(1) = idx
                 call obsrv%AddObsIndex(idx)
                 exit
               end if
@@ -2744,7 +2730,6 @@ subroutine apt_rp_obs(this)
               if (this%flowbudptr%budterm(this%idxbudfjf)%id1(j) == nn1 .and. &
                   this%flowbudptr%budterm(this%idxbudfjf)%id2(j) == nn2) then
                 idx = j
-                !obsrv%indxbnds(1) = idx
                 call obsrv%AddObsIndex(idx)
                 exit
               end if
@@ -2757,7 +2742,6 @@ subroutine apt_rp_obs(this)
               call store_error(errmsg)
             end if
           else
-            !obsrv%indxbnds(1) = nn1
             call obsrv%AddObsIndex(nn1)
           end if
         else
@@ -2769,8 +2753,6 @@ subroutine apt_rp_obs(this)
       ! -- catch non-cumulative observation assigned to observation defined
       !    by a boundname that is assigned to more than one element
       if (obsrv%ObsTypeId == 'CONCENTRATION') then
-        !n = size(obsrv%indxbnds)
-        !if (n > 1) then
         if (obsrv%indxbnds_count > 1) then
           write (errmsg, '(4x,a,4(1x,a))') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
@@ -2784,7 +2766,6 @@ subroutine apt_rp_obs(this)
       if (obsrv%ObsTypeId=='TO-MVR' .or. &
           obsrv%ObsTypeId=='EXT-OUTFLOW') then
         ntmvr = this%flowbudptr%budterm(this%idxbudtmvr)%nlist
-        !do j = 1, size(obsrv%indxbnds)
         do j = 1, obsrv%indxbnds_count
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > ntmvr) then
@@ -2797,7 +2778,6 @@ subroutine apt_rp_obs(this)
         end do
       else if (obsrv%ObsTypeId == trim(adjustl(this%text)) .or. &
                obsrv%ObsTypeId == 'FLOW-JA-FACE') then
-        !do j = 1, size(obsrv%indxbnds)
         do j = 1, obsrv%indxbnds_count
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
@@ -2809,7 +2789,6 @@ subroutine apt_rp_obs(this)
           end if
         end do
       else
-        !do j = 1, size(obsrv%indxbnds)
         do j = 1, obsrv%indxbnds_count
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%ncv) then
@@ -2848,7 +2827,6 @@ subroutine apt_rp_obs(this)
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: n
-    !integer(I4B) :: nn
     integer(I4B) :: n1
     integer(I4B) :: n2
     real(DP) :: v
@@ -2861,8 +2839,6 @@ subroutine apt_rp_obs(this)
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        !nn = size(obsrv%indxbnds)
-        !do j = 1, nn
         do j = 1, obsrv%indxbnds_count
           v = DNODATA
           jj = obsrv%indxbnds(j)

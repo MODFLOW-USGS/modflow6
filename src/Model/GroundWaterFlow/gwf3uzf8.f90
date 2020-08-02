@@ -23,6 +23,7 @@ module UzfModule
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
+  use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
@@ -551,7 +552,6 @@ contains
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
     class(uzftype),intent(inout) :: this
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -679,7 +679,6 @@ contains
     character(len=LENBOUNDNAME) :: bndName
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     logical :: isfound
     logical :: endOfBlock
     integer (I4B) :: i
@@ -1396,7 +1395,6 @@ contains
     ! -- for observations
     integer(I4B) :: j
     character(len=LENBOUNDNAME) :: bname
-    character(len=100) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
@@ -1961,7 +1959,6 @@ contains
     real(DP) :: trhs1, thcof1, trhs2, thcof2
     real(DP) :: hgwf, hgwflm1, cvv, uzderiv, gwet, derivgwet
     real(DP) :: qfrommvr, qformvr,sumaet
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -2106,7 +2103,6 @@ contains
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
     integer(I4B) :: ierr
     integer(I4B) :: i, n
@@ -2431,7 +2427,6 @@ contains
     ! -- dummy
     class(UzfType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=16) :: cuzf
     character(len=20) :: cellid
     character(len=LINELENGTH) :: cuzfcells
@@ -2607,9 +2602,7 @@ contains
     integer(I4B) :: i
     integer(I4B) :: ii
     integer(I4B) :: n
-    !integer(I4B) :: nn
     real(DP) :: v
-    character(len=LINELENGTH) :: errmsg
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
@@ -2618,8 +2611,6 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        !nn = size(obsrv%indxbnds)
-        !do ii = 1, nn
         do ii = 1, obsrv%indxbnds_count
           n = obsrv%indxbnds(ii)
           v = DNODATA
@@ -2706,7 +2697,6 @@ contains
     integer(I4B) :: nn
     real(DP) :: obsdepth
     real(DP) :: dmax
-    character(len=200) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     class(ObserveType),   pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
@@ -2732,11 +2722,7 @@ contains
             if (this%boundname(j) == bname) then
               obsrv%BndFound = .true.
               obsrv%CurrentTimeStepEndValue = DZERO
-              !call ExpandArray(obsrv%indxbnds)
-              !n = size(obsrv%indxbnds)
-              !obsrv%indxbnds(n) = j
               call obsrv%AddObsIndex(j)
-              !if (n==1) then
               if (obsrv%indxbnds_count == 1) then
                 !
                 ! -- Define intPak1 so that obs_theta is stored (for first uzf
@@ -2760,16 +2746,12 @@ contains
             obsrv%BndFound = .true.
           endif
           obsrv%CurrentTimeStepEndValue = DZERO
-          !call ExpandArray(obsrv%indxbnds)
-          !n = size(obsrv%indxbnds)
-          !obsrv%indxbnds(n) = nn
           call obsrv%AddObsIndex(nn)
         end if
         !
         ! -- catch non-cumulative observation assigned to observation defined
         !    by a boundname that is assigned to more than one element
         if (obsrv%ObsTypeId == 'WATER-CONTENT') then
-          !n = size(obsrv%indxbnds)
           n = obsrv%indxbnds_count
           if (n > 1) then
             write (errmsg, '(a,3(1x,a))')                                        &
@@ -2797,7 +2779,6 @@ contains
             call store_error(errmsg)
           endif
         else
-          !do j = 1, size(obsrv%indxbnds)
           do j = 1, obsrv%indxbnds_count
             nn =  obsrv%indxbnds(j)
             if (nn < 1 .or. nn > this%maxbound) then
