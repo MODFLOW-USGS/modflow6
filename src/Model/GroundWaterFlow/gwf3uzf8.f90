@@ -2,7 +2,7 @@
 module UzfModule
 
   use KindModule, only: DP, I4B
-  use ArrayHandlersModule, only: ExpandArray
+  !use ArrayHandlersModule, only: ExpandArray
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
                              DONE, DHUNDRED,                                    &
                              LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
@@ -23,6 +23,7 @@ module UzfModule
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
+  use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
@@ -551,7 +552,6 @@ contains
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
     class(uzftype),intent(inout) :: this
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -679,7 +679,6 @@ contains
     character(len=LENBOUNDNAME) :: bndName
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     logical :: isfound
     logical :: endOfBlock
     integer (I4B) :: i
@@ -1396,7 +1395,6 @@ contains
     ! -- for observations
     integer(I4B) :: j
     character(len=LENBOUNDNAME) :: bname
-    character(len=100) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
@@ -1961,7 +1959,6 @@ contains
     real(DP) :: trhs1, thcof1, trhs2, thcof2
     real(DP) :: hgwf, hgwflm1, cvv, uzderiv, gwet, derivgwet
     real(DP) :: qfrommvr, qformvr,sumaet
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -2106,7 +2103,6 @@ contains
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
     integer(I4B) :: ierr
     integer(I4B) :: i, n
@@ -2431,7 +2427,6 @@ contains
     ! -- dummy
     class(UzfType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=16) :: cuzf
     character(len=20) :: cellid
     character(len=LINELENGTH) :: cuzfcells
@@ -2604,19 +2599,19 @@ contains
     ! -- dummy
     class(UzfType) :: this
     ! -- local
-    integer(I4B) :: i, ii, n, nn
+    integer(I4B) :: i
+    integer(I4B) :: ii
+    integer(I4B) :: n
     real(DP) :: v
-    character(len=LINELENGTH) :: errmsg
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
     ! Write simulated values for all uzf observations
-    if (this%obs%npakobs>0) then
+    if (this%obs%npakobs > 0) then
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        nn = size(obsrv%indxbnds)
-        do ii = 1, nn
+        do ii = 1, obsrv%indxbnds_count
           n = obsrv%indxbnds(ii)
           v = DNODATA
           select case (obsrv%ObsTypeId)
@@ -2679,155 +2674,130 @@ contains
           call this%obs%SaveOneSimval(obsrv, v)
         end do
       end do
+      !
+      ! -- write summary of error messages
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
     end if
     !
-    ! -- write summary of package block error messages
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
+    ! -- return
     return
   end subroutine uzf_bd_obs
 !
   subroutine uzf_rp_obs(this)
+    use TdisModule, only: kper
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n
+    integer(I4B) :: nn
     real(DP) :: obsdepth
     real(DP) :: dmax
-    character(len=200) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     class(ObserveType),   pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
     ! -- formats
 60  format('Invalid node number in OBS input: ', i0)
     !
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      endif
-      !
-      ! -- get node number 1
-      nn = obsrv%NodeNumber
-      if (nn == NAMEDBOUNDFLAG) then
-        bname = obsrv%FeatureName
-        ! -- Observation location(s) is(are) based on a boundary name.
-        !    Iterate through all boundaries to identify and store
-        !    corresponding index(indices) in bound array.
-        do j = 1, this%nodes
-          if (this%boundname(j) == bname) then
-            !! In UZF, use of the same boundary name for multiple boundaries
-            !! in an observation is not supported for obs type UZF-WATERCONTENT
-            !if (obsrv%ObsTypeId=='WATER-CONTENT') then
-            !  if (obsrv%BndFound) then
-            !    errmsg = 'Duplicate names for multiple boundaries are not ' // &
-            !            'supported for UZF observations of type ' // &
-            !            '"UZF-WATERCONTENT". There are multiple' // &
-            !            ' boundaries named "' // trim(bname) // &
-            !            '" for observation: ' // &
-            !            trim(obsrv%Name) // '.'
-            !    call store_error(errmsg)
-            !    call store_error_unit(this%inunit)
-            !    call ustop()
-            !  endif
-            !endif
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
-            if (n==1) then
-              ! Define intPak1 so that obs_theta is stored (for first uzf
-              ! cell if multiple cells share the same boundname).
-              obsrv%intPak1 = j
-            endif
-          endif
-        enddo
-      else
-        ! -- get node number
+    ! -- process each package observation
+    !    only done the first stress period since boundaries are fixed
+    !    for the simulation
+    if (kper == 1) then
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        !
+        ! -- get node number 1
         nn = obsrv%NodeNumber
-        ! -- put nn (a value meaningful only to UZF) in intPak1
-        obsrv%intPak1 = nn
-        ! -- check that node number is valid; call store_error if not
-        if (nn < 1 .or. nn > this%nodes) then
-          write (errmsg, 60) nn
-          call store_error(errmsg)
+        if (nn == NAMEDBOUNDFLAG) then
+          bname = obsrv%FeatureName
+          !
+          ! -- Observation location(s) is(are) based on a boundary name.
+          !    Iterate through all boundaries to identify and store
+          !    corresponding index(indices) in bound array.
+          do j = 1, this%nodes
+            if (this%boundname(j) == bname) then
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              call obsrv%AddObsIndex(j)
+              if (obsrv%indxbnds_count == 1) then
+                !
+                ! -- Define intPak1 so that obs_theta is stored (for first uzf
+                !    cell if multiple cells share the same boundname).
+                obsrv%intPak1 = j
+              endif
+            endif
+          enddo
         else
-          obsrv%BndFound = .true.
-        endif
-        obsrv%CurrentTimeStepEndValue = DZERO
-        call ExpandArray(obsrv%indxbnds)
-        n = size(obsrv%indxbnds)
-        obsrv%indxbnds(n) = nn
-      end if
-      !
-      ! -- catch non-cumulative observation assigned to observation defined
-      !    by a boundname that is assigned to more than one element
-      if (obsrv%ObsTypeId == 'WATER-CONTENT') then
-        n = size(obsrv%indxbnds)
-        if (n > 1) then
-          write (errmsg, '(a,3(1x,a))')                                          &
-            trim(adjustl(obsrv%ObsTypeId)), 'for observation',                   &
-            trim(adjustl(obsrv%Name)),                                           &
-            'must be assigned to a UZF cell with a unique boundname.'
-          call store_error(errmsg)
+          !
+          ! -- get node number
+          nn = obsrv%NodeNumber
+          !
+          ! -- put nn (a value meaningful only to UZF) in intPak1
+          obsrv%intPak1 = nn
+          ! -- check that node number is valid; call store_error if not
+          if (nn < 1 .or. nn > this%nodes) then
+            write (errmsg, 60) nn
+            call store_error(errmsg)
+          else
+            obsrv%BndFound = .true.
+          endif
+          obsrv%CurrentTimeStepEndValue = DZERO
+          call obsrv%AddObsIndex(nn)
         end if
         !
-        ! -- check WATER-CONTENT depth
-        obsdepth = obsrv%Obsdepth
-        !
-        ! -- put obsdepth (a value meaningful only to UZF) in dblPak1
-        obsrv%dblPak1 = obsdepth
-        !
-        ! -- determine maximum cell depth
-        dmax = this%uzfobj%celtop(n) - this%uzfobj%celbot(n)
-        ! -- check that obs depth is valid; call store_error if not
-        ! -- need to think about a way to put bounds on this depth
-        if (obsdepth < DZERO .or. obsdepth > dmax) then
-          write (errmsg, '(a,3(1x,a),1x,g0,1x,a,1x,g0,a)')                       &
-            trim(adjustl(obsrv%ObsTypeId)), 'for observation',                   &
-            trim(adjustl(obsrv%Name)), 'specified depth (', obsdepth,            &
-            ') must be between 0.0 and ', dmax, '.'
-          call store_error(errmsg)
-        endif
-      else
-        do j = 1, size(obsrv%indxbnds)
-          nn =  obsrv%indxbnds(j)
-          if (nn < 1 .or. nn > this%maxbound) then
-            write (errmsg, '(a,2(1x,a),1x,i0,1x,a,1x,i0,a)')                     &
-              trim(adjustl(obsrv%ObsTypeId)), 'uzfno must be greater than 0 ',   &
-              'and less than or equal to', this%maxbound,                        &
-              '(specified value is ', nn, ').'
+        ! -- catch non-cumulative observation assigned to observation defined
+        !    by a boundname that is assigned to more than one element
+        if (obsrv%ObsTypeId == 'WATER-CONTENT') then
+          n = obsrv%indxbnds_count
+          if (n > 1) then
+            write (errmsg, '(a,3(1x,a))')                                        &
+              trim(adjustl(obsrv%ObsTypeId)), 'for observation',                 &
+              trim(adjustl(obsrv%Name)),                                         &
+              'must be assigned to a UZF cell with a unique boundname.'
             call store_error(errmsg)
           end if
-        end do
+          !
+          ! -- check WATER-CONTENT depth
+          obsdepth = obsrv%Obsdepth
+          !
+          ! -- put obsdepth (a value meaningful only to UZF) in dblPak1
+          obsrv%dblPak1 = obsdepth
+          !
+          ! -- determine maximum cell depth
+          dmax = this%uzfobj%celtop(n) - this%uzfobj%celbot(n)
+          ! -- check that obs depth is valid; call store_error if not
+          ! -- need to think about a way to put bounds on this depth
+          if (obsdepth < DZERO .or. obsdepth > dmax) then
+            write (errmsg, '(a,3(1x,a),1x,g0,1x,a,1x,g0,a)')                       &
+              trim(adjustl(obsrv%ObsTypeId)), 'for observation',                   &
+              trim(adjustl(obsrv%Name)), 'specified depth (', obsdepth,            &
+              ') must be between 0.0 and ', dmax, '.'
+            call store_error(errmsg)
+          endif
+        else
+          do j = 1, obsrv%indxbnds_count
+            nn =  obsrv%indxbnds(j)
+            if (nn < 1 .or. nn > this%maxbound) then
+              write (errmsg, '(a,2(1x,a),1x,i0,1x,a,1x,i0,a)')                     &
+                trim(adjustl(obsrv%ObsTypeId)), 'uzfno must be greater than 0 ',   &
+                'and less than or equal to', this%maxbound,                        &
+                '(specified value is ', nn, ').'
+              call store_error(errmsg)
+            end if
+          end do
+        end if
+      end do
+      !
+      ! -- evaluate if there are any observation errors
+      if (count_errors() > 0) then
+        call store_error_unit(this%inunit)
+        call ustop()
       end if
-  !    !
-  !    select case (obsrv%ObsTypeId)
-  !      case ('WATER-CONTENT')
-  !        obsdepth = obsrv%Obsdepth
-  !        ! -- put obsdepth (a value meaningful only to UZF) in dblPak1
-  !        obsrv%dblPak1 = obsdepth
-  !        ! -- check that obs depth is valid; call store_error if not
-  !        ! -- need to think about a way to put bounds on this depth
-  !        if (obsdepth < -999999.d0 .or. obsdepth > 999999.d0) then
-  !          write (errmsg, 70) obsdepth
-  !          call store_error(errmsg)
-  !        endif
-  !      case default
-  !! left to check other types of observations
-  !    end select
-    end do
-    if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
-      call ustop()
-    endif
+    end if
     !
     return
   end subroutine uzf_rp_obs

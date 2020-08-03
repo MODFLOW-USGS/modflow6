@@ -2,7 +2,6 @@ module GwfGwfExchangeModule
 
   use KindModule, only: DP, I4B
   use SimVariablesModule, only: errmsg
-  use ArrayHandlersModule,     only: ExpandArray
   use BaseModelModule,         only: GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
@@ -1956,7 +1955,8 @@ contains
     ! -- dummy
     class(GwfExchangeType) :: this
     ! -- local
-    integer(I4B) :: i, j, n
+    integer(I4B) :: i
+    integer(I4B) :: j
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     character(len=1000) :: ermsg
@@ -1966,16 +1966,13 @@ contains
            '" is invalid in package "',a,'"')
 ! ------------------------------------------------------------------------------
     !
-    do i=1,this%obs%npakobs
+    do i = 1, this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       !
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
+      ! -- indxbnds needs to be reset each stress period because 
+      !    list of boundaries can change each stress period.
       ! -- Not true for exchanges, but leave this in for now anyway.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      endif
+      call obsrv%ResetObsIndex()
       obsrv%BndFound = .false.
       !
       bname = obsrv%FeatureName
@@ -1989,9 +1986,7 @@ contains
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
-            call ExpandArray(obsrv%indxbnds)
-            n = size(obsrv%indxbnds)
-            obsrv%indxbnds(n) = j
+            call obsrv%AddObsIndex(j)
           endif
         enddo
         if (.not. jfound) then
@@ -2004,15 +1999,14 @@ contains
           jfound = .true.
           obsrv%BndFound = .true.
           obsrv%CurrentTimeStepEndValue = DZERO
-          call ExpandArray(obsrv%indxbnds)
-          n = size(obsrv%indxbnds)
-          obsrv%indxbnds(n) = obsrv%intPak1
+          call obsrv%AddObsIndex(obsrv%intPak1)
         else
           jfound = .false.
         endif
       endif
     enddo
     !
+    ! -- write summary of error messages
     if (count_errors() > 0) then
       call store_error_unit(this%inobs)
       call ustop()
@@ -2104,7 +2098,10 @@ contains
     use ObserveModule, only: ObserveType
     class(GwfExchangeType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n1, n2, nbndobs
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n1
+    integer(I4B) :: n2
     integer(I4B) :: iexg
     real(DP) :: v
     character(len=100) :: msg
@@ -2116,8 +2113,7 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        nbndobs = size(obsrv%indxbnds)
-        do j = 1,  nbndobs
+        do j = 1,  obsrv%indxbnds_count
           iexg = obsrv%indxbnds(j)
           v = DZERO
           select case (obsrv%ObsTypeId)
