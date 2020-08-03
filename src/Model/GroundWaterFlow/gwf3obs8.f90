@@ -136,7 +136,7 @@ contains
     !
     ! -- iterate through all GWF observations
     if (this%npakobs > 0) then
-      do i=1,this%npakobs
+      do i = 1, this%npakobs
         obsrv => this%pakobs(i)%obsrv
         nodenumber = obsrv%NodeNumber
         jaindex = obsrv%JaIndex
@@ -151,11 +151,15 @@ contains
         case default
           msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
           call store_error(msg)
-          call store_error_unit(this%inUnitObs)
-          call ustop()
         end select
-      enddo
-    endif
+      end do
+      !
+      ! -- write summary of error messages
+      if (count_errors() > 0) then
+        call store_error_unit(this%inUnitObs)
+        call ustop()
+      end if
+    end if
     !
     return
   end subroutine gwf_obs_bd

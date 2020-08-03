@@ -1212,11 +1212,14 @@ module GwfBuyModule
     class(GwfBuyType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: line
     integer(I4B) :: ierr
     integer(I4B) :: irhospec
     logical :: isfound, endOfBlock
     logical :: blockrequired
     integer(I4B), dimension(:), allocatable :: itemp
+    character(len=10) :: c10
+    character(len=16) :: c16
     ! -- format
     character(len=*),parameter :: fmterr = &
       "('INVALID VALUE FOR IRHOSPEC (',i0,') DETECTED IN BUY PACKAGE. &
@@ -1233,7 +1236,7 @@ module GwfBuyModule
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
                               blockRequired=blockRequired)
     !
-    ! -- parse options block if detected
+    ! -- parse packagedata block
     if (isfound) then
       write(this%iout,'(1x,a)')'PROCESSING BUY PACKAGEDATA'
       do
@@ -1262,6 +1265,25 @@ module GwfBuyModule
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    ! -- write packagedata information
+    write(this%iout, '(/,a)') 'SUMMARY OF SPECIES INFORMATION IN BUY PACKAGE'
+    write(this%iout, '(3a11, 2a17)') &
+                         'SPECIES', 'DRHODC', 'CRHOREF', 'MODEL', &
+                         'AUXSPECIESNAME'
+    do irhospec = 1, this%nrhospecies
+      write(c10, '(i0)') irhospec
+      line = ' ' // adjustr(c10)
+      write(c10, '(g10.4)') this%drhodc(irhospec)
+      line = trim(line) // ' ' // adjustr(c10)
+      write(c10, '(g10.4)') this%crhoref(irhospec)
+      line = trim(line) // ' ' // adjustr(c10)
+      write(c16, '(a)') this%cmodelname(irhospec)
+      line = trim(line) // ' ' // adjustr(c16)
+      write(c16, '(a)') this%cauxspeciesname(irhospec)
+      line = trim(line) // ' ' // adjustr(c16)
+      write(this%iout, '(a)') trim(line)
+    end do
     !
     ! -- deallocate
     deallocate(itemp)

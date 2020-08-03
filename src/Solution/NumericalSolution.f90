@@ -305,9 +305,9 @@ contains
     this%linmeth = 1
     this%nonmeth = 0
     this%iprims = 0
-    this%theta = DZERO
+    this%theta = DONE
     this%akappa = DZERO
-    this%gamma = DZERO
+    this%gamma = DONE
     this%amomentum = DZERO
     this%breduc = DZERO
     this%btol = 0
@@ -824,10 +824,19 @@ contains
       WRITE(IOUT,*) '***UNDER-RELAXATION WILL NOT BE USED***'
       WRITE(IOUT,*)
     ELSE
-      WRITE(errmsg,'(a)')                                                        &
+      WRITE(errmsg,'(a)')                                                      &
         'INCORRECT VALUE FOR VARIABLE NONMETH WAS SPECIFIED.'
       call store_error(errmsg)
     END IF
+    !
+    ! -- ensure gamma is > 0 for simple
+    if (this%nonmeth == 1) then
+      if (this%gamma == 0) then
+        WRITE(errmsg, '(a)')                                                   &
+          'GAMMA must be greater than zero if SIMPLE under-relaxation is used.'
+        call store_error(errmsg)
+      end if
+    end if
     !
     ! -- call secondary subroutine to initialize and read linear 
     !    solver parameters IMSLINEAR solver
@@ -883,26 +892,34 @@ contains
     !
     ! -- standard outer iteration formats
 9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION    (DVCLOSE) = ', E15.6, &
-    &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I9,    &
-    &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ', I9,    &
-    &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ', I9,    &
-    &      /1X,'LINEAR SOLUTION METHOD                   (LINMETH) = ', I9)
+    &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I0,    &
+    &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ', I0,    &
+    &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ', I0,    &
+    &      /1X,'LINEAR SOLUTION METHOD                   (LINMETH) = ', I0)
     !
-    IF(this%nonmeth /= 0)THEN
-      WRITE(IOUT,9003) this%theta, this%akappa, this%gamma, this%amomentum,    &
-                       this%numtrack
-      IF(this%numtrack /= 0) WRITE(IOUT,9004) this%btol,this%breduc,this%res_lim
-    END IF
+    if (this%nonmeth == 1) then ! simple
+      write(iout, 9003) this%gamma
+    else if (this%nonmeth == 2) then ! cooley
+      write(iout, 9004) this%gamma
+    else if (this%nonmeth == 3) then ! delta bar delta
+      write(iout, 9005) this%theta, this%akappa, this%gamma, this%amomentum
+    end if
     !
-    ! -- under-relaxation formats
-9003 FORMAT(1X,'UNDER-RELAXATION WEIGHT REDUCTION FACTOR   (THETA) = ', E15.6, &
+    ! -- write backtracking information
+    if(this%numtrack /= 0) write(iout, 9006) this%numtrack, this%btol,       &
+                                             this%breduc,this%res_lim
+    !
+    ! -- under-relaxation formats (simple, cooley, dbd)
+9003 FORMAT(1X,'UNDER-RELAXATION FACTOR                    (GAMMA) = ', E15.6)
+9004 FORMAT(1X,'UNDER-RELAXATION PREVIOUS HISTORY FACTOR   (GAMMA) = ', E15.6)
+9005 FORMAT(1X,'UNDER-RELAXATION WEIGHT REDUCTION FACTOR   (THETA) = ', E15.6, &
     &      /1X,'UNDER-RELAXATION WEIGHT INCREASE INCREMENT (KAPPA) = ', E15.6, &
     &      /1X,'UNDER-RELAXATION PREVIOUS HISTORY FACTOR   (GAMMA) = ', E15.6, &
-    &      /1X,'UNDER-RELAXATIONMOMENTUM TERM          (AMOMENTUM) = ', E15.6, &
-    &      /1X,'   MAXIMUM NUMBER OF BACKTRACKS         (NUMTRACK) = ',I9)
+    &      /1X,'UNDER-RELAXATION MOMENTUM TERM         (AMOMENTUM) = ', E15.6)
     !
     ! -- backtracking formats
-9004 FORMAT(1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
+9006 FORMAT(1X,'MAXIMUM NUMBER OF BACKTRACKS            (NUMTRACK) = ', I0,    &
+    &      /1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
     &      /1X,'BACKTRACKING REDUCTION FACTOR             (BREDUC) = ', E15.6, &
     &      /1X,'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
     !
@@ -2463,9 +2480,9 @@ contains
       this%dvclose = dem3
       this%mxiter = 25
       this%nonmeth = 0
-      this%theta = 1.0
+      this%theta = DONE
       this%akappa = DZERO
-      this%gamma = DZERO
+      this%gamma = DONE
       this%amomentum = DZERO
       this%numtrack = 0
       this%btol = DZERO
@@ -2841,6 +2858,7 @@ contains
     ! -- option for using simple dampening (as done by MODFLOW-2005 PCG)
     if (this%nonmeth == 1) then
       do n = 1, neq
+        !
         ! -- skip inactive nodes
         if (active(n) < 1) cycle
         !
@@ -2854,12 +2872,17 @@ contains
     !
     ! -- option for using cooley underrelaxation
     else if (this%nonmeth == 2) then
+      !
+      ! -- set bigch
+      this%bigch = bigch
+      !
+      ! -- initialize values for first iteration
       if (kiter == 1) then
-        relax = done
+        relax = DONE
         this%relaxold = DONE
-        this%bigch = bigch
         this%bigchold = bigch
       else
+        !
         ! -- compute relaxation factor
         es = this%bigch / (this%bigchold * this%relaxold)
         aes = abs(es)
@@ -2871,16 +2894,18 @@ contains
       end if
       this%relaxold = relax
       !
-      ! -- modify cooley to use exponential average of past changes
+      ! -- modify cooley to use weighted average of past changes
       this%bigchold = (DONE - this%gamma) * this%bigch  + this%gamma *         &
                       this%bigchold
-      ! -- this method does it right after newton - need to do it after
-      !    underrelaxation and backtracking.
       !
       ! -- compute new head after under-relaxation
       if (relax < DONE) then
         do n = 1, neq
+          !
+          ! -- skip inactive nodes
           if (active(n) < 1) cycle
+          !
+          ! -- update dependent variable
           delx = x(n) - xtemp(n)
           this%dxold(n) = delx
           x(n) = xtemp(n) + relax * delx
@@ -2890,12 +2915,14 @@ contains
     ! -- option for using delta-bar-delta scheme to under-relax for all equations
     else if (this%nonmeth == 3) then
       do n = 1, neq
+        !
         ! -- skip inactive nodes
         if (active(n) < 1) cycle
         !
         ! -- compute step-size (delta x) and initialize d-b-d parameters
         delx = x(n) - xtemp(n)
-
+        !
+        ! -- initialize values for first iteration
         if ( kiter == 1 ) then
           this%wsave(n) = DONE
           this%hchold(n) = DEM20
@@ -2904,7 +2931,7 @@ contains
         !
         ! -- compute new relaxation term as per delta-bar-delta
         ww = this%wsave(n)
-
+        !
         ! for flip-flop condition, decrease factor
         if ( this%deold(n)*delx < DZERO ) then
           ww = this%theta * this%wsave(n)
@@ -2914,11 +2941,9 @@ contains
         end if
         if ( ww > DONE ) ww = DONE
         this%wsave(n) = ww
-
-        ! -- compute exponential average of past changes in hchold
+        !
+        ! -- compute weighted average of past changes in hchold
         if (kiter == 1) then
-          ! -- this method does it right after newton
-          ! -- need to do it after underrelaxation and backtracking.
           this%hchold(n) = delx
         else
           this%hchold(n) = (DONE - this%gamma) * delx +                        &
