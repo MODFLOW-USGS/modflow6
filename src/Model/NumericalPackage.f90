@@ -16,7 +16,7 @@ module NumericalPackageModule
   type :: NumericalPackageType
 
     ! -- strings
-    character(len=LENMODELNAME)                        :: name_model      = ''       !TODO_MJR: remove this??
+    character(len=LENMODELNAME)                        :: name_model      = ''       !< TODO_MJR: remove this
     character(len=LENPACKAGENAME)                      :: packName        = ''       !< name of the package
     character(len=LENMEMPATH)                          :: memoryPath      = ''       !< the location in the memory manager where the variables are stored
     character(len=LENMEMPATH)                          :: memoryPathModel = ''       !< the location in the memory manager where the variables

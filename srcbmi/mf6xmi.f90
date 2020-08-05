@@ -1,10 +1,12 @@
 ! this module contains entry points for the mf6 dll to expose functionality
 ! that is _beyond_ the basic model interface: https://bmi-spec.readthedocs.io/en/latest/
 module mf6xmi
+  use mf6bmi
+  use mf6bmiUtil
   use Mf6CoreModule
   use KindModule
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
-  use iso_c_binding, only: c_int
+  use iso_c_binding, only: c_int, c_char  
   implicit none
  
   ! this is the counter for the outer iteration loop,
@@ -185,5 +187,43 @@ module mf6xmi
     solution => GetNumericalSolutionFromList(basesolutionlist, solutionIdx)    
     
   end function getSolution
+
+  function get_var_address(c_component_name, c_subcomponent_name, &
+                          c_var_name, c_var_address) &
+                          result(bmi_status) bind(C, name="get_var_address")
+    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_address
+    use MemoryHelperModule, only: create_mem_path, create_mem_address
+    use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME, LENMEMPATH, LENMEMADDRESS    
+    character(kind=c_char), intent(in) :: c_component_name(*)
+    character(kind=c_char), intent(in) :: c_subcomponent_name(*)
+    character(kind=c_char), intent(in) :: c_var_name(*)
+    character(kind=c_char), intent(out) :: c_var_address(MAXSTRLEN)
+    integer(kind=c_int) :: bmi_status
+ 
+    ! local
+    character(len=LENCOMPONENTNAME) :: component_name
+    character(len=LENCOMPONENTNAME) :: subcomponent_name
+    character(len=LENVARNAME) :: variable_name
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENMEMADDRESS) :: mem_address
+
+    ! convert to Fortran strings
+    component_name = char_array_to_string(c_component_name, strlen(c_component_name)) 
+    subcomponent_name = char_array_to_string(c_subcomponent_name, strlen(c_subcomponent_name))
+    variable_name = char_array_to_string(c_var_name, strlen(c_var_name))
+
+    ! create memory address
+    if (subcomponent_name == '') then
+      mem_path = create_mem_path(component_name)
+    else
+      mem_path = create_mem_path(component_name, subcomponent_name)
+    end if
+    mem_address = create_mem_address(mem_path, variable_name)
+
+    ! convert to c string:
+    c_var_address(1:len(trim(mem_address))+1) = string_to_char_array(trim(mem_address), len(trim(mem_address)))
+
+    !bmi_status = BMI_SUCCESS
+  end function get_var_address
 
 end module mf6xmi
