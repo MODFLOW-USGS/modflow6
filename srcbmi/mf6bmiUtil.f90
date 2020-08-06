@@ -1,18 +1,34 @@
-!> @brief This module contains helper routines for the MODFLOW 6 BMI
+!> @brief This module contains helper routines and parameters for the MODFLOW 6 BMI
 !!
 !<
 module mf6bmiUtil  
   use iso_c_binding, only: c_int, c_char, c_null_char
-  use ConstantsModule, only: MAXCHARLEN, LENMEMPATH, LENVARNAME, LENMODELNAME, LINELENGTH
+  use ConstantsModule, only: MAXCHARLEN, LENMEMPATH, LENVARNAME, &
+                             LENMODELNAME, LINELENGTH, LENMEMTYPE, &
+                             LENMEMADDRESS, LENCOMPONENTNAME
   use KindModule, only: DP, I4B  
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: istdout
   implicit none
-   
-  ! TODO_MJR: do we really need this? grid type strings and variable type string are not 1000 chars long...
-  integer(c_int), bind(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN !< max length for strings passed to the BMI calls
-  !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
   
+  ! TODO_MJR: this will be removed as soon as the python wrapper and scripts are updated to
+  ! use the specific constants below
+  integer(c_int), bind(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN !< max length for strings passed to the BMI calls
+  !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN  
+
+
+  integer(I4B), parameter :: LENGRIDTYPE = 16 !< max length for Fortran grid type string
+
+  integer(c_int), bind(C, name="BMI_LENVARTYPE") :: BMI_LENVARTYPE = LENMEMTYPE + 1 !< max. length for variable type C-strings
+  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENVARTYPE
+
+  integer(c_int), bind(C, name="BMI_LENGRIDTYPE") :: BMI_LENGRIDTYPE = LENGRIDTYPE + 1 !< max. length for grid type C-strings
+  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENGRIDTYPE
+  
+  integer(c_int), bind(C, name="BMI_LENVARADDRESS") :: BMI_LENVARADDRESS = LENMEMADDRESS + 1 !< max. length for the variable's address C-string
+  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
+
+
 contains
    
   !> @brief split the variable address string
@@ -116,5 +132,24 @@ contains
     write(error_msg,'(a,i0)') 'BMI error: no model for grid id ', grid_id
     call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
   end function get_model_name
+
+  ! the subcomponent_idx runs from 1 to the nr of 
+  ! solutions in the solution group
+  function getSolution(subcomponent_idx) result(solution)
+    use SolutionGroupModule
+    use NumericalSolutionModule
+    use ListsModule, only: basesolutionlist, solutiongrouplist
+    integer(I4B), intent(in) :: subcomponent_idx
+    class(NumericalSolutionType), pointer :: solution
+    ! local
+    class(SolutionGroupType), pointer :: sgp
+    integer(I4B) :: solutionIdx
+    
+    ! this is equivalent to how it's done in sgp_ca
+    sgp => GetSolutionGroupFromList(solutiongrouplist, 1)
+    solutionIdx = sgp%idsolutions(subcomponent_idx)
+    solution => GetNumericalSolutionFromList(basesolutionlist, solutionIdx)    
+    
+  end function getSolution
 
 end module mf6bmiUtil

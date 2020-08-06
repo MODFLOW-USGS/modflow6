@@ -41,11 +41,6 @@ contains
       end if
     end do
     
-    ! TODO_MJR: some variables will not have a model associated, 
-    ! but maybe a numerical solution instead, e.g. head "X", and then
-    ! even have multiple grids (from multiple models)
-    ! How should this work?
-    
     bmi_status = BMI_FAILURE
   end function get_var_grid
   
@@ -53,10 +48,10 @@ contains
   function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type  
     integer(kind=c_int), intent(in) :: grid_id
-    character(kind=c_char), intent(out) :: grid_type(MAXSTRLEN)
+    character(kind=c_char), intent(out) :: grid_type(BMI_LENGRIDTYPE)
     integer(kind=c_int) :: bmi_status
     ! local
-    character(len=MAXSTRLEN) :: grid_type_f
+    character(len=LENGRIDTYPE) :: grid_type_f
     character(len=LENMODELNAME) :: model_name
     
     model_name = get_model_name(grid_id)
@@ -77,8 +72,7 @@ contains
     use ListsModule, only: basemodellist
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     character(len=LENMODELNAME) :: model_name
-    character(len=MAXSTRLEN) :: grid_type_f
-    !integer(kind=c_int) :: bmi_status
+    character(len=LENGRIDTYPE) :: grid_type_f
     ! local
     integer(I4B) :: i    
     class(NumericalModelType), pointer :: numericalModel
@@ -109,7 +103,7 @@ contains
     ! local
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer, contiguous :: grid_shape
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    character(kind=c_char) :: grid_type(BMI_LENGRIDTYPE)
     
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
@@ -137,8 +131,8 @@ contains
     ! local
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer, contiguous :: grid_shape
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
-    character(len=MAXSTRLEN) :: grid_type_f
+    character(kind=c_char) :: grid_type(BMI_LENGRIDTYPE)
+    character(len=LENGRIDTYPE) :: grid_type_f
     integer(I4B) :: status
     
     bmi_status = BMI_FAILURE
@@ -169,7 +163,7 @@ contains
     ! local
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    character(kind=c_char) :: grid_type(BMI_LENGRIDTYPE)
     
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
@@ -199,9 +193,9 @@ contains
     integer(I4B) :: i
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    character(kind=c_char) :: grid_type(BMI_LENGRIDTYPE)
     real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
-    character(len=MAXSTRLEN) :: grid_type_f
+    character(len=LENGRIDTYPE) :: grid_type_f
     integer(I4B) :: x_size
     
     bmi_status = BMI_FAILURE
@@ -238,9 +232,9 @@ contains
     integer(I4B) :: i
     integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    character(kind=c_char) :: grid_type(BMI_LENGRIDTYPE)
     real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
-    character(len=MAXSTRLEN) :: grid_type_f
+    character(len=LENGRIDTYPE) :: grid_type_f
     integer(I4B) :: y_size
     
     bmi_status = BMI_FAILURE
@@ -365,12 +359,12 @@ contains
   ! for all types of discretizations
   function confirm_grid_type(grid_id, expected_type) result(is_match)
     integer(kind=c_int), intent(in) :: grid_id
-    character(kind=c_char), intent(in) :: expected_type(MAXSTRLEN) ! this is a C-style string
+    character(kind=c_char), intent(in) :: expected_type(BMI_LENGRIDTYPE) ! this is a C-style string
     logical :: is_match
     ! local
     character(len=LENMODELNAME) :: model_name
-    character(len=MAXSTRLEN) :: expected_type_f ! this is a fortran style string
-    character(len=MAXSTRLEN) :: grid_type_f
+    character(len=LENGRIDTYPE) :: expected_type_f ! this is a fortran style string
+    character(len=LENGRIDTYPE) :: grid_type_f
     
     is_match = .false.
      

@@ -6,8 +6,9 @@
 !!   executables and scripts, not necessarily written in Fortran. Therefore we have
 !!   omitted the type-boundness of the routines, since they cannot have the
 !!   bind(C,"...") attribute.
-!! - MODFLOW has internal data arrays with rank > 1 that we would like to expose.
-!!   The get_value_ptr calls below support this, returning a C-style pointer to the arrays,
+!! - MODFLOW has internal data arrays with rank > 1 that we would like to expose. An
+!!   example would be access to data in the BOUND array of GWF boundary packages (BndType).
+!!   The get_value_ptr calls below support this, returning a C-style pointer to the arrays
 !!   and methods have been added to query the variable's rank and shape.
 !!
 !! Note on style: BMI apparently uses underscores, we use underscores in some 
@@ -343,7 +344,7 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_type
     use ConstantsModule, only: LENMEMTYPE
     character (kind=c_char), intent(in) :: c_var_address(*)
-    character (kind=c_char), intent(out) :: c_var_type(MAXSTRLEN) ! TODO_MJR: 1000 chars, that's too long for a type...
+    character (kind=c_char), intent(out) :: c_var_type(BMI_LENVARTYPE)
     integer(kind=c_int) :: bmi_status    
     ! local
     character(len=LENMEMPATH) :: mem_path
