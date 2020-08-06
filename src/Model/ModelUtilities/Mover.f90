@@ -17,20 +17,17 @@ module MvrModule
     character(len=LENMEMPATH)                    :: pckNameSrc = ''              !< provider package name
     character(len=LENMEMPATH)                    :: pckNameTgt = ''              !< receiver package name
     integer(I4B)                                 :: iRchNrSrc = 0                !< provider reach number
-    integer(I4B)                                 :: iRckNrTgt = 0                !< receiver reach number
+    integer(I4B)                                 :: iRchNrTgt = 0                !< receiver reach number
     integer(I4B)                                 :: imvrtype = 0                 !< mover type (1, 2, 3, 4) corresponds to mvrtypes
     real(DP)                                     :: value = DZERO                !< factor or rate depending on mvrtype
-    real(DP)                                     :: qpold = DZERO                !< provider rate from last time step
     real(DP)                                     :: qpactual = DZERO             !< rate provided to the receiver
-    real(DP)                                     :: qanew = DZERO                !< rate available at time of providing
-    real(DP)                                     :: qaold = DZERO                !< rate available fromtime step
+    real(DP)                                     :: qavailable = DZERO           !< rate available at time of providing
     real(DP), pointer                            :: qtformvr_ptr => null()       !< pointer to total available flow (qtformvr)
     real(DP), pointer                            :: qformvr_ptr => null()        !< pointer to available flow after consumed (qformvr)
     real(DP), pointer                            :: qtomvr_ptr => null()         !< pointer to provider flow rate (qtomvr)
     real(DP), pointer                            :: qfrommvr_ptr => null()       !< pointer to receiver flow rate (qfrommvr)
   contains
     procedure :: set
-    procedure :: set_qpold
     procedure :: echo
     procedure :: advance
     procedure :: fc
@@ -110,7 +107,7 @@ module MvrModule
     !
     ! -- Read id for the receiver
     call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
-    this%iRckNrTgt = ival
+    this%iRchNrTgt = ival
     !
     ! -- Read mover type
     call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
@@ -133,11 +130,8 @@ module MvrModule
     call urword(line, lloc, istart, istop, 3, ival, rval, iout, inunit)
     this%value = rval
     !
-    ! -- initialize values to zero
-    call this%set_qpold(DZERO)
-    !
     ! -- Check to make sure provider and receiver are not the same
-    if(this%pckNameSrc == this%pckNameTgt .and. this%iRchNrSrc == this%iRckNrTgt) then
+    if(this%pckNameSrc == this%pckNameTgt .and. this%iRchNrSrc == this%iRchNrTgt) then
       call store_error('ERROR. PROVIDER AND RECEIVER ARE THE SAME: '//         &
         trim(line))
       call store_error_unit(inunit)
@@ -199,39 +193,19 @@ module MvrModule
     !
     ! -- Set pointer to QFROMMVR array in the receiver boundary package
     temp_ptr => pakmovers(ipakloc2)%qfrommvr
-    if(this%iRckNrTgt < 1 .or. this%iRckNrTgt > size(temp_ptr)) then
+    if(this%iRchNrTgt < 1 .or. this%iRchNrTgt > size(temp_ptr)) then
       call store_error('ERROR. RECEIVER ID < 1 OR GREATER THAN PACKAGE SIZE ')
-      write(errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%iRckNrTgt,            &
+      write(errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%iRchNrTgt,            &
         '; PACKAGE SIZE = ', size(temp_ptr)
       call store_error(trim(errmsg))
       call store_error_unit(inunit)
       call ustop()
     endif
-    this%qfrommvr_ptr => temp_ptr(this%iRckNrTgt)
+    this%qfrommvr_ptr => temp_ptr(this%iRchNrTgt)
     !
     ! -- return
     return
   end subroutine set
-  
-  subroutine set_qpold(this, value)
-! ******************************************************************************
-! set_qpold -- Set the value of qpold
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(MvrType) :: this
-    real(DP), intent(in) :: value
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    this%qpold = value
-    !
-    ! -- return
-    return
-  end subroutine set_qpold
   
   subroutine echo(this, iout)
 ! ******************************************************************************
@@ -247,10 +221,10 @@ module MvrModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    write(iout, '(4x, a, a, a, i0)') 'FROM PACKAGE: ', trim(this%pckNameSrc),      &
+    write(iout, '(4x, a, a, a, i0)') 'FROM PACKAGE: ', trim(this%pckNameSrc),  &
       ' FROM ID: ', this%iRchNrSrc
-    write(iout, '(4x, a, a, a, i0)') 'TO PACKAGE: ', trim(this%pckNameTgt),        &
-      ' TO ID: ', this%iRckNrTgt
+    write(iout, '(4x, a, a, a, i0)') 'TO PACKAGE: ', trim(this%pckNameTgt),    &
+      ' TO ID: ', this%iRchNrTgt
     write(iout, '(4x, a, a, a, 1pg15.6,/)') 'MOVER TYPE: ',                    &
       trim(mvrtypes(this%imvrtype)), ' ', this%value
     !
@@ -271,14 +245,12 @@ module MvrModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    this%qpold = this%qpactual
-    this%qaold = this%qanew
     !
     ! -- return
     return
   end subroutine advance
   
-  subroutine fc(this, omega)
+  subroutine fc(this)
 ! ******************************************************************************
 ! fc -- formulate coefficients
 ! ******************************************************************************
@@ -288,22 +260,18 @@ module MvrModule
     ! -- modules
     ! -- dummy
     class(MvrType) :: this
-    real(DP), intent(in) :: omega
     ! -- local
-    real(DP) :: qanew, qtanew, qpnew, qpactual
+    real(DP) :: qavailable, qtanew, qpactual
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set qa and this%qanew equal to available water in package (qtomvr)
-    qanew = this%qformvr_ptr
+    ! -- Set qa and this%qavailable equal to available water in package (qtomvr)
+    qavailable = this%qformvr_ptr
     qtanew = this%qtformvr_ptr
-    this%qanew = qanew
+    this%qavailable = qavailable
     !
     ! -- Using the mover rules, calculate how much of the available water will
     !    be provided from the mover to the receiver.
-    qpnew = this%qrcalc(qanew, qtanew)
-    !
-    ! -- Calculate weighted value for qpactual using qpnew and qpold
-    qpactual = omega * qpnew
+    qpactual = this%qrcalc(qavailable, qtanew)
     !
     ! -- Store qpactual
     this%qpactual = qpactual
@@ -394,8 +362,8 @@ module MvrModule
       "' PROVIDED ', 1(1pg15.6), ' TO ', a, ' ID ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    write(iout, fmt) trim(this%pckNameSrc), this%iRchNrSrc, this%qanew, this%qpactual, &
-      trim(this%pckNameTgt), this%iRckNrTgt
+    write(iout, fmt) trim(this%pckNameSrc), this%iRchNrSrc, this%qavailable,   &
+      this%qpactual, trim(this%pckNameTgt), this%iRchNrTgt
     !
     ! -- return
     return
