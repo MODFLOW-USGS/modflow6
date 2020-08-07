@@ -1186,8 +1186,7 @@ contains
 
   subroutine sln_ca(this, isgcnvg, isuppress_output)
 ! ******************************************************************************
-! sln_ca -- Solve the models in this solution for kper and kstp.  If necessary
-!           use subtiming to get to the end of the time step
+! sln_ca -- Solve the models in this solution for kper and kstp.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1328,7 +1327,7 @@ contains
     
   end subroutine writePTCInfoToFile
   
-  ! prepare for outer iteration loop
+  ! prepare for the system solve by advancing the simulation
   subroutine prepareSolve(this)
     class(NumericalSolutionType) :: this
     ! local
@@ -1353,7 +1352,8 @@ contains
     
   end subroutine prepareSolve
   
-  ! this routine performs a single outer iteration, with the following steps:
+  ! This routine builds and solves the system for this numerical solution. 
+  ! It roughly consists of the following steps:
   !
   ! - backtracking
   ! - reset amat and rhs

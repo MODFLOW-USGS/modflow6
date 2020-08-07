@@ -86,7 +86,7 @@ contains
     use MemoryManagerModule,    only: mem_write_usage, mem_da
     use TimerModule,            only: elapsed_time   
     use SimVariablesModule,     only: iout
-    use SimulationCreateModule, only: simulation_cr, simulation_da  
+    use SimulationCreateModule, only: simulation_da  
     use TdisModule,             only: tdis_tu, tdis_da
     use SimModule,              only: final_message
     ! -- dummy
