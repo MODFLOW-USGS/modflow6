@@ -311,14 +311,10 @@ def update_readme_markdown(vmajor, vminor, vmicro):
     terminate = False
     f = open(fpth, 'w')
     for line in lines:
-        if '### Version ' in line:
+        if '## Version ' in line:
             line = '### Version {}'.format(version)
             if 'develop' in branch:
                 line += sb
-        elif '[Build Status]' in line:
-            line = '[![Build Status](https://travis-ci.org/MODFLOW-USGS/' + \
-                   'modflow6.svg?branch={})]'.format(branch) + \
-                   '(https://travis-ci.org/MODFLOW-USGS/modflow6)'
         elif 'https://doi.org/10.5066/F76Q1VQV' in line:
             line = '[Langevin, C.D., Hughes, J.D., ' + \
                    'Banta, E.R., Provost, A.M., ' + \
