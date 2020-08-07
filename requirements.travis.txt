@@ -1,11 +1,4 @@
-conda-build
-matplotlib
-netcdf4
-pyproj
-pyshp
-shapely
-tk
+numpy
 pip
 nose-timer
-pydotplus
 bmipy
