@@ -1,11 +1,30 @@
 
-# MODFLOW 6
+# MODFLOW 6: USGS Modular Hydrologic Model
+
+This is the development repository for the USGS MODFLOW 6 Hydrologic Model. For the latest official USGS release, please goto the [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html)
+
+This repository contains branches of ongoing MODFLOW 6 development.  The two main branches in this repository are:
+
+* `master` -- the state of the MODFLOW 6 repository corresponding to the last official USGS release
+* `develop` -- the current development version of the MODFLOW 6 program
+
+The `develop` branch is under active and frequent updates by the MODFLOW development team and other interested contributors.  We follow a fork and pull request workflow and require that pull requests pass our test suite before they are considered a possible candidate to merge into develop.
+
+## Nightly Builds
+
+The `develop` branch often contains bug fixes and new features that are not yet part of the official USGS release.  The `develop` version of the updated user guide and binary executables for several operating systems are built and posted each night to our [nightly-build repository](https://github.com/MODFLOW-USGS/modflow6-nightly-build).
 
 
+## Automated Testing
 
-[USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html)
+This repository contains an `./autotest` folder with python scripts for building and testing the MODFLOW 6 program and other workflow tasks.  The testing workflow relies heavily on several related repositories including:
 
-## Automated Testing Status on Travis-CI
+* [modflowpy/pymake](https://github.com/modflowpy/pymake)
+* [modflowpy/flopy](https://github.com/modflowpy/flopy)
+* [MODFLOW-USGS/modflow6-testmodels](https://github.com/MODFLOW-USGS/modflow6-testmodels)
+* [MODFLOW-USGS/modflow6-largetestmodels](https://github.com/MODFLOW-USGS/modflow6-largetestmodels)
+* [MODFLOW-USGS/executables](https://github.com/MODFLOW-USGS/executables)
+
 
 ### Version 6.1.2 release candidate
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=develop)](https://travis-ci.org/MODFLOW-USGS/modflow6)
@@ -18,10 +37,9 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 
 
-## How to Cite
------------------------------------------------
+## How to Cite MODFLOW 6
 
-### ***Citations for MODFLOW 6:***
+### ***Report and Papers***
 
 [Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the MODFLOW 6 framework: U.S. Geological Survey Techniques and Methods, book 6, chap. A57, 40 p., https://doi.org/10.3133/tm6A57.](https://doi.org/10.3133/tm6A57)
 
@@ -29,7 +47,9 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 [Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the "XT3D" option in the Node Property Flow (NPF) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A56, 40 p., https://doi.org/10.3133/tm6A56.](https://doi.org/10.3133/tm6A56)
 
-#### ***Software/Code citation for MODFLOW 6:***
+[Langevin, C.D., Panday, S, and Provost, A.M., 2020, Hydraulic-head formulation for density-dependent flow and transport: Groundwater, v. 58, no. 3, p. 349–362.](https://doi.org/10.1111/gwat.12967)
+
+#### ***Software/Code***
 
 [Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2020, MODFLOW 6 Modular Hydrologic Model version 6.1.2 release candidate: U.S. Geological Survey Software Release, 15 June 2020, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
