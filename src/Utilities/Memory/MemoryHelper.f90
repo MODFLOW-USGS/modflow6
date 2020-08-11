@@ -7,9 +7,9 @@ module MemoryHelperModule
   implicit none
   private
 
-  public :: create_mem_path, create_mem_address, mem_check_length
+  public :: create_mem_path, create_mem_address, mem_check_length, memPathSeparator
 
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = ' '   !< used to build up the memory address for the stored variables
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/' !< used to build up the memory address for the stored variables
 
 contains
 
@@ -64,8 +64,8 @@ contains
 
   !> @brief Generic routine to check the length of (parts of) the memory address
   !!
-  !! -- IMPORTANT -- if the length exceeds the maximum, a message is recorded
-  !! and the program will be stopped 
+  !! @warning{if the length exceeds the maximum, a message is recorded 
+  !! and the program will be stopped}
   !!
   !! @param[in]   name          the string to be checked
   !! @param[in]   max_length    the maximum length
