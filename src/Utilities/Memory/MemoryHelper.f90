@@ -1,12 +1,15 @@
 module MemoryHelperModule
-  use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS
+  use KindModule, only: I4B
+  use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, LENVARNAME, LENCOMPONENTNAME
+  use SimModule, only: store_error, ustop
+  use SimVariablesModule,     only: errmsg
 
   implicit none
   private
 
-  public :: create_mem_path, create_mem_address
+  public :: create_mem_path, create_mem_address, mem_check_length
 
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = ' '   !<used to build up the memory address for the stored variables
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = ' '   !< used to build up the memory address for the stored variables
 
 contains
 
@@ -26,7 +29,8 @@ contains
     character(len=*), intent(in), optional :: subcomponent
     character(len=LENMEMPATH) :: memory_path
     
-    ! TODO_MJR: add check on lenghts, see check_var_name in mem mng
+    call mem_check_length(component, LENCOMPONENTNAME, "solution/model/exchange")
+    call mem_check_length(subcomponent, LENCOMPONENTNAME, "package")  
     
     if (present(subcomponent)) then
       memory_path = trim(component) // memPathSeparator // trim(subcomponent)    
@@ -51,11 +55,41 @@ contains
     character(len=*), intent(in) :: var_name
     character(len=LENMEMADDRESS) :: mem_address
 
-    ! TODO_MJR: add check on lenghts, see check_var_name in mem mng
+    call mem_check_length(mem_path, LENMEMPATH, "memory path")
+    call mem_check_length(var_name, LENVARNAME, "variable")
 
     mem_address = trim(mem_path) // memPathSeparator // trim(var_name) 
 
-  end function create_mem_address
+  end function create_mem_address  
 
+  !> @brief Generic routine to check the length of (parts of) the memory address
+  !!
+  !! -- IMPORTANT -- if the length exceeds the maximum, a message is recorded
+  !! and the program will be stopped 
+  !!
+  !! @param[in]   name          the string to be checked
+  !! @param[in]   max_length    the maximum length
+  !! @param[in]   description   a descriptive string
+  !!
+  !! The description should describe the part of the address that is checked
+  !! (variable, package, model, solution, exchange name) or the full memory path
+  !! itself
+  !<
+  subroutine mem_check_length(name, max_length, description)
+    character(len=*), intent(in) :: name
+    integer(I4B), intent(in)     :: max_length
+    character(len=*), intent(in) :: description
+    
+    if(len(name) > max_length) then
+      write(errmsg, '(*(G0))')                                                   &
+        'Fatal error in Memory Manager, length of ', description, ' must be ',   &
+        max_length, ' characters or less: ', name
+
+      ! -- store error and stop program execution
+      call store_error(errmsg)
+      call ustop()
+    end if
+
+  end subroutine mem_check_length
 
 end module MemoryHelperModule
