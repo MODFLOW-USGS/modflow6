@@ -64,6 +64,8 @@ contains
 
   !> @brief Generic routine to check the length of (parts of) the memory address
   !!
+  !! The string will be trimmed before the measurement.
+  !!
   !! @warning{if the length exceeds the maximum, a message is recorded 
   !! and the program will be stopped}
   !!
@@ -80,10 +82,10 @@ contains
     integer(I4B), intent(in)     :: max_length
     character(len=*), intent(in) :: description
     
-    if(len(name) > max_length) then
+    if(len(trim(name)) > max_length) then
       write(errmsg, '(*(G0))')                                                   &
         'Fatal error in Memory Manager, length of ', description, ' must be ',   &
-        max_length, ' characters or less: ', name
+        max_length, ' characters or less: ', name, '(len=', len(trim(name)), ')'
 
       ! -- store error and stop program execution
       call store_error(errmsg)
