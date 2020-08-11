@@ -1,0 +1,144 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build MF6 (Release)",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "args": [
+                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "-exe",
+                "-release",
+                "-only"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Rebuild MF6 (Release)",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "args": [
+                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "-exe",
+                "-release",
+                "-all"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Build MF6 (Debug)",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "args": [
+                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "-exe",
+                "-debug",
+                "-only"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+          "label": "Rebuild MF6 (Debug)",
+          "type": "shell",
+          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "args": [
+              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "-exe",
+              "-debug",
+              "-all"
+          ],
+          "group": {
+              "kind": "build",
+              "isDefault": true
+          },
+          "presentation": {
+              "reveal": "silent"
+          },
+          "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Build MF6 dll (Release)",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "args": [
+                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "-dll",
+                "-release",
+                "-only"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"            
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+          "label": "Rebuild MF6 dll (Release)",
+          "type": "shell",
+          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "args": [
+              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "-dll",
+              "-release",
+              "-all"
+          ],
+          "group": "build",
+          "presentation": {
+              "reveal": "silent"
+          },
+          "problemMatcher": "$msCompile"
+        },
+        {
+          "label": "Build MF6 dll (Debug)",
+          "type": "shell",
+          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "args": [
+              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "-dll",
+              "-debug",
+              "-only"
+          ],
+          "group": "build",
+          "presentation": {
+              "reveal": "silent"
+          },
+          "problemMatcher": "$msCompile"
+        },
+        {
+          "label": "Rebuild MF6 dll (Debug)",
+          "type": "shell",
+          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "args": [
+              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "-dll",
+              "-debug",
+              "-all"
+          ],
+          "group": "build",
+          "presentation": {
+              "reveal": "silent"
+          },
+          "problemMatcher": "$msCompile"
+      }
+    ]
+}
