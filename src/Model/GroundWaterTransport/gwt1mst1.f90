@@ -288,11 +288,11 @@ module GwtMstModule
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
         idiag = this%dis%con%ia(n)
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
-      elseif (this%idcy == 0) then
+      elseif (this%idcy == 2) then
         !
         ! -- zero-order decay rate is not a function of concentration, so add
         !    to right hand side
-        rrhs = this%decay(n) * vcell * swtpdt
+        rrhs = this%decay(n) * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
       endif
       !
@@ -586,8 +586,8 @@ module GwtMstModule
       rrhs = DZERO
       if (this%idcy == 1) then
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
-      elseif (this%idcy == 0) then
-        rrhs = this%decay(n) * vcell * swtpdt
+      elseif (this%idcy == 2) then
+        rrhs = this%decay(n) * vcell * swtpdt * this%porosity(n)
       endif
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
