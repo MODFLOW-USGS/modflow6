@@ -191,14 +191,18 @@ def bmifunc(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get pointer to simulated heads
-    head = mf6.get_value_ptr("LIBGWF_EVT01/X")
+    head_tag = mf6.get_var_address("X", "LIBGWF_EVT01")
+    head = mf6.get_value_ptr(head_tag)
 
     # maximum outer iterations
-    max_iter = mf6.get_value_ptr("SLN_1/MXITER")
+    mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
+    max_iter = mf6.get_value_ptr(mxit_tag)
 
     # get sc2 array and update flag
-    cdata = "{} WEL_0/BOUND".format(name)
-    well = mf6.get_value_ptr(cdata)
+    sc2_tag = mf6.get_var_address("BOUND", name, "WEL_0")
+    print(sc2_tag)    
+    well = mf6.get_value_ptr(sc2_tag)
+    
     twell = np.zeros(ncol, dtype=np.float64)
 
     # model time loop

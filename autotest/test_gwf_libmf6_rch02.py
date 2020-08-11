@@ -216,14 +216,16 @@ def bmifunc(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get pointer to simulated heads
-    head = mf6.get_value_ptr("LIBGWF_RCH02/X")
+    head_tag = mf6.get_var_address("X", name)
+    head = mf6.get_value_ptr(head_tag)
 
     # maximum outer iterations
-    max_iter = mf6.get_value_ptr("SLN_1/MXITER")
+    mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
+    max_iter = mf6.get_value_ptr(mxit_tag)
 
     # get recharge array
-    cdata = "{} RCHA/BOUND".format(name)
-    recharge = mf6.get_value_ptr(cdata)
+    rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
+    recharge = mf6.get_value_ptr(rch_tag)
 
     # determine initial recharge value
     np.random.seed(0)
