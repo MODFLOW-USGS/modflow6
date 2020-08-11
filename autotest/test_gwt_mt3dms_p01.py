@@ -12,6 +12,11 @@ dispersion, and reaction (sorption and decay):
 * Case 1b: Advection and dispersion
 * Case 1c: Advection, dispersion, and sorption
 * Case 1d: Advection, dispersion, sorption, and decay
+* Case 1e: Advection, dispersion, sorption, decay, immobile domain
+* Case 1f: Advection, dispersion, sorption, decay, immobile domain (do not
+           specify decay_sorbed in mst input file so that mf6 assumes that
+           decay_sorbed = decay_aqueous.  Results should be same as Case 1e.
+* Case 1g: Advection and zero-order growth
 """
 
 import os
@@ -45,8 +50,8 @@ testgroup = 'mt3dms_p01'
 remove_files = True
 
 
-def p01mt3d(model_ws, al, retardation, lambda1, mixelm,
-            zeta=None, prsity2=None):
+def p01mt3d(model_ws, al, retardation, rc1, mixelm,
+            zeta=None, prsity2=None, rc2=None, zero_order_decay=False):
     nlay = 1
     nrow = 1
     ncol = 101
@@ -111,10 +116,20 @@ def p01mt3d(model_ws, al, retardation, lambda1, mixelm,
     isothm = 1
     if zeta is not None:
         isothm = 6
-    rct = flopy.mt3d.Mt3dRct(mt, isothm=isothm, ireact=1, igetsc=0, rhob=rhob,
+    ireact = 1
+    if zero_order_decay:
+        ireact = 100
+    if rc2 is None:
+        rc2 = rc1
+    rct = flopy.mt3d.Mt3dRct(mt, isothm=isothm,
+                             ireact=ireact,
+                             igetsc=0,
+                             rhob=rhob,
                              sp1=kd,
-                             sp2=zeta, prsity2=prsity2, rc1=lambda1,
-                             rc2=lambda1)
+                             sp2=zeta,
+                             prsity2=prsity2,
+                             rc1=rc1,
+                             rc2=rc2)
     ssm = flopy.mt3d.Mt3dSsm(mt)
     gcg = flopy.mt3d.Mt3dGcg(mt, mxiter=10)
     mt.write_input()
@@ -140,8 +155,8 @@ def p01mt3d(model_ws, al, retardation, lambda1, mixelm,
     return mf, mt, conc, cvt, mvt
 
 
-def p01mf6(model_ws, al, retardation, lambda1, mixelm, zeta=None, prsity2=None,
-           onelambda=False):
+def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
+           prsity2=None, onelambda=False, zero_order_decay=False):
     name = 'p01'
     nlay, nrow, ncol = 1, 1, 101
     nper = 1
@@ -290,13 +305,22 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm, zeta=None, prsity2=None,
 
     # mass storage and transfer
     if onelambda:
-        lambda2 = None
+        # specify lambda2 as None, so that sorbed decay is same as aqueous
+        decay_rate_sorbed = None
     else:
-        lambda2 = lambda1
+        decay_rate_sorbed = decay_rate
+
+    first_order_decay = True
+    if zero_order_decay:
+        first_order_decay = False
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=prsity,
-                                  first_order_decay=True,
-                                  decay=lambda1, decay_sorbed=lambda2,
-                                  sorbtion=True, bulk_density=rhob, distcoef=kd)
+                                  first_order_decay=first_order_decay,
+                                  zero_order_decay=zero_order_decay,
+                                  decay=decay_rate,
+                                  decay_sorbed=decay_rate_sorbed,
+                                  sorbtion=True,
+                                  bulk_density=rhob,
+                                  distcoef=kd)
 
     # constant concentration
     c0 = 1.
@@ -312,10 +336,11 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm, zeta=None, prsity2=None,
 
     if zeta is not None:
         ist = flopy.mf6.ModflowGwtist(gwt, sorbtion=True,
-                                      first_order_decay=True,
+                                      first_order_decay=first_order_decay,
+                                      zero_order_decay=zero_order_decay,
                                       bulk_density=rhob, distcoef=kd,
-                                      decay=lambda1,
-                                      decay_sorbed=lambda2,
+                                      decay=decay_rate,
+                                      decay_sorbed=decay_rate_sorbed,
                                       zetaim=zeta, thetaim=prsity2,
                                       filename='{}.ist'.format(gwtname),
                                       pname='IST-1')
@@ -360,19 +385,19 @@ def test_mt3dmsp01a():
 
     longitudinal_dispersivity = 0.
     retardation = 1.0
-    zero_order_decay = 0.00
+    decay_rate = 0.00
     mixelm = 0
     zeta = None
     prsity2 = None
 
     mf6_ws = os.path.join(testdir, testgroup + 'a')
     sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, zero_order_decay,
+                           retardation, decay_rate,
                            mixelm, zeta, prsity2)
 
     mt3d_ws = os.path.join(mf6_ws, 'mt3d')
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, zero_order_decay,
+                                          retardation, decay_rate,
                                           mixelm, zeta, prsity2)
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
@@ -412,19 +437,19 @@ def test_mt3dmsp01b():
 
     longitudinal_dispersivity = 10.
     retardation = 1.0
-    zero_order_decay = 0.00
+    decay_rate = 0.00
     mixelm = 0
     zeta = None
     prsity2 = None
 
     mf6_ws = os.path.join(testdir, testgroup + 'b')
     sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, zero_order_decay,
+                           retardation, decay_rate,
                            mixelm, zeta, prsity2)
 
     mt3d_ws = os.path.join(mf6_ws, 'mt3d')
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, zero_order_decay,
+                                          retardation, decay_rate,
                                           mixelm, zeta, prsity2)
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
@@ -438,19 +463,19 @@ def test_mt3dmsp01c():
 
     longitudinal_dispersivity = 10.
     retardation = 1.5
-    zero_order_decay = 0.00
+    decay_rate = 0.00
     mixelm = 0
     zeta = None
     prsity2 = None
 
     mf6_ws = os.path.join(testdir, testgroup + 'c')
     sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, zero_order_decay,
+                           retardation, decay_rate,
                            mixelm, zeta, prsity2)
 
     mt3d_ws = os.path.join(mf6_ws, 'mt3d')
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, zero_order_decay,
+                                          retardation, decay_rate,
                                           mixelm, zeta, prsity2)
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
@@ -464,19 +489,19 @@ def test_mt3dmsp01d():
 
     longitudinal_dispersivity = 10.
     retardation = 1.5
-    zero_order_decay = 0.002
+    decay_rate = 0.002
     mixelm = 0
     zeta = None
     prsity2 = None
 
     mf6_ws = os.path.join(testdir, testgroup + 'd')
     sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, zero_order_decay,
+                           retardation, decay_rate,
                            mixelm, zeta, prsity2)
 
     mt3d_ws = os.path.join(mf6_ws, 'mt3d')
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, zero_order_decay,
+                                          retardation, decay_rate,
                                           mixelm, zeta, prsity2)
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
@@ -490,19 +515,19 @@ def test_mt3dmsp01e():
 
     longitudinal_dispersivity = 10.
     retardation = 1.5
-    zero_order_decay = 0.002
+    decay_rate = 0.002
     mixelm = 0
     zeta = .1
     prsity2 = 0.05
 
     mf6_ws = os.path.join(testdir, testgroup + 'e')
     sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, zero_order_decay,
+                           retardation, decay_rate,
                            mixelm, zeta, prsity2)
 
     mt3d_ws = os.path.join(mf6_ws, 'mt3d')
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, zero_order_decay,
+                                          retardation, decay_rate,
                                           mixelm, zeta, prsity2)
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
@@ -516,23 +541,51 @@ def test_mt3dmsp01f():
 
     longitudinal_dispersivity = 10.
     retardation = 1.5
-    zero_order_decay = 0.002
+    decay_rate = 0.002
     mixelm = 0
     zeta = .1
     prsity2 = 0.05
 
     mf6_ws = os.path.join(testdir, testgroup + 'f')
     sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, zero_order_decay,
+                           retardation, decay_rate,
                            mixelm, zeta, prsity2, onelambda=True)
 
     mt3d_ws = os.path.join(mf6_ws, 'mt3d')
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, zero_order_decay,
+                                          retardation, decay_rate,
                                           mixelm, zeta, prsity2)
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
+    return
+
+
+def test_mt3dmsp01g():
+
+    longitudinal_dispersivity = 0.
+    retardation = 1.0
+    decay_rate = -1.
+    mixelm = 0
+    zeta = None
+    prsity2 = None
+
+    mf6_ws = os.path.join(testdir, testgroup + 'g')
+    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
+                           retardation, decay_rate,
+                           mixelm, zeta, prsity2,
+                           zero_order_decay=True)
+
+    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
+                                          retardation, decay_rate,
+                                          mixelm, zeta, prsity2, rc2=0.,
+                                          zero_order_decay=True)
+
+    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1.e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
     return
@@ -547,3 +600,4 @@ if __name__ == "__main__":
     test_mt3dmsp01d()
     test_mt3dmsp01e()
     test_mt3dmsp01f()
+    test_mt3dmsp01g()
