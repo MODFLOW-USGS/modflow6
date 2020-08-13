@@ -73,6 +73,19 @@ contains
     integer(I4B) :: idx
 
     idx = index(mem_address, memPathSeparator, back=.true.)
+
+    ! if no separator, or it's at the end of the string,
+    ! the memory address is not valid:
+    if(idx < 1 .or. idx == len(mem_address)) then
+      write(errmsg, '(*(G0))')                                                  &
+        'Fatal error in Memory Manager, cannot split invalid memory address: ', &
+         mem_address
+
+      ! -- store error and stop program execution
+      call store_error(errmsg)
+      call ustop()
+    end if
+
     mem_path = mem_address(:idx-1)
     var_name = mem_address(idx+1:)
     
@@ -96,11 +109,25 @@ contains
     integer(I4B) :: idx
 
     idx = index(mem_path, memPathSeparator, back=.true.)
+    ! if the separator is found at the end of the string,
+    ! the path is invalid:
+    if(idx == len(mem_path)) then
+      write(errmsg, '(*(G0))')                                               &
+        'Fatal error in Memory Manager, cannot split invalid memory path: ', &
+         mem_path
+
+      ! -- store error and stop program execution
+      call store_error(errmsg)
+      call ustop()
+    end if
+
 
     if (idx > 0) then
+      ! when found:
       component = mem_path(:idx-1)
       subcomponent = mem_path(idx+1:)
     else
+      ! when not found, there apparently is no subcomponent:
       component = mem_path
       subcomponent = ''
     end if
