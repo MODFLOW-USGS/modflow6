@@ -9,13 +9,16 @@ module mf6bmiUtil
   use KindModule, only: DP, I4B  
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: istdout
+  use MemoryHelperModule, only: split_mem_address
   implicit none
   
-  ! TODO_MJR: this will be removed as soon as the python wrapper and scripts are updated to
-  ! use the specific constants below
-  integer(c_int), bind(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN !< max length for strings passed to the BMI calls
-  !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN  
-
+  ! the following exported parameters will trigger annoying warnings with
+  ! the Intel Fortran compiler (4049,4217). We know that these can be ignored:
+  !
+  ! https://community.intel.com/t5/Intel-Fortran-Compiler/suppress-linker-warnings/td-p/855137
+  ! https://community.intel.com/t5/Intel-Fortran-Compiler/Locally-Defined-Symbol-Imported/m-p/900805
+  !
+  ! and gfortran does so anyway. They have been disabled in the linker config.
 
   integer(I4B), parameter :: LENGRIDTYPE = 16 !< max length for Fortran grid type string
 
@@ -27,7 +30,6 @@ module mf6bmiUtil
   
   integer(c_int), bind(C, name="BMI_LENVARADDRESS") :: BMI_LENVARADDRESS = LENMEMADDRESS + 1 !< max. length for the variable's address C-string
   !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
-
 
 contains
    
@@ -42,20 +44,18 @@ contains
   !!
   !<
   subroutine split_address(c_var_address, mem_path, var_name)
+    use MemoryHelperModule, only: memPathSeparator
     character (kind=c_char), intent(in) :: c_var_address(*)
     character(len=LENMEMPATH), intent(out) :: mem_path
     character(len=LENVARNAME), intent(out) :: var_name    
     ! local
-    integer(I4B) :: idx
-    character(len=LENMEMPATH) :: var_address    
-    
+    character(len=LENMEMPATH) :: var_address   
+
     ! convert to fortran string
     var_address = char_array_to_string(c_var_address, strlen(c_var_address)) 
 
-    idx = index(var_address, '/', back=.true.)
-    mem_path = var_address(:idx-1)
-    var_name = var_address(idx+1:)
-    
+    call split_mem_address(var_address, mem_path, var_name)
+
   end subroutine split_address
 
   integer(c_int) pure function strlen(char_array)

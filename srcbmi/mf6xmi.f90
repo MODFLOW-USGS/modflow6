@@ -309,12 +309,12 @@ module mf6xmi
   !! This routine constructs the full address string of a variable using the
   !! exact same logic as the internal memory manager. This routine
   !! should always be used when accessing a variable through the BMI as
-  !! to assure compatibility with future versions of the library.  !!
+  !! to assure compatibility with future versions of the library.
   !!
   !! @param[in]   c_component_name        the name of the component (a Model or Solution) as a C-string
   !! @param[in]   c_subcomponent_name     the name of the subcomponent (a Package) as a C-string (or an empty string '' when not applicable)
   !! @param[in]   c_var_name              the name of the variable as a C-string
-  !! @param[out]  c_var_address           the full address of the variable as a C-string
+  !! @param[out]  c_var_address           the full address of the variable as a C-string with length mf6bmiUtil::BMI_LENVARADDRESS
   !! @return      bmi_status              the BMI status code
   !<
   function get_var_address(c_component_name, c_subcomponent_name, &

@@ -102,3 +102,6 @@ msvs/My Advisor Results*
 
 build/
 CMakeFiles/
+
+latex/
+html/

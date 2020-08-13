@@ -112,6 +112,7 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(ConnectionsType) :: this
     character(len=*), intent(in) :: name_model
@@ -119,7 +120,8 @@ module ConnectionsModule
     !
     ! -- allocate
     allocate(this%name_model)
-    this%memoryPath = trim(adjustl(name_model)) // ' CON'
+    
+    this%memoryPath = create_mem_path(name_model, 'CON')
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
     call mem_allocate(this%njas, 'NJAS', this%memoryPath)

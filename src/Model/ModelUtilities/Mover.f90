@@ -50,7 +50,8 @@ module MvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword, extract_idnum_or_bndname
-    use SimModule, only: ustop, store_error, store_error_unit, count_errors
+    use SimModule, only: ustop, store_error, store_error_unit, count_errors    
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(MvrType) :: this
     character(len=*), intent(inout) :: line
@@ -66,6 +67,8 @@ module MvrModule
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
     character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bndname
+    character(len=LINELENGTH) :: modelName
+    character(len=LINELENGTH) :: packageName
     logical :: mnamel, found
     integer(I4B) :: i
     integer(I4B) :: ipakloc1, ipakloc2
@@ -83,13 +86,16 @@ module MvrModule
     !
     ! -- Construct provider name, which is modelname followed by packagename
     if(mnamel) then
-      this%pckNameSrc = trim(adjustl(mname))
+      modelName = mname
     else
       call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-      this%pckNameSrc = line(istart:istop)
+      modelName = line(istart:istop)
     endif
     call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    this%pckNameSrc = trim(this%pckNameSrc) // ' ' // line(istart:istop)
+    packageName = line(istart:istop)
+
+    this%pckNameSrc = create_mem_path(modelName, packageName)
+
     !
     ! -- Read id for the provider
     call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
@@ -97,13 +103,14 @@ module MvrModule
     !
     ! -- Construct receiver name, which is modelname followed by packagename
     if(mnamel) then
-      this%pckNameTgt = trim(adjustl(mname))
+      modelName = mname
     else
       call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-      this%pckNameTgt = line(istart:istop)
+      modelName = line(istart:istop)
     endif
     call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    this%pckNameTgt = trim(this%pckNameTgt) // ' ' // line(istart:istop)
+    packageName = line(istart:istop)
+    this%pckNameTgt = create_mem_path(modelName, packageName)
     !
     ! -- Read id for the receiver
     call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)

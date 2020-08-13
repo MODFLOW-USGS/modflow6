@@ -181,13 +181,14 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # maximum outer iterations
-    max_iter = mf6.get_value_ptr("SLN_1/MXITER")
+    # maximum outer iterations    
+    mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
+    max_iter = mf6.get_value_ptr(mxit_tag)
 
     # get recharge array
-    cdata = "{} RCHA/BOUND".format(name)
-    recharge = mf6.get_value_ptr(cdata)
-
+    rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
+    recharge = mf6.get_value_ptr(rch_tag)
+    
     # model time loop
     idx = 0
     while current_time < end_time:

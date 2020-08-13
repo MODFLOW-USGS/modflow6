@@ -12,6 +12,7 @@ module MemoryManagerModule
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
   use MemoryListModule,       only: MemoryListType
+  use MemoryHelperModule,     only: mem_check_length
   use TableModule,            only: TableType, table_cr
   
   implicit none
@@ -389,38 +390,7 @@ module MemoryManagerModule
     ! -- store error and stop program execution
     call store_error(errmsg)
     call ustop()
-  end subroutine allocate_error
-  
-  subroutine check_varname(name)
-! ******************************************************************************
-! Check the size of the variable name. Stop program execution if the variable
-! name exceeds LENVARNAME
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    ! -- local
-    ! -- code
-    !
-    ! -- evaluate the length of the variable name
-    if(len(name) > LENVARNAME) then
-      !
-      ! -- create error message
-      write(errmsg, '(*(G0))')                                                   &
-        'Programming error in Memory Manager. Variable ', name, ' must be ',     &
-        LENVARNAME, ' characters or less.'
-      !
-      ! -- store error and stop program execution
-      call store_error(errmsg)
-      call ustop()
-    end if
-  end subroutine check_varname
+  end subroutine allocate_error  
 
   subroutine allocate_logical(sclr, name, origin)
 ! ******************************************************************************
@@ -445,7 +415,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check varible name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate the logical scalar
     allocate(sclr, stat=istat, errmsg=errmsg)
@@ -505,8 +475,8 @@ module MemoryManagerModule
       call ustop()
     end if
     !
-    ! -- check varible name length
-    call check_varname(name)
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate string
     allocate(character(len=ilen) :: sclr, stat=istat, errmsg=errmsg)
@@ -576,8 +546,8 @@ module MemoryManagerModule
       call ustop()
     end if
     !
-    ! -- check varible name length
-    call check_varname(name)
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
     isize = ilen * nrow
@@ -641,7 +611,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate integer scalar
     allocate(sclr, stat=istat, errmsg=errmsg)
@@ -704,7 +674,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = nrow
@@ -772,7 +742,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow
@@ -841,7 +811,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow * nlay
@@ -905,7 +875,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate real scalar
     allocate(sclr, stat=istat, errmsg=errmsg)
@@ -968,7 +938,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = nrow
@@ -1036,7 +1006,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow
@@ -1106,7 +1076,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow * nlay
@@ -1174,7 +1144,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = size(aint)
@@ -1237,7 +1207,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = size(adbl)
