@@ -49,14 +49,13 @@ contains
     character(len=LENMEMPATH), intent(out) :: mem_path
     character(len=LENVARNAME), intent(out) :: var_name    
     ! local
-    integer(I4B) :: idx
     character(len=LENMEMPATH) :: var_address   
 
     ! convert to fortran string
     var_address = char_array_to_string(c_var_address, strlen(c_var_address)) 
 
-    split_mem_address(var_address, meme_path, var_name)
-        
+    call split_mem_address(var_address, mem_path, var_name)
+
   end subroutine split_address
 
   integer(c_int) pure function strlen(char_array)
