@@ -841,6 +841,7 @@ contains
     !
     ! -- Cycle through ObsOutputList to write headers
     !    to formatted and unformatted file(s).
+    idx = 1
     num = this%obsOutputList%Count()
     all_obsfiles: do i = 1, num
       obsOutput => this%obsOutputList%Get(i)
@@ -872,7 +873,6 @@ contains
       end if
       !
       ! -- write observation name
-      idx = 1
       obsfile: do ii = 1, nobs
         obsrv => this%get_obs(idx)
         if (obsOutput%FormattedOutput) then
