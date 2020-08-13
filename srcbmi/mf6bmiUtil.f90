@@ -9,6 +9,7 @@ module mf6bmiUtil
   use KindModule, only: DP, I4B  
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: istdout
+  use MemoryHelperModule, only: split_mem_address
   implicit none
   
   ! the following exported parameters will trigger annoying warnings with
@@ -49,15 +50,13 @@ contains
     character(len=LENVARNAME), intent(out) :: var_name    
     ! local
     integer(I4B) :: idx
-    character(len=LENMEMPATH) :: var_address    
-    
+    character(len=LENMEMPATH) :: var_address   
+
     ! convert to fortran string
     var_address = char_array_to_string(c_var_address, strlen(c_var_address)) 
 
-    idx = index(var_address, memPathSeparator, back=.true.)
-    mem_path = var_address(:idx-1)
-    var_name = var_address(idx+1:)
-    
+    split_mem_address(var_address, meme_path, var_name)
+        
   end subroutine split_address
 
   integer(c_int) pure function strlen(char_array)

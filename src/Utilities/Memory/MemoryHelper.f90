@@ -5,9 +5,6 @@ module MemoryHelperModule
   use SimVariablesModule,     only: errmsg
 
   implicit none
-  private
-
-  public :: create_mem_path, create_mem_address, mem_check_length, memPathSeparator
 
   character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/' !< used to build up the memory address for the stored variables
 
@@ -61,6 +58,48 @@ contains
     mem_address = trim(mem_path) // memPathSeparator // trim(var_name) 
 
   end function create_mem_address  
+
+  !> @brief Split a memory address string into memory path and variable name
+  !!
+  !! @param[in]   mem_address       the full memory address string
+  !! @param[out]  mem_path          the memory path
+  !! @param[out]  var_name          the variable name
+  !<
+  subroutine split_mem_address(mem_address, mem_path, var_name)
+    character(len=*), intent(in) :: mem_address
+    character(len=LENMEMPATH), intent(out) :: mem_path
+    character(len=LENVARNAME), intent(out) :: var_name    
+    ! local
+    integer(I4B) :: idx
+
+    idx = index(mem_address, memPathSeparator, back=.true.)
+    mem_path = mem_address(:idx-1)
+    var_name = mem_address(idx+1:)
+    
+  end subroutine split_mem_address
+
+  !> @brief Split the memory path into component(s)
+  !!
+  !! @param[in]   mem_path        the path to the memory object
+  !! @param[out]  component       the name of the component (solution, model, exchange)
+  !! @param[out]  subcomponent    the name of the subcomponent (package), optionally
+  !!
+  !! NB: when there is no subcomponent in the path, the 
+  !! value for @par subcomponent is set to an empty string.
+  !<
+  subroutine split_mem_path(mem_path, component, subcomponent)   
+    character(len=*), intent(in) :: mem_path
+    character(len=LENCOMPONENTNAME), intent(out) :: component
+    character(len=LENCOMPONENTNAME), intent(out), optional :: subcomponent
+    
+    ! local
+    integer(I4B) :: idx
+
+    idx = index(mem_path, memPathSeparator, back=.true.)
+    component = mem_path(:idx-1)
+    subcomponent = mem_path(idx+1:)
+
+  end subroutine split_mem_path
 
   !> @brief Generic routine to check the length of (parts of) the memory address
   !!

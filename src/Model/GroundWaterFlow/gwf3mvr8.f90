@@ -1093,6 +1093,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
+    use MemoryHelperModule, only: split_mem_path
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
@@ -1100,15 +1101,9 @@ module GwfMvrModule
     integer(I4B) :: ncv
     integer(I4B) :: i
     integer(I4B) :: j
-    integer(I4B) :: ival
     integer(I4B) :: naux
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    real(DP) :: rval
     character (len=LENMODELNAME) :: modelname1, modelname2
     character (len=LENPACKAGENAME) :: packagename1, packagename2
-    character (len=LENMEMPATH) :: pckMemPathsDummy
     integer(I4B) :: maxlist
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
@@ -1138,22 +1133,13 @@ module GwfMvrModule
     maxlist = this%maxmvr
     naux = 0
     do i = 1, this%maxpackages
-      lloc = 1
-      call urword(this%pckMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pckMemPathsDummy = this%pckMemPaths(i)
-      modelname1 = pckMemPathsDummy(istart:istop)
-      call urword(this%pckMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pckMemPathsDummy = this%pckMemPaths(i)
-      packagename1 = pckMemPathsDummy(istart:istop)
+
+      call split_mem_path(this%pckMemPaths(i), modelname1, packagename1)
+      
       do j = 1, this%maxpackages
-        lloc = 1
-        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pckMemPathsDummy = this%pckMemPaths(j)
-        modelname2 = pckMemPathsDummy(istart:istop)
-        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pckMemPathsDummy = this%pckMemPaths(j)
-        packagename2 = pckMemPathsDummy(istart:istop)
-        idx = idx + 1
+        
+        call split_mem_path(this%pckMemPaths(j), modelname2, packagename2)
+
         call this%budobj%budterm(idx)%initialize(text, &
                                                  modelname1, &
                                                  packagename1, &
