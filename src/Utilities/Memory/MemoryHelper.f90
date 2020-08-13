@@ -82,7 +82,7 @@ contains
   !!
   !! @param[in]   mem_path        the path to the memory object
   !! @param[out]  component       the name of the component (solution, model, exchange)
-  !! @param[out]  subcomponent    the name of the subcomponent (package), optionally
+  !! @param[out]  subcomponent    the name of the subcomponent (package)
   !!
   !! NB: when there is no subcomponent in the path, the 
   !! value for @par subcomponent is set to an empty string.
@@ -90,14 +90,20 @@ contains
   subroutine split_mem_path(mem_path, component, subcomponent)   
     character(len=*), intent(in) :: mem_path
     character(len=LENCOMPONENTNAME), intent(out) :: component
-    character(len=LENCOMPONENTNAME), intent(out), optional :: subcomponent
+    character(len=LENCOMPONENTNAME), intent(out) :: subcomponent
     
     ! local
     integer(I4B) :: idx
 
     idx = index(mem_path, memPathSeparator, back=.true.)
-    component = mem_path(:idx-1)
-    subcomponent = mem_path(idx+1:)
+
+    if (idx > 0) then
+      component = mem_path(:idx-1)
+      subcomponent = mem_path(idx+1:)
+    else
+      component = mem_path
+      subcomponent = ''
+    end if
 
   end subroutine split_mem_path
 
