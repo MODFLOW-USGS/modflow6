@@ -1133,13 +1133,13 @@ module GwfMvrModule
     maxlist = this%maxmvr
     naux = 0
     do i = 1, this%maxpackages
-
+      
       call split_mem_path(this%pckMemPaths(i), modelname1, packagename1)
       
-      do j = 1, this%maxpackages
+      do j = 1, this%maxpackages  
         
+        idx = idx + 1
         call split_mem_path(this%pckMemPaths(j), modelname2, packagename2)
-
         call this%budobj%budterm(idx)%initialize(text, &
                                                  modelname1, &
                                                  packagename1, &
