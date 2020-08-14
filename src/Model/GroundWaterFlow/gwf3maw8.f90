@@ -8,7 +8,8 @@ module MawModule
                              DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
                              LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,      &
                              TABLEFT, TABCENTER, TABRIGHT,                       &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,       &
+                             MEMREADWRITE
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
                               sQuadraticSaturationDerivative,                    &
                               sQSaturationDerivative,                            &
@@ -914,10 +915,16 @@ contains
         !
         ! -- adjust the bottom of the well for all conductance approaches
         !    except for "mean"
-        if (this%ieqn(n) /= 4) then
-          if (rval < botw) then
+        if (rval < botw) then
+          if (this%ieqn(n) /= 4) then
             botw = rval
             this%bot(n) = rval
+          else
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)')                  &
+              'Screen bottom for maw well', n, 'connection', j, '(',             &
+              this%botscrn(jpos), ') is less than the well bottom (',            &
+              this%bot(n), ').'
+            call store_error(errmsg)
           end if
         end if
         !
@@ -935,6 +942,13 @@ contains
         if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
             this%ieqn(n) == 4) then
           this%sradius(jpos) = rval
+          if (this%sradius(jpos) <= this%radius(n)) then
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)')                  &
+              'Screen radius for maw well', n, 'connection', j, '(',             &
+              this%sradius(jpos),') is less than or equal to the well radius (', &
+              this%radius(n), ').'
+            call store_error(errmsg)
+          end if
         end if
       end do
       write(this%iout,'(1x,a)')                                                  &
@@ -1550,19 +1564,9 @@ contains
                                             trim(cgwfnode))
         end if
         !
-        ! -- connection skin radius
+        ! -- connection skin hydraulic conductivity
         if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
             this%ieqn(n) == 4) then
-          if (this%sradius(jpos) > DZERO) then
-            if (this%sradius(jpos) <= this%radius(n)) then
-              call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
-                                                'radius must be greater ' //     &
-                                                'than or equal to well ' //      &
-                                                'radius. ' // trim(cgwfnode))
-            end if
-          end if
-          !
-          ! -- skin hydraulic conductivity
           if (this%hk(jpos) <= DZERO) then
             call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
                                               'conductivity must be greater ' // &
@@ -2959,6 +2963,9 @@ contains
     call mem_deallocate(this%idxsymoffdglo)
     call mem_deallocate(this%xoldpak)
     !
+    ! -- nullify pointers
+    call mem_deallocate(this%xnewpak, 'HEAD', this%memoryPath)
+    !
     ! -- scalars
     call mem_deallocate(this%correct_flow)
     call mem_deallocate(this%iprhed)
@@ -3030,7 +3037,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_checkin
     ! -- dummy
     class(MawType) :: this
     integer(I4B), pointer :: neq
@@ -3053,6 +3060,8 @@ contains
     iend = istart + this%nmawwells - 1
     this%iboundpak => this%ibound(istart:iend)
     this%xnewpak => this%xnew(istart:iend)
+    call mem_checkin(this%xnewpak, 'HEAD', this%memoryPath, 'X',                 &
+                     this%memoryPathModel, MEMREADWRITE)
     call mem_allocate(this%xoldpak, this%nmawwells, 'XOLDPAK', this%memoryPath)
     !
     ! -- initialize xnewpak
@@ -3831,7 +3840,7 @@ contains
       !
       ! -- flow is not corrected, so calculate term for newton formulation
       if (inewton /= 0) then
-        term = drterm * this%satcond(jpos) * (hmaw - hgwf)
+        term = drterm * this%satcond(jpos) * (hgwf - hmaw)
       end if
     end if
     !
