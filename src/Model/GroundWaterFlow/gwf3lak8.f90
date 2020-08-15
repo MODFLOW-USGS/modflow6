@@ -54,6 +54,7 @@ module LakModule
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
+    integer(I4B), pointer :: istrtin => null()
     integer(I4B), pointer :: ibudgetout => null()
     integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
@@ -324,6 +325,7 @@ contains
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
+    call mem_allocate(this%istrtin, 'ISTRTIN', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
     call mem_allocate(this%nlakes, 'NLAKES', this%memoryPath)
@@ -346,6 +348,7 @@ contains
     ! -- Set values
     this%iprhed = 0
     this%istageout = 0
+    this%istrtin = 0
     this%ibudgetout = 0
     this%ipakcsv = 0
     this%nlakes = 0
@@ -448,6 +451,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
+    use InputOutputModule, only: U1DREL
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -628,6 +632,12 @@ contains
 
         nlak = nlak + 1
       end do
+      !
+      ! -- overwrite strt for the STRT option
+      if (this%istrtin > 0) then
+        call U1DREL(this%strt, text, this%nlakes, 1, this%istrtin)
+        close(this%istrtin)        
+      end if
       !
       ! -- check for duplicate or missing lakes
       do n = 1, this%nlakes
@@ -3300,6 +3310,8 @@ contains
       "(4x, 'LAKE ', a, ' VALUE (',g15.7,') SPECIFIED.')"
     character(len=*),parameter :: fmtlakbin = &
       "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*),parameter :: fmtlakstrt = &
+      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE READ FROM FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
@@ -3319,6 +3331,18 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('STRT')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEIN') then
+          call this%parser%GetString(fname)
+          this%istrtin = getunit()
+          call openfile(this%istrtin, this%iout, fname, 'DATA(BINARY)',         &
+                       form, access, mode_opt=MNORMAL)
+          write(this%iout,fmtlakstrt) 'STARTING HEAD', fname, this%istrtin
+          found = .true.
+        else
+          call store_error('OPTIONAL STRT KEYWORD MUST BE FOLLOWED BY FILEIN')
         end if
       case('BUDGET')
         call this%parser%GetStringCaps(keyword)
@@ -4233,16 +4257,7 @@ contains
     !
     ! -- write lake binary output
     if (ibinun > 0) then
-      do n = 1, this%nlakes
-        v = this%xnewpak(n)
-        d = v - this%lakebot(n)
-        if (this%iboundpak(n) == 0) then
-          v = DHNOFLO
-        else if (d <= DZERO) then
-          v = DHDRY
-        end if
-        this%dbuff(n) = v
-      end do
+      this%dbuff = this%xnewpak
       call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
                   this%nlakes, 1, 1, ibinun)
     end if
@@ -4403,6 +4418,7 @@ contains
     ! -- scalars
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
+    call mem_deallocate(this%istrtin)
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%nlakes)

@@ -168,6 +168,49 @@ longname shutdown kappa
 description value that defines the weight applied to discharge rate for wells that limit the water level in a discharging well (defined using the HEAD\_LIMIT keyword in the stress period data). SHUTDOWN\_KAPPA is used to control discharge rate oscillations when the flow rate from the aquifer is less than the specified flow rate from the aquifer to the well. Values range between 0.0 and 1.0, and larger values increase the weight applied to the well discharge rate. The HEAD\_LIMIT option has been included to facilitate backward compatibility with previous versions of MODFLOW but use of the RATE\_SCALING option instead of the HEAD\_LIMIT option is recommended. By default, SHUTDOWN\_KAPPA is 0.0001.
 
 block options
+name strt_filerecord
+type record strt filein strt_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name strt
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname strt keyword
+description keyword to specify that starting head for the wells is read from a binary file.
+
+block options
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block options
+name strt_filename
+type string
+preserve_case true
+in_record true
+reader urword
+optional false
+tagged false
+longname file name of starting head
+description name of input file to define starting head for the MAW package
+
+block options
 name ts_filerecord
 type record ts6 filein ts6_filename
 shape
@@ -187,17 +230,6 @@ tagged true
 optional false
 longname head keyword
 description keyword to specify that record corresponds to a time-series file.
-
-block options
-name filein
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname file keyword
-description keyword to specify that an input filename is expected next.
 
 block options
 name ts6_filename

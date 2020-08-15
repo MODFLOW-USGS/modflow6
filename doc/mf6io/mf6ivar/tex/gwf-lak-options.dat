@@ -8,6 +8,7 @@ BEGIN OPTIONS
   [STAGE FILEOUT <stagefile>]
   [BUDGET FILEOUT <budgetfile>]
   [PACKAGE_CONVERGENCE FILEOUT <package_convergence_filename>]
+  [STRT FILEIN <strt_filename>]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]
   [MOVER]

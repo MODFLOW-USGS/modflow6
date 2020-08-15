@@ -160,6 +160,49 @@ longname file keyword
 description name of the comma spaced values output file to write package convergence information.
 
 block options
+name strt_filerecord
+type record strt filein strt_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name strt
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname strt keyword
+description keyword to specify that starting head for the lakes is read from a binary file.
+
+block options
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block options
+name strt_filename
+type string
+preserve_case true
+in_record true
+reader urword
+optional false
+tagged false
+longname file name of starting head
+description name of input file to define starting head for the LAK package
+
+block options
 name ts_filerecord
 type record ts6 filein ts6_filename
 shape
@@ -179,17 +222,6 @@ tagged true
 optional false
 longname head keyword
 description keyword to specify that record corresponds to a time-series file.
-
-block options
-name filein
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname file keyword
-description keyword to specify that an input filename is expected next.
 
 block options
 name ts6_filename

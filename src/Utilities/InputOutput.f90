@@ -16,7 +16,7 @@ module InputOutputModule
   private
   public :: GetUnit, u8rdcom, uget_block,                                      &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
-            ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
+            ubdsv06, UBDSVB, UCOLNO, ULAPRW, U1DREL,                           &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
             same_word, get_node, get_ijk, unitinquire,                         &
             ParseLine, ulaprufw, openfile,                                     &
@@ -1275,7 +1275,31 @@ module InputOutputModule
 !C3------RETURN
       RETURN
      END SUBROUTINE ULASAV
-
+     
+     SUBROUTINE U1DREL(BUF,TEXT,NCOL,NROW,ICHN)
+!C     ******************************************************************
+!C     READ 1 LAYER ARRAY ON DISK
+!C     ******************************************************************
+!C
+!C        SPECIFICATIONS:
+!C     ------------------------------------------------------------------
+      CHARACTER(len=16) :: TEXT
+      real(DP),dimension(ncol,nrow) :: BUF, BUF0
+      real(DP) :: pertim,totim
+!C     ------------------------------------------------------------------
+!C
+!C1------READ AN UNFORMATTED RECORD CONTAINING IDENTIFYING
+!C1------INFORMATION.
+      READ(ICHN) ISTP,IPER,PERTIM,TOTIM,TEXT,ICOL,IROW,ILAY
+!C
+!C2------READ AN UNFORMATTED RECORD CONTAINING ARRAY VALUES
+!C2------THE ARRAY IS DIMENSIONED (NCOL,NROW)
+      READ(ICHN) ((BUF(IC,IR),IC=1,NCOL),IR=1,NROW)
+!C
+!C3------RETURN
+      RETURN
+     END SUBROUTINE U1DREL
+     
   subroutine ubdsv1(kstp, kper, text, ibdchn, buff, ncol, nrow, nlay, iout, &
                     delt, pertim, totim)
 ! ******************************************************************************

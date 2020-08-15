@@ -57,6 +57,7 @@ module MawModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: iheadout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: istrtin => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: iflowingwells => NULL()
     integer(I4B), pointer :: imawiss => NULL()
@@ -275,6 +276,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%iheadout, 'IHEADOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%istrtin, 'ISTRTIN', this%memoryPath)
     call mem_allocate(this%iflowingwells, 'IFLOWINGWELLS', this%memoryPath)
     call mem_allocate(this%imawiss, 'IMAWISS', this%memoryPath)
     call mem_allocate(this%imawissopt, 'IMAWISSOPT', this%memoryPath)
@@ -295,6 +297,7 @@ contains
     this%iprhed = 0
     this%iheadout = 0
     this%ibudgetout = 0
+    this%istrtin = 0
     this%iflowingwells = 0
     this%imawiss = 0
     this%imawissopt = 0
@@ -537,6 +540,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
+    use InputOutputModule, only: U1DREL
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
@@ -725,6 +729,12 @@ contains
     ! -- allocate well and connection data
     call this%maw_allocate_well_conn_arrays()
     !
+    ! -- read starting head from a file
+    if (this%istrtin > 0) then
+      call U1DREL(this%strt, text, this%nmawwells, 1, this%istrtin)
+      close(this%istrtin)
+    end if
+    !
     ! -- fill well data with data stored in temporary local arrays
     do n = 1,  this%nmawwells
       rval = radius(n)
@@ -738,19 +748,23 @@ contains
       ! fill timeseries aware data
       !
       ! -- well_head and strt
-      jj = 1    ! For WELL_HEAD
-      bndElem => this%well_head(n)
-      call read_value_or_time_series_adv(strttext(n), n, jj, bndElem, this%packName, &
-                                         'BND', this%tsManager, this%iprpak,     &
-                                         'WELL_HEAD')
-      !
-      ! -- set starting head value
-      this%strt(n) = this%well_head(n)
-      !
-      ! -- check for error condition
-      if (this%strt(n) < this%bot(n)) then
-        write(cstr, fmthdbot) this%strt(n), this%bot(n)
-        call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
+      if (this%istrtin > 0) then
+        this%well_head(n) = this%strt(n)
+      else
+        jj = 1    ! For WELL_HEAD
+        bndElem => this%well_head(n)
+        call read_value_or_time_series_adv(strttext(n), n, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak,     &
+                                           'WELL_HEAD')
+        !
+        ! -- set starting head value
+        this%strt(n) = this%well_head(n)
+        !
+        ! -- check for error condition
+        if (this%strt(n) < this%bot(n)) then
+          write(cstr, fmthdbot) this%strt(n), this%bot(n)
+          call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
+        end if
       end if
       !
       ! -- fill aux data
@@ -1730,6 +1744,9 @@ contains
     character(len=*),parameter :: fmtmawbin = &
       "(4x, 'MAW ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x,               &
      &'OPENED ON UNIT: ', I7)"
+    character(len=*),parameter :: fmtmawstrt = &
+      "(4x, 'MAW ', 1x, a, 1x, ' WILL BE READ FROM FILE: ', a, /4x,               &
+     &'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for 'FLOWING_WELLS' and set this%iflowingwells
@@ -1751,6 +1768,18 @@ contains
         else
           call store_error('Optional maw stage keyword must be ' //              &
                            'followed by fileout.')
+        end if
+      case('STRT')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEIN') then
+          call this%parser%GetString(fname)
+          this%istrtin = getunit()
+          call openfile(this%istrtin, this%iout, fname, 'DATA(BINARY)',         &
+                       form, access, mode_opt=MNORMAL)
+          write(this%iout,fmtmawstrt) 'STARTING HEAD', fname, this%istrtin
+          found = .true.
+        else
+          call store_error('OPTIONAL STRT KEYWORD MUST BE FOLLOWED BY FILEIN')
         end if
       case('BUDGET')
         call this%parser%GetStringCaps(keyword)
@@ -2786,16 +2815,7 @@ contains
     !
     ! -- write maw binary output
     if (ibinun > 0) then
-      do n = 1, this%nmawwells
-        v = this%xnewpak(n)
-        d = v - this%bot(n)
-        if (this%iboundpak(n) == 0) then
-          v = DHNOFLO
-        else if (d <= DZERO) then
-          v = DHDRY
-        end if
-        this%dbuff(n) = v
-      end do
+      this%dbuff = this%xnewpak
       call ulasav(this%dbuff, '            HEAD',                               &
                   kstp, kper, pertim, totim,                                    &
                   this%nmawwells, 1, 1, ibinun)
@@ -2964,6 +2984,7 @@ contains
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%iheadout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%istrtin)
     call mem_deallocate(this%iflowingwells)
     call mem_deallocate(this%imawiss)
     call mem_deallocate(this%imawissopt)
