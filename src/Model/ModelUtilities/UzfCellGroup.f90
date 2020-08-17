@@ -95,7 +95,7 @@ module UzfCellGroupModule
 !
 ! ------------------------------------------------------------------------------
    
-  subroutine init(this, ncells, nwav, origin)
+  subroutine init(this, ncells, nwav, memory_path)
 ! ******************************************************************************
 ! init -- allocate and set uzf object variables
 ! ******************************************************************************
@@ -108,59 +108,59 @@ module UzfCellGroupModule
    class(UzfCellGroupType) :: this
    integer(I4B), intent(in) :: nwav
    integer(I4B), intent(in) :: ncells
-   character(len=*), intent(in), optional :: origin
+   character(len=*), intent(in), optional :: memory_path
    ! -- local
    integer(I4B) :: icell
 ! ------------------------------------------------------------------------------
     !
-    ! -- Use mem_allocate if origin is passed in, otherwise it's a temp object
-    if (present(origin)) then
+    ! -- Use mem_allocate if memory path is passed in, otherwise it's a temp object
+    if (present(memory_path)) then
       this%imem_manager = 1
-      call mem_allocate(this%uzdpst, nwav, ncells, 'UZDPST', origin)
-      call mem_allocate(this%uzthst, nwav, ncells, 'UZTHST', origin)
-      call mem_allocate(this%uzflst, nwav, ncells, 'UZFLST', origin)
-      call mem_allocate(this%uzspst, nwav, ncells, 'UZSPST', origin)
-      call mem_allocate(this%nwavst, ncells, 'NWAVST', origin)
-      call mem_allocate(this%uzolsflx, ncells, 'UZOLSFLX', origin)
-      call mem_allocate(this%thtr, ncells, 'THTR', origin)
-      call mem_allocate(this%thts, ncells, 'THTS', origin)
-      call mem_allocate(this%thti, ncells, 'THTI', origin)
-      call mem_allocate(this%eps, ncells, 'EPS', origin)
-      call mem_allocate(this%ha, ncells, 'HA', origin)
-      call mem_allocate(this%hroot, ncells, 'HROOT', origin)
-      call mem_allocate(this%rootact, ncells, 'ROOTACT', origin)
-      call mem_allocate(this%extwc, ncells, 'EXTWC', origin)
-      call mem_allocate(this%etact, ncells, 'ETACT', origin)
-      call mem_allocate(this%nwav, ncells, 'NWAV', origin)
-      call mem_allocate(this%ntrail, ncells, 'NTRAIL', origin)
-      call mem_allocate(this%uzstor, ncells, 'UZSTOR', origin)
-      call mem_allocate(this%delstor, ncells, 'DELSTOR', origin)
-      call mem_allocate(this%totflux, ncells, 'TOTFLUX', origin)
-      call mem_allocate(this%vflow, ncells, 'VFLOW', origin)
-      call mem_allocate(this%sinf, ncells, 'SINF', origin)
-      call mem_allocate(this%finf, ncells, 'FINF', origin)
-      call mem_allocate(this%finf_rej, ncells, 'FINF_REJ', origin)
-      call mem_allocate(this%gwet, ncells, 'GWET', origin)
-      call mem_allocate(this%uzfarea, ncells, 'UZFAREA', origin)
-      call mem_allocate(this%cellarea, ncells, 'CELLAREA', origin)
-      call mem_allocate(this%celtop, ncells, 'CELTOP', origin)
-      call mem_allocate(this%celbot, ncells, 'CELBOT', origin)
-      call mem_allocate(this%landtop, ncells, 'LANDTOP', origin)
-      call mem_allocate(this%cvlm1, ncells, 'CVLM1', origin)
-      call mem_allocate(this%watab, ncells, 'WATAB', origin)
-      call mem_allocate(this%watabold, ncells, 'WATABOLD', origin)
-      call mem_allocate(this%surfdep, ncells, 'SURFDEP', origin)
-      call mem_allocate(this%vks, ncells, 'VKS', origin)
-      call mem_allocate(this%surflux, ncells, 'SURFLUX', origin)
-      call mem_allocate(this%surfluxbelow, ncells, 'SURFLUXBELOW', origin)
-      call mem_allocate(this%surfseep, ncells, 'SURFSEEP', origin)
-      call mem_allocate(this%gwpet, ncells, 'GWPET', origin)
-      call mem_allocate(this%pet, ncells, 'PET', origin)
-      call mem_allocate(this%petmax, ncells, 'PETMAX', origin)
-      call mem_allocate(this%extdp, ncells, 'EXTDP', origin)
-      call mem_allocate(this%extdpuz, ncells, 'EXTDPUZ', origin)
-      call mem_allocate(this%landflag, ncells, 'LANDFLAG', origin) 
-      call mem_allocate(this%ivertcon, ncells, 'IVERTCON', origin)
+      call mem_allocate(this%uzdpst, nwav, ncells, 'UZDPST', memory_path)
+      call mem_allocate(this%uzthst, nwav, ncells, 'UZTHST', memory_path)
+      call mem_allocate(this%uzflst, nwav, ncells, 'UZFLST', memory_path)
+      call mem_allocate(this%uzspst, nwav, ncells, 'UZSPST', memory_path)
+      call mem_allocate(this%nwavst, ncells, 'NWAVST', memory_path)
+      call mem_allocate(this%uzolsflx, ncells, 'UZOLSFLX', memory_path)
+      call mem_allocate(this%thtr, ncells, 'THTR', memory_path)
+      call mem_allocate(this%thts, ncells, 'THTS', memory_path)
+      call mem_allocate(this%thti, ncells, 'THTI', memory_path)
+      call mem_allocate(this%eps, ncells, 'EPS', memory_path)
+      call mem_allocate(this%ha, ncells, 'HA', memory_path)
+      call mem_allocate(this%hroot, ncells, 'HROOT', memory_path)
+      call mem_allocate(this%rootact, ncells, 'ROOTACT', memory_path)
+      call mem_allocate(this%extwc, ncells, 'EXTWC', memory_path)
+      call mem_allocate(this%etact, ncells, 'ETACT', memory_path)
+      call mem_allocate(this%nwav, ncells, 'NWAV', memory_path)
+      call mem_allocate(this%ntrail, ncells, 'NTRAIL', memory_path)
+      call mem_allocate(this%uzstor, ncells, 'UZSTOR', memory_path)
+      call mem_allocate(this%delstor, ncells, 'DELSTOR', memory_path)
+      call mem_allocate(this%totflux, ncells, 'TOTFLUX', memory_path)
+      call mem_allocate(this%vflow, ncells, 'VFLOW', memory_path)
+      call mem_allocate(this%sinf, ncells, 'SINF', memory_path)
+      call mem_allocate(this%finf, ncells, 'FINF', memory_path)
+      call mem_allocate(this%finf_rej, ncells, 'FINF_REJ', memory_path)
+      call mem_allocate(this%gwet, ncells, 'GWET', memory_path)
+      call mem_allocate(this%uzfarea, ncells, 'UZFAREA', memory_path)
+      call mem_allocate(this%cellarea, ncells, 'CELLAREA', memory_path)
+      call mem_allocate(this%celtop, ncells, 'CELTOP', memory_path)
+      call mem_allocate(this%celbot, ncells, 'CELBOT', memory_path)
+      call mem_allocate(this%landtop, ncells, 'LANDTOP', memory_path)
+      call mem_allocate(this%cvlm1, ncells, 'CVLM1', memory_path)
+      call mem_allocate(this%watab, ncells, 'WATAB', memory_path)
+      call mem_allocate(this%watabold, ncells, 'WATABOLD', memory_path)
+      call mem_allocate(this%surfdep, ncells, 'SURFDEP', memory_path)
+      call mem_allocate(this%vks, ncells, 'VKS', memory_path)
+      call mem_allocate(this%surflux, ncells, 'SURFLUX', memory_path)
+      call mem_allocate(this%surfluxbelow, ncells, 'SURFLUXBELOW', memory_path)
+      call mem_allocate(this%surfseep, ncells, 'SURFSEEP', memory_path)
+      call mem_allocate(this%gwpet, ncells, 'GWPET', memory_path)
+      call mem_allocate(this%pet, ncells, 'PET', memory_path)
+      call mem_allocate(this%petmax, ncells, 'PETMAX', memory_path)
+      call mem_allocate(this%extdp, ncells, 'EXTDP', memory_path)
+      call mem_allocate(this%extdpuz, ncells, 'EXTDPUZ', memory_path)
+      call mem_allocate(this%landflag, ncells, 'LANDFLAG', memory_path) 
+      call mem_allocate(this%ivertcon, ncells, 'IVERTCON', memory_path)
     else
       this%imem_manager = 0
       allocate(this%uzdpst(nwav, ncells))

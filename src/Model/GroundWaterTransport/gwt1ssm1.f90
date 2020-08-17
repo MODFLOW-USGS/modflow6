@@ -66,7 +66,7 @@ module GwtSsmModule
     ! -- Create the object
     allocate(ssmobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call ssmobj%set_names(1, name_model, 'SSM', 'SSM')
     !
     ! -- Allocate scalars

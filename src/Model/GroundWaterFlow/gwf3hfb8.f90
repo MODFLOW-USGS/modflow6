@@ -70,7 +70,7 @@ module GwfHfbModule
     ! -- Create the object
     allocate(hfbobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call hfbobj%set_names(1, name_model, 'HFB', 'HFB')
     !
     ! -- Allocate scalars

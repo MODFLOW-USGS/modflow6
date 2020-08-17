@@ -311,7 +311,7 @@ contains
     ! -- allocate the object and assign values to object variables
     allocate(csubobj)
 
-    ! -- create name and origin
+    ! -- create name and memory path
     call csubobj%set_names(1, name_model, 'CSUB', 'CSUB')
     !
     ! -- Allocate scalars

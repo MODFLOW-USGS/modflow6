@@ -40,10 +40,10 @@ module MvrModule
   subroutine set(this, line, inunit, iout, mname, pckMemPaths, pakmovers)
 ! ******************************************************************************
 ! set -- Setup mvr object
-!        If mname == '', then read mname out of line. pakorigins is an array
-!        of strings, which are model names and package names.  The mover
-!        entries must be in pakorigins, or this routine will terminate with
-!        an error.
+!        If mname == '', then read mname out of line. pckMemPaths is an array
+!        of strings which are the memory paths for those packages. They are composed
+!        of model names and package names. The mover entries must be in pckMemPaths, 
+!        or this routine will terminate with an error.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -84,7 +84,7 @@ module MvrModule
     ! -- Set lloc for line
     lloc = 1
     !
-    ! -- Construct provider name, which is modelname followed by packagename
+    ! -- Construct provider name, which is the memory path for the package
     if(mnamel) then
       modelName = mname
     else
@@ -101,7 +101,7 @@ module MvrModule
     call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
     this%iRchNrSrc = ival
     !
-    ! -- Construct receiver name, which is modelname followed by packagename
+    ! -- Construct receiver name, which is the memory path for the package
     if(mnamel) then
       modelName = mname
     else
@@ -145,7 +145,7 @@ module MvrModule
       call ustop()
     endif
     !
-    ! -- Check to make sure pname1 and pname2 are both listed in pakorigins
+    ! -- Check to make sure pname1 and pname2 are both listed in pckMemPaths
     !    pname1 is the provider package; pname2 is the receiver package
     found = .false.
     ipakloc1 = 0

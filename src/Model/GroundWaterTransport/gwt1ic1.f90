@@ -36,7 +36,7 @@ module GwtIcModule
     ! -- Create the object
     allocate(ic)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call ic%set_names(1, name_model, 'IC', 'IC')
     !
     ! -- Allocate scalars

@@ -94,7 +94,7 @@ module GwtMstModule
     ! -- Create the object
     allocate(mstobj)
     !
-    ! -- Create name and origin
+    ! -- create name and memory path
     call mstobj%set_names(1, name_model, 'MST', 'MST')
     !
     ! -- Allocate scalars

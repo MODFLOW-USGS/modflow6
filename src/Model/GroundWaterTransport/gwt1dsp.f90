@@ -81,7 +81,7 @@ module GwtDspModule
     ! -- Create the object
     allocate(dspobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call dspobj%set_names(1, name_model, 'DSP', 'DSP')
     !
     ! -- Allocate scalars

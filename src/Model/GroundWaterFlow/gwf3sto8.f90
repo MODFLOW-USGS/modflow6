@@ -65,7 +65,7 @@ module GwfStoModule
     ! -- Create the object
     allocate(stoobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call stoobj%set_names(1, name_model, 'STO', 'STO')
     !
     ! -- Allocate scalars
