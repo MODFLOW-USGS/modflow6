@@ -262,11 +262,13 @@ module GwtIstModule
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
-      if (this%isrb > 0) kd = this%distcoef(n)
       if (this%idcy == 1) lambda1im = this%decay(n)
       if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      if (this%isrb > 0) then
+        kd = this%distcoef(n)
+        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      end if
       call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
                           thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
                           lambda1im, lambda2im, gamma1im, gamma2im,          &
@@ -368,11 +370,13 @@ module GwtIstModule
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
-      if (this%isrb > 0) kd = this%distcoef(n)
       if (this%idcy == 1) lambda1im = this%decay(n)
       if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      if (this%isrb > 0) then
+        kd = this%distcoef(n)
+        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      end if
       call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
                           thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
                           lambda1im, lambda2im, gamma1im, gamma2im,          &
@@ -963,11 +967,13 @@ module GwtIstModule
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
-      if (this%isrb > 0) kd = this%distcoef(n)
       if (this%idcy == 1) lambda1im = this%decay(n)
       if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      if (this%isrb > 0) then
+        kd = this%distcoef(n)
+        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      end if
       !
       ! -- calculate the ddterms
       cimt = this%cim(n)
@@ -1086,11 +1092,13 @@ module GwtIstModule
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
-      if (this%isrb > 0) kd = this%distcoef(n)
       if (this%idcy == 1) lambda1im = this%decay(n)
       if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      if (this%isrb > 0) then
+        kd = this%distcoef(n)
+        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      end if
       ctmp = this%cim(n)
       ctmp = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
                         thetamfrac, thetaimfrac, this%bulk_density(n), kd,   &
