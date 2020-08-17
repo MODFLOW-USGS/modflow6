@@ -9,7 +9,9 @@ module NumericalSolutionModule
                                      DONE, DTHREE, DEP6, DEP20, DNODATA,       &
                                      TABLEFT, TABRIGHT,                        &
                                      MNORMAL, MVALIDATE,                       &
-                                     MEMREADONLY, MEMREADWRITE
+                                     MEMREADONLY, MEMREADWRITE,                &
+                                     LENMEMPATH
+  use MemoryHelperModule,      only: create_mem_path                                     
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
@@ -36,6 +38,7 @@ module NumericalSolutionModule
   public :: GetNumericalSolutionFromList
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
+    character(len=LENMEMPATH)                            :: memoryPath !> the path for storing solution variables in the memory manager
     character(len=LINELENGTH)                            :: fname
     type(ListType)                                       :: modellist
     type(ListType)                                       :: exchangelist
@@ -72,8 +75,8 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: res_in  => NULL()
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
-    integer(I4B), pointer                                :: itertot_timestep => NULL()   ! total nr. of linear solves per call to sln_ca
-    integer(I4B), pointer                                :: itertot_sim => NULL()        ! total nr. of inner iterations for simulation
+    integer(I4B), pointer                                :: itertot_timestep => NULL()   !> total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                                :: itertot_sim => NULL()        !> total nr. of inner iterations for simulation
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -196,7 +199,12 @@ contains
     allocate(solution)
     solbase => solution
     write(solutionname,'(a, i0)') 'SLN_', id
-    call solution%allocate_scalars(solutionname)
+    !
+    solution%name = solutionname
+    solution%memoryPath = create_mem_path(solutionname)
+    !
+    call solution%allocate_scalars()
+    !
     call AddBaseSolutionToList(basesolutionlist, solbase)
     !
     solution%id = id
@@ -218,7 +226,7 @@ contains
     return
   end subroutine solution_create
 
-  subroutine allocate_scalars(this, solutionname)
+  subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate scalars
 ! ******************************************************************************
@@ -229,59 +237,55 @@ contains
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(NumericalSolutionType) :: this
-    character(len=*), intent(in) :: solutionname
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- set value for solution name, which is a member of the base solution
-    this%name = solutionname
-    !
     ! -- allocate scalars
-    call mem_allocate(this%id, 'ID', solutionname)
-    call mem_allocate(this%iu, 'IU', solutionname)
-    call mem_allocate(this%ttform, 'TTFORM', solutionname)
-    call mem_allocate(this%ttsoln, 'TTSOLN', solutionname)
-    call mem_allocate(this%neq, 'NEQ', solutionname)
-    call mem_allocate(this%nja, 'NJA', solutionname)
-    call mem_allocate(this%dvclose, 'DVCLOSE', solutionname)
-    call mem_allocate(this%hiclose, 'HICLOSE', solutionname)
-    call mem_allocate(this%bigchold, 'BIGCHOLD', solutionname)
-    call mem_allocate(this%bigch, 'BIGCH', solutionname)
-    call mem_allocate(this%relaxold, 'RELAXOLD', solutionname)
-    call mem_allocate(this%res_prev, 'RES_PREV', solutionname)
-    call mem_allocate(this%res_new, 'RES_NEW', solutionname)
-    call mem_allocate(this%res_in, 'RES_IN', solutionname)
-    call mem_allocate(this%ibcount, 'IBCOUNT', solutionname)
-    call mem_allocate(this%icnvg, 'ICNVG', solutionname)
-    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', solutionname)
-    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', solutionname)
-    call mem_allocate(this%mxiter, 'MXITER', solutionname, MEMREADWRITE)
-    call mem_allocate(this%linmeth, 'LINMETH', solutionname)
-    call mem_allocate(this%nonmeth, 'NONMETH', solutionname)
-    call mem_allocate(this%iprims, 'IPRIMS', solutionname)
-    call mem_allocate(this%theta, 'THETA', solutionname)
-    call mem_allocate(this%akappa, 'AKAPPA', solutionname)
-    call mem_allocate(this%gamma, 'GAMMA', solutionname)
-    call mem_allocate(this%amomentum, 'AMOMENTUM', solutionname)
-    call mem_allocate(this%breduc, 'BREDUC', solutionname)
-    call mem_allocate(this%btol, 'BTOL', solutionname)
-    call mem_allocate(this%res_lim, 'RES_LIM', solutionname)
-    call mem_allocate(this%numtrack, 'NUMTRACK', solutionname)
-    call mem_allocate(this%ibflag, 'IBFLAG', solutionname)
-    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', solutionname)
-    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', solutionname)
-    call mem_allocate(this%nitermax, 'NITERMAX', solutionname)
-    call mem_allocate(this%convnmod, 'CONVNMOD', solutionname)
-    call mem_allocate(this%iallowptc, 'IALLOWPTC', solutionname)
-    call mem_allocate(this%iptcopt, 'IPTCOPT', solutionname)
-    call mem_allocate(this%iptcout, 'IPTCOUT', solutionname)
-    call mem_allocate(this%l2norm0, 'L2NORM0', solutionname)
-    call mem_allocate(this%ptcfact, 'PTCFACT', solutionname)
-    call mem_allocate(this%ptcdel, 'PTCDEL', solutionname)
-    call mem_allocate(this%ptcdel0, 'PTCDEL0', solutionname)
-    call mem_allocate(this%ptcexp, 'PTCEXP', solutionname)
-    call mem_allocate(this%ptcthresh, 'PTCTHRESH', solutionname)
-    call mem_allocate(this%ptcrat, 'PTCRAT', solutionname)
+    call mem_allocate(this%id, 'ID', this%memoryPath)
+    call mem_allocate(this%iu, 'IU', this%memoryPath)
+    call mem_allocate(this%ttform, 'TTFORM', this%memoryPath)
+    call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
+    call mem_allocate(this%neq, 'NEQ', this%memoryPath)
+    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
+    call mem_allocate(this%hiclose, 'HICLOSE', this%memoryPath)
+    call mem_allocate(this%bigchold, 'BIGCHOLD', this%memoryPath)
+    call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)
+    call mem_allocate(this%relaxold, 'RELAXOLD', this%memoryPath)
+    call mem_allocate(this%res_prev, 'RES_PREV', this%memoryPath)
+    call mem_allocate(this%res_new, 'RES_NEW', this%memoryPath)
+    call mem_allocate(this%res_in, 'RES_IN', this%memoryPath)
+    call mem_allocate(this%ibcount, 'IBCOUNT', this%memoryPath)
+    call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
+    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memoryPath)
+    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
+    call mem_allocate(this%mxiter, 'MXITER', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
+    call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)
+    call mem_allocate(this%iprims, 'IPRIMS', this%memoryPath)
+    call mem_allocate(this%theta, 'THETA', this%memoryPath)
+    call mem_allocate(this%akappa, 'AKAPPA', this%memoryPath)
+    call mem_allocate(this%gamma, 'GAMMA', this%memoryPath)
+    call mem_allocate(this%amomentum, 'AMOMENTUM', this%memoryPath)
+    call mem_allocate(this%breduc, 'BREDUC', this%memoryPath)
+    call mem_allocate(this%btol, 'BTOL', this%memoryPath)
+    call mem_allocate(this%res_lim, 'RES_LIM', this%memoryPath)
+    call mem_allocate(this%numtrack, 'NUMTRACK', this%memoryPath)
+    call mem_allocate(this%ibflag, 'IBFLAG', this%memoryPath)
+    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', this%memoryPath)
+    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memoryPath)
+    call mem_allocate(this%nitermax, 'NITERMAX', this%memoryPath)
+    call mem_allocate(this%convnmod, 'CONVNMOD', this%memoryPath)
+    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memoryPath)
+    call mem_allocate(this%iptcopt, 'IPTCOPT', this%memoryPath)
+    call mem_allocate(this%iptcout, 'IPTCOUT', this%memoryPath)
+    call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
+    call mem_allocate(this%ptcfact, 'PTCFACT', this%memoryPath)
+    call mem_allocate(this%ptcdel, 'PTCDEL', this%memoryPath)
+    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)
+    call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
+    call mem_allocate(this%ptcthresh, 'PTCTHRESH', this%memoryPath)
+    call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
     !
     ! -- initialize
     this%id = 0
@@ -354,27 +358,27 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%name, MEMREADONLY)
-    call mem_allocate(this%x, this%neq, 'X', this%name)
-    call mem_allocate(this%rhs, this%neq, 'RHS', this%name)
-    call mem_allocate(this%active, this%neq, 'IACTIVE', this%name)
-    call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%name)
-    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%name)
-    call mem_allocate(this%hncg, 0, 'HNCG', this%name)
-    call mem_allocate(this%lrch, 3, 0, 'LRCH', this%name)
-    call mem_allocate(this%wsave, 0, 'WSAVE', this%name)
-    call mem_allocate(this%hchold, 0, 'HCHOLD', this%name)
-    call mem_allocate(this%deold, 0, 'DEOLD', this%name)
-    call mem_allocate(this%convmodstart, this%convnmod+1, 'CONVMODSTART', this%name)
-    call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%name)
-    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%name)
-    call mem_allocate(this%itinner, 0, 'ITINNER', this%name)
-    call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', this%name)
-    call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', this%name)
-    call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%name)
-    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%name)
-    call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', this%name)
-    call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', this%name)
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath, MEMREADONLY)
+    call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
+    call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
+    call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
+    call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memoryPath)
+    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memoryPath)
+    call mem_allocate(this%hncg, 0, 'HNCG', this%memoryPath)
+    call mem_allocate(this%lrch, 3, 0, 'LRCH', this%memoryPath)
+    call mem_allocate(this%wsave, 0, 'WSAVE', this%memoryPath)
+    call mem_allocate(this%hchold, 0, 'HCHOLD', this%memoryPath)
+    call mem_allocate(this%deold, 0, 'DEOLD', this%memoryPath)
+    call mem_allocate(this%convmodstart, this%convnmod+1, 'CONVMODSTART', this%memoryPath)
+    call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%memoryPath)
+    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%memoryPath)
+    call mem_allocate(this%itinner, 0, 'ITINNER', this%memoryPath)
+    call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', this%memoryPath)
+    call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', this%memoryPath)
+    call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%memoryPath)
+    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%memoryPath)
+    call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', this%memoryPath)
+    call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', this%memoryPath)
     !
     ! -- initialize allocated arrays
     do i = 1, this%neq
