@@ -1,4 +1,4 @@
-# test to evaluate Newton-Raphson solution for a single column steady-state
+# test to evaluate Newton-Raphson solution for a single column transient
 # dry multi-aquifer well problem. Developed to address issue #546
 
 import os
@@ -15,11 +15,12 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ("maw_08a", "maw_08b")
+ex = ("maw_09a", "maw_09b", "maw_09c", "maw_09d")
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
-dis_option = ("dis", "disv")
+dis_option = ("dis", "dis", "disv", "disv")
+flow_correction = (None, True, None, True)
 
 nlay = 3
 nrow = 1
@@ -41,14 +42,15 @@ gwfarea = delr * delc
 
 top = 30.
 botm = [20, 10, 0]
+zelevs = [top] + botm
 maw_bot = 15.
 
 strt = 4.5
-maw_strt = 16.
+maw_strt = 30.
 
 Kh = 10
-Kv = 1.
-radius = 0.05
+Kv = 10.
+radius = np.sqrt(1./np.pi)
 
 def get_model(idx, dir):
     dvclose, rclose, relax = 1e-9, 1e-9, 1.0
@@ -63,7 +65,8 @@ def get_model(idx, dir):
                                  sim_ws=ws,
                                  memory_print_option='summary')
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS')
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                 perioddata=[(20., 50, 1.1)])
 
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
                                   complexity="complex",
@@ -88,6 +91,10 @@ def get_model(idx, dir):
                    (0, 0, 0),
                    (1, 0, 0),
                   ]
+        gwf_obs = [["C1", "HEAD", (0, 0, 0)],
+                   ["C2", "HEAD", (1, 0, 0)],
+                   ["C3", "HEAD", (2, 0, 0)],
+                  ]
     else:
         dis = flopy.mf6.ModflowGwfdisv(gwf,
                                        nlay=nlay, ncpl=nrow, nvert=4,
@@ -96,6 +103,10 @@ def get_model(idx, dir):
         cellids = [
                    (0, 0),
                    (1, 0),
+                  ]
+        gwf_obs = [["C1", "HEAD", (0, 0)],
+                   ["C2", "HEAD", (1, 0)],
+                   ["C3", "HEAD", (2, 0)],
                   ]
 
 
@@ -108,13 +119,27 @@ def get_model(idx, dir):
                                   save_specific_discharge=True,
                                   icelltype=1,
                                   k=Kh, k33=Kv)
+    # gwf observations
+    opth = '{}.gwf.obs'.format(gwfname)
+    obsdata = {'{}.gwf.obs.csv'.format(gwfname): gwf_obs}
+    flopy.mf6.ModflowUtlobs(
+                            gwf,
+                            filename=opth,
+                            digits=20,
+                            print_input=True,
+                            continuous=obsdata
+                            )
+
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(gwf, ss=0., sy=1.,
+                                  transient=True, iconvert=1)
 
     # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = flopy.mf6.ModflowGwfmaw.packagedata.empty(gwf, maxbound=1)
     mawpackagedata["radius"] = radius
     mawpackagedata["bottom"] = maw_bot
     mawpackagedata["strt"] = maw_strt
-    mawpackagedata["condeqn"] = "thiem"
+    mawpackagedata["condeqn"] = "specified"
     mawpackagedata["ngwfnodes"] = 2
 
     # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
@@ -124,7 +149,7 @@ def get_model(idx, dir):
     mawconnectiondata["cellid"] = cellids
     mawconnectiondata["scrn_top"] = 100.
     mawconnectiondata["scrn_bot"] = 0.
-    mawconnectiondata["hk_skin"] = -999
+    mawconnectiondata["hk_skin"] = 1.
     mawconnectiondata["radius_skin"] = -999
 
     mbin = '{}.maw.bin'.format(gwfname)
@@ -134,6 +159,7 @@ def get_model(idx, dir):
                                   print_head=True,
                                   print_flows=True,
                                   save_flows=True,
+                                  flow_correction=flow_correction[idx],
                                   head_filerecord=mbin,
                                   budget_filerecord=mbud,
                                   packagedata=mawpackagedata,
@@ -171,17 +197,56 @@ def build_models():
 def eval_results(sim):
     print('evaluating results...')
 
-    # calculate volume of water and make sure it is conserved
     name = ex[sim.idxsim]
     gwfname = 'gwf_' + name
-    fname = gwfname + '.maw.bin'
+
+    # get well observations
+    fname = '{}.gwf.obs.csv'.format(gwfname)
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
-    bobj = flopy.utils.HeadFile(fname, text='HEAD')
+    gobs = np.genfromtxt(fname, delimiter=",", names=True)
 
-    well_head = bobj.get_data().flatten()
-    assert np.allclose(well_head, 10.), \
-        "simulated maw head ({}) does not equal 10.".format(well_head[0])
+    # get well observations
+    fname = '{}.maw.obs.csv'.format(gwfname)
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    wobs = np.genfromtxt(fname, delimiter=",", names=True)["WHEAD"]
+
+    # calculate volume of water and make sure it is conserved
+    # volume comparisons can be made based on saturated thickness because
+    # the cell area and well area are both equal to 1
+    v0 = (maw_strt - 10.) + (strt - 0.)
+    for idx, w in enumerate(wobs):
+        vg = 0.
+        for jdx, tag in enumerate(("C1", "C2", "C3")):
+            g = gobs[tag][idx]
+            ctop = zelevs[jdx]
+            cbot = zelevs[jdx+1]
+            if g > ctop:
+                d = ctop - cbot
+            elif g > cbot:
+                d = g - cbot
+            else:
+                d = 0.
+            vg += d
+        vw = w - 10.
+        vt = vw + vg
+
+        # write a message
+        msg = "{}\n  well volume: {} ".format(idx, vw)
+        msg += "\n  groundwater volume: {}".format(vg)
+        msg += "\n  total volume: {}".format(vt)
+        print(msg)
+
+        # evaluate results
+        msg = "total volume {} not equal to initial volume {}".format(vt, v0)
+        msg += "\nwell volume: {}\ngroundwater volume: {}".format(vw, vg)
+        assert np.allclose(vt, v0), msg
+
+    # Check final well head
+    well_head = wobs[-1]
+    assert np.allclose(well_head, 17.25), \
+        "final simulated maw head ({}) does not equal 17.25.".format(well_head)
 
     fname = gwfname + '.hds'
     fname = os.path.join(sim.simpath, fname)

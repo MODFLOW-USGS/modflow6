@@ -219,7 +219,7 @@ subroutine store_error_filename(filename)
   return
 end subroutine store_error_filename
 
-subroutine store_warning(warnmsg)
+subroutine store_warning(warnmsg, substring)
 ! ******************************************************************************
 ! Store a warning message for printing at end of simulation
 ! ******************************************************************************
@@ -229,10 +229,15 @@ subroutine store_warning(warnmsg)
   ! -- modules
   ! -- dummy
   character(len=*), intent(in) :: warnmsg
+  character(len=*), intent(in), optional :: substring
 ! ------------------------------------------------------------------------------
   !
   ! -- store warning
-  call sim_warnings%store_message(warnmsg)
+  if (present(substring)) then
+    call sim_warnings%store_message(warnmsg, substring)
+  else
+    call sim_warnings%store_message(warnmsg)
+  end if
   !
   ! -- return
   return

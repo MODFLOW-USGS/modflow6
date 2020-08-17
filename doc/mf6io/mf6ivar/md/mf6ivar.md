@@ -444,7 +444,7 @@
 | GWF | MAW | OPTIONS | PRINT_FLOWS | KEYWORD | keyword to indicate that the list of multi-aquifer well flow rates will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control.  If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period. |
 | GWF | MAW | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that multi-aquifer well flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control. |
 | GWF | MAW | OPTIONS | HEAD | KEYWORD | keyword to specify that record corresponds to head. |
-| GWF | MAW | OPTIONS | HEADFILE | STRING | name of the binary output file to write stage information. |
+| GWF | MAW | OPTIONS | HEADFILE | STRING | name of the binary output file to write head information. |
 | GWF | MAW | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWF | MAW | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWF | MAW | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |

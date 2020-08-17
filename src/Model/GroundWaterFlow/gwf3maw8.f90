@@ -25,7 +25,7 @@ module MawModule
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
                               store_warning, ustop
   use BlockParserModule,   only: BlockParserType
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, warnmsg
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
@@ -816,6 +816,9 @@ contains
     integer(I4B) :: nn2
     integer(I4B) :: ipos
     integer(I4B) :: jpos
+    integer(I4B) :: ireset_scrntop
+    integer(I4B) :: ireset_scrnbot
+    integer(I4B) :: ireset_wellbot
     real(DP) :: rval
     real(DP) :: topnn
     real(DP) :: botnn
@@ -827,6 +830,11 @@ contains
     ! -- format
     !
     ! -- code
+    !
+    ! -- initialize counters
+    ireset_scrntop = 0
+    ireset_scrnbot = 0
+    ireset_wellbot = 0
     !
     ! -- allocate and initialize local storage
     allocate(iachk(this%nmawwells+1))
@@ -897,6 +905,7 @@ contains
           rval = topnn
         else
           if (rval > topnn) then
+            ireset_scrntop = ireset_scrntop + 1
             rval = topnn
           end if
         end if
@@ -908,6 +917,7 @@ contains
           rval = botnn
         else
           if (rval < botnn) then
+            ireset_scrnbot = ireset_scrnbot + 1
             rval = botnn
           end if
         end if
@@ -917,6 +927,7 @@ contains
         !    except for "mean"
         if (rval < botw) then
           if (this%ieqn(n) /= 4) then
+            ireset_wellbot = ireset_wellbot + 1
             botw = rval
             this%bot(n) = rval
           else
@@ -1005,6 +1016,28 @@ contains
     ! -- deallocate local variable
     deallocate(iachk)
     deallocate(nboundchk)
+    !
+    ! -- add warning messages
+    if (ireset_scrntop > 0) then
+      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+        'The screen tops in multi-aquifer well package', trim(this%packName),    &
+        'were reset to the top of the connected cell', ireset_scrntop, 'times.'
+      call store_warning(warnmsg)
+    end if
+    if (ireset_scrnbot > 0) then
+      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+        'The screen bottoms in multi-aquifer well package', trim(this%packName), &
+        'were reset to the bottom of the connected cell', ireset_scrnbot,        &
+        'times.'
+      call store_warning(warnmsg)
+    end if
+    if (ireset_wellbot > 0) then
+      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+        'The well bottoms in multi-aquifer well package', trim(this%packName),   &
+        'were reset to the bottom of the connected cell', ireset_wellbot,        &
+        'times.'
+      call store_warning(warnmsg)
+    end if
     !
     ! -- write summary of maw well_connection error messages
     if (count_errors() > 0) then
@@ -1345,7 +1378,7 @@ contains
   end subroutine maw_read_initial_attr
 
 
-  subroutine maw_set_stressperiod(this, imaw)
+  subroutine maw_set_stressperiod(this, imaw, iheadlimit_warning)
 ! ******************************************************************************
 ! maw_set_stressperiod -- Set a stress period attribute for mawweslls(imaw)
 !                         using keywords.
@@ -1358,6 +1391,7 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: imaw
+    integer(I4B), intent(inout) :: iheadlimit_warning
     ! -- local
     character(len=LINELENGTH) :: errmsgr
     character(len=LINELENGTH) :: text
@@ -1450,6 +1484,9 @@ contains
           if (istat /= 0) then
             errmsg = 'Could not read HEAD_LIMIT value. ' // trim(errmsgr)
             call store_error(errmsg)
+          end if
+          if (this%shutofflevel(imaw) <= this%bot(imaw)) then
+            iheadlimit_warning = iheadlimit_warning + 1
           end if
         end if
       case ('SHUT_OFF')
@@ -1885,6 +1922,7 @@ contains
     integer(I4B) :: ibnd
     integer(I4B) :: j
     integer(I4B) :: jpos
+    integer(I4B) :: iheadlimit_warning
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -1892,8 +1930,12 @@ contains
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize counters
+    iheadlimit_warning = 0
+    !
     ! -- set steady-state flag based on gwfiss
     this%imawiss = this%gwfiss
+    !
     ! -- reset maw steady flag if 'STEADY-STATE' specified in the OPTIONS block
     if (this%imawissopt == 1) then
       this%imawiss = 1
@@ -1969,7 +2011,7 @@ contains
         end if
         !
         ! -- set stress period data
-        call this%maw_set_stressperiod(imaw)
+        call this%maw_set_stressperiod(imaw, iheadlimit_warning)
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
@@ -1981,9 +2023,18 @@ contains
         call this%inputtab%finalize_table()
       end if
     !
-    ! -- usiing data from the last stress period
+    ! -- using data from the last stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
+    end if
+    !
+    ! -- issue warning messages
+    if (iheadlimit_warning > 0) then
+      write(warnmsg, '(a,a,a,1x,a,1x,a)')                                        &
+        "HEAD_LIMIT in '", trim(this%packName),"' was below the well bottom",    &
+        "for one or more multi-aquifer well(s). This may result in",             &
+        "convergence failures for some models."
+      call store_warning(warnmsg, substring=warnmsg(:50))
     end if
     !
     ! -- write summary of maw well stress period error messages

@@ -51,7 +51,7 @@ longname save well flows to budget file
 description REPLACE save_flows {'{#1}': 'multi-aquifer well'}
 
 block options
-name stage_filerecord
+name head_filerecord
 type record head fileout headfile
 shape
 reader urword
@@ -68,7 +68,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname stage keyword
+longname head keyword
 description keyword to specify that record corresponds to head.
 
 block options
@@ -81,7 +81,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the binary output file to write stage information.
+description name of the binary output file to write head information.
 
 block options
 name budget_filerecord

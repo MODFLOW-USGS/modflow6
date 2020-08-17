@@ -133,7 +133,7 @@ def get_model(idx, dir):
                                   print_flows=True,
                                   save_flows=True,
                                   flow_correction=True,
-                                  stage_filerecord=mbin,
+                                  head_filerecord=mbin,
                                   budget_filerecord=mbud,
                                   packagedata=mawpackagedata,
                                   connectiondata=mawconnectiondata,
