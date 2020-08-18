@@ -97,16 +97,18 @@ contains
   
   end function string_to_char_array
 
-  function extract_model_name(var_address)
-    character(len=*), intent(in) :: var_address
-    character(len=LENMODELNAME) :: extract_model_name
+  !> @brief Extract the model name from a memory address string
+  !<
+  function extract_model_name(var_address) result(model_name)
+    character(len=*), intent(in) :: var_address !< the memory address for the variable
+    character(len=LENMODELNAME) :: model_name   !< the extracted model name
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENCOMPONENTNAME) :: dummy_component
     character(len=LENVARNAME) :: var_name
 
     call split_mem_address(var_address, mem_path, var_name)
-    call split_mem_path(mem_path, extract_model_name, dummy_component)
+    call split_mem_path(mem_path, model_name, dummy_component)
     
   end function extract_model_name
 
