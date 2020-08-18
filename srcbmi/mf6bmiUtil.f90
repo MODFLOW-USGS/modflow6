@@ -9,7 +9,7 @@ module mf6bmiUtil
   use KindModule, only: DP, I4B  
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: istdout
-  use MemoryHelperModule, only: split_mem_address
+  use MemoryHelperModule, only: split_mem_address, split_mem_path
   implicit none
   
   ! the following exported parameters will trigger annoying warnings with
@@ -97,15 +97,18 @@ contains
   
   end function string_to_char_array
 
-  ! get the model name from the string, assuming that it is
-  ! the substring in front of the first space
-  pure function extract_model_name(var_name)
-    character(len=*), intent(in) :: var_name
-    character(len=LENMODELNAME) :: extract_model_name
-    integer(I4B) :: idx
-    
-    idx = index(var_name, ' ')
-    extract_model_name = var_name(:idx-1)
+  !> @brief Extract the model name from a memory address string
+  !<
+  function extract_model_name(var_address) result(model_name)
+    character(len=*), intent(in) :: var_address !< the memory address for the variable
+    character(len=LENMODELNAME) :: model_name   !< the extracted model name
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENCOMPONENTNAME) :: dummy_component
+    character(len=LENVARNAME) :: var_name
+
+    call split_mem_address(var_address, mem_path, var_name)
+    call split_mem_path(mem_path, model_name, dummy_component)
     
   end function extract_model_name
 
