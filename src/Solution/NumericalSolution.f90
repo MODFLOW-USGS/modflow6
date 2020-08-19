@@ -38,7 +38,7 @@ module NumericalSolutionModule
   public :: GetNumericalSolutionFromList
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
-    character(len=LENMEMPATH)                            :: memoryPath !> the path for storing solution variables in the memory manager
+    character(len=LENMEMPATH)                            :: memoryPath !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH)                            :: fname
     type(ListType)                                       :: modellist
     type(ListType)                                       :: exchangelist
@@ -75,8 +75,8 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: res_in  => NULL()
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
-    integer(I4B), pointer                                :: itertot_timestep => NULL()   !> total nr. of linear solves per call to sln_ca
-    integer(I4B), pointer                                :: itertot_sim => NULL()        !> total nr. of inner iterations for simulation
+    integer(I4B), pointer                                :: itertot_timestep => NULL()   !< total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                                :: itertot_sim => NULL()        !< total nr. of inner iterations for simulation
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()

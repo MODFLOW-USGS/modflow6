@@ -23,7 +23,7 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
-  use MemoryManagerModule, only: mem_setptr, get_mem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
+  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
   implicit none
@@ -112,15 +112,12 @@ module mf6bmi
   !> @brief Get the start time of the simulation
   !!
   !! As MODFLOW currently does not have internal time, this will be 
-  !! returning 0.0 for now.
-  !!
-  !! @param[out]  start_time      the start time
-  !! @return      bmi_status      the BMI status code
+  !! returning 0.0 for now. New version...
   !<
   function get_start_time(start_time) result(bmi_status) bind(C, name="get_start_time")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_start_time
-    double precision, intent(out) :: start_time
-    integer(kind=c_int) :: bmi_status
+    double precision, intent(out) :: start_time !< the start time
+    integer(kind=c_int) :: bmi_status           !< the BMI status code
     
     start_time = 0.0_DP    
     bmi_status = BMI_SUCCESS
@@ -205,7 +202,7 @@ module mf6bmi
     call split_address(c_var_address, mem_path, var_name_only)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_size(var_name_only, mem_path, var_size)
+    call get_mem_elem_size(var_name_only, mem_path, var_size)
     if (var_size == -1) bmi_status = BMI_FAILURE
         
   end function get_var_itemsize
@@ -229,7 +226,7 @@ module mf6bmi
     call split_address(c_var_address, mem_path, var_name)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_size(var_name, mem_path, var_size)    
+    call get_mem_elem_size(var_name, mem_path, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
     call get_isize(var_name, mem_path, isize)
     if (isize == -1) bmi_status = BMI_FAILURE
