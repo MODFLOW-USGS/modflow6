@@ -114,11 +114,13 @@ contains
     
   end function extract_model_name
 
+  !> @brief Get the model name from the grid id
+  !<
   function get_model_name(grid_id) result(model_name)
     use ListsModule, only: basemodellist
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    integer(kind=c_int), intent(in) :: grid_id
-    character(len=LENMODELNAME) :: model_name
+    integer(kind=c_int), intent(in) :: grid_id  !< grid id
+    character(len=LENMODELNAME) :: model_name   !< model name
     ! local
     integer(I4B) :: i
     class(BaseModelType), pointer :: baseModel    
@@ -138,14 +140,14 @@ contains
     call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
   end function get_model_name
 
-  ! the subcomponent_idx runs from 1 to the nr of 
-  ! solutions in the solution group
+  !> @brief Get the solution object for this index
+  !<
   function getSolution(subcomponent_idx) result(solution)
     use SolutionGroupModule
     use NumericalSolutionModule
     use ListsModule, only: basesolutionlist, solutiongrouplist
-    integer(I4B), intent(in) :: subcomponent_idx
-    class(NumericalSolutionType), pointer :: solution
+    integer(I4B), intent(in) :: subcomponent_idx      !< index of solution
+    class(NumericalSolutionType), pointer :: solution !< Numerical Solution
     ! local
     class(SolutionGroupType), pointer :: sgp
     integer(I4B) :: solutionIdx
