@@ -103,14 +103,11 @@ module mf6xmi
   !! The routine takes the time step \p dt as an argument. However, MODFLOW (currently)
   !! does not allow to alter this value after initialization, so it is ignored
   !! here.
-  !! 
-  !! @param[in]   dt              the time step
-  !! @return      bmi_status      the BMI status code
   !<
   function xmi_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_prepare_time_step
-    double precision, intent(in) :: dt
-    integer(kind=c_int) :: bmi_status
+    double precision, intent(in) :: dt  !< time step
+    integer(kind=c_int) :: bmi_status   !< BMI status code
       
     call Mf6PrepareTimestep()    
     bmi_status = BMI_SUCCESS
@@ -121,12 +118,10 @@ module mf6xmi
   !!
   !! It does so by looping over all solution groups, and calling
   !! the calculate function on all solutions in there.
-  !! 
-  !! @return      bmi_status      the BMI status code
   !<
   function xmi_do_time_step() result(bmi_status) bind(C, name="do_time_step")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_do_time_step
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int) :: bmi_status !< BMI status code
     
     call Mf6DoTimestep()
     bmi_status = BMI_SUCCESS
@@ -137,12 +132,10 @@ module mf6xmi
   !!
   !! This will mostly write output and messages. It is essential
   !! to call this to finish the time step.
-  !!
-  !! @return      bmi_status      the BMI status code
   !<
   function xmi_finalize_time_step() result(bmi_status) bind(C, name="finalize_time_step")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_finalize_time_step
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! local
     logical :: hasConverged
     
@@ -160,17 +153,14 @@ module mf6xmi
   !! For most applications, this number will be equal to 1. Note that this part 
   !! of the XMI only works when the simulation is defined with a single
   !! Solution Group. (If you don't know what a Solution Group is, then
-  !! you are most likely not using more than one...)
-  !! 
-  !! @param[out]  count           the number of solutions
-  !! @return      bmi_status      the BMI status code    
+  !! you are most likely not using more than one...)  
   !<
   function xmi_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_get_subcomponent_count
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: istdout
-    integer(kind=c_int) :: bmi_status
-    integer(kind=c_int), intent(out) :: count
+    integer(kind=c_int), intent(out) :: count !< number of solutions    
+    integer(kind=c_int) :: bmi_status         !< BMI status code
     ! local
     class(SolutionGroupType), pointer :: sgp
     
@@ -193,17 +183,14 @@ module mf6xmi
   !! This preparation mostly consists of advancing the solutions, models, and exchanges 
   !! in the simulation. The index \p subcomponent_idx runs from 1 to the value returned 
   !! by xmi_get_subcomponent_count().
-  !!
-  !! @param[in]   subcomponent_idx    the index of the subcomponent (Numerical Solution)
-  !! @return      bmi_status          the BMI status code  
   !<
   function xmi_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_prepare_solve   
     use ListsModule, only: solutiongrouplist
     use NumericalSolutionModule
     use SimVariablesModule, only: istdout
-    integer(kind=c_int) :: subcomponent_idx ! 1,2,...,xmi_get_subcomponent_count()
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
+    integer(kind=c_int) :: bmi_status       !< BMI status code
     ! local
     class(NumericalSolutionType), pointer :: ns
     
@@ -233,17 +220,13 @@ module mf6xmi
   !! The solve is called on the Numerical Solution indicated by the value of \p subcomponent_idx,
   !! which runs from 1 to the value returned by xmi_get_subcomponent_count(). Before calling
   !! this, a matching call to xmi_prepare_solve() should be done.
-  !!
-  !! @param[in]   subcomponent_idx    the index of the subcomponent (Numerical Solution)
-  !! @param[out]  has_converged       equal to 1 for convergence, 0 otherwise
-  !! @return      bmi_status          the BMI status code
   !<
   function xmi_solve(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="solve")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_solve  
     use NumericalSolutionModule
-    integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,xmi_get_subcomponent_count()
-    integer(kind=c_int), intent(out) :: has_converged
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int), intent(in) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
+    integer(kind=c_int), intent(out) :: has_converged   !< equal to 1 for convergence, 0 otherwise
+    integer(kind=c_int) :: bmi_status                   !< BMI status code
     ! local
     class(NumericalSolutionType), pointer :: ns
     
@@ -276,8 +259,8 @@ module mf6xmi
   function xmi_finalize_solve(subcomponent_idx) result(bmi_status) bind(C, name="finalize_solve")
   !DEC$ ATTRIBUTES DLLEXPORT :: xmi_finalize_solve   
     use NumericalSolutionModule
-    integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,xmi_get_subcomponent_count()
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int), intent(in) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution) 
+        integer(kind=c_int) :: bmi_status               !< BMI status code
     ! local
     class(NumericalSolutionType), pointer :: ns
     integer(I4B) :: hasConverged
@@ -308,14 +291,8 @@ module mf6xmi
   !!
   !! This routine constructs the full address string of a variable using the
   !! exact same logic as the internal memory manager. This routine
-  !! should always be used when accessing a variable through the BMI as
+  !! should always be used when accessing a variable through the BMI
   !! to assure compatibility with future versions of the library.
-  !!
-  !! @param[in]   c_component_name        the name of the component (a Model or Solution) as a C-string
-  !! @param[in]   c_subcomponent_name     the name of the subcomponent (a Package) as a C-string (or an empty string '' when not applicable)
-  !! @param[in]   c_var_name              the name of the variable as a C-string
-  !! @param[out]  c_var_address           the full address of the variable as a C-string with length mf6bmiUtil::BMI_LENVARADDRESS
-  !! @return      bmi_status              the BMI status code
   !<
   function get_var_address(c_component_name, c_subcomponent_name, &
                           c_var_name, c_var_address) &
@@ -323,11 +300,12 @@ module mf6xmi
     !DEC$ ATTRIBUTES DLLEXPORT :: get_var_address
     use MemoryHelperModule, only: create_mem_path, create_mem_address
     use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME, LENMEMPATH, LENMEMADDRESS    
-    character(kind=c_char), intent(in) :: c_component_name(*)
-    character(kind=c_char), intent(in) :: c_subcomponent_name(*)
-    character(kind=c_char), intent(in) :: c_var_name(*)
-    character(kind=c_char), intent(out) :: c_var_address(BMI_LENVARADDRESS)
-    integer(kind=c_int) :: bmi_status
+    character(kind=c_char), intent(in) :: c_component_name(*)               !< name of the component (a Model or Solution)
+    character(kind=c_char), intent(in) :: c_subcomponent_name(*)            !< name of the subcomponent (Package), or an empty
+                                                                            !! string'' when not applicable
+    character(kind=c_char), intent(in) :: c_var_name(*)                     !< name of the variable
+    character(kind=c_char), intent(out) :: c_var_address(BMI_LENVARADDRESS) !< full address of the variable
+    integer(kind=c_int) :: bmi_status                                       !< BMI status code
  
     ! local
     character(len=LENCOMPONENTNAME) :: component_name
