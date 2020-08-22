@@ -23,7 +23,7 @@ import shutil
 import subprocess
 import zipfile
 import pymake
-from pymake.download import download_and_unzip
+from pymake import download_and_unzip
 from contextlib import contextmanager
 
 # examples_setup contains code for copying examples into distribution
