@@ -162,8 +162,7 @@ def get_mf6_models():
             namefiles = pymake.get_namefiles(pth)
             ftypes = []
             for namefile in namefiles:
-                ftype = pymake.autotest.get_mf6_ftypes(namefile,
-                                                       select_packages)
+                ftype = pymake.get_mf6_ftypes(namefile, select_packages)
                 if ftype not in ftypes:
                     ftypes += ftype
             if len(ftypes) > 0:
