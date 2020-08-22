@@ -122,8 +122,8 @@ def get_mf5to6_models():
             ftypes = []
             for namefile in namefiles:
                 for pak in select_packages:
-                    ftype = pymake.autotest.get_entries_from_namefile(namefile,
-                                                                      ftype=pak)
+                    ftype = pymake.get_entries_from_namefile(namefile,
+                                                             ftype=pak)
                     for t in ftype:
                         if t[1] is not None:
                             if t[1] not in ftypes:
@@ -182,7 +182,7 @@ def run_mf5to6(sim):
     if lgrpth is not None:
         print(msg)
         npth = lgrpth
-        pymake.autotest.setup(lgrpth, dst)
+        pymake.setup(lgrpth, dst)
     # copy modflow 2005, NWT, or USG files to working directory
     else:
         print(msg)
@@ -192,7 +192,7 @@ def run_mf5to6(sim):
             print(msg)
             assert False
         npth = npths[0]
-        pymake.autotest.setup(npth, dst)
+        pymake.setup(npth, dst)
 
     # read ftype from name file to set modflow version
     if version != 'mflgr':
