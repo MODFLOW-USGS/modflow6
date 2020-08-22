@@ -143,9 +143,9 @@ def test_zip_assets():
 if __name__ == "__main__":
     test_update_version()
     test_create_dirs()
-    test_build_modflow6()
-    test_build_modflow6_so()
-    test_build_mf5to6()
-    test_build_zonebudget()
+    test_mf6()
+    test_libmf6()
+    test_mf5to6()
+    test_zbud6()
     test_update_mf6io()
     test_zip_assets()
