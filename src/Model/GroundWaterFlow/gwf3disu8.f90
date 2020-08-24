@@ -1338,19 +1338,8 @@ module GwfDisuModule
     real(DP), intent(inout) :: zcomp
     integer(I4B), intent(in) :: ipos
     ! -- local
-    !integer(I4B) :: ipos
     real(DP) :: angle, dmult
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Terminate with error if requesting normal vector components for problems 
-    !    without vertex data
-    if (this%nvert < 1) then
-      write(errmsg, '(a)') &
-        'Cannot calculate normal vector components for DISU grid if VERTEX ' //  &
-        'data are not specified'
-      call store_error(errmsg)
-      call ustop()
-    end if
     !
     ! -- Set vector components based on ihc
     if(ihc == 0) then
