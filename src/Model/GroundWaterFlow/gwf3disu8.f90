@@ -6,6 +6,7 @@ module GwfDisuModule
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimVariablesModule, only: errmsg
   use BaseDisModule, only: DisBaseType
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
@@ -388,18 +389,17 @@ module GwfDisuModule
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n, m
     integer(I4B) :: ipos
     integer(I4B) :: ihc
     real(DP) :: dz
     ! -- formats
     character(len=*), parameter :: fmtidm = &
-      "('ERROR. INVALID IDOMAIN VALUE ', i0, ' SPECIFIED FOR NODE ', i0)"
+      "('Invalid idomain value ', i0, ' specified for node ', i0)"
     character(len=*), parameter :: fmtdz = &
-      "('ERROR. CELL ', i0, ' WITH THICKNESS <= 0. TOP, BOT: ', 2(1pg24.15))"
+      "('Cell ', i0, ' with thickness <= 0. Top, bot: ', 2(1pg24.15))"
     character(len=*), parameter :: fmtarea = &
-      "('ERROR. CELL ', i0, ' WITH AREA <= 0. AREA: ', 1(1pg24.15))"
+      "('Cell ', i0, ' with area <= 0. Area: ', 1(1pg24.15))"
     character(len=*),parameter :: fmterrmsg =                                  &
       "(' Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
       &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
@@ -533,7 +533,6 @@ module GwfDisuModule
     integer(I4B), intent(in) :: nodeu
     integer(I4B), dimension(:), intent(inout) :: arr
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: isize
 ! ------------------------------------------------------------------------------
     !
@@ -566,7 +565,7 @@ module GwfDisuModule
     use SimModule, only: ustop, count_errors, store_error
     implicit none
     class(GwfDisuType) :: this
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr, nerr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -617,8 +616,7 @@ module GwfDisuModule
             write(this%iout,'(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ',         &
               this%angrot
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DIS OPTION: ',         &
-                                     trim(keyword)
+            write(errmsg,'(a)')'Unknown DISU option: ' // trim(keyword)
             call store_error(errmsg)
         end select
       end do
@@ -650,7 +648,7 @@ module GwfDisuModule
     use SimModule, only: ustop, count_errors, store_error
     implicit none
     class(GwfDisuType) :: this
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: n, ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -683,31 +681,30 @@ module GwfDisuModule
             write(this%iout,'(3x,a)') 'VERTICES AND CELL2D BLOCKS WILL ' //    &
               'BE READ BELOW. '
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DISU DIMENSION: ',      &
-                                      trim(keyword)
+            write(errmsg,'(a)') 'Unknown DISU dimension: ' // trim(keyword)
             call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF DISCRETIZATION OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF DISCRETIZATION OPTIONS'
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-      call ustop()
+      call store_error('Required dimensions block not found.')
     end if
     !
     ! -- verify dimensions were set
     if(this%nodesuser < 1) then
       call store_error( &
-          'ERROR.  NODES WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
-      call ustop()
+          'NODES was not specified or was specified incorrectly.')
     endif
     if(this%njausr < 1) then
       call store_error( &
-          'ERROR.  NJA WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
-      call ustop()
+          'NJA was not specified or was specified incorrectly.')
     endif
+    !
+    ! -- terminate if errors were detected
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
     !
     ! -- allocate vectors that are the size of nodesuser
     call mem_allocate(this%top1d, this%nodesuser, 'TOP1D', this%memoryPath)
@@ -745,12 +742,10 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, count_errors, store_error, store_error_unit
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: n
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -792,33 +787,29 @@ module GwfDisuModule
                             this%ndim, this%nodesuser, this%iout, 0)
             lname(4) = .true.
           case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ', &
-                                     trim(keyword)
+            write(errmsg,'(a)') 'Unknown GRIDDATA tag: ' // trim(keyword)
             call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
     else
-      call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-      call ustop()
+      call store_error('Required GRIDDATA block not found.')
     end if
     !
     ! -- verify all items were read
     do n = 1, nname
       if (n == 4) cycle
       if(.not. lname(n)) then
-        write(errmsg,'(1x,a,a)') &
-          'ERROR.  REQUIRED INPUT WAS NOT SPECIFIED: ', aname(n)
+        write(errmsg,'(a)') 'Required input was not specified: ', trim(aname(n))
         call store_error(errmsg)
       endif
     enddo
+    !
+    ! -- terminate if errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
-    endif
+    end if
     !
     ! -- Return
     return
@@ -1301,7 +1292,6 @@ module GwfDisuModule
     class(GwfDisuType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: nodenumber
 ! ------------------------------------------------------------------------------
     !
@@ -1351,6 +1341,16 @@ module GwfDisuModule
     !integer(I4B) :: ipos
     real(DP) :: angle, dmult
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Terminate with error if requesting normal vector components for problems 
+    !    without vertex data
+    if (this%nvert < 1) then
+      write(errmsg, '(a)') &
+        'Cannot calculate normal vector components for DISU grid if VERTEX ' //  &
+        'data are not specified'
+      call store_error(errmsg)
+      call ustop()
+    end if
     !
     ! -- Set vector components based on ihc
     if(ihc == 0) then
@@ -1413,6 +1413,16 @@ module GwfDisuModule
     ! -- local
     real(DP) :: xn, xm, yn, ym, zn, zm
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Terminate with error if requesting unit vector components for problems
+    !    without vertex data
+    if (this%nvert < 1) then
+      write(errmsg, '(a)') &
+        'Cannot calculate unit vector components for DISU grid if VERTEX ' //    &
+        'data are not specified'
+      call store_error(errmsg)
+      call ustop()
+    end if
     !
     ! -- Find xy coords
     call this%get_cellxy(noden, xn, yn)

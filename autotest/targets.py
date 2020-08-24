@@ -35,6 +35,10 @@ target = target_pth('mfusgdbl{}'.format(target_ext), ebindir)
 target_dict['mfusg'] = target
 target = target_pth('mflgrdbl{}'.format(target_ext), ebindir)
 target_dict['mflgr'] = target
+target = target_pth('mf2005{}'.format(target_ext), ebindir)
+target_dict['mf2005s'] = target
+target = target_pth('mt3dms{}'.format(target_ext), ebindir)
+target_dict['mt3dms'] = target
 
 # create MODFLOW 6 target name and add to dictionary
 program = 'mf6{}'.format(target_ext)

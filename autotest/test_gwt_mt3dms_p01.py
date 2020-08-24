@@ -1,11 +1,11 @@
 """
 MODFLOW 6 Autotest
-Test to compare MODFLOW 6 groundwater transport simulation results to MT3DMS 
-results.  This test was first documented in Zheng and Wang (1999) (MT3DMS: 
-A Modular Three-Dimensional Multispecies Transport Model for Simulation of 
-Advection, Dispersion, and Chemical Reactions of Contaminants in Groundwater 
-Systems; Documentation and User's Guide) on page 130.  This is a 1D set of 4 
-test problems that apply incrementally varying combinations of advection, 
+Test to compare MODFLOW 6 groundwater transport simulation results to MT3DMS
+results.  This test was first documented in Zheng and Wang (1999) (MT3DMS:
+A Modular Three-Dimensional Multispecies Transport Model for Simulation of
+Advection, Dispersion, and Chemical Reactions of Contaminants in Groundwater
+Systems; Documentation and User's Guide) on page 130.  This is a 1D set of 4
+test problems that apply incrementally varying combinations of advection,
 dispersion, and reaction (sorption and decay):
 
 * Case 1a: Advection only
@@ -42,8 +42,8 @@ except:
 
 import targets
 
-exe_name_mf = os.path.abspath('./temp/mfexes/mf2005')
-exe_name_mt = os.path.abspath('./temp/mfexes/mt3dms')
+exe_name_mf = targets.target_dict['mf2005s']
+exe_name_mt = targets.target_dict['mt3dms']
 exe_name_mf6 = targets.target_dict['mf6']
 testdir = './temp'
 testgroup = 'mt3dms_p01'
