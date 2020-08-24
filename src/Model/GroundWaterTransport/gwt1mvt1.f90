@@ -70,7 +70,7 @@ module GwtMvtModule
     ! -- Create the object
     allocate(mvt)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call mvt%set_names(1, name_model, 'MVT', 'MVT')
     !
     ! -- Allocate scalars

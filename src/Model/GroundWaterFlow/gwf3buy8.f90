@@ -123,7 +123,7 @@ module GwfBuyModule
     ! -- Create the object
     allocate(buyobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call buyobj%set_names(1, name_model, 'BUY', 'BUY')
     !
     ! -- Allocate scalars

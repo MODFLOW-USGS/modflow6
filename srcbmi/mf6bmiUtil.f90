@@ -33,21 +33,16 @@ module mf6bmiUtil
 
 contains
    
-  !> @brief split the variable address string
+  !> @brief Split the variable address string
   !!
-  !! splits the full address string into a memory path and variable name,
-  !! following the rules used by the memory manager
-  !!
-  !! @param[in]   c_var_address   the full address C-string of a variable
-  !! @param[out]  mem_path        the memory path used by the memory manager
-  !! @param[out]  var_name        the name of the variable (without the path)
-  !!
+  !! Splits the full address string into a memory path and variable name,
+  !! following the rules used by the memory manager.
   !<
   subroutine split_address(c_var_address, mem_path, var_name)
     use MemoryHelperModule, only: memPathSeparator
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    character(len=LENMEMPATH), intent(out) :: mem_path
-    character(len=LENVARNAME), intent(out) :: var_name    
+    character (kind=c_char), intent(in) :: c_var_address(*) !< full address of a variable
+    character(len=LENMEMPATH), intent(out) :: mem_path      !< memory path used by the memory manager
+    character(len=LENVARNAME), intent(out) :: var_name      !< name of the variable
     ! local
     character(len=LENMEMPATH) :: var_address   
 
@@ -58,42 +53,49 @@ contains
 
   end subroutine split_address
 
-  integer(c_int) pure function strlen(char_array)
-    character(c_char), intent(in) :: char_array(LENMEMPATH)
+  !> @brief Returns the string length without the trailing null character
+  !<
+  pure function strlen(char_array) result(string_length)
+    character(c_char), intent(in) :: char_array(LENMEMPATH) !< C-style character string
+    integer(I4B)                  :: string_length          !< Fortran string length
     integer(I4B) :: i
     
-    strlen = 0
+    string_length = 0
     do i = 1, size(char_array)
       if (char_array(i) .eq. C_NULL_CHAR) then
-          strlen = i-1
+        string_length = i-1
           exit
       end if
     end do
     
   end function strlen
 
-  pure function char_array_to_string(char_array, length)
-    integer(c_int), intent(in) :: length
-    character(c_char),intent(in) :: char_array(length)
-    character(len=length) :: char_array_to_string
+  !> @brief Convert C-style string to Fortran character string
+  !<
+  pure function char_array_to_string(char_array, length) result(f_string)
+    integer(c_int), intent(in) :: length                !< string length without terminating null character
+    character(c_char),intent(in) :: char_array(length)  !< string to convert
+    character(len=length) :: f_string                   !< Fortran fixed length character string
     integer(I4B) :: i
     
     do i = 1, length
-      char_array_to_string(i:i) = char_array(i)
+      f_string(i:i) = char_array(i)
     enddo
     
   end function char_array_to_string
 
-  pure function string_to_char_array(string, length)
-  integer(c_int),intent(in) :: length
-  character(len=length), intent(in) :: string
-  character(kind=c_char,len=1) :: string_to_char_array(length+1)
+  !> @brief Convert Fortran string to C-style character string
+  !<
+  pure function string_to_char_array(string, length) result(c_array)
+  integer(c_int),intent(in) :: length               !< Fortran string length
+  character(len=length), intent(in) :: string       !< string to convert
+  character(kind=c_char,len=1) :: c_array(length+1) !< C-style character string
   integer(I4B) :: i
   
   do i = 1, length
-      string_to_char_array(i) = string(i:i)
+    c_array(i) = string(i:i)
   enddo
-  string_to_char_array(length+1) = C_NULL_CHAR
+  c_array(length+1) = C_NULL_CHAR
   
   end function string_to_char_array
 
@@ -112,11 +114,13 @@ contains
     
   end function extract_model_name
 
+  !> @brief Get the model name from the grid id
+  !<
   function get_model_name(grid_id) result(model_name)
     use ListsModule, only: basemodellist
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    integer(kind=c_int), intent(in) :: grid_id
-    character(len=LENMODELNAME) :: model_name
+    integer(kind=c_int), intent(in) :: grid_id  !< grid id
+    character(len=LENMODELNAME) :: model_name   !< model name
     ! local
     integer(I4B) :: i
     class(BaseModelType), pointer :: baseModel    
@@ -136,14 +140,14 @@ contains
     call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
   end function get_model_name
 
-  ! the subcomponent_idx runs from 1 to the nr of 
-  ! solutions in the solution group
+  !> @brief Get the solution object for this index
+  !<
   function getSolution(subcomponent_idx) result(solution)
     use SolutionGroupModule
     use NumericalSolutionModule
     use ListsModule, only: basesolutionlist, solutiongrouplist
-    integer(I4B), intent(in) :: subcomponent_idx
-    class(NumericalSolutionType), pointer :: solution
+    integer(I4B), intent(in) :: subcomponent_idx      !< index of solution
+    class(NumericalSolutionType), pointer :: solution !< Numerical Solution
     ! local
     class(SolutionGroupType), pointer :: sgp
     integer(I4B) :: solutionIdx

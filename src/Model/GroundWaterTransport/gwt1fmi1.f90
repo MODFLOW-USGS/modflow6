@@ -100,7 +100,7 @@ module GwtFmiModule
     ! -- Create the object
     allocate(fmiobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call fmiobj%set_names(1, name_model, 'FMI', 'FMI')
     !
     ! -- Allocate scalars

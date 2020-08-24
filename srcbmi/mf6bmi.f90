@@ -23,7 +23,7 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
-  use MemoryManagerModule, only: mem_setptr, get_mem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
+  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
   implicit none
@@ -42,12 +42,10 @@ module mf6bmi
   !! bmi_finalize(). However, we currently do not support the reinitialization 
   !! of a model in the same memory space... You would have to create a new 
   !! process for that.
-  !!
-  !! @return      bmi_status      the BMI status code
   !<
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! local
     
     if (istdout_to_file > 0) then
@@ -73,12 +71,10 @@ module mf6bmi
   !! the timestep by printing out diagnostics and writing output.
   !! It can be called in succession to perform multiple steps up
   !! to the simulation's end time is reached.
-  !!
-  !! @return      bmi_status      the BMI status code
   !<
   function bmi_update() result(bmi_status) bind(C, name="update")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_update
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! local
     logical :: hasConverged
     
@@ -92,13 +88,11 @@ module mf6bmi
   !!
   !! Performs teardown tasks for the initialized simulation, this
   !! call should match the call to bmi_initialize()
-  !!
-  !! @return      bmi_status      the BMI status code
   !<
   function bmi_finalize() result(bmi_status) bind(C, name="finalize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
     use SimVariablesModule, only: iforcestop
-    integer(kind=c_int) :: bmi_status
+    integer(kind=c_int) :: bmi_status !< BMI status code
     
     ! we don't want a full stop() here, this disables it:    
     iforcestop = 0    
@@ -112,15 +106,12 @@ module mf6bmi
   !> @brief Get the start time of the simulation
   !!
   !! As MODFLOW currently does not have internal time, this will be 
-  !! returning 0.0 for now.
-  !!
-  !! @param[out]  start_time      the start time
-  !! @return      bmi_status      the BMI status code
+  !! returning 0.0 for now. New version...
   !<
   function get_start_time(start_time) result(bmi_status) bind(C, name="get_start_time")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_start_time
-    double precision, intent(out) :: start_time
-    integer(kind=c_int) :: bmi_status
+    double precision, intent(out) :: start_time !< start time
+    integer(kind=c_int) :: bmi_status           !< BMI status code
     
     start_time = 0.0_DP    
     bmi_status = BMI_SUCCESS
@@ -132,15 +123,12 @@ module mf6bmi
   !!
   !! As MODFLOW does currently does not have internal time, this will be
   !! equal to the total runtime.
-  !!
-  !! @param[out]  end_time        the end time
-  !! @return      bmi_status      the BMI status code
   !<
   function get_end_time(end_time) result(bmi_status) bind(C, name="get_end_time")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_end_time
     use TdisModule, only: totalsimtime
-    double precision, intent(out) :: end_time
-    integer(kind=c_int) :: bmi_status
+    double precision, intent(out) :: end_time !< end time
+    integer(kind=c_int) :: bmi_status         !< BMI status code
     
     end_time = totalsimtime
     bmi_status = BMI_SUCCESS
@@ -151,15 +139,12 @@ module mf6bmi
   !!
   !! As MODFLOW currently does not have internal time, this will be
   !! equal to the time passed w.r.t. the start time of the simulation.
-  !!
-  !! @param[out]  current_time    the current time
-  !! @return      bmi_status      the BMI status code
   !<
   function get_current_time(current_time) result(bmi_status) bind(C, name="get_current_time")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_current_time
     use TdisModule, only: totim
-    double precision, intent(out) :: current_time
-    integer(kind=c_int) :: bmi_status
+    double precision, intent(out) :: current_time !< current time
+    integer(kind=c_int) :: bmi_status             !< BMI status code
     
     current_time = totim
     bmi_status = BMI_SUCCESS    
@@ -171,15 +156,12 @@ module mf6bmi
   !!
   !! Note that the returned value may vary between and within stress periods,
   !! depending on your time discretization settings in the TDIS package.
-  !!
-  !! @param[out]  time_step       the current time step
-  !! @return      bmi_status      the BMI status code
   !<
   function get_time_step(time_step) result(bmi_status) bind(C, name="get_time_step")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_time_step
     use TdisModule, only: delt
-    double precision, intent(out) :: time_step
-    integer(kind=c_int) :: bmi_status
+    double precision, intent(out) :: time_step  !< current time step
+    integer(kind=c_int) :: bmi_status           !< BMI status code
 
     time_step = delt
     bmi_status = BMI_SUCCESS
@@ -188,16 +170,12 @@ module mf6bmi
   
 
   !> @brief Get the size (in bytes) of a single element of a variable
-  !! 
-  !! @param[in]   c_var_address     the memory address string of the variable
-  !! @param[out]  var_size          the size of the element in bytes
-  !! @return      bmi_status        the BMI status code
   !< 
   function get_var_itemsize(c_var_address, var_size) result(bmi_status) bind(C, name="get_var_itemsize")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_itemsize
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    integer, intent(out) :: var_size
-    integer(kind=c_int) :: bmi_status
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    integer, intent(out) :: var_size                        !< size of the element in bytes
+    integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name_only
@@ -205,22 +183,18 @@ module mf6bmi
     call split_address(c_var_address, mem_path, var_name_only)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_size(var_name_only, mem_path, var_size)
+    call get_mem_elem_size(var_name_only, mem_path, var_size)
     if (var_size == -1) bmi_status = BMI_FAILURE
         
   end function get_var_itemsize
 
   !> @brief Get size of the variable, in bytes
-  !!
-  !! @param[in]    c_var_address     the memory address string of the variable
-  !! @param[out]   var_nbytes        the size in bytes
-  !! @return      bmi_status        the BMI status code
   !<
   function get_var_nbytes(c_var_address, var_nbytes) result(bmi_status) bind(C, name="get_var_nbytes")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_nbytes
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    integer, intent(out) :: var_nbytes
-    integer(kind=c_int) :: bmi_status
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    integer, intent(out) :: var_nbytes                      !< size in bytes
+    integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     integer(I4B) :: var_size, isize
     character(len=LENMEMPATH) :: mem_path
@@ -229,7 +203,7 @@ module mf6bmi
     call split_address(c_var_address, mem_path, var_name)
     
     bmi_status = BMI_SUCCESS
-    call get_mem_size(var_name, mem_path, var_size)    
+    call get_mem_elem_size(var_name, mem_path, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
     call get_isize(var_name, mem_path, isize)
     if (isize == -1) bmi_status = BMI_FAILURE
@@ -243,17 +217,14 @@ module mf6bmi
   !!
   !! The array is located at @p c_var_address. There is no copying of data involved.
   !! Multi-dimensional arrays are supported and the get_var_rank() function 
-  !! can be used to get the variable's dimensionality.
-  !!
-  !! @param[in]     c_var_address     the memory address string of the variable
-  !! @param[out]    c_arr_ptr         the pointer to the array
-  !! @return        bmi_status        the BMI status code
+  !! can be used to get the variable's dimensionality, and get_var_shape() for
+  !! its shape.
   !<
   function get_value_ptr_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    type(c_ptr), intent(inout) :: c_arr_ptr
-    integer(kind=c_int) :: bmi_status
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(inout) :: c_arr_ptr                 !< pointer to the array
+    integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -289,16 +260,12 @@ module mf6bmi
   !! The array is located at @p c_var_address. There is no copying of data involved.
   !! Multi-dimensional arrays are supported and the get_var_rank() function 
   !! can be used to get the variable's dimensionality.
-  !!
-  !! @param[in]     c_var_address     the memory address string of the variable
-  !! @param[out]    c_arr_ptr         the pointer to the array
-  !! @return        bmi_status        the BMI status code
   !<
   function get_value_ptr_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_ptr_int")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
-    character (kind=c_char), intent(in) :: c_var_address(*)    
-    type(c_ptr), intent(inout) :: c_arr_ptr
-    integer(kind=c_int) :: bmi_status
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(inout) :: c_arr_ptr                 !< pointer to the array
+    integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -335,17 +302,13 @@ module mf6bmi
   !! The type returned is that of a single element. Currently we
   !! support 'INTEGER' and 'DOUBLE'.  When the variable cannot
   !! be found, the string 'UNKNOWN' is assigned.
-  !!
-  !! @param[in]     c_var_address     the memory address string of the variable
-  !! @param[out]    c_var_type        the variable type as a string
-  !! @return        bmi_status        the BMI status code 
   !<
   function get_var_type(c_var_address, c_var_type) result(bmi_status) bind(C, name="get_var_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_type
     use ConstantsModule, only: LENMEMTYPE
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    character (kind=c_char), intent(out) :: c_var_type(BMI_LENVARTYPE)
-    integer(kind=c_int) :: bmi_status    
+    character (kind=c_char), intent(in) :: c_var_address(*)             !< memory address string of the variable
+    character (kind=c_char), intent(out) :: c_var_type(BMI_LENVARTYPE)  !< variable type as a string
+    integer(kind=c_int) :: bmi_status                                   !< BMI status code
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -367,16 +330,12 @@ module mf6bmi
   !!
   !! In order to support multi-dimensional arrays, this function gives
   !! access to the rank of the array.
-  !!
-  !! @param[in]     c_var_address     the memory address string of the variable
-  !! @param[out]    c_var_rank        the variable rank
-  !! @return        bmi_status        the BMI status code 
   !<
   function get_var_rank(c_var_address, c_var_rank) result(bmi_status) bind(C, name="get_var_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_rank
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    integer(kind=c_int), intent(out) :: c_var_rank
-    integer(kind=c_int) :: bmi_status
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    integer(kind=c_int), intent(out) :: c_var_rank          !< variable rank
+    integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -401,16 +360,15 @@ module mf6bmi
   !! length of the array in each dimension. The target shape array
   !! @p c_var_shape should be allocated before calling this routine.
   !!
-  !! @param[in]     c_var_address     the memory address string of the variable
-  !! @param[out]    c_var_shape       the 1D array with the variable's shape
-  !! @return        bmi_status        the BMI status code
+  !! Note that the returned shape representation will has been converted
+  !! to C-style.
   !<
   function get_var_shape(c_var_address, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
     use ConstantsModule, only: MAXMEMRANK
-    character (kind=c_char), intent(in) :: c_var_address(*)
-    integer(c_int), intent(inout) :: c_var_shape(*)
-    integer(kind=c_int) :: bmi_status
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    integer(c_int), intent(inout) :: c_var_shape(*)         !< 1D array with the variable's shape
+    integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     integer(I4B), dimension(MAXMEMRANK) :: var_shape
     integer(I4B) :: var_rank

@@ -70,7 +70,7 @@ module GhostNodeModule
     ! -- Allocate the gnc exchange object
     allocate(gncobj)
     !
-    ! -- create name and origin.  name_parent will either be model name or the
+    ! -- create name and memory path. name_parent will either be model name or the
     !    exchange name.
     call gncobj%set_names(1, name_parent, 'GNC', 'GNC')
     !

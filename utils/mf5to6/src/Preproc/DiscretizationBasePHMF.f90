@@ -11,7 +11,7 @@ module DnmDisBaseModule
   public :: dis_cr
 
   type :: DisBaseType
-    character(len=LENMEMPATH)                           :: memoryPath            !< origin name for mem allocation
+    character(len=LENMEMPATH)                           :: memoryPath            !< path for allocation in memory manager
     character(len=LENMODELNAME), pointer                :: name_model => null()  !< name of the model
     integer, pointer                                    :: inunit     => null()  !< unit number for input file
     integer, pointer                                    :: iout       => null()  !< unit number for output file
@@ -626,7 +626,7 @@ module DnmDisBaseModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Assign origin name
+    ! -- Assign memory path
     this%memoryPath = create_mem_path(name_model, 'DIS')
     !
     ! -- Allocate
