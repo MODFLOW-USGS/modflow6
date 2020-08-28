@@ -53,7 +53,7 @@ module GwtAdvModule
     ! -- Create the object
     allocate(advobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call advobj%set_names(1, name_model, 'ADV', 'ADV')
     !
     ! -- Allocate scalars

@@ -17,25 +17,25 @@
   public :: tdis_ot
   public :: tdis_da
   !
-  integer(I4B), public, pointer                            :: nper               !number of stress period
-  integer(I4B), public, pointer                            :: itmuni             !flag indicating time units
-  integer(I4B), public, pointer                            :: kper               !current stress period number
-  integer(I4B), public, pointer                            :: kstp               !current time step number
-  logical(LGP), public, pointer                            :: readnewdata        !flag indicating time to read new data
-  logical(LGP), public, pointer                            :: endofperiod        !flag indicating end of stress period
-  logical(LGP), public, pointer                            :: endofsimulation    !flag indicating end of simulation
-  real(DP), public, pointer                                :: delt               !length of the current time step
-  real(DP), public, pointer                                :: pertim             !time relative to start of stress period
-  real(DP), public, pointer                                :: totim              !time relative to start of simulation
-  real(DP), public, pointer                                :: totimc             !simulation time at start of time step
-  real(DP), public, pointer                                :: deltsav            !saved value for delt, used for subtiming
-  real(DP), public, pointer                                :: totimsav           !saved value for totim, used for subtiming
-  real(DP), public, pointer                                :: pertimsav          !saved value for pertim, used for subtiming
-  real(DP), public, pointer                                :: totalsimtime       !time at end of simulation
-  real(DP), public, dimension(:), pointer, contiguous      :: perlen             !length of each stress period
-  integer(I4B), public, dimension(:), pointer, contiguous  :: nstp               !number of time steps in each stress period
-  real(DP), public, dimension(:), pointer, contiguous      :: tsmult             !time step multiplier for each stress period
-  character(len=LENDATETIME), pointer                      :: datetime0          !starting date and time for the simulation
+  integer(I4B), public, pointer                            :: nper               !< number of stress period
+  integer(I4B), public, pointer                            :: itmuni             !< flag indicating time units
+  integer(I4B), public, pointer                            :: kper               !< current stress period number
+  integer(I4B), public, pointer                            :: kstp               !< current time step number
+  logical(LGP), public, pointer                            :: readnewdata        !< flag indicating time to read new data
+  logical(LGP), public, pointer                            :: endofperiod        !< flag indicating end of stress period
+  logical(LGP), public, pointer                            :: endofsimulation    !< flag indicating end of simulation
+  real(DP), public, pointer                                :: delt               !< length of the current time step
+  real(DP), public, pointer                                :: pertim             !< time relative to start of stress period
+  real(DP), public, pointer                                :: totim              !< time relative to start of simulation
+  real(DP), public, pointer                                :: totimc             !< simulation time at start of time step
+  real(DP), public, pointer                                :: deltsav            !< saved value for delt, used for subtiming
+  real(DP), public, pointer                                :: totimsav           !< saved value for totim, used for subtiming
+  real(DP), public, pointer                                :: pertimsav          !< saved value for pertim, used for subtiming
+  real(DP), public, pointer                                :: totalsimtime       !< time at end of simulation
+  real(DP), public, dimension(:), pointer, contiguous      :: perlen             !< length of each stress period
+  integer(I4B), public, dimension(:), pointer, contiguous  :: nstp               !< number of time steps in each stress period
+  real(DP), public, dimension(:), pointer, contiguous      :: tsmult             !< time step multiplier for each stress period
+  character(len=LENDATETIME), pointer                      :: datetime0          !< starting date and time for the simulation
   !
   type(BlockParserType), private :: parser
 

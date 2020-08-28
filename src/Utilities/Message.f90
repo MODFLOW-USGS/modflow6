@@ -2,7 +2,7 @@
 ! error units recorded in a simulation.
 module MessageModule
   
-  use KindModule, only: I4B, DP
+  use KindModule, only: LGP, I4B, DP
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DONE,                       &
                              VSUMMARY
   use GenericUtilitiesModule, only: sim_message  
@@ -76,7 +76,7 @@ module MessageModule
       return
     end subroutine set_max_message
     
-    subroutine store_message(this, msg)
+    subroutine store_message(this, msg, substring)
     ! ******************************************************************************
     ! Store a message for printing at end of simulation
     ! ******************************************************************************
@@ -87,9 +87,12 @@ module MessageModule
       ! -- dummy
       class(MessageType) :: this
       character(len=*), intent(in) :: msg
+      character(len=*), intent(in), optional :: substring
       ! -- local
-      logical :: inc_array
+      logical(LGP) :: inc_array
+      logical(LGP) :: increment_message
       integer(I4B) :: i
+      integer(I4B) :: idx
     ! ------------------------------------------------------------------------------
       !
       ! -- determine if messages should be expanded
@@ -107,13 +110,29 @@ module MessageModule
         this%inc_message = this%inc_message * 1.1
       end if
       !
+      ! -- Determine if the substring exists in the passed message.
+      !    If substring is in passed message, do not add the duplicate 
+      !    passed message.
+      increment_message = .TRUE.
+      if (present(substring)) then
+        do i = 1, this%nmessage
+          idx = index(this%message(i), substring)
+          if (idx > 0) then
+            increment_message = .FALSE.
+            exit
+          end if
+        end do
+      end if
+      !
       ! -- store this message and calculate nmessage
-      i = this%nmessage + 1
-      if (i <= this%max_message) then
-        this%nmessage = i
-        this%message(i) = msg
-      else
-        this%max_exceeded = this%max_exceeded + 1
+      if (increment_message) then
+        i = this%nmessage + 1
+        if (i <= this%max_message) then
+          this%nmessage = i
+          this%message(i) = msg
+        else
+          this%max_exceeded = this%max_exceeded + 1
+        end if
       end if
       !
       ! -- return

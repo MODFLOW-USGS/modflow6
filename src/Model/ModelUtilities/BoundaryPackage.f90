@@ -1100,8 +1100,8 @@ module BndModule
     end if
     !
     ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
-    !    this%ictorigin will be 'NPF'.  If boundary packages do not set
-    !    this%ictorigin, then icelltype will remain as null()
+    !    this%ictMemPath will be 'NPF'.  If boundary packages do not set
+    !    this%ictMemPath, then icelltype will remain as null()
     if (this%ictMemPath /= '') then
       call mem_setptr(this%icelltype, 'ICELLTYPE', this%ictMemPath)
     end if

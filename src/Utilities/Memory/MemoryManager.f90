@@ -4,14 +4,16 @@ module MemoryManagerModule
   use ConstantsModule,        only: DZERO, DONE,                                 &
                                     DEM3, DEM6, DEM9, DEP3, DEP6, DEP9,          &
                                     LENMEMPATH, LENMEMSEPARATOR, LENVARNAME,     &
-                                    LINELENGTH, LENMEMTYPE, LENMEMADDRESS,       &
-                                    TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
-                                    TABCENTER, TABLEFT, TABRIGHT,                &
-                                    MEMHIDDEN, MEMREADONLY, MEMREADWRITE
+                                    LENCOMPONENTNAME, LINELENGTH, LENMEMTYPE,    &
+                                    LENMEMADDRESS, TABSTRING, TABUCSTRING,       &
+                                    TABINTEGER, TABREAL, TABCENTER, TABLEFT,     &
+                                    TABRIGHT, MEMHIDDEN, MEMREADONLY,            &
+                                    MEMREADWRITE
   use SimVariablesModule,     only: errmsg
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
   use MemoryListModule,       only: MemoryListType
+  use MemoryHelperModule,     only: mem_check_length, split_mem_path
   use TableModule,            only: TableType, table_cr
   
   implicit none
@@ -29,7 +31,7 @@ module MemoryManagerModule
   
   public :: get_mem_type
   public :: get_mem_rank
-  public :: get_mem_size
+  public :: get_mem_elem_size
   public :: get_mem_shape
   public :: get_isize
   public :: copy_dbl1d
@@ -89,30 +91,22 @@ module MemoryManagerModule
 
   contains
   
-  subroutine get_mem_type(name, origin, var_type)
-! ******************************************************************************
-! Get the variable memory type 
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       VAR_TYPE     : returned variable memory type   
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=LENMEMTYPE), intent(out) :: var_type    
+  !> @ brief Get the variable memory type
+  !!
+  !! Returns any of 'LOGICAL', 'INTEGER', 'DOUBLE', 'STRING'.
+  !! returns 'UNKNOWN' when the variable is not found.
+  !<
+  subroutine get_mem_type(name, mem_path, var_type)
+    character(len=*), intent(in) :: name                !< variable name
+    character(len=*), intent(in) :: mem_path            !< path where the variable is stored
+    character(len=LENMEMTYPE), intent(out) :: var_type  !< memory type
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code    
     mt => null()
     var_type = 'UNKNOWN'
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     if (found) then
       var_type = mt%memtype
     end if
@@ -121,23 +115,14 @@ module MemoryManagerModule
     return
   end subroutine get_mem_type
   
-  subroutine get_mem_rank(name, origin, rank)
-! ******************************************************************************
-! Get the variable rank 
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       RANK         : returned variable rank   
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(out)    :: rank    
+  !> @ brief Get the variable rank
+  !!
+  !! Returns rank = -1 when not found.
+  !<
+  subroutine get_mem_rank(name, mem_path, rank)
+    character(len=*), intent(in) :: name      !< variable name
+    character(len=*), intent(in) :: mem_path  !< mem_path
+    integer(I4B), intent(out)    :: rank      !< rank
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
@@ -147,7 +132,7 @@ module MemoryManagerModule
     rank = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- set rank
     if (found) then
@@ -166,23 +151,14 @@ module MemoryManagerModule
     return
   end subroutine get_mem_rank 
     
-  subroutine get_mem_size(name, origin, size)
-! ******************************************************************************
-! Get the variable size 
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       SIZE         : returned variable size   
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(out)    :: size
+  !> @ brief Get the memory size of a single element of the stored variable
+  !!
+  !! Memory size in bytes, returns size = -1 when not found.
+  !<
+  subroutine get_mem_elem_size(name, mem_path, size)
+    character(len=*), intent(in) :: name        !< variable name
+    character(len=*), intent(in) :: mem_path    !< path where the variable is stored
+    integer(I4B), intent(out)    :: size        !< size of the variable in bytes
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
@@ -192,7 +168,7 @@ module MemoryManagerModule
     size = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- set memory size
     if (found) then      
@@ -210,32 +186,24 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine get_mem_size
+  end subroutine get_mem_elem_size
   
-  subroutine get_mem_shape(name, origin, mem_shape)
-! ******************************************************************************
-! Get the variable shape 
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEM_SHAPE    : returned variable shape (integer vector)   
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), dimension(:), intent(out) :: mem_shape
+  !> @ brief Get the variable memory shape
+  !!
+  !! Returns an integer array with the shape (Fortran ordering),
+  !! and set shape(1) = -1 when not found.
+  !<
+  subroutine get_mem_shape(name, mem_path, mem_shape)
+    character(len=*), intent(in) :: name                  !< variable name
+    character(len=*), intent(in) :: mem_path              !< path where the variable is stored
+    integer(I4B), dimension(:), intent(out) :: mem_shape  !< shape of the variable
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
     ! -- code
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- set shape
     if (found) then
@@ -257,23 +225,14 @@ module MemoryManagerModule
     return
   end subroutine get_mem_shape
   
-  subroutine get_isize(name, origin, isize)
-! ******************************************************************************
-! Get the variable number of elements (flattened) 
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       ISIZE        : returned variable number of elements (flattened)  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(out)    :: isize
+  !> @ brief Get the number of elements for this variable
+  !!
+  !! Returns with isize = -1 when not found.
+  !<
+  subroutine get_isize(name, mem_path, isize)
+    character(len=*), intent(in) :: name      !< variable name
+    character(len=*), intent(in) :: mem_path  !< path where the variable is stored
+    integer(I4B), intent(out)    :: isize     !< number of elements (flattened)
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
@@ -283,7 +242,7 @@ module MemoryManagerModule
     isize = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- set isize
     if (found) then
@@ -294,29 +253,18 @@ module MemoryManagerModule
     return
   end subroutine get_isize
   
-  subroutine get_from_memorylist(name, origin, mt, found, check)
-! ******************************************************************************
-! Get a memory type entry (MT) from the memory list 
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MT           : returned memory type entry in the memory list
-!       FOUND        : returned boolean indicating if varible with origin
-!                      was found
-!       CHECK        : optional boolean flag to make sure the variable exists
-!                      in the memory list
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    type(MemoryType), pointer, intent(inout) :: mt
-    logical(LGP),intent(out) :: found
-    logical(LGP), intent(in), optional :: check
+  !> @ brief Get a memory type entry from the memory list
+  !!
+  !! Default value for @par check is .true. which means that this
+  !! routine will kill the program when the memory entry cannot be found.
+  !<
+  subroutine get_from_memorylist(name, mem_path, mt, found, check)
+    character(len=*), intent(in) :: name            !< variable name
+    character(len=*), intent(in) :: mem_path        !< path where the variable is stored
+    type(MemoryType), pointer, intent(inout) :: mt  !< memory type entry
+    logical(LGP),intent(out) :: found               !< set to .true. when found
+    logical(LGP), intent(in), optional :: check     !< to suppress aborting the program when not found,
+                                                    !! set check = .false.
     ! -- local
     integer(I4B) :: ipos
     logical(LGP) check_opt
@@ -329,7 +277,7 @@ module MemoryManagerModule
     ! -- iterate over the memory list
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      if(mt%name == name .and. mt%path == origin) then
+      if(mt%name == name .and. mt%path == mem_path) then
         found = .true.
         exit
       end if
@@ -341,7 +289,7 @@ module MemoryManagerModule
     if (check_opt) then
       if (.not. found) then
         errmsg = "Programming error in memory manager. Variable '" //            &
-          trim(name) // "' in origin '" // trim(origin) // "' cannot be " //     &
+          trim(name) // "' in '" // trim(mem_path) // "' cannot be " //     &
           "assigned because it does not exist in memory manager."
         call store_error(errmsg)
         call ustop()
@@ -352,28 +300,16 @@ module MemoryManagerModule
     return
   end subroutine get_from_memorylist
   
-  subroutine allocate_error(varname, origin, istat, isize)
-! ******************************************************************************
-! Issue allocation error message and stop program execution 
-!
-! -- Arguments are as follows:
-!       VARNAME      : variable name
-!       ORIGIN       : variable origin
-!       ISTAT        : status code
-!       ISIZE        : variable size (flattened)   
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: origin
+  !> @brief Issue allocation error message and stop program execution
+  !<
+  subroutine allocate_error(varname, mem_path, istat, isize)
+    character(len=*), intent(in) :: varname   !< variable name
+    character(len=*), intent(in) :: mem_path  !< path where the variable is stored
+    integer(I4B), intent(in) :: istat         !< status code
+    integer(I4B), intent(in) :: isize         !< size of allocation
     ! -- local
-    character(len=20) :: csize
-    character(len=20) :: cstat
-    integer(I4B), intent(in) :: istat
-    integer(I4B), intent(in) :: isize
+    character(len=20) :: csize                
+    character(len=20) :: cstat 
     ! -- code
     !
     ! -- initialize character variables
@@ -381,7 +317,7 @@ module MemoryManagerModule
     write(cstat, '(i0)') istat
     !
     ! -- create error message
-    errmsg = "Error trying to allocate memory. Origin '" // trim(origin) //      &
+    errmsg = "Error trying to allocate memory. Path '" // trim(mem_path) //      &
       "' variable name '" // trim(varname) // "' size '" // trim(csize) //       &
       "'. Error message is '" // trim(adjustl(errmsg)) //                        &
       "'. Status code is " //  trim(cstat) // '.'
@@ -389,68 +325,26 @@ module MemoryManagerModule
     ! -- store error and stop program execution
     call store_error(errmsg)
     call ustop()
-  end subroutine allocate_error
-  
-  subroutine check_varname(name)
-! ******************************************************************************
-! Check the size of the variable name. Stop program execution if the variable
-! name exceeds LENVARNAME
-!
-! -- Arguments are as follows:
-!       NAME         : variable name
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: name
-    ! -- local
-    ! -- code
-    !
-    ! -- evaluate the length of the variable name
-    if(len(name) > LENVARNAME) then
-      !
-      ! -- create error message
-      write(errmsg, '(*(G0))')                                                   &
-        'Programming error in Memory Manager. Variable ', name, ' must be ',     &
-        LENVARNAME, ' characters or less.'
-      !
-      ! -- store error and stop program execution
-      call store_error(errmsg)
-      call ustop()
-    end if
-  end subroutine check_varname
+  end subroutine allocate_error  
 
-  subroutine allocate_logical(sclr, name, origin)
-! ******************************************************************************
-! Allocate a logical scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned logical scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    logical(LGP), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Allocate a logical scalar
+  !<
+  subroutine allocate_logical(sclr, name, mem_path)
+    logical(LGP), pointer, intent(inout) :: sclr  !< variable for allocation
+    character(len=*), intent(in) :: name          !< variable name
+    character(len=*), intent(in) :: mem_path      !< path where the variable is stored
     ! -- local
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
     ! -- code
     !
     ! -- check varible name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate the logical scalar
     allocate(sclr, stat=istat, errmsg=errmsg)
     if(istat /= 0) then
-      call allocate_error(name, origin, istat, 1)
+      call allocate_error(name, mem_path, istat, 1)
     end if
     !
     ! -- update counter
@@ -463,7 +357,7 @@ module MemoryManagerModule
     mt%logicalsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
@@ -473,25 +367,13 @@ module MemoryManagerModule
     return
   end subroutine allocate_logical
 
-  subroutine allocate_str(sclr, ilen, name, origin)
-! ******************************************************************************
-! Allocate a character scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned character scalar
-!       ILEN         : character length
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), intent(in) :: ilen
-    character(len=ilen), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Allocate a character string
+  !<
+  subroutine allocate_str(sclr, ilen, name, mem_path)
+    integer(I4B), intent(in) :: ilen                    !< string length
+    character(len=ilen), pointer, intent(inout) :: sclr !< variable for allocation
+    character(len=*), intent(in) :: name                !< variable name
+    character(len=*), intent(in) :: mem_path            !< path where the variable is stored
     ! -- local
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
@@ -505,13 +387,13 @@ module MemoryManagerModule
       call ustop()
     end if
     !
-    ! -- check varible name length
-    call check_varname(name)
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate string
     allocate(character(len=ilen) :: sclr, stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, 1)
+      call allocate_error(name, mem_path, istat, 1)
     end if
     !
     ! -- set sclr to a empty string
@@ -526,7 +408,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = ilen
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
@@ -536,27 +418,14 @@ module MemoryManagerModule
     return
   end subroutine allocate_str
   
-  subroutine allocate_str1d(astr, ilen, nrow, name, origin)
-! ******************************************************************************
-! Allocate a 1-dimensional defined length string array 
-!
-! -- Arguments are as follows:
-!       ASTR         : returned defined length 1-dimensional character array
-!       ILEN         : character length
-!       NROW         : character array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy variables
-    integer(I4B), intent(in) :: ilen
-    integer(I4B), intent(in) :: nrow
-    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Allocate a 1-dimensional defined length string array 
+  !<
+  subroutine allocate_str1d(astr, ilen, nrow, name, mem_path)
+    integer(I4B), intent(in) :: ilen                                                !< string length
+    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr   !< variable for allocation
+    integer(I4B), intent(in) :: nrow                                                !< number of strings in array
+    character(len=*), intent(in) :: name                                            !< variable name
+    character(len=*), intent(in) :: mem_path                                        !< path where the variable is stored
     ! -- local variables
     type(MemoryType), pointer :: mt
     character(len=ilen) :: string
@@ -576,8 +445,8 @@ module MemoryManagerModule
       call ustop()
     end if
     !
-    ! -- check varible name length
-    call check_varname(name)
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
     isize = ilen * nrow
@@ -587,7 +456,7 @@ module MemoryManagerModule
     !
     ! -- check for error condition
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- fill deferred length string with empty string
@@ -604,7 +473,7 @@ module MemoryManagerModule
     ! -- set memory type
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
@@ -614,39 +483,27 @@ module MemoryManagerModule
     return
   end subroutine allocate_str1d
 
-  subroutine allocate_int(sclr, name, origin, memtype)
-! ******************************************************************************
-! Allocate a integer scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned integer scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a integer scalar
+  !<
+  subroutine allocate_int(sclr, name, mem_path, memtype)
+    integer(I4B), pointer, intent(inout) :: sclr  !< variable for allocation
+    character(len=*), intent(in) :: name          !< variable name
+    character(len=*), intent(in) :: mem_path      !< path where the variable is stored
+    integer(I4B), intent(in), optional :: memtype !< optional integer value that defines memaccess for 
+                                                  !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+                                                  !! and MEMREADWRITE.  
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate integer scalar
     allocate(sclr, stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, 1)
+      call allocate_error(name, mem_path, istat, 1)
     end if
     !
     ! -- update counter
@@ -659,7 +516,7 @@ module MemoryManagerModule
     mt%intsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a)") 'INTEGER'
     !
     ! -- set memory access permission
@@ -674,29 +531,16 @@ module MemoryManagerModule
     return
   end subroutine allocate_int
   
-  subroutine allocate_int1d(aint, nrow, name, origin, memtype)
-! ******************************************************************************
-! Allocate a 1-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 1-dimensional integer array
-!       NROW        : integer array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a 1-dimensional integer array
+  !<
+  subroutine allocate_int1d(aint, nrow, name, mem_path, memtype)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< variable for allocation
+    integer(I4B), intent(in) :: nrow                                        !< integer array number of rows
+    character(len=*), intent(in) :: name                                    !< variable name
+    character(len=*), intent(in) :: mem_path                                !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                           !< optional integer value that defines memaccess for 
+                                                                            !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+                                                                            !! and MEMREADWRITE. 
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -704,7 +548,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = nrow
@@ -712,7 +556,7 @@ module MemoryManagerModule
     ! -- allocate integer array
     allocate(aint(nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- update counter
@@ -725,7 +569,7 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set memory access permission
@@ -740,31 +584,17 @@ module MemoryManagerModule
     return
   end subroutine allocate_int1d
   
-  subroutine allocate_int2d(aint, ncol, nrow, name, origin, memtype)
-! ******************************************************************************
-! Allocate a 2-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 2-dimensional integer array
-!       NCOL         : integer array number of columns
-!       NROW         : integer array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a 2-dimensional integer array
+  !<
+  subroutine allocate_int2d(aint, ncol, nrow, name, mem_path, memtype)
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint   !< variable for allocation
+    integer(I4B), intent(in) :: ncol                                            !< number of columns
+    integer(I4B), intent(in) :: nrow                                            !< number of rows
+    character(len=*), intent(in) :: name                                        !< variable name  
+    character(len=*), intent(in) :: mem_path                                    !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                               !< optional integer value that defines memaccess for 
+                                                                                !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+                                                                                !! and MEMREADWRITE. 
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -772,7 +602,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow
@@ -780,7 +610,7 @@ module MemoryManagerModule
     ! -- allocate the integer array
     allocate(aint(ncol, nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- update the counter
@@ -793,7 +623,7 @@ module MemoryManagerModule
     mt%aint2d => aint
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- set memory access permission
@@ -807,33 +637,19 @@ module MemoryManagerModule
     ! -- return
   end subroutine allocate_int2d
     
-  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, origin, memtype)
-! ******************************************************************************
-! Allocate a 3-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 3-dimensional integer array
-!       NCOL         : integer array number of columns
-!       NROW         : integer array number of rows
-!       NLAY         : integer array number of layers
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    integer(I4B), intent(in) :: nlay
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a 3-dimensional integer array
+  !<
+  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, mem_path, memtype)
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint  !< variable for allocation
+    integer(I4B), intent(in) :: ncol                                              !< number of columns
+    integer(I4B), intent(in) :: nrow                                              !< number of rows 
+    integer(I4B), intent(in) :: nlay                                              !< number of layers
+    character(len=*), intent(in) :: name                                          !< variable name
+    character(len=*), intent(in) :: mem_path                                      !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                                 !< optional integer value that defines 
+                                                                                  !! memaccess for variable name. valid
+                                                                                  !! values are MEMHIDDEN, MEMREADONLY,
+                                                                                  !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -841,7 +657,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow * nlay
@@ -849,7 +665,7 @@ module MemoryManagerModule
     ! -- allocate integer array
     allocate(aint(ncol, nrow, nlay), stat=istat, errmsg=errmsg)
     if(istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- update counter 
@@ -862,7 +678,7 @@ module MemoryManagerModule
     mt%aint3d => aint
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
                                                        nrow, nlay
     !
@@ -878,39 +694,27 @@ module MemoryManagerModule
     return
   end subroutine allocate_int3d
 
-  subroutine allocate_dbl(sclr, name, origin, memtype)
-! ******************************************************************************
-! Allocate a real scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned real scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a real scalar
+  !<
+  subroutine allocate_dbl(sclr, name, mem_path, memtype)
+    real(DP), pointer, intent(inout) :: sclr      !< variable for allocation
+    character(len=*), intent(in) :: name          !< variable name
+    character(len=*), intent(in) :: mem_path      !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype !< optional integer value that defines memaccess for 
+                                                  !! variable name. valid values are MEMHIDDEN, MEMREADONLY,
+                                                  !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate real scalar
     allocate(sclr, stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, 1)
+      call allocate_error(name, mem_path, istat, 1)
     end if
     !
     ! -- update counter
@@ -923,7 +727,7 @@ module MemoryManagerModule
     mt%dblsclr => sclr
     mt%isize = 1
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a)") 'DOUBLE'
     !
     ! -- set memory access permission
@@ -938,29 +742,16 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl
   
-  subroutine allocate_dbl1d(adbl, nrow, name, origin, memtype)
-! ******************************************************************************
-! Allocate a 1-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 1-dimensional real array
-!       NROW         : real array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a 1-dimensional real array
+  !<
+  subroutine allocate_dbl1d(adbl, nrow, name, mem_path, memtype)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< variable for allocation
+    integer(I4B), intent(in) :: nrow                                    !< number of rows
+    character(len=*), intent(in) :: name                                !< variable name
+    character(len=*), intent(in) :: mem_path                            !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                       !< optional integer value that defines memaccess for
+                                                                        !! variable name. valid values are MEMHIDDEN, MEMREADONLY,
+                                                                        !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -968,7 +759,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = nrow
@@ -976,7 +767,7 @@ module MemoryManagerModule
     ! -- allocate the real array
     allocate(adbl(nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- update counter
@@ -989,7 +780,7 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set memory access permission
@@ -1004,31 +795,17 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl1d
   
-  subroutine allocate_dbl2d(adbl, ncol, nrow, name, origin, memtype)
-! ******************************************************************************
-! Allocate a 2-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 2-dimensional real array
-!       NCOL         : real array number of columns
-!       NROW         : real array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a 2-dimensional real array
+  !<
+  subroutine allocate_dbl2d(adbl, ncol, nrow, name, mem_path, memtype)
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< variable for allocation
+    integer(I4B), intent(in) :: ncol                                      !< number of columns
+    integer(I4B), intent(in) :: nrow                                      !< number of rows
+    character(len=*), intent(in) :: name                                  !< variable name
+    character(len=*), intent(in) :: mem_path                              !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                         !< optional integer value that defines memaccess for 
+                                                                          !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
+                                                                          !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1036,7 +813,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow
@@ -1044,7 +821,7 @@ module MemoryManagerModule
     ! -- allocate the real array
     allocate(adbl(ncol, nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- update counter
@@ -1057,7 +834,7 @@ module MemoryManagerModule
     mt%adbl2d => adbl
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
     ! -- set memory access permission
@@ -1072,33 +849,18 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl2d
   
-  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, origin, memtype)
-! ******************************************************************************
-! Allocate a 3-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 3-dimensional real array
-!       NCOL         : real array number of columns
-!       NROW         : real array number of rows
-!       NLAY         : real array number of layers
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    integer(I4B), intent(in) :: nlay
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Allocate a 3-dimensional real array
+  !<
+  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, mem_path, memtype)
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl  !< variable for allocation
+    integer(I4B), intent(in) :: ncol                                          !< number of columns
+    integer(I4B), intent(in) :: nrow                                          !< number of rows
+    integer(I4B), intent(in) :: nlay                                          !< number of layers
+    character(len=*), intent(in) :: name                                      !< variable name
+    character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                             !< optional integer value that defines memaccess 
+                                                                              !! for variable name. valid values are MEMHIDDEN, 
+                                                                              !! MEMREADONLY, and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1106,7 +868,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = ncol * nrow * nlay
@@ -1114,7 +876,7 @@ module MemoryManagerModule
     ! -- allocate the real array
     allocate(adbl(ncol, nrow, nlay), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     !
     ! -- update the counter
@@ -1127,7 +889,7 @@ module MemoryManagerModule
     mt%adbl3d => adbl
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'DOUBLE', ncol,           &
                                                        nrow, nlay
     !
@@ -1143,38 +905,24 @@ module MemoryManagerModule
     return
   end subroutine allocate_dbl3d
   
-  subroutine checkin_int1d(aint, name, origin, name2, origin2, memtype)
-! ******************************************************************************
-! Check in am existing 1-dimensional integer array to the memory manager
-!
-! -- Arguments are as follows:
-!       AINT         : returned 1-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       NAME2        : second variable name
-!       ORIGIN2      : second variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
-    integer(I4B), intent(in), optional :: memtype
+  !> @brief Check in an existing 1d integer array with a new address (name + path)
+  !<
+  subroutine checkin_int1d(aint, name, mem_path, name2, mem_path2, memtype)
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: aint !< the existing array
+    character(len=*), intent(in) :: name                                !< new variable name
+    character(len=*), intent(in) :: mem_path                            !< new path where variable is stored
+    character(len=*), intent(in) :: name2                               !< existing variable name
+    character(len=*), intent(in) :: mem_path2                           !< existing path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                       !< optional integer value that defines memaccess
+                                                                        !! for variable name. valid values are MEMHIDDEN,
+                                                                        !! MEMREADONLY, and MEMREADWRITE.
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: isize
     ! -- code
     !
     ! -- check variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = size(aint)
@@ -1186,13 +934,13 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterPath = origin2
+    mt%masterPath = mem_path2
     !
     ! -- set memory access permission
     if (present(memtype)) then
@@ -1205,39 +953,25 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine checkin_int1d
-  
-  subroutine checkin_dbl1d(adbl, name, origin, name2, origin2, memtype)
-! ******************************************************************************
-! Check in an existing 1-dimensional real array to the memory manager
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 1-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       NAME2        : second variable name
-!       ORIGIN2      : second variable origin
-!       MEMTYPE      : optional integer value that defines memaccess for 
-!                      variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-!                      and MEMREADWRITE.  
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
-    integer(I4B), intent(in), optional :: memtype
+
+  !> @brief Check in an existing 1d double precision array with a new address (name + path)
+  !<
+  subroutine checkin_dbl1d(adbl, name, mem_path, name2, mem_path2, memtype)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< the existing array
+    character(len=*), intent(in) :: name                                !< new variable name
+    character(len=*), intent(in) :: mem_path                            !< new path where variable is stored
+    character(len=*), intent(in) :: name2                               !< existing variable name
+    character(len=*), intent(in) :: mem_path2                           !< existing path where variable is stored
+    integer(I4B), intent(in), optional :: memtype                       !< optional integer value that defines memaccess
+                                                                        !! for variable name. valid values are MEMHIDDEN,
+                                                                        !! MEMREADONLY, and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: isize
     ! -- code
     !
     ! -- check the variable name length
-    call check_varname(name)
+    call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- set isize
     isize = size(adbl)
@@ -1249,13 +983,13 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%name = name
-    mt%path = origin
+    mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- set master information
     mt%master = .false.
     mt%mastername = name2
-    mt%masterPath = origin2
+    mt%masterPath = mem_path2
     !
     ! -- set memory access permission
     if (present(memtype)) then
@@ -1269,27 +1003,14 @@ module MemoryManagerModule
     return
   end subroutine checkin_dbl1d
   
-  subroutine reallocate_str1d(astr, ilen, nrow, name, origin)
-! ******************************************************************************
-! Reallocate a 1-dimensional defined length string array 
-!
-! -- Arguments are as follows:
-!       ASTR         : returned defined length 1-dimensional character array
-!       ILEN         : character length
-!       NROW         : character array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), intent(in) :: ilen
-    integer(I4B), intent(in) :: nrow
-    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Reallocate a 1-dimensional defined length string array
+  !<
+  subroutine reallocate_str1d(astr, ilen, nrow, name, mem_path)
+    integer(I4B), intent(in) :: ilen                                              !< string length
+    integer(I4B), intent(in) :: nrow                                              !< number of rows
+    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr !< the reallocated string array
+    character(len=*), intent(in) :: name                                          !< variable name
+    character(len=*), intent(in) :: mem_path                                      !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -1301,7 +1022,7 @@ module MemoryManagerModule
     integer(I4B) :: n
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- reallocate astr1d
     if (found) then
@@ -1318,7 +1039,7 @@ module MemoryManagerModule
       ! -- allocate astrtemp
       allocate(astrtemp(nrow), stat=istat, errmsg=errmsg)
       if (istat /= 0) then
-        call allocate_error(name, origin, istat, isize)
+        call allocate_error(name, mem_path, istat, isize)
       end if
       !
       ! -- copy existing values
@@ -1339,7 +1060,7 @@ module MemoryManagerModule
       ! -- allocate astr1d
       allocate(astr(nrow), stat=istat, errmsg=errmsg)
       if (istat /= 0) then
-        call allocate_error(name, origin, istat, isize)
+        call allocate_error(name, mem_path, istat, isize)
       end if
       !
       ! -- fill the reallocate character array
@@ -1358,7 +1079,7 @@ module MemoryManagerModule
       write(mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     else
       errmsg = "Programming error, varible '" // trim(name) // "' from '" //     &
-        trim(origin) // "' is not defined in the memory manager. Use " //        &
+        trim(mem_path) // "' is not defined in the memory manager. Use " //        &
         "mem_allocate instead."
       call store_error(errmsg)
       call ustop()
@@ -1368,25 +1089,13 @@ module MemoryManagerModule
     return
   end subroutine reallocate_str1d
   
-  subroutine reallocate_int1d(aint, nrow, name, origin)
-! ******************************************************************************
-! Reallocate a 1-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 1-dimensional integer array
-!       NROW         : integer array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Reallocate a 1-dimensional integer array
+  !<
+  subroutine reallocate_int1d(aint, nrow, name, mem_path)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< the reallocated integer array
+    integer(I4B), intent(in) :: nrow                                        !< number of rows
+    character(len=*), intent(in) :: name                                    !< variable name
+    character(len=*), intent(in) :: mem_path                                !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -1398,7 +1107,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     isize = nrow
@@ -1406,7 +1115,7 @@ module MemoryManagerModule
     ifill = min(isizeold, isize)
     allocate(aint(nrow), stat=istat, errmsg=errmsg)
     if(istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     do i = 1, ifill
       aint(i) = mt%aint1d(i)
@@ -1424,28 +1133,14 @@ module MemoryManagerModule
     return
   end subroutine reallocate_int1d
   
-  
-  subroutine reallocate_int2d(aint, ncol, nrow, name, origin)
-! ******************************************************************************
-! Reallocate a 2-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 2-dimensional integer array
-!       NCOL         : integer array number of columns
-!       NROW         : integer array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Reallocate a 2-dimensional integer array
+  !<
+  subroutine reallocate_int2d(aint, ncol, nrow, name, mem_path)
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< the reallocated 2d integer array
+    integer(I4B), intent(in) :: ncol                                          !< number of columns
+    integer(I4B), intent(in) :: nrow                                          !< number of rows
+    character(len=*), intent(in) :: name                                      !< variable name
+    character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -1458,7 +1153,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     ishape = shape(mt%aint2d)
@@ -1466,7 +1161,7 @@ module MemoryManagerModule
     isizeold = ishape(1) * ishape(2)
     allocate(aint(ncol, nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     do i = 1, ishape(2)
       do j = 1, ishape(1)
@@ -1487,26 +1182,13 @@ module MemoryManagerModule
     return
   end subroutine reallocate_int2d
   
-  subroutine reallocate_dbl1d(adbl, nrow, name, origin)
-! ******************************************************************************
-! Reallocate a 1-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 1-dimensional real array
-!       NCOL         : real array number of columns
-!       NROW         : real array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Reallocate a 1-dimensional real array
+  !<
+  subroutine reallocate_dbl1d(adbl, nrow, name, mem_path)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< the reallocated 1d real array
+    integer(I4B), intent(in) :: nrow                                    !< number of rows
+    character(len=*), intent(in) :: name                                !< variable name
+    character(len=*), intent(in) :: mem_path                            !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1518,7 +1200,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- Allocate adbl and then refill
     isize = nrow
@@ -1526,7 +1208,7 @@ module MemoryManagerModule
     ifill = min(isizeold, isize)
     allocate(adbl(nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     do i = 1, ifill
       adbl(i) = mt%adbl1d(i)
@@ -1545,27 +1227,14 @@ module MemoryManagerModule
     return
   end subroutine reallocate_dbl1d
   
-  subroutine reallocate_dbl2d(adbl, ncol, nrow, name, origin)
-! ******************************************************************************
-! Reallocate a 2-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 2-dimensional real array
-!       NCOL         : real array number of columns
-!       NROW         : real array number of rows
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Reallocate a 2-dimensional real array
+  !<
+  subroutine reallocate_dbl2d(adbl, ncol, nrow, name, mem_path)
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< the reallocated 2d real array
+    integer(I4B), intent(in) :: ncol                                      !< number of columns
+    integer(I4B), intent(in) :: nrow                                      !< number of rows
+    character(len=*), intent(in) :: name                                  !< variable name
+    character(len=*), intent(in) :: mem_path                              !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -1578,7 +1247,7 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- Allocate adbl and then refill
     ishape = shape(mt%adbl2d)
@@ -1586,7 +1255,7 @@ module MemoryManagerModule
     isizeold = ishape(1) * ishape(2)
     allocate(adbl(ncol, nrow), stat=istat, errmsg=errmsg)
     if(istat /= 0) then
-      call allocate_error(name, origin, istat, isize)
+      call allocate_error(name, mem_path, istat, isize)
     end if
     do i = 1, ishape(2)
       do j = 1, ishape(1)
@@ -1607,232 +1276,144 @@ module MemoryManagerModule
     return
   end subroutine reallocate_dbl2d
   
-  subroutine setptr_logical(sclr, name, origin)
-! ******************************************************************************
-! Set pointer to a logical scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned pointer to a logical scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    logical(LGP), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Set pointer to a logical scalar
+  !<
+  subroutine setptr_logical(sclr, name, mem_path)
+    logical(LGP), pointer, intent(inout) :: sclr  !< pointer to logical scalar
+    character(len=*), intent(in) :: name          !< variable name
+    character(len=*), intent(in) :: mem_path      !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     sclr => mt%logicalsclr
     !
     ! -- return
     return
   end subroutine setptr_logical
   
-  subroutine setptr_int(sclr, name, origin)
-! ******************************************************************************
-! Set pointer to a integer scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned pointer to a integer scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Set pointer to integer scalar
+  !<
+  subroutine setptr_int(sclr, name, mem_path)
+    integer(I4B), pointer, intent(inout) :: sclr  !< pointer to integer scalar
+    character(len=*), intent(in) :: name          !< variable name
+    character(len=*), intent(in) :: mem_path      !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     sclr => mt%intsclr
     !
     ! -- return
     return
   end subroutine setptr_int
   
-  subroutine setptr_int1d(aint, name, origin)
-! ******************************************************************************
-! Set pointer to a 1-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned pointer to a 1-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Set pointer to 1d integer array
+  !<
+  subroutine setptr_int1d(aint, name, mem_path)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< pointer to 1d integer array
+    character(len=*), intent(in) :: name                                    !< variable name
+    character(len=*), intent(in) :: mem_path                                !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     aint => mt%aint1d
     !
     ! -- return
     return
   end subroutine setptr_int1d
   
-  subroutine setptr_int2d(aint, name, origin)
-! ******************************************************************************
-! Set pointer to a 2-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned pointer to a 2-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Set pointer to 2d integer array
+  !<
+  subroutine setptr_int2d(aint, name, mem_path)
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< pointer to 2d integer array
+    character(len=*), intent(in) :: name                                      !< variable name
+    character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     aint => mt%aint2d
     !
     ! -- return
     return
   end subroutine setptr_int2d
-  
-  subroutine setptr_dbl(sclr, name, origin)
-! ******************************************************************************
-! Set pointer to a real scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : returned pointer to a real scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+    
+  !> @brief Set pointer to a real scalar
+  !<
+  subroutine setptr_dbl(sclr, name, mem_path)
+    real(DP), pointer, intent(inout) :: sclr  !< pointer to a real scalar
+    character(len=*), intent(in) :: name      !< variable name
+    character(len=*), intent(in) :: mem_path  !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     sclr => mt%dblsclr
     !
     ! -- return
     return
   end subroutine setptr_dbl
   
-  subroutine setptr_dbl1d(adbl, name, origin)
-! ******************************************************************************
-! Set pointer to a 1-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned pointer to a 1-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Set pointer to a 1d real array
+  !<
+  subroutine setptr_dbl1d(adbl, name, mem_path)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< pointer to 1d real array
+    character(len=*), intent(in) :: name                                !< variable name
+    character(len=*), intent(in) :: mem_path                            !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     adbl => mt%adbl1d
     !
     ! -- return
     return
   end subroutine setptr_dbl1d
   
-  subroutine setptr_dbl2d(adbl, name, origin)
-! ******************************************************************************
-! Set pointer to a 2-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned pointer to a 2-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Set pointer to a 2d real array
+  !<
+  subroutine setptr_dbl2d(adbl, name, mem_path)
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< pointer to 2d real array
+    character(len=*), intent(in) :: name                                  !< variable name
+    character(len=*), intent(in) :: mem_path                              !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     adbl => mt%adbl2d
     !
     ! -- return
     return
   end subroutine setptr_dbl2d
 
-  subroutine copyptr_int1d(aint, name, origin, origin2)
-! ******************************************************************************
-! Make a copy of a 1-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned copy of a 1-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       ORIGIN2      : optional additional variable origin. If passed then the
-!                      copy is added to the memory manager
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in), optional :: origin2
+  !> @brief Make a copy of a 1-dimensional integer array
+  !<
+  subroutine copyptr_int1d(aint, name, mem_path, mem_path_copy)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< returned copy of 1d integer array
+    character(len=*), intent(in) :: name                                    !< variable name
+    character(len=*), intent(in) :: mem_path                                !< path where variable is stored
+    character(len=*), intent(in), optional :: mem_path_copy                 !< optional path where the copy wil be stored,
+                                                                            !! if passed then the copy is added to the 
+                                                                            !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     aint => null()
     ! -- check the copy into the memory manager
-    if (present(origin2)) then
-      call allocate_int1d(aint, size(mt%aint1d), mt%name, origin2)
+    if (present(mem_path_copy)) then
+      call allocate_int1d(aint, size(mt%aint1d), mt%name, mem_path_copy)
     ! -- create a local copy
     else
       allocate(aint(size(mt%aint1d)))
@@ -1845,26 +1426,15 @@ module MemoryManagerModule
     return
   end subroutine copyptr_int1d
 
-  subroutine copyptr_int2d(aint, name, origin, origin2)
-! ******************************************************************************
-! Make a copy of a 2-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : returned copy of a 2-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       ORIGIN2      : optional additional variable origin. If passed then the
-!                      copy is added to the memory manager
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in), optional :: origin2
+  !> @brief Make a copy of a 2-dimensional integer array
+  !<
+  subroutine copyptr_int2d(aint, name, mem_path, mem_path_copy)
+    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint  !< returned copy of 2d integer array
+    character(len=*), intent(in) :: name                                      !< variable name
+    character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
+    character(len=*), intent(in), optional :: mem_path_copy                   !< optional path where the copy wil be stored,
+                                                                              !! if passed then the copy is added to the 
+                                                                              !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -1873,13 +1443,13 @@ module MemoryManagerModule
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     aint => null()
     ncol = size(mt%aint2d, dim=1)
     nrow = size(mt%aint2d, dim=2)
     ! -- check the copy into the memory manager
-    if (present(origin2)) then
-      call allocate_int2d(aint, ncol, nrow, mt%name, origin2)
+    if (present(mem_path_copy)) then
+      call allocate_int2d(aint, ncol, nrow, mt%name, mem_path_copy)
     ! -- create a local copy
     else
       allocate(aint(ncol,nrow))
@@ -1893,37 +1463,26 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine copyptr_int2d
-  
-  subroutine copyptr_dbl1d(adbl, name, origin, origin2)
-! ******************************************************************************
-! Make a copy of a 1-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned copy of a 1-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       ORIGIN2      : optional additional variable origin. If passed then the
-!                      copy is added to the memory manager
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in), optional :: origin2
+
+  !> @brief Make a copy of a 1-dimensional real array
+  !<
+  subroutine copyptr_dbl1d(adbl, name, mem_path, mem_path_copy)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< returned copy of 1d real array
+    character(len=*), intent(in) :: name                                !< variable name
+    character(len=*), intent(in) :: mem_path                            !< path where variable is stored
+    character(len=*), intent(in), optional :: mem_path_copy             !< optional path where the copy wil be stored,
+                                                                        !! if passed then the copy is added to the 
+                                                                        !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     adbl => null()
     ! -- check the copy into the memory manager
-    if (present(origin2)) then
-      call allocate_dbl1d(adbl, size(mt%adbl1d), mt%name, origin2)
+    if (present(mem_path_copy)) then
+      call allocate_dbl1d(adbl, size(mt%adbl1d), mt%name, mem_path_copy)
     ! -- create a local copy
     else
       allocate(adbl(size(mt%adbl1d)))
@@ -1936,26 +1495,15 @@ module MemoryManagerModule
     return
   end subroutine copyptr_dbl1d
 
-  subroutine copyptr_dbl2d(adbl, name, origin, origin2)
-! ******************************************************************************
-! Make a copy of a 2-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned copy of a 2-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       ORIGIN2      : optional additional variable origin. If passed then the
-!                      copy is added to the memory manager
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in), optional :: origin2
+  !> @brief Make a copy of a 2-dimensional real array
+  !<
+  subroutine copyptr_dbl2d(adbl, name, mem_path, mem_path_copy)
+    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl  !< returned copy of 2d real array
+    character(len=*), intent(in) :: name                                  !< variable name
+    character(len=*), intent(in) :: mem_path                              !< path where variable is stored
+    character(len=*), intent(in), optional :: mem_path_copy               !< optional path where the copy wil be stored,
+                                                                          !! if passed then the copy is added to the 
+                                                                          !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -1964,13 +1512,13 @@ module MemoryManagerModule
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)    
     adbl => null()
     ncol = size(mt%adbl2d, dim=1)
     nrow = size(mt%adbl2d, dim=2)
     ! -- check the copy into the memory manager
-    if (present(origin2)) then
-      call allocate_dbl2d(adbl, ncol, nrow, mt%name, origin2)
+    if (present(mem_path_copy)) then
+      call allocate_dbl2d(adbl, ncol, nrow, mt%name, mem_path_copy)
     ! -- create a local copy
     else
       allocate(adbl(ncol,nrow))
@@ -1985,30 +1533,18 @@ module MemoryManagerModule
     return
   end subroutine copyptr_dbl2d
   
-  subroutine copy_dbl1d(adbl, name, origin)
-! ******************************************************************************
-! Copy values from a 1-dimensional real array in the memory manage to a passed
-! 1-dimensional real array
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 1-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Copy values from a 1-dimensional real array in the memory
+  !< manager to a passed 1-dimensional real array
+  subroutine copy_dbl1d(adbl, name, mem_path)
+    real(DP), dimension(:), intent(inout) :: adbl !< target array
+    character(len=*), intent(in) :: name          !< variable name
+    character(len=*), intent(in) :: mem_path      !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found)
     do n = 1, size(mt%adbl1d)
       adbl(n) = mt%adbl1d(n)
     end do
@@ -2017,35 +1553,21 @@ module MemoryManagerModule
     return
   end subroutine copy_dbl1d
   
-  subroutine reassignptr_int1d(aint, name, origin, name2, origin2)
-! ******************************************************************************
-! Set the pointer for a 1-dimensional integer array to a second 1-dimensional 
-! integer array already in the memory manager 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 2-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       NAME2        : second variable name
-!       ORIGIN2      : second variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+  !> @brief Set the pointer for a 1-dimensional integer array to 
+  !< a target array already stored in the memory manager
+  subroutine reassignptr_int1d(aint, name, mem_path, name_target, mem_path_target)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< pointer to 1d integer array
+    character(len=*), intent(in) :: name                                    !< variable name
+    character(len=*), intent(in) :: mem_path                                !< path where variable is stored
+    character(len=*), intent(in) :: name_target                             !< name of target variable
+    character(len=*), intent(in) :: mem_path_target                         !< path where target variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)
-    call get_from_memorylist(name2, origin2, mt2, found)
+    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name_target, mem_path_target, mt2, found)
     if (size(aint) > 0) then
       nvalues_aint = nvalues_aint - size(aint)
       deallocate(aint)
@@ -2057,35 +1579,21 @@ module MemoryManagerModule
     !
     ! -- set master information
     mt%master = .false.
-    mt%mastername = name2
-    mt%masterPath = origin2
+    mt%mastername = name_target
+    mt%masterPath = mem_path_target
     !
     ! -- return
     return
   end subroutine reassignptr_int1d
 
-  subroutine reassignptr_int2d(aint, name, origin, name2, origin2)
-! ******************************************************************************
-! Set the pointer for a 2-dimensional integer array to a second 2-dimensional 
-! integer array already in the memory manager 
-!
-! -- Arguments are as follows:
-!       AINT         : returned 2-dimensional integer array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       NAME2        : second variable name
-!       ORIGIN2      : second variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+  !> @brief Set the pointer for a 2-dimensional integer array to 
+  !< a target array already stored in the memory manager
+  subroutine reassignptr_int2d(aint, name, mem_path, name_target, mem_path_target)
+    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint  !< pointer to 2d integer array
+    character(len=*), intent(in) :: name                                      !< variable name
+    character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
+    character(len=*), intent(in) :: name_target                               !< name of target variable
+    character(len=*), intent(in) :: mem_path_target                           !< path where target variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     type(MemoryType), pointer :: mt2
@@ -2093,8 +1601,8 @@ module MemoryManagerModule
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)
-    call get_from_memorylist(name2, origin2, mt2, found)
+    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name_target, mem_path_target, mt2, found)
     if (size(aint) > 0) then
       nvalues_aint = nvalues_aint - size(aint)
       deallocate(aint)
@@ -2108,42 +1616,28 @@ module MemoryManagerModule
     !
     ! -- set master information
     mt%master = .false.
-    mt%mastername = name2
-    mt%masterPath = origin2
+    mt%mastername = name_target
+    mt%masterPath = mem_path_target
     !
     ! -- return
     return
   end subroutine reassignptr_int2d
 
-  subroutine reassignptr_dbl1d(adbl, name, origin, name2, origin2)
-! ******************************************************************************
-! Set the pointer for a 1-dimensional real array to a second 1-dimensional 
-! real array already in the memory manager 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 1-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       NAME2        : second variable name
-!       ORIGIN2      : second variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+  !> @brief Set the pointer for a 1-dimensional real array to 
+  !< a target array already stored in the memory manager
+  subroutine reassignptr_dbl1d(adbl, name, mem_path, name_target, mem_path_target)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< pointer to 1d real array
+    character(len=*), intent(in) :: name                                !< variable name
+    character(len=*), intent(in) :: mem_path                            !< path where variable is stored
+    character(len=*), intent(in) :: name_target                         !< name of target variable
+    character(len=*), intent(in) :: mem_path_target                     !< path where target variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)
-    call get_from_memorylist(name2, origin2, mt2, found)
+    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name_target, mem_path_target, mt2, found)
     if (size(adbl) > 0) then
       nvalues_adbl = nvalues_adbl - size(adbl)
       deallocate(adbl)
@@ -2155,35 +1649,21 @@ module MemoryManagerModule
     !
     ! -- set master information
     mt%master = .false.
-    mt%mastername = name2
-    mt%masterPath = origin2
+    mt%mastername = name_target
+    mt%masterPath = mem_path_target
     !
     ! -- return
     return
   end subroutine reassignptr_dbl1d
 
-  subroutine reassignptr_dbl2d(adbl, name, origin, name2, origin2)
-! ******************************************************************************
-! Set the pointer for a 2-dimensional real array to a second 2-dimensional 
-! real array already in the memory manager 
-!
-! -- Arguments are as follows:
-!       ADBL         : returned 2-dimensional real array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!       NAME2        : second variable name
-!       ORIGIN2      : second variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    character(len=*), intent(in) :: name2
-    character(len=*), intent(in) :: origin2
+  !> @brief Set the pointer for a 2-dimensional real array to 
+  !< a target array already stored in the memory manager
+  subroutine reassignptr_dbl2d(adbl, name, mem_path, name_target, mem_path_target)
+    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl  !< pointer to 2d real array
+    character(len=*), intent(in) :: name                                  !< variable name
+    character(len=*), intent(in) :: mem_path                              !< path where variable is stored
+    character(len=*), intent(in) :: name_target                           !< name of target variable
+    character(len=*), intent(in) :: mem_path_target                       !< path where target variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     type(MemoryType), pointer :: mt2
@@ -2191,8 +1671,8 @@ module MemoryManagerModule
     integer(I4B) :: ncol
     integer(I4b) :: nrow
     ! -- code
-    call get_from_memorylist(name, origin, mt, found)
-    call get_from_memorylist(name2, origin2, mt2, found)
+    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name_target, mem_path_target, mt2, found)
     if (size(adbl) > 0) then
       nvalues_adbl = nvalues_adbl - size(adbl)
       deallocate(adbl)
@@ -2206,36 +1686,25 @@ module MemoryManagerModule
     !
     ! -- set master information
     mt%master = .false.
-    mt%mastername = name2
-    mt%masterPath = origin2
+    mt%mastername = name_target
+    mt%masterPath = mem_path_target
     !
     ! -- return
     return
   end subroutine reassignptr_dbl2d
 
-  subroutine deallocate_str(sclr, name, origin)
-! ******************************************************************************
-! Deallocate a character scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : character scalar
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy  
-    character(len=*), pointer, intent(inout) :: sclr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Deallocate a variable-length character string
+  !<
+  subroutine deallocate_str(sclr, name, mem_path)
+    character(len=*), pointer, intent(inout) :: sclr  !< pointer to string
+    character(len=*), intent(in) :: name              !< variable name
+    character(len=*), intent(in) :: mem_path          !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
     if (associated(sclr)) then
-      call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
+      call get_from_memorylist(name, mem_path, mt, found, check=.FALSE.)
       if (.not. found) then
         call store_error('Programming error in deallocate_str.')
         call ustop()
@@ -2248,32 +1717,23 @@ module MemoryManagerModule
     return
   end subroutine deallocate_str
   
-  subroutine deallocate_str1d(astr, name, origin)
-! ******************************************************************************
-! Deallocate a defined length character array 
-!
-! -- Arguments are as follows:
-!       ASTR         : defined length character array
-!       NAME         : variable name
-!       ORIGIN       : variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
+  !> @brief Deallocate an array of variable-length character strings
+  !!
+  !! @todo confirm this description versus the previous doc
+  !<
+  subroutine deallocate_str1d(astr, name, mem_path)
+    character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr  !< array of strings
+    character(len=*), intent(in) :: name                                        !< variable name
+    character(len=*), intent(in) :: mem_path                                    !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
     if (associated(astr)) then
-      call get_from_memorylist(name, origin, mt, found, check=.FALSE.)
+      call get_from_memorylist(name, mem_path, mt, found, check=.FALSE.)
       if (.not. found) then
         errmsg = "Programming error in deallocate_str1d. Variable '" //          &
-          trim(name) // "' from origin '" // trim(origin) // "' is not " //      &
+          trim(name) // "' in '" // trim(mem_path) // "' is not "    //          &
           "present in the memory manager but is associated."
         call store_error(errmsg)
         call ustop()
@@ -2286,19 +1746,10 @@ module MemoryManagerModule
     return
   end subroutine deallocate_str1d
 
+  !> @brief Deallocate a logical scalar
+  !<
   subroutine deallocate_logical(sclr)
-! ******************************************************************************
-! Deallocate a logical scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : logical scalar
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    logical(LGP), pointer, intent(inout) :: sclr
+    logical(LGP), pointer, intent(inout) :: sclr  !< logical scalar to deallocate
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2328,19 +1779,10 @@ module MemoryManagerModule
     return
   end subroutine deallocate_logical
   
+  !> @brief Deallocate a integer scalar
+  !<
   subroutine deallocate_int(sclr)
-! ******************************************************************************
-! Deallocate a integer scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : integer scalar
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), pointer, intent(inout) :: sclr
+    integer(I4B), pointer, intent(inout) :: sclr  !< integer variable to deallocate
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2370,19 +1812,10 @@ module MemoryManagerModule
     return
   end subroutine deallocate_int
   
+  !> @brief Deallocate a real scalar
+  !<
   subroutine deallocate_dbl(sclr)
-! ******************************************************************************
-! Deallocate a real scalar 
-!
-! -- Arguments are as follows:
-!       SCLR         : real scalar
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), pointer, intent(inout) :: sclr
+    real(DP), pointer, intent(inout) :: sclr  !< real variable to deallocate
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2412,23 +1845,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_dbl
   
-  subroutine deallocate_int1d(aint, name, origin)
-! ******************************************************************************
-! Deallocate a 1-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : 1-dimensional integer array
-!       NAME         : optional variable name
-!       ORIGIN       : optional variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+  !> @brief Deallocate a 1-dimensional integer array
+  !<
+  subroutine deallocate_int1d(aint, name, mem_path)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< 1d integer array to deallocate
+    character(len=*), optional :: name                                      !< variable name
+    character(len=*), optional :: mem_path                                  !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2436,8 +1858,8 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- process optional variables
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found)
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
       nullify(mt%aint1d)
     else
       found = .false.
@@ -2465,23 +1887,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_int1d
   
-  subroutine deallocate_int2d(aint, name, origin)
-! ******************************************************************************
-! Deallocate a 2-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : 2-dimensional integer array
-!       NAME         : optional variable name
-!       ORIGIN       : optional variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+  !> @brief Deallocate a 2-dimensional integer array
+  !<
+  subroutine deallocate_int2d(aint, name, mem_path)
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< 2d integer array to deallocate
+    character(len=*), optional :: name                                        !< variable name
+    character(len=*), optional :: mem_path                                    !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2489,8 +1900,8 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- process optional variables
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found)
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
       nullify(mt%aint2d)
     else
       found = .false.
@@ -2518,23 +1929,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_int2d
   
-  subroutine deallocate_int3d(aint, name, origin)
-! ******************************************************************************
-! Deallocate a 3-dimensional integer array 
-!
-! -- Arguments are as follows:
-!       AINT         : 3-dimensional integer array
-!       NAME         : optional variable name
-!       ORIGIN       : optional variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+  !> @brief Deallocate a 3-dimensional integer array
+  !<
+  subroutine deallocate_int3d(aint, name, mem_path)
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint  !< 3d integer array to deallocate
+    character(len=*), optional :: name                                            !< variable name
+    character(len=*), optional :: mem_path                                        !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2542,8 +1942,8 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- process optional variables
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found)
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
       nullify(mt%aint3d)
     else
       found = .false.
@@ -2571,23 +1971,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_int3d
   
-  subroutine deallocate_dbl1d(adbl, name, origin)
-! ******************************************************************************
-! Deallocate a 1-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : 1-dimensional real array
-!       NAME         : optional variable name
-!       ORIGIN       : optional variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+  !> @brief Deallocate a 1-dimensional real array
+  !<
+  subroutine deallocate_dbl1d(adbl, name, mem_path)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< 1d real array to deallocate
+    character(len=*), optional :: name                                  !< variable name
+    character(len=*), optional :: mem_path                              !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2595,8 +1984,8 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- process optional variables
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found)
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
       nullify(mt%adbl1d)
     else
       found = .false.
@@ -2624,23 +2013,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_dbl1d
   
-  subroutine deallocate_dbl2d(adbl, name, origin)
-! ******************************************************************************
-! Deallocate a 2-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : 2-dimensional real array
-!       NAME         : optional variable name
-!       ORIGIN       : optional variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+  !> @brief Deallocate a 2-dimensional real array
+  !<
+  subroutine deallocate_dbl2d(adbl, name, mem_path)
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< 2d real array to deallocate
+    character(len=*), optional :: name                                    !< variable name
+    character(len=*), optional :: mem_path                                !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2648,8 +2026,8 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- process optional variables
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found)
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
       nullify(mt%adbl2d)
     else
       found = .false.
@@ -2677,23 +2055,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_dbl2d
   
-  subroutine deallocate_dbl3d(adbl, name, origin)
-! ******************************************************************************
-! Deallocate a 3-dimensional real array 
-!
-! -- Arguments are as follows:
-!       ADBL         : 3-dimensional real array
-!       NAME         : optional variable name
-!       ORIGIN       : optional variable origin
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl
-    character(len=*), optional :: name
-    character(len=*), optional :: origin
+  !> @brief Deallocate a 3-dimensional real array
+  !<
+  subroutine deallocate_dbl3d(adbl, name, mem_path)
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl  !< 3d real array to deallocate
+    character(len=*), optional :: name                                        !< variable name
+    character(len=*), optional :: mem_path                                    !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -2701,8 +2068,8 @@ module MemoryManagerModule
     ! -- code
     !
     ! -- process optional variables
-    if (present(name) .and. present(origin)) then
-      call get_from_memorylist(name, origin, mt, found)
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
       nullify(mt%adbl3d)
     else
       found = .false.
@@ -2730,23 +2097,12 @@ module MemoryManagerModule
     return
   end subroutine deallocate_dbl3d
 
-  subroutine mem_set_print_option(iout, keyword, errmsg)
-! ******************************************************************************
-! Set the memory print option 
-!
-! -- Arguments are as follows:
-!       IOUT         : unit number for mfsim.lst
-!       KEYWORD      : memory print option
-!       ERRMSG       : returned error message if keyword is not valid option
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy 
-    integer(I4B), intent(in) :: iout
-    character(len=*), intent(in) :: keyword
-    character(len=*), intent(inout) :: errmsg
+  !> @brief Set the memory print option
+  !<
+  subroutine mem_set_print_option(iout, keyword, error_msg)
+    integer(I4B), intent(in) :: iout              !< unit number for mfsim.lst
+    character(len=*), intent(in) :: keyword       !< memory print option
+    character(len=*), intent(inout) :: error_msg  !< returned error message if keyword is not valid option
     ! -- local
     ! -- format
     ! -- code
@@ -2764,28 +2120,17 @@ module MemoryManagerModule
         write(iout, '(4x, a)')                                                 &
               'ALL SIMULATION MEMORY INFORMATION WILL BE WRITTEN.'
       case default
-        errmsg = "Unknown memory print option '" // trim(keyword) // "."
+        error_msg = "Unknown memory print option '" // trim(keyword) // "."
     end select
     return
   end subroutine mem_set_print_option
   
+  !> @brief Create a table if memory_print_option is 'SUMMARY'
+  !<
   subroutine mem_summary_table(iout, nrows, cunits)
-! ******************************************************************************
-! Create a table if memory_print_option is 'SUMMARY' 
-!
-! -- Arguments are as follows:
-!       IOUT         : unit number for mfsim.lst
-!       NROWS        : number of table rows
-!       CUNITS       : memory units (bytes, kilobytes, megabytes, or gigabytes)
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nrows
-    character(len=*), intent(in) :: cunits
+    integer(I4B), intent(in) :: iout        !< unit number for mfsim.lst
+    integer(I4B), intent(in) :: nrows       !< number of table rows
+    character(len=*), intent(in) :: cunits  !< memory units (bytes, kilobytes, megabytes, or gigabytes)
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -2830,21 +2175,11 @@ module MemoryManagerModule
     return
   end subroutine mem_summary_table 
   
+  !> @brief Create a table if memory_print_option is 'ALL' 
+  !<
   subroutine mem_detailed_table(iout, nrows)
-! ******************************************************************************
-! Create a table if memory_print_option is 'ALL' 
-!
-! -- Arguments are as follows:
-!       IOUT         : unit number for mfsim.lst
-!       NROWS        : number of table rows
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nrows
+    integer(I4B), intent(in) :: iout    !< unit number for mfsim.lst
+    integer(I4B), intent(in) :: nrows   !< number of table rows
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -2888,31 +2223,15 @@ module MemoryManagerModule
     return
   end subroutine mem_detailed_table  
   
+  !> @brief Write a row for the memory_print_option 'SUMMARY' table
+  !<
   subroutine mem_summary_line(component, rchars, rlog, rint, rreal, bytes)
-! ******************************************************************************
-! Write a row for the memory_print_option 'SUMMARY' table 
-!
-! -- Arguments are as follows:
-!       COMPONENT    : character defining the program component (for example,
-!                      solution)
-!       RCHARS       : allocated size of characters (in common units)
-!       RLOG         : allocated size of logical (in common units)
-!       RINT         : allocated size of integer variables (in common units)
-!       RREAL        : allocated size of real variables (in common units)
-!       BYTES        : total allocated memory in memory manager (in common units)
-!       CUNITS       : memory units (bytes, kilobytes, megabytes, or gigabytes)
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    character(len=*), intent(in) :: component
-    real(DP), intent(in) :: rchars
-    real(DP), intent(in) :: rlog
-    real(DP), intent(in) :: rint
-    real(DP), intent(in) :: rreal
-    real(DP), intent(in) :: bytes
+    character(len=*), intent(in) :: component !< character defining the program component (e.g. solution)
+    real(DP), intent(in) :: rchars            !< allocated size of characters (in common units)
+    real(DP), intent(in) :: rlog              !< allocated size of logical (in common units)
+    real(DP), intent(in) :: rint              !< allocated size of integer variables (in common units)
+    real(DP), intent(in) :: rreal             !< allocated size of real variables (in common units)
+    real(DP), intent(in) :: bytes             !< total allocated memory in memory manager (in common units)
     ! -- formats
     ! -- code
     !
@@ -2928,11 +2247,13 @@ module MemoryManagerModule
     return
   end subroutine mem_summary_line 
 
+  !> @brief Determine appropriate memory unit and conversion factor
+  !<
   subroutine mem_units(bytes, fact, cunits)
     ! -- dummy
-    real(DP), intent(in) :: bytes
-    real(DP), intent(inout) :: fact
-    character(len=*), intent(inout) :: cunits
+    real(DP), intent(in) :: bytes             !< total nr. of bytes
+    real(DP), intent(inout) :: fact           !< conversion factor
+    character(len=*), intent(inout) :: cunits !< string with memory unit
     ! -- local
     ! -- formats
     ! -- code
@@ -2960,21 +2281,11 @@ module MemoryManagerModule
     return
   end subroutine mem_units 
   
+  !> @brief Create and fill a table with the total allocated memory 
+  !< in the memory manager
   subroutine mem_summary_total(iout, bytes)
-! ******************************************************************************
-! Create and fill a table with the total allocated memory in the memory manager
-!
-! -- Arguments are as follows:
-!       IOUT         : unit number for mfsim.lst
-!       BYTES        : total number of bytes allocated in the memory manager
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), intent(in) :: iout
-    real(DP), intent(in) :: bytes
+    integer(I4B), intent(in) :: iout  !< unit number for mfsim.lst
+    real(DP), intent(in) :: bytes     !< total number of bytes allocated in the memory manager
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -3043,17 +2354,9 @@ module MemoryManagerModule
     return
   end subroutine mem_summary_total  
   
+  !> @brief Generic function to clean a memory manager table
+  !<
   subroutine mem_cleanup_table()
-! ******************************************************************************
-! Generic function to clean a memory manager table 
-!
-! -- Arguments are as follows:
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
     ! -- local
     ! -- formats
     ! -- code
@@ -3065,25 +2368,17 @@ module MemoryManagerModule
     return
   end subroutine mem_cleanup_table 
   
-  
+  !> @brief Write memory manager memory usage based on the 
+  !! user-specified memory_print_option
+  !!
+  !! The total memory usage by data types (int, real, etc.)
+  !! is written for every simulation.
+  !<
   subroutine mem_write_usage(iout)
-! ******************************************************************************
-! Write memory manager memory usage based on the user-specified 
-! memory_print_option. The total memory usage by data types (int, real, etc.)
-! is written for every simulation. 
-!
-! -- Arguments are as follows:
-!       IOUT         : unit number for mfsim.lst
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: iout  !< unit number for mfsim.lst
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique ! TODO_MJR: refactor this name??
+    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -3172,30 +2467,23 @@ module MemoryManagerModule
     return
   end subroutine mem_write_usage
   
+  !> @brief Deallocate memory in the memory manager
+  !<
   subroutine mem_da()
-! ******************************************************************************
-! Deallocate memory in the memory manager.
-!
-! -- Arguments are as follows:
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use VersionModule, only: IDEVELOPMODE
-    ! -- dummy
+    ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: error_msg
     integer(I4B) :: ipos
     ! -- code
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
         if (mt%mt_associated() .and. mt%isize > 0) then
-          errmsg = trim(adjustl(mt%path)) // ' ' // &
-                   trim(adjustl(mt%name)) // ' not deallocated'
-          call store_error(trim(errmsg))
+          error_msg = trim(adjustl(mt%path)) // ' ' // &
+                      trim(adjustl(mt%name)) // ' not deallocated'
+          call store_error(trim(error_msg))
         end if
       end if
       deallocate(mt)
@@ -3209,30 +2497,20 @@ module MemoryManagerModule
     return
   end subroutine mem_da
   
+  !> @brief Create a array with unique first components from all memory paths.
+  !! Only the first component of the memory path is evaluated.
+  !<
   subroutine mem_unique_origins(cunique)
-! ******************************************************************************
-! Create a character array that contains the unique origins in the memory 
-! manager. Only the first component of the origin is evaluated.  
-!
-! -- Arguments are as follows:
-!       CUNIQUE      : returned defined length (LENORIGIN) character array with
-!                      unique first component origin entries.
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ArrayHandlersModule, only: ExpandArray, ifind
-    use InputOutputModule, only: ParseLine
     ! -- dummy
-    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique
+    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique  !< array with unique first components
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENMEMPATH), allocatable, dimension(:) :: words
+    character(len=LENCOMPONENTNAME) :: component
+    character(len=LENCOMPONENTNAME) :: subcomponent
     integer(I4B) :: ipos
     integer(I4B) :: ipa
-    integer(I4B) :: nwords
     ! -- code
     !
     ! -- initialize cunique
@@ -3241,11 +2519,11 @@ module MemoryManagerModule
     ! -- find unique origins
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      call ParseLine(mt%path, nwords, words)
-      ipa = ifind(cunique, words(1))
+      call split_mem_path(mt%path, component, subcomponent)
+      ipa = ifind(cunique, component)
       if(ipa < 1) then
         call ExpandArray(cunique, 1)
-        cunique(size(cunique)) = words(1)
+        cunique(size(cunique)) = component
       end if
     end do
     !

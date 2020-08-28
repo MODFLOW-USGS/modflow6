@@ -57,7 +57,7 @@ contains
     allocate(srcobj)
     packobj => srcobj
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !

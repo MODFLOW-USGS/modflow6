@@ -94,7 +94,7 @@ module GwtMstModule
     ! -- Create the object
     allocate(mstobj)
     !
-    ! -- Create name and origin
+    ! -- create name and memory path
     call mstobj%set_names(1, name_model, 'MST', 'MST')
     !
     ! -- Allocate scalars
@@ -288,11 +288,11 @@ module GwtMstModule
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
         idiag = this%dis%con%ia(n)
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
-      elseif (this%idcy == 0) then
+      elseif (this%idcy == 2) then
         !
         ! -- zero-order decay rate is not a function of concentration, so add
         !    to right hand side
-        rrhs = this%decay(n) * vcell * swtpdt
+        rrhs = this%decay(n) * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
       endif
       !
@@ -388,6 +388,7 @@ module GwtMstModule
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
     real(DP) :: ctosrb
+    real(DP) :: thetamfrac
 ! ------------------------------------------------------------------------------
     !
     ! -- loop through and calculate sorbtion contribution to hcof and rhs
@@ -403,17 +404,25 @@ module GwtMstModule
       ctosrb = this%distcoef(n)
       idiag = this%dis%con%ia(n)
       !
+      ! -- Set thetamfrac
+      thetamfrac = this%get_thetamfrac(n)
+      !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
-        hhcof = - this%decay_sorbed(n) * vcell * this%bulk_density(n) * ctosrb
+        hhcof = - this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
+                  ctosrb * vcell
       elseif (this%idcy == 2) then
         !
         ! -- zero-order decay rate is not a function of concentration, so add
         !    to right hand side
-        rrhs = this%decay_sorbed(n) * ctosrb * vcell
+        if (ctosrb > DZERO) then
+          ! -- Add zero order sorbtion term only if distribution coefficient > 0
+          rrhs = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
+                 vcell
+        end if
       endif
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
@@ -586,8 +595,8 @@ module GwtMstModule
       rrhs = DZERO
       if (this%idcy == 1) then
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
-      elseif (this%idcy == 0) then
-        rrhs = this%decay(n) * vcell * swtpdt
+      elseif (this%idcy == 2) then
+        rrhs = this%decay(n) * vcell * swtpdt * this%porosity(n)
       endif
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -710,6 +719,7 @@ module GwtMstModule
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
     real(DP) :: ctosrb
+    real(DP) :: thetamfrac
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate sorbed decay change
@@ -732,10 +742,21 @@ module GwtMstModule
       hhcof = DZERO
       rrhs = DZERO
       ctosrb = this%distcoef(n)
+      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+      !
+      ! -- Get thetamfrac
+      thetamfrac = this%get_thetamfrac(n)
+      !
+      ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
-        hhcof = - this%decay_sorbed(n) * vcell * this%bulk_density(n) * ctosrb
+        hhcof = - this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
+                  ctosrb * vcell
       elseif (this%idcy == 2) then
-        rrhs = this%decay_sorbed(n) * ctosrb * vcell
+        if (ctosrb > DZERO) then
+          ! -- Add zero order sorbtion term only if distribution coefficient > 0
+          rrhs = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
+                 vcell
+        end if
       endif
       rate = hhcof * cnew(n) - rrhs
       this%ratedcys(n) = rate

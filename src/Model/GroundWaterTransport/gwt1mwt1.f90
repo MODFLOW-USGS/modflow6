@@ -106,7 +106,7 @@ module GwtMwtModule
     allocate(mwtobj)
     packobj => mwtobj
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !

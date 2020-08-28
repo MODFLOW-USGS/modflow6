@@ -24,7 +24,12 @@
 !      Mover aware packages have access to the following vectors of mover
 !      information, which are stored in the PackageMoverType object:
 !
-!      integer(I4B), pointer            :: imover        => null()
+!      qtformvr(nproviders) -- total available unconsumed water for mover
+!      qformvr(nproviders) -- currently available consumed water (changes during fc)
+!      qtomvr(nproviders) -- actual amount of water sent to mover
+!      qfrommvr(nreceivers) -- actual amount of water received from mover
+!
+!      integer(I4B), pointer                        :: imover        => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
@@ -124,7 +129,6 @@ module GwfMvrModule
     integer(I4B), pointer                            :: nmvr => null()           !< number of movers for current stress period
     integer(I4B), pointer                            :: iexgmvr => null()        !< indicate mover is for an exchange (not for a single model)
     integer(I4B), pointer                            :: imodelnames => null()    !< indicate package input file has model names in it
-    real(DP), pointer                                :: omega => null()          !< temporal weighting factor (not presently used)
     integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !< number of entries for each combination
     character(len=LENMEMPATH),                                                &
       dimension(:), pointer, contiguous              :: pckMemPaths              !< memory paths of all packages used in this mover
@@ -400,11 +404,6 @@ module GwfMvrModule
     else
       write(this%iout, fmtlsp) 'MVR'
       !
-      ! -- New stress period, but no new movers.  Set qpold to zero
-      do i = 1, this%nmvr
-        call this%mvr(i)%set_qpold(DZERO)
-      enddo
-      !
     endif
     !
     ! -- return
@@ -448,7 +447,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     do i = 1, this%nmvr
-      call this%mvr(i)%fc(this%omega)
+      call this%mvr(i)%fc()
     enddo
     !
     ! -- Return
@@ -649,7 +648,6 @@ module GwfMvrModule
     call mem_deallocate(this%nmvr)
     call mem_deallocate(this%iexgmvr)
     call mem_deallocate(this%imodelnames)
-    call mem_deallocate(this%omega)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%NumericalPackageType%da()
@@ -1028,7 +1026,6 @@ module GwfMvrModule
     !
     ! -- Allocate
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
-    call mem_allocate(this%omega, 'OMEGA', this%memoryPath)
     call mem_allocate(this%maxmvr, 'MAXMVR', this%memoryPath)
     call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
     call mem_allocate(this%maxcomb, 'MAXCOMB', this%memoryPath)
@@ -1044,7 +1041,6 @@ module GwfMvrModule
     this%nmvr = 0
     this%iexgmvr = 0
     this%imodelnames = 0
-    this%omega = DONE
     !
     ! -- Return
     return
@@ -1097,6 +1093,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
+    use MemoryHelperModule, only: split_mem_path
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
@@ -1104,15 +1101,9 @@ module GwfMvrModule
     integer(I4B) :: ncv
     integer(I4B) :: i
     integer(I4B) :: j
-    integer(I4B) :: ival
     integer(I4B) :: naux
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    real(DP) :: rval
     character (len=LENMODELNAME) :: modelname1, modelname2
     character (len=LENPACKAGENAME) :: packagename1, packagename2
-    character (len=LENMEMPATH) :: pckMemPathsDummy
     integer(I4B) :: maxlist
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
@@ -1142,22 +1133,13 @@ module GwfMvrModule
     maxlist = this%maxmvr
     naux = 0
     do i = 1, this%maxpackages
-      lloc = 1
-      call urword(this%pckMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pckMemPathsDummy = this%pckMemPaths(i)
-      modelname1 = pckMemPathsDummy(istart:istop)
-      call urword(this%pckMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pckMemPathsDummy = this%pckMemPaths(i)
-      packagename1 = pckMemPathsDummy(istart:istop)
-      do j = 1, this%maxpackages
-        lloc = 1
-        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pckMemPathsDummy = this%pckMemPaths(j)
-        modelname2 = pckMemPathsDummy(istart:istop)
-        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pckMemPathsDummy = this%pckMemPaths(j)
-        packagename2 = pckMemPathsDummy(istart:istop)
+      
+      call split_mem_path(this%pckMemPaths(i), modelname1, packagename1)
+      
+      do j = 1, this%maxpackages  
+        
         idx = idx + 1
+        call split_mem_path(this%pckMemPaths(j), modelname2, packagename2)
         call this%budobj%budterm(idx)%initialize(text, &
                                                  modelname1, &
                                                  packagename1, &
@@ -1246,7 +1228,7 @@ module GwfMvrModule
               n1 = this%pakmovers(i)%iprmap(n1)
               !
               ! -- set receiver id to irch2
-              n2 = this%mvr(n)%iRckNrTgt
+              n2 = this%mvr(n)%iRchNrTgt
               !
               ! -- check record into budget object
               call this%budobj%budterm(idx)%update_term(n1, n2, q)
@@ -1342,10 +1324,10 @@ module GwfMvrModule
       call this%outputtab%add_term(i)
       call this%outputtab%add_term(this%mvr(i)%pckNameSrc)
       call this%outputtab%add_term(this%mvr(i)%iRchNrSrc)
-      call this%outputtab%add_term(this%mvr(i)%qanew)
+      call this%outputtab%add_term(this%mvr(i)%qavailable)
       call this%outputtab%add_term(this%mvr(i)%qpactual)
       call this%outputtab%add_term(this%mvr(i)%pckNameTgt)
-      call this%outputtab%add_term(this%mvr(i)%iRckNrTgt)
+      call this%outputtab%add_term(this%mvr(i)%iRchNrTgt)
     end do
     !
     ! -- return

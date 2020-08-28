@@ -1915,7 +1915,7 @@
               deltax = tv
               xloc = n
             END IF
-            IF (ABS(tv) > ABS(DRMAX(im))) THEN
+            IF (ABS(tv) > ABS(DVMAX(im))) THEN
               DVMAX(im) = tv
               LOCDV(im) = n
             END IF

@@ -81,7 +81,7 @@ module GwtDspModule
     ! -- Create the object
     allocate(dspobj)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call dspobj%set_names(1, name_model, 'DSP', 'DSP')
     !
     ! -- Allocate scalars
@@ -125,7 +125,7 @@ module GwtDspModule
     !
     ! -- xt3d create
     if(this%ixt3d > 0) then
-      call xt3d_cr(this%xt3d, trim(this%memoryPath), this%inunit, this%iout,       &
+      call xt3d_cr(this%xt3d, this%name_model, this%inunit, this%iout,       &
                    ldispopt=.true.)
       this%xt3d%ixt3d = this%ixt3d
       call this%xt3d%xt3d_df(dis)

@@ -131,7 +131,7 @@ def get_model(idx, dir):
                                   print_head=True,
                                   print_flows=True,
                                   save_flows=True,
-                                  stage_filerecord='{}.maw.bin'.format(gwfname),
+                                  head_filerecord='{}.maw.bin'.format(gwfname),
                                   budget_filerecord='{}.maw.bud'.format(gwfname),
                                   packagedata=mawpackagedata,
                                   connectiondata=mawconnectiondata,

@@ -162,6 +162,12 @@ module GwfGwtExchangeModule
     ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     !
+    ! -- Set the npf flag so that specific discharge is available for 
+    !    transport calculations if dispersion is active
+    if (gwtmodel%indsp > 0) then
+      gwfmodel%npf%icalcspdis = 1
+    end if
+    !
     ! -- Set the auxiliary names for gwf flow packages in gwt%fmi
     ngwfpack = gwfmodel%bndlist%Count()
     do ip = 1, ngwfpack

@@ -5,7 +5,7 @@
 	<Configurations>
 		<Configuration Name="Debug|x64" OutputDirectory="../bin" IntermediateDirectory="dll\$(PlatformName)\$(ConfigurationName)" TargetName="libmf6d" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
+				<Tool Name="VFLinkerTool" AdditionalOptions="/ignore:4049,4217" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -15,7 +15,7 @@
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="../bin" IntermediateDirectory="dll\$(PlatformName)\$(ConfigurationName)" TargetName="libmf6" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
-				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" SubSystem="subSystemWindows" LinkDLL="true"/>
+				<Tool Name="VFLinkerTool" AdditionalOptions="/ignore:4049,4217" SuppressStartupBanner="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -28,6 +28,8 @@
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<File RelativePath="..\srcbmi\bmi.f90"/>
-		<File RelativePath="..\srcbmi\mf6xmi.f90"/>
-		<File RelativePath="..\srcbmi\mf6bmi.f90"/></Filter></Files>
+		<File RelativePath="..\srcbmi\mf6bmi.f90"/>
+		<File RelativePath="..\srcbmi\mf6bmiGrid.f90"/>
+		<File RelativePath="..\srcbmi\mf6bmiUtil.f90"/>
+		<File RelativePath="..\srcbmi\mf6xmi.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

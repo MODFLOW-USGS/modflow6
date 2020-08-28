@@ -179,7 +179,7 @@ shape (nodes)
 reader readarray
 layered true
 longname mass transfer rate coefficient between the mobile and immobile domains
-description mass transfer rate coefficient between the mobile and immobile domains, in dimenions of per time.
+description mass transfer rate coefficient between the mobile and immobile domains, in dimensions of per time.
 
 block griddata
 name decay

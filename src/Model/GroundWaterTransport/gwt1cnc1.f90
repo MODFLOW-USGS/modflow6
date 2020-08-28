@@ -59,7 +59,7 @@ contains
     allocate(cncobj)
     packobj => cncobj
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
@@ -237,7 +237,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kstp, kper
     use ConstantsModule, only: LENBOUNDNAME
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -261,8 +261,6 @@ contains
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     chin = DZERO
@@ -292,6 +290,7 @@ contains
       !
       ! -- reset size of table
       if (this%iprflow /= 0) then
+        call this%outputtab%set_kstpkper(kstp, kper)
         call this%outputtab%set_maxbound(this%nbound)
       end if
       !

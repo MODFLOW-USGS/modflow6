@@ -191,10 +191,10 @@ def bmifunc(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get sc2 array and update flag
-    cdata = "{} STO/IRESETSC2".format(name)
-    update_sc2 = mf6.get_value_ptr(cdata)
-    cdata = "{} STO/SC2".format(name)
-    sc2 = mf6.get_value_ptr(cdata)
+    update_sc2_tag = mf6.get_var_address("IRESETSC2", name, "STO")
+    update_sc2 = mf6.get_value_ptr(update_sc2_tag)
+    sc2_tag = mf6.get_var_address("SC2", name, "STO")
+    sc2 = mf6.get_value_ptr(sc2_tag)
 
     # reset sc2 and update flag
     sc2 += sy_val

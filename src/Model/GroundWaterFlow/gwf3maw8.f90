@@ -8,7 +8,8 @@ module MawModule
                              DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
                              LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,      &
                              TABLEFT, TABCENTER, TABRIGHT,                       &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,       &
+                             MEMREADWRITE
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
                               sQuadraticSaturationDerivative,                    &
                               sQSaturationDerivative,                            &
@@ -24,7 +25,7 @@ module MawModule
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
                               store_warning, ustop
   use BlockParserModule,   only: BlockParserType
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, warnmsg
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
@@ -232,7 +233,7 @@ contains
     allocate(mawobj)
     packobj => mawobj
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
@@ -815,6 +816,9 @@ contains
     integer(I4B) :: nn2
     integer(I4B) :: ipos
     integer(I4B) :: jpos
+    integer(I4B) :: ireset_scrntop
+    integer(I4B) :: ireset_scrnbot
+    integer(I4B) :: ireset_wellbot
     real(DP) :: rval
     real(DP) :: topnn
     real(DP) :: botnn
@@ -826,6 +830,11 @@ contains
     ! -- format
     !
     ! -- code
+    !
+    ! -- initialize counters
+    ireset_scrntop = 0
+    ireset_scrnbot = 0
+    ireset_wellbot = 0
     !
     ! -- allocate and initialize local storage
     allocate(iachk(this%nmawwells+1))
@@ -896,6 +905,7 @@ contains
           rval = topnn
         else
           if (rval > topnn) then
+            ireset_scrntop = ireset_scrntop + 1
             rval = topnn
           end if
         end if
@@ -907,6 +917,7 @@ contains
           rval = botnn
         else
           if (rval < botnn) then
+            ireset_scrnbot = ireset_scrnbot + 1
             rval = botnn
           end if
         end if
@@ -914,10 +925,17 @@ contains
         !
         ! -- adjust the bottom of the well for all conductance approaches
         !    except for "mean"
-        if (this%ieqn(n) /= 4) then
-          if (rval < botw) then
+        if (rval < botw) then
+          if (this%ieqn(n) /= 4) then
+            ireset_wellbot = ireset_wellbot + 1
             botw = rval
             this%bot(n) = rval
+          else
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)')                  &
+              'Screen bottom for maw well', n, 'connection', j, '(',             &
+              this%botscrn(jpos), ') is less than the well bottom (',            &
+              this%bot(n), ').'
+            call store_error(errmsg)
           end if
         end if
         !
@@ -935,6 +953,13 @@ contains
         if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
             this%ieqn(n) == 4) then
           this%sradius(jpos) = rval
+          if (this%sradius(jpos) <= this%radius(n)) then
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)')                  &
+              'Screen radius for maw well', n, 'connection', j, '(',             &
+              this%sradius(jpos),') is less than or equal to the well radius (', &
+              this%radius(n), ').'
+            call store_error(errmsg)
+          end if
         end if
       end do
       write(this%iout,'(1x,a)')                                                  &
@@ -991,6 +1016,28 @@ contains
     ! -- deallocate local variable
     deallocate(iachk)
     deallocate(nboundchk)
+    !
+    ! -- add warning messages
+    if (ireset_scrntop > 0) then
+      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+        'The screen tops in multi-aquifer well package', trim(this%packName),    &
+        'were reset to the top of the connected cell', ireset_scrntop, 'times.'
+      call store_warning(warnmsg)
+    end if
+    if (ireset_scrnbot > 0) then
+      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+        'The screen bottoms in multi-aquifer well package', trim(this%packName), &
+        'were reset to the bottom of the connected cell', ireset_scrnbot,        &
+        'times.'
+      call store_warning(warnmsg)
+    end if
+    if (ireset_wellbot > 0) then
+      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+        'The well bottoms in multi-aquifer well package', trim(this%packName),   &
+        'were reset to the bottom of the connected cell', ireset_wellbot,        &
+        'times.'
+      call store_warning(warnmsg)
+    end if
     !
     ! -- write summary of maw well_connection error messages
     if (count_errors() > 0) then
@@ -1331,7 +1378,7 @@ contains
   end subroutine maw_read_initial_attr
 
 
-  subroutine maw_set_stressperiod(this, imaw)
+  subroutine maw_set_stressperiod(this, imaw, iheadlimit_warning)
 ! ******************************************************************************
 ! maw_set_stressperiod -- Set a stress period attribute for mawweslls(imaw)
 !                         using keywords.
@@ -1344,6 +1391,7 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: imaw
+    integer(I4B), intent(inout) :: iheadlimit_warning
     ! -- local
     character(len=LINELENGTH) :: errmsgr
     character(len=LINELENGTH) :: text
@@ -1436,6 +1484,9 @@ contains
           if (istat /= 0) then
             errmsg = 'Could not read HEAD_LIMIT value. ' // trim(errmsgr)
             call store_error(errmsg)
+          end if
+          if (this%shutofflevel(imaw) <= this%bot(imaw)) then
+            iheadlimit_warning = iheadlimit_warning + 1
           end if
         end if
       case ('SHUT_OFF')
@@ -1550,19 +1601,9 @@ contains
                                             trim(cgwfnode))
         end if
         !
-        ! -- connection skin radius
+        ! -- connection skin hydraulic conductivity
         if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
             this%ieqn(n) == 4) then
-          if (this%sradius(jpos) > DZERO) then
-            if (this%sradius(jpos) <= this%radius(n)) then
-              call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
-                                                'radius must be greater ' //     &
-                                                'than or equal to well ' //      &
-                                                'radius. ' // trim(cgwfnode))
-            end if
-          end if
-          !
-          ! -- skin hydraulic conductivity
           if (this%hk(jpos) <= DZERO) then
             call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
                                               'conductivity must be greater ' // &
@@ -1881,6 +1922,7 @@ contains
     integer(I4B) :: ibnd
     integer(I4B) :: j
     integer(I4B) :: jpos
+    integer(I4B) :: iheadlimit_warning
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -1888,8 +1930,12 @@ contains
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize counters
+    iheadlimit_warning = 0
+    !
     ! -- set steady-state flag based on gwfiss
     this%imawiss = this%gwfiss
+    !
     ! -- reset maw steady flag if 'STEADY-STATE' specified in the OPTIONS block
     if (this%imawissopt == 1) then
       this%imawiss = 1
@@ -1965,7 +2011,7 @@ contains
         end if
         !
         ! -- set stress period data
-        call this%maw_set_stressperiod(imaw)
+        call this%maw_set_stressperiod(imaw, iheadlimit_warning)
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
@@ -1977,9 +2023,18 @@ contains
         call this%inputtab%finalize_table()
       end if
     !
-    ! -- usiing data from the last stress period
+    ! -- using data from the last stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
+    end if
+    !
+    ! -- issue warning messages
+    if (iheadlimit_warning > 0) then
+      write(warnmsg, '(a,a,a,1x,a,1x,a)')                                        &
+        "HEAD_LIMIT in '", trim(this%packName),"' was below the well bottom",    &
+        "for one or more multi-aquifer well(s). This may result in",             &
+        "convergence failures for some models."
+      call store_warning(warnmsg, substring=warnmsg(:50))
     end if
     !
     ! -- write summary of maw well stress period error messages
@@ -2959,6 +3014,9 @@ contains
     call mem_deallocate(this%idxsymoffdglo)
     call mem_deallocate(this%xoldpak)
     !
+    ! -- nullify pointers
+    call mem_deallocate(this%xnewpak, 'HEAD', this%memoryPath)
+    !
     ! -- scalars
     call mem_deallocate(this%correct_flow)
     call mem_deallocate(this%iprhed)
@@ -3030,7 +3088,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_checkin
     ! -- dummy
     class(MawType) :: this
     integer(I4B), pointer :: neq
@@ -3053,6 +3111,8 @@ contains
     iend = istart + this%nmawwells - 1
     this%iboundpak => this%ibound(istart:iend)
     this%xnewpak => this%xnew(istart:iend)
+    call mem_checkin(this%xnewpak, 'HEAD', this%memoryPath, 'X',                 &
+                     this%memoryPathModel, MEMREADWRITE)
     call mem_allocate(this%xoldpak, this%nmawwells, 'XOLDPAK', this%memoryPath)
     !
     ! -- initialize xnewpak
@@ -3831,7 +3891,7 @@ contains
       !
       ! -- flow is not corrected, so calculate term for newton formulation
       if (inewton /= 0) then
-        term = drterm * this%satcond(jpos) * (hmaw - hgwf)
+        term = drterm * this%satcond(jpos) * (hgwf - hmaw)
       end if
     end if
     !
