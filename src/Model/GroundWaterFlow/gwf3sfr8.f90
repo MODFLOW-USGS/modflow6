@@ -59,6 +59,7 @@ module SfrModule
     integer(I4B), pointer :: icheck => NULL()
     integer(I4B), pointer :: iconvchk => NULL()
     integer(I4B), pointer :: gwfiss => NULL()
+    integer(I4B), pointer :: ianynone => null()                                   !< number of reaches with 'none' connection
     ! -- double precision
     real(DP), pointer :: unitconv => NULL()
     real(DP), pointer :: dmaxchg => NULL()
@@ -269,6 +270,7 @@ contains
     call mem_allocate(this%icheck, 'ICHECK', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
+    call mem_allocate(this%ianynone, 'IANYNONE', this%memoryPath)
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
@@ -290,6 +292,7 @@ contains
     this%icheck = 1
     this%iconvchk = 1
     this%idense = 0
+    this%ianynone = 0
     !
     ! -- return
     return
@@ -768,6 +771,7 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: jj
     integer(I4B) :: iaux
+    integer(I4B) :: nconzero
     integer, allocatable, dimension(:) :: nboundchk
     real(DP), pointer :: bndElem => null()
     ! -- format
@@ -778,6 +782,7 @@ contains
     do i = 1, this%maxbound
       nboundchk(i) = 0
     enddo 
+    nconzero = 0
     !
     ! -- allocate local storage for aux variables
     if (this%naux > 0) then
@@ -818,6 +823,7 @@ contains
         ! -- read the cellid string and determine if 'none' is specified
         if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
+          this%ianynone = this%ianynone + 1
           if (keyword /= 'NONE') then
             write(cnum, '(i0)') n
             errmsg = 'Cell ID (' // trim(cellid) //                              &
@@ -849,6 +855,8 @@ contains
             'NCON for reach', n,                                                 &
             'must be greater than or equal to 0 (', ival, ').'
           call store_error(errmsg)
+        else if (ival == 0) then
+          nconzero = nconzero + 1
         end if
         ! -- get upstream fraction for reach
         call this%parser%GetString(ustrfname)
@@ -933,6 +941,14 @@ contains
       endif
     end do
     deallocate(nboundchk)
+    !
+    ! -- Submit warning message if any reach has zero connections
+    if (nconzero > 0) then
+      write(warnmsg, '(a,1x,a,1x,a,1x,i0,1x, a)')                              &
+        'SFR Package', trim(this%packName),                                    &
+        'has', nconzero, 'reach(es) with zero connections.'
+      call store_warning(warnmsg)
+    endif
     !
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
@@ -1058,9 +1074,7 @@ contains
         endif
         !
         ! -- increment nboundchk
-        if (this%nconnreach(n) > 0) then
-          nboundchk(n) = nboundchk(n) + 1
-        end if
+        nboundchk(n) = nboundchk(n) + 1
         !
         ! -- add diagonal connection for reach
         call sparse%addconnection(n, n, 1)
@@ -1098,22 +1112,19 @@ contains
         'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
       
       do n = 1, this%maxbound
-        if (this%nconnreach(n) > 0) then
-          !
-          ! -- check for missing or duplicate sfr connections
-          if (nboundchk(n) == 0) then
-            write(errmsg,'(a,1x,i0)')                                            &
-              'No connection data specified for reach', n
-            call store_error(errmsg)
-          else if (nboundchk(n) > 1) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                            &
-              'Connection data for reach', n,                                    &
-              'specified', nboundchk(n), 'times.'
-            call store_error(errmsg)
-          end if
+        !
+        ! -- check for missing or duplicate sfr connections
+        if (nboundchk(n) == 0) then
+          write(errmsg,'(a,1x,i0)')                                              &
+            'No connection data specified for reach', n
+          call store_error(errmsg)
+        else if (nboundchk(n) > 1) then
+          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                              &
+            'Connection data for reach', n,                                      &
+            'specified', nboundchk(n), 'times.'
+          call store_error(errmsg)
         end if
       end do
-      
     else
       call store_error('Required connectiondata block not found.')
     end if
@@ -1130,8 +1141,10 @@ contains
     ! -- test for error condition
     if (ierr /= 0) then
       write(errmsg, '(a,3(1x,a))')                                               &
-        'Could not fill', trim(this%packName), 'package IA and JA connection data.', &
-        'Check connectivity data in connectiondata block'
+        'Could not fill', trim(this%packName),                                   &
+        'package IA and JA connection data.',                                    &
+        'Check connectivity data in connectiondata block.'
+      call store_error(errmsg)
     end if
     !
     ! -- fill flat connection storage
@@ -2066,12 +2079,12 @@ contains
   end subroutine sfr_bd
 
   subroutine sfr_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-    ! **************************************************************************
-    ! pak1t -- Output package budget
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
+! ******************************************************************************
+! sfr_ot -- Output package budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(SfrType) :: this
     integer(I4B),intent(in) :: kstp
@@ -2081,14 +2094,15 @@ contains
     integer(I4B),intent(in) :: ibudfl
     ! -- locals
     character (len=20) :: cellid
+    character (len=20), dimension(:), allocatable :: cellidstr
     integer(I4B) :: n
     integer(I4B) :: node
     real(DP) :: hgwf
     real(DP) :: sbot
     real(DP) :: depth, stage
     real(DP) :: w, cond, grad
-    ! format
-     ! --------------------------------------------------------------------------
+    ! -- format
+! ------------------------------------------------------------------------------
      !
      ! -- write sfr stage and depth table
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
@@ -2103,7 +2117,7 @@ contains
           call this%dis%noder_to_string(node, cellid)
           hgwf = this%xnew(node)
         else
-          cellid = 'none'
+          cellid = 'NONE'
         end if
         if(this%inamedbound==1) then
           call this%stagetab%add_term(this%boundname(n))
@@ -2138,7 +2152,26 @@ contains
     !
     ! -- Output sfr flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
+      !
+      ! -- If there are any 'none' gwf connections then need to calculate
+      !    a vector of cellids and pass that in to the budget flow table because
+      !    the table assumes that there are maxbound gwf entries, which is not
+      !    the case if any 'none's are specified.
+      if (this%ianynone > 0) then
+        allocate(cellidstr(this%maxbound))
+        do n = 1, this%maxbound
+          node = this%igwfnode(n)
+          if (node > 0) then
+            call this%dis%noder_to_string(node, cellidstr(n))
+          else
+            cellidstr(n) = 'NONE'
+          end if
+        end do
+        call this%budobj%write_flowtable(this%dis, kstp, kper, cellidstr)
+        deallocate(cellidstr)
+      else
+        call this%budobj%write_flowtable(this%dis, kstp, kper)
+      end if
     end if
     !
     ! -- Output sfr budget
@@ -2257,6 +2290,7 @@ contains
     call mem_deallocate(this%icheck)
     call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%idense)
+    call mem_deallocate(this%ianynone)
     nullify(this%gwfiss)
     !
     ! -- call BndType deallocate
@@ -4326,7 +4360,7 @@ contains
     ! -- 
     text = '             GWF'
     idx = idx + 1
-    maxlist = this%maxbound 
+    maxlist = this%maxbound - this%ianynone
     naux = 1
     auxtxt(1) = '       FLOW-AREA'
     call this%budobj%budterm(idx)%initialize(text, &
@@ -4340,7 +4374,9 @@ contains
     q = DZERO
     do n = 1, this%maxbound
       n2 = this%igwfnode(n)
-      call this%budobj%budterm(idx)%update_term(n, n2, q)
+      if (n2 > 0) then
+        call this%budobj%budterm(idx)%update_term(n, n2, q)
+      end if
     end do
     !
     ! -- 
@@ -4535,12 +4571,14 @@ contains
     !
     ! -- GWF (LEAKAGE)
     idx = idx + 1
-    call this%budobj%budterm(idx)%reset(this%maxbound)
+    call this%budobj%budterm(idx)%reset(this%maxbound - this%ianynone)
     do n = 1, this%maxbound
-      this%qauxcbc(1) = this%width(n) * this%length(n)
       n2 = this%igwfnode(n)
-      q = -this%gwflow(n)
-      call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
+      if (n2 > 0) then
+        this%qauxcbc(1) = this%width(n) * this%length(n)
+        q = -this%gwflow(n)
+        call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
+      end if
     end do
     !
     ! -- RAIN
