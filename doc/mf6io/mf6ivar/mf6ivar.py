@@ -771,7 +771,7 @@ if __name__ == '__main__':
 
             if "period" in b.lower():
                 f.write("\n_FOR ANY STRESS PERIOD_\n\n")
-            f.write("```asciidoc\n")
+            f.write("```adoc\n")
             s = md_replace(write_block(vardict, b, blk_var_list,
                                        varexcludeprefix='dev_',
                                        indent=4)) + "\n"
