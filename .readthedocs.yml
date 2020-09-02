@@ -21,6 +21,6 @@ python:
   version: 3.7
   install:
     - requirements: requirements.travis.txt
-    - requirements: .docs/requirements.rtd.txt
+    - requirements: .doc/requirements.rtd.txt
     - method: pip
       path: .
