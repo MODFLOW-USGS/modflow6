@@ -24,7 +24,7 @@ print("Update the modflow6 version")
 pth = os.path.join("..", "distribution")
 args = (
     "python",
-    "make_release",
+    "make_release.py",
 )
 # run the command
 proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
