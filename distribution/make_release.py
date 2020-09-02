@@ -4,6 +4,7 @@ from __future__ import print_function
 import subprocess
 import os
 import sys
+import shutil
 import datetime
 import json
 from collections import OrderedDict
@@ -199,6 +200,12 @@ def update_version():
         f.close()
         print('Successfully updated version.py')
 
+        # update version.py in doc directory
+        shutil.copyfile(os.path.abspath(fpth),
+                        os.path.join("..",
+                                     "doc",
+                                     os.path.basename(fpth.replace(".txt", ".py")))
+                        )
 
         # update latex version file
         version = get_version_str(vmajor, vminor, vmicro)

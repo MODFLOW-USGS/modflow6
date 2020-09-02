@@ -10,31 +10,32 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import sys
 import os
 from subprocess import Popen, PIPE
 
-# sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
 
 # -- determine if running on readthedocs ------------------------------------
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
-# # -- Clone the modflow6 repo -------------------------------------------------
-# print("Cloning the modflow6 repo")
-# pth = os.path.join("..", "modflow6")
-# if not os.path.isdir(pth):
-#     args = (
-#         "git",
-#         "clone",
-#         "https://github.com/MODFLOW-USGS/modflow6.git",
-#         "modflow6"
-#     )
-#     # run the command
-#     proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd="../")
-#     stdout, stderr = proc.communicate()
-#     if stdout:
-#         print(stdout.decode("utf-8"))
-#     if stderr:
-#         print("Errors:\n{}".format(stderr.decode("utf-8")))
+# -- Update the modflow 6 version -------------------------------------------
+print("Update the modflow6 version")
+pth = os.path.join("..", "distribution")
+args = (
+    "python",
+    "make_release",
+)
+# run the command
+proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
+stdout, stderr = proc.communicate()
+if stdout:
+    print(stdout.decode("utf-8"))
+if stderr:
+    print("Errors:\n{}".format(stderr.decode("utf-8")))
+
+# -- import version from doc/version.py -------------------------------------
+from version import __version__
 
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")
@@ -56,6 +57,10 @@ if stderr:
 project = "MODFLOW 6 Program Documentation"
 copyright = "2020, MODFLOW Development Team"
 author = "MODFLOW Development Team"
+
+# -- Project version ---------------------------------------------------------
+version = __version__
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 
