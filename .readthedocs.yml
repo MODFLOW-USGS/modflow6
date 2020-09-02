@@ -22,5 +22,3 @@ python:
   install:
     - requirements: requirements.travis.txt
     - requirements: .doc/requirements.rtd.txt
-    - method: pip
-      path: .
