@@ -1,9 +1,8 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used update the Sy=0 value with same Sy used to
-calculate SC2 in the non-bmi simulation.
+Test the bmi which is used update to set the river stages to
+the same values as they are in the non-bmi simulation.
 """
-
 import os
 import numpy as np
 from xmipy import XmiWrapper
@@ -27,28 +26,20 @@ except:
 from framework import testing_framework
 from simulation import Simulation, bmi_return
 
-ex = ['libgwf_sto01']
+ex = ['libgwf_riv01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
-# average recharge rate
-avg_rch = 0.001
-
-# calculate recharge rates
-dx = 1 / 20
-rad = np.arange(0, 1 + dx, dx) * 2. * np.pi
-f = np.sin(rad)
-rch_rates = avg_rch + f * avg_rch
 
 # temporal discretization
-nper = rch_rates.shape[0]
+nper = 10
 tdis_rc = []
 for i in range(nper):
     tdis_rc.append((1., 1, 1))
 
 # model spatial dimensions
-nlay, nrow, ncol = 1, 1, 100
+nlay, nrow, ncol = 1, 1, 10
 
 # cell spacing
 delr = 50.
@@ -65,7 +56,7 @@ botm = 0.
 hk = 50.
 
 # boundary heads
-h1 = 20.
+h1 = 11.
 h2 = 11.
 
 # build chd stress period data
@@ -74,20 +65,19 @@ chd_spd = {0: [[(0, 0, 0), h1],
 
 strt = np.linspace(h1, h2, num=ncol)
 
-# build recharge spd
-rch_spd = {}
-for n in range(nper):
-    rch_spd[n] = rch_rates[n]
-
-# storage variables
-sy_val = 0.2
 
 # solver data
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
+# uniform river stage
+riv_stage = 15.
+riv_stage2 = 20.
+riv_bot = 12.
+riv_cond = 35.
+riv_packname = "MYRIV"
 
-def build_model(ws, name, sy):
+def build_model(ws, name, riv_spd):
     sim = flopy.mf6.MFSimulation(sim_name=name,
                                  version='mf6',
                                  exe_name='mf6',
@@ -126,14 +116,14 @@ def build_model(ws, name, sy):
     sto = flopy.mf6.ModflowGwfsto(gwf,
                                   save_flows=True,
                                   iconvert=1,
-                                  ss=0., sy=sy,
+                                  ss=0., sy=0.2,
                                   transient={0: True})
 
     # chd file
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
-    # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rch_spd)
+    # riv package
+    riv = flopy.mf6.ModflowGwfriv(gwf, stress_period_data=riv_spd, pname=riv_packname)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -150,12 +140,17 @@ def build_model(ws, name, sy):
 def get_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
-    name = ex[idx]
-    sim = build_model(ws, name, sy=sy_val)
+    name = ex[idx]   
+    
+    # create river data
+    rd = [[(0, 0, icol), riv_stage, riv_cond, riv_bot] for icol in range(1, ncol-1)]
+    rd2 = [[(0, 0, icol), riv_stage2, riv_cond, riv_bot] for icol in range(1, ncol-1)]
+    sim = build_model(ws, name, riv_spd={0 : rd, 5: rd2})
 
-    # build comparison model
+    # build comparison model with zeroed values   
     ws = os.path.join(dir, 'libmf6')
-    mc = build_model(ws, name, sy=0.)
+    rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol-1)]
+    mc = build_model(ws, name, riv_spd={0 : rd_bmi})
 
     return sim, mc
 
@@ -179,8 +174,7 @@ def bmifunc(exe, idx, model_ws=None):
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
     mf6 = XmiWrapper(exe)
-    mf6.set_int("ISTDOUTTOFILE", 0)
-
+    
     # initialize the model
     try:
         mf6.initialize(mf6_config_file)
@@ -191,27 +185,47 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get sc2 array and update flag
-    update_sc2_tag = mf6.get_var_address("IRESETSC2", name, "STO")
-    update_sc2 = mf6.get_value_ptr(update_sc2_tag)
-    sc2_tag = mf6.get_var_address("SC2", name, "STO")
-    sc2 = mf6.get_value_ptr(sc2_tag)
-
-    # reset sc2 and update flag
-    sc2 += sy_val
-    update_sc2[0] = 1
-
+    # get (multi-dim) array with river parameters
+    riv_tag = mf6.get_var_address("BOUND" , name, riv_packname)
+    spd = mf6.get_value_ptr(riv_tag)
+    
     # model time loop
     idx = 0
     while current_time < end_time:
 
-        # run the time step
-        try:
-            mf6.update()
-        except:
+        # get dt        
+        dt = mf6.get_time_step()
+        
+        # prepare... and reads the RIV data from file!
+        mf6.prepare_time_step(dt)
+        
+        # set the RIV data through the BMI
+        if current_time < 5:
+            spd[:] = [riv_stage, riv_cond, riv_bot]        
+        else:
+            spd[:] = [riv_stage2, riv_cond, riv_bot]    
+            
+        kiter = 0
+        mf6.prepare_solve(1)
+
+        while kiter < nouter:
+            has_converged = mf6.solve(1)
+            kiter += 1
+
+            if has_converged:
+                msg = "Component {}".format(1) + \
+                      " converged in {}".format(kiter) + " outer iterations"
+                print(msg)
+                break
+
+        if not has_converged:
             return bmi_return(success, model_ws)
 
-        # update time
+        # finalize time step
+        mf6.finalize_solve(1)
+
+        # finalize time step and update time
+        mf6.finalize_time_step()
         current_time = mf6.get_current_time()
 
         # increment counter
