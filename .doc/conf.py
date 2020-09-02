@@ -42,7 +42,7 @@ print("Build the mf6io markdown files")
 pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
 args = (
     "python",
-    "mf6ivar.py",
+    "mf6ivar.py"
 )
 # run the command
 proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)

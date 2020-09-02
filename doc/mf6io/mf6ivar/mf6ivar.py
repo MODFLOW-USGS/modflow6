@@ -129,10 +129,14 @@
 
 
 import os
+import sys
 from collections import OrderedDict
 import shutil
 
-VERBOSE = True
+VERBOSE = False
+for arg in sys.argv:
+    if arg in ("-v", "--verbose"):
+        VERBOSE = True
 
 
 def parse_mf6var_file(fname):
