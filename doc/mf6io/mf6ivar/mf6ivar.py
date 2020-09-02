@@ -468,7 +468,7 @@ def get_examples(component):
         fpth = os.path.join(pth, filename)
         with open(fpth, 'r') as f:
             lines = f.readlines()
-        s += "```\n"
+        s += "```adoc\n"
         for line in lines:
             line = line.rstrip()
             if len(line) > 0:
