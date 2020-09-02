@@ -578,6 +578,7 @@ module BndModule
     integer(I4B) :: n2
     integer(I4B) :: ibinun
     integer(I4B) :: naux
+    integer(I4B) :: nbound
     real(DP) :: q
     real(DP) :: qtomvr
     real(DP) :: ratin
@@ -645,20 +646,29 @@ module BndModule
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun /= 0) then
+      !
+      ! -- Count nbound as the number of entries with node > 0
+      !    SFR, for example, can have a 'none' connection, which
+      !    means it should be excluded from budget file
+      nbound = 0
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0) nbound = nbound + 1
+      end do
       naux = this%naux
       call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
-                  this%name_model, this%name_model, this%packName, naux,           &
-                  this%auxname, ibinun, this%nbound, this%iout)
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  this%auxname, ibinun, nbound, this%iout)
     endif
     !
     ! -- If no boundaries, skip flow calculations.
-    if(this%nbound > 0) then
+    if (this%nbound > 0) then
       !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
         node = this%nodelist(i)
         ! -- assign boundary name
-        if (this%inamedbound>0) then
+        if (this%inamedbound > 0) then
           bname = this%boundname(i)
         else
           bname = ''
@@ -709,22 +719,22 @@ module BndModule
             if(rrate < DZERO) then
               !
               ! -- Flow is out of aquifer; subtract rate from ratout.
-              ratout=ratout - rrate
+              ratout = ratout - rrate
             else
               !
               ! -- Flow is into aquifer; add rate to ratin.
-              ratin=ratin + rrate
+              ratin = ratin + rrate
             end if
           end if
-        end if
-        !
-        ! -- If saving cell-by-cell flows in list, write flow
-        if (ibinun /= 0) then
-          n2 = i
-          if (present(imap)) n2 = imap(i)
-          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
-                                                  naux, this%auxvar(:,i),     &
-                                                  olconv2=.FALSE.)
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            if (present(imap)) n2 = imap(i)
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                naux, this%auxvar(:,i),          &
+                                                olconv2=.FALSE.)
+          end if
         end if
         !
         ! -- Save simulated value to simvals array.
@@ -748,21 +758,21 @@ module BndModule
       text = trim(adjustl(this%text)) // '-TO-MVR'
       text = adjustr(text)
       if (ibudfl /= 0 .and. this%iprflow /= 0) then
-        title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //   &
-                ') FLOW RATES TO-MVR'
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
+                trim(this%packName) // ') FLOW RATES TO-MVR'
         call this%outputtab%set_title(title)
       end if
       !
-      ! -- If cell-by-cell flows will be saved as a list, write header.
+      ! -- If MOVER cell-by-cell flows will be saved as a list, write header.
       if(ibinun /= 0) then
         naux = this%naux
-        call this%dis%record_srcdst_list_header(text, this%name_model,       &
-                    this%name_model, this%name_model, this%packName, naux,           &
-                    this%auxname, ibinun, this%nbound, this%iout)
+        call this%dis%record_srcdst_list_header(text, this%name_model,         &
+                    this%name_model, this%name_model, this%packName, naux,     &
+                    this%auxname, ibinun, nbound, this%iout)
       end if
       !
       ! -- If no boundaries, skip flow calculations.
-      if(this%nbound > 0) then
+      if (this%nbound > 0) then
         !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nbound
@@ -805,22 +815,22 @@ module BndModule
               if(rrate < DZERO) then
                 !
                 ! -- Flow is out of aquifer; subtract rate from ratout.
-                ratout=ratout - rrate
+                ratout = ratout - rrate
               else
                 !
                 ! -- Flow is into aquifer; add rate to ratin.
-                ratin=ratin + rrate
+                ratin = ratin + rrate
               end if
             end if
-          end if
-          !
-          ! -- If saving cell-by-cell flows in list, write flow
-          if (ibinun /= 0) then
-            n2 = i
-            if (present(imap)) n2 = imap(i)
-            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
-                                                    naux, this%auxvar(:,i),     &
-                                                    olconv2=.FALSE.)
+            !
+            ! -- If saving cell-by-cell flows in list, write flow
+            if (ibinun /= 0) then
+              n2 = i
+              if (present(imap)) n2 = imap(i)
+              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,     &
+                                                  naux, this%auxvar(:,i),      &
+                                                  olconv2=.FALSE.)
+            end if
           end if
           !
           ! -- Save simulated value to simvals array.
