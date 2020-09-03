@@ -423,13 +423,11 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
 
                 t = v['type']
                 if t.startswith('keystring'):
-                    s += '        ```\n'
                     for vn in t.strip().split()[1:]:
                         blockentry = md_replace(
                             block_entry(vn, block, vardict, 10 * " ")
                         )
                         s += '{}\n'.format(blockentry)
-                    s += '        ```\n\n'
 
     return s
 
@@ -440,9 +438,9 @@ def md_replace(s):
         re.compile("\\\\cite{(.*?)\\}"): ("\\cite{{{}}}", None),
         re.compile("\\\\citep{(.*?)\\}"): ("\\citep{{{}}}", None),
         re.compile("\\\\texttt{(.*?)\\}"): ("\\texttt{{{}}}", "`{}`"),
-        re.compile("\\${(.*?)\\$"): ("${}$", "{}"),
+        re.compile("\\$(.*?)\\$"): ("${}$", '{}'),
         re.compile("\\^{(.*?)\\}"): ("^{{{}}}", "<sup>{}</sup>"),
-        re.compile("\\^(.*?)\\ "): ("^{} ", "<sup>{}</sup> "),
+        re.compile("\\^(.*?)\\ "): ("^{:.1}", "<sup>{:.1}</sup>"),
         re.compile("\\``(.*?)\\''"): ("``{}''", '"{}"'),
         re.compile("\\`(.*?)\\'"): ("`{}'", '"{}"'),
     }
@@ -490,8 +488,7 @@ def get_examples(component):
         s += "```adoc\n"
         for line in lines:
             line = line.rstrip()
-            if len(line) > 0:
-                s += "    {}\n".format(line)
+            s += "    {}\n".format(line)
         s += "```\n\n"
     return s
 
@@ -512,8 +509,7 @@ def get_obs_examples(component):
         s += "```adoc\n"
         for line in lines:
             line = line.rstrip()
-            if len(line) > 0:
-                s += "    {}\n".format(line)
+            s += "    {}\n".format(line)
         s += "```\n\n"
     return s
 
@@ -534,7 +530,12 @@ def get_obs_table(component):
             lines = f.readlines()
         for line in lines:
             line = md_replace(line.rstrip())
-            if len(line) > 0:
+            save_line = True
+            if len(line) < 1:
+                save_line = False
+            elif line.strip().startswith("%"):
+                save_line = False
+            if save_line:
                 s += "| {} |\n".format(line.replace("&", "|"))
     if len(s) > 0:
         s += "\n\n"
