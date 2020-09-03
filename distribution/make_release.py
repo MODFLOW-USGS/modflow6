@@ -4,6 +4,7 @@ from __future__ import print_function
 import subprocess
 import os
 import sys
+import shutil
 import datetime
 import json
 from collections import OrderedDict
@@ -112,7 +113,7 @@ def get_disclaimerfmt():
     return is_approved, disclaimer
 
 
-def get_branch():
+def get_branch(verbose=False):
     branch = None
 
     # determine if branch defined on command line
@@ -125,15 +126,21 @@ def get_branch():
     if branch is None:
         try:
             # determine current branch
-            b = subprocess.Popen(("git", "status"),
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT).communicate()[0]
-            if isinstance(b, bytes):
-                b = b.decode('utf-8')
-
-            for line in b.splitlines():
-                if 'On branch' in line:
-                    branch = line.replace('On branch ', '').rstrip()
+            proc = subprocess.Popen(("git", "branch"),
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    cwd=".")
+            stdout, stderr = proc.communicate()
+            if stdout:
+                for line in stdout.decode("utf-8").splitlines():
+                    if "* " in line:
+                        branch = line.replace("* ", "")
+                    if verbose:
+                        print(line)
+                if verbose:
+                    print("On Branch: {}\n".format(branch))
+            if stderr:
+                print("Errors:\n{}".format(stderr.decode("utf-8")))
 
             if branch is not None:
                 if 'master' in branch or 'release' in branch:
@@ -165,6 +172,7 @@ def get_tag(v0, v1, v2):
 
 
 def update_version():
+    branch = get_branch(verbose=True)
     try:
         fpth = os.path.join(paths[0], files[0])
 
@@ -199,6 +207,11 @@ def update_version():
         f.close()
         print('Successfully updated version.py')
 
+        # update version.py in doc directory
+        shutil.copyfile(os.path.abspath(fpth),
+                        os.path.join("..", "doc", os.path.basename(
+                            fpth.replace(".txt", ".py")))
+                        )
 
         # update latex version file
         version = get_version_str(vmajor, vminor, vmicro)
@@ -235,8 +248,9 @@ def update_version():
 
 def get_version_type(branch):
     version_type = ' '
-    if 'release' not in branch.lower() and 'master' not in branch.lower():
-        version_type = ' release candidate '
+    if branch is not None:
+        if 'release' not in branch.lower() and 'master' not in branch.lower():
+            version_type = ' release candidate '
     return version_type
 
 

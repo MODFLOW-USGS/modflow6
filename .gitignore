@@ -103,5 +103,10 @@ msvs/My Advisor Results*
 build/
 CMakeFiles/
 
+# ReadTheDocs
+.doc/_build
+.doc/_mf6io
+.doc/_mf6src
 latex/
 html/
+xml/
