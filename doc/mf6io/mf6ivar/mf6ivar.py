@@ -131,6 +131,7 @@
 import os
 import sys
 from collections import OrderedDict
+import re
 import shutil
 
 VERBOSE = False
@@ -434,19 +435,37 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
 
 
 def md_replace(s):
+    # replace specific latex commands
+    re_dict = {
+        re.compile("\\\\cite{(.*?)\\}"): ("\\cite{{{}}}", None),
+        re.compile("\\\\citep{(.*?)\\}"): ("\\citep{{{}}}", None),
+        re.compile("\\\\texttt{(.*?)\\}"): ("\\texttt{{{}}}", "`{}`"),
+        re.compile("\\${(.*?)\\$"): ("${}$", "{}"),
+        re.compile("\\^{(.*?)\\}"): ("^{{{}}}", "<sup>{}</sup>"),
+        re.compile("\\^(.*?)\\ "): ("^{} ", "<sup>{}</sup> "),
+        re.compile("\\``(.*?)\\''"): ("``{}''", '"{}"'),
+        re.compile("\\`(.*?)\\'"): ("`{}'", '"{}"'),
+    }
+    for key, (in_fmt, out_fmt) in re_dict.items():
+        for v in key.findall(s):
+            src = in_fmt.format(v)
+            if out_fmt is None:
+                dst = ""
+            else:
+                dst = out_fmt.format(v)
+            s = s.replace(src, dst)
+
+    # replace individual characters
     replace_dict = {
-        "``": '"',
-        "''": '"',
-        "`": "",
-        "'": "",
+        "\mf": 'MODFLOW 6',
+        "~": " ",
         "@": "",
         "$": "",
         "\_": "_",
+        "&": "|",
         "\le": "&#8804;",
         "\ge": "&#8805;",
-        "\\texttt{": "`",
-        "}": "`",
-        "&": "|",
+        "\\times": "x",
         "\\": "",
     }
     for key, value in replace_dict.items():
