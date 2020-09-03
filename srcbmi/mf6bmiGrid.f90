@@ -314,11 +314,15 @@ contains
   function get_grid_face_nodes(grid_id, face_nodes) result(bmi_status) bind(C, name="get_grid_face_nodes")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_nodes
     integer(kind=c_int), intent(in) :: grid_id
-    type(c_ptr), intent(out) :: face_nodes
+    integer(kind=c_int), intent(out) :: face_nodes(*)
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: javert_ptr
+    integer, dimension(:), allocatable :: nodes_per_face
+    integer :: face_count
+    integer :: face_nodes_count
+    
     
     ! make sure function is only used for unstructured grids
     bmi_status = BMI_FAILURE
@@ -326,7 +330,17 @@ contains
     
     model_name = get_model_name(grid_id)
     call mem_setptr(javert_ptr, "JAVERT", create_mem_path(model_name, 'DIS'))
-    face_nodes = c_loc(javert_ptr)
+    
+    bmi_status = get_grid_face_count(grid_id, face_count)
+    if (bmi_status == BMI_FAILURE) return
+    
+    allocate(nodes_per_face(face_count))
+    bmi_status = get_grid_nodes_per_face(grid_id, nodes_per_face)
+    if (bmi_status == BMI_FAILURE) return
+    
+    face_nodes_count = sum(nodes_per_face + 1)
+    
+    face_nodes(1:face_nodes_count) = javert_ptr(:)
     bmi_status = BMI_SUCCESS
   end function get_grid_face_nodes
   
@@ -334,7 +348,7 @@ contains
   function get_grid_nodes_per_face(grid_id, nodes_per_face) result(bmi_status) bind(C, name="get_grid_nodes_per_face")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
     integer(kind=c_int), intent(in) :: grid_id
-    real(kind=c_double), intent(out) :: nodes_per_face(*)
+    integer(kind=c_int), intent(out) :: nodes_per_face(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B) :: i
