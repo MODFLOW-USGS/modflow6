@@ -27,7 +27,8 @@ contains
     character(len=LENMEMPATH) :: var_address
     integer(I4B) :: i
     class(BaseModelType), pointer :: baseModel
-    
+
+    bmi_status = BMI_FAILURE
     var_address = char_array_to_string(c_var_address, strlen(c_var_address))    
     model_name = extract_model_name(var_address)
     
@@ -39,9 +40,7 @@ contains
         bmi_status = BMI_SUCCESS
         return
       end if
-    end do
-    
-    bmi_status = BMI_FAILURE
+    end do  
   end function get_var_grid
   
   ! Get the grid type as a string.
@@ -54,46 +53,23 @@ contains
     character(len=LENGRIDTYPE) :: grid_type_f
     character(len=LENMODELNAME) :: model_name
     
+    bmi_status = BMI_FAILURE
     model_name = get_model_name(grid_id)
-    if (model_name == '') then      
-      bmi_status = BMI_FAILURE
-      return
-    end if
-
-    bmi_status = BMI_SUCCESS
-    call get_grid_type_model(model_name, grid_type_f) 
-    grid_type(1:len(trim(grid_type_f))+1) = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
+    if (model_name == '') return
     
-  end function get_grid_type
-  
-  ! internal helper function to return the grid type for a 
-  ! named model as a fortran string following BMI convention
-  subroutine get_grid_type_model(model_name, grid_type_f)
-    use ListsModule, only: basemodellist
-    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
-    character(len=LENMODELNAME) :: model_name
-    character(len=LENGRIDTYPE) :: grid_type_f
-    ! local
-    integer(I4B) :: i    
-    class(NumericalModelType), pointer :: numericalModel
+    call get_grid_type_model(model_name, grid_type_f)
 
-    grid_type_f = "unknown"
-    do i = 1,basemodellist%Count()
-      numericalModel => GetNumericalModelFromList(basemodellist, i)
-      if (numericalModel%name == model_name) then
-        call numericalModel%dis%get_dis_type(grid_type_f)
-      end if
-    end do
-    
     if (grid_type_f == "DIS") then
       grid_type_f = "rectilinear"
     else if ((grid_type_f == "DISV") .or. (grid_type_f == "DISU")) then
       grid_type_f = "unstructured"
-    end if
-    
-  end subroutine get_grid_type_model
+    else
+      return
+    end if 
+    grid_type = string_to_char_array(trim(grid_type_f), len_trim(grid_type_f))
+    bmi_status = BMI_SUCCESS    
+  end function get_grid_type
   
-  ! TODO_JH: Currently only works for rectilinear grids
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
@@ -103,11 +79,10 @@ contains
     ! local
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer, contiguous :: grid_shape
-    character(kind=c_char) :: grid_type(BMI_LENGRIDTYPE)
     
     bmi_status = BMI_FAILURE
-    ! make sure function is only used for implemented grid_types
-    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
+    ! TODO: It is currently only implemented for DIS grids
+    if (.not. confirm_grid_type(grid_id, "DISU")) return
     
     ! get shape array
     model_name = get_model_name(grid_id)
@@ -117,8 +92,7 @@ contains
       grid_rank = 2
     else    
       grid_rank = 3
-    end if
-    
+    end if    
     bmi_status = BMI_SUCCESS
   end function get_grid_rank
   
@@ -136,21 +110,20 @@ contains
     integer(I4B) :: status
     
     bmi_status = BMI_FAILURE
-    ! make sure function is only used for implemented grid_types
+
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
-        
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))        
     model_name = get_model_name(grid_id)
     
     if (grid_type_f == "rectilinear") then
       call mem_setptr(grid_shape, "MSHAPE", create_mem_path(model_name, 'DIS'))
       grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
       bmi_status = BMI_SUCCESS
+      return
     else if (grid_type_f == "unstructured") then
       status = get_grid_node_count(grid_id, grid_size)
       bmi_status = BMI_SUCCESS
-    else
-      bmi_status = BMI_FAILURE
+      return
     end if
   end function get_grid_size
   
@@ -178,7 +151,6 @@ contains
     else
       grid_shape(1:3) = grid_shape_ptr       ! 3D
     end if
-
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
@@ -238,7 +210,6 @@ contains
     integer(I4B) :: y_size
     
     bmi_status = BMI_FAILURE
-    ! make sure function is only used for implemented grid_types
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
     grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
     
@@ -272,9 +243,9 @@ contains
     character(len=LENMODELNAME) :: model_name
     integer(I4B), pointer :: nvert_ptr
     
-    ! make sure function is only used for unstructured grids
+    ! make sure function is only used for DISU grids
     bmi_status = BMI_FAILURE
-    if (.not. confirm_grid_type(grid_id, "unstructured")) return   
+    if (.not. confirm_grid_type(grid_id, "DISU")) return   
     
     model_name = get_model_name(grid_id)
     call mem_setptr(nvert_ptr, "NVERT", create_mem_path(model_name, 'DIS'))
@@ -282,7 +253,7 @@ contains
     bmi_status = BMI_SUCCESS  
   end function get_grid_node_count
   
-  ! TODO_JH: This is a simplified implementation which ignores vertical face
+  ! TODO_JH: This currently only works for 2D DISU models
   ! Get the number of faces in an unstructured grid.
   function get_grid_face_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_face_count")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_count
@@ -296,9 +267,9 @@ contains
     integer(I4B) :: i
     class(NumericalModelType), pointer :: numericalModel
     
-    ! make sure function is only used for unstructured grids
+    ! make sure function is only used for DISU grids
     bmi_status = BMI_FAILURE
-    if (.not. confirm_grid_type(grid_id, "unstructured")) return
+    if (.not. confirm_grid_type(grid_id, "DISU")) return
     
     model_name = get_model_name(grid_id)    
     do i = 1,basemodellist%Count()
@@ -324,9 +295,9 @@ contains
     integer :: face_nodes_count
     
     
-    ! make sure function is only used for unstructured grids
+    ! make sure function is only used for DISU grids
     bmi_status = BMI_FAILURE
-    if (.not. confirm_grid_type(grid_id, "unstructured")) return
+    if (.not. confirm_grid_type(grid_id, "DISU")) return
     
     model_name = get_model_name(grid_id)
     call mem_setptr(javert_ptr, "JAVERT", create_mem_path(model_name, 'DIS'))
@@ -355,9 +326,9 @@ contains
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: iavert_ptr
     
-    ! make sure function is only used for unstructured grids
+    ! make sure function is only used for DISU grids
     bmi_status = BMI_FAILURE
-    if (.not. confirm_grid_type(grid_id, "unstructured")) return
+    if (.not. confirm_grid_type(grid_id, "DISU")) return
     
     model_name = get_model_name(grid_id)
     call mem_setptr(iavert_ptr, "IAVERT", create_mem_path(model_name, 'DIS'))
@@ -366,29 +337,5 @@ contains
       nodes_per_face(i) = iavert_ptr(i+1) - iavert_ptr(i) - 1
     end do
     bmi_status = BMI_SUCCESS
-  end function get_grid_nodes_per_face
-  
-  
-  ! Helper function to check the grid, not all bmi routines are implemented
-  ! for all types of discretizations
-  function confirm_grid_type(grid_id, expected_type) result(is_match)
-    integer(kind=c_int), intent(in) :: grid_id
-    character(kind=c_char), intent(in) :: expected_type(BMI_LENGRIDTYPE) ! this is a C-style string
-    logical :: is_match
-    ! local
-    character(len=LENMODELNAME) :: model_name
-    character(len=LENGRIDTYPE) :: expected_type_f ! this is a fortran style string
-    character(len=LENGRIDTYPE) :: grid_type_f
-    
-    is_match = .false.
-     
-    model_name = get_model_name(grid_id)
-    call get_grid_type_model(model_name, grid_type_f) 
-    
-    ! careful comparison:
-    expected_type_f = char_array_to_string(expected_type, strlen(expected_type))
-    if (expected_type_f == grid_type_f) is_match = .true.
-    
-  end function confirm_grid_type
-  
+  end function get_grid_nodes_per_face  
 end module mf6bmiGrid
