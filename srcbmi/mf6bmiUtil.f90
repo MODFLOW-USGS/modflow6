@@ -156,7 +156,42 @@ contains
     sgp => GetSolutionGroupFromList(solutiongrouplist, 1)
     solutionIdx = sgp%idsolutions(subcomponent_idx)
     solution => GetNumericalSolutionFromList(basesolutionlist, solutionIdx)    
-    
   end function getSolution
 
+  !> @brief Get the grid type for a named model as a fortran string
+  !<
+  subroutine get_grid_type_model(model_name, grid_type_f)
+    use ListsModule, only: basemodellist
+    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+    character(len=LENMODELNAME) :: model_name
+    character(len=LENGRIDTYPE) :: grid_type_f
+    ! local
+    integer(I4B) :: i    
+    class(NumericalModelType), pointer :: numericalModel
+
+    do i = 1,basemodellist%Count()
+      numericalModel => GetNumericalModelFromList(basemodellist, i)
+      if (numericalModel%name == model_name) then
+        call numericalModel%dis%get_dis_type(grid_type_f)
+      end if
+    end do
+  end subroutine get_grid_type_model
+
+  !> @brief Confirm that grid is of an expected type
+  !< 
+  function confirm_grid_type(grid_id, expected_type) result(is_match)
+    integer(kind=c_int), intent(in) :: grid_id
+    character(len=*), intent(in) :: expected_type
+    logical :: is_match
+    ! local
+    character(len=LENMODELNAME) :: model_name
+    character(len=LENGRIDTYPE) :: grid_type
+    
+    is_match = .false.
+     
+    model_name = get_model_name(grid_id)
+    call get_grid_type_model(model_name, grid_type) 
+    ! careful comparison:
+    if (expected_type == grid_type) is_match = .true.    
+  end function confirm_grid_type  
 end module mf6bmiUtil
