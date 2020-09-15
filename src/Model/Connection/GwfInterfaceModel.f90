@@ -211,19 +211,19 @@ contains
             
     ! allocate when active
     if (npf%ik22 > 0) then
-      call mem_allocate(npf%k22, nrOfCells, 'K22', trim(npf%origin))  
+      call mem_allocate(npf%k22, nrOfCells, 'K22', npf%memoryPath)
     end if
     if (npf%ik33 > 0) then
-      call mem_allocate(npf%k33, nrOfCells, 'K33', trim(npf%origin))  
+      call mem_allocate(npf%k33, nrOfCells, 'K33', npf%memoryPath)
     end if
     if (npf%iangle1 > 0) then
-      call mem_allocate(npf%angle1, nrOfCells, 'ANGLE1', trim(npf%origin))  
+      call mem_allocate(npf%angle1, nrOfCells, 'ANGLE1', npf%memoryPath)
     end if
     if (npf%iangle2 > 0) then
-      call mem_allocate(npf%angle2, nrOfCells, 'ANGLE2', trim(npf%origin))  
+      call mem_allocate(npf%angle2, nrOfCells, 'ANGLE2', npf%memoryPath)
     end if
     if (npf%iangle3 > 0) then
-      call mem_allocate(npf%angle3, nrOfCells, 'ANGLE3', trim(npf%origin))  
+      call mem_allocate(npf%angle3, nrOfCells, 'ANGLE3', npf%memoryPath)
     end if
     
     ! and copy the remaining arrays

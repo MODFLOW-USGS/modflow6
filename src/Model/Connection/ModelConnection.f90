@@ -1,7 +1,7 @@
 ! TODO: module description
 module ModelConnectionModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: LENPACKAGENAME, LENORIGIN
+  use ConstantsModule, only: LENPACKAGENAME, LENMEMPATH
   use SparseModule, only:sparsematrix
   use ListModule
   use NumericalModelModule, only: NumericalModelType
@@ -21,7 +21,7 @@ module ModelConnectionModule
     class(NumericalModelType), pointer  :: owner => null()  ! the model whose connection this is  
     character(len=7)                    :: connectionType
     character(len=LENPACKAGENAME)       :: name
-    character(len=LENORIGIN)            :: memoryOrigin
+    character(len=LENMEMPATH)            :: memoryOrigin
     
     integer(I4B)                        :: iNewton          ! == 1 for newton-raphson, 0 otherwise
   

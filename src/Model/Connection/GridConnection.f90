@@ -1,7 +1,7 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP
   use SimModule, only: ustop
-  use ConstantsModule, only: LENORIGIN
+  use ConstantsModule, only: LENMEMPATH
   use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
   use NumericalExchangeModule
@@ -51,7 +51,7 @@ module GridConnectionModule
   !
   ! --
   type, public :: GridConnectionType
-    character(len=LENORIGIN) :: memOrigin
+    character(len=LENMEMPATH) :: memOrigin
     class(NumericalModelType), pointer :: model => null()
     
     integer(I4B), pointer :: linkCapacity => null()
