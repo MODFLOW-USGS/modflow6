@@ -11,8 +11,8 @@ module Xt3dModule
   
   type Xt3dType  
     character(len=LENMEMPATH)                       :: memoryPath                !< location in memory manager for storing package variables    
-    integer(I4B), pointer                           :: inunit      => null()
-    integer(I4B), pointer                           :: iout        => null()
+    integer(I4B), pointer                           :: inunit      => null()     !< unit number from where xt3d was read
+    integer(I4B), pointer                           :: iout        => null()     !< unit number for output
     integer(I4B), dimension(:), pointer, contiguous :: ibound      => null()     !< pointer to model ibound
     integer(I4B),dimension(:), pointer, contiguous  :: iax         => null()     !< ia array for extended neighbors used by xt3d
     integer(I4B),dimension(:), pointer, contiguous  :: jax         => null()     !< ja array for extended neighbors used by xt3d
@@ -22,9 +22,6 @@ module Xt3dModule
     logical, pointer                                :: nozee       => null()     !< nozee flag
     real(DP), pointer                               :: vcthresh    => null()     !< attenuation function threshold
     real(DP), dimension(:,:), pointer, contiguous   :: rmatck      => null()     !< rotation matrix for the conductivity tensor
-    real(DP), dimension(:,:), pointer, contiguous   :: vecc        => null()     !< connection vectors
-    real(DP), dimension(:,:), pointer, contiguous   :: vecn        => null()     !< interface normals
-    real(DP), dimension(:), pointer, contiguous     :: conlen      => null()     !< direct connection lengths
     real(DP), dimension(:), pointer, contiguous     :: qsat        => null()     !< saturated flow saved for Newton
     real(DP), dimension(:), pointer, contiguous     :: qrhs        => null()     !< rhs part of flow saved for Newton
     integer(I4B), pointer                           :: nbrmax      => null()     !< maximum number of neighbors for any cell
@@ -174,7 +171,7 @@ module Xt3dModule
     return
   end subroutine xt3d_ac
   
-  subroutine xt3d_mc(this, moffset, iasln, jasln, inewton)
+  subroutine xt3d_mc(this, moffset, iasln, jasln)
 ! ******************************************************************************
 ! xt3d_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -189,7 +186,7 @@ module Xt3dModule
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
-    integer(I4B) :: i, j, jj, iglo, jglo, jjg, niax, njax, ipos, inewton
+    integer(I4B) :: i, j, jj, iglo, jglo, jjg, niax, njax, ipos
     integer(I4B) :: igfirstnod, iglastnod
     logical :: isextnbr
 ! ------------------------------------------------------------------------------
@@ -354,8 +351,8 @@ module Xt3dModule
     ! -- allocate arrays
     call this%allocate_arrays()
     !
-    ! -- If not Newton and not rhs, calculate amatpc and amatpcx for permanently
-    ! -- confined connections
+    ! -- If not Newton and not rhs, precalculate amatpc and amatpcx for 
+    ! -- permanently confined connections
     if(this%lamatsaved .and. .not. this%ldispersion) &
       call this%xt3d_fcpc(this%dis%nodes)
     !
@@ -1011,9 +1008,6 @@ module Xt3dModule
       call mem_deallocate(this%jax)
       call mem_deallocate(this%idxglox)
       call mem_deallocate(this%rmatck)
-      call mem_deallocate(this%vecc)
-      call mem_deallocate(this%conlen)
-      call mem_deallocate(this%vecn)
       call mem_deallocate(this%qsat)
       call mem_deallocate(this%qrhs)
       call mem_deallocate(this%amatpc)
@@ -1088,10 +1082,10 @@ module Xt3dModule
     class(Xt3dType) :: this
     ! -- local
     integer(I4B) :: njax
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%rmatck, 3, 3, 'RMATCK', this%memoryPath)
-    !
+    ! -- Allocate Newton-dependent arrays
     if (this%inewton /= 0) then
       call mem_allocate(this%qsat, this%dis%nja, 'QSAT', this%memoryPath)
       if (this%ixt3d == 1) then
@@ -1099,28 +1093,32 @@ module Xt3dModule
       else
         call mem_allocate(this%qrhs, this%dis%nja, 'QRHS', this%memoryPath)
       end if
-      call mem_allocate(this%amatpc, 0, 'AMATPC', this%memoryPath)
-      call mem_allocate(this%amatpcx, 0, 'AMATPCX', this%memoryPath)
-      call mem_allocate(this%iallpc, 0, 'IALLPC', this%memoryPath)
     else
       call mem_allocate(this%qsat, 0, 'QSAT', this%memoryPath)
       call mem_allocate(this%qrhs, 0, 'QRHS', this%memoryPath)
     end if
     !
+    ! -- If dispersion, set iallpc to 1 otherwise call xt3d_iallpc to go through
+    !    each connection and mark cells that are permanenntly confined and can
+    !    have their coefficients precalculated
     if (this%ldispersion) then
       !
-      ! -- xt3d is being used for dispersion
+      ! -- xt3d is being used for dispersion; all matrix terms are precalculated
+      !    and used repeatedly until flows change
       this%lamatsaved = .true.
       call mem_allocate(this%iallpc, this%dis%nodes, 'IALLPC', this%memoryPath)
-      this%iallpc = 1
+      do n = 1, this%dis%nodes
+        this%iallpc(n) = 1
+      end do
     else
       !
       ! -- xt3d is being used for flow so find where connections are
-      !    permanently confined
+      !    permanently confined and precalculate matrix terms case where
+      !    conductances do not depend on head
       call this%xt3d_iallpc()
     endif
-    
     !
+    ! -- Allocate space for precalculated matrix terms
     if (this%lamatsaved) then
       call mem_allocate(this%amatpc, this%dis%nja, 'AMATPC', this%memoryPath)
       njax = this%numextnbrs ! + 1
@@ -1129,21 +1127,19 @@ module Xt3dModule
       call mem_allocate(this%amatpc, 0, 'AMATPC', this%memoryPath)
       call mem_allocate(this%amatpcx, 0, 'AMATPCX', this%memoryPath)
     end if
-    call mem_allocate(this%vecc, 0, 3, 'VECC', this%memoryPath)
-    call mem_allocate(this%conlen, 0, 'CONLEN', this%memoryPath)
-    call mem_allocate(this%vecn, 0, 3, 'VECN', this%memoryPath)
     !
-    this%rmatck = 0.d0
+    ! -- Allocate work arrays
+    call mem_allocate(this%rmatck, 3, 3, 'RMATCK', this%memoryPath)
+    !
+    ! -- Initialize arrays to zero
+    this%rmatck = DZERO
     if (this%inewton /= 0) then
-      this%qsat = 0.d0
-      if (this%ixt3d == 2) this%qrhs = 0.d0
+      this%qsat = DZERO
+      if (this%ixt3d == 2) this%qrhs = DZERO
     else if (this%lamatsaved) then
-      this%amatpc = 0.d0
-      this%amatpcx = 0.d0
+      this%amatpc = DZERO
+      this%amatpcx = DZERO
     end if
-    this%vecc = 0.d0
-    this%conlen = 0.d0
-    this%vecn = 0.d0
     !
     ! -- Return
     return
@@ -1170,8 +1166,15 @@ module Xt3dModule
       this%lamatsaved = .false.
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%memoryPath)
     else
+      !
+      ! -- allocate memory for iallpc and initialize to 1
       call mem_allocate(this%iallpc, this%dis%nodes, 'IALLPC', this%memoryPath)
-      this%iallpc = 1
+      do n = 1, this%dis%nodes
+        this%iallpc(n) = 1
+      end do
+      !
+      ! -- Go through cells and connections and set iallpc to 0 if any
+      !    connected cell is not confined
       do n = 1, this%dis%nodes
         if (this%icelltype(n) /= 0) then
           this%iallpc(n) = 0
@@ -1199,6 +1202,10 @@ module Xt3dModule
           enddo
         enddo
       enddo
+      !
+      ! -- If any cells have all permanently confined connections then
+      !    performance can be improved by precalculating coefficients
+      !    so set lamatsaved to true.
       this%lamatsaved = .false.
       do n = 1, this%dis%nodes
         if (this%iallpc(n) == 1) then
@@ -1376,7 +1383,6 @@ module Xt3dModule
 ! ------------------------------------------------------------------------------
     ! -- module
     use ConstantsModule, only: DZERO, DONE
-    use SmoothingModule, only: sQuadraticSaturation                     ! kluge debug
     ! -- dummy
     class(Xt3dType) :: this
     logical :: lsat
@@ -1386,17 +1392,21 @@ module Xt3dModule
     ! -- local
     real(DP) :: topn, botn, topm, botm, thksatn, thksatm
     real(DP) :: sill_top, sill_bot, tpn, tpm
-    real(DP) :: hn, hm                                          ! kluge debug
     real(DP) :: satups
 ! ------------------------------------------------------------------------------
     !
     ! -- Compute area depending on connection type
-    if (this%dis%con%ihc(jjs01).eq.0) then
+    if (this%dis%con%ihc(jjs01) == 0) then
+      !
       ! -- vertical connection
       ar01 = this%dis%con%hwva(jjs01)
       ar10 = ar01
     else if (this%inewton /= 0) then
+      !
+      ! -- If Newton horizontal connection
       if (lsat) then
+        !
+        ! -- lsat true means use full saturation
         topn = this%dis%top(n)
         botn = this%dis%bot(n)
         topm = this%dis%top(m)
@@ -1419,43 +1429,31 @@ module Xt3dModule
         ! -- ar01 and ar10. The actual areas are obtained simply by scaling by
         ! -- the upstream saturation.
         if (hnew(m) < hnew(n)) then
-          if (this%icelltype(n) == 0) then
-            satups = DONE
-          else
-            topn = this%dis%top(n)
-            botn = this%dis%bot(n)
-            hn = hnew(n)                                           ! kluge
-            satups = sQuadraticSaturation(topn, botn, hn)
-          end if
+          satups = this%sat(n)
         else
-          if (this%icelltype(m) == 0) then
-            satups = DONE
-          else
-            topm = this%dis%top(m)
-            botm = this%dis%bot(m)
-            hm = hnew(m)                                           ! kluge
-            satups = sQuadraticSaturation(topm, botm, hm)
-          end if
+          satups = this%sat(m)
         end if
         ar01 = ar01*satups
       end if
       ar10 = ar01
     else
+      !
+      ! -- Non-Newton horizontal connection
       topn = this%dis%top(n)
       botn = this%dis%bot(n)
       topm = this%dis%top(m)
       botm = this%dis%bot(m)
-      if (lsat.or.(this%icelltype(n) == 0)) then
+      if (lsat .or. (this%icelltype(n) == 0)) then
         thksatn = topn - botn
       else
         thksatn = this%sat(n)*(topn - botn)
       end if
-      if (lsat.or.(this%icelltype(m) == 0)) then
+      if (lsat .or. (this%icelltype(m) == 0)) then
         thksatm = topm - botm
       else
-        thksatm = this%sat(m)*(topm - botm)
+        thksatm = this%sat(m) * (topm - botm)
       end if
-      if (this%dis%con%ihc(jjs01).eq.2) then
+      if (this%dis%con%ihc(jjs01) == 2) then
         ! -- vertically staggered
         sill_top = min(topn, topm)
         sill_bot = max(botn, botm)
@@ -1464,8 +1462,8 @@ module Xt3dModule
         thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
         thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
       end if
-      ar01 = this%dis%con%hwva(jjs01)*thksatn
-      ar10 = this%dis%con%hwva(jjs01)*thksatm
+      ar01 = this%dis%con%hwva(jjs01) * thksatn
+      ar10 = this%dis%con%hwva(jjs01) * thksatm
     endif
     !
     return

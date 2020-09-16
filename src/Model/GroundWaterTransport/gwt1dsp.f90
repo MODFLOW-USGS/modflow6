@@ -153,7 +153,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse)
+    if (this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse)
     !
     ! -- Return
     return
@@ -174,12 +174,10 @@ module GwtDspModule
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
-    integer(I4B) :: inewton
 ! ------------------------------------------------------------------------------
     !
-    ! TODO: set inewton
-    inewton = 0
-    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln, inewton)
+    ! -- Call xt3d map connections
+    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
     !
     ! -- Return
     return
@@ -883,7 +881,7 @@ module GwtDspModule
     integer(I4B) :: nodes, n, m, idiag, ipos
     real(DP) :: clnm, clmn, dn, dm
     real(DP) :: vg1, vg2, vg3
-    integer(I4B) :: ihc, ictn, ictm, isympos
+    integer(I4B) :: ihc, isympos
     real(DP) :: satn, satm, topn, topm, botn, botm
     real(DP) :: hwva, cond, cn, cm, denom
     real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
@@ -915,12 +913,6 @@ module GwtDspModule
         botm = this%dis%bot(m)
         !
         ! -- flow model information
-        ictn = 0
-        ictm = 0
-        satn = DONE
-        satm = DONE
-        ictn = this%fmi%gwficelltype(n)
-        ictm = this%fmi%gwficelltype(m)
         satn = this%fmi%gwfsat(n)
         satm = this%fmi%gwfsat(m)
         !
@@ -943,22 +935,18 @@ module GwtDspModule
           anm = hwva
           !
           ! -- n is convertible and unsaturated
-          if (ictn /= 0) then
-            if (satn == DZERO) then
-              anm = DZERO
-            else if (n > m .and. satn < DONE) then
-              anm = DZERO
-            endif
-          end if
+          if (satn == DZERO) then
+            anm = DZERO
+          else if (n > m .and. satn < DONE) then
+            anm = DZERO
+          endif
           !
           ! -- m is convertible and unsaturated
-          if (ictm /= 0) then
-            if (satm == DZERO) then
-              anm = DZERO
-            else if (m > n .and. satm < DONE) then
-              anm = DZERO
-            endif
-          end if
+          if (satm == DZERO) then
+            anm = DZERO
+          else if (m > n .and. satm < DONE) then
+            anm = DZERO
+          endif
           !
           ! -- amn is the same as anm for vertical flow
           amn = anm
@@ -966,10 +954,8 @@ module GwtDspModule
         else
           !
           ! -- horizontal conductance
-          thksatn = topn - botn
-          if (ictn /= 0) thksatn = thksatn * satn
-          thksatm = topm - botm
-          if (ictm /= 0) thksatm = thksatm * satm
+          thksatn = (topn - botn) * satn
+          thksatm = (topm - botm) * satm
           !
           ! -- handle vertically staggered case
           if (ihc == 2) then
@@ -985,21 +971,11 @@ module GwtDspModule
           anm = thksatn * hwva
           amn = thksatm * hwva
           !
-          ! -- n is convertible and unsaturated
-          if (ictn /= 0) then
-            if (satn == DZERO) then
-              anm = DZERO
-              amn = DZERO
-            endif
-          end if
-          !
-          ! -- m is convertible and unsaturated
-          if (ictm /= 0) then
-            if (satm == DZERO) then
-              anm = DZERO
-              amn = DZERO
-            endif
-          end if
+          ! -- n or m is unsaturated, so no dispersion
+          if (satn == DZERO .or. satm == DZERO) then
+            anm = DZERO
+            amn = DZERO
+          endif
           !
         end if
         !

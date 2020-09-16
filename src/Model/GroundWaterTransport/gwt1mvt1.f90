@@ -215,7 +215,7 @@ module GwtMvtModule
       end do
     end do
     !
-    ! -- Add mover terms?
+    ! -- Add mover QC terms to the receiver packages
     nbudterm = this%fmi%mvrbudobj%nbudterm
     do i = 1, nbudterm
       nlist = this%fmi%mvrbudobj%budterm(i)%nlist
@@ -229,15 +229,21 @@ module GwtMvtModule
           id1 = this%fmi%mvrbudobj%budterm(i)%id1(n)
           id2 = this%fmi%mvrbudobj%budterm(i)%id2(n)
           !
-          ! -- mover flow rate
+          ! -- Obtain mover flow rate from the mover flow budget object
           q = this%fmi%mvrbudobj%budterm(i)%flow(n)
           !
-          ! -- concentration of the provider
+          ! -- Assign concentration of the provider
           cp = DZERO
           if (this%fmi%iatp(ipr) /= 0) then
+            !
+            ! -- Provider package is being represented by an APT (SFT, LKT, MWT, UZT)
+            !    so set the concentration to the simulated concentation of APT
             cp = concpak(id1)
           else
-            ! -- Must be a regular stress package
+            !
+            ! -- Provider is a regular stress package (WEL, DRN, RIV, etc.) or the
+            !    provider is an advanced stress package but is not represented with
+            !    SFT, LKT, MWT, or UZT, so use the GWT cell concentration 
             igwtnode = this%fmi%gwfpackages(ipr)%nodelist(id1)
             cp = cnew(igwtnode)
           end if

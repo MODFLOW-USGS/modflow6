@@ -244,8 +244,7 @@ module GwfNpfModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln,   &
-                                              jasln, this%inewton)
+    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
     !
     ! -- Return
     return
