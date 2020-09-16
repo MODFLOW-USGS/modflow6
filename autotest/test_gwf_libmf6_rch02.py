@@ -203,7 +203,12 @@ def bmifunc(exe, idx, model_ws=None):
     hobs = np.genfromtxt(fpth, delimiter=',', names=True)['H1_6_6']
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
-    mf6 = XmiWrapper(exe)
+    try:
+        mf6 = XmiWrapper(exe)
+    except Exception as e:
+        print("Failed to load " + exe)
+        print("with message: " + str(e))
+        return bmi_return(success, model_ws)
 
     # initialize the model
     try:
