@@ -87,8 +87,8 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    !< edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    !< edge properties (Q, area, nx, ny, distance) 
     !
-    class(*), pointer                           :: func_caller => null()
-    procedure(set_data_iface), nopass, pointer  :: set_data_func => null()    
+    class(*), pointer                               :: func_caller => null()
+    procedure(set_data_iface), pointer, nopass      :: set_data_func => null()
     !
     integer(I4B), pointer                           :: intvk        => null()    ! TVK (time-varying K) unit number (0 if unused)
     type(TvkType), pointer                          :: tvk          => null()    ! TVK object
