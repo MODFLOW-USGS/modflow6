@@ -215,7 +215,6 @@ module GwfGwtExchangeModule
     gwtmodel%fmi%gwfhead   => gwfmodel%x
     gwtmodel%fmi%gwfsat    => gwfmodel%npf%sat
     gwtmodel%fmi%gwfspdis  => gwfmodel%npf%spdis
-    gwtmodel%fmi%gwficelltype => gwfmodel%npf%icelltype
     gwtmodel%fmi%igwfinwtup => gwfmodel%npf%inewton
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are

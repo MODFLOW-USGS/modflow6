@@ -265,7 +265,7 @@ module Xt3dModule
   end subroutine xt3d_mc
   
   subroutine xt3d_ar(this, ibound, k11, ik33, k33, sat, ik22, k22,             &
-    inewton, icelltype, iangle1, iangle2, iangle3, angle1, angle2, angle3)
+    inewton, iangle1, iangle2, iangle3, angle1, angle2, angle3, icelltype)
 ! ******************************************************************************
 ! xt3d_ar -- Allocate and Read
 ! ******************************************************************************
@@ -284,13 +284,14 @@ module Xt3dModule
     integer(I4B), intent(in), pointer :: ik22
     real(DP), dimension(:), intent(in), pointer, contiguous :: k22
     integer(I4B), intent(in), pointer :: inewton
-    integer(I4B), dimension(:), intent(in), pointer, contiguous :: icelltype
     integer(I4B), intent(in), pointer :: iangle1
     integer(I4B), intent(in), pointer :: iangle2
     integer(I4B), intent(in), pointer :: iangle3
     real(DP), dimension(:), intent(in), pointer, contiguous :: angle1
     real(DP), dimension(:), intent(in), pointer, contiguous :: angle2
     real(DP), dimension(:), intent(in), pointer, contiguous :: angle3
+    integer(I4B), dimension(:), intent(in), pointer, &
+      contiguous, optional :: icelltype
     ! -- local
     integer(I4B) :: n, nnbrs
     ! -- formats
@@ -311,13 +312,18 @@ module Xt3dModule
     this%ik22 => ik22
     this%k22 => k22
     this%inewton => inewton
-    this%icelltype => icelltype
     this%iangle1 => iangle1
     this%iangle2 => iangle2
     this%iangle3 => iangle3
     this%angle1 => angle1
     this%angle2 => angle2
     this%angle3 => angle3
+    if (present(icelltype)) then
+      ! -- icelltype is not needed for transport, so it's optional
+      !    It is only needed to determine if cell connections are permanently 
+      !    confined, which means that some matrix terms can be precalculated
+      this%icelltype => icelltype
+    end if
     !
     ! -- If angle1 and angle2 were not specified, then there is no z
     !    component in the xt3d formulation for horizontal connections.
@@ -354,7 +360,7 @@ module Xt3dModule
     ! -- If not Newton and not rhs, precalculate amatpc and amatpcx for 
     ! -- permanently confined connections
     if(this%lamatsaved .and. .not. this%ldispersion) &
-      call this%xt3d_fcpc(this%dis%nodes)
+      call this%xt3d_fcpc(this%dis%nodes, .true.)
     !
     ! -- Return
     return
@@ -499,7 +505,7 @@ module Xt3dModule
     return
   end subroutine xt3d_fc
 
-  subroutine xt3d_fcpc(this, nodes)
+  subroutine xt3d_fcpc(this, nodes, lsat)
 ! ******************************************************************************
 ! xt3d_fcpc -- Formulate for permanently confined connections and save in
 !              amatpc and amatpcx
@@ -507,11 +513,12 @@ module Xt3dModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: DONE
+    ! -- modules
     use Xt3dAlgorithmModule, only: qconds
     ! -- dummy
     class(Xt3dType) :: this
-    integer(I4B) :: nodes
+    integer(I4B), intent(in) :: nodes
+    logical, intent(in) :: lsat  !< if true, then calculations made with saturated areas (should be false for dispersion)
     ! -- local
     integer(I4B) :: n, m, ipos
     !
@@ -540,6 +547,7 @@ module Xt3dModule
     do n = 1, nodes
       ! -- Skip if not iallpc.
       if (this%iallpc(n) == 0) cycle
+      if (this%ibound(n) == 0) cycle
       nnbr0 = this%dis%con%ia(n+1) - this%dis%con%ia(n) - 1
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n,     &
@@ -561,7 +569,7 @@ module Xt3dModule
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10,          &
           ii00, ii11, ii10)
         ! -- Compute confined areas.
-        call this%xt3d_areas(nodes, n, m, jjs01, .true., ar01, ar10)
+        call this%xt3d_areas(nodes, n, m, jjs01, lsat, ar01, ar10)
         ! -- Compute "conductances" for interface between
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
@@ -1382,13 +1390,12 @@ module Xt3dModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- module
-    use ConstantsModule, only: DZERO, DONE
     ! -- dummy
     class(Xt3dType) :: this
     logical :: lsat
     integer(I4B) :: nodes, n, m, jjs01
     real(DP) :: ar01, ar10
-    real(DP),intent(inout),dimension(:), optional :: hnew
+    real(DP), intent(inout), dimension(:), optional :: hnew
     ! -- local
     real(DP) :: topn, botn, topm, botm, thksatn, thksatm
     real(DP) :: sill_top, sill_bot, tpn, tpm
@@ -1422,7 +1429,7 @@ module Xt3dModule
           thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
           thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
         end if
-        ar01 = this%dis%con%hwva(jjs01)*DHALF*(thksatn + thksatm)
+        ar01 = this%dis%con%hwva(jjs01) * DHALF * (thksatn + thksatm)
       else
         ! -- If Newton and lsat=.false., it is assumed that the fully saturated
         ! -- areas have already been calculated and are being passed in through
@@ -1443,15 +1450,11 @@ module Xt3dModule
       botn = this%dis%bot(n)
       topm = this%dis%top(m)
       botm = this%dis%bot(m)
-      if (lsat .or. (this%icelltype(n) == 0)) then
-        thksatn = topn - botn
-      else
-        thksatn = this%sat(n)*(topn - botn)
-      end if
-      if (lsat .or. (this%icelltype(m) == 0)) then
-        thksatm = topm - botm
-      else
-        thksatm = this%sat(m) * (topm - botm)
+      thksatn = topn - botn
+      thksatm = topm - botm
+      if (.not. lsat) then
+        thksatn = this%sat(n) * thksatn
+        thksatm = this%sat(m) * thksatm
       end if
       if (this%dis%con%ihc(jjs01) == 2) then
         ! -- vertically staggered

@@ -237,10 +237,9 @@ module GwtDspModule
     ! TODO: might consider adding a new mf6 level set pointers method, and
     ! doing this stuff there instead of in the time step loop.
     if (kstp * kper == 1) then
-      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%ibound,                   &
+      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0,           &
         this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
-        this%fmi%igwfinwtup, this%fmi%gwficelltype,                            &
-        this%iangle1, this%iangle2, this%iangle3,                              &
+        this%fmi%igwfinwtup, this%iangle1, this%iangle2, this%iangle3,         &
         this%angle1, this%angle2, this%angle3)
     endif
     !
@@ -299,7 +298,7 @@ module GwtDspModule
       if (iflwchng == 1) then
         !
         ! -- Calculate xt3d coefficients
-        call this%xt3d%xt3d_fcpc(this%dis%nodes)
+        call this%xt3d%xt3d_fcpc(this%dis%nodes, .false.)
         !
         ! -- Save gwf flows
         do ipos = 1, size(this%gwfflowjaold)
