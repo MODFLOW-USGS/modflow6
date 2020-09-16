@@ -22,14 +22,14 @@ module GridConnectionModule
   type, public :: CellWithNbrsType
     type(GlobalCellType) :: cell
     integer(I4B) :: nrOfNbrs
-    type(CellWithNbrsType), dimension(:), allocatable :: neighbors
+    type(CellWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
   end type
   
   ! a model with neighbors
   type, private :: ModelWithNbrsType
       class(NumericalModelType), pointer :: model => null()
       integer(I4B) :: nrOfNbrs
-      type(ModelWithNbrsType), dimension(:), allocatable :: neighbors
+      type(ModelWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
   end type
   
   ! --
@@ -210,7 +210,7 @@ module GridConnectionModule
     ! do not add until here, after the recursion, to prevent 
     ! back-and-forth connecting of models...
     if (associated(neighborModel)) then           
-      if (.not. allocated(modelNbrs%neighbors)) then
+      if (.not. associated(modelNbrs%neighbors)) then
         allocate(modelNbrs%neighbors(MaxNeighbors))
         modelNbrs%nrOfNbrs = 0
       end if
@@ -456,7 +456,7 @@ module GridConnectionModule
     end if
     
     ! TODO_MJR: dynamic memory
-    if (.not. allocated(cellNbrs%neighbors)) then
+    if (.not. associated(cellNbrs%neighbors)) then
       allocate(cellNbrs%neighbors(MaxNeighbors))  
     end if
     
