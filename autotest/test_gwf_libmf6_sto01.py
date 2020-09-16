@@ -179,7 +179,6 @@ def bmifunc(exe, idx, model_ws=None):
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
     mf6 = XmiWrapper(exe)
-    mf6.set_int("ISTDOUTTOFILE", 0)
 
     # initialize the model
     try:
