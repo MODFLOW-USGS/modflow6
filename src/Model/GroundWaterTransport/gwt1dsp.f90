@@ -153,7 +153,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse)
+    if (this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse)
     !
     ! -- Return
     return
@@ -174,12 +174,10 @@ module GwtDspModule
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
-    integer(I4B) :: inewton
 ! ------------------------------------------------------------------------------
     !
-    ! TODO: set inewton
-    inewton = 0
-    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln, inewton)
+    ! -- Call xt3d map connections
+    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
     !
     ! -- Return
     return
@@ -239,9 +237,8 @@ module GwtDspModule
     ! TODO: might consider adding a new mf6 level set pointers method, and
     ! doing this stuff there instead of in the time step loop.
     if (kstp * kper == 1) then
-      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%ibound,                   &
+      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0,           &
         this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
-        this%fmi%igwfinwtup, this%fmi%gwficelltype,                            &
         this%iangle1, this%iangle2, this%iangle3,                              &
         this%angle1, this%angle2, this%angle3)
     endif
@@ -301,7 +298,7 @@ module GwtDspModule
       if (iflwchng == 1) then
         !
         ! -- Calculate xt3d coefficients
-        call this%xt3d%xt3d_fcpc(this%dis%nodes)
+        call this%xt3d%xt3d_fcpc(this%dis%nodes, .false.)
         !
         ! -- Save gwf flows
         do ipos = 1, size(this%gwfflowjaold)
@@ -342,12 +339,12 @@ module GwtDspModule
       call this%xt3d%xt3d_fc(kiter, njasln, amatsln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
-        if(this%ibound(n) == 0) cycle
+        if(this%fmi%ibdgwfsat0(n) == 0) cycle
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
           if (m < n) cycle
-          if(this%ibound(m) == 0) cycle
+          if(this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           !
@@ -391,10 +388,10 @@ module GwtDspModule
       call this%xt3d%xt3d_flowja(cnew, flowja)
     else
       do n = 1, this%dis%nodes
-        if(this%ibound(n) == 0) cycle
+        if(this%fmi%ibdgwfsat0(n) == 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
-          if(this%ibound(m) == 0) cycle
+          if(this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
@@ -781,7 +778,7 @@ module GwtDspModule
       this%angle1(n) = DZERO
       this%angle2(n) = DZERO
       this%angle3(n) = DZERO
-      if(this%ibound(n) == 0) cycle
+      if(this%fmi%ibdgwfsat0(n) == 0) cycle
       !
       ! -- specific discharge
       qx = DZERO
@@ -883,7 +880,7 @@ module GwtDspModule
     integer(I4B) :: nodes, n, m, idiag, ipos
     real(DP) :: clnm, clmn, dn, dm
     real(DP) :: vg1, vg2, vg3
-    integer(I4B) :: ihc, ictn, ictm, isympos
+    integer(I4B) :: ihc, isympos
     real(DP) :: satn, satm, topn, topm, botn, botm
     real(DP) :: hwva, cond, cn, cm, denom
     real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
@@ -891,7 +888,7 @@ module GwtDspModule
     !
     nodes = size(this%d11)
     do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
+      if(this%fmi%ibdgwfsat0(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         !
@@ -902,7 +899,7 @@ module GwtDspModule
         if (m < n) cycle
         isympos = this%dis%con%jas(ipos)
         this%dispcoef(isympos) = DZERO
-        if(this%ibound(m) == 0) cycle
+        if(this%fmi%ibdgwfsat0(m) == 0) cycle
         !
         ! -- cell dimensions
         hwva = this%dis%con%hwva(isympos)
@@ -915,12 +912,6 @@ module GwtDspModule
         botm = this%dis%bot(m)
         !
         ! -- flow model information
-        ictn = 0
-        ictm = 0
-        satn = DONE
-        satm = DONE
-        ictn = this%fmi%gwficelltype(n)
-        ictm = this%fmi%gwficelltype(m)
         satn = this%fmi%gwfsat(n)
         satm = this%fmi%gwfsat(m)
         !
@@ -943,22 +934,18 @@ module GwtDspModule
           anm = hwva
           !
           ! -- n is convertible and unsaturated
-          if (ictn /= 0) then
-            if (satn == DZERO) then
-              anm = DZERO
-            else if (n > m .and. satn < DONE) then
-              anm = DZERO
-            endif
-          end if
+          if (satn == DZERO) then
+            anm = DZERO
+          else if (n > m .and. satn < DONE) then
+            anm = DZERO
+          endif
           !
           ! -- m is convertible and unsaturated
-          if (ictm /= 0) then
-            if (satm == DZERO) then
-              anm = DZERO
-            else if (m > n .and. satm < DONE) then
-              anm = DZERO
-            endif
-          end if
+          if (satm == DZERO) then
+            anm = DZERO
+          else if (m > n .and. satm < DONE) then
+            anm = DZERO
+          endif
           !
           ! -- amn is the same as anm for vertical flow
           amn = anm
@@ -966,10 +953,8 @@ module GwtDspModule
         else
           !
           ! -- horizontal conductance
-          thksatn = topn - botn
-          if (ictn /= 0) thksatn = thksatn * satn
-          thksatm = topm - botm
-          if (ictm /= 0) thksatm = thksatm * satm
+          thksatn = (topn - botn) * satn
+          thksatm = (topm - botm) * satm
           !
           ! -- handle vertically staggered case
           if (ihc == 2) then
@@ -985,21 +970,11 @@ module GwtDspModule
           anm = thksatn * hwva
           amn = thksatm * hwva
           !
-          ! -- n is convertible and unsaturated
-          if (ictn /= 0) then
-            if (satn == DZERO) then
-              anm = DZERO
-              amn = DZERO
-            endif
-          end if
-          !
-          ! -- m is convertible and unsaturated
-          if (ictm /= 0) then
-            if (satm == DZERO) then
-              anm = DZERO
-              amn = DZERO
-            endif
-          end if
+          ! -- n or m is unsaturated, so no dispersion
+          if (satn == DZERO .or. satm == DZERO) then
+            anm = DZERO
+            amn = DZERO
+          endif
           !
         end if
         !

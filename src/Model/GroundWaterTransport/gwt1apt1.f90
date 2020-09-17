@@ -754,7 +754,8 @@ module GwtAptModule
 
   subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case
+! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case in which
+!   feature concentrations are solved explicitly
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -788,7 +789,8 @@ module GwtAptModule
 
   subroutine apt_fc_expanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! apt_fc_expanded -- formulate for the expanded a matrix case
+! apt_fc_expanded -- formulate for the expanded matrix case in which new
+!   rows are added to the system of equations for each feature
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1782,7 +1784,8 @@ module GwtAptModule
 
   subroutine apt_solve(this)
 ! ******************************************************************************
-! apt_solve -- solve for concentration in the lakes
+! apt_solve -- explicit solve for concentration in features, which is an
+!   alternative to the iterative implicit solve
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

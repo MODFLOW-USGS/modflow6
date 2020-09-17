@@ -1,10 +1,7 @@
 ! todo
   ! velocity is incorrect for a triangular corner cell if two edges are on model perimeter
-  ! newton-raphson (head below bottom); more testing
-  ! transport when cells are dry (IBOUND=0)
   ! verify that idomain is working (can transport have a different idomain?)
   ! check that discretization is the same between both models 
-  ! now that immobile domain is separate package, should sorbtion and decay be split?
   ! Add internal GWF flows to the diagonal postion of the flowja array
   ! gwt obs
   ! adv obs
@@ -14,11 +11,10 @@
   ! ssm obs
   ! src obs
   ! cnc obs
-  ! GWF-GWF exchange transport
+  ! GWT-GWT exchange transport
   ! transient flow case; verify that its working properly, test with goode 1990
   ! implement steady-state transport (affects MST, IST)
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
-  ! xt3d dispersion areas need to be consistent with non-xt3d case
   
   
 module GwtModule

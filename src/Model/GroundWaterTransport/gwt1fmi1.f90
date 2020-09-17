@@ -37,13 +37,11 @@ module GwtFmiModule
     real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis  => null()      ! pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous     :: gwfhead   => null()      ! pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous     :: gwfsat    => null()      ! pointer to the GWF saturation array
-    integer(I4B), dimension(:), pointer, contiguous :: gwfibound => null()      ! pointer to the GWF ibound array
+    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null()     ! mark cells with saturation = 0 to exclude from dispersion
     real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()      ! pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()      ! pointer to flow model QSTOSY
     integer(I4B), pointer                           :: igwfstrgss => null()     ! indicates if gwfstrgss is available
     integer(I4B), pointer                           :: igwfstrgsy => null()     ! indicates if gwfstrgsy is available
-    integer(I4B), dimension(:), pointer, contiguous :: gwficelltype => null()   ! pointer to the GWF icelltype array
-    integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
     integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
     integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
     integer(I4B), pointer                           :: iumvr => null()          ! unit number GWF mover budget file
@@ -198,16 +196,6 @@ module GwtFmiModule
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
-    !    package is specified by the user.  Program should return with an
-    !    error in this case.
-    !if (.not. this%flows_from_file .and. this%inunit /= 0) then
-    !  call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
-    !    & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
-    !    & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
-    !    & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
-    !end if
-    !
     ! -- store pointers to arguments that were passed in
     this%ibound  => ibound
     !
@@ -309,6 +297,14 @@ module GwtFmiModule
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
     do n = 1, this%dis%nodes
       !
+      ! -- Calculate the ibound-like array that has 0 if saturation 
+      !    is zero and 1 otherwise
+      if (this%gwfsat(n) > DZERO) then
+        this%ibdgwfsat0(n) = 1
+      else
+        this%ibdgwfsat0(n) = 0
+      end if
+      !
       ! -- Check if active transport cell is inactive for flow
       if (this%ibound(n) > 0) then
         if (this%gwfhead(n) == DHDRY) then
@@ -322,7 +318,7 @@ module GwtFmiModule
       !
       ! -- Convert dry transport cell to active if flow has rewet
       if (cnew(n) == DHDRY) then
-        if (this%gwfibound(n) > 0) then
+        if (this%gwfhead(n) /= DHDRY) then
           !
           ! -- obtain weighted concentration
           crewet = DZERO
@@ -387,7 +383,7 @@ module GwtFmiModule
       ! -- Loop through and calculate flow residual for face flows and storage
       do n = 1, nodes
         this%flowerr(n) = DZERO
-        if (this%gwfibound(n) <= 0) cycle
+        if (this%ibound(n) <= 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           this%flowerr(n) = this%flowerr(n) + this%gwfflowja(ipos)
         enddo
@@ -401,7 +397,7 @@ module GwtFmiModule
       do ip = 1, this%nflowpack
         do i = 1, this%gwfpackages(ip)%nbound
           n = this%gwfpackages(ip)%nodelist(i)
-          if (this%gwfibound(n) <= 0) cycle
+          if (this%ibound(n) <= 0) cycle
           qbnd = this%gwfpackages(ip)%get_flow(i)
           this%flowerr(n) = this%flowerr(n) + qbnd
         enddo
@@ -488,16 +484,14 @@ module GwtFmiModule
     deallocate(this%aptbudobj)
     call mem_deallocate(this%flowerr)
     call mem_deallocate(this%iatp)
+    call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
-      call mem_deallocate(this%igwfinwtup)
       call mem_deallocate(this%gwfflowja)
       call mem_deallocate(this%gwfsat)
       call mem_deallocate(this%gwfhead)
       call mem_deallocate(this%gwfstrgss)
       call mem_deallocate(this%gwfstrgsy)
       call mem_deallocate(this%gwfspdis)
-      call mem_deallocate(this%gwfibound)
-      call mem_deallocate(this%gwficelltype)
     end if
     !
     ! -- deallocate scalars
@@ -589,23 +583,24 @@ module GwtFmiModule
       this%flowerr(n) = DZERO
     enddo
     !
+    ! -- Allocate ibdgwfsat0, which is an indicator array marking cells with
+    !    saturation greater than 0.0 with a value of 1
+    call mem_allocate(this%ibdgwfsat0, nodes, 'IBDGWFSAT0', this%memoryPath)
+    do n = 1, nodes
+      this%ibdgwfsat0(n) = 1
+    end do
+    !
     ! -- Allocate differently depending on whether or not flows are
     !    being read from a file.
     if (this%flows_from_file) then
-      call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%memoryPath)
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%memoryPath)
       call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%memoryPath)
       call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%memoryPath)
       call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%memoryPath)
-      call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%memoryPath)
-      call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%memoryPath)
-      this%igwfinwtup = 0
       do n = 1, nodes
         this%gwfsat(n) = DONE
         this%gwfhead(n) = DZERO
         this%gwfspdis(:, n) = DZERO
-        this%gwfibound(n) = 1
-        this%gwficelltype(n) = 0
       end do
       do n = 1, size(this%gwfflowja)
         this%gwfflowja(n) = DZERO
