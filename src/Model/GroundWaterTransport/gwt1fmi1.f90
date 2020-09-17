@@ -1,4 +1,3 @@
-! todo: remove gwfibound if possible, as it is not available if running with flows from file
 module GwtFmiModule
   
   use KindModule,             only: DP, I4B
@@ -38,13 +37,11 @@ module GwtFmiModule
     real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis  => null()      ! pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous     :: gwfhead   => null()      ! pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous     :: gwfsat    => null()      ! pointer to the GWF saturation array
-    integer(I4B), dimension(:), pointer, contiguous :: gwfibound => null()      ! pointer to the GWF ibound array
     integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null()     ! mark cells with saturation = 0 to exclude from dispersion
     real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()      ! pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()      ! pointer to flow model QSTOSY
     integer(I4B), pointer                           :: igwfstrgss => null()     ! indicates if gwfstrgss is available
     integer(I4B), pointer                           :: igwfstrgsy => null()     ! indicates if gwfstrgsy is available
-    integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
     integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
     integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
     integer(I4B), pointer                           :: iumvr => null()          ! unit number GWF mover budget file
@@ -300,7 +297,8 @@ module GwtFmiModule
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
     do n = 1, this%dis%nodes
       !
-      ! 
+      ! -- Calculate the ibound-like array that has 0 if saturation 
+      !    is zero and 1 otherwise
       if (this%gwfsat(n) > DZERO) then
         this%ibdgwfsat0(n) = 1
       else
@@ -320,7 +318,7 @@ module GwtFmiModule
       !
       ! -- Convert dry transport cell to active if flow has rewet
       if (cnew(n) == DHDRY) then
-        if (this%gwfibound(n) > 0) then
+        if (this%gwfhead(n) /= DHDRY) then
           !
           ! -- obtain weighted concentration
           crewet = DZERO
@@ -385,7 +383,7 @@ module GwtFmiModule
       ! -- Loop through and calculate flow residual for face flows and storage
       do n = 1, nodes
         this%flowerr(n) = DZERO
-        if (this%gwfibound(n) <= 0) cycle
+        if (this%ibound(n) <= 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           this%flowerr(n) = this%flowerr(n) + this%gwfflowja(ipos)
         enddo
@@ -399,7 +397,7 @@ module GwtFmiModule
       do ip = 1, this%nflowpack
         do i = 1, this%gwfpackages(ip)%nbound
           n = this%gwfpackages(ip)%nodelist(i)
-          if (this%gwfibound(n) <= 0) cycle
+          if (this%ibound(n) <= 0) cycle
           qbnd = this%gwfpackages(ip)%get_flow(i)
           this%flowerr(n) = this%flowerr(n) + qbnd
         enddo
@@ -488,14 +486,12 @@ module GwtFmiModule
     call mem_deallocate(this%iatp)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
-      call mem_deallocate(this%igwfinwtup)
       call mem_deallocate(this%gwfflowja)
       call mem_deallocate(this%gwfsat)
       call mem_deallocate(this%gwfhead)
       call mem_deallocate(this%gwfstrgss)
       call mem_deallocate(this%gwfstrgsy)
       call mem_deallocate(this%gwfspdis)
-      call mem_deallocate(this%gwfibound)
     end if
     !
     ! -- deallocate scalars
@@ -597,18 +593,14 @@ module GwtFmiModule
     ! -- Allocate differently depending on whether or not flows are
     !    being read from a file.
     if (this%flows_from_file) then
-      call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%memoryPath)
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%memoryPath)
       call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%memoryPath)
       call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%memoryPath)
       call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%memoryPath)
-      call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%memoryPath)
-      this%igwfinwtup = 0
       do n = 1, nodes
         this%gwfsat(n) = DONE
         this%gwfhead(n) = DZERO
         this%gwfspdis(:, n) = DZERO
-        this%gwfibound(n) = 1
       end do
       do n = 1, size(this%gwfflowja)
         this%gwfflowja(n) = DZERO

@@ -13,6 +13,7 @@ module Xt3dModule
     character(len=LENMEMPATH)                       :: memoryPath                !< location in memory manager for storing package variables    
     integer(I4B), pointer                           :: inunit      => null()     !< unit number from where xt3d was read
     integer(I4B), pointer                           :: iout        => null()     !< unit number for output
+    integer(I4B), pointer                           :: inewton     => null()     !< Newton flag
     integer(I4B), dimension(:), pointer, contiguous :: ibound      => null()     !< pointer to model ibound
     integer(I4B),dimension(:), pointer, contiguous  :: iax         => null()     !< ia array for extended neighbors used by xt3d
     integer(I4B),dimension(:), pointer, contiguous  :: jax         => null()     !< ja array for extended neighbors used by xt3d
@@ -37,7 +38,6 @@ module Xt3dModule
     integer(I4B), pointer                           :: ik22        => null()     !< flag indicates K22 was read
     integer(I4B), pointer                           :: ik33        => null()     !< flag indicates K33 was read
     real(DP), dimension(:), pointer, contiguous     :: sat         => null()     !< saturation (0. to 1.) for each cell
-    integer(I4B), pointer                           :: inewton     => null()     !< Newton flag
     integer(I4B), dimension(:), pointer, contiguous :: icelltype   => null()     !< cell type (confined or unconfined)
     integer(I4B), pointer                           :: iangle1     => null()     !< flag to indicate angle1 was read
     integer(I4B), pointer                           :: iangle2     => null()     !< flag to indicate angle2 was read
@@ -265,7 +265,7 @@ module Xt3dModule
   end subroutine xt3d_mc
   
   subroutine xt3d_ar(this, ibound, k11, ik33, k33, sat, ik22, k22,             &
-    inewton, iangle1, iangle2, iangle3, angle1, angle2, angle3, icelltype)
+    iangle1, iangle2, iangle3, angle1, angle2, angle3, inewton, icelltype)
 ! ******************************************************************************
 ! xt3d_ar -- Allocate and Read
 ! ******************************************************************************
@@ -283,13 +283,13 @@ module Xt3dModule
     real(DP), dimension(:), intent(in), pointer, contiguous :: sat
     integer(I4B), intent(in), pointer :: ik22
     real(DP), dimension(:), intent(in), pointer, contiguous :: k22
-    integer(I4B), intent(in), pointer :: inewton
     integer(I4B), intent(in), pointer :: iangle1
     integer(I4B), intent(in), pointer :: iangle2
     integer(I4B), intent(in), pointer :: iangle3
     real(DP), dimension(:), intent(in), pointer, contiguous :: angle1
     real(DP), dimension(:), intent(in), pointer, contiguous :: angle2
     real(DP), dimension(:), intent(in), pointer, contiguous :: angle3
+    integer(I4B), intent(in), pointer, optional :: inewton
     integer(I4B), dimension(:), intent(in), pointer, &
       contiguous, optional :: icelltype
     ! -- local
@@ -311,15 +311,18 @@ module Xt3dModule
     this%sat => sat
     this%ik22 => ik22
     this%k22 => k22
-    this%inewton => inewton
     this%iangle1 => iangle1
     this%iangle2 => iangle2
     this%iangle3 => iangle3
     this%angle1 => angle1
     this%angle2 => angle2
     this%angle3 => angle3
+    if (present(inewton)) then
+      ! -- inewton is not needed for transport so it's optional.
+      this%inewton = inewton
+    end if
     if (present(icelltype)) then
-      ! -- icelltype is not needed for transport, so it's optional
+      ! -- icelltype is not needed for transport, so it's optional.
       !    It is only needed to determine if cell connections are permanently 
       !    confined, which means that some matrix terms can be precalculated
       this%icelltype => icelltype
@@ -1027,6 +1030,7 @@ module Xt3dModule
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
+    call mem_deallocate(this%inewton)
     call mem_deallocate(this%numextnbrs)
     call mem_deallocate(this%nozee)
     call mem_deallocate(this%vcthresh)
@@ -1056,6 +1060,7 @@ module Xt3dModule
     call mem_allocate(this%nbrmax, 'NBRMAX', this%memoryPath)
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
     call mem_allocate(this%numextnbrs, 'NUMEXTNBRS', this%memoryPath)
     call mem_allocate(this%nozee, 'NOZEE', this%memoryPath)
     call mem_allocate(this%vcthresh, 'VCTHRESH', this%memoryPath)
@@ -1067,6 +1072,7 @@ module Xt3dModule
     this%nbrmax = 0
     this%inunit = 0
     this%iout = 0
+    this%inewton = 0
     this%numextnbrs = 0
     this%nozee = .false.
     this%vcthresh = 1.d-10

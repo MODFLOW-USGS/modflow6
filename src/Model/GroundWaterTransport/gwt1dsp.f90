@@ -239,7 +239,7 @@ module GwtDspModule
     if (kstp * kper == 1) then
       if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0,           &
         this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
-        this%fmi%igwfinwtup, this%iangle1, this%iangle2, this%iangle3,         &
+        this%iangle1, this%iangle2, this%iangle3,                              &
         this%angle1, this%angle2, this%angle3)
     endif
     !
@@ -339,12 +339,12 @@ module GwtDspModule
       call this%xt3d%xt3d_fc(kiter, njasln, amatsln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
-        if(this%ibound(n) == 0) cycle
+        if(this%fmi%ibdgwfsat0(n) == 0) cycle
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
           if (m < n) cycle
-          if(this%ibound(m) == 0) cycle
+          if(this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           !
@@ -388,10 +388,10 @@ module GwtDspModule
       call this%xt3d%xt3d_flowja(cnew, flowja)
     else
       do n = 1, this%dis%nodes
-        if(this%ibound(n) == 0) cycle
+        if(this%fmi%ibdgwfsat0(n) == 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
-          if(this%ibound(m) == 0) cycle
+          if(this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
@@ -778,7 +778,7 @@ module GwtDspModule
       this%angle1(n) = DZERO
       this%angle2(n) = DZERO
       this%angle3(n) = DZERO
-      if(this%ibound(n) == 0) cycle
+      if(this%fmi%ibdgwfsat0(n) == 0) cycle
       !
       ! -- specific discharge
       qx = DZERO
@@ -888,7 +888,7 @@ module GwtDspModule
     !
     nodes = size(this%d11)
     do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
+      if(this%fmi%ibdgwfsat0(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         !
@@ -899,7 +899,7 @@ module GwtDspModule
         if (m < n) cycle
         isympos = this%dis%con%jas(ipos)
         this%dispcoef(isympos) = DZERO
-        if(this%ibound(m) == 0) cycle
+        if(this%fmi%ibdgwfsat0(m) == 0) cycle
         !
         ! -- cell dimensions
         hwva = this%dis%con%hwva(isympos)
