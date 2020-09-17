@@ -179,7 +179,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 		\item Fix error in calculated Newton-Raphson MAW-GWF connection terms for the MAW Package. This correction should improve model convergence and may change existing model results. This correction does not affect simulations that use the FLOW\_CORRECTION option introduced in version 6.1.1.
 		\item  The program will now terminate with an error message if the skin radius for a GWF connection in the MAW Package is less than or equal to the well radius. Warning messages are also issued when the well bottom, screen top for a GWF connection, or screen bottom for a GWF connection are reset by the program for one or more MAW Package wells.
-		\item 
+		\item An SFR reach can have zero specified connections.  In this case, an entry is still required in the CONNECTIONDATA block for that reach.  The error check for this required entry was not implemented and so the program would continue with unexpected results.  The program now verifies that an entry is present in CONNECTIONDATA for every reach, even those with zero connections.
+		\item If a GWF 'NONE' connection was specified for SFR then the program would terminate with an error or proceed with unexpected results if GWF or SFR flow terms were written to binary output files.  The program was fixed so that GWF 'NONE' connections for SFR are not written to the binary budget files.
 	\end{itemize}
 
 	\underline{SOLUTION}

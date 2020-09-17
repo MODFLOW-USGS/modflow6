@@ -334,10 +334,10 @@ module BudgetObjectModule
     return
   end subroutine accumulate_terms
 
-  subroutine write_flowtable(this, dis, kstp, kper)
+  subroutine write_flowtable(this, dis, kstp, kper, cellidstr)
 ! ******************************************************************************
 ! write_flowtable -- Write the flow table for each advanced package control
-!                    volume  
+!                    volume
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -348,6 +348,7 @@ module BudgetObjectModule
     class(DisBaseType), intent(in) :: dis
     integer(I4B), intent(in) :: kstp
     integer(I4B), intent(in) :: kper
+    character(len=20), dimension(:), optional :: cellidstr
     ! -- dummy
     character(len=LENBUDTXT) :: flowtype
     character(len=20) :: cellid
@@ -367,7 +368,6 @@ module BudgetObjectModule
     real(DP) :: qerr
     real(DP) :: qavg
     real(DP) :: qpd
-    
 ! ------------------------------------------------------------------------------
     !
     ! -- reset starting position
@@ -388,14 +388,26 @@ module BudgetObjectModule
       !
       ! -- add cellid if required
       if (this%add_cellids) then
-        j = this%icellid 
-        idx = this%iflowterms(j)
-        i = this%istart(j)
-        id2 = this%budterm(idx)%get_id2(i)
-        if (id2 > 0) then
-          call dis%noder_to_string(id2, cellid)
+        if (present(cellidstr)) then
+          !
+          ! -- If there are not maxbound entries for this%budterm(idx),
+          !    which can happen for sfr, for example, if 'none' connections
+          !    are specified, then cellidstr should be passed in if the flow
+          !    table needs a cellid label.
+          cellid = cellidstr(icv)
         else
-          cellid = 'NONE'
+          !
+          ! -- Determine the cellid for this entry.  The cellid, such as 
+          !    (1, 10, 10), is assumed to be in the id2 column of this budterm.
+          j = this%icellid 
+          idx = this%iflowterms(j)
+          i = this%istart(j)
+          id2 = this%budterm(idx)%get_id2(i)
+          if (id2 > 0) then
+            call dis%noder_to_string(id2, cellid)
+          else
+            cellid = 'NONE'
+          end if
         end if
         call this%flowtab%add_term(cellid)
       end if

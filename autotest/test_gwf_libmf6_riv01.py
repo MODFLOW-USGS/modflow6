@@ -1,10 +1,8 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used to calculate a recharge rate that results in a
-simulated head in the center of the model domain to be equal to the
-simulated head in the non-bmi simulation.
+Test the bmi which is used update to set the river stages to
+the same values as they are in the non-bmi simulation.
 """
-
 import os
 import numpy as np
 from xmipy import XmiWrapper
@@ -28,62 +26,58 @@ except:
 from framework import testing_framework
 from simulation import Simulation, bmi_return
 
-ex = ['libgwf_rch02']
+ex = ['libgwf_riv01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
-# average recharge rate
-avg_rch = 0.001
-drch = 1e-6 * avg_rch
-
-# calculate recharge rates
-dx = 1 / 20
-rad = np.arange(0, 1 + dx, dx) * 2. * np.pi
-f = np.sin(rad)
-rch_rates = avg_rch + f * avg_rch
 
 # temporal discretization
-nper = rch_rates.shape[0]
+nper = 10
 tdis_rc = []
 for i in range(nper):
     tdis_rc.append((1., 1, 1))
 
 # model spatial dimensions
-nlay, nrow, ncol = 1, 11, 11
+nlay, nrow, ncol = 1, 1, 10
 
 # cell spacing
-delr = 10.
-delc = 10.
+delr = 50.
+delc = 1.
 area = delr * delc
 
 # top of the aquifer
-top = 10.
+top = 25.
 
 # bottom of the aquifer
 botm = 0.
 
 # hydraulic conductivity
-hk = 1.
+hk = 50.
 
-# starting head
-strt = 5.
+# boundary heads
+h1 = 11.
+h2 = 11.
 
 # build chd stress period data
-chd_spd = {0: [[(0, 0, 0), strt],
-               [(0, nrow - 1, ncol - 1), strt]]}
+chd_spd = {0: [[(0, 0, 0), h1],
+               [(0, 0, ncol - 1), h2]]}
 
-# build recharge spd
-rch_spd = {}
-for n in range(nper):
-    rch_spd[n] = rch_rates[n]
+strt = np.linspace(h1, h2, num=ncol)
+
 
 # solver data
-nouter, ninner = 100, 100
+nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
+# uniform river stage
+riv_stage = 15.
+riv_stage2 = 20.
+riv_bot = 12.
+riv_cond = 35.
+riv_packname = "MYRIV"
 
-def build_model(ws, name, rech=rch_spd):
+def build_model(ws, name, riv_spd):
     sim = flopy.mf6.MFSimulation(sim_name=name,
                                  version='mf6',
                                  exe_name='mf6',
@@ -98,20 +92,14 @@ def build_model(ws, name, rech=rch_spd):
                                print_option='SUMMARY',
                                outer_dvclose=hclose,
                                outer_maximum=nouter,
-                               under_relaxation='SIMPLE',
-                               under_relaxation_gamma=0.98,
+                               under_relaxation='DBD',
                                inner_maximum=ninner,
                                inner_dvclose=hclose, rcloserecord=rclose,
                                linear_acceleration='BICGSTAB',
                                relaxation_factor=relax)
 
     # create gwf model
-    newtonoptions = ['NEWTON', 'UNDER_RELAXATION']
-    gwf = flopy.mf6.ModflowGwf(sim,
-                               newtonoptions=newtonoptions,
-                               modelname=name,
-                               print_input=True,
-                               save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
@@ -124,22 +112,18 @@ def build_model(ws, name, rech=rch_spd):
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=1,
                                   k=hk)
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(gwf,
+                                  save_flows=True,
+                                  iconvert=1,
+                                  ss=0., sy=0.2,
+                                  transient={0: True})
 
     # chd file
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
-    # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
-
-    # gwf observations
-    onam = '{}.head.obs'.format(name)
-    cnam = onam + '.csv'
-    obs_recarray = {cnam: [('h1_6_6', 'HEAD', (0, 5, 5))]}
-    gwfobs = flopy.mf6.ModflowUtlobs(gwf,
-                                     print_input=True,
-                                     filename=onam,
-                                     digits=20,
-                                     continuous=obs_recarray)
+    # riv package
+    riv = flopy.mf6.ModflowGwfriv(gwf, stress_period_data=riv_spd, pname=riv_packname)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -156,12 +140,17 @@ def build_model(ws, name, rech=rch_spd):
 def get_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
-    name = ex[idx]
-    sim = build_model(ws, name)
+    name = ex[idx]   
+    
+    # create river data
+    rd = [[(0, 0, icol), riv_stage, riv_cond, riv_bot] for icol in range(1, ncol-1)]
+    rd2 = [[(0, 0, icol), riv_stage2, riv_cond, riv_bot] for icol in range(1, ncol-1)]
+    sim = build_model(ws, name, riv_spd={0 : rd, 5: rd2})
 
-    # build comparison model
+    # build comparison model with zeroed values   
     ws = os.path.join(dir, 'libmf6')
-    mc = build_model(ws, name, rech=0.)
+    rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol-1)]
+    mc = build_model(ws, name, riv_spd={0 : rd_bmi})
 
     return sim, mc
 
@@ -175,32 +164,13 @@ def build_models():
     return
 
 
-def run_perturbation(mf6, max_iter, recharge, rch):
-    mf6.prepare_solve(1)
-    kiter = 0
-    while kiter < max_iter:
-        # update recharge
-        recharge[:, 0] = rch * area
-        # solve with updated well rate
-        has_converged = mf6.solve(1)
-        kiter += 1
-        if has_converged:
-            break
-    return has_converged
-
-
 def bmifunc(exe, idx, model_ws=None):
-    print('\nBMI implementation test:')
     success = False
 
     name = ex[idx].upper()
     init_wd = os.path.abspath(os.getcwd())
     if model_ws is not None:
         os.chdir(model_ws)
-
-    # get the observations from the standard run
-    fpth = os.path.join('..', '{}.head.obs.csv'.format(ex[idx]))
-    hobs = np.genfromtxt(fpth, delimiter=',', names=True)['H1_6_6']
 
     mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
     try:
@@ -209,7 +179,7 @@ def bmifunc(exe, idx, model_ws=None):
         print("Failed to load " + exe)
         print("with message: " + str(e))
         return bmi_return(success, model_ws)
-
+    
     # initialize the model
     try:
         mf6.initialize(mf6_config_file)
@@ -220,69 +190,39 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get pointer to simulated heads
-    head_tag = mf6.get_var_address("X", name)
-    head = mf6.get_value_ptr(head_tag)
-
-    # maximum outer iterations
-    mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
-    max_iter = mf6.get_value_ptr(mxit_tag)
-
-    # get recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
-    recharge = mf6.get_value_ptr(rch_tag)
-
-    # determine initial recharge value
-    np.random.seed(0)
-    rch = np.random.normal(1) * avg_rch
-
+    # get (multi-dim) array with river parameters
+    riv_tag = mf6.get_var_address("BOUND" , name, riv_packname)
+    spd = mf6.get_value_ptr(riv_tag)
+    
     # model time loop
     idx = 0
     while current_time < end_time:
 
-        # target head
-        htarget = hobs[idx]
-
-        # get dt and prepare for non-linear iterations
+        # get dt        
         dt = mf6.get_time_step()
+        
+        # prepare... and reads the RIV data from file!
         mf6.prepare_time_step(dt)
+        
+        # set the RIV data through the BMI
+        if current_time < 5:
+            spd[:] = [riv_stage, riv_cond, riv_bot]        
+        else:
+            spd[:] = [riv_stage2, riv_cond, riv_bot]    
+            
+        kiter = 0
+        mf6.prepare_solve(1)
 
-        est_iter = 0
-        while est_iter < 100:
-            # base simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge, rch)
-            if not has_converged:
-                return bmi_return(success, model_ws)
-            h0 = head.reshape((nrow, ncol))[5, 5]
-            r0 = h0 - htarget
+        while kiter < nouter:
+            has_converged = mf6.solve(1)
+            kiter += 1
 
-            # perturbation simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge,
-                                             rch + drch)
-            if not has_converged:
-                return bmi_return(success, model_ws)
-            h1 = head.reshape((nrow, ncol))[5, 5]
-            r1 = h1 - htarget
-
-            # calculate update terms
-            dqdr = drch / (r0 - r1)
-            dr = r1 * dqdr
-
-            # evaluate if the estimation iterations need to continue
-            if abs(r0) < 1e-5:
-                msg = "Estimation for time {:5.1f}".format(current_time) + \
-                      " converged in {:3d}".format(est_iter) + \
-                      " iterations" + \
-                      " -- final recharge={:10.5f}".format(rch) + \
-                      " residual={:10.2g}".format(rch - rch_rates[idx])
+            if has_converged:
+                msg = "Component {}".format(1) + \
+                      " converged in {}".format(kiter) + " outer iterations"
                 print(msg)
                 break
-            else:
-                est_iter += 1
-                rch += dr
 
-        # solution with final estimated recharge for the timestep
-        has_converged = run_perturbation(mf6, max_iter, recharge, rch)
         if not has_converged:
             return bmi_return(success, model_ws)
 
@@ -295,6 +235,7 @@ def bmifunc(exe, idx, model_ws=None):
 
         # increment counter
         idx += 1
+
     # cleanup
     try:
         mf6.finalize()
