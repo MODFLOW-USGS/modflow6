@@ -82,7 +82,7 @@ contains
     
     bmi_status = BMI_FAILURE
     ! TODO: It is currently only implemented for DIS grids
-    if (.not. confirm_grid_type(grid_id, "DISU")) return
+    if (.not. confirm_grid_type(grid_id, "DIS")) return
     
     ! get shape array
     model_name = get_model_name(grid_id)
