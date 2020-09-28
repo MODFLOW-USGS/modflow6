@@ -6,7 +6,7 @@ pymake package.
 To make a distribution:
   1.  Create a release branch
   2.  Update version.txt with the correct minor and micro numbers
-  3.  Run the pre-commit.py script, which will create the proper dist name
+  3.  Run the make_release.py script, which will create the proper dist name
   4.  Run this mkdist.py script
   5.  Post the distribution zip file
   6.  Commit the release changes, but no need to push
@@ -210,17 +210,23 @@ def make_zonebudget(srcpath, destpath, win_target_os, exepath):
                     makeclean=True, dryrun=True, include_subdirs=True,
                     makefile=True, extrafiles='extrafiles.txt')
         os.path.isfile('makefile')
+        os.path.isfile('makedefaults')
 
     # Copy makefile to utils/zonebudget/make folder
     shutil.copyfile(os.path.join(srcpath, 'pymake', 'makefile'),
                     os.path.join(srcpath, 'make', 'makefile'))
+    shutil.copyfile(os.path.join(srcpath, 'pymake', 'makedefaults'),
+                    os.path.join(srcpath, 'make', 'makedefaults'))
 
     # Copy makefile to distribution/xxx/utils/zonebudget/make folder
     shutil.copyfile(os.path.join(srcpath, 'pymake', 'makefile'),
                     os.path.join(fd['make'], 'makefile'))
+    shutil.copyfile(os.path.join(srcpath, 'pymake', 'makedefaults'),
+                    os.path.join(fd['make'], 'makedefaults'))
 
     # Remove the makefile from the pymake folder
     os.remove(os.path.join(srcpath, 'pymake', 'makefile'))
+    os.remove(os.path.join(srcpath, 'pymake', 'makedefaults'))
 
     # Copy the Visual Studio project file
     flist = [os.path.join(srcpath, 'msvs', 'zonebudget.vfproj')]
@@ -279,21 +285,27 @@ def make_mf5to6(srcpath, destpath, win_target_os, exepath):
                     makeclean=True, dryrun=True, include_subdirs=True,
                     makefile=True, extrafiles='extrafiles.txt')
         os.path.isfile('makefile')
+        os.path.isfile('makedefaults')
 
     # Copy makefile to utils/mf5to6/make folder
     print('Copying mf5to6 makefile')
-    makefile = os.path.join(srcpath, 'pymake', 'makefile')
-    d = os.path.join(srcpath, 'make', 'makefile')
-    print('  {} ===> {}'.format(makefile, d))
-    shutil.copyfile(makefile, d)
+    for fname in ['makefile', 'makedefaults']:
+        fpath = os.path.join(srcpath, 'pymake', fname)
+        d = os.path.join(srcpath, 'make', fname)
+        print('  {} ===> {}'.format(fpath, d))
+        shutil.copyfile(fpath, d)
 
     # Copy makefile to distribution/xxx/utils/mf5to6/make folder
-    d = os.path.join(fd['make'], 'makefile')
-    print('  {} ===> {}'.format(makefile, d))
-    shutil.copyfile(makefile, d)
+    for fname in ['makefile', 'makedefaults']:
+        fpath = os.path.join(srcpath, 'pymake', fname)
+        d = os.path.join(fd['make'], fname)
+        print('  {} ===> {}'.format(fpath, d))
+        shutil.copyfile(fpath, d)
 
-    # Remove the makefile from the pymake folder
-    os.remove(makefile)
+    # Remove makefile and makedefaults from the pymake folder
+    for fname in ['makefile', 'makedefaults']:
+        fpath = os.path.join(srcpath, 'pymake', fname)
+        os.remove(fpath)
 
     # Copy the Visual Studio project file
     flist = [os.path.join(srcpath, 'msvs', 'mf5to6.vfproj')]
@@ -587,7 +599,7 @@ def update_latex_releaseinfo(examples_folder):
 if __name__ == '__main__':
 
     # setup paths and folder structure
-    win_target_os = True
+    win_target_os = False #True
     name = 'MODFLOW 6'
     exename = 'mf6'
     destpath = '.'
@@ -619,18 +631,25 @@ if __name__ == '__main__':
     copytree(os.path.join('..', 'srcbmi'), fd['srcbmi'],
              ignore=shutil.ignore_patterns('.DS_Store'))
 
-    # Create makefile in the make folder and then copy into distribution
+    # Remove existing makefile and makedefaults
     print('Creating makefile')
     makedir = os.path.join('..', 'make')
-    makefile = os.path.join(makedir, 'makefile')
-    if os.path.isfile(makefile):
-        os.remove(makefile)
+    for fname in ['makefile', 'makedefaults']:
+        fpath = os.path.join(makedir, fname)
+        if os.path.isfile(fpath):
+            os.remove(fpath)
+
+    # Create makefile in the make folder
     with cwd(makedir):
         pymake.main(os.path.join('..', 'src'), 'mf6', 'gfortran', 'gcc',
                     makeclean=True, dryrun=True, include_subdirs=True,
                     makefile=True, extrafiles=None)
-    print('  {} ===> {}'.format(makefile, fd['make']))
-    shutil.copy(makefile, fd['make'])
+
+    # Copy makefile to the distribution
+    for fname in ['makefile', 'makedefaults']:
+        fpath = os.path.join(makedir, fname)
+        print('  {} ===> {}'.format(fpath, fd['make']))
+        shutil.copy(fpath, fd['make'])
 
     # build MODFLOW 6 executable
     srcdir = fd['src']
