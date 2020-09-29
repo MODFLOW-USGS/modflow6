@@ -1,6 +1,6 @@
 Unsaturated Zone Transport (UZT) Package information is read from the file that is specified by ``UZT6'' as the file type.  There can be as many UZT Packages as necessary for a GWT model. Each UZT Package is designed to work with flows from a corresponding GWF UZF Package. By default \mf uses the UZT package name to determine which UZF Package corresponds to the UZT Package.  Therefore, the package name of the UZT Package (as specified in the GWT name file) must match with the name of the corresponding UZF Package (as specified in the GWF name file).  Alternatively, the name of the flow package can be specified using the FLOW\_PACKAGE\_NAME keyword in the options block.  The GWT UZT Package cannot be used without a corresponding GWF UZF Package.
 
-The UZT Package does not have a dimensions block; instead, dimensions for the UZT Package are set using the dimensions from the corresponding UZF Package.  For example, the UZF Package requires specification of the number of wells (NUZFCELLS).  UZT sets the number of UZT cells equal to NUZFCELLS.  Therefore, the PACKAGEDATA block below must have NUZFCELLS entries in it.
+The UZT Package does not have a dimensions block; instead, dimensions for the UZT Package are set using the dimensions from the corresponding UZF Package.  For example, the UZF Package requires specification of the number of cells (NUZFCELLS).  UZT sets the number of UZT cells equal to NUZFCELLS.  Therefore, the PACKAGEDATA block below must have NUZFCELLS entries in it.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
