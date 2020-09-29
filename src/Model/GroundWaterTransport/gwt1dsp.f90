@@ -1,6 +1,6 @@
 module GwtDspModule
 
-  use KindModule,             only: DP, I4B, LGP
+  use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, DHALF, DPI
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
@@ -40,12 +40,6 @@ module GwtDspModule
     integer(I4B), pointer                            :: iangle2    => null()    ! flag indicating angle2 is available
     integer(I4B), pointer                            :: iangle3    => null()    ! flag indicating angle3 is available
     real(DP), dimension(:), pointer, contiguous      :: gwfflowjaold => null()  ! gwf flowja values last time disp coeffs were calculated
-    logical(LGP), pointer                            :: xt3dbyconn => null()    ! flag to indicate whether application of xt3d is specified by connection
-    logical(LGP), pointer                            :: allnonstdf => null()    ! flag to indicate whether all connections are using a non-standard dispersion formulation
-    integer(I4B), dimension(:), pointer, contiguous  :: idispform  => null()    ! flag to indicate use of non-standard dispersion formulations by connection
-    integer(I4B), pointer                            :: iprxt3d    => null()    ! print (1) or do not print (0) xt3d connections in XT3DDATA block
-    integer(I4B), pointer                            :: inonstdf   => null()    ! non-standard dispersion formulation flag is (0) if standard only and (1) if any non-standard
-    integer(I4B), pointer                            :: nbrmax     => null()    ! maximum number of standard neighbors for any cell
     
   contains
   
@@ -62,10 +56,8 @@ module GwtDspModule
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: read_xt3d_data   ! amp_note: currently separate but identical read_xt3d_data procedures in NPF and DSP - just have one in XT3D module if always the same???
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
-    procedure, private :: stddisp_fc
    
   end type GwtDspType
   
@@ -119,6 +111,7 @@ module GwtDspModule
     class(GwtDspType) :: this
     class(DisBaseType), pointer :: dis
     ! -- local
+    ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
       &' INPUT READ FROM UNIT ', i0, //)"
@@ -135,22 +128,8 @@ module GwtDspModule
       call xt3d_cr(this%xt3d, this%name_model, this%inunit, this%iout,       &
                    ldispopt=.true.)
       this%xt3d%ixt3d = this%ixt3d
+      call this%xt3d%xt3d_df(dis)
     endif
-    !
-    ! -- If xt3d active:
-    !    Temporarily allocate and initialize idispform array. Read the xt3d
-    !    data block if necessary to set idispform, otherwise set it to 1.    ! amp_note: doing this here because we need to know idispform array before call to _ac
-    !    Call xt3d_df.
-    if (this%ixt3d /= 0) then
-      allocate(this%idispform(this%dis%njas))
-      this%idispform = 0
-      if (this%xt3dbyconn /= 0) then
-        call this%read_xt3d_data(.true.)
-      else
-        this%idispform = 1
-      end if
-      call this%xt3d%xt3d_df(dis,this%idispform)
-    end if
     !
     ! -- Return
     return
@@ -217,7 +196,6 @@ module GwtDspModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
-    integer(I4B) :: i, nnbrs, nbrxmax
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
@@ -231,35 +209,11 @@ module GwtDspModule
     ! -- Print a message identifying the dispersion package.
     write(this%iout, fmtdsp) this%inunit
     !
-    ! -- Determine the maximum number of standard neighbors
-    !    for any cell (excluding self)
-    this%nbrmax = 0
-    do i = 1, this%dis%nodes
-      nnbrs = this%dis%con%ia(i+1) - this%dis%con%ia(i) - 1
-      this%nbrmax = max(nnbrs, this%nbrmax)
-    end do
-    !
     ! -- Allocate arrays
     call this%allocate_arrays(this%dis%nodes)
     !
     ! -- Read dispersion data
     call this%read_data()
-    !
-    ! -- Initialize the idispform and allnonstdf flags
-    this%idispform = 0
-    this%allnonstdf = .false.
-    ! -- If xt3d active:
-    !    Read the xt3d data block if necessary to set idispform, otherwise
-    !    set it to 1. Set allnonstdf flag to .true. if all connections use XT3D.
-    if (this%ixt3d /= 0) then
-      if (this%xt3dbyconn /= 0) then
-        call this%read_xt3d_data(.false.)
-        this%allnonstdf = all(this%idispform /= 0)
-      else
-        this%idispform = 1
-        this%allnonstdf = .true.
-      end if
-    end if
     !
     ! -- Return
     return
@@ -286,17 +240,14 @@ module GwtDspModule
       if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0,           &
         this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
         this%iangle1, this%iangle2, this%iangle3,                              &
-        this%angle1, this%angle2, this%angle3,                                 &
-        this%idispform, this%nbrmax)
+        this%angle1, this%angle2, this%angle3)
     endif
     !
     ! -- Fill d11, d22, d33, angle1, angle2, angle3 using specific discharge
     call this%calcdispellipse()
     !
-    ! -- Recalculate dispersion coefficients only where the standard dispersion
-    !    formulation is in use.  If a non-standard dispersion formulation is in
-    !     use at all connections, dispcoef is allocated to size of zero.  ! amp_note: make it like condsat???
-    if (.not.this%allnonstdf) then
+    ! -- If xt3d not in use, recalculate dispersion coefficients
+    if (this%ixt3d == 0) then
       call this%calcdispcoef()
     endif
     !
@@ -317,24 +268,20 @@ module GwtDspModule
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: kiter 
     ! -- local
-    integer(I4B) :: n, ipos, iflwchng, isympos
+    integer(I4B) :: n, ipos, iflwchng
     real(DP) :: fd
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate xt3d coefficients if flow solution has changed
     !    Force iflwchng to be 1 for the very first iteration just in case
     !    there is no advection so that the xt3d_fcpc routine is called
-    if (this%ixt3d > 0) then         ! amp_note: will need to generalize & modify if more dispersion formulations are added
+    if (this%ixt3d > 0) then
       iflwchng = 0
       if (kper*kstp*kiter == 1) then
         iflwchng = 1
       else
         nodeloop: do n = 1, this%dis%nodes
           do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-            ! -- Skip if XT3D not used for this connection
-            isympos = this%dis%con%jas(ipos)
-            if (this%idispform(isympos) /= 1) cycle   ! amp_note: verify that only flows at xt3d connections are relevant (not associated neighbor-of-neighbor connections)
-            !
             fd = abs(this%gwfflowjaold(ipos) - this%fmi%gwfflowja(ipos))
             !
             ! -- todo: this check is not robust.  Should find a better way
@@ -384,54 +331,35 @@ module GwtDspModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: cnew
     ! -- local
-    integer(I4B) :: n, m, ii, iis
-    integer(I4B) :: i, il, ig, iil, ilp1
+    integer(I4B) :: n, m, idiag, idiagm, ipos, isympos, isymcon
+    real(DP) :: dnm
 ! ------------------------------------------------------------------------------
     !
-    ! -- Update amat and rhs for dispersion formulation
-    !
-!!    this%xt3d%lamatsaved = .false.       ! kluge to debug and test
-!!    !
-    ! -- Apply any saved coefficient updates
-    if(this%ixt3d /= 0)                                                        &
-      call this%xt3d%xt3d_amatsaved_fc(njasln, amatsln, idxglo)
-    !
-    ! -- Loop over rows (nodes)
-    do n = 1, this%dis%nodes
-      !
-      ! -- Loop over connections of node n (columns) and apply the
-      !    appropriate dispersion formulations
-      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        if (this%dis%con%mask(ii) == 0) cycle
-        !
-        m = this%dis%con%ja(ii)
-        ! -- Skip if neighbor has lower cell number
-        if (m < n) cycle
-        !
-        iis = this%dis%con%jas(ii)
-        !
-        ! -- If no non-standard dispersion formulations used at any
-        !    connections, always use standard dispersion formulation.
-        !    Otherwise, use the appropriate formulation for the connection.
-        if (this%inonstdf == 0) then
+    if(this%ixt3d > 0) then
+      call this%xt3d%xt3d_fc(kiter, njasln, amatsln, idxglo, rhs, cnew)
+    else
+      do n = 1, nodes
+        if(this%fmi%ibdgwfsat0(n) == 0) cycle
+        idiag = this%dis%con%ia(n)
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          m = this%dis%con%ja(ipos)
+          if (m < n) cycle
+          if(this%fmi%ibdgwfsat0(m) == 0) cycle
+          isympos = this%dis%con%jas(ipos)
+          dnm = this%dispcoef(isympos)
           !
-          ! -- Standard dispersion formulation
-          call this%stddisp_fc(n, ii, njasln, amatsln, idxglo, rhs)
+          ! -- Contribution to row n
+          amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
+          amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
           !
-        else
-          !
-          ! -- Standard dispersion formulation
-          if (this%idispform(iis) == 0)                                          &
-             call this%stddisp_fc(n, ii, njasln, amatsln, idxglo, rhs)
-          !
-          ! -- XT3D formulation
-          if (this%idispform(iis) == 1)                                          &
-             call this%xt3d%xt3d_fc(n, ii, njasln, amatsln, idxglo, rhs, cnew)
-          !
-        end if
-        !
+          ! -- Contribution to row m
+          idiagm = this%dis%con%ia(m)
+          isymcon = this%dis%con%isym(ipos)
+          amatsln(idxglo(isymcon)) = amatsln(idxglo(isymcon)) + dnm
+          amatsln(idxglo(idiagm)) = amatsln(idxglo(idiagm)) - dnm
+        enddo
       enddo
-    enddo
+    endif
     !
     ! -- Return
     return
@@ -456,21 +384,15 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate dispersion and add to flowja
-    if(this%ixt3d > 0) call this%xt3d%xt3d_flowja(cnew, flowja)
-    !
-    if (.not.this%allnonstdf) then
+    if(this%ixt3d > 0) then
+      call this%xt3d%xt3d_flowja(cnew, flowja)
+    else
       do n = 1, this%dis%nodes
         if(this%fmi%ibdgwfsat0(n) == 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-          isympos = this%dis%con%jas(ipos)
-          ! -- Skip if non-standard dispersion formulation used for this
-          !    connection
-          if(this%inonstdf /= 0) then
-             if (this%idispform(isympos) /= 0) cycle
-          end if
-          !
           m = this%dis%con%ja(ipos)
           if(this%fmi%ibdgwfsat0(m) == 0) cycle
+          isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
         enddo
@@ -480,50 +402,6 @@ module GwtDspModule
     ! -- Return
     return
   end subroutine dsp_flowja
- 
-  subroutine stddisp_fc(this, n, ipos, njasln, amatsln, idxglo, rhs)
-! ******************************************************************************
-! stdcond_fc -- Formulate a connection
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: DONE
-    ! -- dummy
-    class(GwtDspType) :: this
-    integer(I4B) :: n, ipos
-    integer(I4B),intent(in) :: njasln
-    real(DP),dimension(njasln),intent(inout) :: amatsln
-    integer(I4B),intent(in),dimension(:) :: idxglo
-    real(DP),intent(inout),dimension(:) :: rhs
-    ! -- local
-    integer(I4B) :: m, idiag, idiagm, isympos, isymcon, iil, iilp1
-    real(DP) :: dnm
- ! ------------------------------------------------------------------------------
-    !
-    if(this%fmi%ibdgwfsat0(n) == 0) return
-    idiag = this%dis%con%ia(n)
-    isympos = this%dis%con%jas(ipos)
-    !
-    m = this%dis%con%ja(ipos)
-!!    if (m < n) return   ! amp_note: check for m<n now done in calling routine loop
-    if(this%fmi%ibdgwfsat0(m) == 0) return
-    dnm = this%dispcoef(isympos)
-    !
-    ! -- Contribution to row n
-    amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
-    amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
-    !
-    ! -- Contribution to row m
-    idiagm = this%dis%con%ia(m)
-    isymcon = this%dis%con%isym(ipos)
-    amatsln(idxglo(isymcon)) = amatsln(idxglo(isymcon)) + dnm
-    amatsln(idxglo(idiagm)) = amatsln(idxglo(idiagm)) - dnm
-    !
-    ! -- Return
-    return
-  end subroutine stddisp_fc
   
   subroutine allocate_scalars(this)
 ! ******************************************************************************
@@ -552,11 +430,6 @@ module GwtDspModule
     call mem_allocate(this%iangle1, 'IANGLE1', this%memoryPath)
     call mem_allocate(this%iangle2, 'IANGLE2', this%memoryPath)
     call mem_allocate(this%iangle3, 'IANGLE3', this%memoryPath)
-    call mem_allocate(this%allnonstdf, 'allnonstdf', this%memoryPath)
-    call mem_allocate(this%xt3dbyconn, 'XT3DBYCONN', this%memoryPath)
-    call mem_allocate(this%iprxt3d, 'IPRXT3D', this%memoryPath)
-    call mem_allocate(this%inonstdf, 'inonstdf', this%memoryPath)
-    call mem_allocate(this%nbrmax, 'NBRMAX', this%memoryPath)
     !
     ! -- Initialize
     this%idiffc = 0
@@ -567,11 +440,6 @@ module GwtDspModule
     this%iangle1 = 1
     this%iangle2 = 1
     this%iangle3 = 1
-    this%allnonstdf = .false.
-    this%xt3dbyconn = .false.
-    this%iprxt3d = 0
-    this%inonstdf = 0
-    this%nbrmax = 0
     !
     ! -- Return
     return
@@ -610,24 +478,18 @@ module GwtDspModule
     call mem_allocate(this%gwfflowjaold, this%dis%con%nja, 'GWFFLOWJAOLD',     &
       trim(this%memoryPath))
     !
-    ! -- Non-standard dispersion formulation flag array
-    ! -- Deallocate temporary allocation in dsp_df and allocate permanently
-    if (this%ixt3d /= 0) deallocate(this%idispform)
-    if (this%inonstdf /= 0)                                                    &
-       call mem_allocate(this%idispform, this%dis%njas, 'IDISPFORM',           &
-       this%memoryPath)
-    !
-    ! -- Allocate dispersion coefficient array   ! amp_note: if it turns out (later) that all connections use xt3d, reallocate to size 0 ???
+    ! -- Allocate dispersion coefficient array if xt3d not in use
+    if (this%ixt3d == 0) then
       call mem_allocate(this%dispcoef, this%dis%njas, 'DISPCOEF',              &
         trim(this%memoryPath))
+    else
+      call mem_allocate(this%dispcoef, 0, 'DISPCOEF', trim(this%memoryPath))
+    endif
     !
     ! -- Initialize gwfflowjaold
     do i = 1, size(this%gwfflowjaold)
       this%gwfflowjaold(i) = DZERO
     enddo
-    !
-    ! -- initialize dispersion formulation flag array
-    if (this%inonstdf /= 0) this%idispform = 0
     !
     ! -- Return
     return
@@ -645,10 +507,7 @@ module GwtDspModule
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
-    integer(I4B) :: inonstdf
 ! ------------------------------------------------------------------------------
-    !
-    inonstdf = this%inonstdf
     !
     ! -- deallocate arrays
     if (this%inunit /= 0) then
@@ -666,14 +525,11 @@ module GwtDspModule
       call mem_deallocate(this%angle3)
       call mem_deallocate(this%gwfflowjaold)
       call mem_deallocate(this%dispcoef)
-      if (inonstdf /= 0) call mem_deallocate(this%idispform)
+      if (this%ixt3d > 0) call this%xt3d%xt3d_da()
     end if
     !
     ! -- deallocate objects
-    if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_da()
-      deallocate(this%xt3d)
-    end if
+    if (this%ixt3d > 0) deallocate(this%xt3d)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%idiffc)
@@ -684,11 +540,6 @@ module GwtDspModule
     call mem_deallocate(this%iangle1)
     call mem_deallocate(this%iangle2)
     call mem_deallocate(this%iangle3)
-    call mem_deallocate(this%allnonstdf)
-    call mem_deallocate(this%xt3dbyconn)
-    call mem_deallocate(this%iprxt3d)
-    call mem_deallocate(this%inonstdf)
-    call mem_deallocate(this%nbrmax)
     !
     ! -- deallocate variables in NumericalPackageType
     call this%NumericalPackageType%da()
@@ -711,7 +562,7 @@ module GwtDspModule
     class(GwtDspType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr, isubopt
+    integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -731,26 +582,6 @@ module GwtDspModule
             this%ixt3d = 1
             write(this%iout, '(4x,a)')                                         &
                              'XT3D FORMULATION IS SELECTED.'
-            this%inonstdf = 1
-            do isubopt=1,3
-              call this%parser%GetStringCaps(keyword)
-              if(keyword == 'RHS') then    ! amp_note: RHS option was not previously programmed - verify that there's no harm in having it for DSP
-                this%ixt3d = 2
-                write(this%iout, '(8x,a)')                                     &
-                                 'XT3D RHS OPTION IS SELECTED.'
-              else if(keyword == 'BY_CONNECTION') then
-                this%xt3dbyconn = .true.
-                write(this%iout, '(8x,a)')                                     &
-                                 'APPLICATION OF XT3D IS SPECIFIED BY ' //     &
-                                 'CONNECTION.'
-              else if(keyword == 'PRINT_INPUT') then
-                this%iprxt3d = 1
-                write(this%iout, '(8x,a)')                                     &
-                                 'THE LIST OF XT3D CONNECTIONS WILL BE '   //  &
-                                 'PRINTED IF APPLICATION OF XT3D IS '      //  &
-                                 'SPECIFIED BY CONNECTION.'
-              endif
-            end do
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DISPERSION OPTION: ',  &
                                      trim(keyword)
@@ -916,95 +747,6 @@ module GwtDspModule
     ! -- Return
     return
   end subroutine read_data
-
-  subroutine read_xt3d_data(this,isdfcall)
-! ******************************************************************************
-! read_xt3d_data -- read the dsp xt3d data block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
-    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate, &
-                                   mem_reassignptr
-    use SimModule,         only: ustop, store_error, count_errors
-    ! -- dummy
-    class(GwtDspType) :: this
-    logical :: isdfcall
-    ! -- local
-    character(len=LINELENGTH) :: errmsg, line, nodestr, cellidm, cellidn
-    integer(I4B) :: n, m, ierr, iux, nodeun, nodeum, ii, iis
-    integer(I4B) :: nxt3ddata
-    logical :: isfound, endOfBlock
-! ------------------------------------------------------------------------------
-    !
-    ! -- If call from _df, skip past GRIDDATA block
-    if (isdfcall) call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    !
-    ! -- Check for XT3DDATA block
-    call this%parser%GetBlock('XT3DDATA', isfound, ierr)
-    if(.not.isfound) then
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED XT3DDATA BLOCK NOT FOUND.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- Read XT3DDATA block
-    if (.not.isdfcall) write(this%iout,'(1x,a)')'PROCESSING XT3DDATA'
-    nxt3ddata = 0                    ! amp_note: specify nxt3ddata in dimensions block???
-    do
-      call this%parser%GetNextLine(endOfBlock)
-      if (endOfBlock) exit
-      call this%parser%GetCurrentLine(line)
-      !
-      ! -- cellidn (read as cellid and convert to user node)
-      call this%parser%GetCellid(this%dis%ndim, cellidn)
-      ! -- convert user node to reduced node number     ! amp_note: confirm that conversion is appropriate here
-      n = this%dis%noder_from_cellid(cellidn, &
-                                       this%parser%iuactive, this%iout)
-      ! -- cellidm (read as cellid and convert to user node)
-      call this%parser%GetCellid(this%dis%ndim, cellidm)
-      ! -- convert user node to reduced node number     ! amp_note: confirm that conversion is appropriate here
-      m = this%dis%noder_from_cellid(cellidm, &
-                                       this%parser%iuactive, this%iout)
-      ! -- set idispform flag for connection to 1
-      ii = this%dis%con%getjaindex(n, m)
-      iis = this%dis%con%jas(ii)
-      this%idispform(iis) = 1
-      nxt3ddata = nxt3ddata + 1
-      !
-      if ((.not.isdfcall).and.(this%iprxt3d /= 0))                             &
-        write(this%iout, '(2a10)') trim(adjustl(cellidn)),                     &
-                                   trim(adjustl(cellidm))
-    end do
-    ! -- terminate if read errors encountered
-    if(count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
-    !
-    ! -- If call from _df, rewind dsp input file and skip past OPTIONS block
-    !    so data can be reread later
-    if (isdfcall) then
-      rewind(this%parser%GetUnit())
-      call this%parser%GetBlock('OPTIONS', isfound, ierr)
-    else
-      ! -- Print number of connections listed in GRIDDATA block
-      write(this%iout, '(1x,a,i10)')                                           &
-          'NUMBER OF XT3D CONNECTIONS LISTED:', nxt3ddata
-      ! -- Specification is by connection, so warn if no connections listed
-      if (nxt3ddata.eq.0) write(this%iout, '(4x,a,1(1x,a))')                   &
-          '****WARNING. Application of XT3D is specified by connection',       &
-          'but no connections are listed in the XT3DDATA block.'
-      ! -- Final XT3DDATA message
-      write(this%iout,'(1x,a)')'END PROCESSING XT3DDATA'
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_xt3d_data
  
   subroutine calcdispellipse(this)
 ! ******************************************************************************
@@ -1149,17 +891,13 @@ module GwtDspModule
       if(this%fmi%ibdgwfsat0(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        isympos = this%dis%con%jas(ipos)
-        ! -- Skip if nonstandard dispersion formulation used for this connection
-        if(this%inonstdf /= 0) then
-           if (this%idispform(isympos) /= 0) cycle
-        end if
         !
         ! -- Set m to connected cell
         m = this%dis%con%ja(ipos)
         !
         ! -- skip for lower triangle
         if (m < n) cycle
+        isympos = this%dis%con%jas(ipos)
         this%dispcoef(isympos) = DZERO
         if(this%fmi%ibdgwfsat0(m) == 0) cycle
         !
