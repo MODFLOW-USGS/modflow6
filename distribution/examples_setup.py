@@ -174,13 +174,13 @@ def make_example_table(fname, examplespath):
 
         # number of models
         mfnamefile = os.path.join(examplespath, exname, 'mfsim.nam')
-        model_files, outfiles = pymake.autotest.get_mf6_files(mfnamefile)
+        model_files, outfiles = pymake.get_mf6_files(mfnamefile)
         nmodels = len([w for w in model_files if w.lower().endswith('.nam')])
         # s += '& {} '.format(nmodels)
 
         # Number of stress periods
         tdis = [w for w in model_files if w.upper().endswith('.TDIS')][0]
-        nper = pymake.autotest.get_mf6_nper(os.path.join(examplespath,
+        nper = pymake.get_mf6_nper(os.path.join(examplespath,
                                                          exname, tdis))
         s += '& {} '.format(nper)
 
@@ -198,7 +198,7 @@ def make_example_table(fname, examplespath):
         s += '& '
         mshapes = []
         for disfile in dis_files:
-            mshape = pymake.autotest.get_mf6_mshape(
+            mshape = pymake.get_mf6_mshape(
                 os.path.join(examplespath, exname, disfile))
             mshapes.append(mshape)
         cellstring = '\parbox[t]{3cm}{' + ''.join(
@@ -210,7 +210,7 @@ def make_example_table(fname, examplespath):
         s += '& '
         lines = []
         for nf in namefiles:
-            ftypes = pymake.autotest.get_mf6_ftypes(
+            ftypes = pymake.get_mf6_ftypes(
                 os.path.join(examplespath, exname, nf),
                 ['CHD6', 'WEL6', 'DRN6', 'RIV6', 'GHB6', 'SFR6', 'RCH6',
                  'EVT6', 'SFR6', 'UZF6', 'MAW6', 'LAK6', 'MVR6'])
