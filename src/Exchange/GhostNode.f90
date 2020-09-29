@@ -31,10 +31,13 @@ module GhostNodeModule
     integer(I4B), dimension(:), pointer, contiguous    :: idiagm      => null()  ! amat diagonal position of m
     integer(I4B), dimension(:,:), pointer, contiguous  :: jposinrown  => null()  ! amat j position in row n
     integer(I4B), dimension(:,:), pointer, contiguous  :: jposinrowm  => null()  ! amat j position in row m
+    integer(I4B), pointer                              :: inonstdf    => null()  ! non-standard flow formulation flag is (0) if standard only and (1) if any non-standard
+    integer(I4B), dimension(:), pointer, contiguous    :: iflowform   => null()  ! flag to indicate use of non-standard flow formulations by connection
   contains
     procedure          :: gnc_df
     procedure          :: gnc_ac
     procedure          :: gnc_mc
+    procedure          :: gnc_ar
     procedure, private :: gnc_fmsav
     procedure          :: gnc_fc
     procedure          :: gnc_fn
@@ -307,6 +310,30 @@ module GhostNodeModule
     return
   end subroutine gnc_mc
 
+  subroutine gnc_ar(this, inonstdf, iflowform)
+! ******************************************************************************
+! gnc_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GhostNodeType) :: this
+    integer(I4B), pointer :: inonstdf
+    integer(I4B), dimension(:), pointer, contiguous :: iflowform
+    ! -- local
+    ! -- formats
+    ! -- data
+! ------------------------------------------------------------------------------
+    !
+    ! Set flow formulation pointers
+    this%inonstdf => inonstdf
+    if (this%inonstdf /= 0) this%iflowform => iflowform
+    !
+    ! -- Return
+    return
+  end subroutine gnc_ar
+
   subroutine gnc_fmsav(this, kiter, amatsln)
 ! ******************************************************************************
 ! gnc_fmsav -- Store the n-m Picard conductance in cond prior to the Newton
@@ -358,7 +385,7 @@ module GhostNodeModule
     integer(I4B), intent(in) :: kiter
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm
+    integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm, ii, iis
     real(DP) :: cond, alpha, aterm, rterm
 ! ------------------------------------------------------------------------------
     !
@@ -371,6 +398,16 @@ module GhostNodeModule
     gncloop: do ignc = 1, this%nexg
       noden = this%nodem1(ignc)
       nodem = this%nodem2(ignc)
+      ! -- If this is a single model gnc (not an exchange across models),
+      !    and the connection uses a non-standard flow formualtion, skip.
+      !    Non-standard flow formulations not currently supported
+      !    by exchanges; if an exchange across models, apply GNC.
+      if ((this%inonstdf /= 0).and.this%smgnc) then
+        ! -- Skip if XT3D used for this connection
+        ii = this%m1%dis%con%getjaindex(noden, nodem)
+        iis = this%m1%dis%con%jas(ii)
+        if (this%iflowform(iis) /= 0) cycle
+      end if
       if(this%m1%ibound(noden) == 0 .or. &
          this%m2%ibound(nodem) == 0) cycle gncloop
       ipos = this%idxglo(ignc)
@@ -435,7 +472,7 @@ module GhostNodeModule
     integer(I4B), dimension(:), optional :: ictm1_opt
     integer(I4B), dimension(:), optional :: ictm2_opt
     ! -- local
-    integer(I4B) :: ignc, jidx, ipos, isympos, ihc, ivarcv
+    integer(I4B) :: ignc, jidx, ipos, isympos, ihc, ivarcv, ii, iis
     integer(I4B) :: nodej, noden, nodem
     integer(I4B) :: iups, ictup
     real(DP) :: csat, alpha, consterm, term, derv
@@ -450,6 +487,16 @@ module GhostNodeModule
     gncloop: do ignc = 1, this%nexg
       noden = this%nodem1(ignc)
       nodem = this%nodem2(ignc)
+      ! -- If this is a single model gnc (not an exchange across models),
+      !    and the connection uses a non-standard flow formualtion, skip.
+      !    Non-standard flow formulations not currently supported
+      !    by exchanges; if an exchange across models, apply GNC.
+      if ((this%inonstdf /= 0).and.this%smgnc) then
+        ! -- Skip if XT3D used for this connection
+        ii = this%m1%dis%con%getjaindex(noden, nodem)
+        iis = this%m1%dis%con%jas(ii)
+        if (this%iflowform(iis) /= 0) cycle
+      end if
       if(this%m1%ibound(noden) == 0 .or. &
          this%m2%ibound(nodem) == 0) cycle gncloop
       !
@@ -541,7 +588,7 @@ module GhostNodeModule
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    integer(I4B) :: ignc
+    integer(I4B) :: ignc, ii, iis, noden, nodem, nigncwritten
     real(DP) :: deltaQgnc
     character(len=LINELENGTH) :: nodenstr, nodemstr
     ! -- format
@@ -553,14 +600,27 @@ module GhostNodeModule
       write(this%iout, '(//, a)') 'GHOST NODE CORRECTION RESULTS'
       write(this%iout, '(3a10, 2a15)') 'GNC NUM', 'NODEN', 'NODEM', &
         'DELTAQGNC', 'CONDNM'
+      nigncwritten = 0
       do ignc = 1, this%nexg
+        noden = this%nodem1(ignc)
+        nodem = this%nodem2(ignc)
+        if (this%inonstdf /= 0) then
+          ! -- Skip if non-standard flow formulation used for this connection
+          ii = this%m1%dis%con%getjaindex(noden, nodem)
+          iis = this%m1%dis%con%jas(ii)
+          if (this%iflowform(iis) /= 0) cycle
+        end if
         deltaQgnc = this%deltaQgnc(ignc)
         call this%m1%dis%noder_to_string(this%nodem1(ignc), nodenstr)
         call this%m2%dis%noder_to_string(this%nodem2(ignc), nodemstr)
         write(this%iout, fmtgnc) ignc, trim(adjustl(nodenstr)), &
                                   trim(adjustl(nodemstr)), &
                                   deltaQgnc, this%cond(ignc)
+        nigncwritten = nigncwritten + 1
       enddo
+      if (this%inonstdf /= 0) write(this%iout, '(/3x,2a,i10,a,i10/)')          &
+        'NUMBER OF GHOST-NODE CONNECTIONS OVERRIDDEN BY NON-STANDARD',         &
+        ' FLOW FORMULATION:', this%nexg - nigncwritten, ' OF', this%nexg   ! say which formulation(s)???
     endif
     !
     ! -- return
@@ -578,7 +638,7 @@ module GhostNodeModule
     class(GhostNodeType) :: this
     real(DP), dimension(:), intent(inout) :: flowja
     ! -- local
-    integer(I4B) :: ignc, n1, n2, ipos, isympos
+    integer(I4B) :: ignc, n1, n2, ipos, isympos, iis
     real(DP) :: deltaQgnc
     ! -- format
 ! ------------------------------------------------------------------------------
@@ -594,6 +654,11 @@ module GhostNodeModule
       ! -- find the positions of this connection in the csr array
       ipos = this%m1%dis%con%getjaindex(n1, n2)
       isympos = this%m1%dis%con%isym(ipos)
+      ! -- If connection uses a non-standard flow formulation, skip
+      if (this%inonstdf /= 0) then
+        iis = this%m1%dis%con%jas(ipos)
+        if (this%iflowform(iis) /= 0) cycle
+      end if
       !
       ! -- add/subtract the corrections
       flowja(ipos) = flowja(ipos) + deltaQgnc
@@ -621,7 +686,7 @@ module GhostNodeModule
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: ignc
     ! -- local
-    integer(I4B) :: noden, nodem, nodej, jidx
+    integer(I4B) :: noden, nodem, nodej, jidx, ii, iis
     real(DP) :: sigalj, alpha, hd, aterm, cond
 ! ------------------------------------------------------------------------------
     !
@@ -631,6 +696,12 @@ module GhostNodeModule
     hd = DZERO
     noden = this%nodem1(ignc)
     nodem = this%nodem2(ignc)
+    if (this%inonstdf /= 0) then   ! amp_note: verify that deltaQgnc really is single-model only, even though it's called from gwf_gwf exchange
+      ! -- Skip if non-standard flow formulation used for this connection
+      ii = this%m1%dis%con%getjaindex(noden, nodem)
+      iis = this%m1%dis%con%jas(ii)
+      if (this%iflowform(iis) /= 0) return
+    end if
     !
     ! -- calculate deltaQgnc
     if(this%m1%ibound(noden) /= 0 .and. this%m2%ibound(nodem) /= 0) then

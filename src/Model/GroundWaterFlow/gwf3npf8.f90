@@ -1,5 +1,5 @@
 module GwfNpfModule
-  use KindModule,                 only: DP, I4B
+  use KindModule,                 only: DP, I4B, LGP
   use ConstantsModule,            only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2,    &
                                         DHALF, DP9, DONE, DTWO,                 &
                                         DLNLOW, DLNHIGH,                        &
@@ -51,6 +51,12 @@ module GwfNpfModule
     real(DP), pointer                               :: wetfct       => null()    ! wetting factor
     real(DP), pointer                               :: hdry         => null()    ! default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    ! confined (0) or convertible (1)
+    logical(LGP), pointer                           :: xt3dbyconn   => null()    ! flag to indicate whether application of xt3d is specified by connection
+    logical(LGP), pointer                           :: allnonstdf   => null()    ! flag to indicate whether all connections are using a non-standard flow formulation
+    integer(I4B), dimension(:), pointer, contiguous :: iflowform    => null()    ! flag to indicate use of non-standard flow formulations by connection
+    integer(I4B), pointer                           :: iprxt3d      => null()    ! print (1) or do not print (0) xt3d connections in XT3DDATA block
+    integer(I4B), pointer                           :: inonstdf     => null()    ! non-standard flow formulation flag is (0) if standard only and (1) if any non-standard
+    integer(I4B), pointer                           :: nbrmax       => null()    ! maximum number of standard neighbors for any cell
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -96,6 +102,7 @@ module GwfNpfModule
     procedure                               :: npf_nur
     procedure                               :: npf_ot
     procedure                               :: npf_da
+    procedure, private                      :: stdcond_fc
     procedure, private                      :: thksat     => sgwf_npf_thksat
     procedure, private                      :: qcalc      => sgwf_npf_qcalc
     procedure, private                      :: wd         => sgwf_npf_wetdry
@@ -106,6 +113,7 @@ module GwfNpfModule
     procedure, private                      :: rewet_options
     procedure, private                      :: check_options
     procedure, private                      :: read_data
+    procedure, private                      :: read_xt3d_data
     procedure, private                      :: prepcheck
     procedure, public                       :: rewet_check
     procedure, public                       :: hy_eff
@@ -166,7 +174,6 @@ module GwfNpfModule
     class(DisBaseType), pointer, intent(inout) :: dis
     type(Xt3dType), pointer :: xt3d
     integer(I4B), intent(in) :: ingnc
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015',    &
@@ -190,14 +197,30 @@ module GwfNpfModule
     ! -- Save pointer to xt3d object
     this%xt3d => xt3d
     if (this%ixt3d /= 0) xt3d%ixt3d = this%ixt3d
-    call this%xt3d%xt3d_df(dis)
     !
-    ! -- Ensure GNC and XT3D are not both on at the same time
-    if (this%ixt3d /= 0 .and. ingnc > 0) then
-      call store_error('Error in model ' // trim(this%name_model) // &
-        '.  The XT3D option cannot be used with the GNC Package.')
-      call ustop()
-    endif
+    ! -- check whether a non-standard flow formulation and GNC are both active,
+    !    and if so, warn
+    if (this%inonstdf /= 0 .and. ingnc > 0) then
+      write(this%iout, '(4x,a,2(1x,a))')                                        &
+        '****WARNING. A non-standard flow formulation and the GNC Package are', &
+        'both active. The non-standard flow formulation will override GNC at',  &
+        'any connections for which both are specified.'    ! amp_note: say which formulation???
+    end if
+    !
+    ! -- If xt3d active:
+    !    Temporarily allocate and initialize iflowform array. Read the xt3d
+    !    data block if necessary to set iflowform, otherwise set it to 1.    ! amp_note: doing this here because we need to know iflowform array before call to _ac
+    !    Call xt3d_df.
+    if (this%ixt3d /= 0) then
+      allocate(this%iflowform(this%dis%njas))
+      this%iflowform = 0
+      if (this%xt3dbyconn /= 0) then
+        call this%read_xt3d_data(.true.)
+      else
+        this%iflowform = 1
+      end if
+      call this%xt3d%xt3d_df(dis,this%iflowform)
+    end if
     !
     ! -- Return
     return
@@ -251,7 +274,7 @@ module GwfNpfModule
   end subroutine npf_mc
   
   subroutine npf_init_mem(this, dis, ixt3d, icelltype, k11, k22, k33, wetdry,    &
-                          angle1, angle2, angle3)
+                          angle1, angle2, angle3)    ! amp_note: this subroutine appears to be unused
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object from memory
 ! ******************************************************************************
@@ -340,6 +363,7 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
     ! -- local
+    integer(I4B) :: i, nnbrs, nbrxmax
     ! -- formats
     ! -- data
 ! ------------------------------------------------------------------------------
@@ -352,11 +376,36 @@ module GwfNpfModule
     ! -- read data from files
     if (this%inunit /= 0)  then
       !
+      ! -- Determine the maximum number of standard neighbors
+      !    for any cell (excluding self)
+      this%nbrmax = 0
+      do i = 1, this%dis%nodes
+        nnbrs = this%dis%con%ia(i+1) - this%dis%con%ia(i) - 1
+        this%nbrmax = max(nnbrs, this%nbrmax)
+      end do
+      !
       ! -- allocate arrays
       call this%allocate_arrays(this%dis%nodes, this%dis%njas)
       !
       ! -- read the data block
       call this%read_data()
+      !
+      ! -- Initialize the iflowform and allnonstdf flags
+      this%iflowform = 0
+      this%allnonstdf = .false.
+      ! -- If xt3d active:
+      !    Read the xt3d data block if necessary to set iflowform, otherwise
+      !    set it to 1. Set allnonstdf flag to .true. if all connections use XT3D.
+      if (this%ixt3d /= 0) then
+        if (this%xt3dbyconn /= 0) then
+          call this%read_xt3d_data(.false.)
+          this%allnonstdf = all(this%iflowform /= 0)
+        else
+          this%iflowform = 1
+          this%allnonstdf = .true.
+        end if
+      end if
+      !
     end if
     !
     ! -- Initialize and check data
@@ -364,10 +413,11 @@ module GwfNpfModule
     !
     ! -- xt3d
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_ar(ibound, this%k11, this%ik33, this%k33,              &
-                             this%sat, this%ik22, this%k22,                      &
-                             this%iangle1, this%iangle2, this%iangle3,           &
-                             this%angle1, this%angle2, this%angle3,              &
+      call this%xt3d%xt3d_ar(ibound, this%k11, this%ik33, this%k33,            &
+                             this%sat, this%ik22, this%k22,                    &
+                             this%iangle1, this%iangle2, this%iangle3,         &
+                             this%angle1, this%angle2, this%angle3,            &
+                             this%iflowform, this%nbrmax,                      &
                              this%inewton, this%icelltype)
     end if
     !
@@ -459,103 +509,57 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: rhs
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n, m, ii, idiag, ihc
-    integer(I4B) :: isymcon, idiagm
-    real(DP) :: hyn, hym
-    real(DP) :: cond
+    integer(I4B) :: n, m, ii, iis
+    integer(I4B) :: i, il, ig, iil, ilp1
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate conductance and put into amat
+    ! -- Update amat and rhs for flow formulation
     !
-    if(this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
-    else
+!!    this%xt3d%lamatsaved = .false.       ! kluge to debug and test
+!!    !
+    ! -- Apply any saved coefficient updates
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_amatsaved_fc(njasln, amat, idxglo)
     !
+    ! -- Loop over rows (nodes)
     do n = 1, this%dis%nodes
+      !
+      ! -- Loop over connections of node n (columns) and apply the
+      !    the appropriate flow formulations
       do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         if (this%dis%con%mask(ii) == 0) cycle
-        
+        !
         m = this%dis%con%ja(ii)
+        ! -- Skip if neighbor has lower cell number
+        if (m < n) cycle
         !
-        ! -- Calculate conductance only for upper triangle but insert into
-        !    upper and lower parts of amat.
-        if(m < n) cycle
-        ihc = this%dis%con%ihc(this%dis%con%jas(ii))
-        hyn = this%hy_eff(n, m, ihc, ipos=ii)
-        hym = this%hy_eff(m, n, ihc, ipos=ii)
+        iis = this%dis%con%jas(ii)
         !
-        ! -- Vertical connection
-        if(ihc == 0) then
+        ! -- If no non-standard conductance formulations used at any
+        !    connections, always use standard conductance formulation.
+        !    Otherwise, use the appropriate formulation for the connection.
+        if (this%inonstdf == 0) then
           !
-          ! -- Calculate vertical conductance
-          cond =  vcond(this%ibound(n), this%ibound(m),                        &
-                        this%icelltype(n), this%icelltype(m), this%inewton,    &
-                        this%ivarcv, this%idewatcv,                            &
-                        this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m),  &
-                        hyn, hym,                                              &
-                        this%sat(n), this%sat(m),                              &
-                        this%dis%top(n), this%dis%top(m),                      &
-                        this%dis%bot(n), this%dis%bot(m),                      &
-                        this%dis%con%hwva(this%dis%con%jas(ii)))
-          !
-          ! -- Vertical flow for perched conditions
-          if(this%iperched /= 0) then
-            if(this%icelltype(m) /= 0) then
-              if(hnew(m) < this%dis%top(m)) then
-                !
-                ! -- Fill row n
-                idiag = this%dis%con%ia(n)
-                rhs(n) = rhs(n) - cond * this%dis%bot(n)
-                amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
-                !
-                ! -- Fill row m
-                isymcon = this%dis%con%isym(ii)
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-                rhs(m) = rhs(m) + cond * this%dis%bot(n)
-                !
-                ! -- cycle the connection loop
-                cycle
-              endif
-            endif
-          endif
+          ! -- Standard conductance formulation
+          call this%stdcond_fc(n, ii, njasln, amat, idxglo, rhs, hnew)
           !
         else
           !
-          ! -- Horizontal conductance
-          cond = hcond(this%ibound(n), this%ibound(m),                       &
-                       this%icelltype(n), this%icelltype(m),                 &
-                       this%inewton, this%inewton,                           &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
-                       this%condsat(this%dis%con%jas(ii)),                   &
-                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
-                       this%dis%top(n), this%dis%top(m),                     &
-                       this%dis%bot(n), this%dis%bot(m),                     &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
-                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
-                       this%satomega, this%satmin)
-        endif
+          ! -- Standard conductance formulation
+          if (this%iflowform(iis) == 0)                                          &
+             call this%stdcond_fc(n, ii, njasln, amat, idxglo, rhs, hnew)
+          !
+          ! -- XT3D formulation
+          if (this%iflowform(iis) == 1)                                          &
+             call this%xt3d%xt3d_fc(n, ii, njasln, amat, idxglo, rhs, hnew)
+          !
+        end if
         !
-        ! -- Fill row n
-        idiag = this%dis%con%ia(n)
-        amat(idxglo(ii)) = amat(idxglo(ii)) + cond
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
-        !
-        ! -- Fill row m
-        isymcon = this%dis%con%isym(ii)
-        idiagm = this%dis%con%ia(m)
-        amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-        amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
       enddo
     enddo
-    !
-    endif
     !
     ! -- Return
     return
   end subroutine npf_fc
-
 
   subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
@@ -574,7 +578,7 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) :: nodes, nja
-    integer(I4B) :: n,m,ii,idiag
+    integer(I4B) :: n,m,ii,idiag,iis
     integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
     integer(I4B) :: idn
@@ -595,104 +599,108 @@ module GwfNpfModule
     !
     nodes = this%dis%nodes
     nja = this%dis%con%nja
-    if(this%ixt3d /= 0) then
+    if(this%ixt3d /= 0)                                                        &
       call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
-    else
     !
-    do n=1, nodes
-      idiag=this%dis%con%ia(n)
-      do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
-        if (this%dis%con%mask(ii) == 0) cycle
-        
-        m=this%dis%con%ja(ii)
-        isymcon = this%dis%con%isym(ii)
-        ! work on upper triangle
-        if(m < n) cycle
-        if(this%dis%con%ihc(this%dis%con%jas(ii))==0 .and.                     &
-           this%ivarcv == 0) then
-          !call this%vcond(n,m,hnew(n),hnew(m),ii,cond)
-          ! do nothing
-        else
-          ! determine upstream node
-          iups = m
-          if (hnew(m) < hnew(n)) iups = n
-          idn = n
-          if (iups == n) idn = m
-          !
-          ! -- no newton terms if upstream cell is confined
-          if (this%icelltype(iups) == 0) cycle
-          !
-          ! -- Set the upstream top and bot, and then recalculate for a
-          !    vertically staggered horizontal connection
-          topup = this%dis%top(iups)
-          botup = this%dis%bot(iups)
-          if(this%dis%con%ihc(this%dis%con%jas(ii)) == 2) then
-            topup = min(this%dis%top(n), this%dis%top(m))
-            botup = max(this%dis%bot(n), this%dis%bot(m))
-          endif
-          !
-          ! get saturated conductivity for derivative
-          cond = this%condsat(this%dis%con%jas(ii))
-          !
-          ! -- if using MODFLOW-NWT upstream weighting option apply
-          !    factor to remove average thickness
-          if (this%inwtupw /= 0) then
-            topdn = this%dis%top(idn)
-            botdn = this%dis%bot(idn)
-            afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
-            cond = cond * afac
+    if (.not.this%allnonstdf) then
+      do n=1, nodes
+        idiag=this%dis%con%ia(n)
+        do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
+          if (this%dis%con%mask(ii) == 0) cycle
+          ! -- Skip if non-standard flow formulation used for this connection
+          if(this%inonstdf /= 0) then
+            iis = this%dis%con%jas(ii)
+            if (this%iflowform(iis) /= 0) cycle
           end if
           !
-          ! compute additional term
-          consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
-          !filledterm = cond
-          filledterm = amat(idxglo(ii))
-          derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),       &
-                                                this%satomega, this%satmin)
-          idiagm = this%dis%con%ia(m)
-          ! fill jacobian for n being the upstream node
-          if (iups == n) then
-            hds = hnew(m)
-            !isymcon =  this%dis%con%isym(ii)
-            term = consterm * derv
-            rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
-            rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
-            ! fill in row of n
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(n) > 0) then
-              amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
-            end if
-            !fill row of m
-            amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(m) > 0) then
-              amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
-            end if
-          ! fill jacobian for m being the upstream node
+          m=this%dis%con%ja(ii)
+          isymcon = this%dis%con%isym(ii)
+          ! work on upper triangle
+          if(m < n) cycle
+          if(this%dis%con%ihc(this%dis%con%jas(ii))==0 .and.                     &
+             this%ivarcv == 0) then
+            !call this%vcond(n,m,hnew(n),hnew(m),ii,cond)
+            ! do nothing
           else
-            hds = hnew(n)
-            term = -consterm * derv
-            rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
-            rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
-            ! fill in row of n
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(n) > 0) then
-              amat(idxglo(ii)) = amat(idxglo(ii)) + term
+            ! determine upstream node
+            iups = m
+            if (hnew(m) < hnew(n)) iups = n
+            idn = n
+            if (iups == n) idn = m
+            !
+            ! -- no newton terms if upstream cell is confined
+            if (this%icelltype(iups) == 0) cycle
+            !
+            ! -- Set the upstream top and bot, and then recalculate for a
+            !    vertically staggered horizontal connection
+            topup = this%dis%top(iups)
+            botup = this%dis%bot(iups)
+            if(this%dis%con%ihc(this%dis%con%jas(ii)) == 2) then
+              topup = min(this%dis%top(n), this%dis%top(m))
+              botup = max(this%dis%bot(n), this%dis%bot(m))
+            endif
+            !
+            ! get saturated conductivity for derivative
+            cond = this%condsat(this%dis%con%jas(ii))
+            !
+            ! -- if using MODFLOW-NWT upstream weighting option apply
+            !    factor to remove average thickness
+            if (this%inwtupw /= 0) then
+              topdn = this%dis%top(idn)
+              botdn = this%dis%bot(idn)
+              afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
+              cond = cond * afac
             end if
-            !fill row of m
-            amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(m) > 0) then
-              amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+            !
+            ! compute additional term
+            consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
+            !filledterm = cond
+            filledterm = amat(idxglo(ii))
+            derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),    &
+                                                  this%satomega, this%satmin)
+            idiagm = this%dis%con%ia(m)
+            ! fill jacobian for n being the upstream node
+            if (iups == n) then
+              hds = hnew(m)
+              !isymcon =  this%dis%con%isym(ii)
+              term = consterm * derv
+              rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
+              rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
+              ! fill in row of n
+              amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
+              ! fill newton term in off diagonal if active cell
+              if (this%ibound(n) > 0) then
+                amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
+              end if
+              !fill row of m
+              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              ! fill newton term in off diagonal if active cell
+              if (this%ibound(m) > 0) then
+                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
+              end if
+            ! fill jacobian for m being the upstream node
+            else
+              hds = hnew(n)
+              term = -consterm * derv
+              rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
+              rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
+              ! fill in row of n
+              amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              ! fill newton term in off diagonal if active cell
+              if (this%ibound(n) > 0) then
+                amat(idxglo(ii)) = amat(idxglo(ii)) + term
+              end if
+              !fill row of m
+              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
+              ! fill newton term in off diagonal if active cell
+              if (this%ibound(m) > 0) then
+                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+              end if
             end if
-          end if
-        endif
+          endif
 
-      enddo
-    end do
-    !
+        enddo
+      end do
     end if
     !
     ! -- Return
@@ -763,31 +771,141 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: hnew
     real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: n, ipos, m
+    integer(I4B) :: n, ipos, m, isympos
     real(DP) :: qnm
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow across each cell face and store in flowja
     !
-    if(this%ixt3d /= 0) then
-      call this%xt3d%xt3d_flowja(hnew, flowja)
-    else
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_flowja(hnew, flowja)
     !
-    do n = 1, this%dis%nodes
-      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        m = this%dis%con%ja(ipos)
-        if(m < n) cycle
-        call this%qcalc(n, m, hnew(n), hnew(m), ipos, qnm)
-        flowja(ipos) = qnm
-        flowja(this%dis%con%isym(ipos)) = -qnm
+    if (.not.this%allnonstdf) then
+      do n = 1, this%dis%nodes
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          ! -- Skip if non-standard flow formulation used for this connection
+          if(this%inonstdf /= 0) then
+            isympos = this%dis%con%jas(ipos)
+            if (this%iflowform(isympos) /= 0) cycle
+          end if
+          m = this%dis%con%ja(ipos)
+          if(m < n) cycle
+          call this%qcalc(n, m, hnew(n), hnew(m), ipos, qnm)
+          flowja(ipos) = qnm
+          flowja(this%dis%con%isym(ipos)) = -qnm
+        enddo
       enddo
-    enddo
-    !
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine npf_flowja
+
+  subroutine stdcond_fc(this, n, ii, njasln, amat, idxglo, rhs, hnew)
+! ******************************************************************************
+! stdcond_fc -- Formulate a connection
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DONE
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B) :: n, ii
+    integer(I4B),intent(in) :: njasln
+    real(DP),dimension(njasln),intent(inout) :: amat
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
+    ! -- local
+    integer(I4B) :: m, idiag, ihc, iil, iilp1
+    integer(I4B) :: isymcon, idiagm
+    real(DP) :: hyn, hym
+    real(DP) :: cond
+ ! ------------------------------------------------------------------------------
+    !
+    ! -- Get neighbor's node number
+    m = this%dis%con%ja(ii)
+    !
+    ! -- Calculate conductance only for upper triangle but insert into
+    !    upper and lower parts of amat.
+!!    if(m < n) return
+    if(m < n) then
+      print *,"stdcond_fc should not be called for m < n"   ! amp_note: because perched calc assumes m > n???
+      pause                                                 ! kluge
+      stop
+    end if
+    !
+    ihc = this%dis%con%ihc(this%dis%con%jas(ii))
+    hyn = this%hy_eff(n, m, ihc, ipos=ii)
+    hym = this%hy_eff(m, n, ihc, ipos=ii)
+    !
+    ! -- Vertical connection
+    if(ihc == 0) then
+      !
+      ! -- Calculate vertical conductance
+      cond = vcond(this%ibound(n), this%ibound(m),                       &
+                   this%icelltype(n), this%icelltype(m), this%inewton,   &
+                   this%ivarcv, this%idewatcv,                           &
+                   this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), &
+                   hyn, hym,                                             &
+                   this%sat(n), this%sat(m),                             &
+                   this%dis%top(n), this%dis%top(m),                     &
+                   this%dis%bot(n), this%dis%bot(m),                     &
+                   this%dis%con%hwva(this%dis%con%jas(ii)))
+      !
+      ! -- Vertical flow for perched conditions
+      if(this%iperched /= 0) then
+        if(this%icelltype(m) /= 0) then
+          if(hnew(m) < this%dis%top(m)) then
+            !
+            ! -- Fill row n
+            idiag = this%dis%con%ia(n)
+            rhs(n) = rhs(n) - cond * this%dis%bot(n)
+            amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+            !
+            ! -- Fill row m
+            isymcon = this%dis%con%isym(ii)
+            amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+            rhs(m) = rhs(m) + cond * this%dis%bot(n)
+            !
+          endif
+        endif
+      endif
+      !
+    else
+      !
+      ! -- Horizontal conductance
+      cond = hcond(this%ibound(n), this%ibound(m),                       &
+                   this%icelltype(n), this%icelltype(m),                 &
+                   this%inewton, this%inewton,                           &
+                   this%dis%con%ihc(this%dis%con%jas(ii)),               &
+                   this%icellavg, this%iusgnrhc, this%inwtupw,           &
+                   this%condsat(this%dis%con%jas(ii)),                   &
+                   hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
+                   this%dis%top(n), this%dis%top(m),                     &
+                   this%dis%bot(n), this%dis%bot(m),                     &
+                   this%dis%con%cl1(this%dis%con%jas(ii)),               &
+                   this%dis%con%cl2(this%dis%con%jas(ii)),               &
+                   this%dis%con%hwva(this%dis%con%jas(ii)),              &
+                   this%satomega, this%satmin)
+    endif
+    !
+    ! -- Fill row n
+    idiag = this%dis%con%ia(n)
+    amat(idxglo(ii)) = amat(idxglo(ii)) + cond
+    amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+    !
+    ! -- Fill row m
+    isymcon = this%dis%con%isym(ii)
+    idiagm = this%dis%con%ia(m)
+    amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+    amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
+    !
+    ! -- Return
+    return
+  end subroutine stdcond_fc
+
 
   subroutine sgwf_npf_thksat(this, n, hn, thksat)
 ! ******************************************************************************
@@ -1006,7 +1124,11 @@ module GwfNpfModule
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwfNpftype) :: this
+    ! -- local
+    integer(I4B) :: inonstdf
 ! ------------------------------------------------------------------------------
+    !
+    inonstdf = this%inonstdf
     !
     ! -- Strings
     !
@@ -1042,6 +1164,11 @@ module GwfNpfModule
     call mem_deallocate(this%lastedge)
     call mem_deallocate(this%ik22overk)
     call mem_deallocate(this%ik33overk)
+    call mem_deallocate(this%allnonstdf)
+    call mem_deallocate(this%xt3dbyconn)
+    call mem_deallocate(this%iprxt3d)
+    call mem_deallocate(this%inonstdf)
+    call mem_deallocate(this%nbrmax)
     !
     ! -- Deallocate arrays
     deallocate(this%aname)
@@ -1059,6 +1186,7 @@ module GwfNpfModule
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
     call mem_deallocate(this%spdis)
+    if (inonstdf /= 0) call mem_deallocate(this%iflowform)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -1115,6 +1243,11 @@ module GwfNpfModule
     call mem_allocate(this%iwetdry, 'IWETDRY', this%memoryPath)
     call mem_allocate(this%nedges, 'NEDGES', this%memoryPath)
     call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
+    call mem_allocate(this%allnonstdf, 'allnonstdf', this%memoryPath)
+    call mem_allocate(this%xt3dbyconn, 'XT3DBYCONN', this%memoryPath)
+    call mem_allocate(this%iprxt3d, 'IPRXT3D', this%memoryPath)
+    call mem_allocate(this%inonstdf, 'inonstdf', this%memoryPath)
+    call mem_allocate(this%nbrmax, 'NBRMAX', this%memoryPath)
     !
     ! -- set pointer to inewtonur
     call mem_setptr(this%igwfnewtonur, 'INEWTONUR', create_mem_path(this%name_model))
@@ -1150,6 +1283,11 @@ module GwfNpfModule
     this%iwetdry = 0
     this%nedges = 0
     this%lastedge = 0
+    this%allnonstdf = .false.
+    this%xt3dbyconn = .false.
+    this%iprxt3d = 0
+    this%inonstdf = 0
+    this%nbrmax = 0
     !
     ! -- If newton is on, then NPF creates asymmetric matrix
     this%iasym = this%inewton
@@ -1208,6 +1346,12 @@ module GwfNpfModule
       call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     endif
     !
+    ! -- Non-standard flow formulation flag array
+    ! -- Deallocate temporary allocation in npf_df and allocate permanently
+    if (this%ixt3d /= 0) deallocate(this%iflowform)
+    if (this%inonstdf /= 0)                                                    &
+       call mem_allocate(this%iflowform, njas, 'IFLOWFORM', this%memoryPath)
+    !
     ! -- initialize iangle1, iangle2, iangle3, and wetdry
     do n = 1, ncells
       this%angle1(n) = DZERO
@@ -1215,6 +1359,9 @@ module GwfNpfModule
       this%angle3(n) = DZERO
       this%wetdry(n) = DZERO
     end do
+    !
+    ! -- initialize flow formulation flag array
+    if (this%inonstdf /= 0) this%iflowform = 0
     !
     ! -- allocate variable names
     allocate(this%aname(this%iname))
@@ -1242,7 +1389,7 @@ module GwfNpfModule
     class(GwfNpftype) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
+    integer(I4B) :: ierr, isubopt
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
@@ -1321,10 +1468,26 @@ module GwfNpfModule
             this%ixt3d = 1
             write(this%iout, '(4x,a)')                                         &
                              'XT3D FORMULATION IS SELECTED.'
-            call this%parser%GetStringCaps(keyword)
-            if(keyword == 'RHS') then
-              this%ixt3d = 2
-            endif
+            this%inonstdf = 1
+            do isubopt=1,3
+              call this%parser%GetStringCaps(keyword)
+              if(keyword == 'RHS') then
+                this%ixt3d = 2
+                write(this%iout, '(8x,a)')                                     &
+                                 'XT3D RHS OPTION IS SELECTED.'
+              else if(keyword == 'BY_CONNECTION') then
+                this%xt3dbyconn = .true.
+                write(this%iout, '(8x,a)')                                     &
+                                 'APPLICATION OF XT3D IS SPECIFIED BY ' //     &
+                                 'CONNECTION.'
+              else if(keyword == 'PRINT_INPUT') then
+                this%iprxt3d = 1
+                write(this%iout, '(8x,a)')                                     &
+                                 'THE LIST OF XT3D CONNECTIONS WILL BE '   //  &
+                                 'PRINTED IF APPLICATION OF XT3D IS '      //  &
+                                 'SPECIFIED BY CONNECTION.'
+              endif
+            end do
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
             this%isavspdis = 1
@@ -1722,21 +1885,21 @@ module GwfNpfModule
     if (lname(6)) then
       this%iangle1 = 1
     else
-      if (this%ixt3d == 0) then
+      if (this%inonstdf == 0) then
         call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))        
       end if
     endif
     if (lname(7)) then
       this%iangle2 = 1
     else
-      if (this%ixt3d == 0) then
+      if (this%inonstdf == 0) then
         call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))        
       end if
     endif
     if (lname(8)) then
       this%iangle3 = 1
     else
-      if (this%ixt3d == 0) then
+      if (this%inonstdf == 0) then
         call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))        
       end if
     endif
@@ -1753,6 +1916,95 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine read_data
+
+  subroutine read_xt3d_data(this,isdfcall)
+! ******************************************************************************
+! read_xt3d_data -- read the npf xt3d data block
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate, &
+                                   mem_reassignptr
+    use SimModule,         only: ustop, store_error, count_errors
+    ! -- dummy
+    class(GwfNpftype) :: this
+    logical :: isdfcall
+    ! -- local
+    character(len=LINELENGTH) :: errmsg, line, nodestr, cellidm, cellidn
+    integer(I4B) :: n, m, ierr, iux, nodeun, nodeum, ii, iis
+    integer(I4B) :: nxt3ddata
+    logical :: isfound, endOfBlock
+! ------------------------------------------------------------------------------
+    !
+    ! -- If call from _df, skip past GRIDDATA block
+    if (isdfcall) call this%parser%GetBlock('GRIDDATA', isfound, ierr)
+    !
+    ! -- Check for XT3DDATA block
+    call this%parser%GetBlock('XT3DDATA', isfound, ierr)
+    if(.not.isfound) then
+      write(errmsg,'(1x,a)')'ERROR.  REQUIRED XT3DDATA BLOCK NOT FOUND.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- Read XT3DDATA block
+    if (.not.isdfcall) write(this%iout,'(1x,a)')'PROCESSING XT3DDATA'
+    nxt3ddata = 0                    ! amp_note: specify nxt3ddata in dimensions block???
+    do
+      call this%parser%GetNextLine(endOfBlock)
+      if (endOfBlock) exit
+      call this%parser%GetCurrentLine(line)
+      !
+      ! -- cellidn (read as cellid and convert to user node)
+      call this%parser%GetCellid(this%dis%ndim, cellidn)
+      ! -- convert user node to reduced node number     ! amp_note: confirm that conversion is appropriate here
+      n = this%dis%noder_from_cellid(cellidn, &
+                                       this%parser%iuactive, this%iout)
+      ! -- cellidm (read as cellid and convert to user node)
+      call this%parser%GetCellid(this%dis%ndim, cellidm)
+      ! -- convert user node to reduced node number     ! amp_note: confirm that conversion is appropriate here
+      m = this%dis%noder_from_cellid(cellidm, &
+                                       this%parser%iuactive, this%iout)
+      ! -- set iflowform flag for connection to 1
+      ii = this%dis%con%getjaindex(n, m)
+      iis = this%dis%con%jas(ii)
+      this%iflowform(iis) = 1
+      nxt3ddata = nxt3ddata + 1
+      !
+      if ((.not.isdfcall).and.(this%iprxt3d /= 0))                             &
+        write(this%iout, '(2a10)') trim(adjustl(cellidn)),                     &
+                                   trim(adjustl(cellidm))
+    end do
+    ! -- terminate if read errors encountered
+    if(count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- If call from _df, rewind npf input file and skip past OPTIONS block
+    !    so data can be reread later
+    if (isdfcall) then
+      rewind(this%parser%GetUnit())
+      call this%parser%GetBlock('OPTIONS', isfound, ierr)
+    else
+      ! -- Print number of connections listed in GRIDDATA block
+      write(this%iout, '(1x,a,i10)')                                           &
+          'NUMBER OF XT3D CONNECTIONS LISTED:', nxt3ddata
+      ! -- Specification is by connection, so warn if no connections listed
+      if (nxt3ddata.eq.0) write(this%iout, '(4x,a,1(1x,a))')                   &
+          '****WARNING. Application of XT3D is specified by connection',       &
+          'but no connections are listed in the XT3DDATA block.'
+      ! -- Final XT3DDATA message
+      write(this%iout,'(1x,a)')'END PROCESSING XT3DDATA'
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine read_xt3d_data
 
   subroutine prepcheck(this)
 ! ******************************************************************************
@@ -1776,7 +2028,7 @@ module GwfNpfModule
     real(DP) :: fawidth
     real(DP) :: hn, hm
     real(DP) :: hyn, hym
-    integer(I4B) :: n, m, ii, nn, ihc
+    integer(I4B) :: n, m, ii, nn, ihc, iis
     integer(I4B) :: nextn
     real(DP) :: minbot, botm
     integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
@@ -2043,70 +2295,76 @@ module GwfNpfModule
       call ustop()
     endif
     !
-    ! -- Calculate condsatu, but only if xt3d is not active.  If xt3d is
-    !    active, then condsat is allocated to size of zero.
-    if (this%ixt3d == 0) then
-    !
-    ! -- Calculate the saturated conductance for all connections assuming
-    !    that saturation is 1 (except for case where icelltype was entered
-    !    as a negative value and THCKSTRT option in effect)
-    do n = 1, this%dis%nodes
+    ! -- Calculate condsatu only where the standard conductance formulation is
+    !    in use.  If a non-standard conductance formulation is in use at all
+    !    connections, condsat is allocated to size of zero.  ! amp_note: make this change - not made previously???
+    if (.not.this%allnonstdf) then
       !
-      topn = this%dis%top(n)
-      !
-      ! -- Go through the connecting cells
-      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+      ! -- Calculate the saturated conductance for all connections assuming
+      !    that saturation is 1 (except for case where icelltype was entered
+      !    as a negative value and THCKSTRT option in effect)
+      do n = 1, this%dis%nodes
         !
-        ! -- Set the m cell number and cycle if lower triangle connection
-        m = this%dis%con%ja(ii)
-        if (m < n) cycle
-        ihc = this%dis%con%ihc(this%dis%con%jas(ii))
-        topm = this%dis%top(m)
-        hyn = this%hy_eff(n, m, ihc, ipos=ii)
-        hym = this%hy_eff(m, n, ihc, ipos=ii)
-        if (ithickstartflag(n) == 0) then
-          hn = topn
-        else
-          hn = this%ic%strt(n)
-        end if
-        if (ithickstartflag(m) == 0) then
-          hm = topm
-        else
-          hm = this%ic%strt(m)
-        end if
+        topn = this%dis%top(n)
         !
-        ! -- Calculate conductance depending on whether connection is
-        !    vertical (0), horizontal (1), or staggered horizontal (2)
-        if(ihc == 0) then
+        ! -- Go through the connecting cells
+        do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          ! -- Skip if nonstandard flow formulation used for this connection
+          if(this%inonstdf /= 0) then
+            iis = this%dis%con%jas(ii)
+            if (this%iflowform(iis) /= 0) cycle
+          end if
           !
-          ! -- Vertical conductance for fully saturated conditions
-          csat =  vcond(1, 1, 1, 1, 0, 1, 1, DONE,                             &
-                        this%dis%bot(n), this%dis%bot(m),                      &
-                        hyn, hym,                                              &
-                        this%sat(n), this%sat(m),                              &
-                        topn, topm,                                            &
-                        this%dis%bot(n), this%dis%bot(m),                      &
-                        this%dis%con%hwva(this%dis%con%jas(ii)))
-        else
+          ! -- Set the m cell number and cycle if lower triangle connection
+          m = this%dis%con%ja(ii)
+          if (m < n) cycle
+          ihc = this%dis%con%ihc(this%dis%con%jas(ii))
+          topm = this%dis%top(m)
+          hyn = this%hy_eff(n, m, ihc, ipos=ii)
+          hym = this%hy_eff(m, n, ihc, ipos=ii)
+          if (ithickstartflag(n) == 0) then
+            hn = topn
+          else
+            hn = this%ic%strt(n)
+          end if
+          if (ithickstartflag(m) == 0) then
+            hm = topm
+          else
+            hm = this%ic%strt(m)
+          end if
           !
-          ! -- Horizontal conductance for fully saturated conditions
-          fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),                 &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,             &
-                       DONE,                                                   &
-                       hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
-                       topn, topm,                                             &
-                       this%dis%bot(n), this%dis%bot(m),                       &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),                 &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),                 &
-                       fawidth, this%satomega, this%satmin)
-        end if
-        this%condsat(this%dis%con%jas(ii)) = csat
+          ! -- Calculate conductance depending on whether connection is
+          !    vertical (0), horizontal (1), or staggered horizontal (2)
+          if(ihc == 0) then
+            !
+            ! -- Vertical conductance for fully saturated conditions
+            csat =  vcond(1, 1, 1, 1, 0, 1, 1, DONE,                             &
+                          this%dis%bot(n), this%dis%bot(m),                      &
+                          hyn, hym,                                              &
+                          this%sat(n), this%sat(m),                              &
+                          topn, topm,                                            &
+                          this%dis%bot(n), this%dis%bot(m),                      &
+                          this%dis%con%hwva(this%dis%con%jas(ii)))
+          else
+            !
+            ! -- Horizontal conductance for fully saturated conditions
+            fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
+            csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
+                         this%dis%con%ihc(this%dis%con%jas(ii)),                 &
+                         this%icellavg, this%iusgnrhc, this%inwtupw,             &
+                         DONE,                                                   &
+                         hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
+                         topn, topm,                                             &
+                         this%dis%bot(n), this%dis%bot(m),                       &
+                         this%dis%con%cl1(this%dis%con%jas(ii)),                 &
+                         this%dis%con%cl2(this%dis%con%jas(ii)),                 &
+                         fawidth, this%satomega, this%satmin)
+          end if
+          this%condsat(this%dis%con%jas(ii)) = csat
+        enddo
       enddo
-    enddo
-    !
-    endif
+
+    end if
     !
     ! -- Determine the lower most node
     if (this%igwfnewtonur /= 0) then

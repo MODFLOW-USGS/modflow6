@@ -1,6 +1,6 @@
 module GwfModule
 
-  use KindModule,                  only: DP, I4B
+  use KindModule,                  only: DP, I4B, LGP
   use InputOutputModule,           only: ParseLine, upcase
   use ConstantsModule,             only: LENFTYPE, LENPAKLOC, DZERO, DEM1, DTEN, DEP20
   use VersionModule,               only: write_listfile_header
@@ -55,6 +55,7 @@ module GwfModule
     integer(I4B),                   pointer :: inobs   => null()                ! unit number OBS
     integer(I4B),                   pointer :: iss     => null()                ! steady state flag
     integer(I4B),                   pointer :: inewtonur => null()              ! newton under relaxation flag
+    logical(LGP),                   pointer :: allgncnonstdff => null()         ! flag to indicate whether all gnc connections are using a non-standard flow formulation
 
   contains
 
@@ -425,18 +426,44 @@ module GwfModule
     class(GwfModelType) :: this
     ! -- locals
     integer(I4B) :: ip
+    integer(I4B) :: ignc,noden,nodem,ii,iis
     class(BndType), pointer :: packobj
+    integer(I4B), pointer :: inonstdf
+    integer(I4B), dimension(:), pointer, contiguous :: iflowform
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and read modules attached to model
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
+    if(this%innpf > 0) then
+      call this%npf%npf_ar(this%ic, this%ibound, this%x)
+      inonstdf => this%npf%inonstdf
+      iflowform => this%npf%iflowform
+    end if
     if(this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
-    if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
+    if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis,  &
+                                            inonstdf, iflowform)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if(this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
     if(this%inmvr > 0) call this%mvr%mvr_ar()
     if(this%inobs > 0) call this%obs%gwf_obs_ar(this%ic, this%x, this%flowja)
+    if(this%ingnc > 0) call this%gnc%gnc_ar(inonstdf, iflowform)
+    !
+    ! -- If gnc active, set allgncnonstdff to .true. if all gnc connections
+    !    use a non-standard flow formulation, and to .false. otherwise
+    if (this%ingnc > 0) then
+      if (this%gnc%inonstdf /= 0) then
+        this%allgncnonstdff = .true.
+        do ignc = 1, this%gnc%nexg
+          noden = this%gnc%nodem1(ignc)
+          nodem = this%gnc%nodem2(ignc)
+          ii = this%gnc%m1%dis%con%getjaindex(noden, nodem)
+          iis = this%gnc%m1%dis%con%jas(ii)
+          if (this%gnc%iflowform(iis) == 0) then
+            this%allgncnonstdff = .false.
+          end if
+        enddo
+      end if
+    end if
     !
     ! -- Call dis_ar to write binary grid file
     call this%dis%dis_ar(this%npf%icelltype)
@@ -604,7 +631,8 @@ module GwfModule
                                             this%idxglo, this%rhs, this%x)
     if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, njasln, amatsln,            &
                                             this%idxglo, this%rhs, this%x)
-    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, amatsln)
+    if((this%ingnc > 0).and.(.not.this%allgncnonstdff))                        &
+                       call this%gnc%gnc_fc(kiter, amatsln)
     ! -- storage
     if(this%insto > 0) then
       call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln,          &
@@ -630,7 +658,7 @@ module GwfModule
     endif
     !
     ! -- Fill newton terms for ghost nodes
-    if(this%ingnc > 0) then
+    if((this%ingnc > 0).and.(.not.this%allgncnonstdff)) then
       if(inwt /= 0) then
         call this%gnc%gnc_fn(kiter, njasln, amatsln, this%npf%condsat,         &
           ivarcv_opt=this%npf%ivarcv,                                          &
@@ -931,7 +959,8 @@ module GwfModule
     if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
     if(this%inbuy > 0) call this%buy%buy_flowja(this%x, this%flowja)
     if(this%inhfb > 0) call this%hfb%hfb_flowja(this%x, this%flowja)
-    if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
+    if((this%ingnc > 0).and.(.not.this%allgncnonstdff))                        &
+                       call this%gnc%flowja(this%flowja)
     !
     ! -- Return
     return
@@ -1201,6 +1230,7 @@ module GwfModule
     call mem_deallocate(this%ingnc)
     call mem_deallocate(this%iss)
     call mem_deallocate(this%inewtonur)
+    call mem_deallocate(this%allgncnonstdff)
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
@@ -1305,6 +1335,7 @@ module GwfModule
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%iss,   'ISS',   this%memoryPath)
     call mem_allocate(this%inewtonur, 'INEWTONUR', this%memoryPath)
+    call mem_allocate(this%allgncnonstdff, 'ALLGNCNONSTDFF', this%memoryPath)
     !
     this%inic = 0
     this%inoc = 0
@@ -1318,6 +1349,7 @@ module GwfModule
     this%inobs = 0
     this%iss = 1       !default is steady-state (i.e., no STO package)
     this%inewtonur = 0 !default is to not use newton bottom head dampening
+    this%allgncnonstdff = .false.
     !
     ! -- return
     return

@@ -23,6 +23,8 @@ module GwfHfbModule
     real(DP), dimension(:), pointer, contiguous :: csatsav => null()             !value of condsat prior to hfb modification
     real(DP), dimension(:), pointer, contiguous :: condsav => null()             !saved conductance of combined npf and hfb
     type(Xt3dType), pointer :: xt3d => null()                                    !pointer to xt3d object
+    integer(I4B), pointer :: inonstdf => null()                                  !non-standard flow formulation flag is (0) if standard only and (1) if any non-standard
+    integer(I4B), dimension(:), pointer, contiguous :: iflowform => null()       !flag to indicate use of non-standard flow formulations by connection
     !
     integer(I4B), dimension(:), pointer, contiguous :: ibound  => null()         !pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to model icelltype
@@ -87,7 +89,7 @@ module GwfHfbModule
     return
   end subroutine hfb_cr
 
-  subroutine hfb_ar(this, ibound, xt3d, dis)
+  subroutine hfb_ar(this, ibound, xt3d, dis, inonstdf, iflowform)
 ! ******************************************************************************
 ! hfb_ar -- Allocate and read
 ! ******************************************************************************
@@ -102,6 +104,8 @@ module GwfHfbModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     type(Xt3dType), pointer :: xt3d
     class(DisBaseType), pointer, intent(inout) :: dis
+    integer(I4B), pointer :: inonstdf
+    integer(I4B), dimension(:), pointer, contiguous :: iflowform
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
       &"(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ',       &
@@ -115,6 +119,8 @@ module GwfHfbModule
     this%dis => dis
     this%ibound => ibound
     this%xt3d => xt3d
+    this%inonstdf => inonstdf
+    if (this%inonstdf /= 0) this%iflowform => iflowform
 
     call mem_setptr(this%icelltype, 'ICELLTYPE', create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%ihc, 'IHC', create_mem_path(this%name_model, 'CON'))
@@ -200,7 +206,7 @@ module GwfHfbModule
 
   subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
-! hfb_fc -- Fill amatsln for the following conditions:
+! hfb_fc -- Fill amat and/or rhs for the following conditions:
 !   1.  Not Newton, and
 !   2.  Cell type n is convertible or cell type m is convertible
 !  OR
@@ -221,7 +227,7 @@ module GwfHfbModule
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) ::  nodes, nja
-    integer(I4B) :: ihfb, n, m
+    integer(I4B) :: ihfb, n, m, ii, iis, il, ig, ilp1
     integer(I4B) :: ipos
     integer(I4B) :: idiag, isymcon
     integer(I4B) :: ixt3d
@@ -238,11 +244,15 @@ module GwfHfbModule
       ixt3d = 0
     end if
     !
-    if(ixt3d > 0) then
-      !
+    ! -- Fill amat and/or rhs for XT3D connections
+    if(ixt3d /= 0) then      ! amp_note: will need to add cases if other flow formulations are added
       do ihfb = 1, this%nhfb
         n = min(this%noden(ihfb), this%nodem(ihfb))
-        m = max(this%noden(ihfb), this%nodem(ihfb))
+        m = max(this%noden(ihfb), this%nodem(ihfb))     ! amp_note: don't want an m<n check here
+        ! -- Skip if XT3D not used for this connection
+        ii = this%dis%con%getjaindex(n, m)
+        iis = this%dis%con%jas(ii)
+        if (this%iflowform(iis) /= 1) cycle
         ! -- Skip if either cell is inactive.
         if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
   !!!      if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
@@ -277,61 +287,65 @@ module GwfHfbModule
         call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo,      &
           rhs, hnew, n, m, condhfb)
       end do
-      !
-    else
-      !
-      ! -- For Newton, the effect of the barrier is included in condsat.
-      if(this%inewton == 0) then
-        do ihfb = 1, this%nhfb
+    end if
+    !
+    ! -- Fill amat for non-XT3D, non-Newton, convertible connections.
+    !    (For Newton, and for confined connections, the effect of the 
+    !    barrier is included in condsat.)
+    if(this%inewton == 0) then
+      do ihfb = 1, this%nhfb
+        n = this%noden(ihfb)
+        m = this%nodem(ihfb)
+        ! -- Skip if XT3D used for this connection
+        ii = this%dis%con%getjaindex(n, m)
+        iis = this%dis%con%jas(ii)
+        if (this%iflowform(iis) == 1) cycle
+        if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
+        if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+          !
           ipos = this%idxloc(ihfb)
           aterm = amat(idxglo(ipos))
-          n = this%noden(ihfb)
-          m = this%nodem(ihfb)
-          if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-          if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
-            !
-            ! -- Calculate hfb conductance
-            topn = this%top(n)
-            topm = this%top(m)
-            botn = this%bot(n)
-            botm = this%bot(m)
-            if(this%icelltype(n) == 1) then
-              if(hnew(n) < topn) topn = hnew(n)
-            endif
-            if(this%icelltype(m) == 1) then
-              if(hnew(m) < topm) topm = hnew(m)
-            endif
-            if(this%ihc(this%jas(ipos)) == 2) then
-              faheight = min(topn, topm) - max(botn, botm)
-            else
-              faheight = DHALF * ( (topn - botn) + (topm - botm) )
-            endif
-            if(this%hydchr(ihfb) > DZERO) then
-              fawidth = this%hwva(this%jas(ipos))
-              condhfb = this%hydchr(ihfb) * fawidth * faheight
-              cond = aterm * condhfb / (aterm + condhfb)
-            else
-              cond = - aterm * this%hydchr(ihfb)
-            endif
-            !
-            ! -- Save cond for budget calculation
-            this%condsav(ihfb) = cond
-            !
-            ! -- Fill row n diag and off diag
-            idiag = this%ia(n)
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
-            amat(idxglo(ipos)) = cond
-            !
-            ! -- Fill row m diag and off diag
-            isymcon = this%isym(ipos)
-            idiag = this%ia(m)
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
-            amat(idxglo(isymcon)) = cond
-            !
+          !
+          ! -- Calculate hfb conductance
+          topn = this%top(n)
+          topm = this%top(m)
+          botn = this%bot(n)
+          botm = this%bot(m)
+          if(this%icelltype(n) == 1) then
+            if(hnew(n) < topn) topn = hnew(n)
           endif
-        enddo
-      endif
-      !
+          if(this%icelltype(m) == 1) then
+            if(hnew(m) < topm) topm = hnew(m)
+          endif
+          if(this%ihc(this%jas(ipos)) == 2) then
+            faheight = min(topn, topm) - max(botn, botm)
+          else
+            faheight = DHALF * ( (topn - botn) + (topm - botm) )
+          endif
+          if(this%hydchr(ihfb) > DZERO) then
+            fawidth = this%hwva(this%jas(ipos))
+            condhfb = this%hydchr(ihfb) * fawidth * faheight
+            cond = aterm * condhfb / (aterm + condhfb)
+          else
+            cond = - aterm * this%hydchr(ihfb)
+          endif
+          !
+          ! -- Save cond for budget calculation
+          this%condsav(ihfb) = cond
+          !
+          ! -- Fill row n diag and off diag
+          idiag = this%ia(n)
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
+          amat(idxglo(ipos)) = cond
+          !
+          ! -- Fill row m diag and off diag
+          isymcon = this%isym(ipos)
+          idiag = this%ia(m)
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
+          amat(idxglo(isymcon)) = cond
+          !
+        endif
+      enddo
     endif
     !
     ! -- return
@@ -354,7 +368,7 @@ module GwfHfbModule
     real(DP),intent(inout),dimension(:) :: hnew
     real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: ihfb, n, m
+    integer(I4B) :: ihfb, n, m, ii, iis
     integer(I4B) :: ipos
     real(DP) :: qnm
     real(DP) :: cond
@@ -370,11 +384,15 @@ module GwfHfbModule
       ixt3d = 0
     end if
     !
-    if(ixt3d > 0) then
-      !
+    ! -- Recalculate flowja for XT3D connections
+    if(ixt3d /= 0) then      ! amp_note: will need to add cases if other flow formulations are added
       do ihfb = 1, this%nhfb
         n = min(this%noden(ihfb), this%nodem(ihfb))
         m = max(this%noden(ihfb), this%nodem(ihfb))
+        ! -- Skip if XT3D not used for this connection
+        ii = this%dis%con%getjaindex(n, m)
+        iis = this%dis%con%jas(ii)
+        if (this%xt3d%iflowform(iis) /= 1) cycle
         ! -- Skip if either cell is inactive.
         if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
   !!!      if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
@@ -408,28 +426,29 @@ module GwfHfbModule
         ! -- Make hfb corrections for xt3d
         call this%xt3d%xt3d_flowjahfb(n, m, hnew, flowja, condhfb)
       end do
-      !
-    else
-      !
-      ! -- Recalculate flowja for non-newton unconfined.
-      if(this%inewton == 0) then
-        do ihfb = 1, this%nhfb
-          n = this%noden(ihfb)
-          m = this%nodem(ihfb)
-          if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-          if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
-            ipos = this%dis%con%getjaindex(n, m)
-            cond = this%condsav(ihfb)
-            qnm = cond * (hnew(m) - hnew(n))
-            flowja(ipos) = qnm
-            ipos = this%dis%con%getjaindex(m, n)
-            flowja(ipos) = -qnm
-            !
-          endif
-        enddo
-      endif
-      !
     end if
+    !
+    ! -- Recalculate flowja for non-XT3D, non-newton, convertible connections
+    if(this%inewton == 0) then
+      do ihfb = 1, this%nhfb
+        n = this%noden(ihfb)
+        m = this%nodem(ihfb)
+        ! -- Skip if XT3D used for this connection
+        ii = this%dis%con%getjaindex(n, m)
+        iis = this%dis%con%jas(ii)
+        if (this%xt3d%iflowform(iis) == 1) cycle
+        if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
+        if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+          ipos = this%dis%con%getjaindex(n, m)
+          cond = this%condsav(ihfb)
+          qnm = cond * (hnew(m) - hnew(n))
+          flowja(ipos) = qnm
+          ipos = this%dis%con%getjaindex(m, n)
+          flowja(ipos) = -qnm
+          !
+        endif
+      enddo
+    endif
     !
     ! -- return
     return
