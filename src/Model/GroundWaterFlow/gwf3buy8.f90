@@ -1,7 +1,5 @@
 ! Buoyancy Package for representing variable-density groundwater flow
 ! The BUY Package does not work yet with the NPF XT3D option
-! Need to add buoyancy terms to LAK, SFR, MAW, and maybe UZF
-! How to handle multiple species?
 
   
 module GwfBuyModule
@@ -1268,16 +1266,16 @@ module GwfBuyModule
     !
     ! -- write packagedata information
     write(this%iout, '(/,a)') 'SUMMARY OF SPECIES INFORMATION IN BUY PACKAGE'
-    write(this%iout, '(3a11, 2a17)') &
+    write(this%iout, '(1a11, 4a17)') &
                          'SPECIES', 'DRHODC', 'CRHOREF', 'MODEL', &
                          'AUXSPECIESNAME'
     do irhospec = 1, this%nrhospecies
       write(c10, '(i0)') irhospec
       line = ' ' // adjustr(c10)
-      write(c10, '(g10.4)') this%drhodc(irhospec)
-      line = trim(line) // ' ' // adjustr(c10)
-      write(c10, '(g10.4)') this%crhoref(irhospec)
-      line = trim(line) // ' ' // adjustr(c10)
+      write(c16, '(g15.6)') this%drhodc(irhospec)
+      line = trim(line) // ' ' // adjustr(c16)
+      write(c16, '(g15.6)') this%crhoref(irhospec)
+      line = trim(line) // ' ' // adjustr(c16)
       write(c16, '(a)') this%cmodelname(irhospec)
       line = trim(line) // ' ' // adjustr(c16)
       write(c16, '(a)') this%cauxspeciesname(irhospec)
