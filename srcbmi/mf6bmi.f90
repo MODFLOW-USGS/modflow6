@@ -22,8 +22,12 @@ module mf6bmi
   use TdisModule, only: kper, kstp
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMEMPATH, LENVARNAME
-  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME, MEMREADWRITE, MEMREADONLY
+  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize,       &
+                                 get_mem_rank, get_mem_shape, get_mem_type,      &
+                                 memorylist
+  use MemoryTypeModule, only: MemoryType
+  use MemoryHelperModule, only: create_mem_address
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
   implicit none
@@ -167,7 +171,130 @@ module mf6bmi
     bmi_status = BMI_SUCCESS
 
   end function get_time_step
+
+  !> @brief Get the number of input variables in the simulation
+  !!
+  !! This concerns all those variables which have their access
+  !! specifier set to "readwrite" in the internal memory manager
+  !<
+  function get_input_item_count(count) result(bmi_status) bind(C, name="get_input_item_count")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_input_item_count
+    integer(kind=c_int), intent(out) :: count !< the number of input variables
+    integer(kind=c_int) :: bmi_status         !< BMI status code
+    ! local
+    integer(I4B) :: ipos
+    type(MemoryType), pointer :: mt => null()
+
+    count = 0
+    do ipos = 1, memorylist%count()
+      mt => memorylist%Get(ipos)
+      if (mt%memaccess == MEMREADWRITE) then
+        count = count + 1
+      end if
+    end do
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_input_item_count
+
+  !> @brief Get the number of output variables in the simulation
+  !!
+  !! This concerns all those variables which have their access
+  !! specifier set to "readonly|readwrite" in the internal memory 
+  !! manager
+  !<
+  function get_output_item_count(count) result(bmi_status) bind(C, name="get_output_item_count")
+    !DEC$ ATTRIBUTES DLLEXPORT :: get_output_item_count
+      integer(kind=c_int), intent(out) :: count !< the number of output variables
+      integer(kind=c_int) :: bmi_status         !< BMI status code
+      ! local
+      integer(I4B) :: ipos
+      type(MemoryType), pointer :: mt => null()
   
+      count = 0
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if (mt%memaccess == MEMREADONLY .or. mt%memaccess == MEMREADWRITE) then
+          count = count + 1
+        end if
+      end do
+  
+      bmi_status = BMI_SUCCESS
+  
+    end function get_output_item_count
+
+  !> @brief Returns all input variables in the simulation
+  !!
+  !! This functions returns the full address for all variables in the
+  !! memory manager, that have their access specified as "readwrite"
+  !! and can therefore be used as input variables.
+  !! The array @p c_names should be pre-allocated of proper size:
+  !!
+  !! size = BMI_LENVARADDRESS *  get_input_item_count()
+  !!
+  !! The strings will be written contiguously with stride equal to
+  !! BMI_LENVARADDRESS and nul-terminated where the trailing spaces start:
+  !!
+  !! c_names = 'variable_address_1\x00 ... variable_address_2\x00 ... ' etc.
+  !<
+  function get_input_var_names(c_names) result(bmi_status) bind(C, name="get_input_var_names")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_input_var_names
+    character(kind=c_char,len=1), intent(inout) :: c_names(*) !< array with memory paths for input variables
+    integer(kind=c_int) :: bmi_status                         !< BMI status code
+    ! local
+    integer(I4B) :: imem, start, i
+    type(MemoryType), pointer :: mt => null() 
+    character(len=LENMEMADDRESS) :: var_address
+
+    start = 1
+    do imem = 1, memorylist%count()
+      mt => memorylist%Get(imem)
+      if (mt%memaccess == MEMREADWRITE) then
+        var_address = create_mem_address(mt%path, mt%name)
+        do i = 1, len(trim(var_address))
+          c_names(start + i - 1) = var_address(i:i)
+        end do
+        c_names(start + i) = c_null_char
+        start = start + BMI_LENVARADDRESS
+      end if
+    end do
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_input_var_names
+
+  !> @brief Returns all output variables in the simulation
+  !!
+  !! This function works analogously to get_input_var_names(),
+  !! for all variables that have their access specified as either
+  !! "readonly" or "readwrite"
+  !<
+  function get_output_var_names(c_names) result(bmi_status) bind(C, name="get_output_var_names")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_output_var_names
+    character(kind=c_char,len=1), intent(inout) :: c_names(*) !< array with memory paths for output variables
+    integer(kind=c_int) :: bmi_status                         !< BMI status code
+    ! local
+    integer(I4B) :: imem, start, i
+    type(MemoryType), pointer :: mt => null() 
+    character(len=LENMEMADDRESS) :: var_address
+
+    start = 1
+    do imem = 1, memorylist%count()
+      mt => memorylist%Get(imem)
+      if (mt%memaccess == MEMREADONLY .or. mt%memaccess == MEMREADWRITE) then
+        var_address = create_mem_address(mt%path, mt%name)
+        do i = 1, len(trim(var_address))
+          c_names(start + i - 1) = var_address(i:i)
+        end do
+        c_names(start + i) = c_null_char
+        start = start + BMI_LENVARADDRESS
+      end if
+    end do
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_output_var_names
+
 
   !> @brief Get the size (in bytes) of a single element of a variable
   !< 

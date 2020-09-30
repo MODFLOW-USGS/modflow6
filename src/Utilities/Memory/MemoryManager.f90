@@ -35,6 +35,8 @@ module MemoryManagerModule
   public :: get_mem_shape
   public :: get_isize
   public :: copy_dbl1d
+
+  public :: memorylist
   
   type(MemoryListType) :: memorylist
   type(TableType), pointer :: memtab => null()
