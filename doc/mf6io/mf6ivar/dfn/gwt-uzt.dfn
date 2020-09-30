@@ -58,7 +58,7 @@ type keyword
 reader urword
 optional true
 longname print calculated flows to listing file
-description REPLACE print_flows {'{#1}': 'unsaturated zone flow'}
+description REPLACE print_flows {'{#1}': 'unsaturated zone'}
 
 block options
 name save_flows
@@ -66,7 +66,7 @@ type keyword
 reader urword
 optional true
 longname save UZT cell flows to budget file
-description REPLACE save_flows {'{#1}': 'unsaturated zone flow'}
+description REPLACE save_flows {'{#1}': 'unsaturated zone'}
 
 block options
 name concentration_filerecord
