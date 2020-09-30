@@ -28,6 +28,7 @@ module MemoryManagerModule
   public :: mem_write_usage
   public :: mem_da
   public :: mem_set_print_option
+  public :: get_from_memorylist
   
   public :: get_mem_type
   public :: get_mem_rank
