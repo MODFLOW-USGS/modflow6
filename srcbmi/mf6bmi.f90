@@ -20,12 +20,13 @@ module mf6bmi
   use bmif, only: BMI_FAILURE, BMI_SUCCESS
   use Mf6CoreModule
   use TdisModule, only: kper, kstp
-  use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
+  use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr,   &
+                           c_f_pointer
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, MEMREADWRITE, MEMREADONLY
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize,       &
                                  get_mem_rank, get_mem_shape, get_mem_type,      &
-                                 memorylist
+                                 memorylist, get_from_memorylist
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_address
   use SimVariablesModule, only: simstdout, istdout
@@ -374,6 +375,7 @@ module mf6bmi
       call mem_setptr(array2D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
     else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
       bmi_status = BMI_FAILURE
       return
     end if
@@ -416,6 +418,7 @@ module mf6bmi
       call mem_setptr(array_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
     else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
       bmi_status = BMI_FAILURE
       return
     end if
@@ -423,6 +426,73 @@ module mf6bmi
     bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_int
+
+  !> @brief Set new values for a variable of type double
+  !!
+  !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2.
+  !! When the memory access in the manager for the variable @p c_var_address
+  !! is specified as @p MEMHIDDEN or @p MEMREADONLY, the function will return
+  !! with a BMI error code.
+  !<
+  function set_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_double")
+  !DEC$ ATTRIBUTES DLLEXPORT :: set_value_double
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+
+    integer(I4B) :: rank
+    real(DP), pointer :: src_ptr, tgt_ptr
+    real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+
+    call split_address(c_var_address, mem_path, var_name)
+
+    ! check access
+    found = .false.
+    mt => null()
+    call get_from_memorylist(var_name, mem_path, mt, found, check=.false.)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    if (mt%memaccess /= MEMREADWRITE) then
+      write(istdout,*) 'BMI Error: cannot write to variable '//var_name
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! convert data and set
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(tgt_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(tgt1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src1D_ptr, shape(tgt1D_ptr))
+      tgt1D_ptr = src1D_ptr
+    else if (rank == 2) then
+      call mem_setptr(tgt2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src2D_ptr, shape(tgt2D_ptr))
+      tgt2D_ptr = src2D_ptr
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    bmi_status = BMI_SUCCESS
+
+  end function set_value_double
   
   !> @brief Get the variable type as a string
   !!
