@@ -2,7 +2,7 @@ module MemoryHelperModule
   use KindModule, only: I4B
   use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, LENVARNAME, LENCOMPONENTNAME
   use SimModule, only: store_error, ustop
-  use SimVariablesModule,     only: errmsg
+  use SimVariablesModule, only: errmsg
 
   implicit none
 
@@ -145,5 +145,4 @@ contains
     end if
 
   end subroutine mem_check_length
-
 end module MemoryHelperModule

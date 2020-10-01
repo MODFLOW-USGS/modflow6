@@ -23,6 +23,7 @@ module MemoryTypeModule
     integer(I4B)                                           :: nrealloc = 0           !< number of times reallocated
     integer(I4B)                                           :: isize                  !< size of the array
     integer(I4B)                                           :: memaccess = MEMHIDDEN  !< memory permissions
+    integer(I4B)                                           :: set_handler_idx = 0    !< index of side effect handler for external access
     logical(LGP)                                           :: master = .true.        !< master copy, others point to this one
     logical(LGP), pointer                                  :: logicalsclr => null()  !< pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !< pointer to the integer

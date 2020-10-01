@@ -684,6 +684,20 @@ module GwfStoModule
     return
   end subroutine allocate_scalars
 
+  subroutine handler_sc1(sto)
+    use SimVariablesModule, only: state_variable
+    class(*), pointer :: sto
+
+    if (state_variable > state_init) then
+      ! not allowed!!
+
+      return
+    end if
+    
+    ! do stuff here
+
+  end subroutine handler_sc1
+
   subroutine allocate_arrays(this, nodes)
 ! ******************************************************************************
 ! allocate_arrays
@@ -692,6 +706,7 @@ module GwfStoModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
+    use MemorySetHandlerModule, only: mem_register_handler
     !modules
     use ConstantsModule, only: DZERO
     ! -- dummy
@@ -705,6 +720,7 @@ module GwfStoModule
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
     call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)
+    call mem_register_handler('SC1', this%memoryPath, ... todo ...)
     call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath, MEMREADWRITE)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
