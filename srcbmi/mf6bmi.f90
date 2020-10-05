@@ -22,7 +22,7 @@ module mf6bmi
   use TdisModule, only: kper, kstp
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr,   &
                            c_f_pointer
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, MEMREADWRITE, MEMREADONLY
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize,       &
                                  get_mem_rank, get_mem_shape, get_mem_type,      &
@@ -436,6 +436,7 @@ module mf6bmi
   !<
   function set_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: set_value_double
+    use MemorySetHandlerModule, only: on_memory_set
     character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the array
     integer :: bmi_status                                   !< BMI status code
@@ -489,6 +490,9 @@ module mf6bmi
       bmi_status = BMI_FAILURE
       return
     end if
+
+    ! trigger event:
+    call on_memory_set(var_name, mem_path)
 
     bmi_status = BMI_SUCCESS
 

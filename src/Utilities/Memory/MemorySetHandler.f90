@@ -13,7 +13,7 @@ module MemorySetHandlerModule
   public :: on_memory_set
 
   type EventHandlerDataType
-    procedure(set_handler_iface), pointer, nopass :: handler => null()
+    procedure(set_handler_iface), nopass, pointer :: handler => null()
     class(*), pointer :: handlerContext => null()
   end type
 
@@ -35,8 +35,8 @@ module MemorySetHandlerModule
   !! (the context) such as happens with the BMI.
   !<
   subroutine mem_register_handler(var_name, mem_path, handler, ctx)
-    character(len=LENVARNAME), intent(out) :: var_name  !< the variable name
-    character(len=LENMEMPATH), intent(out) :: mem_path  !< the memory path
+    character(len=*), intent(in) :: var_name  !< the variable name
+    character(len=*), intent(in) :: mem_path  !< the memory path
     procedure(set_handler_iface), pointer :: handler    !< called after memory is set
     class(*), pointer :: ctx                            !< the context with which the handler should be called
     ! local

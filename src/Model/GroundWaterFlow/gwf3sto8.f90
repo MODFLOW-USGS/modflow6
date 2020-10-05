@@ -41,6 +41,7 @@ module GwfStoModule
     procedure :: sto_da
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
+    procedure, private :: register_handlers
     procedure, private :: read_options
     procedure, private :: read_data
     procedure, private :: convert_sc1, convert_sc2
@@ -115,6 +116,9 @@ module GwfStoModule
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
+    !
+    ! -- Register side effect handlers
+    call this%register_handlers()
     !
     ! -- Read storage options
     call this%read_options()
@@ -684,20 +688,6 @@ module GwfStoModule
     return
   end subroutine allocate_scalars
 
-  subroutine handler_sc1(sto)
-    use SimVariablesModule, only: state_variable
-    class(*), pointer :: sto
-
-    if (state_variable > state_init) then
-      ! not allowed!!
-
-      return
-    end if
-    
-    ! do stuff here
-
-  end subroutine handler_sc1
-
   subroutine allocate_arrays(this, nodes)
 ! ******************************************************************************
 ! allocate_arrays
@@ -706,11 +696,10 @@ module GwfStoModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
-    use MemorySetHandlerModule, only: mem_register_handler
     !modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwfStoType) :: this
+    class(GwfStoType), target :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
     integer(I4B) :: n
@@ -719,8 +708,7 @@ module GwfStoModule
     ! -- Allocate
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)
-    call mem_register_handler('SC1', this%memoryPath, ... todo ...)
+    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)    
     call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath, MEMREADWRITE)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
@@ -738,6 +726,65 @@ module GwfStoModule
     ! -- Return
     return
   end subroutine allocate_arrays
+
+  !> @brief Registers the side effect handlers
+  !! 
+  !! When memory is set externally, these handlers can be called to
+  !! deal with any side effects.
+  !!
+  !! @todo: when this functionality is accepted, we probably want to
+  !! get rid of the iupdatescx flags...
+  !<
+  subroutine register_handlers(this)
+    use MemorySetHandlerModule, only: mem_register_handler, set_handler_iface
+    class(GwfStoType), intent(in), target :: this !< the storage package
+    ! local
+    procedure(set_handler_iface), pointer :: handler_ptr
+    class(GwfStoType), pointer :: this_ptr
+    class(*), pointer :: context  
+    
+    this_ptr => this
+    context => this_ptr
+    handler_ptr => sc1_handler
+    call mem_register_handler('SC1', this%memoryPath, handler_ptr, context)
+    handler_ptr => sc2_handler
+    call mem_register_handler('SC2', this%memoryPath, handler_ptr, context)
+
+  end subroutine register_handlers
+
+  !> @brief Side effect handler for when sc1 is set externally
+  !<
+  subroutine sc1_handler(sto_ptr)
+    class(*), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
+    ! local
+    class(GwfStoType), pointer :: storage
+
+    storage => null()
+    select type(sto_ptr)
+    class is (GwfStoType)
+      storage => sto_ptr
+    end select
+
+    call storage%convert_sc1()
+
+  end subroutine sc1_handler
+
+  !> @brief Side effect handler for when sc2 is set externally
+  !<
+  subroutine sc2_handler(sto_ptr)
+    class(*), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
+    ! local
+    class(GwfStoType), pointer :: storage
+
+    storage => null()
+    select type(sto_ptr)
+    class is (GwfStoType)
+      storage => sto_ptr
+    end select
+
+    call storage%convert_sc2()
+
+  end subroutine sc2_handler
 
   subroutine read_options(this)
 ! ******************************************************************************
