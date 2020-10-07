@@ -529,8 +529,8 @@ module mf6bmi
     ! trigger event:
     call on_memory_set(var_name, mem_path, status)
     if (status /= 0) then
-      ! something went terribly wrong here, aborting        
-      bmi_status = BMI_FAILURE
+      ! something went terribly wrong here, aborting       
+      write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
       return
     end if
 
@@ -610,7 +610,7 @@ module mf6bmi
       call on_memory_set(var_name, mem_path, status)
       if (status /= 0) then
         ! something went terribly wrong here, aborting        
-        bmi_status = BMI_FAILURE
+        write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
         return
       end if
 
