@@ -20,8 +20,10 @@ module MemorySetHandlerModule
   type(ListType) :: handler_list
 
   abstract interface
-    subroutine set_handler_iface(owner)
-      class(*), pointer :: owner
+    subroutine set_handler_iface(owner, status)
+      import I4B
+      class(*), pointer, intent(inout) :: owner
+      integer(I4B), intent(out) :: status
     end subroutine
   end interface
 
@@ -67,11 +69,14 @@ module MemorySetHandlerModule
 
   !> @brief Triggers the calling of the side effect handler for this variable
   !!
-  !! The handler can be set by calling @p mem_register_handler()
+  !! The handler can be set by calling @p mem_register_handler(). When
+  !! the status contains an error code, the program should be stopped
+  !! because the data in memory is no longer consistent...
   !<
-  subroutine on_memory_set(var_name, mem_path)
-    character(len=LENVARNAME), intent(out) :: var_name  !< the variable name
-    character(len=LENMEMPATH), intent(out) :: mem_path  !< the memory path
+  subroutine on_memory_set(var_name, mem_path, status)
+    character(len=*), intent(in) :: var_name  !< the variable name
+    character(len=*), intent(in) :: mem_path  !< the memory path
+    integer(I4B), intent(out) :: status                 !< status: 0 for success, -1 when failed
     ! local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -82,6 +87,12 @@ module MemorySetHandlerModule
     mt => null()
     found = .false.
     call get_from_memorylist(var_name, mem_path, mt, found)
+    if (mt%set_handler_idx == 0) then
+      ! nothing to be done
+      status = 0
+      return
+    end if
+    
     handler_data_genptr => handler_list%GetItem(mt%set_handler_idx)
     select type(handler_data_genptr)
     class is (EventHandlerDataType)
@@ -89,8 +100,7 @@ module MemorySetHandlerModule
     end select
   
     ! call the function
-    call evt_handler_data%handler(evt_handler_data%handlerContext)
-
+    call evt_handler_data%handler(evt_handler_data%handlerContext, status)
   end subroutine
 
 end module

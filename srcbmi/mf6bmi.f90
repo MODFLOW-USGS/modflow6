@@ -481,6 +481,7 @@ module mf6bmi
     real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
     real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
     integer(I4B) :: i, j
+    integer(I4B) :: status
 
     bmi_status = BMI_FAILURE
 
@@ -526,7 +527,13 @@ module mf6bmi
     end if
 
     ! trigger event:
-    call on_memory_set(var_name, mem_path)
+    call on_memory_set(var_name, mem_path, status)
+    if (status /= 0) then
+      ! something went terribly wrong here, aborting        
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
     bmi_status = BMI_SUCCESS
 
   end function set_value_double
@@ -554,6 +561,7 @@ module mf6bmi
       integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
       integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
       integer(I4B) :: i, j
+      integer(I4B) :: status
   
       bmi_status = BMI_FAILURE
   
@@ -599,7 +607,13 @@ module mf6bmi
       end if
   
       ! trigger event:
-      call on_memory_set(var_name, mem_path)
+      call on_memory_set(var_name, mem_path, status)
+      if (status /= 0) then
+        ! something went terribly wrong here, aborting        
+        bmi_status = BMI_FAILURE
+        return
+      end if
+
       bmi_status = BMI_SUCCESS
   
     end function set_value_int
