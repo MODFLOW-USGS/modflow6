@@ -1,15 +1,9 @@
-\begin{thebibliography}{23}
+\begin{thebibliography}{8}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
   \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
   \urlstyle{rm}\Url}\fi
-
-\bibitem[{Harbaugh(2005)}]{modflow2005}
-Harbaugh, A.W., 2005, MODFLOW-2005, the U.S. Geological Survey modular
-  ground-water model---the Ground-Water Flow Process: {U.S. Geological Survey
-  Techniques and Methods, book 6, chap. A16, variously paged}, accessed June
-  27, 2017, at \url{https://pubs.usgs.gov/tm/2005/tm6A16/}.
 
 \bibitem[{Hoffmann and others(2003)Hoffmann, Leake, Galloway, and
   Wilson}]{hoffmann2003modflow}
@@ -25,23 +19,6 @@ Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
   MODFLOW 6 framework: {U.S. Geological Survey Techniques and Methods, book 6,
   chap. A57, 36 p.}, accessed August 4, 2017, at
   \url{https://doi.org/10.3133/tm6A57}.
-
-\bibitem[{Jacob(1939)}]{jacob1939fluctuations}
-Jacob, CE, 1939, Fluctuations in artesian pressure produced by passing
-  railroad-trains as shown in a well on {Long Island, New York}: Eos,
-  Transactions American Geophysical Union, v.~20, no.~4, p.~666--674.
-
-\bibitem[{Keating and Zyvoloski(2009)}]{keating2009stable}
-Keating, Elizabeth, and Zyvoloski, George, 2009, A stable and efficient
-  numerical algorithm for unconfined aquifer analysis: Ground Water, v.~47,
-  no.~4, p.~569--579, accessed June 27, 2017, at
-  \url{https://doi.org/10.1111/j.1745-6584.2009.00555.x}.
-
-\bibitem[{Laattoe and others(2014)Laattoe, Post, and
-  Werner}]{laattoe2014spatial}
-Laattoe, Tariq, Post, V.~E.A., and Werner, A.D., 2014, Spatial periodic
-  boundary condition for {MODFLOW}: Groundwater, v.~52, no.~4, p.~606--612,
-  accessed June 27, 2017, at \url{https://doi.org/10.1111/gwat.12086}.
 
 \bibitem[{Langevin and others(2017)Langevin, Hughes, Provost, Banta, Niswonger,
   and Panday}]{modflow6gwf}
@@ -63,47 +40,6 @@ Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model---User guide
   chap. A23, 42 p.}, accessed June 27, 2017, at
   \url{https://pubs.er.usgs.gov/publication/tm6A23}.
 
-\bibitem[{McDonald and others(1992)McDonald, Harbaugh, Orr, and
-  Ackerman}]{mcdonaldetal1991wetdry}
-McDonald, M.G., Harbaugh, A.W., Orr, B.R., and Ackerman, D.J., 1992, A method
-  of converting no-flow cells to variable-head cells for the U.S. Geological
-  Survey modular finite-difference ground-water flow model: {U.S. Geological
-  Survey Open-File Report 91--536, 99 p.}, accessed June 27, 2017, at
-  \url{https://pubs.er.usgs.gov/publication/ofr91536}.
-
-\bibitem[{Mehl and Hill(2013)}]{mehl2013modflow}
-Mehl, S.W., and Hill, M.C., 2013, MODFLOW--LGR---Documentation of ghost node
-  Local Grid Refinement (LGR2) for multiple areas and the Boundary Flow and
-  Head (BFH2) Package: {U.S. Geological Survey Techniques and Methods, book 6,
-  chap. A44, 43 p.}, accessed June 27, 2017, at
-  \url{https://pubs.usgs.gov/tm/6a44/}.
-
-\bibitem[{Merritt and Konikow(2000)}]{modflowlak3pack}
-Merritt, M.L., and Konikow, L.F., 2000, Documentation of a computer program to
-  simulate lake-aquifer interaction using the MODFLOW ground-water flow model
-  and the MOC3D solute-transport model: {U.S. Geological Survey Water-Resources
-  Investigations Report 00--4167, 146 p.}, accessed June 27, 2017, at
-  \url{https://pubs.er.usgs.gov/publication/wri004167}.
-
-\bibitem[{Neville and Tonkin(2004)}]{nevilletonkin2004}
-Neville, C.J., and Tonkin, M.J., 2004, Modeling multiaquifer wells with
-  {MODFLOW}: Ground Water, v.~42, no.~6, p.~910--919, accessed June 27, 2017,
-  at \url{https://doi.org/10.1111/j.1745-6584.2004.t01-9-.x}.
-
-\bibitem[{Niswonger and others(2006)Niswonger, Prudic, and Regan}]{UZF}
-Niswonger, R.G., Prudic, D.E., and Regan, R.S., 2006, Documentation of the
-  Unsaturated-Zone Flow (UZF1) Package for modeling unsaturated flow between
-  the land surface and the water table with {MODFLOW}-2005: {U.S. Geological
-  Survey Techniques and Methods, book 6, chap. A19, 62 p.}, accessed June 27,
-  2017, at \url{https://pubs.usgs.gov/tm/2006/tm6a19/}.
-
-\bibitem[{Niswonger and others(2011)Niswonger, Panday, and
-  Ibaraki}]{modflownwt}
-Niswonger, R.G., Panday, Sorab, and Ibaraki, Motomu, 2011, MODFLOW-NWT, A
-  Newton formulation for MODFLOW-2005: {U.S. Geological Survey Techniques and
-  Methods, book 6, chap. A37, 44 p.}, accessed June 27, 2017, at
-  \url{https://pubs.er.usgs.gov/publication/tm6A37}.
-
 \bibitem[{Panday and others(2013)Panday, Langevin, Niswonger, Ibaraki, and
   Hughes}]{modflowusg}
 Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
@@ -124,33 +60,5 @@ Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
   ``XT3D'' Option in the Node Property Flow (NPF) Package of MODFLOW 6: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A56, 46 p.}, accessed
   August 4, 2017, at \url{https://doi.org/10.3133/tm6A56}.
-
-\bibitem[{Prudic(1989)}]{prudic1989str}
-Prudic, D.E., 1989, Documentation of a computer program to simulate
-  stream-aquifer relations using a modular, finite-difference, ground-water
-  flow model: {U.S. Geological Survey Open-File Report 88--729, 113 p.},
-  accessed June 27, 2017, at
-  \url{https://pubs.er.usgs.gov/publication/ofr88729}.
-
-\bibitem[{Reilly and others(1989)Reilly, Franke, and Bennett}]{reilly1989bias}
-Reilly, T.E., Franke, O.L., and Bennett, G.D., 1989, Bias in groundwater
-  samples caused by wellbore flow: Journal of Hydraulic Engineering, v. 115,
-  no.~2, p.~270--276.
-
-\bibitem[{Sneed(2008)}]{sneed2008}
-Sneed, Michelle, 2008, Aquifer-system compaction and land subsidence: data and
-  simulations, the Holly site, Edwards Air Force Base, California: {Sacramento,
-  California State University, Master's Thesis, 40 p.}
-
-\bibitem[{Vilhelmsen and others(2012)Vilhelmsen, Christensen, and
-  Mehl}]{vilhelmsen2012evaluation}
-Vilhelmsen, T.N., Christensen, Steen, and Mehl, S.W., 2012, Evaluation of
-  modflow-lgr in connection with a synthetic regional-scale model: Groundwater,
-  v.~50, no.~1, p.~118--132.
-
-\bibitem[{Zaidel(2013)}]{zaidel2013discontinuous}
-Zaidel, Jacob, 2013, Discontinuous steady-state analytical solutions of the
-  boussinesq equation and their numerical representation by modflow:
-  Groundwater, v.~51, no.~6, p.~952--959.
 
 \end{thebibliography}
