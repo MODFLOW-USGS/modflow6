@@ -37,8 +37,8 @@ module MemorySetHandlerModule
   !! (the context) such as happens with the BMI.
   !<
   subroutine mem_register_handler(var_name, mem_path, handler, ctx)
-    character(len=*), intent(in) :: var_name  !< the variable name
-    character(len=*), intent(in) :: mem_path  !< the memory path
+    character(len=*), intent(in) :: var_name            !< the variable name
+    character(len=*), intent(in) :: mem_path            !< the memory path
     procedure(set_handler_iface), pointer :: handler    !< called after memory is set
     class(*), pointer :: ctx                            !< the context with which the handler should be called
     ! local
@@ -76,7 +76,7 @@ module MemorySetHandlerModule
   subroutine on_memory_set(var_name, mem_path, status)
     character(len=*), intent(in) :: var_name  !< the variable name
     character(len=*), intent(in) :: mem_path  !< the memory path
-    integer(I4B), intent(out) :: status                 !< status: 0 for success, -1 when failed
+    integer(I4B), intent(out) :: status       !< status: 0 for success, -1 when failed
     ! local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found

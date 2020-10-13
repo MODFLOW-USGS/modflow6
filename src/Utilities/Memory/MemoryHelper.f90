@@ -20,7 +20,7 @@ contains
   function create_mem_path(component, subcomponent) result(memory_path)
     character(len=*), intent(in) :: component               !< name of the solution, model, or exchange
     character(len=*), intent(in), optional :: subcomponent  !< name of the package (optional)
-    character(len=LENMEMPATH) :: memory_path                !< name of the package (optional)
+    character(len=LENMEMPATH) :: memory_path                !< the memory path
     
     call mem_check_length(component, LENCOMPONENTNAME, "solution/model/exchange")
     call mem_check_length(subcomponent, LENCOMPONENTNAME, "package")  

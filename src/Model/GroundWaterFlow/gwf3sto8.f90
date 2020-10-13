@@ -19,12 +19,11 @@ module GwfStoModule
   type, extends(NumericalPackageType) :: GwfStoType
     integer(I4B), pointer                            :: isfac => null()          !< indicates if ss is read as storativity
     integer(I4B), pointer                            :: isseg => null()          !< indicates if ss is 0 below the top of a layer
-    integer(I4B), pointer                            :: iss => null()            !< steady state flag
+    integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
     integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
     real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !< primary storage capacity (when cell is fully saturated)
     real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !< secondary storage capacity (when cell is partially saturated)
-    logical(LGP), pointer                            :: allowresetsc => null()   !< when .true., the coefficients can be changed 
     integer(I4B), pointer                            :: iresetsc1 => null()      !< should be set to 1 whenever sc1 has been updated 'in-flight', this triggers the conversion
     integer(I4B), pointer                            :: iresetsc2 => null()      !< should be set to 1 whenever sc2 has been updated 'in-flight', this triggers the conversion
     real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !< vector of specific storage rates
@@ -231,11 +230,6 @@ module GwfStoModule
     !  write(this%iout,fmtlsp) 'STORAGE VALUES'
     endif
 
-    ! now the stress data has been read, the SC values
-    ! can be altered from outside, up to the point that
-    ! the formulate is called:
-    this%allowresetsc = .true.
-
     write(this%iout,'(//1X,A,I0,A,A,/)') &
       'STRESS PERIOD ', kper, ' IS ', trim(adjustl(css(this%iss)))
     !
@@ -306,9 +300,6 @@ module GwfStoModule
     !
     ! -- set variables
     tled = DONE / delt
-    !
-    ! -- storage values will be used here, doesn't make sense to alter them anymore
-    this%allowresetsc = .false.
     !
     ! -- loop through and calculate storage contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -650,7 +641,6 @@ module GwfStoModule
     call mem_deallocate(this%isseg)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%iusesy)
-    call mem_deallocate(this%allowresetsc)
     call mem_deallocate(this%iresetsc1)
     call mem_deallocate(this%iresetsc2)
     !
@@ -683,7 +673,6 @@ module GwfStoModule
     call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
     call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
-    call mem_allocate(this%allowresetsc, 'ALLOWRESETSC', this%memoryPath)
     call mem_allocate(this%iresetsc1, 'IRESETSC1', this%memoryPath, MEMREADWRITE)
     call mem_allocate(this%iresetsc2, 'IRESETSC2', this%memoryPath, MEMREADWRITE)
     !
@@ -692,7 +681,6 @@ module GwfStoModule
     this%isfac = 0
     this%isseg = 0
     this%satomega = DZERO
-    this%allowresetsc = .false.
     this%iresetsc1 = 0
     this%iresetsc2 = 0
     !
@@ -778,14 +766,7 @@ module GwfStoModule
       storage => sto_ptr
     end select
     
-    ! check if reset is allowed, i.e. after sto_rp()
-    ! and before sto_fc()
     status = 0
-    if (.not. storage%allowresetsc) then
-      status = -1
-      return
-    end if
-
     call storage%convert_sc1()
 
   end subroutine sc1_handler
@@ -804,14 +785,7 @@ module GwfStoModule
       storage => sto_ptr
     end select
 
-    ! check if reset is allowed, i.e. after sto_rp()
-    ! and before sto_fc()
     status = 0
-    if (.not. storage%allowresetsc) then
-      status = -1
-      return
-    end if
-
     call storage%convert_sc2()
 
   end subroutine sc2_handler
