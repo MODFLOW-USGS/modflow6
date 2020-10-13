@@ -151,14 +151,18 @@ Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The ma
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.1.2--Month xx, 20xx
+	\item Version mf6.2.0--October 16, 2020
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 	        \item A new Buoyancy (BUY) Package for the Groundwater Flow (GWF) Model is introduced in this release as a way to represent variable-density groundwater flow.  The BUY Package is based on the hydraulic head formulation described by \cite{langevin2020hydraulic}.  The BUY Package in this release is considered preliminary.  Extensive testing of the BUY Package has been performed but changes to the code and input may be required in response to user needs and testing.   
 		\item A new Groundwater Transport (GWT) Model is introduced in this release as a way to simulate the fate and transport of a dissolved solute.  The GWT Model in this release is considered preliminary.  Extensive testing of the GWT Model has been performed but changes to the code and input may be required in response to user needs and testing. 
 		\item A preliminary release of the Basic Model Interface (BMI) was introduced in version 6.1.1.  The BMI released in this version is also considered preliminary (alpha release).  Limited testing of the BMI has been performed but significant changes are expected in future releases.  User support for the MODFLOW 6 BMI may be provided in the future.
-		\item 
+	\end{itemize}
+	
+	\underline{EXAMPLES}
+	\begin{itemize}
+	\item The format for the examples included in the distribution has changed.  The examples are now described in the modflow6-examples.pdf file in the doc folder.  The examples have been renamed, and they are no longer numbered.  Most of the examples are the same as those distributed with the previous release; however some have been modified, updated, combined or eliminated based on standardization of example construction, testing, and documentation.  
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
@@ -189,7 +193,6 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 		\item A fix was implemented in the biconjugate gradient stabilized linear solver routine so that the maximum change in the dependent value is calculated and stored correctly.
 		\item Corrected the SIMPLE and COOLEY under-relaxation schemes in the Iterative Model Solution (IMS).  The methods were not applying the correct under-relaxation factor.  The SIMPLE scheme now uses the user-specified value for gamma as the factor.  The COOLEY scheme updates the factor based on solver history.  
-		\item
 	\end{itemize}
 
 \end{itemize}
@@ -262,17 +265,6 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 \end{itemize}
  
 \noindent Description of the MODFLOW~6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
-
-% -------------------------------------------------
-\section{Test Problems}
-The following is a list of test problems distributed with MODFLOW~6.  Characteristics of these tests are contained in Table \ref{table:examples}.
-
-
-% example tex files created by python scripts
-
-\input{example_items.tex}
-
-\input{example_table.tex}
 
 % -------------------------------------------------
 \section{Disclaimer and Notices}
