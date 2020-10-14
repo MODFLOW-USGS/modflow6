@@ -194,7 +194,7 @@ def get_model(idx, dir):
 
         # dispersion
         diffc = 0.0
-        dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
+        dsp = flopy.mf6.ModflowGwtdsp(gwt, diffc=diffc,
                                       alh=10., ath1=3.0, atv=0.30,
                                       filename='{}.dsp'.format(gwtname))
 

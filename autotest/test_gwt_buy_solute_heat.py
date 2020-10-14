@@ -177,7 +177,7 @@ def get_model(idx, dir):
         adv = flopy.mf6.ModflowGwtadv(gwts, scheme='UPSTREAM')
 
         # dispersion
-        dsp = flopy.mf6.ModflowGwtdsp(gwts, xt3d=True, alh=10., ath1=.1,
+        dsp = flopy.mf6.ModflowGwtdsp(gwts, alh=10., ath1=.1,
                                       diffc=1.e-10)
 
         # mass storage and transfer
@@ -236,7 +236,7 @@ def get_model(idx, dir):
         adv = flopy.mf6.ModflowGwtadv(gwth, scheme='UPSTREAM')
 
         # dispersion
-        dsp = flopy.mf6.ModflowGwtdsp(gwth, xt3d=False, diffc=0.150309621)
+        dsp = flopy.mf6.ModflowGwtdsp(gwth, xt3d_off=True, diffc=0.150309621)
 
         # mass storage and transfer
         porosity = 0.35

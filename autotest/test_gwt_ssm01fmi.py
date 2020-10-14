@@ -206,7 +206,7 @@ def run_transport_model():
     ic = flopy.mf6.ModflowGwtic(gwt, strt=100.)
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=0.3)
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme='TVD')
-    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, alh=20., ath1=2, atv=0.2)
+    dsp = flopy.mf6.ModflowGwtdsp(gwt, alh=20., ath1=2, atv=0.2)
 
     sourcerecarray = [('WEL-1', 'AUX', 'CONCENTRATION')] \
                      + [('GHB-{}'.format(i + 1), 'AUX', 'CONCENTRATION') for i in [0, 1, 2, 3]] \

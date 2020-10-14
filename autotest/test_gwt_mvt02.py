@@ -245,12 +245,6 @@ def get_model(idx, dir):
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
                                       filename='{}.adv'.format(gwtname))
 
-        # dispersion
-        # diffc = 0.0
-        # dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
-        #                              alh=0.1, ath1=0.01, atv=0.05,
-        #                              filename='{}.dsp'.format(gwtname))
-
         # storage
         porosity = 1.0
         sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,

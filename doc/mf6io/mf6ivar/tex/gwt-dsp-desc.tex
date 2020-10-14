@@ -3,7 +3,9 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{XT3D}---activate the xt3d method to solve the dispersion term
+\item \texttt{XT3D\_OFF}---deactivate the xt3d method to and use the faster and less accurate approximation
+
+\item \texttt{XT3D\_RHS}---add xt3d terms to right-hand side, when possible.  This option uses less memory, but may require more iterations.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}

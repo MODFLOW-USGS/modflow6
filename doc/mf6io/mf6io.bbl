@@ -1,4 +1,4 @@
-\begin{thebibliography}{28}
+\begin{thebibliography}{29}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -191,6 +191,10 @@ Prudic, D.E., Konikow, L.F., and Banta, E.R., 2004, A New Streamflow-Routing
   (SFR1) Package to simulate stream-aquifer interaction with MODFLOW-2000:
   {U.S. Geological Survey Open File Report 2004--1042, 104 p.}, accessed June
   27, 2017, at \url{https://pubs.er.usgs.gov/publication/ofr20041042}.
+
+\bibitem[{Zheng(2010)}]{zheng2010supplemental}
+Zheng, Chunmiao, 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical
+  Report Prepared for the U.S. Army Corps of Engineers, 51 p.}
 
 \bibitem[{Zheng and others(2001)Zheng, Hill, and Hsieh}]{zheng2001modflow}
 Zheng, Chunmiao, Hill, M.C., and Hsieh, P.A., 2001, MODFLOW-2000, the U.S.

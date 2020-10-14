@@ -1,21 +1,9 @@
-! todo
-  ! velocity is incorrect for a triangular corner cell if two edges are on model perimeter
-  ! verify that idomain is working (can transport have a different idomain?)
-  ! check that discretization is the same between both models 
-  ! Add internal GWF flows to the diagonal postion of the flowja array
-  ! gwt obs
-  ! adv obs
-  ! dsp obs
-  ! mst obs
-  ! ist obs
-  ! ssm obs
-  ! src obs
-  ! cnc obs
-  ! GWT-GWT exchange transport
-  ! transient flow case; verify that its working properly, test with goode 1990
-  ! implement steady-state transport (affects MST, IST)
-  ! pore space discrepancy between flow and transport (porosity vs specific yield)
-  
+! Groundwater Transport (GWT) Model
+! The following are additional features/checks to add
+!   * Add check that discretization is the same between both models 
+!   * Program GWT-GWT exchange transport (awaiting implementation of interface model)
+!   * Consider implementation of steady-state transport (affects MST, IST)
+!   * Check and handle pore space discrepancy between flow and transport (porosity vs specific yield)
   
 module GwtModule
 
@@ -532,9 +520,6 @@ module GwtModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Recalculate dispersion coefficients
-    if(this%indsp > 0) call this%dsp%dsp_cf(kiter)
-    !
     ! -- Call package cf routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -1004,8 +989,6 @@ module GwtModule
                             iout)
 ! ******************************************************************************
 ! package_create -- Create boundary condition packages for this model
-! Subroutine: (1) create new-style package
-!             (2) add a pointer to the package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

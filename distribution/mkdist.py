@@ -4,17 +4,20 @@ on Windows and requires that Latex be installed, and Python with the
 pymake package.
 
 To make a distribution:
-  0.  Install/update pymake, mf6examples, flopy, unix2dos/dos2unix,
-      fortran compiler
-  1.  Create a release branch
-  2.  Update version.txt with the correct minor and micro numbers
-  3.  Run the make_release.py script, which will create the proper dist name
-  4.  Run this mkdist.py script
-  5.  Post the distribution zip file
-  6.  Commit the release changes, but no need to push
-  7.  Merge the release changes into the master branch
-  8.  Tag the master branch with the correct version
-  9.  Merge master into develop
+  1.   Install/update pymake, mf6examples, flopy, unix2dos/dos2unix,
+       fortran compiler, jupytext
+  2.   Run update_flopy.py in modflow6/autotest
+  3.   Put fresh executables (including mf6.exe) into mf6examples/bin
+  4.   Run python scripts in mf6examples/scripts (run process-scripts.py last)
+  5.   Create a release branch
+  6.   Update version.txt with the correct minor and micro numbers
+  7.   Run the make_release.py script, which will create the proper dist name
+  8.   Run this mkdist.py script
+  9.   Post the distribution zip file
+  10.  Commit the release changes, but no need to push
+  11.  Merge the release changes into the master branch
+  12.  Tag the master branch with the correct version
+  13.  Merge master into develop
 
 """
 
@@ -621,6 +624,7 @@ def setup_examples(examples_repo, exdestpath, mf6path):
             dwpath = os.path.join(root, d)
             if 'mfsim.nam' in os.listdir(dwpath):
                 simulation_folders.append(dwpath)
+    simulation_folders = sorted(simulation_folders)
 
     # go through each simulation folder and add a run.bat file
     for dwpath in simulation_folders:
@@ -768,7 +772,6 @@ if __name__ == '__main__':
     for url in ['https://pubs.usgs.gov/tm/06/a57/tm6a57.pdf',
                 'https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf',
                 'https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf',
-                'https://github.com/MODFLOW-USGS/modflow6-testmodels/releases/download/6.1.0/csubexamples.pdf',
                 ]:
         print('  downloading {}'.format(url))
         download_and_unzip(url, pth=fd['doc'], delete_zip=False, verify=False)

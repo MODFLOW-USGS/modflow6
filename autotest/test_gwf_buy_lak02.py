@@ -220,11 +220,6 @@ def get_model(idx, dir):
         # advection
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM')
 
-        # dispersion
-        # diffc = 0.0
-        # dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
-        #                              alh=0.1, ath1=0.01, atv=0.05)
-
         # storage
         porosity = 0.30
         sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
