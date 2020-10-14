@@ -24,7 +24,6 @@ module Xt3dModule
     real(DP), pointer                               :: vcthresh    => null()     !< attenuation function threshold
     real(DP), dimension(:,:), pointer, contiguous   :: rmatck      => null()     !< rotation matrix for the conductivity tensor
     real(DP), dimension(:), pointer, contiguous     :: qsat        => null()     !< saturated flow saved for Newton
-    real(DP), dimension(:), pointer, contiguous     :: qrhs        => null()     !< rhs part of flow saved for Newton
     integer(I4B), pointer                           :: nbrmax      => null()     !< maximum number of neighbors for any cell
     real(DP), dimension(:), pointer, contiguous     :: amatpc      => null()     !< saved contributions to amat from permanently confined connections, direct neighbors
     real(DP), dimension(:), pointer, contiguous     :: amatpcx     => null()     !< saved contributions to amat from permanently confined connections, extended neighbors
@@ -472,12 +471,8 @@ module Xt3dModule
           ! -- Multiply by saturated area and save in qsat.
           call this%xt3d_areas(nodes, n, m, jjs01, .true., ar01, ar10, hnew)
           this%qsat(ii01) = qnm*ar01
-          ! -- Scale coefficients by actual area.  If RHS
-          ! -- formulation, also compute and save qrhs.
+          ! -- Scale coefficients by actual area.
           call this%xt3d_areas(nodes, n, m, jjs01, .false., ar01, ar10, hnew)
-          if (this%ixt3d == 2) then
-            this%qrhs(ii01) = -qnbrs*ar01
-          end if
           chat01 = chat01*ar01
           chati0 = chati0*ar01
           chat1j = chat1j*ar01
@@ -689,12 +684,8 @@ module Xt3dModule
       ! -- Multiply by saturated area and add correction to qsat.
       call this%xt3d_areas(nodes, n, m, jjs01, .true., ar01, ar10, hnew)
       this%qsat(ii01) = this%qsat(ii01) + qnm*ar01
-      ! -- Scale coefficients by actual area.  If RHS
-      ! -- formulation, also compute and add correction to qrhs.
+      ! -- Scale coefficients by actual area.
       call this%xt3d_areas(nodes, n, m, jjs01, .false., ar01, ar10, hnew)
-      if (this%ixt3d == 2) then
-        this%qrhs(ii01) = this%qrhs(ii01) - qnbrs*ar01
-      end if
       chat01 = chat01*ar01
       chati0 = chati0*ar01
       chat1j = chat1j*ar01
@@ -748,7 +739,7 @@ module Xt3dModule
     integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10
     integer(I4B),dimension(this%nbrmax) :: inbr0
     integer(I4B) :: iups, idn
-    real(DP) :: topup, botup, derv, term, termrhs
+    real(DP) :: topup, botup, derv, term
 ! ------------------------------------------------------------------------------
     !
     ! -- Update amat and rhs with Newton terms
@@ -795,27 +786,22 @@ module Xt3dModule
         ! derivative term
         derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups))
         term = this%qsat(ii01) * derv
-        if (this%ixt3d == 1) then
-           termrhs = term
-        else
-           termrhs = term - this%qrhs(ii01)
-        endif
         ! fill Jacobian for n being the upstream node
         if (iups == n) then
           ! fill in row of n
           amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
-          rhs(n) = rhs(n) + termrhs * hnew(n)
+          rhs(n) = rhs(n) + term * hnew(n)
           ! fill in row of m
           amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
-          rhs(m) = rhs(m) - termrhs * hnew(n)
+          rhs(m) = rhs(m) - term * hnew(n)
         ! fill Jacobian for m being the upstream node
         else
           ! fill in row of n
           amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
-          rhs(n) = rhs(n) + termrhs * hnew(m)
+          rhs(n) = rhs(n) + term * hnew(m)
           ! fill in row of m
           amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
-          rhs(m) = rhs(m) - termrhs * hnew(m)
+          rhs(m) = rhs(m) - term * hnew(m)
         end if
       enddo
     enddo
@@ -1020,7 +1006,6 @@ module Xt3dModule
       call mem_deallocate(this%idxglox)
       call mem_deallocate(this%rmatck)
       call mem_deallocate(this%qsat)
-      call mem_deallocate(this%qrhs)
       call mem_deallocate(this%amatpc)
       call mem_deallocate(this%amatpcx)
       call mem_deallocate(this%iallpc)
@@ -1102,14 +1087,8 @@ module Xt3dModule
     ! -- Allocate Newton-dependent arrays
     if (this%inewton /= 0) then
       call mem_allocate(this%qsat, this%dis%nja, 'QSAT', this%memoryPath)
-      if (this%ixt3d == 1) then
-        call mem_allocate(this%qrhs, 0, 'QRHS', this%memoryPath)
-      else
-        call mem_allocate(this%qrhs, this%dis%nja, 'QRHS', this%memoryPath)
-      end if
     else
       call mem_allocate(this%qsat, 0, 'QSAT', this%memoryPath)
-      call mem_allocate(this%qrhs, 0, 'QRHS', this%memoryPath)
     end if
     !
     ! -- If dispersion, set iallpc to 1 otherwise call xt3d_iallpc to go through
@@ -1149,7 +1128,6 @@ module Xt3dModule
     this%rmatck = DZERO
     if (this%inewton /= 0) then
       this%qsat = DZERO
-      if (this%ixt3d == 2) this%qrhs = DZERO
     else if (this%lamatsaved) then
       this%amatpc = DZERO
       this%amatpcx = DZERO
