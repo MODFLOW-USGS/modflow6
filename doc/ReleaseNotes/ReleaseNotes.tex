@@ -171,6 +171,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item The observation routines were improved to handle very large numbers of observations written to the same comma-separated-value (CSV) file.  Non-advancing input-output is now used to write the CSV header instead of constructing a header string.   This change should substantially improve memory and runtime problems with models containing thousands of observations.
 		\item If the CONTINUE option is specified in mfsim.nam, do not force models to write budget tables when the solver does not converge.  Instead, always use Output Control options to determine when budget tables are written if CONTINUE option is specified and the solver does not converge.  Also, if the CONTINUE option is specified, calculate and write observations even if the model does not converge.  Observations were being written as zero if the model did not converge, but the CONTINUE flag was set.
 		\item Allow the program to read input files with very long lines.  Previously, the program was limited to a maximum line length of 50,000 characters.  The program now uses dynamic memory allocation, when necessary, to read any sized line in an input file.
+		\item Fixed an error in the implementation of the Newton-Raphson correction for XT3D. The error in the code would have only affected simulations that used the NEWTON option together with the XT3D RHS option. 
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
