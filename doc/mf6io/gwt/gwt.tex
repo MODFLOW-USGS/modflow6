@@ -1,26 +1,60 @@
-This section describes the data files for a \mf Groundwater Transport (GWT) Model.  A GWT Model is added to the simulation by including a GWT entry in the MODELS block of the simulation name file.
+The GWT Model simulates three-dimensional transport of a single solute species in flowing groundwater.  The GWT Model solves the solute transport equation using numerical methods and a generalized control-volume finite-difference approach, which can be used with regular MODFLOW grids (DIS Package) or with unstructured grids (DISV and DISU Packages).  The GWT Model is designed to work with most of the new capabilities released with the GWF Model, including the Newton flow formulation, unstructured grids, advanced packages, and the movement of water between packages.  The GWF and GWT Models operate simultaneously during a \mf simulation to represent coupled groundwater flow and solute transport.  The GWT Model can also run separately from a GWF Model by reading the heads and flows saved by a previously run GWF Model.  The GWT model is also capable of working with the flows from another groundwater flow model, as long as the flows from that model can be written in the correct form to flow and head files.  
 
-There are three types of spatial discretization approaches that can be used with the GWT Model: DIS, DISV, and DISU.  The input instructions for these three packages are not described here in this section on GWT Model input; input instructions for these three packages are described in the section on GWF Model input.
+The purpose of the GWT Model is to calculate changes in solute concentration in both space and time.  Solute concentrations within an aquifer can change in response to multiple solute transport processes.  These processes include (1) advective transport of solute with flowing groundwater, (2) the combined hydrodynamic dispersion processes of velocity-dependent mechanical dispersion and chemical diffusion, (3) sorbtion of solutes by the aquifer matrix either by adsorption to individual solid grains or by absorbtion into solid grains, (4) transfer of solute into very low permeability aquifer material (called an immobile domain) where it can be stored and later released, (5) first- or zero-order solute decay or production in response to chemical or biological reactions, (6) mixing with fluids from groundwater sources and sinks, and (7) direct addition of solute mass.
+
+With the present implementation, there can be multiple domains and multiple phases.  There is a single mobile domain, which normally consists of flowing groundwater, and there can be one or more immobile domains.  The GWT Model simulates the dissolved phase of chemical constituents in both the mobile and immobile domains.  The dissolved phase is also referred to in this report as the aqueous phase.  If sorbtion is represented, then the GWT Model also simulates the solid phase of the chemical constituent in both the mobile and immobile domains.  The dissolved and solid phases of the chemical constituent are tracked in the different domains by the GWT Model and can be reported as output as requested by the user.
+
+This section describes the data files for a \mf Groundwater Transport (GWT) Model.  A GWT Model is added to the simulation by including a GWT entry in the MODELS block of the simulation name file.  There are three types of spatial discretization approaches that can be used with the GWT Model: DIS, DISV, and DISU.  The input instructions for these three packages are not described here in this section on GWT Model input; input instructions for these three packages are described in the section on GWF Model input.
 
 The GWT Model is designed to permit input to be gathered, as it is needed, from many different files.  Likewise, results from the model calculations can be written to a number of output files. The GWT Model Listing File is a key file to which the GWT model output is written.  As \mf runs, information about the GWT Model is written to the GWT Model Listing File, including much of the input data (as a record of the simulation) and calculated results.  Details about the files used by each package are provided in this section on the GWT Model Instructions.
 
 The GWT Model reads a file called the Name File, which specifies most of the files that will be used in a simulation. Several files are always required whereas other files are optional depending on the simulation. The Output Control Package receives instructions from the user to control the amount and frequency of output.  Details about the Name File and the Output Control Package are described in this section.
 
-\subsection{Multi-Species Transport Simulation}
-The present implementation of the GWT Model does not directly support transport of multiple solute species.  However, a simulation can include multiple models, including multiple GWT models.  Thus, multi-species transport simulations are possible by using a separate GWT model for each species.
+\subsection{Information for Existing Solute Transport Modelers}
+The \mf GWT Model contains most of the functionality of MODFLOW-GWT, MT3DMS, MT3D-USGS and MODFLOW-USG.  The following list summarizes major differences between the GWT Model in \mf and previous MODFLOW-based solute transport programs.
+
+\begin{enumerate}
+
+\item The GWT Model simulates transport of a single chemical species; however, because \mf allows for multiple models of the same type to be included in a single simulation, multiple species can be represented by using multiple GWT Models.
+
+\item There is no specialized flow and transport link file \citep{zheng2001modflow} used to pass the simulated groundwater flows to the transport model.  Instead, simulated flows from the GWF Model are passed in memory to the GWT Model while the program is running.  Alternatively, the GWT Model can read binary flow and head files saved by the GWF Model while it is running.  If the user intends to simulate transport through the advanced stress packages and Water Mover Package, then flows from these advanced packages must also be saved to binary files.  Names for these binary files are provided as input to the FMI Package.
+
+\item The GWT Model is based on a generalized control-volume finite-difference method, which means that solute transport can be simulated using regular MODFLOW grids consisting of layers, rows, and columns, or solute transport can be simulated using unstructured grids.
+
+\item Advection can be simulated using central-in-space weighting, upstream weighting, or an implicit second-order TVD scheme.  The GWT model does not have the Method of Characteristics (particle-based approaches) or an explicit TVD scheme.  Consequently, the GWT Model may require a higher level of spatial discretization than other transport models that use higher order terms for advection dominated systems.  This can be an important limitation for some problems, which require the preservation of sharp solute fronts. 
+
+\item Variable-density flow and transport can be simulated by including a GWF Model and a GWT Model in the same \mf simulation.  The Buoyancy Package should be activated for the GWF Model so that fluid density is calculated as a function of simulated concentration.  If more than one chemical species is represented then the Buoyancy Package allows the simulated concentration for each of them to be used in the density equation of state.   \cite{langevin2020hydraulic} describe the hydraulic-head formation that is implemented in the Buoyancy Package for variable-density groundwater flow and present the results from \mf variable-density simulations.  The variable-density capabilities available in \mf replicate and extend the capabilities available in SEAWAT to include the Newton flow formulation and unstructured grids, for example.  
+
+\item The GWT model includes the MST and IST Packages.  These two package collectively comprise the capabilities of the MT3DMS Reactions Package.
+
+\item The MST and IST Packages contain only the linear isotherm for representation of sorbtion.    Nonlinear isotherms, such as the Langmuir and Freundlich isotherms, are not commonly used in practice and require additional code complexity and numerical overhead. 
+
+\item The GWT model was designed so that the user can specify as many immobile domains and necessary to represent observed contaminant transport patterns and solute breakthrough curves.  The effects of an immobile domain are represented using the Immobile Storage and Transfer (IST) Package, and the user can specify as many IST Packages as necessary.  
+
+\item Although there is GWF-GWF Exchange, a GWT-GWT Exchange has not yet been developed to connect multiple transport models, as might be done in a nested grid configuration.  
+
+\item There is no option to automatically run the GWT Model to steady state using a single time step.  This is an option available in MT3DMS \citep{zheng2010supplemental}.  Steady state conditions must be determined by running the transport model under transient conditions until concentrations stabilize.
+
+\item The GWT Model described in this report is capable of simulating solute transport in the advanced stress packages of \mfcomma including the Lake, Streamflow Routing, Multi-Aquifer Well and Unsaturated Zone Transport Packages.  The present implementation simulates solute advection between package features, such as between two stream reaches, but dispersive transport is not represented.  Likewise, solute transport between the advanced packages and the aquifer occurs only through advection.
+
+\item The GWT Model has not been programmed to work with the Skeletal Storage, Compaction, and Subsidence (CSUB) Package for the GWF Model.  
+
+\item There are many other differences between the \mf GWT Model and other solute transport models that work with MODFLOW, especially with regards to program design and input and output.  Descriptions for the GWT input and output are described here.
+
+\end{enumerate}
 
 \subsection{Units of Length and Time}
 The GWF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
-
-\subsection{Steady-State Simulations}
-A steady-state transport simulation is represented by a single stress period having a single time step with the storage term set to zero. Setting the number and length of stress periods and time steps is the responsibility of the Timing Module of the \mf framework.
-
-TODO: Need to implement mixed steady state and transient periods
 
 \subsection{Solute Mass Budget}
 A summary of all inflow (sources) and outflow (sinks) of solute mass is called a mass budget.  \mf calculates a mass budget for the overall model as a check on the acceptability of the solution, and to provide a summary of the sources and sinks of mass to the flow system.  The solute mass budget is printed to the GWT Model Listing File for selected time steps.
 
 \subsection{Time Stepping}
+
+For the present implementation of the GWT Model, all terms in the solute transport equation are solved implicitly.  With the implicit approach applied to the transport equation, it is possible to take relatively large time steps and efficiently obtain a stable solution.  If the time steps are too large, however, accuracy of the model results will suffer, so there is usually some compromise required between the desired level of accuracy and length of the time step.
+
+In \mf time step lengths are controlled by the user and specified in the Temporal Discretization (TDIS) input file.  When the flow model and transport model are included in the same simulation, then the length of the time step specified in TDIS is used for both models.  If the GWT Model runs in a separate simulation from the GWT Model, then the time steps used for the transport model can be different, and likely shorter, than the time steps used for the flow solution.  Instructions for specifying time steps are described in the TDIS section of this user guide; additional information on GWF and GWT configurations are in the Flow Model Interface section.  
+
 
 
 \newpage

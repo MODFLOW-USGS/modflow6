@@ -99,7 +99,8 @@ def get_model(idx, dir):
                                 filename='{}.ic'.format(gwtname))
 
     # dispersion
-    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=xt3d[idx], diffc=100.,
+    xt3d_off = not xt3d[idx]
+    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=xt3d_off, diffc=100.,
                                   alh=0., alv=0., ath1=0., atv=0.,
                                   filename='{}.dsp'.format(gwtname))
 

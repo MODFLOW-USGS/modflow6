@@ -34,14 +34,4 @@
 \item \texttt{auxspeciesname}---name of an auxiliary variable in a GWF stress package that will be used for this species to calculate a density value.  If a density value is needed by the Buoyancy Package then it will use the concentration values in this AUXSPECIESNAME column in the density equation of state.  For advanced stress packages (LAK, SFR, MAW, and UZF) that have an associated advanced transport package (LKT, SFT, MWT, and UZT), the FLOW\_PACKAGE\_AUXILIARY\_NAME option in the advanced transport package can be used to transfer simulated concentrations into the flow package auxiliary variable.  In this manner, the Buoyancy Package can calculate density values for lakes, streams, multi-aquifer wells, and unsaturated zone flow cells using simulated concentrations.
 
 \end{description}
-\item \textbf{Block: PERIOD}
-
-\begin{description}
-\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
-
-\item \texttt{elevation}---cell center elevation for each cell in the grid.  This may be useful for constructing two-dimensional cross section models using an areal grid.
-
-\item \texttt{concentration}---user-specified concentration array.  If this array is specified, then these concentrations are converted to densities using the equation of state values specified in the PACKAGEDATA block.  If this CONCENTRATION array is specified, then the NRHOSPECIES dimension must be one.
-
-\end{description}
 

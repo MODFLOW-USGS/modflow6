@@ -69,7 +69,6 @@ module GwfBuyModule
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
-    procedure, private :: read_data
     procedure :: set_concentration_pointer
   end type GwfBuyType
   
@@ -276,58 +275,19 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, nper
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg
-    integer(I4B) :: ierr
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
-    logical :: isfound
     ! -- formats
     character(len=*),parameter :: fmtc = &
       "('BUOYANCY PACKAGE DOES NOT HAVE HAVE A CONCENTRATION SET &
        &FOR SPECIES ',i0,'. ONE OR MORE MODEL NAMES MAY BE SPECIFIED &
        &INCORRECTLY IN THE PACKAGEDATA BLOCK OR A GWF-GWT EXCHANGE MAY NEED &
        &TO BE ACTIVATED.')"
-    character(len=*),parameter :: fmtblkerr = &
-      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
-      "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Set ionper to the stress period number for which a new block of data
-    !    will be read.
-    if (this%ionper < kper) then
-      !
-      ! -- get period block
-      call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
-      if(isfound) then
-        !
-        ! -- read ionper and check for increasing period numbers
-        call this%read_check_ionper()
-      else
-        !
-        ! -- PERIOD block not found
-        if (ierr < 0) then
-          ! -- End of file found; data applies for remainder of simulation.
-          this%ionper = nper + 1
-        else
-          ! -- Found invalid block
-          write(errmsg, fmtblkerr) adjustl(trim(line))
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        end if
-      endif
-    end if
-    !
-    if(this%ionper == kper) then
-      call this%read_data()
-    else
-      write(this%iout,fmtlsp) 'BUY'
-    endif
     !
     ! -- Check to make sure all concentration pointers have been set
     if (kstp * kper == 1) then
@@ -1711,74 +1671,6 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine read_options
-
-  subroutine read_data(this)
-! ******************************************************************************
-! read_data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GwfBuyType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: keyword, errmsg
-    character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc
-    logical :: endOfBlock
-    character(len=24) :: aname(2)
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Setup the label
-    aname(1) = '       ELEVATION'
-    aname(2) = '   CONCENTRATION'
-    !
-    do
-      call this%parser%GetNextLine(endOfBlock)
-      if (endOfBlock) exit
-      call this%parser%GetStringCaps(keyword)
-      call this%parser%GetRemainingLine(line)
-      !
-      ! -- Parse the keywords
-      lloc = 1
-      select case (keyword)
-      case ('ELEVATION')
-        this%ireadelev = 1
-        call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &
-                                      this%parser%iuactive, this%elev,         &
-                                      aname(1))
-      case ('CONCENTRATION')
-        if (this%ireadconcbuy == 0) then
-          call mem_reallocate(this%concbuy, this%dis%nodes, 'CONCBUY',         &
-            this%memoryPath)
-        end if
-        this%ireadconcbuy = 1
-        call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &
-                                      this%parser%iuactive, this%concbuy,      &
-                                      aname(2))
-        this%modelconc(1)%conc => this%concbuy
-        this%modelconc(1)%icbund => this%ibound
-        if (this%nrhospecies /= 1) then
-          errmsg = 'NRHOSPECIES MUST BE 1 IF CONCENTRATION IS SPECIFIED IN BUY &
-            &PACKAGE'
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        end if
-      case default
-        write(errmsg,'(4x,a,a)')'UKNOWN BUOYANCY PERIOD DATA KEYWORD: ',       &
-                                  trim(keyword)
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      end select
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine read_data
 
   subroutine set_concentration_pointer(this, modelname, conc, icbund)
 ! ******************************************************************************

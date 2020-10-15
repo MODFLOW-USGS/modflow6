@@ -30,6 +30,7 @@ module GwtFmiModule
     logical, pointer                                :: flows_from_file => null() ! if .false., then flows come from GWF through GWF-GWT exg
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfpackages
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
+    integer(I4B), pointer                           :: iflowsupdated => null()  ! flows were updated for this time step
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
     real(DP), dimension(:), pointer, contiguous     :: flowerr => null()        ! residual error of the flow solution
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()         ! pointer to GWT ibound
@@ -272,6 +273,11 @@ module GwtFmiModule
      &' WITH STARTING CONCENTRATION =',G13.5)"
 ! ------------------------------------------------------------------------------
     !
+    ! -- Set flag to indicated that flows are being updated.  For the case where
+    !    flows may be reused (only when flows are read from a file) then set
+    !    the flag to zero to indicated that flows were not updated
+    this%iflowsupdated = 1
+    !
     ! -- If reading flows from a budget file, read the next set of records
     if (this%iubud /= 0) then
       call this%advance_bfr()
@@ -371,7 +377,6 @@ module GwtFmiModule
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
-    !class(BndType), pointer :: packobj
     integer(I4B) :: n, ipos, idiag
     integer(I4B) :: ip, i
     real(DP) :: qbnd
@@ -496,6 +501,7 @@ module GwtFmiModule
     !
     ! -- deallocate scalars
     call mem_deallocate(this%flows_from_file)
+    call mem_deallocate(this%iflowsupdated)
     call mem_deallocate(this%iflowerr)
     call mem_deallocate(this%igwfstrgss)
     call mem_deallocate(this%igwfstrgsy)
@@ -530,6 +536,7 @@ module GwtFmiModule
     !
     ! -- Allocate
     call mem_allocate(this%flows_from_file, 'FLOWS_FROM_FILE', this%memoryPath)
+    call mem_allocate(this%iflowsupdated, 'IFLOWSUPDATED', this%memoryPath)
     call mem_allocate(this%iflowerr, 'IFLOWERR', this%memoryPath)
     call mem_allocate(this%igwfstrgss, 'IGWFSTRGSS', this%memoryPath)
     call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%memoryPath)
@@ -544,6 +551,7 @@ module GwtFmiModule
     !
     ! -- Initialize
     this%flows_from_file = .true.
+    this%iflowsupdated = 1
     this%iflowerr = 0
     this%igwfstrgss = 0
     this%igwfstrgsy = 0
@@ -1122,7 +1130,12 @@ module GwtFmiModule
         end select
       end do
     else
+      !
+      ! -- write message to indicate that flows are being reused
       write(this%iout, fmtbudkstpkper) kstp, kper, this%bfr%kstp, this%bfr%kper
+      !
+      ! -- set the flag to indicate that flows were not updated
+      this%iflowsupdated = 0
     endif
   end subroutine advance_bfr
   

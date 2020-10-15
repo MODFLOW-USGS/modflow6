@@ -180,7 +180,7 @@ def build_models():
                                       filename='{}.adv'.format(gwtname))
 
         # dispersion
-        dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
+        dsp = flopy.mf6.ModflowGwtdsp(gwt, diffc=diffc,
                                       alh=alphal, alv=alphal,
                                       ath1=alphath, atv=alphatv,
                                       filename='{}.dsp'.format(gwtname))

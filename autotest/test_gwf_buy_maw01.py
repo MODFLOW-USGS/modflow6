@@ -24,9 +24,9 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['buy_maw_01a', 'buy_maw_01b', 'buy_maw_01c']
-buy_on_list = [False, True, True]
-concbuylist = [0., 0., 35.]
+ex = ['buy_maw_01a'] #, 'buy_maw_01b', 'buy_maw_01c']
+buy_on_list = [False] #, True, True]
+concbuylist = [0.] #, 0., 35.]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -139,7 +139,6 @@ def get_model(idx, dir):
                                   auxiliary=['DENSITY'],
                                   pname='MAW-1',
                                   )
-
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,

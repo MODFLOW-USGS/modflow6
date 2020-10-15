@@ -301,7 +301,7 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
                                   filename='{}.adv'.format(gwtname))
 
     # dispersion
-    dsp = flopy.mf6.ModflowGwtdsp(gwt, alh=al, ath1=0.1)
+    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, alh=al, ath1=0.1)
 
     # mass storage and transfer
     if onelambda:

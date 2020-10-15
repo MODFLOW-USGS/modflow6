@@ -274,7 +274,8 @@ def get_model(idx, dir):
         alh = 0.1
         ath = 0.01
         xt3d = True
-    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=xt3d, diffc=diffc,
+    xt3d_off = not xt3d
+    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=xt3d_off, diffc=diffc,
                                   alh=alh, ath1=ath)
 
     # mass storage and transfer
