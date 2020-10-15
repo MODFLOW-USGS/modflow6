@@ -24,8 +24,6 @@ module GwfStoModule
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
     real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !< primary storage capacity (when cell is fully saturated)
     real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !< secondary storage capacity (when cell is partially saturated)
-    integer(I4B), pointer                            :: iresetsc1 => null()      !< should be set to 1 whenever sc1 has been updated 'in-flight', this triggers the conversion
-    integer(I4B), pointer                            :: iresetsc2 => null()      !< should be set to 1 whenever sc2 has been updated 'in-flight', this triggers the conversion
     real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !< vector of specific storage rates
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
@@ -193,17 +191,7 @@ module GwfStoModule
     ! -- read data if ionper == kper
     ! are these here to anticipate reading ss,sy per stress period?
     readss = .false.
-    readsy = .false.   
-    
-    ! when in-memory reset of coefficients, redo calculations
-    if (this%iresetsc1 == 1) then     
-      call this%convert_sc1()
-      this%iresetsc1 = 0
-    end if
-    if (this%iresetsc2 == 1) then
-      call this%convert_sc2()
-      this%iresetsc2 = 0
-    end if
+    readsy = .false.
     
     !stotxt = aname(2)
     if(this%ionper==kper) then
@@ -641,8 +629,6 @@ module GwfStoModule
     call mem_deallocate(this%isseg)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%iusesy)
-    call mem_deallocate(this%iresetsc1)
-    call mem_deallocate(this%iresetsc2)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -673,16 +659,12 @@ module GwfStoModule
     call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
     call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
-    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%memoryPath, MEMREADWRITE)
-    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%memoryPath, MEMREADWRITE)
     !
     ! -- Initialize
     this%iusesy = 0
     this%isfac = 0
     this%isseg = 0
     this%satomega = DZERO
-    this%iresetsc1 = 0
-    this%iresetsc2 = 0
     !
     ! -- Return
     return
