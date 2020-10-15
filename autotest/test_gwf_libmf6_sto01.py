@@ -196,10 +196,9 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # reset sc2 with bmi set_value
+    # reset sc2 with bmi set_value (note the copy!)
     sc2_tag = mf6.get_var_address("SC2", name, "STO")
-    sc2 = mf6.get_value_ptr(sc2_tag)
-    new_sc2 = sc2.copy()
+    new_sc2 = mf6.get_value_ptr(sc2_tag).copy()
     new_sc2.fill(sy_val)
     
     mf6.set_value(sc2_tag, new_sc2)

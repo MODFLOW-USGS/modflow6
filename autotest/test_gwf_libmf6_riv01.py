@@ -190,10 +190,9 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get (multi-dim) array with river parameters
+    # get copy of (multi-dim) array with river parameters
     riv_tag = mf6.get_var_address("BOUND" , name, riv_packname)
-    spd = mf6.get_value_ptr(riv_tag)
-    new_spd = spd.copy()
+    new_spd = mf6.get_value_ptr(riv_tag).copy()
     
     # model time loop
     idx = 0

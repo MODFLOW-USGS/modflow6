@@ -175,12 +175,14 @@ def build_models():
     return
 
 
-def run_perturbation(mf6, max_iter, recharge, rch):
+def run_perturbation(mf6, max_iter, recharge, tag, rch):
+    
     mf6.prepare_solve(1)
     kiter = 0
     while kiter < max_iter:
         # update recharge
         recharge[:, 0] = rch * area
+        mf6.set_value(tag, recharge)
         # solve with updated well rate
         has_converged = mf6.solve(1)
         kiter += 1
@@ -228,9 +230,9 @@ def bmifunc(exe, idx, model_ws=None):
     mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
     max_iter = mf6.get_value_ptr(mxit_tag)
 
-    # get recharge array
+    # get copy of recharge array
     rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
-    recharge = mf6.get_value_ptr(rch_tag)
+    new_recharge = mf6.get_value_ptr(rch_tag).copy()
 
     # determine initial recharge value
     np.random.seed(0)
@@ -250,15 +252,14 @@ def bmifunc(exe, idx, model_ws=None):
         est_iter = 0
         while est_iter < 100:
             # base simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge, rch)
+            has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch)
             if not has_converged:
                 return bmi_return(success, model_ws)
             h0 = head.reshape((nrow, ncol))[5, 5]
             r0 = h0 - htarget
 
             # perturbation simulation loop
-            has_converged = run_perturbation(mf6, max_iter, recharge,
-                                             rch + drch)
+            has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch + drch)
             if not has_converged:
                 return bmi_return(success, model_ws)
             h1 = head.reshape((nrow, ncol))[5, 5]
@@ -282,7 +283,7 @@ def bmifunc(exe, idx, model_ws=None):
                 rch += dr
 
         # solution with final estimated recharge for the timestep
-        has_converged = run_perturbation(mf6, max_iter, recharge, rch)
+        has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch)
         if not has_converged:
             return bmi_return(success, model_ws)
 
