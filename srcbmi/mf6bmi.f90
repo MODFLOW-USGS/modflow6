@@ -460,7 +460,9 @@ module mf6bmi
 
   !> @brief Set new values for a variable of type double
   !!
-  !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2.
+  !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2
+  !! and should have a C-style layout, which is particularly important for
+  !! rank > 1.
   !! When the memory access in the manager for the variable @p c_var_address
   !! is specified as @p MEMHIDDEN or @p MEMREADONLY, the function will return
   !! with a BMI error code.
