@@ -192,7 +192,7 @@ def bmifunc(exe, idx, model_ws=None):
 
     # get copy of (multi-dim) array with river parameters
     riv_tag = mf6.get_var_address("BOUND" , name, riv_packname)
-    new_spd = mf6.get_value_ptr(riv_tag).copy()
+    new_spd = mf6.get_value(riv_tag)
     
     # model time loop
     idx = 0

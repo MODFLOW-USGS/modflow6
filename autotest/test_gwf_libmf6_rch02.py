@@ -228,11 +228,11 @@ def bmifunc(exe, idx, model_ws=None):
 
     # maximum outer iterations
     mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
-    max_iter = mf6.get_value_ptr(mxit_tag)
+    max_iter = mf6.get_value(mxit_tag)
 
     # get copy of recharge array
     rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
-    new_recharge = mf6.get_value_ptr(rch_tag).copy()
+    new_recharge = mf6.get_value(rch_tag).copy()
 
     # determine initial recharge value
     np.random.seed(0)

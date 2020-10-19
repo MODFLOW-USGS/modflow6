@@ -201,11 +201,11 @@ def bmifunc(exe, idx, model_ws=None):
 
     # maximum outer iterations
     mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
-    max_iter = mf6.get_value_ptr(mxit_tag)
+    max_iter = mf6.get_value(mxit_tag)
 
     # get copy of well data
     well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
-    well = mf6.get_value_ptr(well_tag).copy()
+    well = mf6.get_value(well_tag)
     
     twell = np.zeros(ncol, dtype=np.float64)
 
