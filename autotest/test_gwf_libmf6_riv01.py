@@ -190,9 +190,9 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get (multi-dim) array with river parameters
+    # get copy of (multi-dim) array with river parameters
     riv_tag = mf6.get_var_address("BOUND" , name, riv_packname)
-    spd = mf6.get_value_ptr(riv_tag)
+    new_spd = mf6.get_value(riv_tag)
     
     # model time loop
     idx = 0
@@ -206,9 +206,15 @@ def bmifunc(exe, idx, model_ws=None):
         
         # set the RIV data through the BMI
         if current_time < 5:
-            spd[:] = [riv_stage, riv_cond, riv_bot]        
+            # set columns of BOUND data (we're setting entire columns of the
+            # 2D array for convenience, setting only the value for the active
+            # stress period should work too)
+            new_spd[:] = [riv_stage, riv_cond, riv_bot]
+            mf6.set_value(riv_tag, new_spd)
         else:
-            spd[:] = [riv_stage2, riv_cond, riv_bot]    
+            # change only stage data
+            new_spd[:] = [riv_stage2, riv_cond, riv_bot]
+            mf6.set_value(riv_tag, new_spd)
             
         kiter = 0
         mf6.prepare_solve(1)

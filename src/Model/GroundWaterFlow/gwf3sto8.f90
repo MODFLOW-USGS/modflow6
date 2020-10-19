@@ -1,6 +1,6 @@
 module GwfStoModule
 
-  use KindModule,             only: DP, I4B
+  use KindModule,             only: DP, I4B, LGP
   use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT,        &
                                     MEMREADWRITE
   use SmoothingModule,        only: sQuadraticSaturation,                      &
@@ -13,23 +13,21 @@ module GwfStoModule
   implicit none
   public :: GwfStoType, sto_cr
 
-  character(len=LENBUDTXT), dimension(2) :: budtxt =                           & !text labels for budget terms
+  character(len=LENBUDTXT), dimension(2) :: budtxt =                           & !< text labels for budget terms
       ['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
-    integer(I4B), pointer                            :: isfac => null()          !indicates if ss is read as storativity
-    integer(I4B), pointer                            :: isseg => null()          !indicates if ss is 0 below the top of a layer
-    integer(I4B), pointer                            :: iss => null()            !steady state flag
-    integer(I4B), pointer                            :: iusesy => null()         !flag set if any cell is convertible (0, 1)
-    integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !confined (0) or convertible (1)
-    real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !primary storage capacity (when cell is fully saturated)
-    real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !secondary storage capacity (when cell is partially saturated)
-    integer(I4B), pointer                            :: iresetsc1 => null()      !should be set to 1 whenever sc1 has been updated 'in-flight', this triggers the conversion
-    integer(I4B), pointer                            :: iresetsc2 => null()      !should be set to 1 whenever sc2 has been updated 'in-flight', this triggers the conversion
-    real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !vector of specific storage rates
-    real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !vector of specific yield rates
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !pointer to model ibound
-    real(DP), pointer                                :: satomega => null()       !newton-raphson saturation omega
+    integer(I4B), pointer                            :: isfac => null()          !< indicates if ss is read as storativity
+    integer(I4B), pointer                            :: isseg => null()          !< indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
+    integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
+    integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
+    real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !< primary storage capacity (when cell is fully saturated)
+    real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !< secondary storage capacity (when cell is partially saturated)
+    real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !< vector of specific storage rates
+    real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
+    real(DP), pointer                                :: satomega => null()       !< newton-raphson saturation omega
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -41,6 +39,7 @@ module GwfStoModule
     procedure :: sto_da
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
+    procedure, private :: register_handlers
     procedure, private :: read_options
     procedure, private :: read_data
     procedure, private :: convert_sc1, convert_sc2
@@ -116,6 +115,9 @@ module GwfStoModule
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
     !
+    ! -- Register side effect handlers
+    call this%register_handlers()
+    !
     ! -- Read storage options
     call this%read_options()
     !
@@ -189,17 +191,7 @@ module GwfStoModule
     ! -- read data if ionper == kper
     ! are these here to anticipate reading ss,sy per stress period?
     readss = .false.
-    readsy = .false.   
-    
-    ! when in-memory reset of coefficients, redo calculations
-    if (this%iresetsc1 == 1) then     
-      call this%convert_sc1()
-      this%iresetsc1 = 0
-    end if
-    if (this%iresetsc2 == 1) then
-      call this%convert_sc2()
-      this%iresetsc2 = 0
-    end if
+    readsy = .false.
     
     !stotxt = aname(2)
     if(this%ionper==kper) then
@@ -637,8 +629,6 @@ module GwfStoModule
     call mem_deallocate(this%isseg)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%iusesy)
-    call mem_deallocate(this%iresetsc1)
-    call mem_deallocate(this%iresetsc2)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -669,16 +659,12 @@ module GwfStoModule
     call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
     call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
-    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%memoryPath, MEMREADWRITE)
-    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%memoryPath, MEMREADWRITE)
     !
     ! -- Initialize
     this%iusesy = 0
     this%isfac = 0
     this%isseg = 0
     this%satomega = DZERO
-    this%iresetsc1 = 0
-    this%iresetsc2 = 0
     !
     ! -- Return
     return
@@ -695,7 +681,7 @@ module GwfStoModule
     !modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwfStoType) :: this
+    class(GwfStoType), target :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
     integer(I4B) :: n
@@ -704,7 +690,7 @@ module GwfStoModule
     ! -- Allocate
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)    
     call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath, MEMREADWRITE)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
@@ -722,6 +708,69 @@ module GwfStoModule
     ! -- Return
     return
   end subroutine allocate_arrays
+
+  !> @brief Registers the side effect handlers
+  !! 
+  !! When memory is set externally, these handlers can be called to
+  !! deal with any side effects.
+  !!
+  !! @todo: when this functionality is accepted, we probably want to
+  !! get rid of the iupdatescx flags...
+  !<
+  subroutine register_handlers(this)
+    use MemorySetHandlerModule, only: mem_register_handler, set_handler_iface
+    class(GwfStoType), intent(in), target :: this !< the storage package
+    ! local
+    procedure(set_handler_iface), pointer :: handler_ptr
+    class(GwfStoType), pointer :: this_ptr
+    class(*), pointer :: context  
+    
+    this_ptr => this
+    context => this_ptr
+    handler_ptr => sc1_handler
+    call mem_register_handler('SC1', this%memoryPath, handler_ptr, context)
+    handler_ptr => sc2_handler
+    call mem_register_handler('SC2', this%memoryPath, handler_ptr, context)
+
+  end subroutine register_handlers
+
+  !> @brief Side effect handler for when sc1 is set externally
+  !<
+  subroutine sc1_handler(sto_ptr, status)
+    class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
+    integer, intent(out) :: status       !< result of reset, 0 for success, -1 for failure
+    ! local
+    class(GwfStoType), pointer :: storage
+
+    storage => null()
+    select type(sto_ptr)
+    class is (GwfStoType)
+      storage => sto_ptr
+    end select
+    
+    status = 0
+    call storage%convert_sc1()
+
+  end subroutine sc1_handler
+
+  !> @brief Side effect handler for when sc2 is set externally
+  !<
+  subroutine sc2_handler(sto_ptr, status)
+    class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
+    integer(I4B), intent(out) :: status       !< result of reset, 0 for success, -1 for failure
+    ! local
+    class(GwfStoType), pointer :: storage
+
+    storage => null()
+    select type(sto_ptr)
+    class is (GwfStoType)
+      storage => sto_ptr
+    end select
+
+    status = 0
+    call storage%convert_sc2()
+
+  end subroutine sc2_handler
 
   subroutine read_options(this)
 ! ******************************************************************************

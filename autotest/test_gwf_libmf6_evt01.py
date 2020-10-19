@@ -201,12 +201,11 @@ def bmifunc(exe, idx, model_ws=None):
 
     # maximum outer iterations
     mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
-    max_iter = mf6.get_value_ptr(mxit_tag)
+    max_iter = mf6.get_value(mxit_tag)
 
-    # get sc2 array and update flag
-    sc2_tag = mf6.get_var_address("BOUND", name, "WEL_0")
-    print(sc2_tag)    
-    well = mf6.get_value_ptr(sc2_tag)
+    # get copy of well data
+    well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
+    well = mf6.get_value(well_tag)
     
     twell = np.zeros(ncol, dtype=np.float64)
 
@@ -227,6 +226,7 @@ def bmifunc(exe, idx, model_ws=None):
             # update well rate
             twell[:] = head2et_wellrate(head[0])
             well[:, 0] = twell[:]
+            mf6.set_value(well_tag, well)
 
             # solve with updated well rate
             has_converged = mf6.solve(1)
