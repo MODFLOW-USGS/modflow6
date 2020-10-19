@@ -1472,6 +1472,7 @@ module GwfDisvModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use ConstantsModule, only: MEMREADONLY
     ! -- dummy
     class(GwfDisvType) :: this
 ! ------------------------------------------------------------------------------
@@ -1481,12 +1482,15 @@ module GwfDisvModule
     !
     ! -- Allocate arrays for GwfDisvType
     if(this%nodes < this%nodesuser) then
-      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
-      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
-                        this%memoryPath)
+      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath, &
+                        MEMREADONLY)
+      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',        &
+                        this%memoryPath, MEMREADONLY)
     else
-      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
-      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
+      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath,          &
+                        MEMREADONLY)
+      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath,    &
+                        MEMREADONLY)
     endif
     ! -- Initialize
     this%mshape(1) = this%nlay
