@@ -340,6 +340,149 @@ module mf6bmi
     
   end function get_var_nbytes
 
+  !> @brief Copy the double precision values of a variable into the array
+  !!
+  !! The copied variable us located at @p c_var_address. The caller should
+  !! provide @p c_arr_ptr pointing to an array of the proper shape (the
+  !! BMI function get_var_shape() can be used to create it). Multi-dimensional 
+  !! arrays are supported.
+  !<
+  function get_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_double")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_double
+    use MemorySetHandlerModule, only: on_memory_set
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
+    integer(I4B) :: rank
+    real(DP), pointer :: src_ptr, tgt_ptr
+    real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+    integer(I4B) :: i, j
+
+    bmi_status = BMI_FAILURE
+
+    call split_address(c_var_address, mem_path, var_name)
+
+    ! check access
+    access_type = get_memory_access_type(mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
+      return
+    end if
+
+    if (access_type /= MEMREADWRITE .and. access_type /= MEMREADONLY) then
+      write(istdout,*) 'BMI Error: no read access for variable '//var_name
+      return
+    end if
+
+    ! convert pointer and copy data from memory manager into 
+    ! the passed array, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(src_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(src1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt1D_ptr, shape(src1D_ptr))
+      do i = 1, size(tgt1D_ptr)
+        tgt1D_ptr(i) = src1D_ptr(i)
+      end do
+    else if (rank == 2) then
+      call mem_setptr(src2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt2D_ptr, shape(src2D_ptr))
+      do j = 1, size(tgt2D_ptr,2)
+        do i = 1, size(tgt2D_ptr,1)
+          tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      return
+    end if
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_value_double
+
+  !> @brief Copy the integer values of a variable into the array
+  !!
+  !! The copied variable us located at @p c_var_address. The caller should
+  !! provide @p c_arr_ptr pointing to an array of the proper shape (the
+  !! BMI function get_var_shape() can be used to create it). Multi-dimensional 
+  !! arrays are supported.
+  !<
+  function get_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_int")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_int
+    use MemorySetHandlerModule, only: on_memory_set
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
+    integer(I4B) :: rank
+    integer(I4B), pointer :: src_ptr, tgt_ptr
+    integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+    integer(I4B) :: i, j
+
+    bmi_status = BMI_FAILURE
+
+    call split_address(c_var_address, mem_path, var_name)
+
+    ! check access
+    access_type = get_memory_access_type(mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
+      return
+    end if
+
+    if (access_type /= MEMREADWRITE .and. access_type /= MEMREADONLY) then
+      write(istdout,*) 'BMI Error: no read access for variable '//var_name
+      return
+    end if
+
+    ! convert pointer and copy data from memory manager into 
+    ! the passed array, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(src_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(src1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt1D_ptr, shape(src1D_ptr))
+      do i = 1, size(tgt1D_ptr)
+        tgt1D_ptr(i) = src1D_ptr(i)
+      end do
+    else if (rank == 2) then
+      call mem_setptr(src2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt2D_ptr, shape(src2D_ptr))
+      do j = 1, size(tgt2D_ptr,2)
+        do i = 1, size(tgt2D_ptr,1)
+          tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      return
+    end if
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_value_int
 
   !> @brief Get a pointer to the array of double precision numbers
   !!
