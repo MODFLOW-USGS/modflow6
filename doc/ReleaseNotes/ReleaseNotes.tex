@@ -146,6 +146,8 @@ This document describes MODFLOW~6 Version \modflowversion.  This distribution is
 
 Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
 
+MODFLOW~6 is tested with a large number of example problems, and new capabilities are thoroughly tested as they are integrated into the program.  Additional testing can sometimes reveal errors in the program.  These errors are fixed as soon as possible and made available in a subsequent release.  Every effort is made to maintain backward compatibility of the format for MODFLOW~6 input files; however, this goal is not always possible, especially for newer packages and models.  Changes to the program to add new functionality, correct errors, or alter the format for an input file are summarized in this release notes document.
+
 % -------------------------------------------------
 \section{History}
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
@@ -155,9 +157,9 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item A new Buoyancy (BUY) Package for the Groundwater Flow (GWF) Model is introduced in this release as a way to represent variable-density groundwater flow.  The BUY Package is based on the hydraulic head formulation described by \cite{langevin2020hydraulic}.  The BUY Package in this release is considered preliminary.  Extensive testing of the BUY Package has been performed but changes to the code and input may be required in response to user needs and testing.   
-		\item A new Groundwater Transport (GWT) Model is introduced in this release as a way to simulate the fate and transport of a dissolved solute.  The GWT Model in this release is considered preliminary.  Extensive testing of the GWT Model has been performed but changes to the code and input may be required in response to user needs and testing. 
-		\item A preliminary release of the Basic Model Interface (BMI) was introduced in version 6.1.1.  The BMI released in this version is also considered preliminary (alpha release).  Limited testing of the BMI has been performed but significant changes are expected in future releases.  User support for the MODFLOW 6 BMI may be provided in the future.
+	        \item A new Buoyancy (BUY) Package for the Groundwater Flow (GWF) Model is introduced in this release as a way to represent variable-density groundwater flow.  The BUY Package is based on the hydraulic head formulation described by \cite{langevin2020hydraulic}.  Extensive testing of the BUY Package has been performed but changes to the code and input may be required in response to user needs and testing.   
+		\item A new Groundwater Transport (GWT) Model is introduced in this release as a way to simulate the fate and transport of a dissolved solute.  Extensive testing of the GWT Model has been performed but changes to the code and input may be required in response to user needs and testing. 
+		\item The Basic Model Interface (BMI) capabilities were first released in version 6.1.1.  Extensive testing of the BMI capabilities has been performed but changes to the code and calling procedures be required in response to user needs and testing.
 	\end{itemize}
 	
 	\underline{EXAMPLES}
@@ -172,13 +174,6 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item If the CONTINUE option is specified in mfsim.nam, do not force models to write budget tables when the solver does not converge.  Instead, always use Output Control options to determine when budget tables are written if CONTINUE option is specified and the solver does not converge.  Also, if the CONTINUE option is specified, calculate and write observations even if the model does not converge.  Observations were being written as zero if the model did not converge, but the CONTINUE flag was set.
 		\item Allow the program to read input files with very long lines.  Previously, the program was limited to a maximum line length of 50,000 characters.  The program now uses dynamic memory allocation, when necessary, to read any sized line in an input file.
 		\item Fixed an error in the implementation of the Newton-Raphson correction for XT3D. The error in the code would have only affected simulations that used the NEWTON option together with the XT3D RHS option. 
-	\end{itemize}
-
-	\underline{STRESS PACKAGES}
-	\begin{itemize}
-		\item 
-		\item 
-		\item 
 	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
