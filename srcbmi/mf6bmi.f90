@@ -189,7 +189,7 @@ module mf6bmi
     count = 0
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
-      if (mt%memaccess == MEMREADWRITE) then
+      if (mt%memaccess == MEMREADONLY .or. mt%memaccess == MEMREADWRITE) then
         count = count + 1
       end if
     end do
