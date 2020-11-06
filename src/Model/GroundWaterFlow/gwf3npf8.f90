@@ -56,6 +56,7 @@ module GwfNpfModule
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
     real(DP), dimension(:), pointer, contiguous     :: k22          => null()    ! hydraulic conductivity; if specified then this is Ky prior to rotation
     real(DP), dimension(:), pointer, contiguous     :: k33          => null()    ! hydraulic conductivity; if specified then this is Kz prior to rotation
+    integer(I4B), pointer                           :: iavgkeff     => null()    ! effective conductivity averaging (0: harmonic, 1: arithmetic)
     integer(I4B), pointer                           :: ik22         => null()    ! flag that k22 is specified
     integer(I4B), pointer                           :: ik33         => null()    ! flag that k33 is specified
     integer(I4B), pointer                           :: ik22overk    => null()    ! flag that k22 is specified as anisotropy ratio
@@ -1017,6 +1018,7 @@ module GwfNpfModule
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
     call mem_deallocate(this%icellavg)
+    call mem_deallocate(this%iavgkeff)
     call mem_deallocate(this%ik22)
     call mem_deallocate(this%ik33)
     call mem_deallocate(this%iperched)
@@ -1091,6 +1093,7 @@ module GwfNpfModule
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
     call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
+    call mem_allocate(this%iavgkeff, 'IAVGKEFF', this%memoryPath)
     call mem_allocate(this%ik22, 'IK22', this%memoryPath)
     call mem_allocate(this%ik33, 'IK33', this%memoryPath)
     call mem_allocate(this%ik22overk, 'IK22OVERK', this%memoryPath)
@@ -1126,6 +1129,7 @@ module GwfNpfModule
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
     this%icellavg = 0
+    this%iavgkeff = 0
     this%ik22 = 0
     this%ik33 = 0
     this%ik22overk = 0
@@ -2452,7 +2456,8 @@ module GwfNpfModule
         ang2 = this%angle2(n)
         ang3 = DZERO
         if(this%iangle3 > 0) ang3 = this%angle3(n)
-        hy = hyeff_calc(hy11, hy22, hy33, ang1, ang2, ang3, vg1, vg2, vg3)
+        hy = hyeff_calc(hy11, hy22, hy33, ang1, ang2, ang3, vg1, vg2, vg3,     &
+                        this%iavgkeff)
       endif
       !
     else
@@ -2477,7 +2482,8 @@ module GwfNpfModule
             if(this%iangle3 > 0) ang3 = this%angle3(n)
           endif
         endif
-        hy = hyeff_calc(hy11, hy22, hy33, ang1, ang2, ang3, vg1, vg2, vg3)
+        hy = hyeff_calc(hy11, hy22, hy33, ang1, ang2, ang3, vg1, vg2, vg3,     &
+                        this%iavgkeff)
       endif
       !
     endif
@@ -2857,22 +2863,24 @@ module GwfNpfModule
     return
   end function logmean
 
-  function hyeff_calc(k11, k22, k33, ang1, ang2, ang3, vg1, vg2, vg3)          &
-    result(hyeff)
+  function hyeff_calc(k11, k22, k33, ang1, ang2, ang3, vg1, vg2, vg3,          &
+    iavgmeth) result(hyeff)
 ! ******************************************************************************
 ! hyeff_calc -- Calculate the effective horizontal hydraulic conductivity from
 !   an ellipse using a specified direction (unit vector vg1, vg2, vg3).
 !   k11 is the hydraulic conductivity of the major ellipse axis
 !   k22 is the hydraulic conductivity of first minor axis
 !   k33 is the hydraulic conductivity of the second minor axis
-!   vg1, vg2, and vg3 are the components of a unit vector in the
-!     direction of the connection between cell n and m
-!   a1 is the counter-clockwise rotation (radians) of the ellipse in
+!   ang1 is the counter-clockwise rotation (radians) of the ellipse in
 !     the (x, y) plane
-!   a2 is the rotation of the conductivity ellipsoid upward or
+!   ang2 is the rotation of the conductivity ellipsoid upward or
 !     downward from the (x, y) plane
-!   a3 is the rotation of the conductivity ellipsoid about the major
+!   ang3 is the rotation of the conductivity ellipsoid about the major
 !     axis
+!   vg1, vg2, and vg3 are the components of a unit vector in model coordinates 
+!     in the direction of the connection between cell n and m
+!  iavgmeth is the averaging method.  If zero, then use harmonic averaging.
+!     if one, then use arithmetic averaging.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2891,10 +2899,12 @@ module GwfNpfModule
     real(DP), intent(in) :: vg1
     real(DP), intent(in) :: vg2
     real(DP), intent(in) :: vg3
+    integer(I4B), intent(in) :: iavgmeth
     ! -- local
     real(DP) :: s1, s2, s3, c1, c2, c3
     real(DP), dimension(3,3) :: r
     real(DP) :: ve1, ve2, ve3
+    real(DP) :: denom, dnum, d1, d2, d3
 ! ------------------------------------------------------------------------------
     !
     ! -- Sin and cos of angles
@@ -2916,18 +2926,44 @@ module GwfNpfModule
     r(3,2) = -c2*s3
     r(3,3) = c2*c3
     !
-    ! -- Unit vector in direction of n-m connection
+    ! -- Unit vector in direction of n-m connection in a local coordinate
+    !    system aligned with the ellipse axes
     ve1 = r(1, 1) * vg1 + r(2, 1) * vg2 + r(3, 1) * vg3
     ve2 = r(1, 2) * vg1 + r(2, 2) * vg2 + r(3, 2) * vg3
     ve3 = r(1, 3) * vg1 + r(2, 3) * vg2 + r(3, 3) * vg3
     !
-    ! -- Effective hydraulic conductivity
-    !hyeff = ve1 ** 2 / k11 + ve2 ** 2 / k22 + ve3 ** 2 / k33
+    ! -- Effective hydraulic conductivity calculated using harmonic (1) 
+    !    or arithmetic (2) weighting
     hyeff = DZERO
-    if (k11 /= DZERO) hyeff = hyeff + ve1 ** 2 / k11
-    if (k22 /= DZERO) hyeff = hyeff + ve2 ** 2 / k22
-    if (k33 /= DZERO) hyeff = hyeff + ve3 ** 2 / k33
-    if (hyeff /= DZERO) hyeff = DONE / hyeff
+    if (iavgmeth == 0) then
+      !
+      ! -- Arithmetic weighting.  If principal direction corresponds exactly with
+      !    unit vector then set to principal direction.  Otherwise weight it.
+      dnum = DONE
+      d1 = ve1 ** 2
+      d2 = ve2 ** 2
+      d3 = ve3 ** 2
+      if (ve1 /= DZERO) then
+        dnum = dnum * k11
+        d2 = d2 * k11
+        d3 = d3 * k11
+      end if
+      if (ve2 /= DZERO) then
+        dnum = dnum * k22
+        d1 = d1 * k22
+        d3 = d3 * k22
+      end if
+      if (ve3 /= DZERO) then
+        dnum = dnum * k33
+        d1 = d1 * k33
+        d2 = d2 * k33
+      end if
+      denom = d1 + d2 + d3
+      if (denom > DZERO) hyeff = dnum / denom
+    else if (iavgmeth == 1) then
+      ! -- arithmetic
+      hyeff = ve1 ** 2 * k11 + ve2 ** 2 * k22 + ve3 ** 2 * k33
+    end if
     !
     ! -- Return
     return

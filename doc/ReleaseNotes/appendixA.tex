@@ -1,7 +1,48 @@
 This appendix describes changes introduced into MODFLOW~6 in previous releases. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.1.1--June 12, 2019
+
+	\item Version mf6.2.0--October 20, 2020
+	
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+	        \item A new Buoyancy (BUY) Package for the Groundwater Flow (GWF) Model is introduced in this release as a way to represent variable-density groundwater flow.  The BUY Package is based on the hydraulic head formulation described by \cite{langevin2020hydraulic}.  Extensive testing of the BUY Package has been performed but changes to the code and input may be required in response to user needs and testing.   
+		\item A new Groundwater Transport (GWT) Model is introduced in this release as a way to simulate the fate and transport of a dissolved solute.  Extensive testing of the GWT Model has been performed but changes to the code and input may be required in response to user needs and testing. 
+		\item The Basic Model Interface (BMI) capabilities were first released in version 6.1.1.  Extensive testing of the BMI capabilities has been performed but changes to the code and calling procedures be required in response to user needs and testing.
+	\end{itemize}
+	
+	\underline{EXAMPLES}
+	\begin{itemize}
+	\item The format for the examples included in the distribution has changed.  The examples are now described in the modflow6-examples.pdf file in the doc folder.  The examples have been renamed, and they are no longer numbered.  Most of the examples are the same as those distributed with the previous release; however some have been modified, updated, combined or eliminated based on standardization of example construction, testing, and documentation.  
+	\end{itemize}
+
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item The observation routines were improved to handle very large numbers of observations written to the same comma-separated-value (CSV) file.  Non-advancing input-output is now used to write the CSV header instead of constructing a header string.   This change should substantially improve memory and runtime problems with models containing thousands of observations.
+		\item If the CONTINUE option is specified in mfsim.nam, do not force models to write budget tables when the solver does not converge.  Instead, always use Output Control options to determine when budget tables are written if CONTINUE option is specified and the solver does not converge.  Also, if the CONTINUE option is specified, calculate and write observations even if the model does not converge.  Observations were being written as zero if the model did not converge, but the CONTINUE flag was set.
+		\item Allow the program to read input files with very long lines.  Previously, the program was limited to a maximum line length of 50,000 characters.  The program now uses dynamic memory allocation, when necessary, to read any sized line in an input file.
+		\item Fixed an error in the implementation of the Newton-Raphson correction for XT3D. The error in the code would have only affected simulations that used the NEWTON option together with the XT3D RHS option. 
+	\end{itemize}
+
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Fix error in calculated Newton-Raphson MAW-GWF connection terms for the MAW Package. This correction should improve model convergence and may change existing model results. This correction does not affect simulations that use the FLOW\_CORRECTION option introduced in version 6.1.1.
+		\item  The program will now terminate with an error message if the skin radius for a GWF connection in the MAW Package is less than or equal to the well radius. Warning messages are also issued when the well bottom, screen top for a GWF connection, or screen bottom for a GWF connection are reset by the program for one or more MAW Package wells.
+		\item An SFR reach can have zero specified connections.  In this case, an entry is still required in the CONNECTIONDATA block for that reach.  The error check for this required entry was not implemented and so the program would continue with unexpected results.  The program now verifies that an entry is present in CONNECTIONDATA for every reach, even those with zero connections.
+		\item If a GWF ``NONE'' connection was specified for SFR then the program would terminate with an error or proceed with unexpected results if GWF or SFR flow terms were written to binary output files.  The program was fixed so that GWF ``NONE'' connections for SFR are not written to the binary budget files.
+		\item Increase the length of boundname to its intended size of 40 characters.  Boundnames were being truncated after 16 characters for the LAK, MAW, and SFR Packages.
+	\end{itemize}
+
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item A fix was implemented in the biconjugate gradient stabilized linear solver routine so that the maximum change in the dependent value is calculated and stored correctly.
+		\item Corrected the SIMPLE and COOLEY under-relaxation schemes in the Iterative Model Solution (IMS).  The methods were not applying the correct under-relaxation factor.  The SIMPLE scheme now uses the user-specified value for gamma as the factor.  The COOLEY scheme updates the factor based on solver history.  
+	\end{itemize}
+
+        
+
+	\item Version mf6.1.1--June 12, 2020
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
