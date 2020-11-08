@@ -269,7 +269,6 @@ module GwtDspModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwtDspType) :: this
     integer(I4B) :: kiter
@@ -323,7 +322,6 @@ module GwtDspModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwtDspType) :: this
     real(DP), intent(inout), dimension(:) :: cnew
@@ -818,7 +816,7 @@ module GwtDspModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use GwfNpfModule, only: thksatnm, hyeff_calc, hcond, vcond
+    use GwfNpfModule, only: hyeff_calc
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
@@ -826,11 +824,16 @@ module GwtDspModule
     real(DP) :: clnm, clmn, dn, dm
     real(DP) :: vg1, vg2, vg3
     integer(I4B) :: ihc, isympos
+    integer(I4B) :: iavgmeth
     real(DP) :: satn, satm, topn, topm, botn, botm
     real(DP) :: hwva, cond, cn, cm, denom
     real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
 ! ------------------------------------------------------------------------------
     !
+    ! -- set iavgmeth = 1 to use arithmetic averaging for effective dispersion
+    iavgmeth = 1
+    !
+    ! -- Proces connections
     nodes = size(this%d11)
     do n = 1, nodes
       if(this%fmi%ibdgwfsat0(n) == 0) cycle
@@ -866,10 +869,10 @@ module GwtDspModule
         call this%dis%connection_normal(n, m, ihc, vg1, vg2, vg3, ipos)
         dn = hyeff_calc(this%d11(n), this%d22(n), this%d33(n),                 &
                         this%angle1(n), this%angle2(n), this%angle3(n),        &
-                        vg1, vg2, vg3)
+                        vg1, vg2, vg3, iavgmeth)
         dm = hyeff_calc(this%d11(m), this%d22(m), this%d33(m),                 &
                         this%angle1(m), this%angle2(m), this%angle3(m),        &
-                        vg1, vg2, vg3)
+                        vg1, vg2, vg3, iavgmeth)
         !
         ! -- Calculate dispersion conductance based on NPF subroutines and the
         !    effective dispersion coefficients dn and dm.
