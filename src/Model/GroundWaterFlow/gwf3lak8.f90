@@ -3648,7 +3648,7 @@ contains
     return
   end subroutine lak_ad
 
-  subroutine lak_cf(this, reset_mover)
+  subroutine lak_cf(this, kiter, reset_mover)
   ! ******************************************************************************
   ! lak_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip if no lakes
@@ -3659,6 +3659,7 @@ contains
   ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: j, n

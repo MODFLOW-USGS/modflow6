@@ -1,8 +1,12 @@
 module GwtSrcModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE
+  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DP99, LENAUXNAME,    &
+                             LENPAKLOC
+  use SimVariablesModule, only: errmsg
   use BndModule, only: BndType
+  use GwtFmiModule, only: GwtFmiType
+  use GwtMstModule, only: GwtMstType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
@@ -17,11 +21,20 @@ module GwtSrcModule
   character(len=16)       :: text  = '     MASS SOURCE'
   !
   type, extends(BndType) :: GwtSrcType
+    type(GwtFmiType), pointer                        :: fmi          => null()           ! pointer to fmi object
+    type(GwtMstType), pointer                        :: mst          => null()           ! pointer to mst object
+    integer(I4B), pointer                            :: iauxconstr   => null()           ! auxiliary column number of concentration constraint
+    real(DP), dimension(:,:), contiguous, pointer    :: qrold        => null()           ! stored q and residual iterates for constraint option
   contains
     procedure :: allocate_scalars => src_allocate_scalars
+    procedure :: src_allocate_arrays
+    procedure :: bnd_ar => src_ar
     procedure :: bnd_cf => src_cf
     procedure :: bnd_fc => src_fc
+    procedure :: bnd_cc => src_cc
     procedure :: bnd_da => src_da
+    procedure :: bnd_options => src_options
+    procedure, private :: src_constrain_rate
     procedure :: define_listlabel
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => src_obs_supported
@@ -32,7 +45,8 @@ module GwtSrcModule
 
 contains
 
-  subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        fmi, mst)
 ! ******************************************************************************
 ! src_create -- Create a New Src Package
 ! Subroutine: (1) create new-style package
@@ -49,7 +63,9 @@ contains
     integer(I4B),intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    type(GwtMstType), pointer :: mst
     ! -- local
+    type(GwtFmiType), pointer :: fmi
     type(GwtSrcType), pointer :: srcobj
 ! ------------------------------------------------------------------------------
     !
@@ -74,10 +90,37 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     !
+    ! -- Point src specific variables
+    srcobj%fmi => fmi
+    srcobj%mst => mst
+    !
     ! -- return
     return
   end subroutine src_create
 
+  subroutine src_ar(this)
+! ******************************************************************************
+! src_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtSrcType), intent(inout) :: this
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    call this%obs%obs_ar()
+    !
+    ! -- Allocate arrays
+    call this%src_allocate_arrays()
+    !
+    ! -- Return
+    return
+  end subroutine src_ar
+  
   subroutine src_da(this)
 ! ******************************************************************************
 ! src_da -- deallocate
@@ -91,14 +134,86 @@ contains
     class(GwtSrcType) :: this
 ! ------------------------------------------------------------------------------
     !
+    ! -- Deallocate arrays if package was active
+    if(this%inunit > 0) then
+      call mem_deallocate(this%qrold)
+    end if
+    !
     ! -- Deallocate parent package
     call this%BndType%bnd_da()
     !
     ! -- scalars
+    call mem_deallocate(this%iauxconstr)
     !
     ! -- return
     return
   end subroutine src_da
+
+  subroutine src_options(this, option, found)
+! ******************************************************************************
+! src_options -- set options specific to GwtSrcType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: store_error
+    ! -- dummy
+    class(GwtSrcType),   intent(inout) :: this
+    character(len=*), intent(inout) :: option
+    logical,          intent(inout) :: found
+    ! -- local
+    character(len=LENAUXNAME) :: constrauxname
+    integer(I4B) :: n
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    select case (option)
+      case('AUXCONSTRAINTNAME')
+        call this%parser%GetStringCaps(constrauxname)
+        this%iauxconstr = -1
+        write(this%iout, '(4x,a,a)')                                           &
+          'AUXILIARY CONCENTRATION CONSTAINT NAME: ', trim(constrauxname)
+        found = .true.
+      case default
+        !
+        ! -- No options found
+        found = .false.
+      end select
+    !
+    ! -- AUXCONSTRAINTNAME was specified, so find column of auxvar that will 
+    !    be used
+    if (this%iauxconstr < 0) then
+      !
+      ! -- Error if no aux variable specified
+      if(this%naux == 0) then
+        write(errmsg, '(a,2(1x,a))')                                           &
+          'AUXCONSTRAINTNAME WAS SPECIFIED AS',  trim(adjustl(constrauxname)), &
+          'BUT NO AUX VARIABLES SPECIFIED.'
+        call store_error(errmsg)
+      end if
+      !
+      ! -- Assign iauxconstr column
+      this%iauxconstr = 0
+      do n = 1, this%naux
+        if(constrauxname == this%auxname(n)) then
+          this%iauxconstr = n
+          exit
+        end if
+      end do
+      !
+      ! -- Error if aux variable cannot be found
+      if(this%iauxconstr == 0) then
+        write(errmsg, '(a,2(1x,a))')                                           &
+          'AUXCONSTRAINTNAME WAS SPECIFIED AS', trim(adjustl(constrauxname)),  &
+          'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
+        call store_error(errmsg)
+      end if
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine src_options
 
   subroutine src_allocate_scalars(this)
 ! ******************************************************************************
@@ -114,16 +229,44 @@ contains
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
+    call mem_allocate(this%iauxconstr, 'IAUXCONSTR', this%memoryPath)
     !
     ! -- allocate the object and assign values to object variables
     !
     ! -- Set values
+    this%iauxconstr = 0
     !
     ! -- return
     return
   end subroutine src_allocate_scalars
 
-  subroutine src_cf(this, reset_mover)
+  subroutine src_allocate_arrays(this)
+! ******************************************************************************
+! src_allocate_arrays -- allocate array members
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtSrcType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- call standard BndType allocate arrays
+    call this%BndType%allocate_arrays()
+    if (this%iauxconstr == 0) then
+      call mem_allocate(this%qrold, 0, 0, 'QROLD', this%memoryPath)
+    else
+      call mem_allocate(this%qrold, 4, this%maxbound, 'QROLD', this%memoryPath)
+    end if
+    !
+    ! -- Set values
+    !
+    ! -- return
+    return
+  end subroutine src_allocate_arrays
+
+  subroutine src_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! src_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no sources
@@ -134,11 +277,13 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSrcType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: q
     logical :: lrm
+    
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sources
@@ -154,25 +299,96 @@ contains
     ! -- Calculate hcof and rhs for each source entry
     do i = 1, this%nbound
       node = this%nodelist(i)
-      this%hcof(i) = DZERO
       if(this%ibound(node) <= 0) then
         this%rhs(i) = DZERO
+        this%hcof(i) = DZERO
         cycle
       end if
-      q = this%bound(1,i)
+      q = this%bound(1, i)
+      if (this%iauxconstr /= 0) then
+        if (q /= DZERO) then
+          !
+          ! -- If q is negative, then use Newton to recalculate q so that the
+          !    cell concentation is not less than the concentration constraint.
+          !    If q is positive, then use Newton to recalculate q so that the
+          !    cell concentration is not greater than the concentration 
+          !    constaint.
+          call this%src_constrain_rate(q, i, kiter, this%xnew(node),           &
+                                       this%auxvar(this%iauxconstr, i))
+        end if
+      end if
       this%rhs(i) = -q
     enddo
     !
+    ! -- return
     return
   end subroutine src_cf
-
-  subroutine src_fc(this, rhs, ia, idxglo, amatsln)
-! **************************************************************************
-! src_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
+  
+  subroutine src_constrain_rate(this, q, i, kiter, cnode, constraint)
+! ******************************************************************************
+! src_constrain_rate -- If necessary reduce the magnitude of q so that if q is 
+!   negative that the resulting cell concentration is never less than the
+!   user-specified constraint.  If q is positive, then if necessary, reduce
+!   q so that the cell concentration is never greater than constraint. 
+!
+!   If constraints are used, then need to store previous iterates of q and the
+!     the residual in order to use Newton's method.  These are saved in qrold.
+!   qrold(1, :) is q from the last iteration
+!   qrold(2, :) is q from two iterations prior
+!   qrold(3, :) is residual (c-constraint) from the last iteration
+!   qrold(4, :) is residual (c-constraint) from two iterations ago
+! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtSrcType) :: this
+    real(DP), intent(inout) :: q
+    integer(I4B), intent(in) :: i
+    integer(I4B), intent(in) :: kiter
+    real(DP), intent(in) :: cnode
+    real(DP), intent(in) :: constraint
+    ! -- local
+    real(DP) :: dq
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    this%qrold(3, i) = cnode - constraint
+    if (kiter == 1) then
+      ! -- for first iteration leave q at user specified rate,
+      !    and initialize q1 to zero
+      this%qrold(1, i) = DZERO
+    else if (kiter == 2) then
+      ! - for second iteration, perturb q by one percent
+      q = q * DP99
+    else
+      ! -- for third and up, use newton update and then constrain
+      !    to not exceed user-specified q
+      dq = -this%qrold(3, i) * (this%qrold(1, i) - this%qrold(2, i)) /         &
+                               (this%qrold(3, i) - this%qrold(4, i))
+      if (q < DZERO) then
+        q = max(this%qrold(1, i) + dq, q)
+      else
+        q = min(this%qrold(1, i) + dq, q)
+      endif
+    end if
+    !
+    ! -- store iterates
+    this%qrold(2, i) = this%qrold(1, i)
+    this%qrold(1, i) = q
+    this%qrold(4, i) = this%qrold(3, i)
+    !
+    ! -- return
+    return
+  end subroutine src_constrain_rate
+
+  subroutine src_fc(this, rhs, ia, idxglo, amatsln)
+! ******************************************************************************
+! src_fc -- Copy rhs and hcof into solution rhs and amat
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSrcType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -181,7 +397,7 @@ contains
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
     integer(I4B) :: i, n, ipos
-! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
     if(this%imover == 1) then
@@ -205,6 +421,47 @@ contains
     ! -- return
     return
   end subroutine src_fc
+
+  subroutine src_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+! ******************************************************************************
+! src_cc -- additional convergence check for advanced packages
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtSrcType), intent(inout) :: this
+    integer(I4B), intent(in) :: innertot
+    integer(I4B), intent(in) :: kiter
+    integer(I4B),intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
+    real(DP), intent(inout) :: dpak
+    ! -- local
+    character(len=LENPAKLOC) :: cloc
+! ------------------------------------------------------------------------------
+    !
+    !
+    if (this%iauxconstr /= 0) then
+      cpak = ''
+      ipak = 0
+      dpak = DZERO
+      if (kiter < 3) then
+        !
+        ! -- If constraints are being used, then three iterations are required
+        write(cloc, "(a,'-',a)") trim(this%packName), 'RATE'
+        cpak = trim(cloc)
+        ipak = 1
+        dpak = DZERO
+      end if
+    end if
+    !
+    ! -- No addition convergence check for boundary conditions
+    !
+    ! -- return
+    return
+  end subroutine src_cc
 
   subroutine define_listlabel(this)
 ! ******************************************************************************

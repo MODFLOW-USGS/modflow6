@@ -1581,7 +1581,7 @@ contains
     return
   end subroutine sfr_ad
 
-  subroutine sfr_cf(this, reset_mover)
+  subroutine sfr_cf(this, kiter, reset_mover)
   ! ******************************************************************************
   ! sfr_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip in no wells
@@ -1592,6 +1592,7 @@ contains
   ! ------------------------------------------------------------------------------
     ! -- dummy
     class(SfrType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local variables
     integer(I4B) :: n

@@ -190,7 +190,7 @@ contains
     return
   end subroutine wel_options
 
-  subroutine wel_cf(this, reset_mover)
+  subroutine wel_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! wel_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip in no wells
@@ -201,6 +201,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(WelType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node, ict

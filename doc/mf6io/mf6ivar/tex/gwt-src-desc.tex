@@ -25,6 +25,8 @@
 
 \item \texttt{obs6\_filename}---name of input file to define observations for the Mass Source package. See the ``Observation utility'' section for instructions for preparing observation input files. Tables \ref{table:gwf-obstypetable} and \ref{table:gwt-obstypetable} lists observation type(s) supported by the Mass Source package.
 
+\item \texttt{auxconstraintname}---name of a variable listed in AUXILIARY that defines the concentration constraints. If the specified mass removal rate is negative, and the specified removal rate would cause the concentration to drop below the concentration constraint, then the mass removal rate will be reduced so that the resulting cell concentration will not drop below the constraint concentration.  If this option is not specified for negative mass removal rates, then the simulated concentration may become negative.  If the specified mass inflow rate is positive, and the specified rate would cause the concentration to exceed the concentration constraint, then the mass inflow rate will be reduced so that the resulting cell concentration will not exceed the constraint concentration.
+
 \end{description}
 \item \textbf{Block: DIMENSIONS}
 

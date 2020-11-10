@@ -547,7 +547,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
-    integer(I4B),intent(in) :: kiter
+    integer(I4B), intent(in) :: kiter
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -558,7 +558,7 @@ module GwfModule
     if(this%inbuy > 0) call this%buy%buy_cf(kiter)
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cf()
+      call packobj%bnd_cf(kiter)
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
     enddo
     !
@@ -953,6 +953,7 @@ module GwfModule
     ! -- local
     integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
+    integer(I4B) :: kiter
     class(BndType),pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
@@ -1012,9 +1013,10 @@ module GwfModule
     !
     ! -- Recalculate package hcof and rhs so that bnd_bd will calculate
     !    flows based on the final head solution
+    kiter = 0
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cf(reset_mover=.false.)
+      call packobj%bnd_cf(kiter, reset_mover=.false.)
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
     enddo
     !

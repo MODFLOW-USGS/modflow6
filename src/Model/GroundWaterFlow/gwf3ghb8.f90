@@ -153,7 +153,7 @@ contains
     return
   end subroutine ghb_ck
 
-  subroutine ghb_cf(this, reset_mover)
+  subroutine ghb_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! ghb_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no ghbs
@@ -164,6 +164,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GhbType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node

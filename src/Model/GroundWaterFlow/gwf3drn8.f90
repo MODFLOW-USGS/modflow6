@@ -2,6 +2,7 @@ module DrnModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DTWO,                                  &
                              LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
+  use SimVariablesModule, only: errmsg
   use MemoryHelperModule, only: create_mem_path
   use SmoothingModule,  only: sQSaturation, sQSaturationDerivative,              &
                               sQuadraticSaturation
@@ -163,7 +164,6 @@ contains
     character(len=*), intent(inout) :: option
     logical,          intent(inout) :: found
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LENAUXNAME) :: ddrnauxname
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
@@ -243,7 +243,6 @@ contains
     ! -- dummy
     class(DrnType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
     integer(I4B) :: node
     real(DP) :: bt
@@ -289,7 +288,7 @@ contains
     return
   end subroutine drn_ck
 
-  subroutine drn_cf(this, reset_mover)
+  subroutine drn_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! drn_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no drains
@@ -300,6 +299,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(DrnType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i

@@ -640,7 +640,7 @@ module RchModule
     return
   end subroutine set_nodesontop
 
-  subroutine rch_cf(this, reset_mover)
+  subroutine rch_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! rch_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no recharge
@@ -651,6 +651,7 @@ module RchModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(rchtype) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node

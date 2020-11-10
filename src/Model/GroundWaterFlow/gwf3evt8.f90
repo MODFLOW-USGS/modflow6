@@ -503,7 +503,7 @@ module EvtModule
     return
   end subroutine set_nodesontop
 
-  subroutine evt_cf(this, reset_mover)
+  subroutine evt_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! evt_cf -- Formulate the HCOF and RHS terms
 ! ******************************************************************************
@@ -512,6 +512,7 @@ module EvtModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, iseg, node

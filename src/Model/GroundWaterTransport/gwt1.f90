@@ -523,7 +523,7 @@ module GwtModule
     ! -- Call package cf routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cf()
+      call packobj%bnd_cf(kiter)
     enddo
     !
     ! -- return
@@ -600,8 +600,8 @@ module GwtModule
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
-    !class(BndType), pointer :: packobj
-    !integer(I4B) :: ip
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -609,10 +609,10 @@ module GwtModule
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
     !
     ! -- Call package cc routines
-    !do ip = 1, this%bndlist%Count()
-    !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_cc(iend, icnvg, hclose, rclose)
-    !enddo
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cc(innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+    enddo
     !
     ! -- return
     return
@@ -1023,7 +1023,8 @@ module GwtModule
     case('CNC6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case('SRC6')
-      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
+                      pakname, this%fmi, this%mst)
     case('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
                       pakname, this%fmi)

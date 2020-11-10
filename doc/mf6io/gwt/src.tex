@@ -1,4 +1,6 @@
-Input to the Mass Source Loading (SRC) Package is read from the file that has type ``SRC6'' in the Name File.  Any number of SRC Packages can be specified for a single groundwater transport model.
+Input to the Mass Source Loading (SRC) Package is read from the file that has type ``SRC6'' in the Name File.  Any number of SRC Packages can be specified for a single groundwater transport model.  The SRC Package can be used to inject or remove solute mass from model cells at a user specified rate.  
+
+The SRC Package has a simple constraint capability whereby the specified rate will be reduced in order to meet a concentration constraint for the model cell.  Concentration constraints are entered as auxiliary variables.  If not entered, then user-specified mass injection or removal rates will be used, even if a negative rate were to result in a negative cell concentration.  Constraints work differently depending on whether the mass rate is positive or negative.  If a positive rate is specified, then that rate will be reduced, if necessary, so that the simulated cell concentration does not exceed the constraint concentration.  If a negative rate is specified, then the rate will be reduced, if necessary, so that the simulated cell concentration does not exceed the constraint concentration.  
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}

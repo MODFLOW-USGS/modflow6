@@ -1035,7 +1035,7 @@ contains
     return
   end subroutine uzf_ad
 
-  subroutine uzf_cf(this, reset_mover)
+  subroutine uzf_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! uzf_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no UZF cells
@@ -1047,6 +1047,7 @@ contains
     ! -- modules
     ! -- dummy
     class(UzfType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- locals
     integer(I4B) :: n

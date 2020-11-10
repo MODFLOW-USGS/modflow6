@@ -126,6 +126,16 @@ optional false
 longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'Mass Source'}
 
+block options
+name auxconstraintname
+type string
+shape
+reader urword
+optional true
+longname name of auxiliary variable for concentration constraints
+description name of a variable listed in AUXILIARY that defines the concentration constraints. If the specified mass removal rate is negative, and the specified removal rate would cause the concentration to drop below the concentration constraint, then the mass removal rate will be reduced so that the resulting cell concentration will not drop below the constraint concentration.  If this option is not specified for negative mass removal rates, then the simulated concentration may become negative.  If the specified mass inflow rate is positive, and the specified rate would cause the concentration to exceed the concentration constraint, then the mass inflow rate will be reduced so that the resulting cell concentration will not exceed the constraint concentration.
+
+
 # --------------------- gwt src dimensions ---------------------
 
 block dimensions

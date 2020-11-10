@@ -80,10 +80,10 @@ module GwtIstModule
     integer(I4B),intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    ! -- local
-    type(GwtIstType), pointer :: istobj
     type(GwtFmiType), pointer :: fmi
     type(GwtMstType), pointer :: mst
+    ! -- local
+    type(GwtIstType), pointer :: istobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables

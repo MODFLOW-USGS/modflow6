@@ -2261,7 +2261,7 @@ contains
     return
   end subroutine maw_ad
 
-  subroutine maw_cf(this, reset_mover)
+  subroutine maw_cf(this, kiter, reset_mover)
   ! ******************************************************************************
   ! maw_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip if no multi-aquifer wells
@@ -2272,6 +2272,7 @@ contains
   ! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     logical :: lrm

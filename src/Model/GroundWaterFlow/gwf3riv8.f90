@@ -173,7 +173,7 @@ end subroutine riv_create
     return
   end subroutine riv_ck
 
-subroutine riv_cf(this, reset_mover)
+subroutine riv_cf(this, kiter, reset_mover)
 ! ******************************************************************************
 ! riv_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip in no rivs
@@ -184,6 +184,7 @@ subroutine riv_cf(this, reset_mover)
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(RivType) :: this
+    integer(I4B), intent(in) :: kiter
     logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node
