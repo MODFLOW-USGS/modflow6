@@ -158,7 +158,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item xxx  
+	        \item The Mass Source Loading (SRC) Package for the Groundwater Transport Model was updated to include constraint functionality.  If activated, source injection or removal rates will be automatically adjusted in order to meet specified user concentration constraints using a simple Newton method.  If a source removal rate causes the simulated concentration for that cell to drop below the constraint value, then the removal rate will be reduced such that the concentration constraint will be honored.  Alternatively if solute mass is added to the model cell and a concentration constraint is specified, then the solute injection rate will be reduced so that the simulated concentration does not exceed the concentration constraint.  These constraints can be used to ensure that the removal of solute mass does not cause concentrations to become negative.  They can also be used for scenario analyses to determine how much mass should be added or removed in order to meet a concentration constraint.
 	        \item xxx  
 	        \item xxx  
 	\end{itemize}

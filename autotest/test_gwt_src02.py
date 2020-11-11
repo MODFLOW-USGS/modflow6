@@ -1,5 +1,7 @@
 """
-Test the SRC package shutoffcmin option
+Test the SRC package constraint option using different combinations of
+source injection and withdrawal rates.  This test is for a simple one-cell
+model.
 
 """
 
@@ -38,7 +40,7 @@ nlay, nrow, ncol = 1, 1, 1
 
 def build_models():
 
-    perlen = [10, 10, 10]
+    perlen = 7 * [10.]
     nper = len(perlen)
     nstp = nper * [1]
     tsmult = nper * [1.0]
@@ -197,11 +199,16 @@ def build_models():
             0: [[(0, 0, 0), -200.0, 12.6987]],
             1: [[(0, 0, 0), -200.0, 1.26987]],
             2: [[(0, 0, 0), 87.3013, 1000.0]],
+            3: [[(0, 0, 0), -100., 8.0], [(0, 0, 0), 100., 12.]],
+            4: [[(0, 0, 0), -100., 12.0],],
+            5: [[(0, 0, 0), 100., 8.0], ],
+            6: [[(0, 0, 0), 100., 12.0], [(0, 0, 0), 100., 12.0]],
         }
         src = flopy.mf6.ModflowGwtsrc(
             gwt,
             auxiliary=["constraint"],
             auxconstraintname="constraint",
+            print_flows=True,
             maxbound=len(srcs),
             stress_period_data=srcs,
             observations=src_obs,
@@ -256,7 +263,8 @@ def eval_transport(sim):
         qsrc = []
         msrc = cbbobj.get_data(text="MASS SOURCE")
         for ra in msrc:
-            qsrc.append(ra["q"][0])
+            q = ra["q"].sum()
+            qsrc.append(q)
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
@@ -267,12 +275,20 @@ def eval_transport(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fname)
 
-    # calculations
-    assert np.allclose(conc[0], conc[1] * 10.0)
-    assert np.allclose(conc[2], 10.0)
-    q_actual = np.array([26.9870, -114.2883, 87.3013])
-    assert np.allclose(np.array(qsrc), q_actual)
-    errmsg = "rates not equal: \n{} \n{}".format(tc["SRC1RATE"], q_actual)
+    # check concentrations
+    c_actual = np.array([10., 1.26987, 10., 10., 10., 10., 12.])
+    errmsg = "concentrations incorrect: \n{} \n{}".format(conc, c_actual)
+    assert np.allclose(conc, c_actual), errmsg
+
+    # check rates in gwt budget file
+    q_actual = np.array([0., -87.3013, 87.3013, 0., 0., 0., 20.])
+    q_sim = np.array(qsrc)
+    errmsg = "rates in gwt budget incorrect: \n{} \n{}".format(q_sim, q_actual)
+    assert np.allclose(q_sim, q_actual), errmsg
+
+    # check rates in src obs file
+    q_sim = tc["SRC1RATE"]
+    errmsg = "rates in src obs incorrect: \n{} \n{}".format(q_sim, q_actual)
     assert np.allclose(tc["SRC1RATE"], q_actual), errmsg
 
     return

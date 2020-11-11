@@ -2,7 +2,7 @@ module GwtSrcModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DP99, LENAUXNAME,    &
-                             LENPAKLOC
+                             LENPAKLOC, DNODATA
   use SimVariablesModule, only: errmsg
   use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
@@ -350,26 +350,33 @@ contains
     real(DP), intent(in) :: constraint
     ! -- local
     real(DP) :: dq
+    real(DP) :: denom
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
     this%qrold(3, i) = cnode - constraint
     if (kiter == 1) then
-      ! -- for first iteration leave q at user specified rate,
+      ! -- for first iteration perturb q by one percent
       !    and initialize q1 to zero
       this%qrold(1, i) = DZERO
-    else if (kiter == 2) then
-      ! - for second iteration, perturb q by one percent
       q = q * DP99
+    else if (kiter == 2) then
+      ! - for second iteration, leave q at user specified rate
     else
       ! -- for third and up, use newton update and then constrain
       !    to not exceed user-specified q
-      dq = -this%qrold(3, i) * (this%qrold(1, i) - this%qrold(2, i)) /         &
-                               (this%qrold(3, i) - this%qrold(4, i))
+      denom = this%qrold(3, i) - this%qrold(4, i)
+      if (abs(denom) > DZERO) then
+        dq = -this%qrold(3, i) * (this%qrold(1, i) - this%qrold(2, i)) / denom
+      else
+        dq = DZERO
+      end if
       if (q < DZERO) then
         q = max(this%qrold(1, i) + dq, q)
+        if (q > DZERO) q = DZERO
       else
         q = min(this%qrold(1, i) + dq, q)
+        if (q < DZERO) q = DZERO
       endif
     end if
     !
@@ -439,25 +446,20 @@ contains
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
-    character(len=LENPAKLOC) :: cloc
+    ! -- formats
+    character(len=*),parameter :: fmtsrccnvg = &
+      "(/,1x,'SRC PACKAGE WITH CONSTRAINTS REQUIRES AT LEAST THREE OUTER &
+      &ITERATIONS. CONVERGE FLAG HAS BEEN RESET TO FALSE.')"
 ! ------------------------------------------------------------------------------
     !
-    !
-    if (this%iauxconstr /= 0) then
-      cpak = ''
-      ipak = 0
-      dpak = DZERO
-      if (kiter < 3) then
-        !
-        ! -- If constraints are being used, then three iterations are required
-        write(cloc, "(a,'-',a)") trim(this%packName), 'RATE'
-        cpak = trim(cloc)
-        ipak = 1
-        dpak = DZERO
-      end if
-    end if
-    !
-    ! -- No addition convergence check for boundary conditions
+    ! -- If there are constraints, then at least 3 outers required
+    if (this%iauxconstr /= 0 .and. this%nbound > 0) then
+      if (icnvgmod == 1 .and. kiter < 3) then
+        dpak = DNODATA
+        cpak = trim(this%packName)
+        write(this%iout, fmtsrccnvg)
+      endif
+    endif
     !
     ! -- return
     return
