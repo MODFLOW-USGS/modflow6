@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 
 try:
@@ -21,8 +20,9 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['dsp01a_noadv', 'dsp01b_noadv']
-xt3d = [False, True]
+ex = ['dsp01a_noadv', 'dsp01b_noadv', 'dsp01c_noadv', 'dsp01d_noadv']
+xt3d = [False, True, False, True]
+cnc_or_src = [True, True, False, False]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -39,16 +39,7 @@ def get_model(idx, dir):
     delr = 1.
     delc = 1.
     top = 1.
-    laytyp = 0
-    ss = 0.
-    sy = 0.1
     botm = [0.]
-    strt = 1.
-    hnoflo = 1e30
-    hdry = -1e30
-    hk = 1.0
-
-    c = {0: [[(0, 0, 0), 0.0000000], [(0, 0, 99), 0.0000000]]}
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-6, 1e-6, 1.
@@ -104,12 +95,27 @@ def get_model(idx, dir):
                                   alh=0., alv=0., ath1=0., atv=0.,
                                   filename='{}.dsp'.format(gwtname))
 
-    # constant concentration
-    cncs = {0: [[(0, 0, 0), 1.0]]}
-    cnc = flopy.mf6.ModflowGwtcnc(gwt, maxbound=len(cncs),
-                                  stress_period_data=cncs,
-                                  save_flows=False,
-                                  pname='CNC-1')
+
+    constant_concentration = cnc_or_src[idx]
+    if constant_concentration:
+
+        # constant concentration
+        cncs = {0: [[(0, 0, 0), 1.0]]}
+        cnc = flopy.mf6.ModflowGwtcnc(gwt, maxbound=len(cncs),
+                                      stress_period_data=cncs,
+                                      save_flows=False,
+                                      pname='CNC-1')
+
+    else:
+
+        # mass source with constraint (behaving as constant concentration)
+        srcs = {0: [[(0, 0, 0), 1000., 1.0]]}
+        src = flopy.mf6.ModflowGwtsrc(gwt, maxbound=len(srcs),
+                                      stress_period_data=srcs,
+                                      auxiliary=['constraint'],
+                                      auxconstraintname='constraint',
+                                      save_flows=False,
+                                      pname='SRC-1')
 
     # mass storage and transfer
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1)
