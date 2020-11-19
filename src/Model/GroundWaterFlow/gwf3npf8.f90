@@ -330,15 +330,6 @@ contains
       call this%set_grid_data(grid_data)
       ! -- check data
       call this%prepcheck()
-      !
-      ! -- xt3d
-      if (this%ixt3d /= 0) then
-        call this%xt3d%xt3d_ar(ibound, this%k11, this%ik33, this%k33,              &
-                               this%sat, this%ik22, this%k22, this%inewton,        &
-                               this%icelltype, this%iangle1,                       &
-                               this%iangle2, this%iangle3, this%angle1,            &
-                               this%angle2, this%angle3)
-      end if
     end if
     !
     ! -- preprocess data
