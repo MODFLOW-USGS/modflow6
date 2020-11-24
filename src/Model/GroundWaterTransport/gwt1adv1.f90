@@ -26,7 +26,7 @@ module GwtAdvModule
     
     procedure :: allocate_scalars
     procedure, private :: read_options
-    procedure, private :: advctvd
+    procedure, private :: advqtvd
     procedure, private :: advtvd_bd
     procedure :: adv_weight
     procedure :: advtvd
@@ -130,11 +130,11 @@ module GwtAdvModule
     ! -- Calculate advection terms and add to solution rhs and hcof.  qnm 
     !    is the volumetric flow rate and has dimensions of L^/T.
     do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
+      if (this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
-        if(this%ibound(m) == 0) cycle
+        if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + qnm * (DONE - omega)
@@ -168,17 +168,17 @@ module GwtAdvModule
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: rhs
     ! -- local
-    real(DP) :: ctvd
+    real(DP) :: qtvd
     integer(I4B) :: m, ipos
 ! ------------------------------------------------------------------------------
     !
-    ! -- Loop through each n connection
+    ! -- Loop through each n connection.  This will
     do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
       m = this%dis%con%ja(ipos)
       if (m > n .and. this%ibound(m) /= 0) then
-        ctvd = this%advctvd(n, m, ipos, cnew)
-        rhs(n) = rhs(n) - ctvd
-        rhs(m) = rhs(m) + ctvd
+        qtvd = this%advqtvd(n, m, ipos, cnew)
+        rhs(n) = rhs(n) - qtvd
+        rhs(m) = rhs(m) + qtvd
       endif
     enddo
     !
@@ -186,9 +186,9 @@ module GwtAdvModule
     return
   end subroutine advtvd
 
-  function advctvd(this, n, m, iposnm, cnew) result(ctvd)
+  function advqtvd(this, n, m, iposnm, cnew) result(qtvd)
 ! ******************************************************************************
-! advctvd -- Calculate TVD
+! advqtvd -- Calculate TVD
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -196,7 +196,7 @@ module GwtAdvModule
     ! -- modules
     use ConstantsModule, only: DPREC
     ! -- return
-    real(DP) :: ctvd
+    real(DP) :: qtvd
     ! -- dummy  
     class(GwtAdvType) :: this
     integer(I4B), intent(in) :: n
@@ -210,7 +210,7 @@ module GwtAdvModule
 ! ------------------------------------------------------------------------------
     !
     ! -- intialize
-    ctvd = DZERO
+    qtvd = DZERO
     !
     ! -- Find upstream node
     isympos = this%dis%con%jas(iposnm)
@@ -230,7 +230,7 @@ module GwtAdvModule
     qmax = DZERO
     do ipos = this%dis%con%ia(iup) + 1, this%dis%con%ia(iup + 1) - 1
       j = this%dis%con%ja(ipos)
-      if(this%ibound(j) == 0) cycle
+      if (this%ibound(j) == 0) cycle
       qupj = this%fmi%gwfflowja(ipos)
       isympos = this%dis%con%jas(ipos)
       if (qupj > qmax) then
@@ -250,13 +250,13 @@ module GwtAdvModule
       endif
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
-        ctvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
       endif
     endif
     !
     ! -- Return
     return
-  end function advctvd
+  end function advqtvd
 
   subroutine adv_flowja(this, cnew, flowja)
 ! ******************************************************************************
@@ -280,11 +280,11 @@ module GwtAdvModule
     !    rate and has dimensions of L^/T.
     nodes = this%dis%nodes
     do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
+      if (this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
-        if(this%ibound(m) == 0) cycle
+        if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) +                  &
@@ -312,19 +312,19 @@ module GwtAdvModule
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: flowja
     ! -- local
-    real(DP) :: ctvd, qnm
+    real(DP) :: qtvd, qnm
     integer(I4B) :: nodes, n, m, ipos
 ! ------------------------------------------------------------------------------
     !
     nodes = this%dis%nodes
     do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
+      if (this%ibound(n) == 0) cycle
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) /= 0) then
           qnm = this%fmi%gwfflowja(ipos)
-          ctvd = this%advctvd(n, m, ipos, cnew)
-          flowja(ipos) = flowja(ipos) + qnm * ctvd
+          qtvd = this%advqtvd(n, m, ipos, cnew)
+          flowja(ipos) = flowja(ipos) + qtvd
         endif
       enddo
     enddo
