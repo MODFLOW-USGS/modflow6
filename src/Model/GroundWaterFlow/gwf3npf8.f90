@@ -480,13 +480,13 @@ module GwfNpfModule
         !
         ! -- Calculate conductance only for upper triangle but insert into
         !    upper and lower parts of amat.
-        if(m < n) cycle
+        if (m < n) cycle
         ihc = this%dis%con%ihc(this%dis%con%jas(ii))
         hyn = this%hy_eff(n, m, ihc, ipos=ii)
         hym = this%hy_eff(m, n, ihc, ipos=ii)
         !
         ! -- Vertical connection
-        if(ihc == 0) then
+        if (ihc == 0) then
           !
           ! -- Calculate vertical conductance
           cond =  vcond(this%ibound(n), this%ibound(m),                        &
@@ -500,9 +500,9 @@ module GwfNpfModule
                         this%dis%con%hwva(this%dis%con%jas(ii)))
           !
           ! -- Vertical flow for perched conditions
-          if(this%iperched /= 0) then
-            if(this%icelltype(m) /= 0) then
-              if(hnew(m) < this%dis%top(m)) then
+          if (this%iperched /= 0) then
+            if (this%icelltype(m) /= 0) then
+              if (hnew(m) < this%dis%top(m)) then
                 !
                 ! -- Fill row n
                 idiag = this%dis%con%ia(n)
