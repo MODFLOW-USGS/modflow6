@@ -39,6 +39,7 @@ module GwtSsmModule
     procedure :: ssm_bdsav
     procedure :: ssm_da
     procedure :: allocate_scalars
+    procedure, private :: ssm_term
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -187,6 +188,101 @@ module GwtSsmModule
     return
   end subroutine ssm_ad
   
+  subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval)
+! ******************************************************************************
+! ssm_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtSsmType) :: this
+    integer(I4B), intent(in) :: ipackage
+    integer(I4B), intent(in) :: ientry
+    real(DP), intent(out), optional :: rrate
+    real(DP), intent(out), optional :: rhsval
+    real(DP), intent(out), optional :: hcofval
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: iauxpos
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    real(DP) :: omega
+    real(DP) :: hcoftmp
+    real(DP) :: rhstmp
+! ------------------------------------------------------------------------------
+    !
+    ! -- retrieve node number, qbnd and iauxpos
+    hcoftmp = DZERO
+    rhstmp = DZERO
+    ctmp = DZERO
+    n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
+    !
+    ! -- If cell is active (ibound > 0) then calculate values
+    if (this%ibound(n) > 0) then
+      !
+      ! -- retrieve qbnd and iauxpos
+      qbnd = this%fmi%gwfpackages(ipackage)%get_flow(ientry)
+      iauxpos = this%iauxpak(ipackage)
+      !
+      ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
+      !    of hcof, rhs, and rate    
+      if(iauxpos >= 0) then
+        !
+        ! -- concentration is zero or stored in auxiliary variable; if
+        !    qbnd is positive, then concentration represents the inflow 
+        !    concentration.  If qbnd is negative, then the outflow concentration
+        !    is set equal to the simulated cell concentration
+        if (qbnd >= DZERO) then
+          if (iauxpos > 0) then
+            ctmp = this%fmi%gwfpackages(ipackage)%auxvar(iauxpos, ientry)
+          else
+            ctmp = DZERO
+          end if
+          omega = DZERO  ! rhs
+        else
+          ctmp = this%cnew(n)
+          omega = DONE  ! lhs
+        end if
+      else if (iauxpos < 0) then
+        !
+        ! -- concentration stored in auxiliary variable; negative iauxpos value
+        !    indicates that this is a mixed sink type where the concentration
+        !    value represents the injected concentration if qbnd is positive.
+        !    If qbnd is negative, then the withdrawn water is equal to the
+        !    minimum of the aux concentration and the cell concentration.
+        ctmp = this%fmi%gwfpackages(ipackage)%auxvar(-iauxpos, ientry)
+        if (qbnd >= DZERO) then
+          omega = DZERO  ! rhs (ctmp is aux value)
+        else
+          if (ctmp < this%cnew(n)) then
+            omega = DZERO  ! rhs (ctmp is aux value)
+          else
+            omega = DONE ! lhs (ctmp is cell concentration)
+            ctmp = this%cnew(n)
+          end if
+        end if
+      endif
+      !
+      ! -- Add terms based on qbnd sign
+      if(qbnd <= DZERO) then
+        hcoftmp = qbnd * omega
+      else
+        rhstmp = -qbnd * ctmp * (DONE - omega)
+      endif
+      !
+      ! -- end of active ibound
+    end if
+    !
+    ! -- set requested values
+    if (present(hcofval)) hcofval = hcoftmp
+    if (present(rhsval)) rhsval = rhstmp
+    if (present(rrate)) rrate = hcoftmp * ctmp - rhstmp
+    !
+    ! -- return
+    return
+  end subroutine ssm_term
+  
   subroutine ssm_fc(this, amatsln, idxglo, rhs)
 ! ******************************************************************************
 ! ssm_fc -- Calculate coefficients and fill amat and rhs
@@ -202,11 +298,13 @@ module GwtSsmModule
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
     integer(I4B) :: ip
-    integer(I4B) :: i, n, idiag
-    integer(I4B) :: iauxpos
-    integer(I4B) :: nflowpack, nbound
-    real(DP) :: qbnd
-    real(DP) :: ctmp
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    integer(I4B) :: nflowpack
+    integer(I4B) :: nbound
+    real(DP) :: hcofval
+    real(DP) :: rhsval
 ! ------------------------------------------------------------------------------
     !
     ! -- do for each flow package
@@ -214,34 +312,14 @@ module GwtSsmModule
     do ip = 1, nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       !
-      ! -- do for each boundary
+      ! -- do for each entry in package (ip)
       nbound = this%fmi%gwfpackages(ip)%nbound
       do i = 1, nbound
-        !
-        ! -- set nodenumber
         n = this%fmi%gwfpackages(ip)%nodelist(i)
-        !
-        ! -- skip if transport cell is inactive or constant concentration
-        if (this%ibound(n) <= 0) cycle
-        !
-        ! -- Calculate the volumetric flow rate
-        qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
-        !
-        ! -- get the first auxiliary variable
-        iauxpos = this%iauxpak(ip)
-        if(iauxpos > 0) then
-          ctmp = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
-        else
-          ctmp = DZERO
-        endif
-        !
-        ! -- Add terms based on qbnd sign
-        if(qbnd <= DZERO) then
-          idiag = idxglo(this%dis%con%ia(n))
-          amatsln(idiag) = amatsln(idiag) + qbnd
-        else
-          rhs(n) = rhs(n) - qbnd * ctmp
-        endif
+        call this%ssm_term(ip, i, rhsval=rhsval, hcofval=hcofval)
+        idiag = idxglo(this%dis%con%ia(n))
+        amatsln(idiag) = amatsln(idiag) + hcofval
+        rhs(n) = rhs(n) + rhsval
         !
       enddo
       !
@@ -268,14 +346,9 @@ module GwtSsmModule
     ! -- local
     character(len=LENPACKAGENAME) :: rowlabel  = 'SSM'
     integer(I4B) :: ip
-    integer(I4B) :: n
     integer(I4B) :: i
-    integer(I4B) :: iauxpos
     real(DP), dimension(:, :), allocatable :: budterm
     real(DP) :: rate
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    real(DP) :: cbnd
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
@@ -293,33 +366,7 @@ module GwtSsmModule
       !
       ! -- do for each boundary
       do i = 1, this%fmi%gwfpackages(ip)%nbound
-        !
-        ! -- set nodenumber
-        n = this%fmi%gwfpackages(ip)%nodelist(i)
-        !
-        ! -- skip if transport cell is inactive or constant concentration
-        if (this%ibound(n) <= 0) cycle
-        !
-        ! -- Calculate the volumetric flow rate
-        qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
-        !
-        ! -- get the first auxiliary variable
-        iauxpos = this%iauxpak(ip)
-        if(iauxpos > 0) then
-          cbnd = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
-        else
-          cbnd = DZERO
-        endif
-        !
-        ! -- Add terms based on qbnd sign
-        if(qbnd <= DZERO) then
-          ctmp = this%cnew(n)
-        else
-          ctmp = cbnd
-        endif
-        !
-        ! -- Rate is now a mass flux
-        rate = qbnd * ctmp
+        call this%ssm_term(ip, i, rrate=rate)
         if(rate < DZERO) then
           budterm(2, ip) = budterm(2, ip) - rate
         else
@@ -367,10 +414,7 @@ module GwtSsmModule
     character(len=20) :: nodestr
     integer(I4B) :: maxrows
     integer(I4B) :: ip
-    integer(I4B) :: iauxpos
     integer(I4B) :: i, n2, ibinun
-    real(DP) :: qbnd
-    real(DP) :: cbnd, ctmp
     real(DP) :: rrate
     integer(I4B) :: naux
     real(DP), dimension(0,0) :: auxvar
@@ -436,34 +480,9 @@ module GwtSsmModule
         ! -- do for each boundary
         do i = 1, this%fmi%gwfpackages(ip)%nbound
           !
-          ! -- set nodenumber and initialize
+          ! -- Calculate rate for this entry
           node = this%fmi%gwfpackages(ip)%nodelist(i)
-          rrate = DZERO
-          !
-          ! -- skip calc if transport cell is inactive or constant concentration
-          if (this%ibound(node) > 0) then
-            !
-            ! -- Calculate the volumetric flow rate
-            qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
-            !
-            ! -- get the first auxiliary variable
-            iauxpos = this%iauxpak(ip)
-            if(iauxpos > 0) then
-              cbnd = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
-            else
-              cbnd = DZERO
-            endif
-            !
-            ! -- Add terms based on qbnd sign
-            if(qbnd <= DZERO) then
-              ctmp = this%cnew(node)
-            else
-              ctmp = cbnd
-            endif
-            !
-            ! -- Rate is now a mass flux
-            rrate = qbnd * ctmp
-          end if
+          call this%ssm_term(ip, i, rrate=rrate)
           !
           ! -- Print the individual rates if the budget is being printed
           !    and PRINT_FLOWS was specified (this%iprflow<0)
@@ -672,19 +691,21 @@ module GwtSsmModule
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=LENAUXNAME) :: auxname
-    character(len=3) :: srctype
+    character(len=20) :: srctype
     integer(I4B) :: ierr
     integer(I4B) :: ip
     integer(I4B) :: iaux
     integer(I4B) :: nflowpack
     logical :: isfound, endOfBlock
     logical :: pakfound
+    logical :: lauxmixed
     ! -- formats
     ! -- data
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
     isfound = .false.
+    lauxmixed = .false.
     nflowpack = this%fmi%nflowpack
     !
     ! -- get sources block
@@ -717,9 +738,12 @@ module GwtSsmModule
         select case(srctype)
         case('AUX')
           write(this%iout,'(1x,a)') 'AUX SOURCE DETECTED.'
+        case('AUXMIXED')
+          write(this%iout,'(1x,a)') 'AUXMIXED SOURCE DETECTED.'
+          lauxmixed = .true.
         case default
           write(errmsg,'(1x, a, a)')                                          &
-            'ERROR.  SRCTYPE MUST BE AUX, LKT, OR SFT ', srctype
+            'ERROR.  SRCTYPE MUST BE AUX.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
@@ -752,7 +776,11 @@ module GwtSsmModule
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
-        this%iauxpak(ip) = iaux
+        if (lauxmixed) then
+          this%iauxpak(ip) = -iaux
+        else
+          this%iauxpak(ip) = iaux
+        end if
         write(this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ',      &
           iaux, ' IN PACKAGE ', trim(keyword)
         !
