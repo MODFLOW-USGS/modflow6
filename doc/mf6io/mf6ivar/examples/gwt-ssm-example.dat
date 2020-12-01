@@ -1,5 +1,6 @@
 BEGIN SOURCES
-# pname srctype        auxname
-  WEL-1     AUX  CONCENTRATION
-  LAK-1     AUX  CONCENTRATION
+# pname   srctype        auxname
+  WEL-1       AUX  CONCENTRATION
+  LAK-1       AUX  CONCENTRATION
+  EVT-1  AUXMIXED         ETCONC
 END SOURCES
