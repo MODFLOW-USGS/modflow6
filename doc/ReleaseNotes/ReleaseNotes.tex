@@ -158,7 +158,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item xxx  
+	        \item The Source and Sink Mixing (SSM) Package for the Groundwater Transport Model was modified to include an alternative option for the concentration value assigned to sinks.  A new AUXMIXED option was added to represent evaporation-like sinks where the solute or a portion of the solute may be left behind.  The AUXMIXED option provides an alternative method for determining the groundwater sink concentration.  If the cell concentration is larger than the user-specified sink concentration, then the concentration of the sink will be assigned as the specified concentration.  Alternatively, if the specified concentration is larger than the cell concentration, then water will be withdrawn at the cell concentration.  Thus, the AUXMIXED option is designed to work with the Evapotranspiration and Recharge packages where water may be withdrawn at a concentration that is less than the cell concentration.  
 	        \item xxx  
 	        \item xxx  
 	\end{itemize}

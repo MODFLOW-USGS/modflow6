@@ -1,6 +1,8 @@
 Source and Sink Mixing (SSM) Package information is read from the file that is specified by ``SSM6'' as the file type.  Only one SSM Package can be specified for a GWT model.  
 
-The SSM Package is used to add or remove solute mass from GWT model cells based on inflows and outflows from the GWF stress packages.  If a GWF stress package provides flow into a model cell, that flow can be assigned a user-specified concentration.  This concentration must be entered as an auxiliary variable in the flow package.  In the SOURCES block below, the user provides the name of the auxiliary variable containing concentration values for each boundary.  If the user does not enter a record for a GWF stress package in the SOURCES block, then inflow to the GWT model is assigned a concentration value of zero.
+The SSM Package is used to add or remove solute mass from GWT model cells based on inflows and outflows from GWF stress packages.  If a GWF stress package provides flow into a model cell, that flow can be assigned a user-specified concentration.  This user-specified concentration must be entered as an auxiliary variable in the flow package.  In the SOURCES block below, the user provides the name of the package and the name of the auxiliary variable containing concentration values for each boundary.  As described below for srctype, there are multiple options for defining this behavior.
+
+If the user does not enter a record for a GWF stress package in the SOURCES block, then inflow to the GWT model is assigned a concentration value of zero.  For negative flow rates in GWF stress packages (sinks), the sink concentration is set to the calculated cell concentration.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
