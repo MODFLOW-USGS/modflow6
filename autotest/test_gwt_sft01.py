@@ -362,6 +362,7 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
+
     # check the flow-ja-face terms
     res = bobj.get_data(text='flow-ja-face')[-1]
     #print(res)
@@ -369,6 +370,13 @@ def eval_results(sim):
     # check the storage terms, which include the total mass in the reach as an aux variable
     res = bobj.get_data(text='storage')[-1]
     #print(res)
+
+    # check the constant term
+    res = bobj.get_data(text='constant')[-1]
+    qs = res['q']
+    qa = np.array([100., 0., 0., 0., 0., 0., 0.])
+    msg = "{} /= {}".format(qs, qa)
+    assert np.allclose(qs, qa), msg
 
     # uncomment when testing
     # assert False
