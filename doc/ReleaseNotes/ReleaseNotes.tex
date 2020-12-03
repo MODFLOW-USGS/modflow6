@@ -187,7 +187,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item xxx  
+	        \item The CONSTANT term used to report the rate of mass provided by a constant-concentration condition in the LKT, SFT, MWT, and UZT did not include the contribution to adjacent package features.  For example, if a stream reach was marked as constant-concentration boundary and it had flow into a downstream reach, then that flow was not included in the budget calculations.  Consequently, reported budgets in the listing file would show discrepancies that were larger than what was actually simulated by the model.  The program code was modified to include these mass flows to adjacent features.
 	        \item xxx  
 	        \item xxx  
 	\end{itemize}

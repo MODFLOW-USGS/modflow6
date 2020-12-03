@@ -2310,6 +2310,7 @@ module GwtAptModule
       do j = 1, nlist
         call this%apt_fjf_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do      
     end if
 
