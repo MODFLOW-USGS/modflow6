@@ -1192,7 +1192,8 @@ module GwfBuyModule
     ! -- get packagedata block
     blockrequired = .true.
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
-                              blockRequired=blockRequired)
+                              blockRequired=blockRequired,                     &
+                              supportOpenClose=.true.)
     !
     ! -- parse packagedata block
     if (isfound) then
