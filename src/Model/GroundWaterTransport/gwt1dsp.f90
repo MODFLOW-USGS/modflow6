@@ -507,7 +507,8 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
+                              supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then

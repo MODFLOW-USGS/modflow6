@@ -697,7 +697,8 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
+                              supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -759,7 +760,8 @@ module GwtFmiModule
     !
     ! -- get options block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
-                              blockRequired=blockRequired)
+                              blockRequired=blockRequired,                     &
+                              supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then
