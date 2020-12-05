@@ -175,7 +175,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 	        \item The way in which the dispersion coefficients are calculated with the simple option (XT3D\_OFF) for the Dispersion Package was modified.  When the velocity within a cell is not aligned with a principal grid direction, the  dispersion coefficients are calculated using a simple arithmetic weighting, rather than harmonic weighting as is done for the simple option for anisotropic flow in the NPF Package.  The arithmetic weighting option eliminates a possible discontinuity when a principal flow-aligned dispersion component is zero.
 	        \item The mass flow between two cells is calculated and optionally written to the GWT budget file.  There was an error in this calculation of mass flow when the TVD scheme was specified in the Advection (ADV) Package.  Consequently, the mass flows written to the budget file were not correct in this situation.  Because these mass flows are also used in the budget calculations for the Constant Concentration (CNC) Package, reported CNC mass flows were also not correct.  This could result in large budget discrepancies in the GWT budget table.  Simulated concentrations were not affected by this error.  A small correction was made to the routine that adds the advective mass flow for the TVD scheme.
-	        \item xxx  
+	        \item Several packages had input blocks that could not be specified using the OPEN/CLOSE keyword.  The program was modified so that OPEN/CLOSE is supported for all intended blocks.
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}

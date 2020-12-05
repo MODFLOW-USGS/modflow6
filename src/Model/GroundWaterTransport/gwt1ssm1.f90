@@ -627,7 +627,7 @@ module GwtSsmModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    !modules
+    ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error
     ! -- dummy
@@ -646,7 +646,8 @@ module GwtSsmModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
+                              supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -709,7 +710,7 @@ module GwtSsmModule
     nflowpack = this%fmi%nflowpack
     !
     ! -- get sources block
-    call this%parser%GetBlock('SOURCES', isfound, ierr)
+    call this%parser%GetBlock('SOURCES', isfound, ierr, supportOpenClose=.true.)
     if(isfound) then
       write(this%iout,'(1x,a)')'PROCESSING SOURCES'
       do
