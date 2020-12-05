@@ -1376,8 +1376,8 @@ contains
     real(DP) :: rfinf
     real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
     real(DP) :: hgwf,hgwflm1,ratin,ratout,rrate,rrech
-    real(DP) :: trhsgwet,thcofgwet,gwet,derivgwet
-    real(DP) :: qfrommvr, qformvr, qgwformvr, sumaet
+    real(DP) :: trhsgwet,thcofgwet,derivgwet
+    real(DP) :: qfrommvr, qformvr, qgwformvr
     real(DP) :: qfinf
     real(DP) :: qrejinf
     real(DP) :: qrejinftomvr
@@ -1411,7 +1411,6 @@ contains
     retgw = DZERO
     rgwseep = DZERO
     rvflux = DZERO
-    sumaet = DZERO
     qfinf = DZERO
     qfrommvr = DZERO
     qtomvr = DZERO
@@ -1422,6 +1421,7 @@ contains
     qseep = DZERO
     qseeptomvr = DZERO
     qgwet = DZERO
+    this%uzfobj%pet = this%uzfobj%petmax
     !
     ! -- set kstp, kper, and maxrows
     maxrows = 0
@@ -1480,22 +1480,30 @@ contains
                               this%ietflag,this%iseepflag,this%issflag,hgwf,   &
                               hgwflm1,cvv,numobs,this%obs_num,                 &
                               this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
-                              qgwformvr,sumaet,ierr)
+                              qgwformvr,ierr)
       if ( ierr > 0 ) then
         if ( ierr == 1 ) &
           errmsg = 'UZF variable NWAVESETS needs to be increased.'
         call store_error(errmsg)
         call ustop()
-      end if
+      end if 
+
       !
       ! -- Calculate gwet
       if (this%igwetflag > 0) then
-        gwet = DZERO
+        call this%uzfobj%setgwpet(i)
         derivgwet = DZERO
         call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
-                                 gwet, derivgwet)
-        retgw = retgw + this%gwet(i)
+                                 derivgwet)
+        retgw = retgw + this%uzfobj%gwet(i)
       end if
+      !
+      ! -- distribute PET to deeper cells
+        if (this%ietflag > 0) then
+          if (this%uzfobj%ivertcon(i) > 0) then
+            call this%uzfobj%setbelowpet(i, ivertflag)
+          end if
+        end if
       !
       ! -- Calculate flows for cbc output and observations
       if (hgwf > this%uzfobj%celbot(i)) then
@@ -1957,13 +1965,13 @@ contains
     integer(I4B) :: i, ivertflag
     integer(I4B) :: n, m, ierr
     real(DP) :: trhs1, thcof1, trhs2, thcof2
-    real(DP) :: hgwf, hgwflm1, cvv, uzderiv, gwet, derivgwet
-    real(DP) :: qfrommvr, qformvr,sumaet
+    real(DP) :: hgwf, hgwflm1, cvv, uzderiv, derivgwet
+    real(DP) :: qfrommvr, qformvr
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     ierr = 0
-    sumaet = DZERO
+    this%uzfobj%pet = this%uzfobj%petmax
     !
     ! -- Calculate hcof and rhs for each UZF entry
     do i = 1, this%nodes
@@ -1972,7 +1980,6 @@ contains
       trhs1 = DZERO
       trhs2 = DZERO
       uzderiv = DZERO
-      gwet = DZERO
       derivgwet = DZERO
       ivertflag = this%uzfobj%ivertcon(i)
       !
@@ -2001,7 +2008,7 @@ contains
                                     this%totfluxtot, this%ietflag,             &
                                     this%issflag,this%iseepflag,               &
                                     trhs1,thcof1,hgwf,hgwflm1,cvv,uzderiv,     &
-                                    qfrommvr,qformvr,ierr,sumaet,ivertflag)
+                                    qfrommvr,qformvr,ierr,ivertflag)
         !
         ! -- terminate if an error condition has occurred
         if (ierr > 0) then
@@ -2010,9 +2017,20 @@ contains
             call store_error(errmsg)
             call ustop()
         end if
-        if ( this%igwetflag > 0 )                                              &
-          call this%uzfobj%simgwet(this%igwetflag,i,hgwf,trhs2,thcof2,gwet,    &
+        
+        if ( this%igwetflag > 0 ) then
+          call this%uzfobj%setgwpet(i)
+          call this%uzfobj%simgwet(this%igwetflag,i,hgwf,trhs2,thcof2,         &
                                     derivgwet)
+        end if
+        !
+        ! -- distribute PET to deeper cells
+        if (this%ietflag > 0) then
+          if (this%uzfobj%ivertcon(i) > 0) then
+            call this%uzfobj%setbelowpet(i, ivertflag)
+          end if
+        end if
+        
         this%deriv(i) = uzderiv + derivgwet
         !
         ! -- save current rejected infiltration, groundwater recharge, and
@@ -2023,7 +2041,7 @@ contains
         !
         ! -- add to hcof and rhs
         this%hcof(i) = thcof1 + thcof2
-        this%rhs(i) = -trhs1 - trhs2
+        this%rhs(i) = -trhs1 + trhs2
         !
         ! -- add spring discharge and rejected infiltration to mover
         if(this%imover == 1) then
