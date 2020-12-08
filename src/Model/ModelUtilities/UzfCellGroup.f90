@@ -88,6 +88,7 @@ module UzfCellGroupModule
       procedure :: rejfinf
       procedure :: gwseep
       procedure :: setbelowpet
+      procedure :: setgwpet
       procedure :: dealloc
     end type UzfCellGroupType
 !  
@@ -546,9 +547,36 @@ module UzfCellGroupModule
     !
     ! -- return
     return
-  end subroutine setdataet   
+   end subroutine setdataet 
    
-  subroutine setbelowpet(this, icell, jbelow, aet)
+   subroutine setgwpet(this, icell)
+! ******************************************************************************
+! setgwpet -- subtract aet from pet to calculate residual et for gw
+!                
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    ! -- dummy
+    class(UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
+    ! -- dummy
+    real(DP) :: pet
+! ------------------------------------------------------------------------------ 
+    pet = DZERO
+    !
+    ! -- reduce pet for gw by uzet
+    pet = this%pet(icell) - this%etact(icell) / delt
+    if ( pet < DZERO ) pet = DZERO
+    this%gwpet(icell) = pet
+    !
+    ! -- return
+    return
+  end subroutine setgwpet  
+   
+  subroutine setbelowpet(this, icell, jbelow)
 ! ******************************************************************************
 ! setbelowpet -- subtract aet from pet to calculate residual et 
 !                for deeper cells
@@ -557,17 +585,21 @@ module UzfCellGroupModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
-    real(DP), intent(in) :: aet
     ! -- dummy
     real(DP) :: pet
 ! ------------------------------------------------------------------------------ 
     pet = DZERO
+    !
+    ! -- transfer unmet pet to lower cell
+    !
     if (this%extdpuz(jbelow) > DEM3) then
-       pet = this%petmax(icell) - aet
+       pet = this%pet(icell) - this%etact(icell) / delt -   &
+             this%gwet(icell)/this%uzfarea(icell)
        if (pet < DZERO) pet = DZERO
     end if
     this%pet(jbelow) = pet
@@ -648,9 +680,8 @@ module UzfCellGroupModule
   end subroutine advance
 
   subroutine formulate(this, thiswork, jbelow, icell, totfluxtot, ietflag,    &
-                       issflag, iseepflag, trhs, thcof, hgwf,                 &
-                       hgwfml1, cvv, deriv, qfrommvr, qformvr, ierr, sumaet,  &
-                       ivertflag)
+                       issflag, iseepflag, trhs, thcof, hgwf, hgwfml1,        &
+                       cvv, deriv, qfrommvr, qformvr, ierr, ivertflag)
 ! ******************************************************************************
 ! formulate -- formulate the unsaturated flow object, calculate terms for 
 !              gwf equation            
@@ -677,7 +708,6 @@ module UzfCellGroupModule
     real(DP), intent(inout) :: trhs
     real(DP), intent(inout) :: thcof
     real(DP), intent(inout) :: qformvr
-    real(DP), intent(inout) :: sumaet
     real(DP), intent(inout) :: totfluxtot
     real(DP), intent(inout) :: deriv
     ! -- local
@@ -700,9 +730,6 @@ module UzfCellGroupModule
     this%watab(icell) = hgwf
     this%etact(icell) = DZERO
     this%surfluxbelow(icell) = DZERO
-    !
-    ! -- set pet for gw when there is no UZ. 
-    this%gwpet(icell) = this%pet(icell)
     if(ivertflag > 0) then
       this%finf(jbelow) = DZERO
     end if
@@ -749,10 +776,6 @@ module UzfCellGroupModule
         if (ierr > 0) return
         call this%uz_rise(icell, totfluxtot)
         this%totflux(icell) = totfluxtot
-        if (ietflag > 0 .and. this%ivertcon(icell) > 0) then
-            this%pet(jbelow) = this%pet(jbelow) - this%etact(icell)
-            if (this%pet(jbelow) < DEM15) this%pet(jbelow) = DEM15
-        end if
         if (this%ivertcon(icell) > 0) then
           call this%addrech(icell, jbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
         end if
@@ -776,20 +799,13 @@ module UzfCellGroupModule
     ! -- reset waves to previous state for next iteration  
     call this%wave_shift(thiswork, icell, 1, 0, 1, thiswork%nwavst(1), 1)  
     !
-    ! -- distribute PET to deeper cells
-    sumaet = sumaet + this%etact(icell)
-    if(this%ivertcon(icell) > 0) then
-      if (ietflag > 0) then
-        call this%setbelowpet(icell, jbelow, sumaet)
-      end if
-    end if
   end subroutine formulate 
 
   subroutine budget(this, jbelow, icell, totfluxtot, rfinf, rin, rout,         &
                     rsto, ret, retgw, rgwseep, rvflux, ietflag, iseepflag,     &
                     issflag, hgwf, hgwfml1, cvv, numobs, obs_num,              &
                     obs_depth, obs_theta, qfrommvr, qformvr, qgwformvr,        &
-                    sumaet, ierr)
+                    ierr)
 ! ******************************************************************************
 ! budget -- save unsat. conditions at end of time step, calculate budget 
 !           terms            
@@ -818,7 +834,6 @@ module UzfCellGroupModule
     real(DP), intent(inout) :: rfinf
     real(DP), intent(inout) :: rin
     real(DP), intent(inout) :: qformvr
-    real(DP), intent(inout) :: sumaet
     real(DP), intent(inout) :: qgwformvr
     real(DP), intent(inout) :: rout
     real(DP), intent(inout) :: rsto
@@ -849,10 +864,6 @@ module UzfCellGroupModule
     finfact = DZERO
     this%etact(icell) = DZERO
     this%surfluxbelow(icell) = DZERO
-    sumaet = DZERO
-    !
-    ! -- set pet for gw when there is no UZ. 
-    this%gwpet(icell) = this%pet(icell)
     if (this%ivertcon(icell) > 0) then
       this%finf(jbelow) = dzero
       if (this%watab(icell) < this%celbot(icell)) &
@@ -940,14 +951,6 @@ module UzfCellGroupModule
         obs_theta(j) = this%thts(icell)
       end if
     end do
-    !
-    ! -- distribute residual PET to deeper cells
-    sumaet = sumaet + this%etact(icell)
-    if (this%ivertcon(icell) > 0) then
-      if (ietflag > 0) then
-        call this%setbelowpet(icell, jbelow, sumaet)
-      end if
-    end if
     !
     ! -- return
     return
@@ -1132,7 +1135,7 @@ module UzfCellGroupModule
     return
   end subroutine gwseep
 
-  subroutine simgwet(this, igwetflag, icell, hgwf, trhs, thcof, et, det)
+  subroutine simgwet(this, igwetflag, icell, hgwf, trhs, thcof, det)
 ! ******************************************************************************
 ! simgwet -- calc. gwf et using residual uzf pet
 ! ******************************************************************************
@@ -1148,15 +1151,19 @@ module UzfCellGroupModule
     real(DP), intent(inout) :: trhs
     real(DP), intent(inout) :: thcof
     real(DP), intent(inout) :: det
-    real(DP), intent(inout) :: et
     ! -- local
-    real(DP) :: s, x, c
+    real(DP) :: s, x, c, b, et
 ! ------------------------------------------------------------------------------      
     !
     this%gwet(icell) = DZERO
+    trhs = DZERO
+    thcof = DZERO
+    det = DZERO
     s = this%landtop(icell)
     x = this%extdp(icell)
     c = this%gwpet(icell)
+    b = this%celbot(icell)
+    if ( b > hgwf ) return
     if (x < DEM6) return
     if (igwetflag == 1) then
       et = etfunc_lin(s, x, c, det, trhs, thcof, hgwf, &
@@ -1164,9 +1171,11 @@ module UzfCellGroupModule
     else if (igwetflag == 2) then
       et = etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
     end if
-    this%gwet(icell) = et * this%uzfarea(icell)
-    trhs = -trhs * this%uzfarea(icell)
+!    this%gwet(icell) = et * this%uzfarea(icell)
+    trhs =  trhs * this%uzfarea(icell)
     thcof = thcof * this%uzfarea(icell)
+    this%gwet(icell) =   trhs - (thcof * hgwf)
+    !    write(99,*)'in group', icell, this%gwet(icell)
     !
     ! -- return
     return
@@ -1200,9 +1209,6 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Between ET surface and extinction depth
-    trhs = DZERO
-    thcof = DZERO
-    det = DZERO
     if (hgwf > (s-x) .and. hgwf < s) THEN
       etgw = (c * (hgwf - (s - x)) / x)
       if (etgw > c) then
@@ -1230,7 +1236,9 @@ module UzfCellGroupModule
     if (depth < dzero) depth = dzero
     range = DEM4 * x
     call sCubic(depth, range, det, scale)
-    etgw = scale * etgw
+    trhs = scale * trhs
+    thcof = scale * thcof
+    etgw = trhs - (thcof * hgwf)
     det = -det * etgw   
     etfunc_lin = etgw
     !
@@ -1261,9 +1269,6 @@ module UzfCellGroupModule
     real(DP) :: range
     real(DP) :: depth, scale
 ! ------------------------------------------------------------------------------
-    det = DZERO 
-    trhs = DZERO
-    thcof = DZERO
     depth = hgwf - (s - x)
     if (depth < DZERO) depth = DZERO
     etgw = c
@@ -1413,10 +1418,6 @@ module UzfCellGroupModule
      if (ierr > 0) return
       totfluxtot = totfluxtot + this%totflux(icell)
     end do
-    !
-    ! -- set residual pet after uz et    
-    this%gwpet(icell) = this%pet(icell) - this%etact(icell) / delt
-    if (this%gwpet(icell) < DZERO) this%gwpet(icell) = DZERO
     !
     ! -- return
     return
