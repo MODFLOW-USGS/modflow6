@@ -915,8 +915,8 @@ module GwtIstModule
     !
     ! -- calculate rhs, and switch the sign because this term needs to
     !    be moved to the left hand side
-    rhs = ddterm(9) * (ddterm(2) + ddterm(4)) / f * cimt - ddterm(9)           &
-          * ddterm(7) / f - ddterm(9) * ddterm(8) / f
+    rhs = (ddterm(2) + ddterm(4)) * cimt - ddterm(7) - ddterm(8)
+    rhs = rhs * ddterm(9) / f
     rhs = -rhs
     !
     ! -- Return
@@ -1199,13 +1199,13 @@ module GwtIstModule
     tled = DONE / delt
     !
     ! -- calculate terms
-    ddterm(1) = thetaim * vcell * tled * swtpdt
-    ddterm(2) = thetaim * vcell * tled * swt
-    ddterm(3) = thetaimfrac * rhob * vcell * kd * swtpdt * tled
-    ddterm(4) = thetaimfrac * rhob * vcell * kd * swt * tled
-    ddterm(5) = thetaim * lambda1im * vcell * swtpdt
+    ddterm(1) = thetaim * vcell * tled
+    ddterm(2) = thetaim * vcell * tled
+    ddterm(3) = thetaimfrac * rhob * vcell * kd * tled
+    ddterm(4) = thetaimfrac * rhob * vcell * kd * tled
+    ddterm(5) = thetaim * lambda1im * vcell
     ddterm(6) = thetaimfrac * lambda2im * rhob * kd * vcell
-    ddterm(7) = thetaim * gamma1im * vcell * swtpdt
+    ddterm(7) = thetaim * gamma1im * vcell
     ddterm(8) = thetaimfrac * gamma2im * rhob * vcell
     ddterm(9) = vcell * swtpdt * zetaim
     !
