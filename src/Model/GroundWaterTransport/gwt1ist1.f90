@@ -313,6 +313,8 @@ module GwtIstModule
     integer(I4B) :: ibinun, ipflg
     real(DP) :: ratin, ratout
     integer(I4B) :: n
+    integer(I4B) :: nbound
+    integer(I4B) :: naux
     real(DP) :: rate
     real(DP) :: swt, swtpdt
     real(DP) :: hhcof, rrhs
@@ -340,8 +342,21 @@ module GwtIstModule
     else
       ibinun = this%ipakcb
     end if
-    if (icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if (icbcfl == 0) then
+      ibinun = 0
+    end if
+    if (isuppress_output /= 0) then
+      ibinun = 0
+    end if
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      nbound = this%dis%nodes
+      naux = 0
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  this%auxname, ibinun, nbound, this%iout)
+    endif
     !
     ! -- Reset budget object for this immobile domain package
     call this%budget%reset()
@@ -350,43 +365,55 @@ module GwtIstModule
     do n = 1, this%dis%nodes
       !
       ! -- skip if transport inactive
-      if(this%ibound(n) <= 0) cycle
-      !
-      ! -- calculate new and old water volumes
-      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      swtpdt = this%fmi%gwfsat(n)
-      swt = this%fmi%gwfsatold(n, delt)
-      !
-      ! -- Set thetamfrac and thetaimfrac
-      thetamfrac = this%mst%get_thetamfrac(n)
-      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-      !
-      ! -- Calculate exchange with immobile domain
       rate = DZERO
-      hhcof = DZERO
-      rrhs = DZERO
-      kd = DZERO
-      lambda1im = DZERO
-      lambda2im = DZERO
-      gamma1im = DZERO
-      gamma2im = DZERO
-      if (this%idcy == 1) lambda1im = this%decay(n)
-      if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%isrb > 0) then
-        kd = this%distcoef(n)
-        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+      if(this%ibound(n) > 0) then
+        !
+        ! -- calculate new and old water volumes
+        vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+        swtpdt = this%fmi%gwfsat(n)
+        swt = this%fmi%gwfsatold(n, delt)
+        !
+        ! -- Set thetamfrac and thetaimfrac
+        thetamfrac = this%mst%get_thetamfrac(n)
+        thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
+        !
+        ! -- Calculate exchange with immobile domain
+        rate = DZERO
+        hhcof = DZERO
+        rrhs = DZERO
+        kd = DZERO
+        lambda1im = DZERO
+        lambda2im = DZERO
+        gamma1im = DZERO
+        gamma2im = DZERO
+        if (this%idcy == 1) lambda1im = this%decay(n)
+        if (this%idcy == 2) gamma1im = this%decay(n)
+        if (this%isrb > 0) then
+          kd = this%distcoef(n)
+          if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+          if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+        end if
+        call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
+                            thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
+                            lambda1im, lambda2im, gamma1im, gamma2im,          &
+                            this%zetaim(n), this%cim(n), hhcof, rrhs)
+        rate = hhcof * x(n) - rrhs
       end if
-      call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                          thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
-                          lambda1im, lambda2im, gamma1im, gamma2im,          &
-                          this%zetaim(n), this%cim(n), hhcof, rrhs)
-      rate = hhcof * x(n) - rrhs
+      !
+      ! -- Accumulate rate
       if (rate < DZERO) then
         ratout = ratout - rate
       else
         ratin = ratin + rate
       endif
+      !
+      ! -- If saving cell-by-cell flows in list, write flow
+      if (ibinun /= 0) then
+        call this%dis%record_mf6_list_entry(ibinun, n, n, rate,                &
+                                            naux, this%auxvar(:,n),            &
+                                            olconv=.TRUE.,                     &
+                                            olconv2=.TRUE.)
+      end if
       !
     enddo
     !
