@@ -86,6 +86,8 @@ module GwfCsubModule
     integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
     integer(I4B), pointer :: ndelaycells => null()
     integer(I4B), pointer :: ndelaybeds => null()
+    integer(I4B), pointer :: idelayflag => null()                                !< flag indicating head in non-covertible below cell top 
+    integer(I4B), pointer :: ndelaycount => null()                               !< delay counter for non-covertible heads below cell top 
     integer(I4B), pointer :: initialized => null()
     integer(I4B), pointer :: ieslag => null()
     integer(I4B), pointer :: ipch => null()
@@ -164,10 +166,10 @@ module GwfCsubModule
     !
     ! -- delay interbed arrays
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
-    real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
-    real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
-    real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !delay bed cell z relative to znode
-    real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
+    real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !< delay bed maximum head change
+    real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !< delay bed cell z
+    real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !< delay bed cell z relative to znode
+    real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !< delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
     real(DP), dimension(:,:), pointer, contiguous :: dbgeo => null()             !delay bed cell geostatic stress
     real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !delay bed cell effective stress
@@ -268,6 +270,7 @@ module GwfCsubModule
     !
     ! -- delay interbed methods
     procedure, private :: csub_delay_chk
+    procedure, private :: csub_delay_calc_sat
     procedure, private :: csub_delay_calc_zcell
     procedure, private :: csub_delay_calc_stress
     procedure, private :: csub_delay_calc_ssksske
@@ -364,6 +367,8 @@ contains
     call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%memoryPath)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%memoryPath)
+    call mem_allocate(this%idelayflag, 'IDELAYFLAG', this%memoryPath)
+    call mem_allocate(this%ndelaycount, 'NDELAYCOUNT', this%memoryPath)
     call mem_allocate(this%initialized, 'INITIALIZED', this%memoryPath)
     call mem_allocate(this%ieslag, 'IESLAG', this%memoryPath)
     call mem_allocate(this%ipch, 'IPCH', this%memoryPath)
@@ -407,6 +412,8 @@ contains
     this%iauxmultcol = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
+    this%idelayflag = 0
+    this%ndelaycount = 0
     this%initialized = 0
     this%ieslag = 0
     this%ipch = 0
@@ -1679,6 +1686,11 @@ contains
       end do
     end if
     !
+    ! -- write warning message
+    if (this%ndelaycount > 0) then
+
+    end if
+    !
     ! -- deallocate temporary storage
     deallocate(imap_sel)
     deallocate(locs)
@@ -2925,6 +2937,8 @@ contains
     call mem_deallocate(this%iauxmultcol)
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
+    call mem_deallocate(this%idelayflag)
+    call mem_deallocate(this%ndelaycount)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%ieslag)
     call mem_deallocate(this%ipch)
@@ -3962,6 +3976,11 @@ contains
         end do
       end if
     end do
+    !
+    ! -- update flags
+    if (this%ndelaybeds > 0) then
+      this%idelayflag = 0 
+    end if
     !
     ! -- set gwfiss0
     this%gwfiss0 = this%gwfiss
@@ -5265,6 +5284,10 @@ contains
     real(DP) :: bot
     real(DP) :: snold
     real(DP) :: snnew
+    real(DP) :: hdcell
+    real(DP) :: hdcellold
+    real(DP) :: dsnold
+    real(DP) :: dsnnew
     real(DP) :: f
     real(DP) :: fmult
     real(DP) :: dz
@@ -5305,12 +5328,17 @@ contains
       if (this%thick(ib) > DZERO) then
         do n = 1, this%ndelaycells
           fmult = DONE
+          hdcell = this%dbh(n, idelay)
+          hdcellold = this%dbh0(n, idelay)
           dz = this%dbdz(n, idelay)
           dz0 = this%dbdz0(n, idelay)
+          call this%csub_delay_calc_sat(node, idelay, n, hdcell, hdcellold,      &
+                                        dsnnew, dsnold)
           wc2 = fmult * f * dz * this%dbtheta(n, idelay)
           wc1 = fmult * f * dz0 * this%dbtheta0(n, idelay)
-          rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
-                       wc2 * snnew * this%dbh(n, idelay))
+          !rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
+          !             wc2 * snnew * this%dbh(n, idelay))
+          rhs = rhs - (wc1 * dsnold * hdcellold - wc2 * dsnnew * hdcell)
         end do
         rhs = rhs * this%rnb(ib) * snnew
       end if
@@ -6180,6 +6208,47 @@ contains
     ! -- return
     return
   end subroutine csub_delay_solve
+ 
+   
+  subroutine csub_delay_calc_sat(this, node, idelay, n, hcell, hcellold,         &
+                                 snnew, snold)
+! ******************************************************************************
+! csub_delay_calc_sat -- Calculate current and previous cell saturation for 
+!                        a delay cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: node
+    integer(I4B), intent(in) :: idelay
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: snnew
+    real(DP), intent(inout) :: snold
+    ! -- local variables
+    real(DP) :: dzhalf
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    if (this%stoiconv(node) /= 0) then
+      dzhalf = DHALF * this%dbdzini(n, idelay)
+      top = this%dbz(n, idelay) + dzhalf
+      bot = this%dbz(n, idelay) - dzhalf
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+    else
+      snnew = DONE
+      snold = DONE
+    end if
+    if (this%ieslag /= 0) then
+      snold = snnew
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_delay_calc_sat  
  
   subroutine csub_delay_calc_dstor(this, ib, hcell, stoe, stoi)
 ! ******************************************************************************
