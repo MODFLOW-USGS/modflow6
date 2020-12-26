@@ -23,9 +23,8 @@ module UzfModule
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
-  use SimVariablesModule, only: errmsg, warnmsg
-  use SimModule, only: count_errors, store_error, ustop, store_error_unit,      &
-                       store_warning
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
 
@@ -2220,13 +2219,12 @@ contains
             'SURFDEP for uzf cell', i,                                           &
             'must be greater than 0 (specified value is', surfdep, ').'
           call store_error(errmsg)
-        endif
-        if(surfdep >= this%GWFTOP(i) - this%GWFBOT(i)) then
-          write(errmsg,'(a,1x,i0,1x,a)')                                        &
+        end if
+        if(surfdep >= this%GWFTOP(ic) - this%GWFBOT(ic)) then
+          write(errmsg,'(a,1x,i0,1x,a)')                                         &
             'SURFDEP for uzf cell', i,                                           &
             'cannot be greater than the cell thickness.'
           call store_error(errmsg)
-          surfdep = 0.2 * (this%GWFTOP(i) - this%GWFBOT(i))
         end if
         !
         ! -- vks
