@@ -2220,6 +2220,12 @@ contains
             'must be greater than 0 (specified value is', surfdep, ').'
           call store_error(errmsg)
         end if
+        if(surfdep >= this%GWFTOP(ic) - this%GWFBOT(ic)) then
+          write(errmsg,'(a,1x,i0,1x,a)')                                         &
+            'SURFDEP for uzf cell', i,                                           &
+            'cannot be greater than the cell thickness.'
+          call store_error(errmsg)
+        end if
         !
         ! -- vks
         vks = this%parser%GetDouble()
