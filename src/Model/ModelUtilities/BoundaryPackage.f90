@@ -992,8 +992,8 @@ module BndModule
     !
     ! -- allocate integer variables
     call mem_allocate(this%ibcnum, 'IBCNUM', this%memoryPath)
-    call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath)
-    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
+    call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath, MEMREADWRITE)
     call mem_allocate(this%ncolbnd, 'NCOLBND', this%memoryPath)
     call mem_allocate(this%iscloc, 'ISCLOC', this%memoryPath)
     call mem_allocate(this%naux, 'NAUX', this%memoryPath)
@@ -1062,8 +1062,11 @@ module BndModule
     if(present(nodelist)) then
       this%nodelist => nodelist
     else
-      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST', this%memoryPath)
-      this%nodelist = 0
+      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST',                &
+                        this%memoryPath, MEMREADWRITE)
+      do j = 1, this%maxbound
+        this%nodelist(j) = 0
+      end do
     endif
     !
     ! -- noupdateauxvar (allows an external caller to stop auxvars from being

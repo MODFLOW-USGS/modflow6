@@ -30,7 +30,7 @@ for s in ex:
 constantcv = [True for idx in range(len(exdirs))]
 
 cmppth = 'mfnwt'
-compare = [True, True, True, True, False, False, False]
+compare = [True, True, True, False, False, False, False]
 tops = [0., 0., 150., 0., 0., 150., 150.]
 ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
