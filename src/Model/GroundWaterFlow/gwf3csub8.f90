@@ -12,7 +12,9 @@ module GwfCsubModule
   use MemoryHelperModule, only: create_mem_path
   use GenericUtilitiesModule, only: is_same, sim_message
   use SmoothingModule,        only: sQuadraticSaturation,                       &
-                                    sQuadraticSaturationDerivative
+                                    sQuadraticSaturationDerivative,             &
+                                    sQuadratic0sp,                              &
+                                    sQuadratic0spDerivative
   use NumericalPackageModule, only: NumericalPackageType
   use ObserveModule,        only: ObserveType
   use ObsModule,            only: ObsType, obs_cr
@@ -3347,11 +3349,12 @@ contains
     real(DP) :: thick
     real(DP) :: va_scale
     real(DP) :: hcell
+    real(DP) :: hbar
     real(DP) :: gs_conn
     real(DP) :: area_node
     real(DP) :: area_conn
     real(DP) :: es
-    real(DP) :: hs
+    real(DP) :: phead
     real(DP) :: hwva
     real(DP) :: sadd
 
@@ -3374,10 +3377,15 @@ contains
         else
           hcell = bot
         end if
+        !
+        ! -- calculate corrected head (hbar)
+        hbar = sQuadratic0sp(hcell, bot, this%satomega)
+        !
+        ! -- geostatic stress calculation
         if (hcell < bot) then
           gs = thick * this%sgm(node)
         else if (hcell < top) then
-          gs = (top - hcell) * this%sgm(node) + (hcell - bot) * this%sgs(node)
+          gs = (top - hbar) * this%sgm(node) + (hbar - bot) * this%sgs(node)
         else
           gs = thick * this%sgs(node)
         end if
@@ -3447,16 +3455,18 @@ contains
       bot = this%dis%bot(node)
       if (this%ibound(node) /= 0) then
         hcell = hnew(node)
-        if (hcell < bot) then
-          hcell = bot
-        end if
       else
         hcell = bot
       end if
-      hs = hcell - bot
+      !
+      ! -- calculate corrected head (hbar)
+      hbar = sQuadratic0sp(hcell, bot, this%satomega)
+      !
+      ! -- calculate pressure head
+      phead = hbar - bot
       !
       ! -- calculate effective stress
-      es = this%cg_gs(node) - hs
+      es = this%cg_gs(node) - phead
       this%cg_es(node) = es
     end do
     !
@@ -5901,10 +5911,11 @@ contains
     real(DP) :: sgm
     real(DP) :: sgs
     real(DP) :: h
+    real(DP) :: hbar
     real(DP) :: z
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: u
+    real(DP) :: phead
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -5916,6 +5927,9 @@ contains
     dzhalf = DHALF * this%dbdzini(1, idelay)
     top = this%dbz(1, idelay) + dzhalf
     !
+    ! -- calculate corrected head (hbar)
+    hbar = sQuadratic0sp(hcell, botaq, this%satomega)
+    !
     ! -- calculate the geostatic load in the cell at the top of the interbed.
     sgm = this%sgm(node)
     sgs = this%sgs(node)
@@ -5924,7 +5938,7 @@ contains
     else if (hcell < botaq) then
       sadd = (top - botaq) * sgm
     else
-      sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
+      sadd = ((top - hbar) * sgm) + ((hbar - botaq) * sgs)
     end if
     sigma = sigma - sadd
     !
@@ -5936,17 +5950,22 @@ contains
       z = this%dbz(n, idelay)
       top = z + dzhalf
       bot = z - dzhalf
+      !
+      ! -- calculate corrected head (hbar)
+      hbar = sQuadratic0sp(h, bot, this%satomega)
+      !
+      ! -- geostatic stress calculation
       if (h > top) then
           sadd = (top - bot) * sgs
       else if (h < bot) then
           sadd = (top - bot) * sgm
       else
-          sadd = ((top - h) * sgm) + ((h - bot) * sgs)
+          sadd = ((top - hbar) * sgm) + ((hbar - bot) * sgs)
       end if
       sigma = sigma + sadd
-      u = h - bot
+      phead = hbar - bot
       this%dbgeo(n, idelay) = sigma
-      this%dbes(n, idelay) = sigma - u
+      this%dbes(n, idelay) = sigma - phead
     end do
     !
     ! -- return
