@@ -86,6 +86,8 @@ module GwfCsubModule
     integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
     integer(I4B), pointer :: ndelaycells => null()
     integer(I4B), pointer :: ndelaybeds => null()
+    integer(I4B), pointer :: idelayflag => null()                                !< flag indicating head in non-covertible below cell top 
+    integer(I4B), pointer :: ndelaycount => null()                               !< delay counter for non-covertible heads below cell top 
     integer(I4B), pointer :: initialized => null()
     integer(I4B), pointer :: ieslag => null()
     integer(I4B), pointer :: ipch => null()
@@ -164,10 +166,10 @@ module GwfCsubModule
     !
     ! -- delay interbed arrays
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
-    real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
-    real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
-    real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !delay bed cell z relative to znode
-    real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
+    real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !< delay bed maximum head change
+    real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !< delay bed cell z
+    real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !< delay bed cell z relative to znode
+    real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !< delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
     real(DP), dimension(:,:), pointer, contiguous :: dbgeo => null()             !delay bed cell geostatic stress
     real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !delay bed cell effective stress
@@ -258,22 +260,24 @@ module GwfCsubModule
     ! -- interbed methods
     procedure, private :: csub_interbed_fc
     procedure, private :: csub_interbed_fn
-    procedure, private :: csub_interbed_wcomp_fc
-    procedure, private :: csub_interbed_wcomp_fn
     !
     ! -- no-delay interbed methods
     procedure, private :: csub_nodelay_update
     procedure, private :: csub_nodelay_fc
+    procedure, private :: csub_nodelay_wcomp_fc
+    procedure, private :: csub_nodelay_wcomp_fn
     procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
     procedure, private :: csub_delay_chk
+    procedure, private :: csub_delay_calc_sat
     procedure, private :: csub_delay_calc_zcell
     procedure, private :: csub_delay_calc_stress
     procedure, private :: csub_delay_calc_ssksske
     procedure, private :: csub_delay_calc_comp
     procedure, private :: csub_delay_update
     procedure, private :: csub_delay_calc_dstor
+    procedure, private :: csub_delay_calc_wcomp
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
@@ -364,6 +368,8 @@ contains
     call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%memoryPath)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%memoryPath)
+    call mem_allocate(this%idelayflag, 'IDELAYFLAG', this%memoryPath)
+    call mem_allocate(this%ndelaycount, 'NDELAYCOUNT', this%memoryPath)
     call mem_allocate(this%initialized, 'INITIALIZED', this%memoryPath)
     call mem_allocate(this%ieslag, 'IESLAG', this%memoryPath)
     call mem_allocate(this%ipch, 'IPCH', this%memoryPath)
@@ -407,6 +413,8 @@ contains
     this%iauxmultcol = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
+    this%idelayflag = 0
+    this%ndelaycount = 0
     this%initialized = 0
     this%ieslag = 0
     this%ipch = 0
@@ -493,6 +501,7 @@ contains
     real(DP) :: snold
     real(DP) :: stoe
     real(DP) :: stoi
+    real(DP) :: dwc
     real(DP) :: tled
     real(DP) :: hcof
     real(DP) :: rhs
@@ -591,6 +600,10 @@ contains
         ! -- calculate the change in storage
         call this%csub_delay_calc_dstor(ib, hcell, stoe, stoi)
         v1 = (stoe + stoi) * area * this%rnb(ib) * snnew * tled
+        !
+        ! -- add water compressibility to storage term
+        call this%csub_delay_calc_wcomp(ib, dwc)
+        v1 = v1 + dwc * area * this%rnb(ib) * snnew
         !
         ! -- calculate the flow between the interbed and the cell
         call this%csub_delay_fc(ib, hcof, rhs)
@@ -946,9 +959,18 @@ contains
         end if
         !
         ! -- interbed water compressibility
-        call this%csub_interbed_wcomp_fc(ib, node, tledm, area,                 &
-                                         hnew(node), hold(node), hcof, rhs)
-        rratewc = hcof * hnew(node) - rhs
+        !
+        ! -- no-delay interbed
+        if (idelay == 0) then
+          call this%csub_nodelay_wcomp_fc(ib, node, tledm, area,                 &
+                                          hnew(node), hold(node), hcof, rhs)
+          rratewc = hcof * hnew(node) - rhs
+        !
+        ! -- delay interbed
+        else
+          call this%csub_delay_calc_wcomp(ib, q)
+          rratewc = q * area * this%rnb(ib) * snnew
+        end if
         this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
         !
         ! -- water compressibility budget terms
@@ -1677,6 +1699,11 @@ contains
         call this%outputtab%add_term(strain)
         call this%outputtab%add_term(pctcomp)
       end do
+    end if
+    !
+    ! -- write warning message
+    if (this%ndelaycount > 0) then
+
     end if
     !
     ! -- deallocate temporary storage
@@ -2925,6 +2952,8 @@ contains
     call mem_deallocate(this%iauxmultcol)
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
+    call mem_deallocate(this%idelayflag)
+    call mem_deallocate(this%ndelaycount)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%ieslag)
     call mem_deallocate(this%ipch)
@@ -3963,6 +3992,11 @@ contains
       end if
     end do
     !
+    ! -- update flags
+    if (this%ndelaybeds > 0) then
+      this%idelayflag = 0 
+    end if
+    !
     ! -- set gwfiss0
     this%gwfiss0 = this%gwfiss
     !
@@ -4439,7 +4473,7 @@ contains
         ! -- calculate coarse-grained water compressibility 
         !    storage terms
         if (this%brg /= DZERO) then
-          call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
+          call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node),   &
                                      hcof, rhsterm)
           !
           ! -- add water compression storage terms to amat and rhs for 
@@ -4474,18 +4508,19 @@ contains
         !    groundwater flow equation
         do ib = 1, this%ninterbeds
           node = this%nodelist(ib)
+          idelay = this%idelay(ib)
           idiag = this%dis%con%ia(node)
           area = this%dis%get_area(node)
-          call this%csub_interbed_fc(ib, node, area, hnew(node), hold(node),    &
+          call this%csub_interbed_fc(ib, node, area, hnew(node), hold(node),     &
                                      hcof, rhsterm)
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          if (this%brg /= DZERO) then
-            call this%csub_interbed_wcomp_fc(ib, node, tled, area,              &
-                                             hnew(node), hold(node),            &
-                                             hcof, rhsterm)
+          if (this%brg /= DZERO .and. idelay == 0) then
+            call this%csub_nodelay_wcomp_fc(ib, node, tled, area,                &
+                                            hnew(node), hold(node),              &
+                                            hcof, rhsterm)
             !
             ! -- add water compression storage terms to amat and rhs for interbed
             amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
@@ -4526,6 +4561,7 @@ contains
     integer(I4B), intent(in),dimension(:) :: idxglo
     real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
+    integer(I4B) :: idelay
     integer(I4B) :: node
     integer(I4B) :: idiag
     integer(I4B) :: ib
@@ -4575,6 +4611,7 @@ contains
         ! -- calculate the interbed newton terms for the 
         !    groundwater flow equation
         do ib = 1, this%ninterbeds
+          idelay = this%idelay(ib)
           node = this%nodelist(ib)
           !
           ! -- skip inactive cells
@@ -4583,7 +4620,7 @@ contains
           ! -- calculate interbed newton terms
           idiag = this%dis%con%ia(node)
           area = this%dis%get_area(node)
-          call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),  &
+          call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),     &
                                       hcof, rhsterm)
           !
           ! -- add interbed newton terms to amat and rhs
@@ -4591,10 +4628,10 @@ contains
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          if (this%brg /= DZERO) then
-            call this%csub_interbed_wcomp_fn(ib, node, tled, area,              &
-                                             hnew(node), hold(node),            &
-                                             hcof, rhsterm)
+          if (this%brg /= DZERO .and. idelay == 0) then
+            call this%csub_nodelay_wcomp_fn(ib, node, tled, area,                &
+                                            hnew(node), hold(node),              &
+                                            hcof, rhsterm)
             !
             ! -- add interbed water compression newton terms to amat and rhs
             amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
@@ -5143,8 +5180,8 @@ contains
     real(DP) :: tthk0
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: wc1
-    real(DP) :: wc2
+    real(DP) :: wc
+    real(DP) :: wc0
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -5161,14 +5198,14 @@ contains
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
-    wc1 = this%brg * area * tthk0 * this%cg_theta0(node) * tled
-    wc2 = this%brg * area * tthk * this%cg_theta(node) * tled
+    wc0 = this%brg * area * tthk0 * this%cg_theta0(node) * tled
+    wc = this%brg * area * tthk * this%cg_theta(node) * tled
     !
     ! -- calculate hcof term
-    hcof = -wc2 * snnew
+    hcof = -wc * snnew
     !
     ! -- calculate rhs term
-    rhs = -wc1 * snold * hcellold
+    rhs = -wc0 * snold * hcellold
     !
     ! -- return
     return
@@ -5198,8 +5235,8 @@ contains
     real(DP) :: tthk0
     real(DP) :: satderv
     real(DP) :: f
-    real(DP) :: wc1
-    real(DP) :: wc2
+    real(DP) :: wc
+    real(DP) :: wc0
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -5218,18 +5255,16 @@ contains
     f = this%brg * area * tled
     !
     ! -- water compressibility coefficient
-    !wc2 = this%brg * area * tthk * this%cg_theta(node) * tled
-    wc2 = f * tthk * this%cg_theta(node)
+    wc = f * tthk * this%cg_theta(node)
     !
     ! -- calculate hcof term
-    hcof = -wc2 * hcell * satderv
+    hcof = -wc * hcell * satderv
     !
     ! -- Add additional term if using lagged effective stress
     if (this%ieslag /= 0) then
       tthk0 = this%cg_thick0(node)
-      !wc1 = this%brg * area * tthk0 * this%cg_theta0(node) * tled
-      wc1 = f * tthk0 * this%cg_theta0(node)
-      hcof = hcof + wc1 * hcellold * satderv
+      wc0 = f * tthk0 * this%cg_theta0(node)
+      hcof = hcof + wc * hcellold * satderv
     end if
     !
     ! -- calculate rhs term
@@ -5240,11 +5275,11 @@ contains
   end subroutine csub_cg_wcomp_fn
 
   
-  subroutine csub_interbed_wcomp_fc(this, ib, node, tled, area,                 &
-                                      hcell, hcellold, hcof, rhs)
+  subroutine csub_nodelay_wcomp_fc(this, ib, node, tled, area,                   &
+                                   hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_interbed_wcomp_fc -- Calculate water compressibility term for an 
-!                           interbed.
+! csub_nodelay_wcomp_fc -- Calculate water compressibility term for an 
+!                          interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -5259,18 +5294,13 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
-    integer(I4B) :: n
-    integer(I4B) :: idelay
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: f
-    real(DP) :: fmult
-    real(DP) :: dz
-    real(DP) :: dz0
-    real(DP) :: wc1
-    real(DP) :: wc2
+    real(DP) :: wc
+    real(DP) :: wc0
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -5285,47 +5315,22 @@ contains
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     !
-    idelay = this%idelay(ib)
     f = this%brg * area * tled
-    !
-    ! -- no-delay interbeds
-    if (idelay == 0) then
-      wc1 = f * this%theta0(ib) * this%thick0(ib)
-      wc2 = f * this%theta(ib) * this%thick(ib)
-      hcof = -wc2 * snnew
-      rhs = -wc1 * snold * hcellold
-    !
-    ! -- delay interbeds
-    else
-      !
-      ! -- calculate cell saturation
-      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-      !
-      ! -- calculate contribution for each delay interbed cell
-      if (this%thick(ib) > DZERO) then
-        do n = 1, this%ndelaycells
-          fmult = DONE
-          dz = this%dbdz(n, idelay)
-          dz0 = this%dbdz0(n, idelay)
-          wc2 = fmult * f * dz * this%dbtheta(n, idelay)
-          wc1 = fmult * f * dz0 * this%dbtheta0(n, idelay)
-          rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
-                       wc2 * snnew * this%dbh(n, idelay))
-        end do
-        rhs = rhs * this%rnb(ib) * snnew
-      end if
-    end if
+    wc0 = f * this%theta0(ib) * this%thick0(ib)
+    wc = f * this%theta(ib) * this%thick(ib)
+    hcof = -wc * snnew
+    rhs = -wc0 * snold * hcellold
     !
     ! -- return
     return
-  end subroutine csub_interbed_wcomp_fc
+  end subroutine csub_nodelay_wcomp_fc
 
   
-  subroutine csub_interbed_wcomp_fn(this, ib, node, tled, area,                 &
-                                    hcell, hcellold, hcof, rhs)
+  subroutine csub_nodelay_wcomp_fn(this, ib, node, tled, area,                   &
+                                   hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_interbed_wcomp_fn -- Calculate water compressibility newton-raphson 
-!                           terms for an interbed.
+! csub_nodelay_wcomp_fn -- Calculate water compressibility newton-raphson 
+!                          terms for an interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -5340,12 +5345,11 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
-    integer(I4B) :: idelay
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: f
-    real(DP) :: wc1
-    real(DP) :: wc2
+    real(DP) :: wc
+    real(DP) :: wc0
     real(DP) :: satderv
 ! ------------------------------------------------------------------------------
 !
@@ -5358,38 +5362,29 @@ contains
     bot = this%dis%bot(node)
     !
     !
-    idelay = this%idelay(ib)
     f = this%brg * area * tled
     !
-    ! -- no-delay interbeds
-    if (idelay == 0) then
-      !
-      ! -- calculate saturation derivitive
-      satderv = this%csub_calc_sat_derivative(node, hcell)    
-      !
-      ! -- calculate the current water compressibility factor
-      wc2 = f * this%theta(ib) * this%thick(ib)
-      !
-      ! -- calculate derivative term
-      hcof = -wc2 * hcell * satderv
-      !
-      ! -- Add additional term if using lagged effective stress
-      if (this%ieslag /= 0) then
-        wc1 = f * this%theta0(ib) * this%thick0(ib)
-        hcof = hcof + wc1 * hcellold * satderv
-      end if
-      !
-      ! -- set rhs
-      rhs = hcof * hcell
+    ! -- calculate saturation derivitive
+    satderv = this%csub_calc_sat_derivative(node, hcell)    
     !
-    ! -- delay interbeds
-    else
-      ! -- delay beds are not head dependent
+    ! -- calculate the current water compressibility factor
+    wc = f * this%theta(ib) * this%thick(ib)
+    !
+    ! -- calculate derivative term
+    hcof = -wc * hcell * satderv
+    !
+    ! -- Add additional term if using lagged effective stress
+    if (this%ieslag /= 0) then
+      wc0 = f * this%theta0(ib) * this%thick0(ib)
+      hcof = hcof + wc0 * hcellold * satderv
     end if
+    !
+    ! -- set rhs
+    rhs = hcof * hcell
     !
     ! -- return
     return
-  end subroutine csub_interbed_wcomp_fn  
+  end subroutine csub_nodelay_wcomp_fn  
   
   function csub_calc_void(this, theta) result(void)
 ! ******************************************************************************
@@ -6055,18 +6050,27 @@ contains
     integer(I4B) :: node
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
-    real(DP) :: dz
+    real(DP) :: dzini
     real(DP) :: dzhalf
     real(DP) :: c
     real(DP) :: c2
     real(DP) :: c3
+    real(DP) :: tled
+    real(DP) :: f
     real(DP) :: fmult
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: z
     real(DP) :: ztop
     real(DP) :: zbot
+    real(DP) :: dz
+    real(DP) :: dz0
+    real(DP) :: dsn
+    real(DP) :: dsn0
+    real(DP) :: wc
+    real(DP) :: wc0
     real(DP) :: h
+    real(DP) :: h0
     real(DP) :: aii
     real(DP) :: r
 ! ------------------------------------------------------------------------------
@@ -6075,12 +6079,16 @@ contains
     idelay = this%idelay(ib)
     ielastic = this%ielastic(ib)
     node = this%nodelist(ib)
-    dz = this%dbdzini(1, idelay)
-    dzhalf = DHALF * dz
-    fmult = dz / delt
-    c = this%kv(ib) / dz
+    dzini = this%dbdzini(1, idelay)
+    dzhalf = DHALF * dzini
+    tled = DONE / delt
+    fmult = dzini * tled
+    c = this%kv(ib) / dzini
     c2 = DTWO * c
     c3 = DTHREE * c
+    !
+    ! -- water compressibility variable
+    f = this%brg * tled
     !
     !
     do n = 1, this%ndelaycells
@@ -6090,12 +6098,20 @@ contains
       ztop = z + dzhalf
       zbot = z - dzhalf
       h = this%dbh(n, idelay)
+      h0 = this%dbh0(n, idelay)
+      !
+      ! -- water compressibility terms
+      dz = this%dbdz(n, idelay)
+      dz0 = this%dbdz0(n, idelay)
+      call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+      wc = dsn * dz * f * this%dbtheta(n, idelay)
+      wc0 = dsn0 * dz0 * f * this%dbtheta0(n, idelay)
       !
       ! -- calculate  ssk and sske
       call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
       !
       ! -- calculate diagonal
-      aii = -ssk * fmult
+      aii = -ssk * fmult - wc
       !
       ! -- calculate right hand side
       if (ielastic /= 0) then
@@ -6107,6 +6123,9 @@ contains
             (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +      &
              sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
+      !
+      ! -- add water compressibility to the right hand side
+      r = r - wc0 * h0
       !
       ! -- add connection to the gwf cell
       if (n == 1 .or. n == this%ndelaycells) then
@@ -6180,6 +6199,47 @@ contains
     ! -- return
     return
   end subroutine csub_delay_solve
+ 
+   
+  subroutine csub_delay_calc_sat(this, node, idelay, n, hcell, hcellold,         &
+                                 snnew, snold)
+! ******************************************************************************
+! csub_delay_calc_sat -- Calculate current and previous cell saturation for 
+!                        a delay cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: node
+    integer(I4B), intent(in) :: idelay
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: snnew
+    real(DP), intent(inout) :: snold
+    ! -- local variables
+    real(DP) :: dzhalf
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    if (this%stoiconv(node) /= 0) then
+      dzhalf = DHALF * this%dbdzini(n, idelay)
+      top = this%dbz(n, idelay) + dzhalf
+      bot = this%dbz(n, idelay) - dzhalf
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+    else
+      snnew = DONE
+      snold = DONE
+    end if
+    if (this%ieslag /= 0) then
+      snold = snnew
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_delay_calc_sat  
  
   subroutine csub_delay_calc_dstor(this, ib, hcell, stoe, stoi)
 ! ******************************************************************************
@@ -6257,6 +6317,60 @@ contains
     ! -- return
     return
   end subroutine csub_delay_calc_dstor
+  
+  subroutine csub_delay_calc_wcomp(this, ib, dwc)
+! ******************************************************************************
+! csub_delay_calc_wcomp -- Calculate change in storage in a delay interbed
+!                          resulting from water compressibility.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
+    ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: ib
+    real(DP), intent(inout) :: dwc
+    ! -- local variables
+    integer(I4B) :: idelay
+    integer(I4B) :: node
+    integer(I4B) :: n
+    real(DP) :: tled
+    real(DP) :: h
+    real(DP) :: h0
+    real(DP) :: dz
+    real(DP) :: dz0
+    real(DP) :: dsn
+    real(DP) :: dsn0
+    real(DP) :: wc
+    real(DP) :: wc0
+    real(DP) :: v
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    dwc = DZERO
+    !
+    !
+    if (this%thickini(ib) > DZERO) then
+      idelay = this%idelay(ib)
+      node = this%nodelist(ib)
+      tled = DONE / delt
+      do n = 1, this%ndelaycells
+        h = this%dbh(n, idelay)
+        h0 = this%dbh0(n, idelay)
+        dz = this%dbdz(n, idelay)
+        dz0 = this%dbdz0(n, idelay)
+        call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+        wc = dz * this%brg * this%dbtheta(n, idelay)
+        wc0 = dz0 * this%brg * this%dbtheta0(n, idelay)
+        v = dsn0 * wc0 * h0 - dsn * wc * h
+        dwc = dwc + v * tled
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_delay_calc_wcomp
 
   subroutine csub_delay_calc_comp(this, ib, hcell, hcellold, comp, compi, compe)
 ! ******************************************************************************
