@@ -273,7 +273,7 @@ module GwfCsubModule
     ! -- delay interbed methods
     procedure, private :: csub_delay_chk
     procedure, private :: csub_delay_calc_sat
-    procedure, private :: csub_delay_calc_zcell
+    procedure, private :: csub_delay_init_zcell
     procedure, private :: csub_delay_calc_stress
     procedure, private :: csub_delay_calc_ssksske
     procedure, private :: csub_delay_calc_comp
@@ -2135,7 +2135,7 @@ contains
           end do
           ! 
           ! -- initialize elevation of delay bed cells
-          call this%csub_delay_calc_zcell(ib)
+          call this%csub_delay_init_zcell(ib)
 
         end do
         !
@@ -3611,6 +3611,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
+    real(DP) :: hbar
     real(DP) :: znode
     real(DP) :: snold
     real(DP) :: snnew
@@ -3634,6 +3635,9 @@ contains
     top = this%dis%top(node)
     thick = this%thickini(ib)
     !
+    ! -- calculate corrected head (hbar)
+    hbar = sQuadratic0sp(hcell, bot, this%satomega)
+    !
     ! -- set iconvert
     this%iconvert(ib) = 0
     !
@@ -3643,7 +3647,7 @@ contains
       f = DONE
       f0 = DONE
     else
-      znode = this%csub_calc_znode(top, bot, hcell)
+      znode = this%csub_calc_znode(top, bot, hbar)
       es = this%cg_es(node)
       es0 = this%cg_es0(node)
       theta = this%thetaini(ib)
@@ -4049,6 +4053,7 @@ contains
     real(DP) :: es
     real(DP) :: znode
     real(DP) :: hcell
+    real(DP) :: hbar
     real(DP) :: dzhalf
     real(DP) :: zbot
     real(DP) :: dbpcs
@@ -4155,8 +4160,11 @@ contains
           es = this%cg_es(node)
           hcell = hnew(node) 
           !
+          ! -- calculate corrected head (hbar)
+          hbar = sQuadratic0sp(hcell, bot, this%satomega)
+          !
           ! -- calculate znode and factor
-          znode = this%csub_calc_znode(top, bot, hcell)
+          znode = this%csub_calc_znode(top, bot, hbar)
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
@@ -4198,8 +4206,11 @@ contains
           es = this%cg_es(node)
           hcell = hnew(node)
           !
+          ! -- calculate corrected head (hbar)
+          hbar = sQuadratic0sp(hcell, bot, this%satomega)
+          !
           ! -- calculate zone and factor
-          znode = this%csub_calc_znode(top, bot, hcell)
+          znode = this%csub_calc_znode(top, bot, hbar)
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
@@ -5054,6 +5065,7 @@ contains
     ! -- local variables
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: hbar
     real(DP) :: znode
     real(DP) :: es
     real(DP) :: es0
@@ -5074,7 +5086,12 @@ contains
     else
       top = this%dis%top(n)
       bot = this%dis%bot(n)
-      znode = this%csub_calc_znode(top, bot, hcell)
+      !
+      ! -- calculate corrected head (hbar)
+      hbar = sQuadratic0sp(hcell, bot, this%satomega)
+      !
+      ! -- calculate znode
+      znode = this%csub_calc_znode(top, bot, hbar)
       !
       ! -- calculate effective stress and theta
       es = this%cg_es(n)
@@ -5793,9 +5810,9 @@ contains
   end subroutine csub_delay_sln
 
 
-  subroutine csub_delay_calc_zcell(this, ib)
+  subroutine csub_delay_init_zcell(this, ib)
 ! ******************************************************************************
-! csub_delay_calc_zcell -- Calculate z for delay interbeds cells.
+! csub_delay_init_zcell -- Calculate initial znode for delay interbeds cells.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -5808,6 +5825,7 @@ contains
     integer(I4B) :: idelay
     real(DP) :: bot
     real(DP) :: top
+    real(DP) :: hbar
     real(DP) :: znode
     real(DP) :: dzz
     real(DP) :: z
@@ -5822,10 +5840,11 @@ contains
     b = this%thickini(ib)
     bot = this%dis%bot(node)
     top = bot + b
+    hbar = top
     !
     ! -- calculate znode based on assumption that the delay bed bottom 
     !    is equal to the cell bottom
-    znode = this%csub_calc_znode(top, bot, top)
+    znode = this%csub_calc_znode(top, bot, hbar)
     dz = DHALF * this%dbdzini(1, idelay)
     dzz = DHALF * b
     z = znode + dzz
@@ -5850,7 +5869,7 @@ contains
     ! -- return
     return
 
-  end subroutine csub_delay_calc_zcell
+  end subroutine csub_delay_init_zcell
 
   subroutine csub_delay_chk(this, ib, hcell)
 ! ******************************************************************************
@@ -5990,9 +6009,16 @@ contains
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
     integer(I4B) :: node
-    real(DP) :: z1
-    real(DP) :: z0
+    real(DP) :: topcell
+    real(DP) :: botcell
+    real(DP) :: hbarcell
     real(DP) :: zcell
+    real(DP) :: zcenter
+    real(DP) :: dzhalf
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: h
+    real(DP) :: hbar
     real(DP) :: znode
     real(DP) :: zbot
     real(DP) :: es
@@ -6018,16 +6044,34 @@ contains
       node = this%nodelist(ib)
       theta = this%dbthetaini(n, idelay)
       !
-      ! -- set top and bottom of layer and elevation of
-      !    node relative to the bottom of the cell
-      z1 = this%dis%top(node)
-      z0 = this%dis%bot(node)
-      zbot = this%dbz(n, idelay) - DHALF * this%dbdzini(1, idelay)
+      ! -- set top and bottom of layer
+      topcell = this%dis%top(node)
+      botcell = this%dis%bot(node)
+      !
+      ! -- calculate corrected head for the cell (hbarcell)
+      hbarcell = sQuadratic0sp(hcell, botcell, this%satomega)
       !
       ! -- set location of delay node relative to the center
       !    of the cell based on current head
-      zcell = this%csub_calc_znode(z1, z0, hcell)
-      znode = zcell + this%dbrelz(n, idelay)
+      zcell = this%csub_calc_znode(topcell, botcell, hbarcell)
+      !
+      ! -- set variables for delay interbed zcell calulations
+      zcenter = zcell + this%dbrelz(n, idelay)
+      dzhalf = DHALF * this%dbdzini(1, idelay)
+      top = zcenter + dzhalf
+      bot = zcenter - dzhalf
+      h = this%dbh(n, idelay)
+      !
+      ! -- calculate corrected head for the delay interbed cell (hbar)
+      hbar = sQuadratic0sp(h, bot, this%satomega)
+      !
+      ! -- calculate the center of the saturated portion of the 
+      !    delay interbed cell
+      znode = this%csub_calc_znode(top, bot, hbar)
+      !
+      ! -- set reference point for bottom of delay interbed cell that is used to
+      !    scale the effective stress at the bottom of the delay interbed cell
+      zbot = this%dbz(n, idelay) - dzhalf
       !
       ! -- set the effective stress
       es = this%dbes(n, idelay)
