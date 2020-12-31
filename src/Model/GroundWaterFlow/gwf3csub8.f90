@@ -3382,9 +3382,7 @@ contains
         hbar = sQuadratic0sp(hcell, bot, this%satomega)
         !
         ! -- geostatic stress calculation
-        if (hcell < bot) then
-          gs = thick * this%sgm(node)
-        else if (hcell < top) then
+        if (hcell < top) then
           gs = (top - hbar) * this%sgm(node) + (hbar - bot) * this%sgs(node)
         else
           gs = thick * this%sgs(node)
@@ -3494,7 +3492,7 @@ contains
     real(DP) :: bot
     real(DP) :: hcell
     real(DP) :: es
-    real(DP) :: u
+    real(DP) :: phead
 
 ! ------------------------------------------------------------------------------
     !
@@ -3510,11 +3508,11 @@ contains
       bot = this%dis%bot(node)
       gs = this%cg_gs(node)
       es = this%cg_es(node)
-      u = DZERO
+      phead = DZERO
       if (this%ibound(node) /= 0) then
-        u = gs - es
+        phead = gs - es
       end if
-      hcell = u + bot
+      hcell = phead + bot
       if (this%lhead_based .EQV. .FALSE.) then
         if (es < DEM6) then
           ierr = ierr + 1
@@ -4156,6 +4154,8 @@ contains
           void = this%csub_calc_void(this%cg_theta(node))
           es = this%cg_es(node)
           hcell = hnew(node) 
+          !
+          ! -- calculate znode and factor
           znode = this%csub_calc_znode(top, bot, hcell)
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
@@ -4197,6 +4197,8 @@ contains
           void = this%csub_calc_void(this%theta(ib))
           es = this%cg_es(node)
           hcell = hnew(node)
+          !
+          ! -- calculate zone and factor
           znode = this%csub_calc_znode(top, bot, hcell)
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
@@ -5073,6 +5075,8 @@ contains
       top = this%dis%top(n)
       bot = this%dis%bot(n)
       znode = this%csub_calc_znode(top, bot, hcell)
+      !
+      ! -- calculate effective stress and theta
       es = this%cg_es(n)
       es0 = this%cg_es0(n)
       theta = this%cg_thetaini(n)
@@ -5933,12 +5937,10 @@ contains
     ! -- calculate the geostatic load in the cell at the top of the interbed.
     sgm = this%sgm(node)
     sgs = this%sgs(node)
-    if (hcell > top) then
-      sadd = (top - botaq) * sgs
-    else if (hcell < botaq) then
-      sadd = (top - botaq) * sgm
-    else
+    if (hcell < top) then
       sadd = ((top - hbar) * sgm) + ((hbar - botaq) * sgs)
+    else
+      sadd = (top - botaq) * sgs
     end if
     sigma = sigma - sadd
     !
@@ -5955,12 +5957,10 @@ contains
       hbar = sQuadratic0sp(h, bot, this%satomega)
       !
       ! -- geostatic stress calculation
-      if (h > top) then
-          sadd = (top - bot) * sgs
-      else if (h < bot) then
-          sadd = (top - bot) * sgm
-      else
+      if (h < top) then
           sadd = ((top - hbar) * sgm) + ((hbar - bot) * sgs)
+      else
+          sadd = (top - bot) * sgs
       end if
       sigma = sigma + sadd
       phead = hbar - bot
