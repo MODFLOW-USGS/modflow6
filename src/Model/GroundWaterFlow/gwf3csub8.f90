@@ -5482,34 +5482,33 @@ contains
   end function csub_calc_interbed_thickness
   
   
-  function csub_calc_znode(this, z1, z0, z) result(znode)
+  function csub_calc_znode(this, top, bottom, zbar) result(znode)
 ! ******************************************************************************
 ! csub_calc_znode -- Calculate elevation of the node between the specified 
-!                    elevation z and the bottom elevation z0. If z is greater 
-!                    the top elevation z1, the node elevation is halfway between
-!                    the top (z1) and bottom (z0) elevations. if z is less than
-!                    the bottom elevation (z0) the node elevation is set to z0.
+!                    corrected elevation zbar and the bottom elevation. If zbar
+!                    is greater than the top elevation, the node elevation is 
+!                    halfway between the top and bottom elevations. The 
+!                    corrected elevation (zbar) is always greater than or 
+!                    equal to bottom
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
-    real(DP), intent(in) :: z1
-    real(DP), intent(in) :: z0
-    real(DP), intent(in) :: z
+    real(DP), intent(in) :: top
+    real(DP), intent(in) :: bottom
+    real(DP), intent(in) :: zbar
     ! -- local variables
     real(DP) :: znode
     real(DP) :: v
 ! ------------------------------------------------------------------------------
-    if (z > z1) then
-      v = z1
-    else if (z < z0) then
-      v = z0
+    if (zbar > top) then
+      v = top
     else
-      v = z
+      v = zbar
     end if
-    znode = (v + z0) * DHALF
+    znode = DHALF * (v + bottom)
     !
     ! -- return
     return
