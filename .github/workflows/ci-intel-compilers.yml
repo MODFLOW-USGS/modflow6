@@ -1,0 +1,163 @@
+# Parts of configuration file are based on the examples in this repository:
+# https://github.com/oneapi-src/oneapi-ci
+#
+# Which have the following copyright:
+# SPDX-FileCopyrightText: 2020 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
+name: MODFLOW 6 CI with gfortran and ifort
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+env:
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17427/l_HPCKit_p_2021.1.0.2684_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17398/m_HPCKit_p_2021.1.0.2681_offline.dmg
+  WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
+  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
+  MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
+
+jobs:
+  test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2.3.4
+  
+    - name: setup-conda
+      uses: s-weigand/setup-conda@v1.0.5
+      with:
+        update-conda: true
+        miniconda-version: "latest"
+  
+    - name: cache install ifort on windows
+      if: runner.os == "windows-latest"
+      id: cache-install
+      uses: actions/cache@v2
+      with:
+        path: C:\Program Files (x86)\Intel\oneAPI\compiler
+        key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/scripts/cache_exclude_windows.sh') }}
+        
+    - name: install ifort on windows
+      if: runner.os == "windows-latest" && steps.cache-install.outputs.cache-hit != 'true'
+      run: .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
+
+    - name: cache install ifort on linux
+      if: runner.os == "ubuntu-18.04"
+      id: cache-install
+      uses: actions/cache@v2
+      with:
+        path: |
+          /opt/intel/oneapi/compiler
+        key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/scripts/cache_exclude_linux.sh') }}
+
+    - name: install ifort on linux
+      if: runner.os == "ubuntu-18.04" && steps.cache-install.outputs.cache-hit != 'true'
+      run: .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB 
+
+    - name: cache install ifort on macos
+      if: runner.os == "macos-latest"
+      id: cache-install
+      uses: actions/cache@v2
+      with:
+        path: /opt/intel/oneapi
+        key: install-${{ env.MACOS_HPCKIT_URL }}-${{ env.MACOS_FORTRAN_COMPONENTS }}
+
+    - name: install ifort on macos
+      if: runner.os == "macos-latest" && steps.cache-install.outputs.cache-hit != 'true'
+      run: .github/intel-scripts/install_macos.sh $MACOS_HPCKIT_URL $MACOS_FORTRAN_COMPONENTS   
+
+    - name: Install python packages
+      run: |
+        conda info
+        conda install pip requests appdirs nose
+        pip install nose-timer
+        # use pip to install numpy and matplotlib because of a windows issue
+        pip install numpy matplotlib
+        pip install https://github.com/modflowpy/flopy/zipball/develop
+        pip install https://github.com/modflowpy/pymake/zipball/master
+        pip install https://github.com/Deltares/xmipy/zipball/develop
+
+    - name: Print conda version
+      run: conda --version
+
+    - name: Print python package versions
+      shell: python
+      run: |
+        import sys
+        import nose
+        import numpy as np
+        import matplotlib as mpl
+        import flopy
+        import pymake
+        flopypth = flopy.__path__[0]
+        pymakepth = pymake.__path__[0]
+        print("python version:     {}".format(sys.version))
+        print("nosetest version:   {}".format(nose.__version__))
+        print("numpy version:      {}".format(np.__version__))
+        print("matplotlib version: {}".format(mpl.__version__))
+        print("flopy version:      {}".format(flopy.__version__))
+        print("pymake version:     {}".format(pymake.__version__))
+        print("")
+        print("flopy is installed in:  {}".format(flopypth))
+        print("pymake is installed in: {}".format(pymakepth))
+
+    - name: Set and print branch name
+      shell: bash
+      run: |
+        echo GITHUB_REF branch name ${GITHUB_REF##*/}
+        echo GITHUB_REF=${GITHUB_REF}
+        echo GITHUB_HEAD_REF=${GITHUB_HEAD_REF}
+        echo GITHUB_BASE_REF=${GITHUB_BASE_REF}
+        if [ -z ${GITHUB_BASE_REF+x} ]; then
+          export BRANCH=${GITHUB_REF##*/};
+        else export BRANCH=${GITHUB_HEAD_REF}; fi
+        echo BRANCH=${BRANCH}
+
+    - name: Get regression test files
+      shell: bash
+      run: |
+        echo $HOME
+        pwd
+        git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
+
+    - name: Check out the correct regression test branch
+      shell: bash
+      run: |
+        cd ../modflow6-testmodels
+        if git show-ref -q --heads ${BRANCH}; then
+          git checkout ${BRANCH}; echo switched to modflow6-testmodels branch ${BRANCH};
+        else echo using modflow6-testmodels branch master;  fi
+        git branch
+        cd ../modflow6
+        ls ../
+
+    - name: Update flopy MODFLOW 6 classes
+      run: |
+        cd autotest
+        python update_flopy.py
+        cd ..
+
+#    - name: Build and test applications
+#      run: |
+#        nosetests -v --with-id --with-timer -w ./autotest
+
+    - name: exclude unused files from cache on windows
+      if: runner.os == "windows-latest" && steps.cache-install.outputs.cache-hit != 'true'
+      shell: bash
+      run: .github/intel-scripts/cache_exclude_windows.sh
+  
+    - name: exclude unused files from cache on linux
+      if: steps.cache-install.outputs.cache-hit != 'true'
+      run: .github/intel-scripts/cache_exclude_linux.sh
