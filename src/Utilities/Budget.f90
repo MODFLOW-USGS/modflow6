@@ -20,7 +20,7 @@ module BudgetModule
 
   use KindModule, only: DP, I4B
   use SimModule,  only: store_error, count_errors, ustop
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, DZERO
   
   implicit none
   private
@@ -130,6 +130,35 @@ module BudgetModule
     ! -- Return
     return
   end subroutine budget_df
+  
+  subroutine value_to_string(val, string, big, small)
+! ******************************************************************************
+! value_to_string -- Convert the specified numeric value into a printable
+!                    string that looks good in the budget table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    real(DP), intent(in) :: val
+    character(len=*), intent(out) :: string
+    real(DP), intent(in) :: big
+    real(DP), intent(in) :: small
+! ------------------------------------------------------------------------------
+    !
+    if (val /= DZERO .and. (val >= big .or. val < small)) then
+      if (val >= 1.D100 .or. val <= 1.D-100) then
+        ! -- if exponent has 3 digits, then need to explicitly use the ES 
+        !    format to force writing the E character
+        write(string, '(es17.4E3)') val
+      else
+        write(string, '(1pe17.4)') val
+      end if
+    else
+      ! -- value is within range where number looks good with F format
+      write(string, '(f17.4)') val
+    end if
+    return
+  end subroutine value_to_string
 
   subroutine budget_ot(this, kstp, kper, iout)
 ! ******************************************************************************
@@ -139,18 +168,17 @@ module BudgetModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(BudgetType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    character(len=17) :: val1,val2
-    integer(I4B) :: msum1,l
-    real(DP) :: zero,two,hund,bigvl1,bigvl2,small,                     &
-                        totrin,totrot,totvin,totvot,diffr,adiffr,              &
-                        pdiffr,pdiffv,avgrat,diffv,adiffv,avgvol
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    character(len=17) :: val1, val2
+    integer(I4B) :: msum1, l
+    real(DP) :: two, hund, bigvl1, bigvl2, small,                              &
+                totrin, totrot, totvin, totvot, diffr, adiffr,                 &
+                pdiffr, pdiffv, avgrat, diffv, adiffv, avgvol
 ! ------------------------------------------------------------------------------
     !
     ! -- Set constants
-    zero = 0.d0
     two = 2.d0
     hund = 100.d0
     bigvl1 = 9.99999d11
@@ -158,32 +186,32 @@ module BudgetModule
     small = 0.1d0
     !
     ! -- Determine number of individual budget entries.
-    this%budperc = zero
-    msum1 = this%msum-1
+    this%budperc = DZERO
+    msum1 = this%msum - 1
     if(msum1 <= 0) return
     !
     ! -- Clear rate and volume accumulators.
-    totrin=zero
-    totrot=zero
-    totvin=zero
-    totvot=zero
+    totrin = DZERO
+    totrot = DZERO
+    totvin = DZERO
+    totvot = DZERO
     !
     ! -- Add rates and volumes (in and out) to accumulators.
     do l=1,msum1
-      totrin=totrin+this%vbvl(3,l)
-      totrot=totrot+this%vbvl(4,l)
-      totvin=totvin+this%vbvl(1,l)
-      totvot=totvot+this%vbvl(2,l)
+      totrin = totrin + this%vbvl(3,l)
+      totrot = totrot + this%vbvl(4,l)
+      totvin = totvin + this%vbvl(1,l)
+      totvot = totvot + this%vbvl(2,l)
     enddo
     !
     ! -- Print time step number and stress period number.
     if(this%labeled) then
-      write(iout,261) trim(adjustl(this%bdtype)), trim(adjustl(this%bdzone)),    &
+      write(iout,261) trim(adjustl(this%bdtype)), trim(adjustl(this%bdzone)),  &
                       kstp, kper
       write(iout,266) trim(adjustl(this%bdtype)), trim(adjustl(this%bddim)),   &
                       trim(adjustl(this%bddim)),this%labeltitle
     else
-      write(iout,260) trim(adjustl(this%bdtype)), trim(adjustl(this%bdzone)),    &
+      write(iout,260) trim(adjustl(this%bdtype)), trim(adjustl(this%bdzone)),  &
                       kstp, kper
       write(iout,265) trim(adjustl(this%bdtype)), trim(adjustl(this%bddim)),   &
                       trim(adjustl(this%bddim))
@@ -191,72 +219,32 @@ module BudgetModule
     !
     ! -- Print individual inflow rates and volumes and their totals.
     do l=1,msum1
-      if(this%vbvl(1,l).ne.zero .and. &
-              (this%vbvl(1,l).ge.bigvl1 .or. this%vbvl(1,l).lt.small)) then
-          write(val1,'(1pe17.4)') this%vbvl(1,l)
-      else
-          write(val1,'(f17.4)') this%vbvl(1,l)
-      end if
-      if(this%vbvl(3,l).ne.zero .and. &
-              (this%vbvl(3,l).ge.bigvl1 .or. this%vbvl(3,l).lt.small)) then
-          write(val2,'(1pe17.4)') this%vbvl(3,l)
-      else
-          write(val2,'(f17.4)') this%vbvl(3,l)
-      end if
+      call value_to_string(this%vbvl(1, l), val1, bigvl1, small)
+      call value_to_string(this%vbvl(3, l), val2, bigvl1, small)
       if(this%labeled) then
-        write(iout,276) this%vbnm(l),val1,this%vbnm(l),val2,this%rowlabel(l)
+        write(iout,276) this%vbnm(l), val1, this%vbnm(l), val2, this%rowlabel(l)
       else
-        write(iout,275) this%vbnm(l),val1,this%vbnm(l),val2
+        write(iout,275) this%vbnm(l), val1, this%vbnm(l), val2
       endif
     enddo
-    if(totvin.ne.zero .and. &
-           (totvin.ge.bigvl1 .or. totvin.lt.small)) then
-        write(val1,'(1pe17.4)') totvin
-    else
-        write(val1,'(f17.4)') totvin
-    end if
-    if(totrin.ne.zero .and. &
-           (totrin.ge.bigvl1 .or. totrin.lt.small)) then
-        write(val2,'(1pe17.4)') totrin
-    else
-        write(val2,'(f17.4)') totrin
-    end if
-    write(iout,286) val1,val2
+    call value_to_string(totvin, val1, bigvl1, small)
+    call value_to_string(totrin, val2, bigvl1, small)
+    write(iout,286) val1, val2
     !
     ! -- Print individual outflow rates and volumes and their totals.
     write(iout,287)
     do l=1,msum1
-      if(this%vbvl(2,l).ne.zero .and. &
-              (this%vbvl(2,l).ge.bigvl1 .or. this%vbvl(2,l).lt.small)) then
-          write(val1,'(1pe17.4)') this%vbvl(2,l)
-      else
-          write(val1,'(f17.4)') this%vbvl(2,l)
-      end if
-      if(this%vbvl(4,l).ne.zero .and. &
-              (this%vbvl(4,l).ge.bigvl1 .or. this%vbvl(4,l).lt.small)) then
-          write(val2,'(1pe17.4)') this%vbvl(4,l)
-      else
-          write(val2,'(f17.4)') this%vbvl(4,l)
-      end if
+      call value_to_string(this%vbvl(2,l), val1, bigvl1, small)
+      call value_to_string(this%vbvl(4,l), val2, bigvl1, small)
       if(this%labeled) then
-        write(iout,276) this%vbnm(l),val1,this%vbnm(l),val2,this%rowlabel(l)
+        write(iout,276) this%vbnm(l), val1, this%vbnm(l), val2, this%rowlabel(l)
       else
-        write(iout,275) this%vbnm(l),val1,this%vbnm(l),val2
+        write(iout,275) this%vbnm(l), val1, this%vbnm(l), val2
       endif
     enddo
-    if(totvot.ne.zero .and. &
-           (totvot.ge.bigvl1 .or. totvot.lt.small)) then
-        write(val1,'(1pe17.4)') totvot
-    else
-        write(val1,'(f17.4)') totvot
-    end if
-    if(totrot.ne.zero .and. &
-           (totrot.ge.bigvl1 .or. totrot.lt.small)) then
-        write(val2,'(1pe17.4)') totrot
-    else
-        write(val2,'(f17.4)') totrot
-    end if
-    write(iout,298) val1,val2
+    call value_to_string(totvot, val1, bigvl1, small)
+    call value_to_string(totrot, val2, bigvl1, small)
+    write(iout,298) val1, val2
     !
     ! -- Calculate the difference between inflow and outflow.
     !
@@ -265,36 +253,26 @@ module BudgetModule
     adiffr=abs(diffr)
     !
     ! -- Calculate percent difference between rate in and rate out.
-    pdiffr=zero
+    pdiffr = DZERO
     avgrat=(totrin+totrot)/two
-    if(avgrat.ne.zero) pdiffr=hund*diffr/avgrat
-    this%budperc=pdiffr
+    if(avgrat /= DZERO) pdiffr = hund * diffr / avgrat
+    this%budperc = pdiffr
     !
     ! -- Calculate difference between volume in and volume out.
-    diffv=totvin-totvot
-    adiffv=abs(diffv)
+    diffv = totvin - totvot
+    adiffv = abs(diffv)
     !
     ! -- Get percent difference between volume in and volume out.
-    pdiffv=zero
+    pdiffv = DZERO
     avgvol=(totvin+totvot)/two
-    if(avgvol.ne.zero) pdiffv=hund*diffv/avgvol
+    if(avgvol /= DZERO) pdiffv= hund * diffv / avgvol
     !
     ! -- Print differences and percent differences between input
     ! -- and output rates and volumes.
-    if(adiffv.ne.zero .and. &
-           (adiffv.ge.bigvl2 .or. adiffv.lt.small)) then
-        write(val1,'(1pe17.4)') diffv
-    else
-        write(val1,'(f17.4)') diffv
-    end if
-    if(adiffr.ne.zero .and. &
-           (adiffr.ge.bigvl2 .or. adiffr.lt.small)) then
-        write(val2,'(1pe17.4)') diffr
-    else
-        write(val2,'(f17.4)') diffr
-    end if
-    write(iout,299) val1,val2
-    write(iout,300) pdiffv,pdiffr
+    call value_to_string(adiffv, val1, bigvl2, small)
+    call value_to_string(adiffr, val2, bigvl2, small)
+    write(iout,299) val1, val2
+    write(iout,300) pdiffv, pdiffr
     !
     ! -- set written_once to .true.
     this%written_once = .true.
