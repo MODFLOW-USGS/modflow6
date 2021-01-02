@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: MODFLOW 6 CI with gfortran and ifort
+name: MODFLOW 6 CI with ifort
 
 on:
   push:
@@ -42,20 +42,20 @@ jobs:
         miniconda-version: "latest"
   
     - name: cache install ifort on windows
-      if: runner.os == "windows-latest"
-      id: cache-install
+      if: runner.os == 'Windows'
+      id: cache-install-windows
       uses: actions/cache@v2
       with:
         path: C:\Program Files (x86)\Intel\oneAPI\compiler
         key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/scripts/cache_exclude_windows.sh') }}
         
     - name: install ifort on windows
-      if: runner.os == "windows-latest" && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' && steps.cache-install.outputs.cache-hit != 'true'
       run: .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
 
     - name: cache install ifort on linux
-      if: runner.os == "ubuntu-18.04"
-      id: cache-install
+      if: runner.os == 'Linux'
+      id: cache-install-linux
       uses: actions/cache@v2
       with:
         path: |
@@ -63,19 +63,19 @@ jobs:
         key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/scripts/cache_exclude_linux.sh') }}
 
     - name: install ifort on linux
-      if: runner.os == "ubuntu-18.04" && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'Linux' && steps.cache-install.outputs.cache-hit != 'true'
       run: .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB 
 
     - name: cache install ifort on macos
-      if: runner.os == "macos-latest"
-      id: cache-install
+      if: runner.os == 'macOS'
+      id: cache-install-macos
       uses: actions/cache@v2
       with:
         path: /opt/intel/oneapi
         key: install-${{ env.MACOS_HPCKIT_URL }}-${{ env.MACOS_FORTRAN_COMPONENTS }}
 
     - name: install ifort on macos
-      if: runner.os == "macos-latest" && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'macOS' && steps.cache-install.outputs.cache-hit != 'true'
       run: .github/intel-scripts/install_macos.sh $MACOS_HPCKIT_URL $MACOS_FORTRAN_COMPONENTS   
 
     - name: Install python packages
@@ -154,10 +154,10 @@ jobs:
 #        nosetests -v --with-id --with-timer -w ./autotest
 
     - name: exclude unused files from cache on windows
-      if: runner.os == "windows-latest" && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
       shell: bash
       run: .github/intel-scripts/cache_exclude_windows.sh
   
     - name: exclude unused files from cache on linux
-      if: steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
       run: .github/intel-scripts/cache_exclude_linux.sh
