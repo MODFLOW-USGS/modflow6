@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
     defaults:
       run:
         shell: bash
@@ -51,11 +51,15 @@ jobs:
       uses: actions/cache@v2
       with:
         path: C:\Program Files (x86)\Intel\oneAPI\compiler
-        key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/scripts/cache_exclude_windows.sh') }}
+        key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_windows.sh') }}
         
     - name: install ifort on windows
-      if: runner.os == 'Windows' && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
       run: .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
+      
+    - name: activate ifort environmental variables on windows
+      if: runner.os == 'Windows'
+      run: .github/intel-scripts/ifortvars_windows.bat
 
     - name: cache install ifort on linux
       if: runner.os == 'Linux'
@@ -64,11 +68,15 @@ jobs:
       with:
         path: |
           /opt/intel/oneapi/compiler
-        key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/scripts/cache_exclude_linux.sh') }}
+        key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
 
     - name: install ifort on linux
-      if: runner.os == 'Linux' && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
       run: .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB 
+
+    - name: activate ifort environmental variables on linux
+      if: runner.os == 'Linux'
+      run: .github/intel-scripts/ifortvars_linux.sh
 
     - name: cache install ifort on macos
       if: runner.os == 'macOS'
@@ -79,8 +87,12 @@ jobs:
         key: install-${{ env.MACOS_HPCKIT_URL }}-${{ env.MACOS_FORTRAN_COMPONENTS }}
 
     - name: install ifort on macos
-      if: runner.os == 'macOS' && steps.cache-install.outputs.cache-hit != 'true'
+      if: runner.os == 'macOS' && steps.cache-install-macos.outputs.cache-hit != 'true'
       run: .github/intel-scripts/install_macos.sh $MACOS_HPCKIT_URL $MACOS_FORTRAN_COMPONENTS   
+    
+    - name: activate ifort environmental variables on macos
+      if: runner.os == 'macOS'
+      run: .github/intel-scripts/ifortvars_macos.sh
 
     - name: Install python packages
       run: |
