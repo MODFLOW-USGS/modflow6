@@ -4690,6 +4690,7 @@ contains
     real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
+    real(DP) :: hbar
     real(DP) :: sske
     real(DP) :: rho1
 ! ------------------------------------------------------------------------------
@@ -4709,6 +4710,9 @@ contains
       ! -- calculate aquifer saturation
       call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
+      ! -- calculate corrected head (hbar)
+      hbar = sQuadratic0sp(hcell, bot, this%satomega)
+      !
       ! -- storage coefficients
       call this%csub_cg_calc_sske(node, sske, hcell)
       rho1 = sske * area * tthk * tled
@@ -4720,7 +4724,10 @@ contains
       ! -- calculate hcof and rhs term
       hcof = -rho1 * snnew
       rhs = rho1 * snold * this%cg_es0(node) -                                     &
-            rho1 * snnew * (this%cg_gs(node) + bot) 
+            rho1 * snnew * (this%cg_gs(node) + bot)
+      !
+      ! -- calculate and apply the flow correction term
+      rhs = rhs - rho1 * snnew * (hcell - hbar)
     end if
     !
     ! -- return
@@ -4746,7 +4753,11 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
+    real(DP) :: snnew
+    real(DP) :: snold
     real(DP) :: satderv
+    real(DP) :: hbar
+    real(DP) :: hbarderv
     real(DP) :: sske
     real(DP) :: rho1
 ! ------------------------------------------------------------------------------
@@ -4763,15 +4774,25 @@ contains
     ! -- calculate newton terms if coarse-grained materials present
     if (tthk > DZERO) then
       !
+      ! -- calculate aquifer saturation - only need snnew
+      call this%csub_calc_sat(node, hcell, top, snnew, snold)
+      !
       ! -- calculate saturation derivative
       satderv = this%csub_calc_sat_derivative(node, hcell)    
+      !
+      ! -- calculate corrected head (hbar)
+      hbar = sQuadratic0sp(hcell, bot, this%satomega)
+      !
+      ! -- calculate the derivative of the hbar functions
+      hbarderv = sQuadratic0spDerivative(hcell, bot, this%satomega)
       !
       ! -- storage coefficients
       call this%csub_cg_calc_sske(node, sske, hcell)
       rho1 = sske * area * tthk * tled
       !
       ! -- calculate hcof term
-      hcof = rho1 * (this%cg_gs(node) - hcell + bot) * satderv
+      hcof = rho1 * snnew * (DONE - hbarderv) +                                  &
+             rho1 * (this%cg_gs(node) - hbar + bot) * satderv
       !
       ! -- Add additional term if using lagged effective stress
       if (this%ieslag /= 0) then
