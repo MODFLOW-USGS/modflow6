@@ -21,10 +21,14 @@ from framework import testing_framework, running_on_CI
 from simulation import Simulation
 
 ex = (
-    "csub_sk04a",
-    "csub_sk04b",
-    "csub_sk04c",
-    "csub_sk04d",
+    "csub_nd01a",
+    "csub_nd01b",
+    "csub_nd01c",
+    "csub_nd01d",
+    "csub_nd01e",
+    "csub_nd01f",
+    "csub_nd01g",
+    "csub_nd01h",
 )
 exdirs = []
 for s in ex:
@@ -33,12 +37,31 @@ newtons = (
     True,
     False,
     True,
-    False)
+    False,
+    True,
+    False,
+    True,
+    False,
+)
 stress_lag = (
     None,
     None,
     True,
     True,
+    None,
+    None,
+    True,
+    True,
+)
+elastic = (
+    True,
+    True,
+    True,
+    True,
+    False,
+    False,
+    False,
+    False,
 )
 
 ddir = 'data'
@@ -102,8 +125,11 @@ sgs = 2.0
 void = 0.82
 theta = void / (1. + void)
 beta = 0.
-crnd0 = 6e-6 * np.ones(shape3d, dtype=np.float)
-crnd0[:, 0, 0] = 0.
+crnd0 = 0.
+cc, cr = 6e-4, 6e-6
+ini_stress = 0.
+kv = 999.
+H0 = 0.
 
 
 def get_model(idx, dir):
@@ -236,19 +262,41 @@ def get_model(idx, dir):
             obsarr.append((otag, cobs, otup))
 
     # csub files
-    opth = '{}.csub.obs'.format(name)
+    swt6 = []
+    ibcno = 0
+    if elastic[idx]:
+        cct, crt = cr, cr
+    else:
+        cct, crt = cc, cr
+    for k in range(nlay):
+        d = [
+            ibcno,
+            (k, 0, 1),
+            "nodelay",
+            ini_stress,
+            zthick[k],
+            1.,
+            cct,
+            crt,
+            theta,
+            kv,
+            H0
+        ]
+        swt6.append(d)
+        ibcno += 1
+
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         observations={"csub_obs.csv": obsarr},
         effective_stress_lag=stress_lag[idx],
         save_flows=True,
         beta=beta,
-        ninterbeds=0,
         sgm=sgm,
         sgs=sgs,
+        ninterbeds=len(swt6),
         cg_theta=theta,
         cg_ske_cr=crnd0,
-        packagedata=None
+        packagedata=swt6,
     )
 
     # output control

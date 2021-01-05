@@ -3623,6 +3623,7 @@ contains
     real(DP) :: es0
     real(DP) :: f
     real(DP) :: f0
+    real(DP) :: rcorr
 ! ------------------------------------------------------------------------------
     if (present(argtled)) then
       tled = argtled
@@ -3667,13 +3668,20 @@ contains
       this%iconvert(ib) = 1
       rho2 = this%ci(ib) * sto_fac
     end if
+    !
+    ! -- calculate correction term
+    rcorr = rho2 * (hcell - hbar)
+    !
+    ! -- fill right-hand side
     if (this%ielastic(ib) /= 0) then
       rhs = rho1 * this%cg_es0(node) -                                           &
-            rho2 * (this%cg_gs(node) + bot)
+            rho2 * (this%cg_gs(node) + bot) -                                    &
+            rcorr
     else
       rhs = -rho2 * (this%cg_gs(node) + bot) +                                   &
             (this%pcs(ib) * (rho2 - rho1)) +                                     &
-            (rho1 * this%cg_es0(node))
+            (rho1 * this%cg_es0(node)) -                                         &
+            rcorr
     end if
     !
     ! -- save ske and sk
@@ -4940,14 +4948,16 @@ contains
     integer(I4B) :: idelaycalc
     real(DP) :: hcofn
     real(DP) :: rhsn
-    real(DP) :: snnew
-    real(DP) :: snold
-    real(DP) :: satderv
-    real(DP) :: tled
-    real(DP) :: tthk
-    real(DP) :: f
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: tled
+    real(DP) :: tthk
+    real(DP) :: snnew
+    real(DP) :: snold
+    real(DP) :: f
+    real(DP) :: satderv
+    real(DP) :: hbar
+    real(DP) :: hbarderv
     real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: dz
@@ -4983,15 +4993,20 @@ contains
         ! -- calculate the saturation derivative
         satderv = this%csub_calc_sat_derivative(node, hcell)    
         !
+        ! -- calculate corrected head (hbar)
+        hbar = sQuadratic0sp(hcell, bot, this%satomega)
+        !
+        ! -- calculate the derivative of the hbar functions
+        hbarderv = sQuadratic0spDerivative(hcell, bot, this%satomega)
+        !
         ! -- calculate storage coefficient
         call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, rho2, rhsn)
         !
         ! -- calculate hcofn term
-        if (this%ielastic(ib) /= 0) then
-          hcofn = rho2 * (this%cg_gs(node) - hcell + bot) * satderv
-        else
-          hcofn = rho2 * (this%cg_gs(node) - hcell + bot - this%pcs(ib)) *       &
-                  satderv
+        hcofn = rho2 * (DONE - hbarderv) * snnew +                               &
+                rho2 * (this%cg_gs(node) - hbar + bot) * satderv
+        if (this%ielastic(ib) == 0) then
+          hcofn = hcofn - rho2 * this%pcs(ib) * satderv
         end if
         !
         ! -- Add additional term if using lagged effective stress
