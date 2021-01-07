@@ -1,8 +1,7 @@
 module NumericalModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC,   &
-                             MEMREADONLY, MEMREADWRITE
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
   use SparseModule, only: sparsematrix
@@ -293,8 +292,7 @@ module NumericalModelModule
     class(NumericalModelType) :: this
     integer(I4B) :: i
     !
-    call mem_allocate(this%xold, this%neq, 'XOLD', this%memoryPath,     &
-                      MEMREADONLY)
+    call mem_allocate(this%xold, this%neq, 'XOLD', this%memoryPath)
     call mem_allocate(this%flowja, this%nja, 'FLOWJA', this%memoryPath)
     call mem_allocate(this%idxglo, this%nja, 'IDXGLO', this%memoryPath)
     !
@@ -317,7 +315,7 @@ module NumericalModelModule
     ! -- local
     ! -- code
     this%x => xsln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%x, 'X', this%memoryPath, varNameTgt, memPathTgt, MEMREADWRITE)
+    call mem_checkin(this%x, 'X', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_xptr
 
   subroutine set_rhsptr(this, rhssln, varNameTgt, memPathTgt)
@@ -330,7 +328,7 @@ module NumericalModelModule
     ! -- local
     ! -- code
     this%rhs => rhssln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%rhs, 'RHS', this%memoryPath, varNameTgt, memPathTgt, MEMREADWRITE)
+    call mem_checkin(this%rhs, 'RHS', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_rhsptr
 
   subroutine set_iboundptr(this, iboundsln, varNameTgt, memPathTgt)
@@ -343,8 +341,7 @@ module NumericalModelModule
     ! -- local
     ! -- code
     this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, memPathTgt,           &
-                     MEMREADWRITE)
+    call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_iboundptr
 
   subroutine get_mcellid(this, node, mcellid)

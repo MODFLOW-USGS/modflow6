@@ -4,8 +4,7 @@ module MemoryTypeModule
   use ConstantsModule, only: LENMEMPATH, LENMEMADDRESS, LENTIMESERIESNAME,       &
                              LENVARNAME, MAXMEMRANK, LENMEMTYPE,                 &
                              TABSTRING, TABINTEGER,                              &
-                             TABCENTER, TABLEFT, TABRIGHT,                       &
-                             MEMHIDDEN, MEMREADONLY, MEMREADWRITE
+                             TABCENTER, TABLEFT, TABRIGHT
   use TableModule, only: TableType
   use MemoryHelperModule, only: create_mem_address
   
@@ -22,7 +21,6 @@ module MemoryTypeModule
     integer(I4B)                                           :: id                     !< id, not used
     integer(I4B)                                           :: nrealloc = 0           !< number of times reallocated
     integer(I4B)                                           :: isize                  !< size of the array
-    integer(I4B)                                           :: memaccess = MEMHIDDEN  !< memory permissions
     integer(I4B)                                           :: set_handler_idx = 0    !< index of side effect handler for external access
     logical(LGP)                                           :: master = .true.        !< master copy, others point to this one
     logical(LGP), pointer                                  :: logicalsclr => null()  !< pointer to the logical
@@ -48,7 +46,6 @@ module MemoryTypeModule
     ! -- local
     character(len=16) :: cmem
     character(len=LENMEMADDRESS) :: cptr
-    character(len=16) :: cbmi
     integer(I4B) :: ipos
     ! -- formats
     !
@@ -67,23 +64,12 @@ module MemoryTypeModule
       cptr = create_mem_address(this%masterPath, this%mastername)
     end if
     !
-    ! -- set bmi access
-    select case(this%memaccess)
-      case(MEMHIDDEN)
-        cbmi = '--'
-      case(MEMREADONLY)
-        cbmi = 'READ'
-      case(MEMREADWRITE)
-        cbmi = 'READ/WRITE'
-    end select
-    !
     ! -- write data to the table
     call memtab%add_term(this%path)
     call memtab%add_term(this%name)
     call memtab%add_term(cmem)
     call memtab%add_term(this%isize)
     call memtab%add_term(cptr)
-    call memtab%add_term(cbmi)
     !
     ! -- return
     return

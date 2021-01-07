@@ -7,8 +7,7 @@ module MemoryManagerModule
                                     LENCOMPONENTNAME, LINELENGTH, LENMEMTYPE,    &
                                     LENMEMADDRESS, TABSTRING, TABUCSTRING,       &
                                     TABINTEGER, TABREAL, TABCENTER, TABLEFT,     &
-                                    TABRIGHT, MEMHIDDEN, MEMREADONLY,            &
-                                    MEMREADWRITE
+                                    TABRIGHT
   use SimVariablesModule,     only: errmsg
   use SimModule,              only: store_error, count_errors, ustop
   use MemoryTypeModule,       only: MemoryType
@@ -488,13 +487,10 @@ module MemoryManagerModule
 
   !> @brief Allocate a integer scalar
   !<
-  subroutine allocate_int(sclr, name, mem_path, memtype)
+  subroutine allocate_int(sclr, name, mem_path)
     integer(I4B), pointer, intent(inout) :: sclr  !< variable for allocation
     character(len=*), intent(in) :: name          !< variable name
     character(len=*), intent(in) :: mem_path      !< path where the variable is stored
-    integer(I4B), intent(in), optional :: memtype !< optional integer value that defines memaccess for 
-                                                  !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-                                                  !! and MEMREADWRITE.  
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -522,11 +518,6 @@ module MemoryManagerModule
     mt%path = mem_path
     write(mt%memtype, "(a)") 'INTEGER'
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -536,14 +527,11 @@ module MemoryManagerModule
   
   !> @brief Allocate a 1-dimensional integer array
   !<
-  subroutine allocate_int1d(aint, nrow, name, mem_path, memtype)
+  subroutine allocate_int1d(aint, nrow, name, mem_path)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< variable for allocation
     integer(I4B), intent(in) :: nrow                                        !< integer array number of rows
     character(len=*), intent(in) :: name                                    !< variable name
     character(len=*), intent(in) :: mem_path                                !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                           !< optional integer value that defines memaccess for 
-                                                                            !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-                                                                            !! and MEMREADWRITE. 
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -575,11 +563,6 @@ module MemoryManagerModule
     mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -589,15 +572,12 @@ module MemoryManagerModule
   
   !> @brief Allocate a 2-dimensional integer array
   !<
-  subroutine allocate_int2d(aint, ncol, nrow, name, mem_path, memtype)
+  subroutine allocate_int2d(aint, ncol, nrow, name, mem_path)
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint   !< variable for allocation
     integer(I4B), intent(in) :: ncol                                            !< number of columns
     integer(I4B), intent(in) :: nrow                                            !< number of rows
     character(len=*), intent(in) :: name                                        !< variable name  
     character(len=*), intent(in) :: mem_path                                    !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                               !< optional integer value that defines memaccess for 
-                                                                                !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-                                                                                !! and MEMREADWRITE. 
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -627,12 +607,7 @@ module MemoryManagerModule
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
-    write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
-    !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
+    write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow    
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -642,17 +617,13 @@ module MemoryManagerModule
     
   !> @brief Allocate a 3-dimensional integer array
   !<
-  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, mem_path, memtype)
+  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, mem_path)
     integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint  !< variable for allocation
     integer(I4B), intent(in) :: ncol                                              !< number of columns
     integer(I4B), intent(in) :: nrow                                              !< number of rows 
     integer(I4B), intent(in) :: nlay                                              !< number of layers
     character(len=*), intent(in) :: name                                          !< variable name
     character(len=*), intent(in) :: mem_path                                      !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                                 !< optional integer value that defines 
-                                                                                  !! memaccess for variable name. valid
-                                                                                  !! values are MEMHIDDEN, MEMREADONLY,
-                                                                                  !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -683,12 +654,7 @@ module MemoryManagerModule
     mt%name = name
     mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
-                                                       nrow, nlay
-    !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
+                                                       nrow, nlay    
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -699,13 +665,10 @@ module MemoryManagerModule
 
   !> @brief Allocate a real scalar
   !<
-  subroutine allocate_dbl(sclr, name, mem_path, memtype)
+  subroutine allocate_dbl(sclr, name, mem_path)
     real(DP), pointer, intent(inout) :: sclr      !< variable for allocation
     character(len=*), intent(in) :: name          !< variable name
     character(len=*), intent(in) :: mem_path      !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype !< optional integer value that defines memaccess for 
-                                                  !! variable name. valid values are MEMHIDDEN, MEMREADONLY,
-                                                  !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -733,11 +696,6 @@ module MemoryManagerModule
     mt%path = mem_path
     write(mt%memtype, "(a)") 'DOUBLE'
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -747,14 +705,11 @@ module MemoryManagerModule
   
   !> @brief Allocate a 1-dimensional real array
   !<
-  subroutine allocate_dbl1d(adbl, nrow, name, mem_path, memtype)
+  subroutine allocate_dbl1d(adbl, nrow, name, mem_path)
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< variable for allocation
     integer(I4B), intent(in) :: nrow                                    !< number of rows
     character(len=*), intent(in) :: name                                !< variable name
     character(len=*), intent(in) :: mem_path                            !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                       !< optional integer value that defines memaccess for
-                                                                        !! variable name. valid values are MEMHIDDEN, MEMREADONLY,
-                                                                        !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -786,11 +741,6 @@ module MemoryManagerModule
     mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -800,15 +750,12 @@ module MemoryManagerModule
   
   !> @brief Allocate a 2-dimensional real array
   !<
-  subroutine allocate_dbl2d(adbl, ncol, nrow, name, mem_path, memtype)
+  subroutine allocate_dbl2d(adbl, ncol, nrow, name, mem_path)
     real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< variable for allocation
     integer(I4B), intent(in) :: ncol                                      !< number of columns
     integer(I4B), intent(in) :: nrow                                      !< number of rows
     character(len=*), intent(in) :: name                                  !< variable name
     character(len=*), intent(in) :: mem_path                              !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                         !< optional integer value that defines memaccess for 
-                                                                          !! variable name. valid values are MEMHIDDEN, MEMREADONLY, 
-                                                                          !! and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -840,11 +787,6 @@ module MemoryManagerModule
     mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -854,16 +796,13 @@ module MemoryManagerModule
   
   !> @brief Allocate a 3-dimensional real array
   !<
-  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, mem_path, memtype)
+  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, mem_path)
     real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl  !< variable for allocation
     integer(I4B), intent(in) :: ncol                                          !< number of columns
     integer(I4B), intent(in) :: nrow                                          !< number of rows
     integer(I4B), intent(in) :: nlay                                          !< number of layers
     character(len=*), intent(in) :: name                                      !< variable name
     character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                             !< optional integer value that defines memaccess 
-                                                                              !! for variable name. valid values are MEMHIDDEN, 
-                                                                              !! MEMREADONLY, and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -896,11 +835,6 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'DOUBLE', ncol,           &
                                                        nrow, nlay
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -910,15 +844,12 @@ module MemoryManagerModule
   
   !> @brief Check in an existing 1d integer array with a new address (name + path)
   !<
-  subroutine checkin_int1d(aint, name, mem_path, name2, mem_path2, memtype)
+  subroutine checkin_int1d(aint, name, mem_path, name2, mem_path2)
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: aint !< the existing array
     character(len=*), intent(in) :: name                                !< new variable name
     character(len=*), intent(in) :: mem_path                            !< new path where variable is stored
     character(len=*), intent(in) :: name2                               !< existing variable name
     character(len=*), intent(in) :: mem_path2                           !< existing path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                       !< optional integer value that defines memaccess
-                                                                        !! for variable name. valid values are MEMHIDDEN,
-                                                                        !! MEMREADONLY, and MEMREADWRITE.
     ! --local
     type(MemoryType), pointer :: mt
     integer(I4B) :: isize
@@ -945,11 +876,6 @@ module MemoryManagerModule
     mt%mastername = name2
     mt%masterPath = mem_path2
     !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
-    !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
@@ -959,15 +885,12 @@ module MemoryManagerModule
 
   !> @brief Check in an existing 1d double precision array with a new address (name + path)
   !<
-  subroutine checkin_dbl1d(adbl, name, mem_path, name2, mem_path2, memtype)
+  subroutine checkin_dbl1d(adbl, name, mem_path, name2, mem_path2)
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< the existing array
     character(len=*), intent(in) :: name                                !< new variable name
     character(len=*), intent(in) :: mem_path                            !< new path where variable is stored
     character(len=*), intent(in) :: name2                               !< existing variable name
     character(len=*), intent(in) :: mem_path2                           !< existing path where variable is stored
-    integer(I4B), intent(in), optional :: memtype                       !< optional integer value that defines memaccess
-                                                                        !! for variable name. valid values are MEMHIDDEN,
-                                                                        !! MEMREADONLY, and MEMREADWRITE.
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: isize
@@ -993,11 +916,6 @@ module MemoryManagerModule
     mt%master = .false.
     mt%mastername = name2
     mt%masterPath = mem_path2
-    !
-    ! -- set memory access permission
-    if (present(memtype)) then
-      mt%memaccess = memtype
-    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)

@@ -1044,7 +1044,6 @@ module GwfDisModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: MEMREADONLY
     ! -- dummy
     class(GwfDisType) :: this
 ! ------------------------------------------------------------------------------
@@ -1054,15 +1053,12 @@ module GwfDisModule
     !
     ! -- Allocate arrays for GwfDisType
     if(this%nodes < this%nodesuser) then
-      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath, &
-                        MEMREADONLY)
-      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',        &
-                        this%memoryPath, MEMREADONLY)
+      call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
+      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',         &
+                        this%memoryPath)
     else
-      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath,          &
-                        MEMREADONLY)
-      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath,    &
-                        MEMREADONLY)
+      call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
+      call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
     !
     ! -- Initialize

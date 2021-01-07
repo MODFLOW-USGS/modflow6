@@ -8,8 +8,7 @@ module MawModule
                              DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
                              LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,      &
                              TABLEFT, TABCENTER, TABRIGHT,                       &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,       &
-                             MEMREADWRITE
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
                               sQuadraticSaturationDerivative,                    &
                               sQSaturationDerivative,                            &
@@ -3111,8 +3110,7 @@ contains
     iend = istart + this%nmawwells - 1
     this%iboundpak => this%ibound(istart:iend)
     this%xnewpak => this%xnew(istart:iend)
-    call mem_checkin(this%xnewpak, 'HEAD', this%memoryPath, 'X',                 &
-                     this%memoryPathModel, MEMREADWRITE)
+    call mem_checkin(this%xnewpak, 'HEAD', this%memoryPath, 'X', this%memoryPathModel)
     call mem_allocate(this%xoldpak, this%nmawwells, 'XOLDPAK', this%memoryPath)
     !
     ! -- initialize xnewpak
