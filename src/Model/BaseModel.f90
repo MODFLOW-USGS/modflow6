@@ -145,7 +145,6 @@ module BaseModelModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: MEMREADONLY
     ! -- dummy
     class(BaseModelType) :: this
     character(len=*), intent(in)  :: modelname
@@ -154,7 +153,7 @@ module BaseModelModule
     allocate(this%name)
     allocate(this%macronym)
     allocate(this%single_model_run)
-    call mem_allocate(this%id, 'ID', this%memoryPath, MEMREADONLY)
+    call mem_allocate(this%id, 'ID', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
     call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
     call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)

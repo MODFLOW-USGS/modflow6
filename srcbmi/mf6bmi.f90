@@ -23,7 +23,7 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr,   &
                            c_f_pointer
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, LENVARNAME, MEMREADWRITE, MEMREADONLY
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize,       &
                                  get_mem_rank, get_mem_shape, get_mem_type,      &
                                  memorylist, get_from_memorylist
@@ -175,8 +175,7 @@ module mf6bmi
 
   !> @brief Get the number of input variables in the simulation
   !!
-  !! This concerns all those variables which have their access
-  !! specifier set to "readwrite" in the internal memory manager
+  !! This concerns all variables stored in the memory manager
   !<
   function get_input_item_count(count) result(bmi_status) bind(C, name="get_input_item_count")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_input_item_count
@@ -186,13 +185,7 @@ module mf6bmi
     integer(I4B) :: ipos
     type(MemoryType), pointer :: mt => null()
 
-    count = 0
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if (mt%memaccess == MEMREADWRITE) then
-        count = count + 1
-      end if
-    end do
+    count = memorylist%count()
 
     bmi_status = BMI_SUCCESS
 
@@ -200,9 +193,7 @@ module mf6bmi
 
   !> @brief Get the number of output variables in the simulation
   !!
-  !! This concerns all those variables which have their access
-  !! specifier set to "readonly|readwrite" in the internal memory 
-  !! manager
+  !! This concerns all variables stored in the memory manager
   !<
   function get_output_item_count(count) result(bmi_status) bind(C, name="get_output_item_count")
     !DEC$ ATTRIBUTES DLLEXPORT :: get_output_item_count
@@ -212,13 +203,7 @@ module mf6bmi
       integer(I4B) :: ipos
       type(MemoryType), pointer :: mt => null()
   
-      count = 0
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
-        if (mt%memaccess == MEMREADONLY .or. mt%memaccess == MEMREADWRITE) then
-          count = count + 1
-        end if
-      end do
+      count = memorylist%count()
   
       bmi_status = BMI_SUCCESS
   
@@ -227,8 +212,8 @@ module mf6bmi
   !> @brief Returns all input variables in the simulation
   !!
   !! This functions returns the full address for all variables in the
-  !! memory manager, that have their access specified as "readwrite"
-  !! and can therefore be used as input variables.
+  !! memory manager
+  !!
   !! The array @p c_names should be pre-allocated of proper size:
   !!
   !! size = BMI_LENVARADDRESS *  get_input_item_count()
@@ -250,14 +235,12 @@ module mf6bmi
     start = 1
     do imem = 1, memorylist%count()
       mt => memorylist%Get(imem)
-      if (mt%memaccess == MEMREADWRITE) then
-        var_address = create_mem_address(mt%path, mt%name)
-        do i = 1, len(trim(var_address))
-          c_names(start + i - 1) = var_address(i:i)
-        end do
-        c_names(start + i) = c_null_char
-        start = start + BMI_LENVARADDRESS
-      end if
+      var_address = create_mem_address(mt%path, mt%name)
+      do i = 1, len(trim(var_address))
+        c_names(start + i - 1) = var_address(i:i)
+      end do
+      c_names(start + i) = c_null_char
+      start = start + BMI_LENVARADDRESS
     end do
 
     bmi_status = BMI_SUCCESS
@@ -267,8 +250,8 @@ module mf6bmi
   !> @brief Returns all output variables in the simulation
   !!
   !! This function works analogously to get_input_var_names(),
-  !! for all variables that have their access specified as either
-  !! "readonly" or "readwrite"
+  !! and currently returns the same set of memory variables,
+  !! which is all of them!
   !<
   function get_output_var_names(c_names) result(bmi_status) bind(C, name="get_output_var_names")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_output_var_names
@@ -282,14 +265,12 @@ module mf6bmi
     start = 1
     do imem = 1, memorylist%count()
       mt => memorylist%Get(imem)
-      if (mt%memaccess == MEMREADONLY .or. mt%memaccess == MEMREADWRITE) then
-        var_address = create_mem_address(mt%path, mt%name)
-        do i = 1, len(trim(var_address))
-          c_names(start + i - 1) = var_address(i:i)
-        end do
-        c_names(start + i) = c_null_char
-        start = start + BMI_LENVARADDRESS
-      end if
+      var_address = create_mem_address(mt%path, mt%name)
+      do i = 1, len(trim(var_address))
+        c_names(start + i - 1) = var_address(i:i)
+      end do
+      c_names(start + i) = c_null_char
+      start = start + BMI_LENVARADDRESS
     end do
 
     bmi_status = BMI_SUCCESS
@@ -368,18 +349,6 @@ module mf6bmi
 
     call split_address(c_var_address, mem_path, var_name)
 
-    ! check access
-    access_type = get_memory_access_type(mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
-      return
-    end if
-
-    if (access_type /= MEMREADWRITE .and. access_type /= MEMREADONLY) then
-      write(istdout,*) 'BMI Error: no read access for variable '//var_name
-      return
-    end if
-
     ! convert pointer and copy data from memory manager into 
     ! the passed array, using loops to avoid stack overflow
     rank = -1
@@ -440,18 +409,6 @@ module mf6bmi
 
     call split_address(c_var_address, mem_path, var_name)
 
-    ! check access
-    access_type = get_memory_access_type(mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
-      return
-    end if
-
-    if (access_type /= MEMREADWRITE .and. access_type /= MEMREADONLY) then
-      write(istdout,*) 'BMI Error: no read access for variable '//var_name
-      return
-    end if
-
     ! convert pointer and copy data from memory manager into 
     ! the passed array, using loops to avoid stack overflow
     rank = -1
@@ -509,18 +466,6 @@ module mf6bmi
     bmi_status = BMI_FAILURE
 
     call split_address(c_var_address, mem_path, var_name)
-
-    ! check access
-    access_type = get_memory_access_type(mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
-      return
-    end if
-
-    if (access_type /= MEMREADWRITE .and. access_type /= MEMREADONLY) then
-      write(istdout,*) 'BMI Error: no read access for variable '//var_name
-      return
-    end if
     
     rank = -1
     call get_mem_rank(var_name, mem_path, rank)
@@ -566,19 +511,7 @@ module mf6bmi
     
     bmi_status = BMI_FAILURE
 
-    call split_address(c_var_address, mem_path, var_name)    
-
-    ! check access
-    access_type = get_memory_access_type(mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
-      return
-    end if
-
-    if (access_type /= MEMREADWRITE .and. access_type /= MEMREADONLY) then
-      write(istdout,*) 'BMI Error: no read access for variable '//var_name
-      return
-    end if    
+    call split_address(c_var_address, mem_path, var_name)
 
     rank = -1
     call get_mem_rank(var_name, mem_path, rank)
@@ -606,9 +539,6 @@ module mf6bmi
   !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2
   !! and should have a C-style layout, which is particularly important for
   !! rank > 1.
-  !! When the memory access in the manager for the variable @p c_var_address
-  !! is specified as @p MEMHIDDEN or @p MEMREADONLY, the function will return
-  !! with a BMI error code.
   !<
   function set_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: set_value_double
@@ -631,18 +561,6 @@ module mf6bmi
     bmi_status = BMI_FAILURE
 
     call split_address(c_var_address, mem_path, var_name)
-
-    ! check access
-    access_type = get_memory_access_type(mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
-      return
-    end if
-
-    if (access_type /= MEMREADWRITE) then
-      write(istdout,*) 'BMI Error: cannot write to variable '//var_name
-      return
-    end if
 
     ! convert pointer and copy, using loops to avoid stack overflow
     rank = -1
@@ -686,9 +604,6 @@ module mf6bmi
   !> @brief Set new values for a variable of type integer
   !!
   !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2.
-  !! When the memory access in the manager for the variable @p c_var_address
-  !! is specified as @p MEMHIDDEN or @p MEMREADONLY, the function will return
-  !! with a BMI error code.
   !<
   function set_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_int")
     !DEC$ ATTRIBUTES DLLEXPORT :: set_value_int
@@ -711,18 +626,6 @@ module mf6bmi
       bmi_status = BMI_FAILURE
   
       call split_address(c_var_address, mem_path, var_name)
-  
-      ! check access
-      access_type = get_memory_access_type(mem_path, var_name, found)
-      if (.not. found) then
-        write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path      
-        return
-      end if
-  
-      if (access_type /= MEMREADWRITE) then
-        write(istdout,*) 'BMI Error: cannot write to variable '//var_name
-        return
-      end if
   
       ! convert pointer and copy, using loops to avoid stack overflow
       rank = -1

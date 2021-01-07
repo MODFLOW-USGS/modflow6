@@ -9,7 +9,6 @@ module NumericalSolutionModule
                                      DONE, DTHREE, DEP6, DEP20, DNODATA,       &
                                      TABLEFT, TABRIGHT,                        &
                                      MNORMAL, MVALIDATE,                       &
-                                     MEMREADONLY, MEMREADWRITE,                &
                                      LENMEMPATH
   use MemoryHelperModule,      only: create_mem_path                                     
   use TableModule,             only: TableType, table_cr
@@ -259,7 +258,7 @@ contains
     call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
     call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memoryPath)
     call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
-    call mem_allocate(this%mxiter, 'MXITER', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%mxiter, 'MXITER', this%memoryPath)
     call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
     call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)
     call mem_allocate(this%iprims, 'IPRIMS', this%memoryPath)
@@ -358,7 +357,7 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath, MEMREADONLY)
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
     call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
