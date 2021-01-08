@@ -1936,8 +1936,7 @@ module GwfNpfModule
     endif
     !
     ! -- allocate temporary storage to handle thickstart option
-    call mem_allocate(ithickstartflag, this%dis%nodes, 'ITHICKSTARTFLAG',      &
-                      trim(this%memoryPath))
+    allocate(ithickstartflag(this%dis%nodes))
     do n = 1, this%dis%nodes
       ithickstartflag(n) = 0
     end do
@@ -2154,7 +2153,7 @@ module GwfNpfModule
     this%igwfnewtonur => null()
     !
     ! - clean up local storage
-    call mem_deallocate(ithickstartflag)
+    deallocate(ithickstartflag)
     !
     ! -- Return
     return
