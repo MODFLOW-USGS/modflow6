@@ -44,15 +44,16 @@ def parse_mem_allocate_line(line):
     return arglist
 
 
-def build_mem_allocate(line_list, fname, fmd=None, ftex=None):
+def line_list_to_var_list(line_list, fname):
+    "convert clean fortran lines into list of memory manager variables"
     current_class = None
     current_module = None
     class_varname_list = []
+    memvar_list = []
     for line in line_list:
         current_class = update_current_class(line, current_class)
         current_module = update_current_module(line, current_module)
         if "mem_allocate(" in line:
-            #print(line)
             arglist = parse_mem_allocate_line(line)
 
             # mempath
@@ -72,8 +73,6 @@ def build_mem_allocate(line_list, fname, fmd=None, ftex=None):
                 class_varname = "{}.{}".format(current_class, fortran_varname)
             else:
                 class_varname = fortran_varname
-            if npercents != 1:
-                print(line)
 
             # source name
             source_name = os.path.basename(fname)
@@ -89,14 +88,28 @@ def build_mem_allocate(line_list, fname, fmd=None, ftex=None):
             # check for uniqueness and write to md and tex
             if class_varname not in class_varname_list:
                 class_varname_list.append(class_varname)
-                if fmd is not None:
-                    write_md_record(
-                        fmd, source_name, current_module, class_varname,
-                        varname, dims
-                    )
-                if ftex is not None:
-                    write_tex_record(ftex, class_varname, varname, dims)
+                l = [source_name, current_module, current_class,
+                     fortran_varname, varname, dims]
+                memvar_list.append(l)
 
+    return memvar_list
+
+
+def write_md(memvar_list, fmd):
+    "write markdown table records for list of memory managed variables"
+    for l in memvar_list:
+        source_name, current_module, typename, fortran_varname, varname, dims = l
+        write_md_record(
+            fmd, source_name, current_module, typename, varname, dims
+        )
+    return
+
+
+def write_tex(memvar_list, ftex):
+    "write latex table records for list of memory managed variables"
+    for l in memvar_list:
+        source_name, current_module, typename, fortran_varname, varname, dims = l
+        write_tex_record(ftex, typename, varname, dims)
     return
 
 
@@ -154,8 +167,11 @@ def write_tex_footer(f):
 
 
 def write_tex_record(f, classname, varname, dimension):
-    classname = classname.replace("_", "\_")
-    classname = classname.replace("%", "-")
+    if classname is None:
+        classname = ""
+    else:
+        classname = classname.replace("_", "\_")
+        classname = classname.replace("%", "-")
     varname = varname.replace("_", "\_")
     s = "{} & {} & {} \\\\ \n".format(classname, varname, dimension)
     f.write(s)
@@ -175,12 +191,17 @@ write_md_header(fmd)
 ftex = open(latex_file, "w")
 write_tex_header(ftex)
 
+i = 0
 for root, dirs, files in os.walk(source_dir):
     for f in files:
         if f.endswith(".f90"):
-            print("processing {}".format(f))
             fwpath = os.path.join(root, f)
             full_lines = d[f]
-            build_mem_allocate(full_lines, fwpath, fmd, ftex)
+            memvar_list = line_list_to_var_list(full_lines, fwpath)
+            if len(memvar_list) > 0:
+                print("{} -- {}".format(i, f))
+                i += 1
+            write_md(memvar_list, fmd)
+            write_tex(memvar_list, ftex)
 
 write_tex_footer(ftex)
