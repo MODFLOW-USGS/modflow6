@@ -8,7 +8,7 @@
 module GwtMstModule
   
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, LENBUDTXT
+  use ConstantsModule,        only: DONE, DZERO, DTWO, LENBUDTXT
   use SimVariablesModule,     only: errmsg, warnmsg
   use SimModule,              only: ustop, store_error, count_errors,          &
                                     store_warning
@@ -39,9 +39,10 @@ module GwtMstModule
     real(DP), dimension(:), pointer, contiguous      :: ratedcy => null()       ! rate of decay
     !
     ! -- sorbtion
-    integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:on)
+    integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
     real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  ! bulk density
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! kd distribution coefficient
+    real(DP), dimension(:), pointer, contiguous      :: sp2 => null()           ! second sorption parameter
     real(DP), dimension(:), pointer, contiguous      :: ratesrb => null()       ! rate of sorbtion
     real(DP), dimension(:), pointer, contiguous      :: ratedcys => null()      ! rate of sorbed mass decay
     !
@@ -151,7 +152,7 @@ module GwtMstModule
     return
   end subroutine mst_ar
   
-  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, rhs)
 ! ******************************************************************************
 ! mst_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -168,6 +169,7 @@ module GwtMstModule
     real(DP), dimension(njasln), intent(inout) :: amatsln
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
+    real(DP), intent(in), dimension(nodes) :: cnew
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -181,7 +183,7 @@ module GwtMstModule
     !
     ! -- sorbtion contribution
     if (this%isrb /= 0) then
-      call this%mst_fc_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+      call this%mst_fc_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, cnew)
     end if
     !
     ! -- decay sorbed contribution
@@ -302,7 +304,8 @@ module GwtMstModule
     return
   end subroutine mst_fc_dcy
   
-  subroutine mst_fc_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine mst_fc_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs,  &
+                        cnew)
 ! ******************************************************************************
 ! mst_fc_srb -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -320,15 +323,17 @@ module GwtMstModule
     real(DP), dimension(njasln), intent(inout) :: amatsln
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
+    real(DP), intent(in), dimension(nodes) :: cnew
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
     real(DP) :: hhcof, rrhs
     real(DP) :: swt, swtpdt
     real(DP) :: vcell
-    real(DP) :: eqfact
-    real(DP) :: ctosrb
+    real(DP) :: const1
+    real(DP) :: const2
     real(DP) :: thetamfrac
+    real(DP) :: rhob
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
@@ -340,20 +345,19 @@ module GwtMstModule
       ! -- skip if transport inactive
       if(this%ibound(n) <= 0) cycle
       !
-      ! -- calculate new and old water volumes
+      ! -- assign variables
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
       idiag = this%dis%con%ia(n)
-      !
-      ! -- Set thetamfrac
       thetamfrac = this%get_thetamfrac(n)
-      !
-      ! -- add sorbtion terms to hcof and rhs accumulators
-      eqfact = -this%bulk_density(n) * vcell * tled
-      ctosrb = this%distcoef(n)
-      hhcof =  thetamfrac * eqfact * ctosrb * swtpdt
-      rrhs = thetamfrac * eqfact * ctosrb * swt * cold(n)
+      const1 = this%distcoef(n)
+      const2 = 0.
+      if (this%isrb > 1) const2 = this%sp2(n)
+      rhob = this%bulk_density(n)
+      call mst_srb_term(this%isrb, thetamfrac, rhob, vcell, tled, cnew(n),     &
+                        cold(n), swtpdt, swt, const1, const2,                  &
+                        hcofval=hhcof, rhsval=rrhs) 
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
       amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
@@ -364,6 +368,113 @@ module GwtMstModule
     ! -- Return
     return
   end subroutine mst_fc_srb
+  
+  subroutine mst_srb_term(isrb, thetamfrac, rhob, vcell, tled, cnew, cold,     &
+                          swnew, swold, const1, const2, rate, hcofval, rhsval) 
+    integer(I4B), intent(in) :: isrb
+    real(DP), intent(in) :: thetamfrac
+    real(DP), intent(in) :: rhob
+    real(DP), intent(in) :: vcell
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: cnew
+    real(DP), intent(in) :: cold
+    real(DP), intent(in) :: swnew
+    real(DP), intent(in) :: swold
+    real(DP), intent(in) :: const1
+    real(DP), intent(in) :: const2
+    real(DP), intent(out), optional :: rate
+    real(DP), intent(out), optional :: hcofval
+    real(DP), intent(out), optional :: rhsval
+    real(DP) :: term
+    real(DP) :: derv
+    real(DP) :: cbarnew
+    real(DP) :: cbarold
+    if (isrb == 1) then
+      ! -- linear
+      term = - thetamfrac * rhob * vcell * tled * const1
+      if (present(hcofval)) hcofval = term * swnew
+      if (present(rhsval)) rhsval = term * swold * cold
+      if (present(rate)) rate = term * swnew * cnew - term * swold * cold
+    else
+      if (isrb == 2) then
+        ! -- freundlich
+        cbarnew = get_freundlich_conc(cnew, const1, const2)
+        cbarold = get_freundlich_conc(cold, const1, const2)
+        derv = get_freundlich_derivative(cnew, const1, const2)
+      else if (isrb == 3) then
+        ! -- langmuir
+        cbarnew = get_langmuir_conc(cnew, const1, const2)
+        cbarold = get_langmuir_conc(cold, const1, const2)
+        derv = get_langmuir_derivative(cnew, const1, const2)
+      end if
+      !
+      ! -- calculate hcof, rhs, and rate for freundlich and langmuir
+      term = - thetamfrac * rhob * vcell * tled
+      if (present(hcofval)) then
+        hcofval = term * derv * (swnew + swold) / DTWO
+      end if
+      if (present(rhsval)) then
+        rhsval = term * derv * cold - term * cbarnew * (swnew - swold)
+      end if
+      if (present(rate)) then
+        rate = term * derv * (swnew + swold) / DTWO * (cnew - cold) &
+               + term * cbarnew * (swnew - swold)
+      end if
+    end if
+    return
+  end subroutine mst_srb_term
+
+  function get_freundlich_conc(conc, kf, a) result(cbar)
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kf
+    real(DP), intent(in) :: a
+    real(DP) :: cbar
+    if (conc > DZERO) then
+      cbar = kf * conc ** a
+    else
+      cbar = DZERO
+    end if
+    return
+  end function 
+  
+  function get_langmuir_conc(conc, kl, sbar) result(cbar)
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kl
+    real(DP), intent(in) :: sbar
+    real(DP) :: cbar
+    if (conc > DZERO) then
+      cbar = (kl * sbar * conc) / (DONE + kl * conc)
+    else
+      cbar = DZERO
+    end if
+    return
+  end function 
+  
+  function get_freundlich_derivative(conc, kf, a) result(derv)
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kf
+    real(DP), intent(in) :: a
+    real(DP) :: derv
+    if (conc > DZERO) then
+      derv = kf * a * conc ** (a - DONE)
+    else
+      derv = DZERO
+    end if
+    return
+  end function 
+  
+  function get_langmuir_derivative(conc, kl, sbar) result(derv)
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kl
+    real(DP), intent(in) :: sbar
+    real(DP) :: derv
+    if (conc > DZERO) then
+      derv = (kl * sbar) / (DONE + kl * conc) ** DTWO
+    else
+      derv = DZERO
+    end if
+    return
+  end function 
   
   subroutine mst_fc_dcy_srb(this, nodes, cold, nja, njasln, amatsln, idxglo,   &
                             rhs)
@@ -641,10 +752,10 @@ module GwtMstModule
     real(DP) :: tled
     real(DP) :: swt, swtpdt
     real(DP) :: rsrbin, rsrbout
-    real(DP) :: hhcof, rrhs
     real(DP) :: vcell
-    real(DP) :: eqfact
-    real(DP) :: ctosrb
+    real(DP) :: rhob
+    real(DP) :: const1
+    real(DP) :: const2
     real(DP) :: thetamfrac
 ! ------------------------------------------------------------------------------
     !
@@ -662,21 +773,19 @@ module GwtMstModule
       ! -- skip if transport inactive
       if(this%ibound(n) <= 0) cycle
       !
-      ! -- calculate new and old water volumes
+      ! -- assign variables
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
       idiag = this%dis%con%ia(n)
-      !
-      ! -- Get thetamfrac
       thetamfrac = this%get_thetamfrac(n)
-      !
-      ! -- calculate sorbtion rate
-      eqfact = -this%bulk_density(n) * vcell * tled
-      ctosrb = this%distcoef(n)
-      hhcof =  thetamfrac * eqfact * ctosrb * swtpdt
-      rrhs = thetamfrac * eqfact * ctosrb * swt * cold(n)
-      rate = hhcof * cnew(n) - rrhs
+      rhob = this%bulk_density(n)
+      const1 = this%distcoef(n)
+      const2 = 0.
+      if (this%isrb > 1) const2 = this%sp2(n)
+      call mst_srb_term(this%isrb, thetamfrac, rhob, vcell, tled, cnew(n),     &
+                        cold(n), swtpdt, swt, const1, const2,                  &
+                        rate=rate) 
       this%ratesrb(n) = rate
       if (rate < DZERO) then
         rsrbout = rsrbout - rate
@@ -863,6 +972,7 @@ module GwtMstModule
       call mem_deallocate(this%isrb)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
+      call mem_deallocate(this%sp2)
       call mem_deallocate(this%ratesrb)
       call mem_deallocate(this%ratedcys)
       this%ibound => null()
@@ -950,12 +1060,18 @@ module GwtMstModule
     ! -- srb
     if (this%isrb == 0) then
       call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
+      call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, 1, 'RATESRB', this%memoryPath)
     else
       call mem_allocate(this%bulk_density, nodes, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%distcoef,  nodes, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, nodes, 'RATESRB', this%memoryPath)
+      if (this%isrb == 1) then
+        call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
+      else
+        call mem_allocate(this%sp2, nodes, 'SP2', this%memoryPath)
+      end if
     end if
     !
     ! -- Initialize
@@ -972,6 +1088,9 @@ module GwtMstModule
       this%bulk_density(n) = DZERO
       this%distcoef(n) = DZERO
       this%ratesrb(n) = DZERO
+    end do
+    do n = 1, size(this%sp2)
+      this%sp2(n) = DZERO
     end do
     !
     ! -- Return
@@ -990,18 +1109,22 @@ module GwtMstModule
     ! -- dummy
     class(GwtMstType) :: this
     ! -- local
-    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: keyword, keyword2
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtisvflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
       "WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisrb =                                  &
-      "(4x,'SORBTION IS ACTIVE. ')"
-    character(len=*), parameter :: fmtidcy1 =                               &
+    character(len=*), parameter :: fmtisrb =                                   &
+      "(4x,'LINEAR SORBTION IS ACTIVE. ')"
+    character(len=*), parameter :: fmtfreundlich =                             &
+      "(4x,'FREUNDLICH SORBTION IS ACTIVE. ')"
+    character(len=*), parameter :: fmtlangmuir =                               &
+      "(4x,'LANGMUIR SORBTION IS ACTIVE. ')"
+    character(len=*), parameter :: fmtidcy1 =                                  &
       "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
-    character(len=*), parameter :: fmtidcy2 =                               &
+    character(len=*), parameter :: fmtidcy2 =                                  &
       "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
 ! ------------------------------------------------------------------------------
     !
@@ -1020,9 +1143,19 @@ module GwtMstModule
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtisvflow)
-          case ('SORBTION')
+          case ('SORBTION', 'SORPTION')
             this%isrb = 1
-            write(this%iout, fmtisrb)
+            call this%parser%GetStringCaps(keyword2)
+            if (trim(adjustl(keyword2)) == 'FREUNDLICH') this%isrb = 2
+            if (trim(adjustl(keyword2)) == 'LANGMUIR') this%isrb = 3
+            select case (this%isrb)
+            case(1)
+              write(this%iout, fmtisrb)
+            case(2)
+              write(this%iout, fmtfreundlich)
+            case(3)
+              write(this%iout, fmtlangmuir)
+            end select
           case ('FIRST_ORDER_DECAY')
             this%idcy = 1
             write(this%iout, fmtidcy1)
@@ -1060,8 +1193,8 @@ module GwtMstModule
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(7) :: lname
-    character(len=24), dimension(7) :: aname
+    logical, dimension(6) :: lname
+    character(len=24), dimension(6) :: aname
     ! -- formats
     ! -- data
     data aname(1) /'  MOBILE DOMAIN POROSITY'/
@@ -1069,6 +1202,7 @@ module GwtMstModule
     data aname(3) /'DISTRIBUTION COEFFICIENT'/
     data aname(4) /'AQUEOUS RATE COEFFICIENT'/
     data aname(5) /' SORBED RATE COEFFICIENT'/
+    data aname(6) /'   SECOND SORPTION PARAM'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -1122,6 +1256,14 @@ module GwtMstModule
                                          this%parser%iuactive,                 &
                                          this%decay_sorbed, aname(5))
             lname(5) = .true.
+          case ('SP2')
+            if (this%isrb < 2) &
+              call mem_reallocate(this%sp2, this%dis%nodes, 'SP2',             &
+                                trim(this%memoryPath))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%sp2,       &
+                                         aname(6))
+            lname(6) = .true.
           case default
             write(errmsg,'(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
             call store_error(errmsg)
@@ -1156,6 +1298,14 @@ module GwtMstModule
           &GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
+      if (this%isrb > 1) then
+        if (.not. lname(6)) then
+          write(errmsg, '(a)') 'FREUNDLICH OR LANGMUIR SORBTION IS ACTIVE &
+            &BUT SP2 NOT SPECIFIED.  SP2 MUST BE SPECIFIED IN &
+            &GRIDDATA BLOCK.'
+          call store_error(errmsg)
+        end if
+      end if
     else
       if (lname(2)) then
         write(warnmsg, '(a)') 'SORBTION IS NOT ACTIVE BUT &
@@ -1167,6 +1317,13 @@ module GwtMstModule
       if (lname(3)) then
         write(warnmsg, '(a)') 'SORBTION IS NOT ACTIVE BUT &
           &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
+          &NO AFFECT ON SIMULATION RESULTS.'
+        call store_warning(warnmsg)
+        write(this%iout, '(1x,a)') 'WARNING.  ' // warnmsg
+      endif
+      if (lname(6)) then
+        write(warnmsg, '(a)') 'SORBTION IS NOT ACTIVE BUT &
+          &SP2 WAS SPECIFIED.  SP2 WILL HAVE &
           &NO AFFECT ON SIMULATION RESULTS.'
         call store_warning(warnmsg)
         write(this%iout, '(1x,a)') 'WARNING.  ' // warnmsg
