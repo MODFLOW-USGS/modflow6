@@ -46,3 +46,24 @@ def source_dir_to_dict(source_dir=".", ext='.f90', verbose=True):
                 full_lines = get_full_lines(fwpath)
                 d[f] = full_lines
     return d
+
+
+def parse_type_extends(line):
+    istart = line.index("(")
+    istop = line.index(")")
+    parent = line[istart + 1:istop]
+    istart = line.index("::")
+    child = line[istart + 2:].strip()
+    return child, parent
+
+
+def get_inheritance_dict(source_dir):
+    d = source_dir_to_dict(source_dir)
+    inheritance_dict = {}
+    for f in d:
+        full_lines = d[f]
+        for line in full_lines:
+            if "type, extends" in line:
+                child, parent = parse_type_extends(line)
+                inheritance_dict[child] = parent
+    return inheritance_dict

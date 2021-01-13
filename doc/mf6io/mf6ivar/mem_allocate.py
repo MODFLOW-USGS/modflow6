@@ -8,7 +8,7 @@ information on the mf6 variables that are stored in the memory manager.
 """
 
 import os
-from fortran_parser import source_dir_to_dict
+from fortran_parser import source_dir_to_dict, get_inheritance_dict
 
 # Set up and check paths
 source_dir = "../../../src"
@@ -205,3 +205,8 @@ for root, dirs, files in os.walk(source_dir):
             write_tex(memvar_list, ftex)
 
 write_tex_footer(ftex)
+
+ihd = get_inheritance_dict(source_dir)
+print("\ninheritance structure")
+for child in ihd:
+    print(child, "<--", ihd[child])
