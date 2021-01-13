@@ -6,8 +6,7 @@ module BndModule
                                           LENMODELNAME, LENPACKAGENAME,        &
                                           LENMEMPATH, MAXCHARLEN, LINELENGTH,  &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
-                                          TABLEFT, TABCENTER,                  &
-                                          MEMREADONLY, MEMREADWRITE
+                                          TABLEFT, TABCENTER
   use SimVariablesModule,           only: errmsg
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
@@ -992,8 +991,8 @@ module BndModule
     !
     ! -- allocate integer variables
     call mem_allocate(this%ibcnum, 'IBCNUM', this%memoryPath)
-    call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath, MEMREADWRITE)
-    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath)
+    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
     call mem_allocate(this%ncolbnd, 'NCOLBND', this%memoryPath)
     call mem_allocate(this%iscloc, 'ISCLOC', this%memoryPath)
     call mem_allocate(this%naux, 'NAUX', this%memoryPath)
@@ -1063,7 +1062,7 @@ module BndModule
       this%nodelist => nodelist
     else
       call mem_allocate(this%nodelist, this%maxbound, 'NODELIST',                &
-                        this%memoryPath, MEMREADWRITE)
+                        this%memoryPath)
       do j = 1, this%maxbound
         this%nodelist(j) = 0
       end do
@@ -1076,7 +1075,7 @@ module BndModule
     !
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
-                      this%memoryPath, MEMREADWRITE)
+                      this%memoryPath)
     !
     ! -- Allocate hcof and rhs
     call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)

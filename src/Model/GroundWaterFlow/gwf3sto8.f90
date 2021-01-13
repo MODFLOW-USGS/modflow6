@@ -1,8 +1,7 @@
 module GwfStoModule
 
   use KindModule,             only: DP, I4B, LGP
-  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT,        &
-                                    MEMREADWRITE
+  use ConstantsModule,        only: DZERO, DEM6, DEM4, DONE, LENBUDTXT
   use SmoothingModule,        only: sQuadraticSaturation,                      &
                                     sQuadraticSaturationDerivative,            &
                                     sQSaturation, sLinearSaturation
@@ -690,8 +689,8 @@ module GwfStoModule
     ! -- Allocate
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath, MEMREADWRITE)    
-    call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath, MEMREADWRITE)
+    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath)    
+    call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
     !

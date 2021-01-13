@@ -231,6 +231,7 @@ module GwtIstModule
     real(DP) :: thetamfrac
     real(DP) :: thetaimfrac
     real(DP) :: kd
+    real(DP) :: rhob
     real(DP) :: lambda1im
     real(DP) :: lambda2im
     real(DP) :: gamma1im
@@ -258,6 +259,7 @@ module GwtIstModule
       !
       ! -- Add dual domain mass transfer contributions to rhs and hcof
       kd = DZERO
+      rhob = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
@@ -266,11 +268,12 @@ module GwtIstModule
       if (this%idcy == 2) gamma1im = this%decay(n)
       if (this%isrb > 0) then
         kd = this%distcoef(n)
+        rhob = this%bulk_density(n)
         if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
         if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       end if
       call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                          thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
+                          thetamfrac, thetaimfrac, rhob, kd,                 &
                           lambda1im, lambda2im, gamma1im, gamma2im,          &
                           this%zetaim(n), this%cim(n), hhcof, rrhs)
       amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
@@ -322,6 +325,7 @@ module GwtIstModule
     real(DP) :: thetamfrac
     real(DP) :: thetaimfrac
     real(DP) :: kd
+    real(DP) :: rhob
     real(DP) :: lambda1im
     real(DP) :: lambda2im
     real(DP) :: gamma1im
@@ -382,6 +386,7 @@ module GwtIstModule
         hhcof = DZERO
         rrhs = DZERO
         kd = DZERO
+        rhob = DZERO
         lambda1im = DZERO
         lambda2im = DZERO
         gamma1im = DZERO
@@ -390,11 +395,12 @@ module GwtIstModule
         if (this%idcy == 2) gamma1im = this%decay(n)
         if (this%isrb > 0) then
           kd = this%distcoef(n)
+          rhob = this%bulk_density(n)
           if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
           if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
         end if
         call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                            thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
+                            thetamfrac, thetaimfrac, rhob, kd,                 &
                             lambda1im, lambda2im, gamma1im, gamma2im,          &
                             this%zetaim(n), this%cim(n), hhcof, rrhs)
         rate = hhcof * x(n) - rrhs
@@ -980,6 +986,7 @@ module GwtIstModule
     real(DP) :: cimt
     real(DP) :: cimtpdt
     real(DP) :: rate
+    real(DP) :: rhob
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate cim
@@ -991,6 +998,7 @@ module GwtIstModule
       thetamfrac = this%mst%get_thetamfrac(n)
       thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
       kd = DZERO
+      rhob = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
@@ -999,6 +1007,7 @@ module GwtIstModule
       if (this%idcy == 2) gamma1im = this%decay(n)
       if (this%isrb > 0) then
         kd = this%distcoef(n)
+        rhob = this%bulk_density(n)
         if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
         if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       end if
@@ -1006,11 +1015,11 @@ module GwtIstModule
       ! -- calculate the ddterms
       cimt = this%cim(n)
       call calcddterms(this%thetaim(n), vcell, delt, swtpdt, swt, thetamfrac,  &
-                       thetaimfrac, this%bulk_density(n), kd, lambda1im,       &
+                       thetaimfrac, rhob, kd, lambda1im,                       &
                        lambda2im, gamma1im, gamma2im, this%zetaim(n), cimt,    &
                        ddterm, f)
       cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                           thetamfrac, thetaimfrac, this%bulk_density(n), kd,  &
+                           thetamfrac, thetaimfrac, rhob, kd,                  &
                            lambda1im, lambda2im, gamma1im, gamma2im,           &
                            this%zetaim(n), this%cim(n), cnew(n))
       !
@@ -1105,6 +1114,7 @@ module GwtIstModule
     real(DP) :: gamma1im
     real(DP) :: gamma2im
     real(DP) :: ctmp
+    real(DP) :: rhob
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate cim
@@ -1116,6 +1126,7 @@ module GwtIstModule
       thetamfrac = this%mst%get_thetamfrac(n)
       thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
       kd = DZERO
+      rhob = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
@@ -1124,12 +1135,13 @@ module GwtIstModule
       if (this%idcy == 2) gamma1im = this%decay(n)
       if (this%isrb > 0) then
         kd = this%distcoef(n)
+        rhob = this%bulk_density(n)
         if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
         if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       end if
       ctmp = this%cim(n)
       ctmp = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
-                        thetamfrac, thetaimfrac, this%bulk_density(n), kd,   &
+                        thetamfrac, thetaimfrac, rhob, kd,                   &
                         lambda1im, lambda2im, gamma1im, gamma2im,            &
                         this%zetaim(n), ctmp, cnew(n))
       cim(n) = ctmp
