@@ -222,7 +222,7 @@ def eval_transport(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     cnorm = obs['X008'] / 0.05
-    cnorm_max = [0.3531926912, 0.8842093246]
+    cnorm_max = [0.32842034, 0.875391418]
     msg = '{} /= {}'.format(cnorm_max[sim.idxsim], cnorm.max())
     assert np.allclose(cnorm_max[sim.idxsim], cnorm.max(), atol=0.001), msg
     print('cnorm max', cnorm.max())
