@@ -9,12 +9,12 @@ longname save calculated flows to budget file
 description REPLACE save_flows {'{#1}': 'IST'}
 
 block options
-name sorbtion
+name sorption
 type keyword
 reader urword
 optional true
-longname activate sorbtion
-description is a text keyword to indicate that sorbtion will be activated.  Use of this keyword requires that BULK\_DENSITY and DISTCOEF are specified in the GRIDDATA block.
+longname activate sorption
+description is a text keyword to indicate that sorption will be activated.  Use of this keyword requires that BULK\_DENSITY and DISTCOEF are specified in the GRIDDATA block.
 
 block options
 name first_order_decay

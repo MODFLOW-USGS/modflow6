@@ -29,7 +29,7 @@ module GwtIstModule
     
     integer(I4B), pointer                            :: icimout => null()       ! unit number for binary cim output
     integer(I4B), pointer                            :: idcy => null()          ! order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:on)
+    integer(I4B), pointer                            :: isrb => null()          ! sorption active flag (0:off, 1:on)
     real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
     real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        ! mass transfer rate to immobile domain
     real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       ! porosity of the immobile domain
@@ -154,15 +154,15 @@ module GwtIstModule
     call budget_cr(this%budget, this%memoryPath)
     call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%packName)
     !
-    ! -- Perform a check to ensure that sorbtion and decay are set 
+    ! -- Perform a check to ensure that sorption and decay are set 
     !    consistently between the MST and IST packages.
     if (this%idcy /= this%mst%idcy) then
       call store_error('DECAY MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
         &MST AND IST PACKAGES.  TURN DECAY ON OR OFF FOR BOTH PACKAGES.')
     endif
     if (this%isrb /= this%mst%isrb) then
-      call store_error('SORBTION MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
-        &MST AND IST PACKAGES.  TURN SORBTION ON OR OFF FOR BOTH PACKAGES.')
+      call store_error('SORPTION MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
+        &MST AND IST PACKAGES.  TURN SORPTION ON OR OFF FOR BOTH PACKAGES.')
     endif
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
@@ -657,7 +657,7 @@ module GwtIstModule
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
       "WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtisrb =                                   &
-      "(4x,'LINEAR SORBTION IS SELECTED. ')"
+      "(4x,'LINEAR SORPTION IS SELECTED. ')"
     character(len=*), parameter :: fmtidcy1 =                               &
       "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 =                               &
@@ -683,7 +683,7 @@ module GwtIstModule
           case('CIM')
             call this%parser%GetRemainingLine(keyword2)
             call this%ocd%set_option(keyword2, this%inunit, this%iout)
-          case ('SORBTION')
+          case ('SORBTION', 'SORPTION')
             this%isrb = 1
             write(this%iout, fmtisrb)
           case ('FIRST_ORDER_DECAY')
@@ -816,27 +816,27 @@ module GwtIstModule
       call ustop()
     end if
     !
-    ! -- Check for required sorbtion variables
+    ! -- Check for required sorption variables
     if (this%isrb > 0) then
       if (.not. lname(1)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT BULK_DENSITY &
+        write(errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT BULK_DENSITY &
           &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(2)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT DISTRIBUTION &
+        write(errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT DISTRIBUTION &
           &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
           &GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
     else
       if (lname(1)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
+        write(this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
           &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
           &SIMULATION RESULTS.'
       endif
       if (lname(2)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
+        write(this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
           &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
           &NO AFFECT ON SIMULATION RESULTS.'
       endif
@@ -852,7 +852,7 @@ module GwtIstModule
       endif
       if (.not. lname(4)) then
         !
-        ! -- If DECAY_SORBED not specified and sorbtion is active, then set
+        ! -- If DECAY_SORBED not specified and sorption is active, then set
         !    decay_sorbed equal to decay
         if (this%isrb > 0) then
           write(this%iout, '(1x, a)') 'DECAY_SORBED not provided in GRIDDATA &

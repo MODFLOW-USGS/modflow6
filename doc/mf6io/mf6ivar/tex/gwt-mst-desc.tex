@@ -9,7 +9,7 @@
 
 \item \texttt{ZERO\_ORDER\_DECAY}---is a text keyword to indicate that zero-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorbtion is active) are specified in the GRIDDATA block.
 
-\item \texttt{SORBTION}---is a text keyword to indicate that sorbtion will be activated.  Use of this keyword requires that BULK\_DENSITY and DISTCOEF are specified in the GRIDDATA block.
+\item \texttt{sorption}---is a text keyword to indicate that sorption will be activated.  Use of this keyword requires that BULK\_DENSITY and DISTCOEF are specified in the GRIDDATA block.  If sorption is specified as FREUNDLICH or LANGMUIR then SP2 is also required in the GRIDDATA block.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}
@@ -23,7 +23,9 @@
 
 \item \texttt{bulk\_density}---is the bulk density of the aquifer in mass per length cubed.  bulk\_density is not required unless the SORBTION keyword is specified.
 
-\item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef is not required unless the SORBTION keyword is specified.
+\item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef is not required unless the SORPTION keyword is specified.
+
+\item \texttt{sp2}---is the exponent for the Freundlich isotherm and the sorption capacity for the Langmuir isotherm.
 
 \end{description}
 

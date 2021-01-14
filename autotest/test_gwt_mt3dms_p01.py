@@ -318,7 +318,7 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
                                   zero_order_decay=zero_order_decay,
                                   decay=decay_rate,
                                   decay_sorbed=decay_rate_sorbed,
-                                  sorbtion=True,
+                                  sorption='linear',
                                   bulk_density=rhob,
                                   distcoef=kd)
 
@@ -335,7 +335,7 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
 
 
     if zeta is not None:
-        ist = flopy.mf6.ModflowGwtist(gwt, sorbtion=True,
+        ist = flopy.mf6.ModflowGwtist(gwt, sorption=True,
                                       first_order_decay=first_order_decay,
                                       zero_order_decay=zero_order_decay,
                                       bulk_density=rhob, distcoef=kd,
