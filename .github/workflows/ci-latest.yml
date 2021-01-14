@@ -39,7 +39,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew info --cask gfortran
-        brew cask install gfortran
+        brew install --cask gfortran
         ls -l /usr/local/gfortran/bin/
         sudo ln -fs /usr/local/gfortran/bin/gfortran /usr/local/bin/gfortran
         sudo ln -fs /usr/local/gfortran/bin/gcc /usr/local/bin/gcc

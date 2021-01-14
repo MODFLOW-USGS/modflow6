@@ -225,7 +225,6 @@ def eval_transport(sim):
     cnorm_max = [0.32842034, 0.875391418]
     msg = '{} /= {}'.format(cnorm_max[sim.idxsim], cnorm.max())
     assert np.allclose(cnorm_max[sim.idxsim], cnorm.max(), atol=0.001), msg
-    print('cnorm max', cnorm.max())
 
     savefig = False
     if savefig:

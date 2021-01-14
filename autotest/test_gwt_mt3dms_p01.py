@@ -305,8 +305,8 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
 
     # mass storage and transfer
     if onelambda:
-        # specify lambda2 as None, so that sorbed decay is same as aqueous
-        decay_rate_sorbed = None
+        # assign sorbed decay to decay rate
+        decay_rate_sorbed = decay_rate
     else:
         decay_rate_sorbed = decay_rate
 
