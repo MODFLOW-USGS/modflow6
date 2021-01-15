@@ -1283,8 +1283,8 @@ module GwtMstModule
     data aname(1) /'  MOBILE DOMAIN POROSITY'/
     data aname(2) /'            BULK DENSITY'/
     data aname(3) /'DISTRIBUTION COEFFICIENT'/
-    data aname(4) /'AQUEOUS RATE COEFFICIENT'/
-    data aname(5) /' SORBED RATE COEFFICIENT'/
+    data aname(4) /'              DECAY RATE'/
+    data aname(5) /'       DECAY SORBED RATE'/
     data aname(6) /'   SECOND SORPTION PARAM'/
 ! ------------------------------------------------------------------------------
     !

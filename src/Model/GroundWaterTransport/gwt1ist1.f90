@@ -732,10 +732,10 @@ module GwtIstModule
     ! -- data
     data aname(1) /'            BULK DENSITY'/
     data aname(2) /'DISTRIBUTION COEFFICIENT'/
-    data aname(3) /'  FIRST RATE COEFFICIENT'/
-    data aname(4) /' SECOND RATE COEFFICIENT'/
+    data aname(3) /'              DECAY RATE'/
+    data aname(4) /'       DECAY SORBED RATE'/
     data aname(5) /'   INITIAL IMMOBILE CONC'/
-    data aname(6) /'  DUAL DOMAIN TRANS RATE'/
+    data aname(6) /'  FIRST ORDER TRANS RATE'/
     data aname(7) /'IMMOBILE DOMAIN POROSITY'/
 ! ------------------------------------------------------------------------------
     !
@@ -855,10 +855,10 @@ module GwtIstModule
         ! -- If DECAY_SORBED not specified and sorption is active, then set
         !    decay_sorbed equal to decay
         if (this%isrb > 0) then
-          write(this%iout, '(1x, a)') 'DECAY_SORBED not provided in GRIDDATA &
-            &block. Assuming DECAY_SORBED=DECAY'
-          call mem_reassignptr(this%decay_sorbed, 'DECAY_SORBED',              &
-                               trim(this%memoryPath), 'DECAY', trim(this%memoryPath))
+          write(errmsg, '(a)') 'DECAY_SORBED not provided in GRIDDATA &
+            &block but decay and sorption are active.  Specify DECAY_SORBED &
+            &in GRIDDATA block.'
+          call store_error(errmsg)
         endif
       endif
     else
