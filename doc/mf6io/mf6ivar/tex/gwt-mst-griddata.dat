@@ -9,4 +9,6 @@ BEGIN GRIDDATA
     <bulk_density(nodes)> -- READARRAY]
   [DISTCOEF [LAYERED]
     <distcoef(nodes)> -- READARRAY]
+  [SP2 [LAYERED]
+    <sp2(nodes)> -- READARRAY]
 END GRIDDATA
