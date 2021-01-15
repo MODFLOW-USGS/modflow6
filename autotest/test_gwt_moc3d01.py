@@ -194,7 +194,7 @@ def get_model(idx, dir):
     porosity = 0.1
 
     rtd = retardation[idx]
-    sorbtion = False
+    sorption = None
     kd = None
     if rtd is not None:
         rhob = 1.
@@ -210,7 +210,7 @@ def get_model(idx, dir):
                                   first_order_decay=first_order_decay,
                                   decay=decay_rate,
                                   decay_sorbed=decay_rate,
-                                  sorbtion=sorbtion, distcoef=kd)
+                                  sorption=sorption, distcoef=kd)
 
 
     # sources
