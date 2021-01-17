@@ -283,6 +283,8 @@ module GwfCsubModule
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
+    procedure, private :: csub_delay_assemble_fc
+    procedure, private :: csub_delay_assemble_fn
     !
     ! -- methods for observations
     procedure, public :: csub_obs_supported
@@ -6138,13 +6140,164 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: delt
+    !use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
+    !integer(I4B) :: node
+    !integer(I4B) :: idelay
+    !integer(I4B) :: ielastic
+    !real(DP) :: dzini
+    !real(DP) :: dzhalf
+    !real(DP) :: c
+    !real(DP) :: c2
+    !real(DP) :: c3
+    !real(DP) :: tled
+    !real(DP) :: f
+    !real(DP) :: fmult
+    !real(DP) :: sske
+    !real(DP) :: ssk
+    !real(DP) :: z
+    !real(DP) :: ztop
+    !real(DP) :: zbot
+    !real(DP) :: dz
+    !real(DP) :: dz0
+    !real(DP) :: theta
+    !real(DP) :: theta0
+    !real(DP) :: dsn
+    !real(DP) :: dsn0
+    !real(DP) :: wc
+    !real(DP) :: wc0
+    !real(DP) :: h
+    !real(DP) :: h0
+    real(DP) :: aii
+    real(DP) :: au
+    real(DP) :: al
+    real(DP) :: r
+! ------------------------------------------------------------------------------
+    !!
+    !! -- initialize variables
+    !idelay = this%idelay(ib)
+    !ielastic = this%ielastic(ib)
+    !node = this%nodelist(ib)
+    !dzini = this%dbdzini(1, idelay)
+    !dzhalf = DHALF * dzini
+    !tled = DONE / delt
+    !fmult = dzini * tled
+    !c = this%kv(ib) / dzini
+    !c2 = DTWO * c
+    !c3 = DTHREE * c
+    !!
+    !! -- water compressibility variable
+    !f = this%brg * tled
+    !
+    !
+    do n = 1, this%ndelaycells
+      !
+      ! -- assemble terms
+      if (this%inewton == 0) then
+        call this%csub_delay_assemble_fc(ib, n, hcell, aii, au, al, r)
+      else
+        call this%csub_delay_assemble_fn(ib, n, hcell, aii, au, al, r)
+      end if
+      !
+      ! -- add terms
+      this%dbal(n) = al
+      this%dbau(n) = au
+      this%dbad(n) = aii
+      this%dbrhs(n) = r
+      !!
+      !! -- current and previous delay cell states
+      !z = this%dbz(n, idelay)
+      !ztop = z + dzhalf
+      !zbot = z - dzhalf
+      !h = this%dbh(n, idelay)
+      !h0 = this%dbh0(n, idelay)
+      !dz = this%dbdz(n, idelay)
+      !dz0 = this%dbdz0(n, idelay)
+      !theta = this%dbtheta(n, idelay)
+      !theta0 = this%dbtheta0(n, idelay)
+      !!
+      !! -- calculate saturation
+      !call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+      !!
+      !! -- calculate ssk and sske
+      !call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
+      !!
+      !! -- water compressibility terms
+      !wc = dsn * dz * f * this%dbtheta(n, idelay)
+      !wc0 = dsn0 * dz0 * f * this%dbtheta0(n, idelay)
+      !!
+      !! -- calculate diagonal
+      !aii = -ssk * fmult - wc
+      !!
+      !! -- calculate right hand side
+      !if (ielastic /= 0) then
+      !  r = -fmult *                                                             &
+      !      (ssk * (this%dbgeo(n, idelay) + zbot) -                              &
+      !       sske * this%dbes0(n, idelay))
+      !else
+      !  r = -fmult *                                                             &
+      !      (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +      &
+      !       sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+      !end if
+      !!
+      !! -- add water compressibility to the right hand side
+      !r = r - wc0 * h0
+      !!
+      !! -- add connection to the gwf cell
+      !if (n == 1 .or. n == this%ndelaycells) then
+      !  aii = aii - c3
+      !  r = r - c2 * hcell
+      !else
+      !  aii = aii - c2
+      !end if
+      !!
+      !! -- off diagonals
+      !! -- lower
+      !if (n > 1) then
+      !  this%dbal(n) = c
+      !end if
+      !!
+      !! -- upper
+      !if (n < this%ndelaycells) then
+      !  this%dbau(n) = c
+      !end if
+      !!
+      !! -- diagonal
+      !this%dbad(n) = aii
+      !!
+      !! -- right hand side
+      !this%dbrhs(n) = r
+    end do
+    !
+    ! -- return
+    return
+
+  end subroutine csub_delay_assemble
+  
+  subroutine csub_delay_assemble_fc(this, ib, n, hcell, aii, au, al, r)
+! ******************************************************************************
+! csub_delay_assemble_fc -- Assemble coefficients for delay interbeds cells
+!                           for the standard formulation.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
+    ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: ib
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: aii
+    real(DP), intent(inout) :: au
+    real(DP), intent(inout) :: al
+    real(DP), intent(inout) :: r
+    ! -- local variables
     integer(I4B) :: node
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
@@ -6154,8 +6307,8 @@ contains
     real(DP) :: c2
     real(DP) :: c3
     real(DP) :: tled
-    real(DP) :: f
-    real(DP) :: fmult
+    real(DP) :: wcf
+    real(DP) :: smult
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: z
@@ -6163,98 +6316,232 @@ contains
     real(DP) :: zbot
     real(DP) :: dz
     real(DP) :: dz0
+    real(DP) :: theta
+    real(DP) :: theta0
     real(DP) :: dsn
     real(DP) :: dsn0
     real(DP) :: wc
     real(DP) :: wc0
     real(DP) :: h
     real(DP) :: h0
-    real(DP) :: aii
-    real(DP) :: r
+    real(DP) :: hbar
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize variables
+    ! -- initialize accumulators
+    aii = DZERO
+    au = DZERO
+    al = DZERO
+    r = DZERO
+    !
+    ! -- initialize local variables
     idelay = this%idelay(ib)
     ielastic = this%ielastic(ib)
     node = this%nodelist(ib)
     dzini = this%dbdzini(1, idelay)
     dzhalf = DHALF * dzini
     tled = DONE / delt
-    fmult = dzini * tled
     c = this%kv(ib) / dzini
     c2 = DTWO * c
     c3 = DTHREE * c
     !
-    ! -- water compressibility variable
-    f = this%brg * tled
+    ! -- add qdb terms
+    aii = aii - c2
     !
+    ! -- top or bottom cell
+    if (n == 1 .or. n == this%ndelaycells) then
+      aii = aii - c
+      r = r - c2 * hcell
+    end if
     !
-    do n = 1, this%ndelaycells
-      !
-      ! -- current and previous delay cell states
-      z = this%dbz(n, idelay)
-      ztop = z + dzhalf
-      zbot = z - dzhalf
-      h = this%dbh(n, idelay)
-      h0 = this%dbh0(n, idelay)
-      !
-      ! -- water compressibility terms
-      dz = this%dbdz(n, idelay)
-      dz0 = this%dbdz0(n, idelay)
-      call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
-      wc = dsn * dz * f * this%dbtheta(n, idelay)
-      wc0 = dsn0 * dz0 * f * this%dbtheta0(n, idelay)
-      !
-      ! -- calculate  ssk and sske
-      call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
-      !
-      ! -- calculate diagonal
-      aii = -ssk * fmult - wc
-      !
-      ! -- calculate right hand side
-      if (ielastic /= 0) then
-        r = -fmult *                                                             &
-            (ssk * (this%dbgeo(n, idelay) + zbot) -                              &
-             sske * this%dbes0(n, idelay))
-      else
-        r = -fmult *                                                             &
-            (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +      &
-             sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
-      end if
-      !
-      ! -- add water compressibility to the right hand side
-      r = r - wc0 * h0
-      !
-      ! -- add connection to the gwf cell
-      if (n == 1 .or. n == this%ndelaycells) then
-        aii = aii - c3
-        r = r - c2 * hcell
-      else
-        aii = aii - c2
-      end if
-      !
-      ! -- off diagonals
-      ! -- lower
-      if (n > 1) then
-        this%dbal(n) = c
-      end if
-      !
-      ! -- upper
-      if (n < this%ndelaycells) then
-        this%dbau(n) = c
-      end if
-      !
-      ! -- diagonal
-      this%dbad(n) = aii
-      !
-      ! -- right hand side
-      this%dbrhs(n) = r
-    end do
+    ! -- lower qdb term    
+    if (n > 1) then
+      al = c
+    end if
+    !
+    ! -- upper qdb term
+    if (n < this%ndelaycells) then
+      au = c
+    end if
+    !
+    ! -- current and previous delay cell states
+    z = this%dbz(n, idelay)
+    ztop = z + dzhalf
+    zbot = z - dzhalf
+    h = this%dbh(n, idelay)
+    h0 = this%dbh0(n, idelay)
+    dz = this%dbdz(n, idelay)
+    dz0 = this%dbdz0(n, idelay)
+    theta = this%dbtheta(n, idelay)
+    theta0 = this%dbtheta0(n, idelay)
+    !
+    ! -- calculate corrected head (hbar)
+    hbar = sQuadratic0sp(h, zbot, this%satomega)
+    !
+    ! -- calculate saturation
+    call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+    !
+    ! -- calculate ssk and sske
+    call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
+    !
+    ! -- add storage terms
+    smult = dzini * tled
+    aii = aii - smult * dsn * ssk
+    if (ielastic /= 0) then
+      r = r - smult *                                                            &
+          (dsn * ssk * (this%dbgeo(n, idelay) + zbot) -                          &
+           dsn0 * sske * this%dbes0(n, idelay))
+    else
+      r = r - smult *                                                            &
+          (dsn * ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +  &
+           dsn0 * sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+    end if
+    !
+    ! -- add storage correction term
+    r = r + smult * dsn * ssk * (h - hbar)
+    !
+    ! -- add water compressibility terms
+    wcf = this%brg * tled
+    wc = dsn * dz * wcf * this%dbtheta(n, idelay)
+    wc0 = dsn0 * dz0 * wcf * this%dbtheta0(n, idelay)
+    aii = aii - wc
+    r = r - wc0 * h0
     !
     ! -- return
     return
 
-  end subroutine csub_delay_assemble
+  end subroutine csub_delay_assemble_fc
+  
+  subroutine csub_delay_assemble_fn(this, ib, n, hcell, aii, au, al, r)
+! ******************************************************************************
+! csub_delay_assemble_fn -- Assemble coefficients for delay interbeds cells
+!                           for the newton-raphson formulation.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
+    ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: ib
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: aii
+    real(DP), intent(inout) :: au
+    real(DP), intent(inout) :: al
+    real(DP), intent(inout) :: r
+    ! -- local variables
+    integer(I4B) :: node
+    integer(I4B) :: idelay
+    integer(I4B) :: ielastic
+    real(DP) :: dzini
+    real(DP) :: dzhalf
+    real(DP) :: c
+    real(DP) :: c2
+    real(DP) :: c3
+    real(DP) :: tled
+    real(DP) :: wcf
+    real(DP) :: smult
+    real(DP) :: sske
+    real(DP) :: ssk
+    real(DP) :: z
+    real(DP) :: ztop
+    real(DP) :: zbot
+    real(DP) :: dz
+    real(DP) :: dz0
+    real(DP) :: theta
+    real(DP) :: theta0
+    real(DP) :: dsn
+    real(DP) :: dsn0
+    real(DP) :: wc
+    real(DP) :: wc0
+    real(DP) :: h
+    real(DP) :: h0
+    real(DP) :: hbar
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize accumulators
+    aii = DZERO
+    au = DZERO
+    al = DZERO
+    r = DZERO
+    !
+    ! -- initialize local variables
+    idelay = this%idelay(ib)
+    ielastic = this%ielastic(ib)
+    node = this%nodelist(ib)
+    dzini = this%dbdzini(1, idelay)
+    dzhalf = DHALF * dzini
+    tled = DONE / delt
+    c = this%kv(ib) / dzini
+    c2 = DTWO * c
+    c3 = DTHREE * c
+    !
+    ! -- add qdb terms
+    aii = aii - c2
+    !
+    ! -- top or bottom cell
+    if (n == 1 .or. n == this%ndelaycells) then
+      aii = aii - c
+      r = r - c2 * hcell
+    end if
+    !
+    ! -- lower qdb term    
+    if (n > 1) then
+      al = c
+    end if
+    !
+    ! -- upper qdb term
+    if (n < this%ndelaycells) then
+      au = c
+    end if
+    !
+    ! -- current and previous delay cell states
+    z = this%dbz(n, idelay)
+    ztop = z + dzhalf
+    zbot = z - dzhalf
+    h = this%dbh(n, idelay)
+    h0 = this%dbh0(n, idelay)
+    dz = this%dbdz(n, idelay)
+    dz0 = this%dbdz0(n, idelay)
+    theta = this%dbtheta(n, idelay)
+    theta0 = this%dbtheta0(n, idelay)
+    !
+    ! -- calculate corrected head (hbar)
+    hbar = sQuadratic0sp(h, zbot, this%satomega)
+    !
+    ! -- calculate saturation
+    call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+    !
+    ! -- calculate ssk and sske
+    call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
+    !
+    ! -- add storage terms
+    smult = dzini * tled
+    aii = aii - smult * dsn * ssk
+    if (ielastic /= 0) then
+      r = r - smult *                                                            &
+          (dsn * ssk * (this%dbgeo(n, idelay) + zbot) -                          &
+           dsn0 * sske * this%dbes0(n, idelay))
+    else
+      r = r - smult *                                                            &
+          (dsn * ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +  &
+           dsn0 * sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+    end if
+    !
+    ! -- add storage correction term
+    r = r + smult * dsn * ssk * (h - hbar)
+    !
+    ! -- add water compressibility terms
+    wcf = this%brg * tled
+    wc = dsn * dz * wcf * this%dbtheta(n, idelay)
+    wc0 = dsn0 * dz0 * wcf * this%dbtheta0(n, idelay)
+    aii = aii - wc
+    r = r - wc0 * h0
+    !
+    ! -- return
+    return
+
+  end subroutine csub_delay_assemble_fn
 
   subroutine csub_delay_solve(n, tl, td, tu, b, x, w)
 ! ******************************************************************************
