@@ -93,7 +93,7 @@ def write_budget(fbin, data, kstp=1, kper=1, text='    FLOW-JA-FACE',
     return
 
 
-def uniform_flow_field(qx, qy, qz, shape):
+def uniform_flow_field(qx, qy, qz, shape, delr=None, delc=None, delv=None):
 
     nlay, nrow, ncol = shape
 
@@ -111,6 +111,12 @@ def uniform_flow_field(qx, qy, qz, shape):
 
     # create the flowja array for the uniform flow field (assume top-bot = 1)
     flowja = []
+    if delr is None:
+        delr = 1.
+    if delc is None:
+        delc = 1.
+    if delv is None:
+        delv = 1.
     for k in range(nlay):
         for i in range(nrow):
             for j in range(ncol):
@@ -118,22 +124,22 @@ def uniform_flow_field(qx, qy, qz, shape):
                 flowja.append(0.)
                 # up
                 if k > 0:
-                    flowja.append(-qz)
+                    flowja.append(-qz * delr * delc)
                 # back
                 if i > 0:
-                    flowja.append(-qy)
+                    flowja.append(-qy * delr * delv)
                 # left
                 if j > 0:
-                    flowja.append(qx)
+                    flowja.append(qx * delc * delv)
                 # right
                 if j < ncol - 1:
-                    flowja.append(-qx)
+                    flowja.append(-qx * delc * delv)
                 # front
                 if i < nrow - 1:
-                    flowja.append(qy)
+                    flowja.append(qy * delr * delv)
                 # bottom
                 if k < nlay - 1:
-                    flowja.append(qz)
+                    flowja.append(qz * delr * delc)
     flowja = np.array(flowja, dtype=np.float64)
     return spdis, flowja
 

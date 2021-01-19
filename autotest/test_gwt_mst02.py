@@ -174,7 +174,7 @@ def build_models():
                                     filename='{}.ic'.format(gwtname))
 
         # mass storage and transfer
-        mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy, sorbtion=True,
+        mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy, sorption='linear',
                                       bulk_density=1., distcoef=distcoef[idx])
 
         # mass loading source
