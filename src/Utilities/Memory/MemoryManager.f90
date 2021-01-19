@@ -2107,7 +2107,7 @@ module MemoryManagerModule
     integer(I4B) :: nterms
     ! -- formats
     ! -- code
-    nterms = 6
+    nterms = 5
     !
     ! -- set up table title
     title = 'DETAILED INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'
@@ -2135,10 +2135,6 @@ module MemoryManagerModule
     ! -- is it a pointer
     text = 'ASSOCIATED VARIABLE'
     call memtab%initialize_column(text, LENMEMADDRESS, alignment=TABLEFT)
-    !
-    ! -- is it a pointer
-    text = 'MEMORY ACCESS PERMISSION'
-    call memtab%initialize_column(text, 16, alignment=TABLEFT)
     !
     ! -- return
     return
