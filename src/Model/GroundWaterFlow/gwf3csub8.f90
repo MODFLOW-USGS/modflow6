@@ -273,6 +273,7 @@ module GwfCsubModule
     ! -- delay interbed methods
     procedure, private :: csub_delay_chk
     procedure, private :: csub_delay_calc_sat
+    procedure, private :: csub_delay_calc_sat_derivative
     procedure, private :: csub_delay_init_zcell
     procedure, private :: csub_delay_calc_stress
     procedure, private :: csub_delay_calc_ssksske
@@ -6140,61 +6141,19 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    !use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
-    !integer(I4B) :: node
-    !integer(I4B) :: idelay
-    !integer(I4B) :: ielastic
-    !real(DP) :: dzini
-    !real(DP) :: dzhalf
-    !real(DP) :: c
-    !real(DP) :: c2
-    !real(DP) :: c3
-    !real(DP) :: tled
-    !real(DP) :: f
-    !real(DP) :: fmult
-    !real(DP) :: sske
-    !real(DP) :: ssk
-    !real(DP) :: z
-    !real(DP) :: ztop
-    !real(DP) :: zbot
-    !real(DP) :: dz
-    !real(DP) :: dz0
-    !real(DP) :: theta
-    !real(DP) :: theta0
-    !real(DP) :: dsn
-    !real(DP) :: dsn0
-    !real(DP) :: wc
-    !real(DP) :: wc0
-    !real(DP) :: h
-    !real(DP) :: h0
     real(DP) :: aii
     real(DP) :: au
     real(DP) :: al
     real(DP) :: r
 ! ------------------------------------------------------------------------------
-    !!
-    !! -- initialize variables
-    !idelay = this%idelay(ib)
-    !ielastic = this%ielastic(ib)
-    !node = this%nodelist(ib)
-    !dzini = this%dbdzini(1, idelay)
-    !dzhalf = DHALF * dzini
-    !tled = DONE / delt
-    !fmult = dzini * tled
-    !c = this%kv(ib) / dzini
-    !c2 = DTWO * c
-    !c3 = DTHREE * c
-    !!
-    !! -- water compressibility variable
-    !f = this%brg * tled
     !
-    !
+    ! -- calculate matrix terms for each delay bed cell
     do n = 1, this%ndelaycells
       !
       ! -- assemble terms
@@ -6209,69 +6168,6 @@ contains
       this%dbau(n) = au
       this%dbad(n) = aii
       this%dbrhs(n) = r
-      !!
-      !! -- current and previous delay cell states
-      !z = this%dbz(n, idelay)
-      !ztop = z + dzhalf
-      !zbot = z - dzhalf
-      !h = this%dbh(n, idelay)
-      !h0 = this%dbh0(n, idelay)
-      !dz = this%dbdz(n, idelay)
-      !dz0 = this%dbdz0(n, idelay)
-      !theta = this%dbtheta(n, idelay)
-      !theta0 = this%dbtheta0(n, idelay)
-      !!
-      !! -- calculate saturation
-      !call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
-      !!
-      !! -- calculate ssk and sske
-      !call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
-      !!
-      !! -- water compressibility terms
-      !wc = dsn * dz * f * this%dbtheta(n, idelay)
-      !wc0 = dsn0 * dz0 * f * this%dbtheta0(n, idelay)
-      !!
-      !! -- calculate diagonal
-      !aii = -ssk * fmult - wc
-      !!
-      !! -- calculate right hand side
-      !if (ielastic /= 0) then
-      !  r = -fmult *                                                             &
-      !      (ssk * (this%dbgeo(n, idelay) + zbot) -                              &
-      !       sske * this%dbes0(n, idelay))
-      !else
-      !  r = -fmult *                                                             &
-      !      (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +      &
-      !       sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
-      !end if
-      !!
-      !! -- add water compressibility to the right hand side
-      !r = r - wc0 * h0
-      !!
-      !! -- add connection to the gwf cell
-      !if (n == 1 .or. n == this%ndelaycells) then
-      !  aii = aii - c3
-      !  r = r - c2 * hcell
-      !else
-      !  aii = aii - c2
-      !end if
-      !!
-      !! -- off diagonals
-      !! -- lower
-      !if (n > 1) then
-      !  this%dbal(n) = c
-      !end if
-      !!
-      !! -- upper
-      !if (n < this%ndelaycells) then
-      !  this%dbau(n) = c
-      !end if
-      !!
-      !! -- diagonal
-      !this%dbad(n) = aii
-      !!
-      !! -- right hand side
-      !this%dbrhs(n) = r
     end do
     !
     ! -- return
@@ -6401,10 +6297,10 @@ contains
     !
     ! -- add water compressibility terms
     wcf = this%brg * tled
-    wc = dsn * dz * wcf * this%dbtheta(n, idelay)
-    wc0 = dsn0 * dz0 * wcf * this%dbtheta0(n, idelay)
-    aii = aii - wc
-    r = r - wc0 * h0
+    wc = dz * wcf * this%dbtheta(n, idelay)
+    wc0 = dz0 * wcf * this%dbtheta0(n, idelay)
+    aii = aii - dsn * wc
+    r = r - dsn0 * wc0 * h0
     !
     ! -- return
     return
@@ -6452,11 +6348,20 @@ contains
     real(DP) :: theta0
     real(DP) :: dsn
     real(DP) :: dsn0
+    real(DP) :: dsnderv
     real(DP) :: wc
     real(DP) :: wc0
     real(DP) :: h
     real(DP) :: h0
     real(DP) :: hbar
+    real(DP) :: hbarderv
+    real(DP) :: gs
+    real(DP) :: es0
+    real(DP) :: pcs
+    real(DP) :: qsto
+    real(DP) :: stoderv
+    real(DP) :: qwc
+    real(DP) :: wcderv
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize accumulators
@@ -6509,34 +6414,62 @@ contains
     ! -- calculate corrected head (hbar)
     hbar = sQuadratic0sp(h, zbot, this%satomega)
     !
+    ! -- calculate the derivative of the hbar functions
+    hbarderv = sQuadratic0spDerivative(h, zbot, this%satomega)
+    !
     ! -- calculate saturation
     call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+    !
+    ! -- calculate the derivative of the saturation 
+    dsnderv = this%csub_delay_calc_sat_derivative(node, idelay, n, hcell)
     !
     ! -- calculate ssk and sske
     call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
     !
-    ! -- add storage terms
+    ! -- caculate storage terms
     smult = dzini * tled
-    aii = aii - smult * dsn * ssk
+    gs = this%dbgeo(n, idelay)
+    es0 = this%dbes0(n, idelay)
+    pcs = this%dbpcs(n, idelay)
     if (ielastic /= 0) then
-      r = r - smult *                                                            &
-          (dsn * ssk * (this%dbgeo(n, idelay) + zbot) -                          &
-           dsn0 * sske * this%dbes0(n, idelay))
+      qsto = smult * (dsn * ssk * (gs - hbar + zbot) - dsn0 * sske * es0)
+      stoderv = -smult * dsn * ssk * hbarderv +                                  &
+                smult * ssk * (gs - hbar + zbot) * dsnderv
     else
-      r = r - smult *                                                            &
-          (dsn * ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +  &
-           dsn0 * sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+      qsto = smult * (dsn * ssk * (gs - hbar + zbot - pcs) +                     &
+                      dsn0 * sske * (pcs - es0))
+      stoderv = -smult * dsn * ssk * hbarderv +                                  &
+                smult * ssk * (gs - hbar + zbot - pcs) * dsnderv
     end if
     !
-    ! -- add storage correction term
-    r = r + smult * dsn * ssk * (h - hbar)
+    ! -- Add additional term if using lagged effective stress
+    if (this%ieslag /= 0) then
+      if (ielastic /= 0) then
+        stoderv = stoderv - smult * sske * es0 * dsnderv
+      else
+        stoderv = stoderv + smult * sske * (pcs - es0) * dsnderv
+      end if
+    end if
+    !
+    ! -- add newton-raphson storage terms
+    aii = aii + stoderv
+    r = r - qsto + stoderv * h
     !
     ! -- add water compressibility terms
     wcf = this%brg * tled
-    wc = dsn * dz * wcf * this%dbtheta(n, idelay)
-    wc0 = dsn0 * dz0 * wcf * this%dbtheta0(n, idelay)
-    aii = aii - wc
-    r = r - wc0 * h0
+    wc = dz * wcf * theta
+    wc0 = dz0 * wcf * theta0
+    qwc = dsn0 * wc0 * h0 - dsn * wc * h
+    wcderv = -dsn * wc - wc * h * dsnderv
+    !
+    ! -- Add additional term if using lagged effective stress
+    if (this%ieslag /= 0) then
+      wcderv = wcderv + wc0 * h0 * dsnderv
+    end if
+    !
+    ! -- add newton-raphson water compressibility terms
+    aii = aii + wcderv
+    r = r - qwc + wcderv * h
     !
     ! -- return
     return
@@ -6625,7 +6558,40 @@ contains
     ! -- return
     return
   end subroutine csub_delay_calc_sat  
- 
+
+  function csub_delay_calc_sat_derivative(this, node, idelay, n, hcell)          &
+           result(satderv)
+! ******************************************************************************
+! csub_delay_calc_sat_derivative -- Calculate current saturation derivative for 
+!                                   a delay cell cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: node
+    integer(I4B), intent(in) :: idelay
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    real(DP) :: satderv
+    real(DP) :: dzhalf
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    if (this%stoiconv(node) /= 0) then
+      dzhalf = DHALF * this%dbdzini(n, idelay)
+      top = this%dbz(n, idelay) + dzhalf
+      bot = this%dbz(n, idelay) - dzhalf
+      satderv = sQuadraticSaturationDerivative(top, bot, hcell, this%satomega)
+    else
+      satderv = DZERO
+    end if
+    !
+    ! -- return
+    return
+  end function csub_delay_calc_sat_derivative  
+  
   subroutine csub_delay_calc_dstor(this, ib, hcell, stoe, stoi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
@@ -6642,6 +6608,7 @@ contains
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
+    integer(I4B) :: node
     integer(I4B) :: n
     real(DP) :: sske
     real(DP) :: ssk
@@ -6652,12 +6619,18 @@ contains
     real(DP) :: sk
     real(DP) :: z
     real(DP) :: zbot
+    real(DP) :: h
+    real(DP) :: h0
+    real(DP) :: dsn
+    real(DP) :: dsn0
+    real(DP) :: hbar
     real(DP) :: dzhalf
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
     ielastic = this%ielastic(ib)
+    node = this%nodelist(ib)
     stoe = DZERO
     stoi = DZERO
     ske = DZERO
@@ -6671,14 +6644,18 @@ contains
         call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
         z = this%dbz(n, idelay)
         zbot = z - dzhalf
+        h = this%dbh(n, idelay)
+        h0 = this%dbh0(n, idelay)
+        call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
+        hbar = sQuadratic0sp(h, zbot, this%satomega)
         if (ielastic /= 0) then
-          v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot) -      &
-                sske * this%dbes0(n, idelay)
+          v1 = dsn * ssk * (this%dbgeo(n, idelay) - hbar + zbot) -               &
+               dsn0 * sske * this%dbes0(n, idelay)
           v2 = DZERO
         else
-          v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot -       &
+          v1 = dsn * ssk * (this%dbgeo(n, idelay) - hbar + zbot -                &
                       this%dbpcs(n, idelay))
-          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          v2 = dsn0 * sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         !
         ! -- calculate inelastic and elastic storage components
@@ -6781,6 +6758,10 @@ contains
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: fmult
+    real(DP) :: h
+    real(DP) :: h0
+    real(DP) :: dsn
+    real(DP) :: dsn0
     real(DP) :: v
     real(DP) :: v1
     real(DP) :: v2
@@ -6801,13 +6782,16 @@ contains
     if (this%thickini(ib) > DZERO) then
       fmult = this%dbdzini(1, idelay)
       do n = 1, this%ndelaycells
+        h = this%dbh(n, idelay)
+        h0 = this%dbh0(n, idelay)
+        call this%csub_delay_calc_sat(node, idelay, n, h, h0, dsn, dsn0)
         call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
         if (ielastic /= 0) then
-          v1 = ssk * this%dbes(n, idelay) - sske * this%dbes0(n, idelay)
+          v1 = dsn * ssk * this%dbes(n, idelay) - sske * this%dbes0(n, idelay)
           v2 = DZERO
         else
-          v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
-          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          v1 = dsn * ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          v2 = dsn0 * sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         v = (v1 + v2) * fmult
         comp = comp + v
