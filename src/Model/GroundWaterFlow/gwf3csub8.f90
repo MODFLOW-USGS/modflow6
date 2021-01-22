@@ -54,7 +54,7 @@ module GwfCsubModule
   type, extends(NumericalPackageType) :: GwfCsubType
     ! -- characters scalars
     character(len=LENLISTLABEL), pointer :: listlabel => null()                  !< title of table written for RP
-    character(len=LENMEMPATH), pointer :: stoMemPath => null()                    !< memory path of storage package
+    character(len=LENMEMPATH), pointer :: stoMemPath => null()                   !< memory path of storage package
     ! -- character arrays
     character(len=LENBOUNDNAME), dimension(:),                                  &
                                  pointer, contiguous :: boundname => null()      !< vector of boundnames
@@ -78,14 +78,14 @@ module GwfCsubModule
     integer(I4B), pointer :: icellf => null()
     integer(I4B), pointer :: ispecified_pcs => null()
     integer(I4B), pointer :: ispecified_dbh => null()
-    integer(I4B), pointer :: inamedbound => null()                               !flag to read boundnames
+    integer(I4B), pointer :: inamedbound => null()                               !< flag to read boundnames
     integer(I4B), pointer :: iconvchk => NULL()
-    integer(I4B), pointer :: naux => null()                                      !number of auxiliary variables
+    integer(I4B), pointer :: naux => null()                                      !< number of auxiliary variables
     integer(I4B), pointer :: ninterbeds => null()
     integer(I4B), pointer :: maxsig0 => null()
-    integer(I4B), pointer :: nbound => null()                                    !number of boundaries for current stress period
-    integer(I4B), pointer :: iscloc => null()                                    !bound column to scale with SFAC
-    integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
+    integer(I4B), pointer :: nbound => null()                                    !< number of boundaries for current stress period
+    integer(I4B), pointer :: iscloc => null()                                    !< bound column to scale with SFAC
+    integer(I4B), pointer :: iauxmultcol => null()                               !< column to use as multiplier for column iscloc
     integer(I4B), pointer :: ndelaycells => null()
     integer(I4B), pointer :: ndelaybeds => null()
     integer(I4B), pointer :: idelayflag => null()                                !< flag indicating head in non-covertible below cell top 
@@ -95,117 +95,119 @@ module GwfCsubModule
     integer(I4B), pointer :: ipch => null()
     integer(I4B), pointer :: iupdatestress => null()
     ! -- real scalars
-    real(DP), pointer :: epsilon => null()                                       !epsilon for stress smoothing
-    real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
-    real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
-    real(DP), pointer :: beta => null()                                          !water compressibility
-    real(DP), pointer :: brg => null()                                           !product of gammaw and water compressibility
+    real(DP), pointer :: epsilon => null()                                       !< epsilon for stress smoothing
+    real(DP), pointer :: cc_crit => null()                                       !< convergence criteria for csub-gwf convergence check
+    real(DP), pointer :: gammaw => null()                                        !< product of fluid density, and gravity
+    real(DP), pointer :: beta => null()                                          !< water compressibility
+    real(DP), pointer :: brg => null()                                           !< product of gammaw and water compressibility
     real(DP), pointer :: dbfact => null()
     real(DP), pointer :: dbfacti => null()
-    real(DP), pointer :: satomega => null()                                      !newton-raphson saturation omega
+    real(DP), pointer :: satomega => null()                                      !< newton-raphson saturation omega
     ! -- integer pointer to storage package variables
-    integer(I4B), pointer :: gwfiss => NULL()                                    !pointer to model iss flag
-    integer(I4B), pointer :: gwfiss0 => NULL()                                   !iss flag for last stress period
+    integer(I4B), pointer :: gwfiss => NULL()                                    !< pointer to model iss flag
+    integer(I4B), pointer :: gwfiss0 => NULL()                                   !< iss flag for last stress period
     ! -- integer arrays
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !pointer to model ibound
-    integer(I4B), dimension(:), pointer, contiguous :: stoiconv => null()        !pointer to iconvert in storage
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< pointer to model ibound
+    integer(I4B), dimension(:), pointer, contiguous :: stoiconv => null()        !< pointer to iconvert in storage
     ! -- real arrays
-    real(DP), dimension(:), pointer, contiguous :: stosc1 => null()              !pointer to sc1 in storage
-    real(DP), dimension(:), pointer, contiguous :: buff => null()                !buff array
-    real(DP), dimension(:), pointer, contiguous :: buffusr => null()             !buffusr array
-    integer, dimension(:), pointer, contiguous :: nodelist => null()             !reduced node that the interbed is attached to
-    integer, dimension(:), pointer, contiguous :: unodelist => null()            !user node that the interbed is attached to
+    real(DP), dimension(:), pointer, contiguous :: stosc1 => null()              !< pointer to sc1 in storage
+    real(DP), dimension(:), pointer, contiguous :: buff => null()                !< buff array
+    real(DP), dimension(:), pointer, contiguous :: buffusr => null()             !< buffusr array
+    integer, dimension(:), pointer, contiguous :: nodelist => null()             !< reduced node that the interbed is attached to
+    integer, dimension(:), pointer, contiguous :: unodelist => null()            !< user node that the interbed is attached to
     !
     ! -- coarse-grained storage variables
-    real(DP), dimension(:), pointer, contiguous :: sgm => null()                 !specific gravity moist sediments
-    real(DP), dimension(:), pointer, contiguous :: sgs => null()                 !specific gravity saturated sediments
-    real(DP), dimension(:), pointer, contiguous :: cg_ske_cr => null()           !coarse-grained specified storage
-    real(DP), dimension(:), pointer, contiguous :: cg_gs => null()               !geostatic stress for a cell
-    real(DP), dimension(:), pointer, contiguous :: cg_es => null()               !coarse-grained (aquifer) effective stress
-    real(DP), dimension(:), pointer, contiguous :: cg_es0 => null()              !coarse-grained (aquifer) effective stress for the previous time step
-    real(DP), dimension(:), pointer, contiguous :: cg_pcs => null()              !coarse-grained (aquifer) preconsolidation stress
-    real(DP), dimension(:), pointer, contiguous :: cg_comp => null()             !coarse-grained (aquifer) incremental compaction
-    real(DP), dimension(:), pointer, contiguous :: cg_tcomp => null()            !coarse-grained (aquifer) total compaction
-    real(DP), dimension(:), pointer, contiguous :: cg_stor => null()             !coarse-grained (aquifer) storage
-    real(DP), dimension(:), pointer, contiguous :: cg_ske => null()              !coarse-grained (aquifer) elastic storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: cg_sk => null()               !coarse-grained (aquifer) first storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: cg_thickini => null()         !initial coarse-grained (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: cg_thetaini => null()         !initial coarse-grained (aquifer) porosity
-    real(DP), dimension(:), pointer, contiguous :: cg_thick => null()            !current coarse-grained (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: cg_thick0 => null()           !previous coarse-grained (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: cg_theta => null()            !current coarse-grained (aquifer) porosity
-    real(DP), dimension(:), pointer, contiguous :: cg_theta0 => null()           !previous coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: sgm => null()                 !< specific gravity moist sediments
+    real(DP), dimension(:), pointer, contiguous :: sgs => null()                 !< specific gravity saturated sediments
+    real(DP), dimension(:), pointer, contiguous :: cg_ske_cr => null()           !< coarse-grained specified storage
+    real(DP), dimension(:), pointer, contiguous :: cg_gs => null()               !< geostatic stress for a cell
+    real(DP), dimension(:), pointer, contiguous :: cg_es => null()               !< coarse-grained (aquifer) effective stress
+    real(DP), dimension(:), pointer, contiguous :: cg_es0 => null()              !< coarse-grained (aquifer) effective stress for the previous time step
+    real(DP), dimension(:), pointer, contiguous :: cg_pcs => null()              !< coarse-grained (aquifer) preconsolidation stress
+    real(DP), dimension(:), pointer, contiguous :: cg_comp => null()             !< coarse-grained (aquifer) incremental compaction
+    real(DP), dimension(:), pointer, contiguous :: cg_tcomp => null()            !< coarse-grained (aquifer) total compaction
+    real(DP), dimension(:), pointer, contiguous :: cg_stor => null()             !< coarse-grained (aquifer) storage
+    real(DP), dimension(:), pointer, contiguous :: cg_ske => null()              !< coarse-grained (aquifer) elastic storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: cg_sk => null()               !< coarse-grained (aquifer) first storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: cg_thickini => null()         !< initial coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_thetaini => null()         !< initial coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_thick => null()            !< current coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_thick0 => null()           !< previous coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_theta => null()            !< current coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_theta0 => null()           !< previous coarse-grained (aquifer) porosity
     !
     ! -- cell storage variables
-    real(DP), dimension(:), pointer, contiguous :: cell_wcstor => null()         !cell water compressibility storage
-    real(DP), dimension(:), pointer, contiguous :: cell_thick => null()          !cell compressible material thickness
+    real(DP), dimension(:), pointer, contiguous :: cell_wcstor => null()         !< cell water compressibility storage
+    real(DP), dimension(:), pointer, contiguous :: cell_thick => null()          !< cell compressible material thickness
     !
     ! -- interbed variables
-    integer(I4B), dimension(:), pointer, contiguous :: idelay => null()          !0 = nodelay, > 0 = delay
-    integer(I4B), dimension(:), pointer, contiguous :: ielastic => null()        !0 = inelastic and elastic, > 0 = elastic
-    integer(I4B), dimension(:), pointer, contiguous :: iconvert => null()        !0 = elastic, > 0 = inelastic
-    real(DP), dimension(:), pointer, contiguous :: ci => null()                  !compression index
-    real(DP), dimension(:), pointer, contiguous :: rci => null()                 !recompression index
-    real(DP), dimension(:), pointer, contiguous :: pcs => null()                 !preconsolidation stress
-    real(DP), dimension(:), pointer, contiguous :: rnb => null()                 !interbed system material factor
-    real(DP), dimension(:), pointer, contiguous :: kv => null()                  !vertical hydraulic conductivity of interbed
-    real(DP), dimension(:), pointer, contiguous :: h0 => null()                  !initial head in interbed
-    real(DP), dimension(:), pointer, contiguous :: comp => null()                !interbed incremental compaction
-    real(DP), dimension(:), pointer, contiguous :: tcomp => null()               !total interbed compaction
-    real(DP), dimension(:), pointer, contiguous :: tcompi => null()              !total inelastic interbed compaction
-    real(DP), dimension(:), pointer, contiguous :: tcompe => null()              !total elastic interbed compaction
-    real(DP), dimension(:), pointer, contiguous :: storagee => null()            !elastic storage
-    real(DP), dimension(:), pointer, contiguous :: storagei => null()            !inelastic storage
-    real(DP), dimension(:), pointer, contiguous :: ske => null()                 !elastic storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
-    real(DP), dimension(:), pointer, contiguous :: thetaini => null()            !initial interbed theta
-    real(DP), dimension(:), pointer, contiguous :: thick => null()               !current interbed thickness
-    real(DP), dimension(:), pointer, contiguous :: thick0 => null()              !previous interbed thickness
-    real(DP), dimension(:), pointer, contiguous :: theta => null()               !current interbed porosity
-    real(DP), dimension(:), pointer, contiguous :: theta0 => null()              !previous interbed porosity
-    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
+    integer(I4B), dimension(:), pointer, contiguous :: idelay => null()          !< delay interbed flag - 0 = nodelay, > 0 = delay
+    integer(I4B), dimension(:), pointer, contiguous :: ielastic => null()        !< elastic interbed equation - 0 = inelastic and elastic, > 0 = elastic
+    integer(I4B), dimension(:), pointer, contiguous :: iconvert => null()        !< convertible cell flag - 0 = elastic, > 0 = inelastic
+    real(DP), dimension(:), pointer, contiguous :: ci => null()                  !< compression index
+    real(DP), dimension(:), pointer, contiguous :: rci => null()                 !< recompression index
+    real(DP), dimension(:), pointer, contiguous :: pcs => null()                 !< preconsolidation stress
+    real(DP), dimension(:), pointer, contiguous :: rnb => null()                 !< interbed system material factor
+    real(DP), dimension(:), pointer, contiguous :: kv => null()                  !< vertical hydraulic conductivity of interbed
+    real(DP), dimension(:), pointer, contiguous :: h0 => null()                  !< initial head in interbed
+    real(DP), dimension(:), pointer, contiguous :: comp => null()                !< interbed incremental compaction
+    real(DP), dimension(:), pointer, contiguous :: tcomp => null()               !< total interbed compaction
+    real(DP), dimension(:), pointer, contiguous :: tcompi => null()              !< total inelastic interbed compaction
+    real(DP), dimension(:), pointer, contiguous :: tcompe => null()              !< total elastic interbed compaction
+    real(DP), dimension(:), pointer, contiguous :: storagee => null()            !< elastic storage
+    real(DP), dimension(:), pointer, contiguous :: storagei => null()            !< inelastic storage
+    real(DP), dimension(:), pointer, contiguous :: ske => null()                 !< elastic storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: sk => null()                  !< first storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: thickini => null()            !< initial interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: thetaini => null()            !< initial interbed theta
+    real(DP), dimension(:), pointer, contiguous :: thick => null()               !< current interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: thick0 => null()              !< previous interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: theta => null()               !< current interbed porosity
+    real(DP), dimension(:), pointer, contiguous :: theta0 => null()              !< previous interbed porosity
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !< auxiliary variable array
     !
-    ! -- delay interbed arrays
+    ! -- delay interbed 
+    integer(I4B), dimension(:), pointer, contiguous :: idb_conv_count => null()  !< convertible count of interbeds with heads below delay cell bottom
+    integer(I4B), dimension(:), pointer, contiguous :: idb_nconv_count => null() !< convertible count of interbeds with heads below delay cell top
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !< delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !< delay bed cell z
     real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !< delay bed cell z relative to znode
     real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !< delay bed cell h
-    real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
-    real(DP), dimension(:,:), pointer, contiguous :: dbgeo => null()             !delay bed cell geostatic stress
-    real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !delay bed cell effective stress
-    real(DP), dimension(:,:), pointer, contiguous :: dbes0 => null()             !delay bed cell previous effective stress
-    real(DP), dimension(:,:), pointer, contiguous :: dbpcs => null()             !delay bed cell preconsolidation stress
-    real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !delay bed flow through interbed top
-    real(DP), dimension(:), pointer, contiguous :: dbflowbot => null()           !delay bed flow through interbed bottom
-    real(DP), dimension(:,:), pointer, contiguous :: dbdzini => null()           !initial delay bed cell thickness
-    real(DP), dimension(:,:), pointer, contiguous :: dbthetaini => null()        !initial delay bed cell porosity
-    real(DP), dimension(:,:), pointer, contiguous :: dbdz => null()              !delay bed dz
-    real(DP), dimension(:,:), pointer, contiguous :: dbdz0 => null()             !delay bed previous dz
-    real(DP), dimension(:,:), pointer, contiguous :: dbtheta => null()           !delay bed cell porosity
-    real(DP), dimension(:,:), pointer, contiguous :: dbtheta0 => null()          !delay bed cell previous porosity
-    real(DP), dimension(:, :), pointer, contiguous :: dbcomp => null()           !delay bed incremental compaction
-    real(DP), dimension(:, :), pointer, contiguous :: dbtcomp => null()          !delay bed total interbed compaction
+    real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !< delay bed cell previous h
+    real(DP), dimension(:,:), pointer, contiguous :: dbgeo => null()             !< delay bed cell geostatic stress
+    real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !< delay bed cell effective stress
+    real(DP), dimension(:,:), pointer, contiguous :: dbes0 => null()             !< delay bed cell previous effective stress
+    real(DP), dimension(:,:), pointer, contiguous :: dbpcs => null()             !< delay bed cell preconsolidation stress
+    real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !< delay bed flow through interbed top
+    real(DP), dimension(:), pointer, contiguous :: dbflowbot => null()           !< delay bed flow through interbed bottom
+    real(DP), dimension(:,:), pointer, contiguous :: dbdzini => null()           !< initial delay bed cell thickness
+    real(DP), dimension(:,:), pointer, contiguous :: dbthetaini => null()        !< initial delay bed cell porosity
+    real(DP), dimension(:,:), pointer, contiguous :: dbdz => null()              !< delay bed dz
+    real(DP), dimension(:,:), pointer, contiguous :: dbdz0 => null()             !< delay bed previous dz
+    real(DP), dimension(:,:), pointer, contiguous :: dbtheta => null()           !< delay bed cell porosity
+    real(DP), dimension(:,:), pointer, contiguous :: dbtheta0 => null()          !< delay bed cell previous porosity
+    real(DP), dimension(:, :), pointer, contiguous :: dbcomp => null()           !< delay bed incremental compaction
+    real(DP), dimension(:, :), pointer, contiguous :: dbtcomp => null()          !< delay bed total interbed compaction
     !
     ! -- delay interbed solution arrays
-    real(DP), dimension(:), pointer, contiguous :: dbal => null()                !delay bed lower diagonal
-    real(DP), dimension(:), pointer, contiguous :: dbad => null()                !delay bed diagonal
-    real(DP), dimension(:), pointer, contiguous :: dbau => null()                !delay bed upper diagonal
-    real(DP), dimension(:), pointer, contiguous :: dbrhs => null()               !delay bed right hand side
-    real(DP), dimension(:), pointer, contiguous :: dbdh => null()                !delay bed dh
-    real(DP), dimension(:), pointer, contiguous :: dbaw => null()                !delay bed work vector
+    real(DP), dimension(:), pointer, contiguous :: dbal => null()                !< delay bed lower diagonal
+    real(DP), dimension(:), pointer, contiguous :: dbad => null()                !< delay bed diagonal
+    real(DP), dimension(:), pointer, contiguous :: dbau => null()                !< delay bed upper diagonal
+    real(DP), dimension(:), pointer, contiguous :: dbrhs => null()               !< delay bed right hand side
+    real(DP), dimension(:), pointer, contiguous :: dbdh => null()                !< delay bed dh
+    real(DP), dimension(:), pointer, contiguous :: dbaw => null()                !< delay bed work vector
     !
     ! -- period data
-    integer(I4B), dimension(:), pointer, contiguous :: nodelistsig0 => null()    !vector of reduced node numbers
-    real(DP), dimension(:), pointer, contiguous :: sig0 => null()                !array of package specific boundary numbers
+    integer(I4B), dimension(:), pointer, contiguous :: nodelistsig0 => null()    !< vector of reduced node numbers
+    real(DP), dimension(:), pointer, contiguous :: sig0 => null()                !< array of package specific boundary numbers
     !
     ! -- timeseries
-    type(TimeSeriesManagerType), pointer :: TsManager => null()                  !time series manager
+    type(TimeSeriesManagerType), pointer :: TsManager => null()                  !< time series manager
     !
     ! -- observation data
-    integer(I4B), pointer :: inobspkg => null()                                  !unit number for obs package
-    type(ObsType), pointer :: obs => null()                                      !observation package
+    integer(I4B), pointer :: inobspkg => null()                                  !< unit number for obs package
+    type(ObsType), pointer :: obs => null()                                      !< observation package
     !
     ! -- table objects
     type(TableType), pointer :: inputtab => null()
@@ -604,15 +606,15 @@ contains
         !
         ! -- calculate the change in storage
         call this%csub_delay_calc_dstor(ib, hcell, stoe, stoi)
-        v1 = (stoe + stoi) * area * this%rnb(ib) * snnew * tled
+        v1 = (stoe + stoi) * area * this%rnb(ib) * tled
         !
         ! -- add water compressibility to storage term
         call this%csub_delay_calc_wcomp(ib, dwc)
-        v1 = v1 + dwc * area * this%rnb(ib) * snnew
+        v1 = v1 + dwc * area * this%rnb(ib)
         !
         ! -- calculate the flow between the interbed and the cell
         call this%csub_delay_fc(ib, hcof, rhs)
-        v2 = (-hcof * hcell - rhs) * area * this%rnb(ib) * snnew
+        v2 = (-hcof * hcell - rhs) * area * this%rnb(ib)
         !
         ! -- calculate the difference between the interbed change in
         !    storage and the flow between the interbed and the cell
@@ -918,8 +920,8 @@ contains
           !
           ! -- calculate inelastic and elastic storage contributions
           call this%csub_delay_calc_dstor(ib, h, stoe, stoi)
-          this%storagee(ib) = stoe * area * this%rnb(ib) * snnew * tledm
-          this%storagei(ib) = stoi * area * this%rnb(ib) * snnew * tledm
+          this%storagee(ib) = stoe * area * this%rnb(ib) * tledm
+          this%storagei(ib) = stoi * area * this%rnb(ib) * tledm
           !
           ! -- calculate flow across the top and bottom of the delay interbed
           q = this%csub_calc_delay_flow(ib, 1, h) * area * this%rnb(ib)
@@ -974,7 +976,7 @@ contains
         ! -- delay interbed
         else
           call this%csub_delay_calc_wcomp(ib, q)
-          rratewc = q * area * this%rnb(ib) * snnew
+          rratewc = q * area * this%rnb(ib)
         end if
         this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
         !
@@ -4917,7 +4919,7 @@ contains
             call store_error(errmsg)
           end if
         end if
-        f = area * this%rnb(ib) * snnew
+        f = area * this%rnb(ib)
       end if
       rhs = rhs * f
       hcof = -hcof * f
@@ -5021,36 +5023,36 @@ contains
           end if
         end if
       !
-      ! -- delay interbeds
-      else
-        !
-        ! -- calculate factor
-        f = this%rnb(ib)
-        !
-        ! -- check that the delay bed should be evaluated
-        idelaycalc = this%csub_delay_eval(ib, node, hcell)
-        !
-        ! -- calculate newton terms if delay bed is not stranded
-        !    newton terms are calculated the same if using the 
-        !    head-based and effective-stress formulations
-        if (idelaycalc > 0) then
-          !
-          ! calculate delay interbed terms
-          dz = this%dbdzini(1, idelay)
-          c = DTWO * this%kv(ib) / dz
-          h1 = this%dbh(1, idelay)
-          hn = this%dbh(this%ndelaycells, idelay)
-          !
-          ! -- calculate the saturation derivative
-          satderv = this%csub_calc_sat_derivative(node, hcell)    
-          !
-          ! -- calculate the saturation derivative term
-          hcofn = satderv * c * area * (hn + h1 - DTWO * hcell)
-        end if
-        !
-        ! -- update hcof and rhs
-        hcof = f * hcofn
-        rhs = f * hcofn * hcell
+      ! -- delay interbeds - no newton terms
+      !else
+      !  !
+      !  ! -- calculate factor
+      !  f = this%rnb(ib)
+      !  !
+      !  ! -- check that the delay bed should be evaluated
+      !  idelaycalc = this%csub_delay_eval(ib, node, hcell)
+      !  !
+      !  ! -- calculate newton terms if delay bed is not stranded
+      !  !    newton terms are calculated the same if using the 
+      !  !    head-based and effective-stress formulations
+      !  if (idelaycalc > 0) then
+      !    !
+      !    ! calculate delay interbed terms
+      !    dz = this%dbdzini(1, idelay)
+      !    c = DTWO * this%kv(ib) / dz
+      !    h1 = this%dbh(1, idelay)
+      !    hn = this%dbh(this%ndelaycells, idelay)
+      !    !
+      !    ! -- calculate the saturation derivative
+      !    satderv = this%csub_calc_sat_derivative(node, hcell)    
+      !    !
+      !    ! -- calculate the saturation derivative term
+      !    hcofn = satderv * c * area * (hn + h1 - DTWO * hcell)
+      !  end if
+      !  !
+      !  ! -- update hcof and rhs
+      !  hcof = f * hcofn
+      !  rhs = f * hcofn * hcell
       end if
     end if
     !
@@ -5597,13 +5599,53 @@ contains
     real(DP) :: top
 ! ------------------------------------------------------------------------------
     idelaycalc = 1
+    !!
+    !! -- non-convertible cell
+    !if (this%stoiconv(node) == 0) then
+    !  top = this%dis%top(node)
+    !  ! -- run-time error
+    !  if (hcell < top) then
+    !    idelaycalc = -999
+    !  end if
+    !!
+    !! -- convertible cell
+    !else
+    !  top = this%dis%bot(node) + this%thickini(ib)
+    !  !
+    !  ! -- stranded cell
+    !  if (hcell < top) then
+    !    idelaycalc = 0
+    !  end if
+    !end if
+    !
+    ! -- return
+    return
+  end function csub_delay_eval
+
+  subroutine csub_delay_violations(this, ib, node, hcell)
+! ******************************************************************************
+! csub_delay_eval -- Determine if the delay interbed should be solved,
+!                    is stranded, or is a run-time error 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: ib
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
     !
     ! -- non-convertible cell
     if (this%stoiconv(node) == 0) then
       top = this%dis%top(node)
       ! -- run-time error
       if (hcell < top) then
-        idelaycalc = -999
       end if
     !
     ! -- convertible cell
@@ -5612,13 +5654,12 @@ contains
       !
       ! -- stranded cell
       if (hcell < top) then
-        idelaycalc = 0
       end if
     end if
     !
     ! -- return
     return
-  end function csub_delay_eval
+  end subroutine csub_delay_violations
   
    
   subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
@@ -6810,9 +6851,9 @@ contains
     end if
     !
     ! -- fill compaction
-    comp = comp * this%rnb(ib) * snnew
-    compi = compi * this%rnb(ib) * snnew
-    compe = compe * this%rnb(ib) * snnew
+    comp = comp * this%rnb(ib)
+    compi = compi * this%rnb(ib)
+    compe = compe * this%rnb(ib)
     !
     ! -- return
     return
