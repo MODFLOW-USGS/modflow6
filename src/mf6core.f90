@@ -7,9 +7,12 @@
 !<
 module Mf6CoreModule 
   use KindModule,             only: I4B, LGP
-  use ListsModule,            only: basesolutionlist, solutiongrouplist, basemodellist, baseexchangelist
+  use ListsModule,            only: basesolutionlist, solutiongrouplist,         &
+                                    basemodellist, baseexchangelist,             &
+                                    baseconnectionlist
   use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
+  use ModelConnectionModule,  only: ModelConnectionType, GetConnectionFromList
   use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule,    only: SolutionGroupType, GetSolutionGroupFromList
   implicit none  
@@ -61,13 +64,14 @@ module Mf6CoreModule
     !<
     subroutine Mf6Initialize()
       ! -- modules
-      use SimulationCreateModule, only: simulation_cr
+      use SimulationCreateModule, only: simulation_cr, connections_cr
       !
       ! -- print banner and info to screen
       call printInfo()
       
       ! -- create
       call simulation_cr()
+      call connections_cr()
       
       ! -- define
       call simulation_df()
@@ -219,6 +223,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(ModelConnectionType), pointer :: mc => null()
       
       ! -- Define each model
       do im = 1, basemodellist%Count()
@@ -230,6 +235,12 @@ module Mf6CoreModule
       do ic = 1, baseexchangelist%Count()
         ep => GetBaseExchangeFromList(baseexchangelist, ic)
         call ep%exg_df()
+      enddo
+      !
+      ! -- Define each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetConnectionFromList(baseconnectionlist, ic)
+        call mc%mc_df()
       enddo
       !
       ! -- Define each solution
@@ -257,6 +268,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(ModelConnectionType), pointer :: mc => null()
       
       ! -- Allocate and read each model
       do im = 1, basemodellist%Count()
@@ -270,6 +282,12 @@ module Mf6CoreModule
         call ep%exg_ar()
       enddo
       !
+      ! -- Allocate and read all model connections
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetConnectionFromList(baseconnectionlist, ic)
+        call mc%mc_ar()
+      enddo
+      !
       ! -- Allocate and read each solution
       do is=1,basesolutionlist%Count()
         sp => GetBaseSolutionFromList(basesolutionlist, is)
@@ -277,6 +295,7 @@ module Mf6CoreModule
       enddo
       !
     end subroutine simulation_ar
+    class(ModelConnectionType), pointer :: mc => null()
     
     !> @brief Read and prepare time step
     !!

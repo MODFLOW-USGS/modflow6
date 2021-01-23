@@ -1431,6 +1431,7 @@ subroutine solution_create(filename, id)
     character(len=LENPAKLOC) :: strh
     character(len=25) :: cval
     character(len=7) :: cmsg
+    character(len=13) :: file_matrix
     integer(I4B) :: ic
     integer(I4B) :: im    
     integer(I4B) :: icsv0
@@ -1534,7 +1535,12 @@ subroutine solution_create(filename, id)
     enddo
     call code_timer(1, ttform, this%ttform)
     !
+    ! TODO_MJR: for dev
+    !write (file_matrix, "(A6,I3.3,A4)") "matrix", kiter, ".crs"
+    !call save_matrix(file_matrix, this%neq, this%ia, this%ja, this%amat)
+    !
     ! -- linear solve
+    ! filename, nrows, ia, ja, M
     call code_timer(0, ttsoln, this%ttsoln)
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)

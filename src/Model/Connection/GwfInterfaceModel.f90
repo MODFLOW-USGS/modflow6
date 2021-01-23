@@ -30,9 +30,11 @@ contains
  
   ! minimal construction
   subroutine construct(this, name)
+    use MemoryHelperModule, only: create_mem_path
     class(GwfInterfaceModelType), intent(inout) :: this
     character(len=*), intent(in)  :: name
-        
+    
+    this%memoryPath = create_mem_path(name)    
     call this%allocate_scalars(name)
     this%name = name
     
@@ -164,6 +166,7 @@ contains
   
   subroutine setNpfData(ifaceModelObj, npf)
     use MemoryManagerModule, only: mem_allocate
+    use ConstantsModule, only: DPIO180
     class(GwfNpftype) :: npf
     class(*), pointer :: ifaceModelObj
     ! local
@@ -238,9 +241,9 @@ contains
       
       if (npf%ik22 > 0) npf%k22(icell) = gwfModel%npf%k22(idx)
       if (npf%ik33 > 0) npf%k33(icell) = gwfModel%npf%k33(idx)
-      if (npf%iangle1 > 0) npf%angle1(icell) = gwfModel%npf%angle1(idx)
-      if (npf%iangle2 > 0) npf%angle2(icell) = gwfModel%npf%angle2(idx)
-      if (npf%iangle3 > 0) npf%angle3(icell) = gwfModel%npf%angle3(idx)
+      if (npf%iangle1 > 0) npf%angle1(icell) = gwfModel%npf%angle1(idx)/DPIO180
+      if (npf%iangle2 > 0) npf%angle2(icell) = gwfModel%npf%angle2(idx)/DPIO180
+      if (npf%iangle3 > 0) npf%angle3(icell) = gwfModel%npf%angle3(idx)/DPIO180
       
     end do
     
