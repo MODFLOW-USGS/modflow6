@@ -129,6 +129,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(ModelConnectionType), pointer :: mc => null()
       !
       ! -- FINAL PROCESSING (FP)
       ! -- Final processing for each model
@@ -165,6 +166,13 @@ module Mf6CoreModule
         ep => GetBaseExchangeFromList(baseexchangelist, ic)
         call ep%exg_da()
         deallocate(ep)
+      enddo
+      !
+      ! -- Deallocate for each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetConnectionFromList(baseconnectionlist, ic)
+        call mc%mc_da()
+        deallocate(mc)
       enddo
       !
       ! -- Deallocate for each solution
@@ -250,6 +258,7 @@ module Mf6CoreModule
       enddo
     
     end subroutine simulation_df
+    class(ModelConnectionType), pointer :: mc => null()
     
     !> @brief Simulation allocate and read
     !!

@@ -81,6 +81,7 @@ module GridConnectionModule
   contains
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars, allocateArrays
+    procedure, public, pass(this) :: deallocateGridConn
     procedure, pass(this) :: connectCell
     procedure, pass(this) :: addModelLink 
     procedure, pass(this) :: extendConnection
@@ -876,11 +877,21 @@ module GridConnectionModule
   end subroutine allocateScalars
   
   subroutine allocateArrays(this, nConns)
-    use MemoryManagerModule, only: mem_allocate
     class(GridConnectionType), intent(in) :: this
     integer(I4B) :: nConns
     
   end subroutine allocateArrays  
+  
+  subroutine deallocateGridConn(this)
+  use MemoryManagerModule, only: mem_deallocate
+    class(GridConnectionType) :: this
+    
+    call mem_deallocate(this%linkCapacity)
+    call mem_deallocate(this%nrOfBoundaryCells)
+    call mem_deallocate(this%indexCount)
+    call mem_deallocate(this%nrOfCells)
+    
+  end subroutine deallocateGridConn
   
   ! test if the connection between node n and m, who are both 
   ! assumed to be part of this%model, is periodic

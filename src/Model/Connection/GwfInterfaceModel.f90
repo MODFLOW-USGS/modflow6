@@ -21,7 +21,9 @@ module GwfInterfaceModelModule
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
     procedure, pass(this) :: defineModel
-    procedure, pass(this) :: allocateAndReadModel    
+    procedure, pass(this) :: allocateAndReadModel 
+    ! override
+    procedure :: model_da => deallocateModel
     ! private stuff
     procedure, private, pass(this) :: buildDiscretization
   end type
@@ -164,6 +166,39 @@ contains
     
   end subroutine buildDiscretization
   
+  subroutine deallocateModel(this)
+  use MemoryManagerModule, only: mem_deallocate
+    class(GwfInterfaceModelType) :: this  
+    
+    ! -- Internal flow packages deallocate
+    call this%dis%dis_da()
+    call this%npf%npf_da()
+    call this%xt3d%xt3d_da()
+    !
+    ! -- Internal package objects
+    deallocate(this%dis)
+    deallocate(this%npf)
+    deallocate(this%xt3d)
+    !
+    ! -- Scalars
+    call mem_deallocate(this%inic)
+    call mem_deallocate(this%inoc)
+    call mem_deallocate(this%inobs)
+    call mem_deallocate(this%innpf)
+    call mem_deallocate(this%inbuy)
+    call mem_deallocate(this%insto)
+    call mem_deallocate(this%incsub)
+    call mem_deallocate(this%inmvr)
+    call mem_deallocate(this%inhfb)
+    call mem_deallocate(this%ingnc)
+    call mem_deallocate(this%iss)
+    call mem_deallocate(this%inewtonur)
+    !
+    ! -- NumericalModelType
+    call this%NumericalModelType%model_da()
+    
+  end subroutine
+  
   subroutine setNpfData(ifaceModelObj, npf)
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DPIO180
@@ -210,25 +245,8 @@ contains
       if (gwfModel%npf%iangle2 > 0) npf%iangle2 = 1
       if (gwfModel%npf%iangle3 > 0) npf%iangle3 = 1
       if (gwfModel%npf%icalcspdis > 0) npf%icalcspdis = 1
-    end do
-            
-    ! allocate when active
-    if (npf%ik22 > 0) then
-      call mem_allocate(npf%k22, nrOfCells, 'K22', npf%memoryPath)
-    end if
-    if (npf%ik33 > 0) then
-      call mem_allocate(npf%k33, nrOfCells, 'K33', npf%memoryPath)
-    end if
-    if (npf%iangle1 > 0) then
-      call mem_allocate(npf%angle1, nrOfCells, 'ANGLE1', npf%memoryPath)
-    end if
-    if (npf%iangle2 > 0) then
-      call mem_allocate(npf%angle2, nrOfCells, 'ANGLE2', npf%memoryPath)
-    end if
-    if (npf%iangle3 > 0) then
-      call mem_allocate(npf%angle3, nrOfCells, 'ANGLE3', npf%memoryPath)
-    end if
-    
+    end do            
+      
     ! and copy the remaining arrays
     do icell=1, nrOfCells
       idx = ifModel%gridConnection%idxToGlobal(icell)%index
@@ -248,5 +266,7 @@ contains
     end do
     
   end subroutine setNpfData
+  
+  
   
 end module GwfInterfaceModelModule

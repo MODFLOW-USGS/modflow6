@@ -2,7 +2,7 @@
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, DONE, DEM6
-  use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use SparseModule, only:sparsematrix
   use SpatialModelConnectionModule  
   use GwfInterfaceModelModule
@@ -39,6 +39,7 @@ module GwfGwfConnectionModule
     procedure, pass(this) :: mc_ac => gwfgwfcon_ac
     procedure, pass(this) :: mc_cf => gwfgwfcon_cf
     procedure, pass(this) :: mc_fc => gwfgwfcon_fc
+    procedure, pass(this) :: mc_da => gwfgwfcon_da
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
@@ -100,8 +101,11 @@ contains
      
     ! point x, ibound, and rhs to connection
     this%interfaceModel%x => this%x
+    call mem_checkin(this%interfaceModel%x, 'X', this%interfaceModel%memoryPath, 'X', this%memoryOrigin)
     this%interfaceModel%rhs => this%rhs
-    this%interfaceModel%ibound => this%iactive    
+    call mem_checkin(this%interfaceModel%rhs, 'RHS', this%interfaceModel%memoryPath, 'RHS', this%memoryOrigin)
+    this%interfaceModel%ibound => this%iactive
+    call mem_checkin(this%interfaceModel%ibound, 'IBOUND', this%interfaceModel%memoryPath, 'IBOUND', this%memoryOrigin)
     
     ! assign connections, fill ia/ja, map connections (following sln_connect) and mask
     call sparse%init(this%neq, this%neq, 7)
@@ -126,7 +130,7 @@ contains
     ! local
     integer(I4B) :: ierror
         
-    this%nja = sparse%nnz    
+    this%nja = sparse%nnz
     call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryOrigin)
     call mem_allocate(this%ja, this%nja, 'JA', this%memoryOrigin)
     call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryOrigin)    
@@ -315,6 +319,26 @@ contains
       end do
     end do    
   end subroutine gwfgwfcon_fc
+
+  ! deallocate resources
+  subroutine gwfgwfcon_da(this)    
+    class(GwfGwfConnectionType), intent(inout) :: this
+
+    call mem_deallocate(this%iVarCV)
+    call mem_deallocate(this%iDewatCV)
+    call mem_deallocate(this%satOmega)
+    call mem_deallocate(this%iCellAvg)
+
+    call mem_deallocate(this%ia)
+    call mem_deallocate(this%ja)
+    call mem_deallocate(this%amat)
+    
+    call this%interfaceModel%model_da()
+    deallocate(this%interfaceModel)
+    
+    call this%spatialcon_da()
+    
+  end subroutine gwfgwfcon_da
   
   ! unsafe routine, you have to know what you're doing with this
   function CastToGwfModel(obj) result(gwfmodel)

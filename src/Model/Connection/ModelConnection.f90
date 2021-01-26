@@ -36,6 +36,7 @@ module ModelConnectionModule
     procedure (calculateCoefficientsIFace), deferred, pass(this)  :: mc_cf
     procedure (mapCoefficientsIFace), deferred, pass(this)        :: mc_mc
     procedure (fillCoefficientsIFace), deferred, pass(this)       :: mc_fc
+    procedure (deallocateIFace), deferred, pass(this)             :: mc_da
     
     ! derived types should decide for themselves how the overall connection is 
     ! altered when another model is connected
@@ -83,6 +84,11 @@ module ModelConnectionModule
       real(DP), dimension(:), intent(inout) :: rhssln
       integer(I4B), intent(in) :: inwtflag
     end subroutine fillCoefficientsIFace
+
+    subroutine deallocateIFace(this)
+      import :: ModelConnectionType, I4B, DP
+      class(ModelConnectionType), intent(inout) :: this
+    end subroutine deallocateIFace
      
     subroutine addExchangeIFace(this, exchange)
       import :: ModelConnectionType, NumericalExchangeType

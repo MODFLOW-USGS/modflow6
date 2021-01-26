@@ -1,7 +1,7 @@
 module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
@@ -37,6 +37,7 @@ module GwfDisuModule
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
+    logical(LGP) :: readFromFile                                                 ! True, when DIS is read from file (almost always)
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
@@ -523,22 +524,27 @@ module GwfDisuModule
     call mem_deallocate(this%voffsettol)
     !
     ! -- arrays
-    call mem_deallocate(this%top1d)
-    call mem_deallocate(this%bot1d)
-    call mem_deallocate(this%area1d)
-    call mem_deallocate(this%idomain)
-    if (associated(this%iavert)) then
-      call mem_deallocate(this%iavert)
-      call mem_deallocate(this%javert)
+    if (this%readFromFile) then
+      call mem_deallocate(this%top1d)
+      call mem_deallocate(this%bot1d)
+      call mem_deallocate(this%area1d)      
+      if (associated(this%iavert)) then
+        call mem_deallocate(this%iavert)
+        call mem_deallocate(this%javert)
+      end if
+      call mem_deallocate(this%vertices)
+      call mem_deallocate(this%iainp)
+      call mem_deallocate(this%jainp)
+      call mem_deallocate(this%ihcinp)
+      call mem_deallocate(this%cl12inp)
+      call mem_deallocate(this%hwvainp)
+      call mem_deallocate(this%angldegxinp)      
     end if
-    call mem_deallocate(this%vertices)
-    call mem_deallocate(this%iainp)
-    call mem_deallocate(this%jainp)
-    call mem_deallocate(this%ihcinp)
-    call mem_deallocate(this%cl12inp)
-    call mem_deallocate(this%hwvainp)
-    call mem_deallocate(this%angldegxinp)
+
+    call mem_deallocate(this%idomain)
     call mem_deallocate(this%cellxy)
+
+    
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     !
@@ -761,6 +767,7 @@ module GwfDisuModule
     end if
     !
     ! -- allocate vectors that are the size of nodesuser
+    this%readFromFile = .true.
     call mem_allocate(this%top1d, this%nodesuser, 'TOP1D', this%memoryPath)
     call mem_allocate(this%bot1d, this%nodesuser, 'BOT1D', this%memoryPath)
     call mem_allocate(this%area1d, this%nodesuser, 'AREA1D', this%memoryPath)
@@ -1543,6 +1550,7 @@ module GwfDisuModule
     this%njausr = 0
     this%nvert = 0
     this%voffsettol = DZERO
+    this%readFromFile = .false.
     !
     ! -- Return
     return

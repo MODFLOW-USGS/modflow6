@@ -4,6 +4,7 @@ module SpatialModelConnectionModule
   use ModelConnectionModule
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
+  use MemoryManagerModule, only: mem_deallocate
   use GridConnectionModule, only: GridConnectionType, GlobalCellType
   use ListModule, only: ListType
   
@@ -42,6 +43,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_mc => spatialcon_mc
     procedure, pass(this) :: mc_ac => spatialcon_ac
     procedure, pass(this) :: spatialcon_df
+    procedure, pass(this) :: spatialcon_da
     ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: setExchangeConnections
@@ -61,7 +63,7 @@ contains ! module procedures
     
     ! base props:
     this%name = name
-    this%memoryOrigin = trim(this%name)
+    this%memoryOrigin = trim(this%name) ! TODO_MJR: refactor origin here too
     this%owner => model
     this%iNewton = 0
     
@@ -151,6 +153,21 @@ contains ! module procedures
     end do    
     
   end subroutine spatialcon_ac
+  
+  subroutine spatialcon_da(this)
+    class(SpatialModelConnectionType), intent(inout) :: this
+  
+    call mem_deallocate(this%neq)
+    call mem_deallocate(this%nja)
+    call mem_deallocate(this%stencilDepth)
+    
+    call mem_deallocate(this%x)
+    call mem_deallocate(this%rhs)
+    call mem_deallocate(this%iactive)
+    
+    call this%gridConnection%deallocateGridConn()
+  
+  end subroutine spatialcon_da
   
   subroutine setupGridConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this
