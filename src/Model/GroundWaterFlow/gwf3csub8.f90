@@ -23,8 +23,9 @@ module GwfCsubModule
                                   GetTimeSeriesLinkFromList
   use InputOutputModule, only: get_node, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop 
-  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, store_error_unit,              &
+                       store_warning, ustop 
+  use SimVariablesModule, only: errmsg, warnmsg
   use SortModule, only: qsort, selectn
   !
   use TimeSeriesLinkModule,         only: TimeSeriesLinkType
@@ -47,8 +48,8 @@ module GwfCsubModule
        '  CSUB-INTERBED', '    CSUB-COARSE', ' CSUB-ZDISPLACE']
   
   !
-  ! -- local parameter - derivative of the log of effective stress
-  real(DP), parameter :: dlog10es = 0.4342942_DP
+  ! -- local parameter
+  real(DP), parameter :: dlog10es = 0.4342942_DP                                 !< derivative of the log of effective stress
   !
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
@@ -61,7 +62,7 @@ module GwfCsubModule
     character(len=LENAUXNAME), dimension(:),                                    &
                                  pointer, contiguous :: auxname => null()        !< vector of auxname
     ! -- logical scalars
-    logical, pointer :: lhead_based => null()
+    logical, pointer :: lhead_based => null()                                    !< logical variable indicating if head-based solution
     ! -- integer scalars
     integer(I4B), pointer :: istounit => null()
     integer(I4B), pointer :: istrainib => null()
@@ -71,37 +72,35 @@ module GwfCsubModule
     integer(I4B), pointer :: ioutcompe => null()
     integer(I4B), pointer :: ioutcompib => null()
     integer(I4B), pointer :: ioutcomps => null()
-    integer(I4B), pointer :: ioutzdisp => null()
-    integer(I4B), pointer :: ipakcsv => null()
-    integer(I4B), pointer :: iupdatematprop => null()
-    integer(I4B), pointer :: istoragec => null()
-    integer(I4B), pointer :: icellf => null()
-    integer(I4B), pointer :: ispecified_pcs => null()
-    integer(I4B), pointer :: ispecified_dbh => null()
+    integer(I4B), pointer :: ioutzdisp => null()                                 !< unit number for z-displacement output
+    integer(I4B), pointer :: ipakcsv => null()                                   !< unit number for csv output 
+    integer(I4B), pointer :: iupdatematprop => null()                            !< flag indicating if material properties will be updated
+    integer(I4B), pointer :: istoragec => null()                                 !< 
+    integer(I4B), pointer :: icellf => null()                                    !< 
+    integer(I4B), pointer :: ispecified_pcs => null()                            !< flag indicating if preconsolidation state is specified (not relative)
+    integer(I4B), pointer :: ispecified_dbh => null()                            !< 
     integer(I4B), pointer :: inamedbound => null()                               !< flag to read boundnames
-    integer(I4B), pointer :: iconvchk => NULL()
+    integer(I4B), pointer :: iconvchk => null()                                  !< flag indicating if a final convergence check will be made
     integer(I4B), pointer :: naux => null()                                      !< number of auxiliary variables
-    integer(I4B), pointer :: ninterbeds => null()
-    integer(I4B), pointer :: maxsig0 => null()
+    integer(I4B), pointer :: ninterbeds => null()                                !< number of interbeds
+    integer(I4B), pointer :: maxsig0 => null()                                   !< maximum number of cells with specified sig0 values
     integer(I4B), pointer :: nbound => null()                                    !< number of boundaries for current stress period
     integer(I4B), pointer :: iscloc => null()                                    !< bound column to scale with SFAC
     integer(I4B), pointer :: iauxmultcol => null()                               !< column to use as multiplier for column iscloc
-    integer(I4B), pointer :: ndelaycells => null()
-    integer(I4B), pointer :: ndelaybeds => null()
-    integer(I4B), pointer :: idelayflag => null()                                !< flag indicating head in non-covertible below cell top 
-    integer(I4B), pointer :: ndelaycount => null()                               !< delay counter for non-covertible heads below cell top 
-    integer(I4B), pointer :: initialized => null()
-    integer(I4B), pointer :: ieslag => null()
-    integer(I4B), pointer :: ipch => null()
-    integer(I4B), pointer :: iupdatestress => null()
+    integer(I4B), pointer :: ndelaycells => null()                               !< number of cells in delay interbeds
+    integer(I4B), pointer :: ndelaybeds => null()                                !< number of delay interbeds
+    integer(I4B), pointer :: initialized => null()                               !< flag indicating if the initial stresses have been initialized
+    integer(I4B), pointer :: ieslag => null()                                    !< flag indicating if the effective stress is lagged
+    integer(I4B), pointer :: ipch => null()                                      !< flag indicating if initial precosolidation value is a head
+    integer(I4B), pointer :: iupdatestress => null()                             !< flag indicating if the geostatic stress is active
     ! -- real scalars
     real(DP), pointer :: epsilon => null()                                       !< epsilon for stress smoothing
     real(DP), pointer :: cc_crit => null()                                       !< convergence criteria for csub-gwf convergence check
     real(DP), pointer :: gammaw => null()                                        !< product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !< water compressibility
     real(DP), pointer :: brg => null()                                           !< product of gammaw and water compressibility
-    real(DP), pointer :: dbfact => null()
-    real(DP), pointer :: dbfacti => null()
+    real(DP), pointer :: dbfact => null()                                        !< 
+    real(DP), pointer :: dbfacti => null()                                       !< 
     real(DP), pointer :: satomega => null()                                      !< newton-raphson saturation omega
     ! -- integer pointer to storage package variables
     integer(I4B), pointer :: gwfiss => NULL()                                    !< pointer to model iss flag
@@ -167,8 +166,7 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !< auxiliary variable array
     !
     ! -- delay interbed 
-    integer(I4B), dimension(:), pointer, contiguous :: idb_conv_count => null()  !< convertible count of interbeds with heads below delay cell bottom
-    integer(I4B), dimension(:), pointer, contiguous :: idb_nconv_count => null() !< convertible count of interbeds with heads below delay cell top
+    integer(I4B), dimension(:), pointer, contiguous :: idb_nconv_count => null() !< non-convertible count of interbeds with heads below delay cell top
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !< delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !< delay bed cell z
@@ -210,9 +208,9 @@ module GwfCsubModule
     type(ObsType), pointer :: obs => null()                                      !< observation package
     !
     ! -- table objects
-    type(TableType), pointer :: inputtab => null()
-    type(TableType), pointer :: outputtab => null()
-    type(TableType), pointer :: pakcsvtab => null()
+    type(TableType), pointer :: inputtab => null()                               !< table for input variables
+    type(TableType), pointer :: outputtab => null()                              !< table for output variables
+    type(TableType), pointer :: pakcsvtab => null()                              !< table for csv output
 
   contains
     procedure :: define_listlabel
@@ -243,7 +241,6 @@ module GwfCsubModule
     procedure, private :: csub_adj_matprop
     procedure, private :: csub_calc_interbed_thickness
     procedure, private :: csub_calc_delay_flow
-    procedure, private :: csub_delay_eval
     !
     ! -- stress methods
     procedure, private :: csub_cg_calc_stress
@@ -273,7 +270,6 @@ module GwfCsubModule
     procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
-    procedure, private :: csub_delay_chk
     procedure, private :: csub_delay_calc_sat
     procedure, private :: csub_delay_calc_sat_derivative
     procedure, private :: csub_delay_init_zcell
@@ -288,6 +284,7 @@ module GwfCsubModule
     procedure, private :: csub_delay_assemble
     procedure, private :: csub_delay_assemble_fc
     procedure, private :: csub_delay_assemble_fn
+    procedure, private :: csub_delay_head_check
     !
     ! -- methods for observations
     procedure, public :: csub_obs_supported
@@ -301,21 +298,23 @@ module GwfCsubModule
 
 contains
 
+  !> @ brief Create a new CSUB object
+  !<
   subroutine csub_cr(csubobj, name_model, istounit, stoPckName, inunit, iout)
 ! ******************************************************************************
-! csub_cr -- Create a New CSUB Object
+! csub_cr -- Create a new CSUB object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
     implicit none
-    type(GwfCsubType), pointer :: csubobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: istounit
-    character(len=*), intent(in) :: stoPckName
-    integer(I4B), intent(in) :: iout
+    type(GwfCsubType), pointer :: csubobj            !< pointer 
+    character(len=*), intent(in) :: name_model       !< model name
+    integer(I4B), intent(in) :: inunit               !< unit number of csub input file
+    integer(I4B), intent(in) :: istounit             !< unit number of storage package
+    character(len=*), intent(in) :: stoPckName       !< name of the storage package
+    integer(I4B), intent(in) :: iout                 !< unit number of lst output file
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -345,6 +344,12 @@ contains
   end subroutine csub_cr
 
 
+  !> @ brief Allocate scalars
+  !!
+  !! Allocate and initialize scalars for the CSUB package. The base model 
+  !! allocate scalars method is also called.
+  !!
+  !<
    subroutine csub_allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars -- allocate scalar members
@@ -375,8 +380,6 @@ contains
     call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%memoryPath)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%memoryPath)
-    call mem_allocate(this%idelayflag, 'IDELAYFLAG', this%memoryPath)
-    call mem_allocate(this%ndelaycount, 'NDELAYCOUNT', this%memoryPath)
     call mem_allocate(this%initialized, 'INITIALIZED', this%memoryPath)
     call mem_allocate(this%ieslag, 'IESLAG', this%memoryPath)
     call mem_allocate(this%ipch, 'IPCH', this%memoryPath)
@@ -420,8 +423,6 @@ contains
     this%iauxmultcol = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
-    this%idelayflag = 0
-    this%ndelaycount = 0
     this%initialized = 0
     this%ieslag = 0
     this%ipch = 0
@@ -464,6 +465,15 @@ contains
     return
    end subroutine csub_allocate_scalars
 
+  !> @ brief Final convergence check
+  !! 
+  !! Final convergence check for the CSUB package. The final convergence
+  !! check is only required when the simulation includes delay interbeds.
+  !! The final convergence check compares the sum of water contributed
+  !! by storage and water compressibility in the delay bed to the fluid
+  !! exchange between the delay interbed and the gwf cell.
+  !! 
+  !<
   subroutine csub_cc(this, innertot, kiter, iend, icnvgmod, nodes,               &
                      hnew, hold, cpak, ipak, dpak)
 ! **************************************************************************
@@ -475,16 +485,16 @@ contains
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: innertot
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: iend
-    integer(I4B), intent(in) :: icnvgmod
-    integer(I4B), intent(in) :: nodes
-    real(DP), dimension(nodes), intent(in) :: hnew
-    real(DP), dimension(nodes), intent(in) :: hold
-    character(len=LENPAKLOC), intent(inout) :: cpak
-    integer(I4B), intent(inout) :: ipak
-    real(DP), intent(inout) :: dpak
+    integer(I4B), intent(in) :: innertot                !< total number of inner iterations
+    integer(I4B), intent(in) :: kiter                   !< 
+    integer(I4B), intent(in) :: iend                    !< 
+    integer(I4B), intent(in) :: icnvgmod                !<
+    integer(I4B), intent(in) :: nodes                   !< number of active nodes
+    real(DP), dimension(nodes), intent(in) :: hnew      !< current gwf head
+    real(DP), dimension(nodes), intent(in) :: hold      !< gwf for previous time step
+    character(len=LENPAKLOC), intent(inout) :: cpak     !< string location of the maximum change in csub package
+    integer(I4B), intent(inout) :: ipak                 !< node with the maximum change in csub package
+    real(DP), intent(inout) :: dpak                     !< maximum change in csub package
     ! -- local
     character(len=LINELENGTH) :: tag
     character(len=LENPAKLOC) :: cloc
@@ -831,8 +841,16 @@ contains
     rateibeout = DZERO
     rateibiin = DZERO
     rateibiout = DZERO
-
+    !
+    ! -- reset delay bed counters for the current time step
+    if (this%ndelaybeds > 0) then
+      this%idb_nconv_count(1) = 0
+    end if
+    !
+    ! -- initialize tled
     tled = DONE
+    !
+    ! -- calculate budget terms for each interbed
     do ib = 1, this%ninterbeds
       rratewc = DZERO
       idelay = this%idelay(ib)
@@ -950,6 +968,10 @@ contains
             do n = 1, this%ndelaycells
               this%dbtcomp(n, idelay) = this%dbtcomp(n, idelay) + this%dbcomp(n, idelay)
             end do
+            !
+            ! -- check delay bed heads relative to the top and bottom of each 
+            !    delay bed cell for convertible and non-convertible gwf cells
+            call this%csub_delay_head_check(ib)
           end if
         end if
         !
@@ -1059,6 +1081,10 @@ contains
     integer(I4B) :: naux
     real(DP) :: dinact
     real(DP) :: Q
+    ! -- formats
+    character(len=*), parameter :: fmtnconv = &
+      "(/4x, 'DELAY INTERBED CELL HEADS IN ', i0, ' INTERBEDS IN',               &
+      &' NON-CONVERTIBLE GWF CELLS WERE LESS THAN THE TOP OF THE INTERBED CELL')"
     
 ! ------------------------------------------------------------------------------
     !
@@ -1309,6 +1335,19 @@ contains
     !    are greater than zero
     if (this%gwfiss == 0) then
       call this%csub_cg_chk_stress()
+    end if
+    !
+    ! -- update maximum count of delay interbeds that violate
+    !    basic head assumptions for delay beds and write a message
+    !    for delay interbeds in non-convertible gwf cells that
+    !    violate these head assumptions
+    if (this%ndelaybeds > 0) then
+      if (this%idb_nconv_count(1) > this%idb_nconv_count(2)) then
+        this%idb_nconv_count(2) = this%idb_nconv_count(1)
+      end if
+      if (this%idb_nconv_count(1) > 0) then
+        write(this%iout, fmtnconv) this%idb_nconv_count(1)
+      end if
     end if
     !
     ! -- Return
@@ -1708,9 +1747,16 @@ contains
       end do
     end if
     !
-    ! -- write warning message
-    if (this%ndelaycount > 0) then
-
+    ! -- write a warning message for delay interbeds in non-convertible gwf 
+    !    cells that violate minimum head assumptions
+    if (this%ndelaybeds > 0) then
+      if (this%idb_nconv_count(2) > 0) then
+        write(warnmsg,'(a,1x,a,1x,i0,1x,a,1x,a)')                                  &
+          'Delay interbed cell heads were less than the top of the interbed',      &
+          'cell in', this%idb_nconv_count(2), 'interbed cells in non-convertible', &
+          'GWF cells for at least one time step during the simulation.'
+        call store_warning(warnmsg)
+      end if
     end if
     !
     ! -- deallocate temporary storage
@@ -2047,6 +2093,8 @@ contains
       !
       ! -- reallocate and initialize delay interbed arrays
       if (ierr == 0) then
+        call mem_allocate(this%idb_nconv_count, 2,                               & 
+                            'idb_nconv_count', trim(this%memoryPath))
         call mem_allocate(this%idbconvert, this%ndelaycells, ndelaybeds,         & 
                             'idbconvert', trim(this%memoryPath))
         call mem_allocate(this%dbdhmax, ndelaybeds,                              &
@@ -2110,6 +2158,11 @@ contains
                             'dbdh', trim(this%memoryPath))
         call mem_allocate(this%dbaw, this%ndelaycells,                           &
                             'dbaw', trim(this%memoryPath))
+        !
+        ! -- initialize delay bed counters
+        do n = 1, 2
+          this%idb_nconv_count(n) = 0
+        end do
         !
         ! -- initialize delay bed storage
         do ib = 1, this%ninterbeds
@@ -2885,6 +2938,7 @@ contains
           call mem_deallocate(this%dbtheta)
           call mem_deallocate(this%dbtheta0)
         end if
+        call mem_deallocate(this%idb_nconv_count)
         call mem_deallocate(this%idbconvert)
         call mem_deallocate(this%dbdhmax)
         call mem_deallocate(this%dbz)
@@ -2954,13 +3008,10 @@ contains
     call mem_deallocate(this%ninterbeds)
     call mem_deallocate(this%maxsig0)
     call mem_deallocate(this%nbound)
-    !call mem_deallocate(this%ncolbnd)
     call mem_deallocate(this%iscloc)
     call mem_deallocate(this%iauxmultcol)
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
-    call mem_deallocate(this%idelayflag)
-    call mem_deallocate(this%ndelaycount)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%ieslag)
     call mem_deallocate(this%ipch)
@@ -4017,11 +4068,6 @@ contains
       end if
     end do
     !
-    ! -- update flags
-    if (this%ndelaybeds > 0) then
-      this%idelayflag = 0 
-    end if
-    !
     ! -- set gwfiss0
     this%gwfiss0 = this%gwfiss
     !
@@ -4079,18 +4125,6 @@ contains
     !    for the previous time step and the previous iteration
     do node = 1, nodes
       this%cg_es0(node) = this%cg_es(node)
-    end do
-    !
-    ! -- check that aquifer head is greater than or equal to the
-    !    top of each delay interbed
-    do ib = 1, this%ninterbeds
-      idelay = this%idelay(ib)
-      if (idelay == 0) then
-        cycle
-      end if
-      node = this%nodelist(ib)
-      hcell = hnew(node)
-      call this%csub_delay_chk(ib, hcell)
     end do
     !
     ! -- initialize interbed initial states
@@ -4462,7 +4496,6 @@ contains
     integer(I4B) :: idelay
     real(DP) :: tled
     real(DP) :: area
-    real(DP) :: hcell
     real(DP) :: hcof
     real(DP) :: rhsterm
     real(DP) :: comp
@@ -4521,24 +4554,6 @@ contains
       !
       ! -- interbed storage
       if (this%ninterbeds /= 0) then
-        !
-        ! -- check that aquifer head is greater than or equal to the
-        !    top of each delay interbed
-        do ib = 1, this%ninterbeds
-          idelay = this%idelay(ib)
-          if (idelay == 0) then
-            cycle
-          end if
-          node = this%nodelist(ib)
-          hcell = hnew(node)
-          call this%csub_delay_chk(ib, hcell)
-        end do
-        !
-        ! -- terminate if the aquifer head is below the top of delay interbeds
-        if (count_errors() > 0) then
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        end if
         !
         ! -- calculate the contribution of interbeds to the 
         !    groundwater flow equation
@@ -4656,8 +4671,8 @@ contains
           ! -- calculate interbed newton terms
           idiag = this%dis%con%ia(node)
           area = this%dis%get_area(node)
-          call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),     &
-                                      hcof, rhsterm)
+          call this%csub_interbed_fn(ib, node, hnew(node), hold(node),           &
+                                     hcof, rhsterm)
           !
           ! -- add interbed newton terms to amat and rhs
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
@@ -4822,9 +4837,7 @@ contains
   
   subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no ibcs
-!             (2) calculate hcof and rhs
+! csub_fc -- Formulate the HCOF and RHS terms for interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4838,9 +4851,7 @@ contains
     real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
-    ! locals
-    character(len=20) :: cellid
-    integer(I4B) :: idelaycalc
+    ! -- locals
     real(DP) :: snnew
     real(DP) :: snold
     real(DP) :: comp
@@ -4849,7 +4860,6 @@ contains
     real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: f
-    real(DP) :: top
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4885,40 +4895,23 @@ contains
         ! -- calculate cell saturation
         call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
-        ! -- check that the delay bed should be evaluated
-        idelaycalc = this%csub_delay_eval(ib, node, hcell)
-        !
-        ! -- calculate delay interbed hcof and rhs
-        if (idelaycalc > 0) then
-          !
-          ! -- update material properties
-          if (this%iupdatematprop /= 0) then
-            if (this%ieslag == 0) then
-              !
-              ! -- calculate compaction
-              call this%csub_delay_calc_comp(ib, hcell, hcellold,                &
-                                             comp, compi, compe)
-              this%comp(ib) = comp
-              !
-              ! -- update thickness and void ratio
-              call this%csub_delay_update(ib)
-            end if
-          end if
-          !
-          ! -- calculate delay interbed hcof and rhs
-          call this%csub_delay_sln(ib, hcell)
-          call this%csub_delay_fc(ib, hcof, rhs)
-        ! -- create error message
-        else
-          if (idelaycalc < 0) then
-            call this%dis%noder_to_string(node, cellid)
-            write(errmsg,'(a,g0,a,1x,a,1x,a,g0,a,1x,i0,a)')                      &
-              'Head (', hcell, ') in non-convertible cell',                      &
-              trim(adjustl(cellid)), 'dropped below the top of the cell (',      &
-              top, ') for delay interbed ', ib, '.'
-            call store_error(errmsg)
+        ! -- update material properties
+        if (this%iupdatematprop /= 0) then
+          if (this%ieslag == 0) then
+            !
+            ! -- calculate compaction
+            call this%csub_delay_calc_comp(ib, hcell, hcellold,                &
+                                           comp, compi, compe)
+            this%comp(ib) = comp
+            !
+            ! -- update thickness and void ratio
+            call this%csub_delay_update(ib)
           end if
         end if
+        !
+        ! -- calculate delay interbed hcof and rhs
+        call this%csub_delay_sln(ib, hcell)
+        call this%csub_delay_fc(ib, hcof, rhs)
         f = area * this%rnb(ib)
       end if
       rhs = rhs * f
@@ -4929,11 +4922,10 @@ contains
     return
   end subroutine csub_interbed_fc
   
-  subroutine csub_interbed_fn(this, ib, node, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_interbed_fn(this, ib, node, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_interbed_fn -- Formulate interbed newton terms
-! Subroutine: (1) skip if no interbeds
-!             (2) calculate hcof and rhs
+! csub_interbed_fn -- Formulate interbed newton terms. No newton terms for 
+!                     delay interbeds.  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4943,14 +4935,12 @@ contains
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: ib
     integer(I4B),intent(in) :: node
-    real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! -- locals
     integer(I4B) :: idelay
-    integer(I4B) :: idelaycalc
     real(DP) :: hcofn
     real(DP) :: rhsn
     real(DP) :: top
@@ -4965,10 +4955,6 @@ contains
     real(DP) :: hbarderv
     real(DP) :: rho1
     real(DP) :: rho2
-    real(DP) :: dz
-    real(DP) :: c
-    real(DP) :: h1
-    real(DP) :: hn
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -5022,37 +5008,6 @@ contains
             hcofn = hcofn - rho1 * (this%pcs(ib) - this%cg_es0(node)) * satderv
           end if
         end if
-      !
-      ! -- delay interbeds - no newton terms
-      !else
-      !  !
-      !  ! -- calculate factor
-      !  f = this%rnb(ib)
-      !  !
-      !  ! -- check that the delay bed should be evaluated
-      !  idelaycalc = this%csub_delay_eval(ib, node, hcell)
-      !  !
-      !  ! -- calculate newton terms if delay bed is not stranded
-      !  !    newton terms are calculated the same if using the 
-      !  !    head-based and effective-stress formulations
-      !  if (idelaycalc > 0) then
-      !    !
-      !    ! calculate delay interbed terms
-      !    dz = this%dbdzini(1, idelay)
-      !    c = DTWO * this%kv(ib) / dz
-      !    h1 = this%dbh(1, idelay)
-      !    hn = this%dbh(this%ndelaycells, idelay)
-      !    !
-      !    ! -- calculate the saturation derivative
-      !    satderv = this%csub_calc_sat_derivative(node, hcell)    
-      !    !
-      !    ! -- calculate the saturation derivative term
-      !    hcofn = satderv * c * area * (hn + h1 - DTWO * hcell)
-      !  end if
-      !  !
-      !  ! -- update hcof and rhs
-      !  hcof = f * hcofn
-      !  rhs = f * hcofn * hcell
       end if
     end if
     !
@@ -5581,51 +5536,11 @@ contains
     return
   end function csub_calc_adjes
 
-  function csub_delay_eval(this, ib, node, hcell) result(idelaycalc)
+  subroutine csub_delay_head_check(this, ib)
 ! ******************************************************************************
-! csub_delay_eval -- Determine if the delay interbed should be solved,
-!                    is stranded, or is a run-time error 
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
-    ! -- local variables
-    integer(I4B) :: idelaycalc
-    real(DP) :: top
-! ------------------------------------------------------------------------------
-    idelaycalc = 1
-    !!
-    !! -- non-convertible cell
-    !if (this%stoiconv(node) == 0) then
-    !  top = this%dis%top(node)
-    !  ! -- run-time error
-    !  if (hcell < top) then
-    !    idelaycalc = -999
-    !  end if
-    !!
-    !! -- convertible cell
-    !else
-    !  top = this%dis%bot(node) + this%thickini(ib)
-    !  !
-    !  ! -- stranded cell
-    !  if (hcell < top) then
-    !    idelaycalc = 0
-    !  end if
-    !end if
-    !
-    ! -- return
-    return
-  end function csub_delay_eval
-
-  subroutine csub_delay_violations(this, ib, node, hcell)
-! ******************************************************************************
-! csub_delay_eval -- Determine if the delay interbed should be solved,
-!                    is stranded, or is a run-time error 
+! csub_delay_head_check -- Determine if the delay interbed head in any delay
+!                          cell in a non-convertible gwf cell is less than the
+!                          top of each delay interbed cell 
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -5633,33 +5548,46 @@ contains
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
     integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
     ! -- local variables
+    integer(I4B) :: iviolate
+    integer(I4B) :: idelay
+    integer(I4B) :: node
     integer(I4B) :: n
-    real(DP) :: top
-    real(DP) :: bot
+    real(DP) :: z
+    real(DP) :: h
+    real(DP) :: dzhalf
+    real(DP) :: ztop
 ! ------------------------------------------------------------------------------
     !
-    ! -- non-convertible cell
-    if (this%stoiconv(node) == 0) then
-      top = this%dis%top(node)
-      ! -- run-time error
-      if (hcell < top) then
-      end if
+    ! -- initialize variables
+    iviolate = 0
+    idelay = this%idelay(ib)
+    node = this%nodelist(ib)
     !
-    ! -- convertible cell
-    else
-      top = this%dis%bot(node) + this%thickini(ib)
+    ! -- evaluate every delay cell
+    idelaycells: do n = 1, this%ndelaycells
+      z = this%dbz(n, idelay)
+      h = this%dbh(n, idelay)
+      dzhalf = DHALF * this%dbdzini(1, idelay)
       !
-      ! -- stranded cell
-      if (hcell < top) then
+      ! -- non-convertible cell
+      if (this%stoiconv(node) == 0) then
+        ztop = z + dzhalf
+        if (h < ztop) then
+          this%idb_nconv_count(1) = this%idb_nconv_count(1) + 1
+          iviolate = 1
+        end if
       end if
-    end if
+      !
+      ! -- terminate the loop
+      if (iviolate > 0) then
+        exit idelaycells
+      end if
+    end do idelaycells
     !
     ! -- return
     return
-  end subroutine csub_delay_violations
+  end subroutine csub_delay_head_check
   
    
   subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
@@ -5949,46 +5877,6 @@ contains
     return
 
   end subroutine csub_delay_init_zcell
-
-  subroutine csub_delay_chk(this, ib, hcell)
-! ******************************************************************************
-! csub_delay_chk -- Check the head relative to the top of a delay interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
-    ! -- local variables
-    character(len=20) :: cellid
-    integer(I4B) :: idelay
-    integer(I4B) :: node
-    real(DP) :: dzhalf
-    real(DP) :: top
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize variables
-    idelay = this%idelay(ib)
-    node = this%nodelist(ib)
-    dzhalf = DHALF * this%dbdzini(1, idelay)
-    top = this%dbz(1, idelay) + dzhalf
-    !
-    ! -- check that aquifer head is above the top of the interbed
-    if (hcell < top) then
-      call this%dis%noder_to_string(node, cellid)
-      write(errmsg, '(a,g0,a,1x,a,1x,a,1x,i0,1x,a,g0,a)')                        &
-        'Head (', hcell, ') in convertible cell', trim(adjustl(cellid)),         &
-        'is less than the top of delay interbed', ib,                            &
-        '(', top,').'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- return
-    return
-
-  end subroutine csub_delay_chk
-
 
   subroutine csub_delay_calc_stress(this, ib, hcell)
 ! ******************************************************************************
