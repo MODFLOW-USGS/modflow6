@@ -35,9 +35,12 @@ tops = [0., 0., 150., 0., 0., 150., 150.]
 ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
 eslag = [True for idx in range(len(exdirs) - 2)] + 2 * [False]
+# eslag = [True, True, True, False, True, False, False]
 headformulation = [True, False, False, True, True, False, False]
 ndc = [None, None, None, 19, 19, 19, 19]
 delay = [False, False, False, True, True, True, True]
+# newton = ["", "", "", "", "", None, ""]
+newton = ["" for idx in range(len(exdirs))]
 
 ddir = 'data'
 
@@ -91,8 +94,8 @@ ib = 1
 # solver options
 nouter, ninner = 500, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.
-newtonoptions = ''
-imsla = 'BICGSTAB'
+# newtonoptions = None
+imsla = "BICGSTAB"
 
 # chd data
 c = []
@@ -200,6 +203,18 @@ def get_model(idx, dir):
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
+
+    # create iterative model solution and register the gwf model with it
+    ims = flopy.mf6.ModflowIms(sim, print_option='ALL',
+                               outer_dvclose=hclose,
+                               outer_maximum=nouter,
+                               under_relaxation='NONE',
+                               inner_maximum=ninner,
+                               inner_dvclose=hclose, rcloserecord=rclose,
+                               linear_acceleration=imsla,
+                               scaling_method='NONE',
+                               reordering_method='NONE',
+                               relaxation_factor=relax)
 
     # create gwf model
     top = tops[idx]
@@ -363,20 +378,7 @@ def get_model(idx, dir):
         wc = 0.
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
-                               newtonoptions=newtonoptions)
-
-    # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                               outer_dvclose=hclose,
-                               outer_maximum=nouter,
-                               under_relaxation='NONE',
-                               inner_maximum=ninner,
-                               inner_dvclose=hclose, rcloserecord=rclose,
-                               linear_acceleration=imsla,
-                               scaling_method='NONE',
-                               reordering_method='NONE',
-                               relaxation_factor=relax)
-    sim.register_ims_package(ims, [gwf.name])
+                               newtonoptions=newton[idx])
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
