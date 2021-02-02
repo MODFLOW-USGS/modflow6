@@ -21,14 +21,14 @@ module GridConnectionModule
   ! a global cell with neighbors
   type, public :: CellWithNbrsType
     type(GlobalCellType) :: cell
-    integer(I4B) :: nrOfNbrs
+    integer(I4B) :: nrOfNbrs = 0
     type(CellWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
   end type
   
   ! a model with neighbors
   type, private :: ModelWithNbrsType
       class(NumericalModelType), pointer :: model => null()
-      integer(I4B) :: nrOfNbrs
+      integer(I4B) :: nrOfNbrs = 0
       type(ModelWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
   end type
   
@@ -154,11 +154,13 @@ module GridConnectionModule
     if (associated(model1, this%model)) then
       this%boundaryCells(this%nrOfBoundaryCells)%cell%index = idx1
       this%boundaryCells(this%nrOfBoundaryCells)%cell%model => this%model
+
       this%connectedCells(this%nrOfBoundaryCells)%cell%index = idx2
       this%connectedCells(this%nrOfBoundaryCells)%cell%model => model2
     else
       this%boundaryCells(this%nrOfBoundaryCells)%cell%index = idx2
       this%boundaryCells(this%nrOfBoundaryCells)%cell%model => this%model
+
       this%connectedCells(this%nrOfBoundaryCells)%cell%index = idx1
       this%connectedCells(this%nrOfBoundaryCells)%cell%model => model1
     end if
@@ -458,7 +460,7 @@ module GridConnectionModule
     
     ! TODO_MJR: dynamic memory
     if (.not. associated(cellNbrs%neighbors)) then
-      allocate(cellNbrs%neighbors(MaxNeighbors))  
+      allocate(cellNbrs%neighbors(MaxNeighbors))
     end if
     
     nbrCnt = cellNbrs%nrOfNbrs
@@ -559,7 +561,7 @@ module GridConnectionModule
       this%indexCount = this%indexCount + 1
       ifaceIdx = this%indexCount
       this%regionalToInterfaceIdxMap(regionIdx) = ifaceIdx
-    end if   
+    end if
     
     ! and also for its neighbors
     do inbr = 1, cellWithNbrs%nrOfNbrs
@@ -683,10 +685,13 @@ module GridConnectionModule
     
     do inx = 1, this%exchanges%Count()
       numEx => GetNumericalExchangeFromList(this%exchanges, inx) 
-      
-      ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
-      if (ivalAngldegx > 0) then
-        conn%ianglex = ivalAngldegx
+       
+      ivalAngldegx = -1
+      if (numEx%naux > 0) then
+        ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
+        if (ivalAngldegx > 0) then
+          conn%ianglex = ivalAngldegx
+        end if
       end if
       
       nOffset = this%getRegionalModelOffset(numEx%m1)

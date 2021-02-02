@@ -14,11 +14,11 @@ module SpatialModelConnectionModule
   ! Class to manage spatial connection of a model to one or more models of the same type.
   ! Spatial connection here means that the model domains (spatial discretization) are adjacent
   ! and connected via NumericalExchangeType object(s).
-  type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
+  type, public, extends(ModelConnectionType) :: SpatialModelConnectionType
         
     ! aggregation, all exchanges which directly connect with our model
     type(ListType), pointer :: exchangeList => null()    
-    integer(I4B), pointer :: stencilDepth ! default = 1, xt3d = 2, ...
+    integer(I4B), pointer :: stencilDepth => null() ! default = 1, xt3d = 2, ...
         
     ! the interface system doesn't live in a solution, so we need these
     integer(I4B), pointer                               :: neq => null()
@@ -40,9 +40,18 @@ module SpatialModelConnectionModule
     generic, public :: construct => spatialConnection_ctor
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
     procedure, pass(this) :: mc_df => spatialcon_df 
-    procedure, pass(this) :: mc_mc => spatialcon_mc
+    procedure, pass(this) :: mc_ar => spatialcon_ar
     procedure, pass(this) :: mc_ac => spatialcon_ac
-    procedure, pass(this) :: spatialcon_df
+    procedure, pass(this) :: mc_cf => spatialcon_cf    
+    procedure, pass(this) :: mc_mc => spatialcon_mc
+    procedure, pass(this) :: mc_fc => spatialcon_fc
+    procedure, pass(this) :: mc_da => spatialcon_da
+    procedure, pass(this) :: spatialcon_df 
+    procedure, pass(this) :: spatialcon_ar
+    procedure, pass(this) :: spatialcon_ac
+    procedure, pass(this) :: spatialcon_cf    
+    procedure, pass(this) :: spatialcon_mc
+    procedure, pass(this) :: spatialcon_fc
     procedure, pass(this) :: spatialcon_da
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -70,10 +79,9 @@ contains ! module procedures
     this%nrOfConnections = 0
     
     allocate(this%exchangeList)
-    allocate(this%gridConnection)  
-    
+    allocate(this%gridConnection)
     call this%allocateScalars()
-    
+
     this%stencilDepth = 1
         
   end subroutine spatialConnection_ctor
@@ -90,7 +98,7 @@ contains ! module procedures
   end subroutine addExchangeToSpatialConnection
   
   subroutine spatialcon_df(this)
-    class(SpatialModelConnectionType), intent(inout) :: this    
+    class(SpatialModelConnectionType), intent(inout) :: this
     
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
@@ -102,6 +110,15 @@ contains ! module procedures
     
   end subroutine spatialcon_df
   
+  subroutine spatialcon_ar(this)
+    class(SpatialModelConnectionType), intent(inout) :: this
+  end subroutine spatialcon_ar
+
+  subroutine spatialcon_cf(this, kiter)
+    class(SpatialModelConnectionType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+  end subroutine spatialcon_cf
+
   ! create the mapping from local system matrix to global
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
@@ -132,6 +149,15 @@ contains ! module procedures
     end do
     
   end subroutine spatialcon_mc
+
+  subroutine spatialcon_fc(this, kiter, amatsln, njasln, rhssln, inwtflag)
+    class(SpatialModelConnectionType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+    real(DP), dimension(:), intent(inout) :: amatsln
+    integer(I4B),intent(in) :: njasln
+    real(DP), dimension(:), intent(inout) :: rhssln
+    integer(I4B), intent(in) :: inwtflag
+  end subroutine spatialcon_fc
   
   ! add connections to global matrix, c.f. exg_ac in NumericalExchange, 
   ! but now for all exchanges with this model and skipping over the 
@@ -221,7 +247,7 @@ contains ! module procedures
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
     class(SpatialModelConnectionType), intent(inout) :: this
-  
+    
     call mem_allocate(this%neq, 'NEQ', this%memoryOrigin)
     call mem_allocate(this%nja, 'NJA', this%memoryOrigin)
     call mem_allocate(this%stencilDepth, 'STENCILDEPTH', this%memoryOrigin)

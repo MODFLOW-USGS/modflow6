@@ -60,7 +60,7 @@ contains
     this%gwfModel => CastToGwfModel(model)
     
     ! first call base constructor
-    call this%construct(model, trim(model%name)//'_G2C')
+    call this%SpatialModelConnectionType%spatialConnection_ctor(model, trim(model%name)//'_G2C')
     
     call this%allocateScalars()
     
