@@ -1,7 +1,8 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP
   use SimModule, only: ustop
-  use ConstantsModule, only: LENMEMPATH
+  use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
+  use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
   use NumericalExchangeModule
@@ -51,7 +52,8 @@ module GridConnectionModule
   !
   ! --
   type, public :: GridConnectionType
-    character(len=LENMEMPATH) :: memOrigin
+
+    character(len=LENMEMPATH) :: memoryPath
     class(NumericalModelType), pointer :: model => null()
     
     integer(I4B), pointer :: linkCapacity => null()
@@ -116,11 +118,22 @@ module GridConnectionModule
     integer(I4B) :: nCapacity ! reserves memory
     integer(I4B), pointer :: stencilDepth ! assuming symmetric stencils for now
     character(len=*) :: connectionName
-        
+    ! local
+    character(len=LENCOMPONENTNAME) :: name
+    integer(I4B), save :: igconn = 1 ! static counter to ensure unique name
+
     this%model => model
     this%stencilDepth => stencilDepth
     
-    this%memOrigin = trim(connectionName)//'_MC'
+    if(len(trim(connectionName)) + 3 > LENCOMPONENTNAME) then
+      ! this will give problems storing in memory manager, fix here
+      write(name,'(a,i4.4)') 'GRIDCON', igconn
+      igconn = igconn + 1
+    else
+      name = trim(connectionName)//'_GC'
+    end if
+    this%memoryPath = create_mem_path(name)
+
     call this%allocateScalars()
     call this%allocateArrays(nCapacity)
     
@@ -521,7 +534,7 @@ module GridConnectionModule
      ! create connections from sparse, and fill
     allocate(this%connections)
     conn => this%connections
-    call conn%allocate_scalars(this%memorigin)
+    call conn%allocate_scalars(this%memoryPath)
     conn%nodes = this%nrOfCells
     conn%nja = sparse%nnz
     conn%njas = (conn%nja -  conn%nodes) / 2
@@ -874,10 +887,10 @@ module GridConnectionModule
     use MemoryManagerModule, only: mem_allocate
     class(GridConnectionType) :: this
       
-    call mem_allocate(this%linkCapacity, 'LINKCAP', this%memOrigin)
-    call mem_allocate(this%nrOfBoundaryCells, 'NRBNDCELLS', this%memOrigin)
-    call mem_allocate(this%indexCount, 'IDXCOUNT', this%memOrigin)
-    call mem_allocate(this%nrOfCells, 'NRCELLS', this%memOrigin)
+    call mem_allocate(this%linkCapacity, 'LINKCAP', this%memoryPath)
+    call mem_allocate(this%nrOfBoundaryCells, 'NRBNDCELLS', this%memoryPath)
+    call mem_allocate(this%indexCount, 'IDXCOUNT', this%memoryPath)
+    call mem_allocate(this%nrOfCells, 'NRCELLS', this%memoryPath)
     
   end subroutine allocateScalars
   

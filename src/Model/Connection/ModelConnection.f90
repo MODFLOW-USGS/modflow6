@@ -21,7 +21,7 @@ module ModelConnectionModule
     class(NumericalModelType), pointer  :: owner => null()  ! the model whose connection this is  
     character(len=7)                    :: connectionType
     character(len=LENPACKAGENAME)       :: name
-    character(len=LENMEMPATH)            :: memoryOrigin
+    character(len=LENMEMPATH)            :: memoryPath
     
     integer(I4B)                        :: iNewton          ! == 1 for newton-raphson, 0 otherwise
   

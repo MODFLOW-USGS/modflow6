@@ -5,6 +5,7 @@ module SpatialModelConnectionModule
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
   use MemoryManagerModule, only: mem_deallocate
+  use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType, GlobalCellType
   use ListModule, only: ListType
   
@@ -15,7 +16,7 @@ module SpatialModelConnectionModule
   ! Spatial connection here means that the model domains (spatial discretization) are adjacent
   ! and connected via NumericalExchangeType object(s).
   type, public, extends(ModelConnectionType) :: SpatialModelConnectionType
-        
+
     ! aggregation, all exchanges which directly connect with our model
     type(ListType), pointer :: exchangeList => null()    
     integer(I4B), pointer :: stencilDepth => null() ! default = 1, xt3d = 2, ...
@@ -72,7 +73,7 @@ contains ! module procedures
     
     ! base props:
     this%name = name
-    this%memoryOrigin = trim(this%name) ! TODO_MJR: refactor origin here too
+    this%memoryPath = create_mem_path(this%name)
     this%owner => model
     this%iNewton = 0
     
@@ -248,9 +249,9 @@ contains ! module procedures
     use MemoryManagerModule, only: mem_allocate
     class(SpatialModelConnectionType), intent(inout) :: this
     
-    call mem_allocate(this%neq, 'NEQ', this%memoryOrigin)
-    call mem_allocate(this%nja, 'NJA', this%memoryOrigin)
-    call mem_allocate(this%stencilDepth, 'STENCILDEPTH', this%memoryOrigin)
+    call mem_allocate(this%neq, 'NEQ', this%memoryPath)
+    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%stencilDepth, 'STENCILDEPTH', this%memoryPath)
     
   end subroutine allocateScalars
   
@@ -261,9 +262,9 @@ contains ! module procedures
     ! local
     integer(I4B) :: i
     
-    call mem_allocate(this%x, this%neq, 'X', this%memoryOrigin)
-    call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryOrigin)
-    call mem_allocate(this%iactive, this%neq, 'IACTIVE', this%memoryOrigin)
+    call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
+    call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
+    call mem_allocate(this%iactive, this%neq, 'IACTIVE', this%memoryPath)
     
     ! c.f. NumericalSolution
     do i = 1, this%neq

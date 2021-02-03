@@ -1,8 +1,8 @@
 ! TODO: module description
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DZERO, DONE, DEM6
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
+  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin  
   use SparseModule, only:sparsematrix
   use SpatialModelConnectionModule  
   use GwfInterfaceModelModule
@@ -16,7 +16,7 @@ module GwfGwfConnectionModule
 
   ! Connecting two groundwaterflow models in space
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
-    
+
     ! aggregation, the model with the connection:
     type(GwfModelType), pointer :: gwfModel => null()
     
@@ -24,10 +24,10 @@ module GwfGwfConnectionModule
     type(GwfInterfaceModelType), pointer  :: interfaceModel => null()   
         
     ! memory managed data:
-    integer(I4B), pointer             :: iVarCV => null()   ! == 1: vertical conductance varies with water table
-    integer(I4B), pointer             :: iDewatCV => null() ! == 1: vertical conductance accounts for dewatered portion of underlying cell
-    real(DP), pointer                 :: satOmega => null() !
-    integer(I4B), pointer             :: iCellAvg => null() ! TODO_MJR: discuss this, iCellAvg same value per connection, user can now specify per exchange?
+    integer(I4B), pointer :: iVarCV => null()   ! == 1: vertical conductance varies with water table
+    integer(I4B), pointer :: iDewatCV => null() ! == 1: vertical conductance accounts for dewatered portion of underlying cell
+    real(DP), pointer     :: satOmega => null() !
+    integer(I4B), pointer :: iCellAvg => null() ! TODO_MJR: discuss this, iCellAvg same value per connection, user can now specify per exchange?
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -56,11 +56,21 @@ contains
     class(GwfGwfConnectionType), intent(inout)  :: this
     class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
     ! local
-    
+    character(len=LENCOMPONENTNAME) :: name
+    integer(I4B), save :: iconn = 1 ! static counter to ensure unique name
+
     this%gwfModel => CastToGwfModel(model)
+        
+    if(len(trim(model%name)) + 4 > LENCOMPONENTNAME) then
+      ! this will give problems storing in memory manager, fix here
+      write(name,'(a,i4.4)') 'G2C', iconn
+      iconn = iconn + 1
+    else
+      name = trim(model%name)//'_G2C'
+    end if
     
     ! first call base constructor
-    call this%SpatialModelConnectionType%spatialConnection_ctor(model, trim(model%name)//'_G2C')
+    call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
     
     call this%allocateScalars()
     
@@ -101,11 +111,11 @@ contains
      
     ! point x, ibound, and rhs to connection
     this%interfaceModel%x => this%x
-    call mem_checkin(this%interfaceModel%x, 'X', this%interfaceModel%memoryPath, 'X', this%memoryOrigin)
+    call mem_checkin(this%interfaceModel%x, 'X', this%interfaceModel%memoryPath, 'X', this%memoryPath)
     this%interfaceModel%rhs => this%rhs
-    call mem_checkin(this%interfaceModel%rhs, 'RHS', this%interfaceModel%memoryPath, 'RHS', this%memoryOrigin)
+    call mem_checkin(this%interfaceModel%rhs, 'RHS', this%interfaceModel%memoryPath, 'RHS', this%memoryPath)
     this%interfaceModel%ibound => this%iactive
-    call mem_checkin(this%interfaceModel%ibound, 'IBOUND', this%interfaceModel%memoryPath, 'IBOUND', this%memoryOrigin)
+    call mem_checkin(this%interfaceModel%ibound, 'IBOUND', this%interfaceModel%memoryPath, 'IBOUND', this%memoryPath)
     
     ! assign connections, fill ia/ja, map connections (following sln_connect) and mask
     call sparse%init(this%neq, this%neq, 7)
@@ -131,9 +141,9 @@ contains
     integer(I4B) :: ierror
         
     this%nja = sparse%nnz
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryOrigin)
-    call mem_allocate(this%ja, this%nja, 'JA', this%memoryOrigin)
-    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryOrigin)    
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
+    call mem_allocate(this%ja, this%nja, 'JA', this%memoryPath)
+    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryPath)    
     call sparse%sort()
     call sparse%filliaja(this%ia, this%ja, ierror)
     if (ierror /= 0) then
@@ -191,10 +201,10 @@ contains
     class(GwfGwfConnectionType), intent(inout)  :: this
     ! local
 
-    call mem_allocate(this%iVarCV, 'IVARCV', this%memoryOrigin)
-    call mem_allocate(this%iDewatCV, 'IDEWATCV', this%memoryOrigin)
-    call mem_allocate(this%satOmega, 'SATOMEGA', this%memoryOrigin)
-    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryOrigin)
+    call mem_allocate(this%iVarCV, 'IVARCV', this%memoryPath)
+    call mem_allocate(this%iDewatCV, 'IDEWATCV', this%memoryPath)
+    call mem_allocate(this%satOmega, 'SATOMEGA', this%memoryPath)
+    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryPath)
     
   end subroutine allocateScalars
   
