@@ -123,18 +123,25 @@ contains
     
     ! create disu
     call disu_cr(this%dis, this%name, -1, -1)
-    
+    disbase => this%dis
+    select type(disbase)
+    type is(GwfDisuType)
+      disu => disbase
+    end select
+          
     ! the following is similar to dis_df, we should refactor this
     ! set nodes, nvertices skipped for as long as possible
     nrOfCells = this%gridConnection%nrOfCells    
     this%dis%nodes = nrOfCells
     this%dis%nodesuser = nrOfCells
     this%dis%nja = this%gridConnection%connections%nja
+
     call this%dis%allocate_arrays()
+    ! these are otherwise allocated in dis%read_dimensions    
+    call disu%allocate_arrays_mem()
     
     ! fill data
-    do icell = 1, nrOfCells
-      
+    do icell = 1, nrOfCells      
       idx = this%gridConnection%idxToGlobal(icell)%index
       model => this%gridConnection%idxToGlobal(icell)%model
       
@@ -145,25 +152,19 @@ contains
      
     ! grid connections follow from GridConnection:
     this%dis%con => this%gridConnection%connections
-    this%dis%njas =  this%dis%con%njas
-        
-    disbase => this%dis
-    select type(disbase)
-    type is(GwfDisuType)
-      disu => disbase
-      
-      ! copy cell x,y
-      do icell = 1, nrOfCells
-        idx = this%gridConnection%idxToGlobal(icell)%index
-        model => this%gridConnection%idxToGlobal(icell)%model
-        call model%dis%get_cellxy(idx, x, y)
-        ! we need to have the origins in here explicitly since
-        ! we are merging grids with possibly different origins
-        ! TODO_MJR: how 'bout rotation?
-        disu%cellxy(1,icell) = x + model%dis%xorigin
-        disu%cellxy(2,icell) = y + model%dis%yorigin
-      end do
-    end select
+    this%dis%njas =  this%dis%con%njas        
+    
+    ! copy cell x,y
+    do icell = 1, nrOfCells
+      idx = this%gridConnection%idxToGlobal(icell)%index
+      model => this%gridConnection%idxToGlobal(icell)%model
+      call model%dis%get_cellxy(idx, x, y)
+      ! we need to have the origins in here explicitly since
+      ! we are merging grids with possibly different origins
+      ! TODO_MJR: how 'bout rotation?
+      disu%cellxy(1,icell) = x + model%dis%xorigin
+      disu%cellxy(2,icell) = y + model%dis%yorigin
+    end do
     
   end subroutine buildDiscretization
   

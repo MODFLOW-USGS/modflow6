@@ -703,7 +703,7 @@ module GridConnectionModule
       if (numEx%naux > 0) then
         ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
         if (ivalAngldegx > 0) then
-          conn%ianglex = ivalAngldegx
+          conn%ianglex = 1
         end if
       end if
       

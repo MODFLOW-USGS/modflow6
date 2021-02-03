@@ -34,6 +34,7 @@ module GwfDisuModule
     real(DP), dimension(:), pointer, contiguous :: cl12inp => null()             ! (size:njausr) user-input cl12 array
     real(DP), dimension(:), pointer, contiguous :: hwvainp => null()             ! (size:njausr) user-input hwva array
     real(DP), dimension(:), pointer, contiguous :: angldegxinp => null()         ! (size:njausr) user-input angldegx array
+    integer(I4B), pointer :: iangledegx => null()                                ! =1 when angle information was present in input, 0 otherwise
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
@@ -59,6 +60,7 @@ module GwfDisuModule
     ! -- private
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+    procedure :: allocate_arrays_mem
     procedure :: read_options
     procedure :: read_dimensions
     procedure :: read_mf6_griddata
@@ -369,7 +371,8 @@ module GwfDisuModule
                                   this%nodereduced, this%nodeuser,             &
                                   this%iainp, this%jainp,                      &
                                   this%ihcinp, this%cl12inp,                   &
-                                  this%hwvainp, this%angldegxinp)
+                                  this%hwvainp, this%angldegxinp,              &
+                                  this%iangledegx)
     this%nja = this%con%nja
     this%njas = this%con%njas
     !
@@ -522,6 +525,7 @@ module GwfDisuModule
     call mem_deallocate(this%njausr)
     call mem_deallocate(this%nvert)
     call mem_deallocate(this%voffsettol)
+    call mem_deallocate(this%iangledegx)
     !
     ! -- arrays
     if (this%readFromFile) then
@@ -954,6 +958,9 @@ module GwfDisuModule
       call store_error('Required CONNECTIONDATA block not found.')
       call this%parser%StoreErrorUnit()
     end if
+    !
+    ! -- store whether angledegx was read
+    if (lname(6)) this%iangledegx = 1
     !
     ! -- verify all items were read
     do n = 1, nname
@@ -1544,12 +1551,14 @@ module GwfDisuModule
     call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
     call mem_allocate(this%nvert, 'NVERT', this%memoryPath)
     call mem_allocate(this%voffsettol, 'VOFFSETTOL', this%memoryPath)
+    call mem_allocate(this%iangledegx, 'IANGLEDEGX', this%memoryPath)
     !
     ! -- Set values
     this%ndim = 1
     this%njausr = 0
     this%nvert = 0
     this%voffsettol = DZERO
+    this%iangledegx = 0
     this%readFromFile = .false.
     !
     ! -- Return
@@ -1581,15 +1590,6 @@ module GwfDisuModule
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
-    call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%memoryPath)
-    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
-    call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%memoryPath)
-    ! TODO_MJR: 
-    !if(this%nvert > 0) then
-    !  call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%origin)
-    !else
-    !  call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%origin)
-    !endif
     !
     ! -- Initialize
     this%mshape(1) = this%nodesuser
@@ -1597,6 +1597,22 @@ module GwfDisuModule
     ! -- Return
     return
   end subroutine allocate_arrays
+
+  subroutine allocate_arrays_mem(this)
+    use MemoryManagerModule, only: mem_allocate
+    class(GwfDisuType) :: this
+     
+    call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%memoryPath)
+    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
+    call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%memoryPath)
+    ! TODO_MJR: is this possible again?
+    !if(this%nvert > 0) then
+    !  call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%origin)
+    !else
+    !  call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%origin)
+    !endif
+    
+  end subroutine allocate_arrays_mem
 
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string, allow_zero) result(nodeu)
