@@ -507,11 +507,23 @@ contains
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: kiter
     ! -- local
+    integer(I4B) :: iexg
 ! ------------------------------------------------------------------------------
     !
     ! -- Rewet cells across models using the wetdry parameters in each model's
     !    npf package, and the head in the connected model.
     call this%rewet(kiter)
+    !
+    ! -- calculate the conductance for each exchange connection
+    call this%condcalc()
+    !
+    ! -- if gnc is active, then copy cond into gnc cond (might consider a
+    !    pointer here in the future)
+    if(this%ingnc > 0) then
+      do iexg = 1, this%nexg
+        this%gnc%cond(iexg) = this%cond(iexg)
+      enddo
+    endif
     !
     ! -- Return
     return
@@ -535,21 +547,10 @@ contains
     real(DP), dimension(:), intent(inout) ::rhssln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
-    integer(I4B) :: inwt, iexg
+    integer(I4B) :: inwt
     integer(I4B) :: i, nodem1sln, nodem2sln, idiagsln
     integer(I4B) :: njasln
-! ------------------------------------------------------------------------------
-    !
-    ! -- calculate the conductance for each exchange connection
-    call this%condcalc()
-    !
-    ! -- if gnc is active, then copy cond into gnc cond (might consider a
-    !    pointer here in the future)
-    if(this%ingnc > 0) then
-      do iexg = 1, this%nexg
-        this%gnc%cond(iexg) = this%cond(iexg)
-      enddo
-    endif
+! ------------------------------------------------------------------------------    
     !
     ! -- Put this%cond into amatsln
     do i = 1, this%nexg

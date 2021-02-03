@@ -1,5 +1,6 @@
 module GwfInterfaceModelModule
-  use KindModule, only: I4B, DP  
+  use KindModule, only: I4B, DP
+  use ConstantsModule, only: DZERO
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use GwfModule, only: GwfModelType
   use GridConnectionModule
@@ -73,7 +74,7 @@ contains
     ! continue as in gwf_cr...
     
     ! set XT3D when the owning model has XT3D enabled
-    this%npf%ixt3d = this%gwfModel%npf%ixt3d
+    this%npf%ixt3d = 0!this%gwfModel%npf%ixt3d
     
   end subroutine createModel
   
@@ -207,66 +208,96 @@ contains
     ! local
     type(GwfInterfaceModelType), pointer :: ifModel
     integer :: icell, idx, nrOfCells
-    class(NumericalModelType), pointer :: numModel
     class(GwfModelType), pointer :: gwfModel
+    integer(I4B) :: im
+    class(*), pointer :: objPtr
     
     ! cast to interface model here, should never fail
-    ifModel => null()
-    if (associated(ifaceModelObj)) then
-      select type (ifaceModelObj)
-      class is (GwfInterfaceModelType)
-        ifModel => ifaceModelObj        
-      end select
-    endif      
-    if (.not. associated(ifModel)) then
-      return
-    endif
-    
-    ! set the data in the npf package
-    nrOfCells = ifModel%gridConnection%nrOfCells
-    do icell=1, nrOfCells
-      idx = ifModel%gridConnection%idxToGlobal(icell)%index
-      numModel => ifModel%gridConnection%idxToGlobal(icell)%model
-      ! cast for now...
-      select type (numModel)
-      class is (GwfModelType)
-        gwfModel => numModel        
-      end select
+    ifModel => CastAsGwfInterfaceModelClass(ifaceModelObj)
       
-      ! copy celltype, K11
-      npf%icelltype(icell) = gwfModel%npf%icelltype(idx) 
-      npf%k11(icell) = gwfModel%npf%k11(idx) 
+    ! loop over models that make up the interface and 
+    ! determine 'merged' properties...
+    do im = 1, ifModel%gridConnection%regionalModels%Count()
+      objPtr => ifModel%gridConnection%regionalModels%GetItem(im)
+      gwfModel => CastAsGwfModelClass(objPtr)
       
       ! do 'OR' on the K properties
-      ! TODO_MJR: get this out of the loop!
       if (gwfModel%npf%ik22 > 0) npf%ik22 = 1
       if (gwfModel%npf%ik33 > 0) npf%ik33 = 1
       if (gwfModel%npf%iangle1 > 0) npf%iangle1 = 1
       if (gwfModel%npf%iangle2 > 0) npf%iangle2 = 1
       if (gwfModel%npf%iangle3 > 0) npf%iangle3 = 1
       if (gwfModel%npf%icalcspdis > 0) npf%icalcspdis = 1
-    end do            
-      
-    ! and copy the remaining arrays
+    end do
+
+
+    ! set the data in the npf package
+    nrOfCells = ifModel%gridConnection%nrOfCells
     do icell=1, nrOfCells
       idx = ifModel%gridConnection%idxToGlobal(icell)%index
-      numModel => ifModel%gridConnection%idxToGlobal(icell)%model
-      ! cast for now...
-      select type (numModel)
-      class is (GwfModelType)
-        gwfModel => numModel        
-      end select
+      objPtr => ifModel%gridConnection%idxToGlobal(icell)%model
+      gwfModel => CastAsGwfModelClass(objPtr)
       
+      npf%icelltype(icell) = gwfModel%npf%icelltype(idx) 
+      npf%k11(icell) = gwfModel%npf%k11(idx)      
       if (npf%ik22 > 0) npf%k22(icell) = gwfModel%npf%k22(idx)
       if (npf%ik33 > 0) npf%k33(icell) = gwfModel%npf%k33(idx)
-      if (npf%iangle1 > 0) npf%angle1(icell) = gwfModel%npf%angle1(idx)/DPIO180
-      if (npf%iangle2 > 0) npf%angle2(icell) = gwfModel%npf%angle2(idx)/DPIO180
-      if (npf%iangle3 > 0) npf%angle3(icell) = gwfModel%npf%angle3(idx)/DPIO180
+      
+      ! angles, zero when not present in one of the models
+      if (npf%iangle1 > 0) then
+        if (gwfModel%npf%iangle1 > 0) then
+          npf%angle1(icell) = gwfModel%npf%angle1(idx)/DPIO180
+        else
+          npf%angle1(icell) = DZERO
+        end if        
+      end if
+      if (npf%iangle2 > 0) then
+        if (gwfModel%npf%iangle2 > 0) then
+          npf%angle2(icell) = gwfModel%npf%angle2(idx)/DPIO180
+        else
+          npf%angle2(icell) = DZERO
+        end if        
+      end if
+      if (npf%iangle3 > 0) then
+        if (gwfModel%npf%iangle3 > 0) then
+          npf%angle3(icell) = gwfModel%npf%angle3(idx)/DPIO180
+        else
+          npf%angle3(icell) = DZERO
+        end if        
+      end if
       
     end do
     
   end subroutine setNpfData
   
+  function CastAsGwfModelClass(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(GwfModelType), pointer :: res
+    !
+    res => null()
+    if (.not. associated(obj)) return
+    !
+    select type (obj)
+    class is (GwfModelType)
+      res => obj
+    end select
+    return
+  end function CastAsGwfModelClass
   
+  function CastAsGwfInterfaceModelClass(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(GwfInterfaceModelType), pointer :: res
+    !
+    res => null()
+    if (.not. associated(obj)) return
+    !
+    select type (obj)
+    class is (GwfInterfaceModelType)
+      res => obj
+    end select
+    return
+  end function CastAsGwfInterfaceModelClass
   
 end module GwfInterfaceModelModule

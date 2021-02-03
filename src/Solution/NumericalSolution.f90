@@ -1514,7 +1514,8 @@ subroutine solution_create(filename, id)
     ! -- Add exchange Newton-Raphson terms to solution
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_nr(kiter, this%ia, this%amat)
+      ! TODO_MJR: temp disabled
+      !call cp%exg_nr(kiter, this%ia, this%amat)
     enddo
     !
     ! -- Calculate pseudo-transient continuation factor for each model
@@ -1627,7 +1628,8 @@ subroutine solution_create(filename, id)
     ! -- Additional convergence check for exchanges
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cc(this%icnvg)
+      ! TODO_MJR: temp disabled
+      !call cp%exg_cc(this%icnvg)
     end do
     !
     ! -- additional convergence check for model packages
@@ -1894,8 +1896,7 @@ subroutine solution_create(filename, id)
     ! -- Calculate the matrix terms for each exchange
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      ! TODO_MJR: delete this when done
-      !call cp%exg_cf(kiter)
+      call cp%exg_cf(kiter)
     enddo
     !
     ! -- Calculate the matrix terms for each connection
