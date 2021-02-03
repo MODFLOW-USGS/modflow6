@@ -64,21 +64,21 @@ module GwfCsubModule
     ! -- logical scalars
     logical, pointer :: lhead_based => null()                                    !< logical variable indicating if head-based solution
     ! -- integer scalars
-    integer(I4B), pointer :: istounit => null()
-    integer(I4B), pointer :: istrainib => null()
-    integer(I4B), pointer :: istrainsk => null()
-    integer(I4B), pointer :: ioutcomp => null()
-    integer(I4B), pointer :: ioutcompi => null()
-    integer(I4B), pointer :: ioutcompe => null()
-    integer(I4B), pointer :: ioutcompib => null()
-    integer(I4B), pointer :: ioutcomps => null()
+    integer(I4B), pointer :: istounit => null()                                  !< unit number of storage package
+    integer(I4B), pointer :: istrainib => null()                                 !< unit number of interbed strain output
+    integer(I4B), pointer :: istrainsk => null()                                 !< unit number of coarse-grained strain output
+    integer(I4B), pointer :: ioutcomp => null()                                  !< unit number for cell-by-cell compaction output
+    integer(I4B), pointer :: ioutcompi => null()                                 !< unit number for cell-by-cell inelastic compaction output
+    integer(I4B), pointer :: ioutcompe => null()                                 !< unit number for cell-by-cell elastic compaction output
+    integer(I4B), pointer :: ioutcompib => null()                                !< unit number for cell-by-cell interbed compaction output
+    integer(I4B), pointer :: ioutcomps => null()                                 !< unit number for cell-by-cell coarse-grained compaction output
     integer(I4B), pointer :: ioutzdisp => null()                                 !< unit number for z-displacement output
     integer(I4B), pointer :: ipakcsv => null()                                   !< unit number for csv output
     integer(I4B), pointer :: iupdatematprop => null()                            !< flag indicating if material properties will be updated
-    integer(I4B), pointer :: istoragec => null()                                 !<
-    integer(I4B), pointer :: icellf => null()                                    !<
-    integer(I4B), pointer :: ispecified_pcs => null()                            !< flag indicating if preconsolidation state is specified (not relative)
-    integer(I4B), pointer :: ispecified_dbh => null()                            !<
+    integer(I4B), pointer :: istoragec => null()                                 !< flag indicating specific storage coefficient will be specified
+    integer(I4B), pointer :: icellf => null()                                    !< flag indicating cell fractions will be specified
+    integer(I4B), pointer :: ispecified_pcs => null()                            !< flag indicating preconsolidation state is specified (not relative)
+    integer(I4B), pointer :: ispecified_dbh => null()                            !< flag indicating delay bed head is specified (not relative)
     integer(I4B), pointer :: inamedbound => null()                               !< flag to read boundnames
     integer(I4B), pointer :: iconvchk => null()                                  !< flag indicating if a final convergence check will be made
     integer(I4B), pointer :: naux => null()                                      !< number of auxiliary variables
@@ -99,8 +99,6 @@ module GwfCsubModule
     real(DP), pointer :: gammaw => null()                                        !< product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !< water compressibility
     real(DP), pointer :: brg => null()                                           !< product of gammaw and water compressibility
-    real(DP), pointer :: dbfact => null()                                        !<
-    real(DP), pointer :: dbfacti => null()                                       !<
     real(DP), pointer :: satomega => null()                                      !< newton-raphson saturation omega
     ! -- integer pointer to storage package variables
     integer(I4B), pointer :: gwfiss => NULL()                                    !< pointer to model iss flag
@@ -163,28 +161,28 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: thick0 => null()              !< previous interbed thickness
     real(DP), dimension(:), pointer, contiguous :: theta => null()               !< current interbed porosity
     real(DP), dimension(:), pointer, contiguous :: theta0 => null()              !< previous interbed porosity
-    real(DP), dimension(:, :), pointer, contiguous :: auxvar => null()            !< auxiliary variable array
+    real(DP), dimension(:, :), pointer, contiguous :: auxvar => null()           !< auxiliary variable array
     !
     ! -- delay interbed
     integer(I4B), dimension(:), pointer, contiguous :: idb_nconv_count => null() !< non-convertible count of interbeds with heads below delay cell top
-    integer(I4B), dimension(:, :), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
+    integer(I4B), dimension(:, :), pointer, contiguous :: idbconvert => null()   !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !< delay bed maximum head change
-    real(DP), dimension(:, :), pointer, contiguous :: dbz => null()               !< delay bed cell z
-    real(DP), dimension(:, :), pointer, contiguous :: dbrelz => null()            !< delay bed cell z relative to znode
-    real(DP), dimension(:, :), pointer, contiguous :: dbh => null()               !< delay bed cell h
-    real(DP), dimension(:, :), pointer, contiguous :: dbh0 => null()              !< delay bed cell previous h
-    real(DP), dimension(:, :), pointer, contiguous :: dbgeo => null()             !< delay bed cell geostatic stress
-    real(DP), dimension(:, :), pointer, contiguous :: dbes => null()              !< delay bed cell effective stress
-    real(DP), dimension(:, :), pointer, contiguous :: dbes0 => null()             !< delay bed cell previous effective stress
-    real(DP), dimension(:, :), pointer, contiguous :: dbpcs => null()             !< delay bed cell preconsolidation stress
+    real(DP), dimension(:, :), pointer, contiguous :: dbz => null()              !< delay bed cell z
+    real(DP), dimension(:, :), pointer, contiguous :: dbrelz => null()           !< delay bed cell z relative to znode
+    real(DP), dimension(:, :), pointer, contiguous :: dbh => null()              !< delay bed cell h
+    real(DP), dimension(:, :), pointer, contiguous :: dbh0 => null()             !< delay bed cell previous h
+    real(DP), dimension(:, :), pointer, contiguous :: dbgeo => null()            !< delay bed cell geostatic stress
+    real(DP), dimension(:, :), pointer, contiguous :: dbes => null()             !< delay bed cell effective stress
+    real(DP), dimension(:, :), pointer, contiguous :: dbes0 => null()            !< delay bed cell previous effective stress
+    real(DP), dimension(:, :), pointer, contiguous :: dbpcs => null()            !< delay bed cell preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !< delay bed flow through interbed top
     real(DP), dimension(:), pointer, contiguous :: dbflowbot => null()           !< delay bed flow through interbed bottom
-    real(DP), dimension(:, :), pointer, contiguous :: dbdzini => null()           !< initial delay bed cell thickness
-    real(DP), dimension(:, :), pointer, contiguous :: dbthetaini => null()        !< initial delay bed cell porosity
-    real(DP), dimension(:, :), pointer, contiguous :: dbdz => null()              !< delay bed dz
-    real(DP), dimension(:, :), pointer, contiguous :: dbdz0 => null()             !< delay bed previous dz
-    real(DP), dimension(:, :), pointer, contiguous :: dbtheta => null()           !< delay bed cell porosity
-    real(DP), dimension(:, :), pointer, contiguous :: dbtheta0 => null()          !< delay bed cell previous porosity
+    real(DP), dimension(:, :), pointer, contiguous :: dbdzini => null()          !< initial delay bed cell thickness
+    real(DP), dimension(:, :), pointer, contiguous :: dbthetaini => null()       !< initial delay bed cell porosity
+    real(DP), dimension(:, :), pointer, contiguous :: dbdz => null()             !< delay bed dz
+    real(DP), dimension(:, :), pointer, contiguous :: dbdz0 => null()            !< delay bed previous dz
+    real(DP), dimension(:, :), pointer, contiguous :: dbtheta => null()          !< delay bed cell porosity
+    real(DP), dimension(:, :), pointer, contiguous :: dbtheta0 => null()         !< delay bed cell previous porosity
     real(DP), dimension(:, :), pointer, contiguous :: dbcomp => null()           !< delay bed incremental compaction
     real(DP), dimension(:, :), pointer, contiguous :: dbtcomp => null()          !< delay bed total interbed compaction
     !
@@ -307,15 +305,14 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    ! -- dummy
-    implicit none
-    type(GwfCsubType), pointer :: csubobj            !< pointer
+    ! -- dummy variables
+    type(GwfCsubType), pointer :: csubobj            !< pointer to default package type
     character(len=*), intent(in) :: name_model       !< model name
     integer(I4B), intent(in) :: inunit               !< unit number of csub input file
     integer(I4B), intent(in) :: istounit             !< unit number of storage package
     character(len=*), intent(in) :: stoPckName       !< name of the storage package
     integer(I4B), intent(in) :: iout                 !< unit number of lst output file
-    ! -- local
+    ! -- local variables
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
@@ -359,12 +356,11 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use ConstantsModule, only: LINELENGTH
     use KindModule, only: I4B
-    implicit none
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     class(DisBaseType), pointer, intent(in) :: dis               !< model discretization
     integer(I4B), dimension(:), pointer, contiguous :: ibound    !< model ibound array
-    ! -- local
+    ! -- local variables
     logical :: isfound, endOfBlock
     character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
@@ -608,10 +604,9 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, urdaux, openfile
-    implicit none
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! -- local
+    ! -- local variables
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
     character(len=MAXCHARLEN) :: fname
@@ -1056,9 +1051,9 @@ contains
     use ConstantsModule, only: LINELENGTH, LENBOUNDNAME
     use KindModule, only: I4B
 !    use SimModule, only: ustop, store_error, count_errors
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! -- local
+    ! -- local variables
     character(len=LENBOUNDNAME) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1135,7 +1130,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
@@ -1256,7 +1251,6 @@ contains
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate, mem_setptr
-    implicit none
     class(GwfCsubType), intent(inout) :: this
     ! -- local variables
     integer(I4B) :: j
@@ -1431,9 +1425,9 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_allocate, mem_setptr
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! -- local
+    ! -- local variables
     character(len=LINELENGTH) :: cellid
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
@@ -1848,7 +1842,6 @@ contains
           !
           ! -- initialize elevation of delay bed cells
           call this%csub_delay_init_zcell(ib)
-
         end do
         !
         ! -- initialize delay bed solution arrays
@@ -1893,9 +1886,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
-    ! -- local
+    ! -- local variables
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: msg
@@ -2314,8 +2307,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    implicit none
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
 ! ------------------------------------------------------------------------------
     !
@@ -2525,7 +2517,7 @@ contains
     ! -- deallocate parent
     call this%NumericalPackageType%da()
     !
-    ! -- Return
+    ! -- return
     return
   end subroutine csub_da
 
@@ -2548,10 +2540,9 @@ contains
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
-    implicit none
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! -- local
+    ! -- local variables
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -2700,12 +2691,12 @@ contains
   end subroutine csub_rp
 
   !> @ brief Advance the package
-      !!
-      !!  Advance data in the CSUB package. The method sets data for the previous
-      !!  time step to the current value for the data (e.g., HOLD = HNEW). The
-      !!  method also calls the method to initialize the initial stress conditions
-      !!  if this is the first transient stress period.
-      !!
+  !!
+  !!  Advance data in the CSUB package. The method sets data for the previous
+  !!  time step to the current value for the data (e.g., HOLD = HNEW). The
+  !!  method also calls the method to initialize the initial stress conditions
+  !!  if this is the first transient stress period.
+  !!
   !<
   subroutine csub_ad(this, nodes, hnew)
     ! ******************************************************************************
@@ -2715,11 +2706,11 @@ contains
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
     use TdisModule, only: nper, kper
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes                !< number of active model nodes
     real(DP), dimension(nodes), intent(in) :: hnew   !< current head
-    ! -- local
+    ! -- local variables
     integer(I4B) :: ib
     integer(I4B) :: n
     integer(I4B) :: idelay
@@ -2830,9 +2821,9 @@ contains
   end subroutine csub_ad
 
   !> @ brief Fill A and r for the package
-      !!
-      !!  Fill the coefficient matrix and right-hand side with the CSUB package terms.
-      !!
+  !!
+  !!  Fill the coefficient matrix and right-hand side with the CSUB package terms.
+  !!
   !<
   subroutine csub_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
     ! ******************************************************************************
@@ -2842,7 +2833,7 @@ contains
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
     use TdisModule, only: delt
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: kiter                   !< outer iteration numbed
     real(DP), intent(in), dimension(:) :: hold          !< previous heads
@@ -2851,7 +2842,7 @@ contains
     real(DP), dimension(njasln), intent(inout) :: amat  !< A matrix
     integer(I4B), intent(in), dimension(:) :: idxglo    !< global index model to solution
     real(DP), intent(inout), dimension(:) :: rhs        !< right-hand side
-    ! -- local
+    ! -- local variables
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idiag
@@ -2956,10 +2947,13 @@ contains
   end subroutine csub_fc
 
   !> @ brief Fill Newton-Raphson terms in A and r for the package
-      !!
-      !!  Fill the coefficient matrix and right-hand side with CSUB package
-      !!  with Newton-Raphson terms.
-      !!
+  !!
+  !!  Fill the coefficient matrix and right-hand side with CSUB package
+  !!  with Newton-Raphson terms.
+  !!
+  !! @param[in,out]  amat  A matrix
+  !! @param[in,out]  rhs   right-hand side
+  !!
   !<
   subroutine csub_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
     ! ******************************************************************************
@@ -2970,7 +2964,7 @@ contains
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
     use TdisModule, only: delt
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: kiter                    !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold           !< previous heads
@@ -2979,7 +2973,7 @@ contains
     real(DP), dimension(njasln), intent(inout) :: amat   !< A matrix
     integer(I4B), intent(in), dimension(:) :: idxglo     !< global index model to solution
     real(DP), intent(inout), dimension(:) :: rhs         !< right-hand side
-    ! -- local
+    ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: node
     integer(I4B) :: idiag
@@ -3072,6 +3066,10 @@ contains
   !! by storage and water compressibility in the delay bed to the fluid
   !! exchange between the delay interbed and the gwf cell.
   !!
+  !! @param[in,out]  cpak  string location of the maximum change in csub package
+  !! @param[in,out]  ipak  node with the maximum change in csub package
+  !! @param[in,out]  dpak  maximum change in csub package
+  !!
   !<
   subroutine csub_cc(this, innertot, kiter, iend, icnvgmod, nodes, &
                      hnew, hold, cpak, ipak, dpak)
@@ -3082,19 +3080,19 @@ contains
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
     use TdisModule, only: totim, kstp, kper, delt
-! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: innertot                !< total number of inner iterations
-    integer(I4B), intent(in) :: kiter                   !<
-    integer(I4B), intent(in) :: iend                    !<
-    integer(I4B), intent(in) :: icnvgmod                !<
+    integer(I4B), intent(in) :: kiter                   !< outer iteration number
+    integer(I4B), intent(in) :: iend                    !< flag indicating if it is the last iteration
+    integer(I4B), intent(in) :: icnvgmod                !< flag indicating if the solution is considered converged
     integer(I4B), intent(in) :: nodes                   !< number of active nodes
     real(DP), dimension(nodes), intent(in) :: hnew      !< current gwf head
     real(DP), dimension(nodes), intent(in) :: hold      !< gwf for previous time step
     character(len=LENPAKLOC), intent(inout) :: cpak     !< string location of the maximum change in csub package
     integer(I4B), intent(inout) :: ipak                 !< node with the maximum change in csub package
     real(DP), intent(inout) :: dpak                     !< maximum change in csub package
-! -- local
+    ! -- local variables
     character(len=LINELENGTH) :: tag
     character(len=LENPAKLOC) :: cloc
     integer(I4B) :: icheck
@@ -3135,161 +3133,161 @@ contains
     dhmax = DZERO
     rmax = DZERO
     ifirst = 1
-!
-! -- additional checks to see if convergence needs to be checked
-! -- no convergence check for steady-state stress periods
+    !
+    ! -- additional checks to see if convergence needs to be checked
+    ! -- no convergence check for steady-state stress periods
     if (this%gwfiss /= 0) then
       icheck = 0
     else
-!
-! -- if not saving package convergence data on check convergence if
-!    the model is considered converged
+      !
+      ! -- if not saving package convergence data on check convergence if
+      !    the model is considered converged
       if (this%ipakcsv == 0) then
-      if (icnvgmod == 0) then
-        icheck = 0
-      end if
+        if (icnvgmod == 0) then
+          icheck = 0
+        end if
       else
-!
-! -- header for package csv
-      if (.not. associated(this%pakcsvtab)) then
-!
-! -- determine the number of columns and rows
-        ntabrows = 1
-        ntabcols = 9
-!
-! -- setup table
-        call table_cr(this%pakcsvtab, this%packName, '')
-        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
-                                     lineseparator=.FALSE., separator=',', &
-                                     finalize=.FALSE.)
-!
-! -- add columns to package csv
-        tag = 'total_inner_iterations'
-        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-        tag = 'totim'
-        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-        tag = 'kper'
-        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-        tag = 'kstp'
-        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-        tag = 'nouter'
-        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-        tag = 'dvmax'
-        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-        tag = 'dvmax_loc'
-        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-        tag = 'dstoragemax'
-        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-        tag = 'dstoragemax_loc'
-        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-      end if
+        !
+        ! -- header for package csv
+        if (.not. associated(this%pakcsvtab)) then
+          !
+          ! -- determine the number of columns and rows
+          ntabrows = 1
+          ntabcols = 9
+          !
+          ! -- setup table
+          call table_cr(this%pakcsvtab, this%packName, '')
+          call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
+                                       lineseparator=.FALSE., separator=',', &
+                                       finalize=.FALSE.)
+          !
+          ! -- add columns to package csv
+          tag = 'total_inner_iterations'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'totim'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'kper'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'kstp'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'nouter'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'dvmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dvmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dstoragemax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dstoragemax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        end if
       end if
     end if
-!
-! -- perform package convergence check
+    !
+    ! -- perform package convergence check
     if (icheck /= 0) then
-    if (DELT > DZERO) then
-      tled = DONE/DELT
-    else
-      tled = DZERO
-    end if
-    final_check: do ib = 1, this%ninterbeds
-      idelay = this%idelay(ib)
-!
-! -- skip nodelay interbeds
-      if (idelay == 0) cycle
-!
-! -- evaluate the maximum head change in the interbed
-      dh = this%dbdhmax(idelay)
-!
-! -- evaluate difference between storage changes
-!    in the interbed and exchange between the interbed
-!    and the gwf cell
-      node = this%nodelist(ib)
-      area = this%dis%get_area(node)
-      hcell = hnew(node)
-      hcellold = hold(node)
-!
-! -- calculate cell saturation
-      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-!
-! -- calculate the change in storage
-      call this%csub_delay_calc_dstor(ib, hcell, stoe, stoi)
-      v1 = (stoe + stoi)*area*this%rnb(ib)*tled
-!
-! -- add water compressibility to storage term
-      call this%csub_delay_calc_wcomp(ib, dwc)
-      v1 = v1 + dwc*area*this%rnb(ib)
-!
-! -- calculate the flow between the interbed and the cell
-      call this%csub_delay_fc(ib, hcof, rhs)
-      v2 = (-hcof*hcell - rhs)*area*this%rnb(ib)
-!
-! -- calculate the difference between the interbed change in
-!    storage and the flow between the interbed and the cell
-      df = v2 - v1
-!
-! -- normalize by cell area and convert to a depth
-      df = df*delt/area
-!
-! -- evaluate magnitude of differences
-      if (ifirst == 1) then
-        ifirst = 0
-        locdhmax = ib
-        dhmax = dh
-        locrmax = ib
-        rmax = df
+      if (DELT > DZERO) then
+        tled = DONE/DELT
       else
-        if (abs(dh) > abs(dhmax)) then
+        tled = DZERO
+      end if
+      final_check: do ib = 1, this%ninterbeds
+        idelay = this%idelay(ib)
+        !
+        ! -- skip nodelay interbeds
+        if (idelay == 0) cycle
+        !
+        ! -- evaluate the maximum head change in the interbed
+        dh = this%dbdhmax(idelay)
+        !
+        ! -- evaluate difference between storage changes
+        !    in the interbed and exchange between the interbed
+        !    and the gwf cell
+        node = this%nodelist(ib)
+        area = this%dis%get_area(node)
+        hcell = hnew(node)
+        hcellold = hold(node)
+        !
+        ! -- calculate cell saturation
+        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+        !
+        ! -- calculate the change in storage
+        call this%csub_delay_calc_dstor(ib, hcell, stoe, stoi)
+        v1 = (stoe + stoi)*area*this%rnb(ib)*tled
+        !
+        ! -- add water compressibility to storage term
+        call this%csub_delay_calc_wcomp(ib, dwc)
+        v1 = v1 + dwc*area*this%rnb(ib)
+        !
+        ! -- calculate the flow between the interbed and the cell
+        call this%csub_delay_fc(ib, hcof, rhs)
+        v2 = (-hcof*hcell - rhs)*area*this%rnb(ib)
+        !
+        ! -- calculate the difference between the interbed change in
+        !    storage and the flow between the interbed and the cell
+        df = v2 - v1
+        !
+        ! -- normalize by cell area and convert to a depth
+        df = df*delt/area
+        !
+        ! -- evaluate magnitude of differences
+        if (ifirst == 1) then
+          ifirst = 0
           locdhmax = ib
           dhmax = dh
-        end if
-        if (abs(df) > abs(rmax)) then
           locrmax = ib
           rmax = df
+        else
+          if (abs(dh) > abs(dhmax)) then
+            locdhmax = ib
+            dhmax = dh
+          end if
+          if (abs(df) > abs(rmax)) then
+            locrmax = ib
+            rmax = df
+          end if
+        end if
+      end do final_check
+      !
+      ! -- set dpak and cpak
+      ! -- update head error
+      if (abs(dhmax) > abs(dpak)) then
+        ipak = locdhmax
+        dpak = dhmax
+        write (cloc, "(a,'-',a)") trim(this%packName), 'head'
+        cpak = cloc
+      end if
+      !
+      ! -- update storage error
+      if (abs(rmax) > abs(dpak)) then
+        ipak = locrmax
+        dpak = rmax
+        write (cloc, "(a,'-',a)") trim(this%packName), 'storage'
+        cpak = cloc
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
+        !
+        ! -- write the data
+        call this%pakcsvtab%add_term(innertot)
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(dhmax)
+        call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(rmax)
+        call this%pakcsvtab%add_term(locrmax)
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
         end if
       end if
-    end do final_check
-!
-! -- set dpak and cpak
-! -- update head error
-    if (abs(dhmax) > abs(dpak)) then
-      ipak = locdhmax
-      dpak = dhmax
-      write (cloc, "(a,'-',a)") trim(this%packName), 'head'
-      cpak = cloc
     end if
-!
-! -- update storage error
-    if (abs(rmax) > abs(dpak)) then
-      ipak = locrmax
-      dpak = rmax
-      write (cloc, "(a,'-',a)") trim(this%packName), 'storage'
-      cpak = cloc
-    end if
-!
-! -- write convergence data to package csv
-    if (this%ipakcsv /= 0) then
-!
-! -- write the data
-      call this%pakcsvtab%add_term(innertot)
-      call this%pakcsvtab%add_term(totim)
-      call this%pakcsvtab%add_term(kper)
-      call this%pakcsvtab%add_term(kstp)
-      call this%pakcsvtab%add_term(kiter)
-      call this%pakcsvtab%add_term(dhmax)
-      call this%pakcsvtab%add_term(locdhmax)
-      call this%pakcsvtab%add_term(rmax)
-      call this%pakcsvtab%add_term(locrmax)
-!
-! -- finalize the package csv
-      if (iend == 1) then
-        call this%pakcsvtab%finalize_table()
-      end if
-    end if
-    end if
-!
-! -- return
+    !
+    ! -- return
     return
   end subroutine csub_cc
 
@@ -3298,6 +3296,8 @@ contains
   !!  Budget calculation for the CSUB package components. Components include
   !!  coarse-grained storage, delay and no-delay interbeds, and water
   !!  compressibility.
+  !!
+  !!  @param[in,out]  model_budget  model budget object
   !!
   !<
   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, &
@@ -3309,18 +3309,18 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-! -- modules
+    ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
     use BudgetModule, only: BudgetType
-! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes                 !< number of active model nodes
     real(DP), intent(in), dimension(nodes) :: hnew    !< current head
     real(DP), intent(in), dimension(nodes) :: hold    !< head for the previous time step
     integer(I4B), intent(in) :: isuppress_output      !< flag indicating if budget output should be suppressed
-    type(BudgetType), intent(inout) :: model_budget   !< model budget object for CSUB package
-! -- local
+    type(BudgetType), intent(inout) :: model_budget   !< model budget object
+    ! -- local variables
     integer(I4B) :: ib
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
@@ -3365,16 +3365,16 @@ contains
     integer(I4B) :: iprobslocal
 ! -- formats
 ! --------------------------------------------------------------------------
-!
-! -- Suppress saving of simulated values; they
-!    will be saved at end of this procedure.
+    !
+    ! -- Suppress saving of simulated values; they
+    !    will be saved at end of this procedure.
     iprobslocal = 0
     ratein = DZERO
     rateout = DZERO
     ratewcin = DZERO
     ratewcout = DZERO
-!
-! -- coarse-grained coarse-grained storage
+    !
+    ! -- coarse-grained coarse-grained storage
     ratecgin = DZERO
     ratecgout = DZERO
     do node = 1, this%dis%nodes
@@ -3383,279 +3383,279 @@ contains
       rrate = DZERO
       rratewc = DZERO
       if (this%gwfiss == 0) then
-      if (DELT > DZERO) then
-        tled = DONE/DELT
-      else
-        tled = DZERO
-      end if
-      if (this%ibound(node) > 0 .and. this%cg_thickini(node) > DZERO) then
-!
-! -- calculate coarse-grained storage terms
-        call this%csub_cg_fc(node, tled, area, hnew(node), hold(node), &
-                             hcof, rhs)
-        rrate = hcof*hnew(node) - rhs
-!
-! -- calculate compaction
-        call this%csub_cg_calc_comp(node, hnew(node), hold(node), comp)
-!
-! -- budget terms
-        if (rrate < DZERO) then
-          ratecgout = ratecgout - rrate
+        if (DELT > DZERO) then
+          tled = DONE/DELT
         else
-          ratecgin = ratecgin + rrate
+          tled = DZERO
         end if
-!
-! -- calculate coarse-grained water compressibility storage terms
-        call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node), &
-                                   hcof, rhs)
-        rratewc = hcof*hnew(node) - rhs
-!
-! -- water compressibility budget terms
+        if (this%ibound(node) > 0 .and. this%cg_thickini(node) > DZERO) then
+          !
+          ! -- calculate coarse-grained storage terms
+          call this%csub_cg_fc(node, tled, area, hnew(node), hold(node), &
+                               hcof, rhs)
+          rrate = hcof*hnew(node) - rhs
+          !
+          ! -- calculate compaction
+          call this%csub_cg_calc_comp(node, hnew(node), hold(node), comp)
+          !
+          ! -- budget terms
+          if (rrate < DZERO) then
+            ratecgout = ratecgout - rrate
+          else
+            ratecgin = ratecgin + rrate
+          end if
+          !
+          ! -- calculate coarse-grained water compressibility storage terms
+          call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node), &
+                                     hcof, rhs)
+          rratewc = hcof*hnew(node) - rhs
+          !
+          ! -- water compressibility budget terms
+          if (rratewc < DZERO) then
+            ratewcout = ratewcout - rratewc
+          else
+            ratewcin = ratewcin + rratewc
+          end if
+        end if
+      end if
+      !
+      ! -- update coarse-grained storage and water
+      !    compresion variables
+      this%cg_stor(node) = rrate
+      this%cell_wcstor(node) = rratewc
+      this%cell_thick(node) = this%cg_thick(node)
+      !
+      ! -- update incremental coarse-grained compaction
+      this%cg_comp(node) = comp
+      !
+      !
+      ! -- update states if required
+      if (isuppress_output == 0) then
+        !
+        ! -- calculate strain and change in coarse-grained void ratio and thickness
+        if (this%iupdatematprop /= 0) then
+          call this%csub_cg_update(node)
+        end if
+        !
+        ! -- update total compaction
+        this%cg_tcomp(node) = this%cg_tcomp(node) + comp
+      end if
+    end do
+    !
+    ! -- interbed storage
+    rateibein = DZERO
+    rateibeout = DZERO
+    rateibiin = DZERO
+    rateibiout = DZERO
+    !
+    ! -- reset delay bed counters for the current time step
+    if (this%ndelaybeds > 0) then
+      this%idb_nconv_count(1) = 0
+    end if
+    !
+    ! -- initialize tled
+    tled = DONE
+    !
+    ! -- calculate budget terms for each interbed
+    do ib = 1, this%ninterbeds
+      rratewc = DZERO
+      idelay = this%idelay(ib)
+      ielastic = this%ielastic(ib)
+      !
+      ! -- calculate interbed thickness
+      ! -- no delay interbeds
+      if (idelay == 0) then
+        b = this%thick(ib)
+        ! -- delay interbeds
+      else
+        b = this%thick(ib)*this%rnb(ib)
+      end if
+      !
+      ! -- set variables required for no-delay and delay interbeds
+      node = this%nodelist(ib)
+      area = this%dis%get_area(node)
+      !
+      ! -- add interbed thickness to cell thickness
+      this%cell_thick(node) = this%cell_thick(node) + b
+      !
+      ! -- update budget terms if transient stress period
+      if (this%gwfiss == 0) then
+        if (DELT > DZERO) then
+          tledm = DONE/DELT
+        else
+          tledm = DZERO
+        end if
+        !
+        ! -- skip inactive and constant head cells
+        if (this%ibound(node) < 1) cycle
+        !
+        ! -- no delay interbeds
+        if (idelay == 0) then
+          iconvert = this%iconvert(ib)
+          stoi = DZERO
+          !
+          ! -- calculate compaction
+          call this%csub_nodelay_calc_comp(ib, hnew(node), hold(node), comp, &
+                                           rho1, rho2)
+          !
+          ! -- interbed stresses
+          es = this%cg_es(node)
+          pcs = this%pcs(ib)
+          es0 = this%cg_es0(node)
+          !
+          ! -- calculate inelastic and elastic compaction
+          if (ielastic > 0 .or. iconvert == 0) then
+            stoe = comp
+          else
+            stoi = -pcs*rho2 + (rho2*es)
+            stoe = pcs*rho1 - (rho1*es0)
+          end if
+          compe = stoe
+          compi = stoi
+          stoe = stoe*area
+          stoi = stoi*area
+          this%storagee(ib) = stoe*tledm
+          this%storagei(ib) = stoi*tledm
+          !
+          ! -- update compaction
+          this%comp(ib) = comp
+          !
+          ! -- update states if required
+          if (isuppress_output == 0) then
+            !
+            ! -- calculate strain and change in interbed void ratio and thickness
+            if (this%iupdatematprop /= 0) then
+              call this%csub_nodelay_update(ib)
+            end if
+            !
+            ! -- update total compaction
+            this%tcomp(ib) = this%tcomp(ib) + comp
+            this%tcompe(ib) = this%tcompe(ib) + compe
+            this%tcompi(ib) = this%tcompi(ib) + compi
+          end if
+          !
+          ! -- delay interbeds
+        else
+          h = hnew(node)
+          h0 = hold(node)
+          !
+          ! -- calculate cell saturation
+          call this%csub_calc_sat(node, h, h0, snnew, snold)
+          !
+          ! -- calculate inelastic and elastic storage contributions
+          call this%csub_delay_calc_dstor(ib, h, stoe, stoi)
+          this%storagee(ib) = stoe*area*this%rnb(ib)*tledm
+          this%storagei(ib) = stoi*area*this%rnb(ib)*tledm
+          !
+          ! -- calculate flow across the top and bottom of the delay interbed
+          q = this%csub_calc_delay_flow(ib, 1, h)*area*this%rnb(ib)
+          this%dbflowtop(idelay) = q
+          nn = this%ndelaycells
+          q = this%csub_calc_delay_flow(ib, nn, h)*area*this%rnb(ib)
+          this%dbflowbot(idelay) = q
+          !
+          ! -- update states if required
+          if (isuppress_output == 0) then
+            !
+            ! -- calculate sum of compaction in delay interbed
+            call this%csub_delay_calc_comp(ib, h, h0, comp, compi, compe)
+            !
+            ! - calculate strain and change in interbed void ratio and thickness
+            if (this%iupdatematprop /= 0) then
+              call this%csub_delay_update(ib)
+            end if
+            !
+            ! -- update total compaction for interbed
+            this%tcomp(ib) = this%tcomp(ib) + comp
+            this%tcompi(ib) = this%tcompi(ib) + compi
+            this%tcompe(ib) = this%tcompe(ib) + compe
+            !
+            ! -- update total compaction for each delay bed cell
+            do n = 1, this%ndelaycells
+              this%dbtcomp(n, idelay) = this%dbtcomp(n, idelay) + this%dbcomp(n, idelay)
+            end do
+            !
+            ! -- check delay bed heads relative to the top and bottom of each
+            !    delay bed cell for convertible and non-convertible gwf cells
+            call this%csub_delay_head_check(ib)
+          end if
+        end if
+        !
+        ! -- budget terms
+        if (this%storagee(ib) < DZERO) then
+          rateibeout = rateibeout - this%storagee(ib)
+        else
+          rateibein = rateibein + this%storagee(ib)
+        end if
+        if (this%storagei(ib) < DZERO) then
+          rateibiout = rateibiout - this%storagei(ib)
+        else
+          rateibiin = rateibiin + this%storagei(ib)
+        end if
+        !
+        ! -- interbed water compressibility
+        !
+        ! -- no-delay interbed
+        if (idelay == 0) then
+          call this%csub_nodelay_wcomp_fc(ib, node, tledm, area, &
+                                          hnew(node), hold(node), hcof, rhs)
+          rratewc = hcof*hnew(node) - rhs
+          !
+          ! -- delay interbed
+        else
+          call this%csub_delay_calc_wcomp(ib, q)
+          rratewc = q*area*this%rnb(ib)
+        end if
+        this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
+        !
+        ! -- water compressibility budget terms
         if (rratewc < DZERO) then
           ratewcout = ratewcout - rratewc
         else
           ratewcin = ratewcin + rratewc
         end if
-      end if
-      end if
-!
-! -- update coarse-grained storage and water
-!    compresion variables
-      this%cg_stor(node) = rrate
-      this%cell_wcstor(node) = rratewc
-      this%cell_thick(node) = this%cg_thick(node)
-!
-! -- update incremental coarse-grained compaction
-      this%cg_comp(node) = comp
-!
-!
-! -- update states if required
-      if (isuppress_output == 0) then
-!
-! -- calculate strain and change in coarse-grained void ratio and thickness
-        if (this%iupdatematprop /= 0) then
-          call this%csub_cg_update(node)
+      else
+        this%storagee(ib) = DZERO
+        this%storagei(ib) = DZERO
+        if (idelay /= 0) then
+          this%dbflowtop(idelay) = DZERO
+          this%dbflowbot(idelay) = DZERO
         end if
-!
-! -- update total compaction
-        this%cg_tcomp(node) = this%cg_tcomp(node) + comp
       end if
     end do
-!
-! -- interbed storage
-    rateibein = DZERO
-    rateibeout = DZERO
-    rateibiin = DZERO
-    rateibiout = DZERO
-!
-! -- reset delay bed counters for the current time step
-    if (this%ndelaybeds > 0) then
-      this%idb_nconv_count(1) = 0
-    end if
-!
-! -- initialize tled
-    tled = DONE
-!
-! -- calculate budget terms for each interbed
-    do ib = 1, this%ninterbeds
-      rratewc = DZERO
-      idelay = this%idelay(ib)
-      ielastic = this%ielastic(ib)
-!
-! -- calculate interbed thickness
-! -- no delay interbeds
-      if (idelay == 0) then
-        b = this%thick(ib)
-! -- delay interbeds
-      else
-        b = this%thick(ib)*this%rnb(ib)
-      end if
-!
-! -- set variables required for no-delay and delay interbeds
-      node = this%nodelist(ib)
-      area = this%dis%get_area(node)
-!
-! -- add interbed thickness to cell thickness
-      this%cell_thick(node) = this%cell_thick(node) + b
-!
-! -- update budget terms if transient stress period
-      if (this%gwfiss == 0) then
-      if (DELT > DZERO) then
-        tledm = DONE/DELT
-      else
-        tledm = DZERO
-      end if
-!
-! -- skip inactive and constant head cells
-      if (this%ibound(node) < 1) cycle
-!
-! -- no delay interbeds
-      if (idelay == 0) then
-        iconvert = this%iconvert(ib)
-        stoi = DZERO
-!
-! -- calculate compaction
-        call this%csub_nodelay_calc_comp(ib, hnew(node), hold(node), comp, &
-                                         rho1, rho2)
-!
-! -- interbed stresses
-        es = this%cg_es(node)
-        pcs = this%pcs(ib)
-        es0 = this%cg_es0(node)
-!
-! -- calculate inelastic and elastic compaction
-        if (ielastic > 0 .or. iconvert == 0) then
-          stoe = comp
-        else
-          stoi = -pcs*rho2 + (rho2*es)
-          stoe = pcs*rho1 - (rho1*es0)
-        end if
-        compe = stoe
-        compi = stoi
-        stoe = stoe*area
-        stoi = stoi*area
-        this%storagee(ib) = stoe*tledm
-        this%storagei(ib) = stoi*tledm
-!
-! -- update compaction
-        this%comp(ib) = comp
-!
-! -- update states if required
-        if (isuppress_output == 0) then
-!
-! -- calculate strain and change in interbed void ratio and thickness
-          if (this%iupdatematprop /= 0) then
-            call this%csub_nodelay_update(ib)
-          end if
-!
-! -- update total compaction
-          this%tcomp(ib) = this%tcomp(ib) + comp
-          this%tcompe(ib) = this%tcompe(ib) + compe
-          this%tcompi(ib) = this%tcompi(ib) + compi
-        end if
-!
-! -- delay interbeds
-      else
-        h = hnew(node)
-        h0 = hold(node)
-!
-! -- calculate cell saturation
-        call this%csub_calc_sat(node, h, h0, snnew, snold)
-!
-! -- calculate inelastic and elastic storage contributions
-        call this%csub_delay_calc_dstor(ib, h, stoe, stoi)
-        this%storagee(ib) = stoe*area*this%rnb(ib)*tledm
-        this%storagei(ib) = stoi*area*this%rnb(ib)*tledm
-!
-! -- calculate flow across the top and bottom of the delay interbed
-        q = this%csub_calc_delay_flow(ib, 1, h)*area*this%rnb(ib)
-        this%dbflowtop(idelay) = q
-        nn = this%ndelaycells
-        q = this%csub_calc_delay_flow(ib, nn, h)*area*this%rnb(ib)
-        this%dbflowbot(idelay) = q
-!
-! -- update states if required
-        if (isuppress_output == 0) then
-!
-! -- calculate sum of compaction in delay interbed
-          call this%csub_delay_calc_comp(ib, h, h0, comp, compi, compe)
-!
-! - calculate strain and change in interbed void ratio and thickness
-          if (this%iupdatematprop /= 0) then
-            call this%csub_delay_update(ib)
-          end if
-!
-! -- update total compaction for interbed
-          this%tcomp(ib) = this%tcomp(ib) + comp
-          this%tcompi(ib) = this%tcompi(ib) + compi
-          this%tcompe(ib) = this%tcompe(ib) + compe
-!
-! -- update total compaction for each delay bed cell
-          do n = 1, this%ndelaycells
-            this%dbtcomp(n, idelay) = this%dbtcomp(n, idelay) + this%dbcomp(n, idelay)
-          end do
-!
-! -- check delay bed heads relative to the top and bottom of each
-!    delay bed cell for convertible and non-convertible gwf cells
-          call this%csub_delay_head_check(ib)
-        end if
-      end if
-!
-! -- budget terms
-      if (this%storagee(ib) < DZERO) then
-        rateibeout = rateibeout - this%storagee(ib)
-      else
-        rateibein = rateibein + this%storagee(ib)
-      end if
-      if (this%storagei(ib) < DZERO) then
-        rateibiout = rateibiout - this%storagei(ib)
-      else
-        rateibiin = rateibiin + this%storagei(ib)
-      end if
-!
-! -- interbed water compressibility
-!
-! -- no-delay interbed
-      if (idelay == 0) then
-        call this%csub_nodelay_wcomp_fc(ib, node, tledm, area, &
-                                        hnew(node), hold(node), hcof, rhs)
-        rratewc = hcof*hnew(node) - rhs
-!
-! -- delay interbed
-      else
-        call this%csub_delay_calc_wcomp(ib, q)
-        rratewc = q*area*this%rnb(ib)
-      end if
-      this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
-!
-! -- water compressibility budget terms
-      if (rratewc < DZERO) then
-        ratewcout = ratewcout - rratewc
-      else
-        ratewcin = ratewcin + rratewc
-      end if
-      else
-      this%storagee(ib) = DZERO
-      this%storagei(ib) = DZERO
-      if (idelay /= 0) then
-        this%dbflowtop(idelay) = DZERO
-        this%dbflowbot(idelay) = DZERO
-      end if
-      end if
-    end do
-!
-! -- Add contributions to model budget
-!
-! -- interbed elastic storage
+    !
+    ! -- Add contributions to model budget
+    !
+    ! -- interbed elastic storage
     call model_budget%addentry(ratecgin, ratecgout, delt, budtxt(1), &
                                isuppress_output, '            CSUB')
     if (this%ninterbeds > 0) then
-!
-! -- interbed elastic storage
+      !
+      ! -- interbed elastic storage
       call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2), &
                                  isuppress_output, '            CSUB')
-!
-! -- interbed elastic storage
+      !
+      ! -- interbed elastic storage
       call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3), &
                                  isuppress_output, '            CSUB')
     end if
     call model_budget%addentry(ratewcin, ratewcout, delt, budtxt(4), &
                                isuppress_output, '            CSUB')
-!
-! -- For continuous observations, save simulated values.
+    !
+    ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0) then
       call this%csub_bd_obs()
     end if
-!
-! -- terminate if errors encountered when updating material properties
+    !
+    ! -- terminate if errors encountered when updating material properties
     if (this%iupdatematprop /= 0) then
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
     end if
-    end if
-!
-! -- return
+    !
+    ! -- return
     return
 
   end subroutine csub_bdcalc
@@ -3674,12 +3674,12 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-! -- dummy
+! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: idvfl     !< flag to output dependent variable data
     integer(I4B), intent(in) :: icbcfl    !< flag to output budget data
     integer(I4B), intent(in) :: icbcun    !< unit number for cell-by-cell file
-! -- local
+! -- local variables
     character(len=1) :: cdatafmp = ' '
     character(len=1) :: editdesc = ' '
     integer(I4B) :: ibinun
@@ -3703,8 +3703,8 @@ contains
     &' NON-CONVERTIBLE GWF CELLS WERE LESS THAN THE TOP OF THE INTERBED CELL')"
 
 ! ------------------------------------------------------------------------------
-!
-! -- Set unit number for binary output
+    !
+    ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
       ibinun = icbcun
     elseif (this%ipakcb == 0) then
@@ -3713,19 +3713,20 @@ contains
       ibinun = this%ipakcb
     end if
     if (icbcfl == 0) ibinun = 0
-!
-! -- Record the storage rates if requested
+    !
+    ! -- Record the storage rates if requested
     if (ibinun /= 0) then
       iprint = 0
       dinact = DZERO
-!
-! -- coarse-grained storage (sske)
+      !
+      ! -- coarse-grained storage (sske)
       call this%dis%record_array(this%cg_stor, this%iout, iprint, -ibinun, &
                                  budtxt(1), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
       if (this%ninterbeds > 0) then
         naux = 0
-! -- interbed elastic storage
+        !
+        ! -- interbed elastic storage
         call this%dis%record_srcdst_list_header(budtxt(2), this%name_model, &
                                                 this%name_model, this%name_model, this%packName, naux, &
                                                 this%auxname, ibinun, this%ninterbeds, this%iout)
@@ -3735,7 +3736,8 @@ contains
           call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux, &
                                               this%auxvar(:, ib))
         end do
-! -- interbed inelastic storage
+        !
+        ! -- interbed inelastic storage
         call this%dis%record_srcdst_list_header(budtxt(3), this%name_model, &
                                                 this%name_model, this%name_model, this%packName, naux, &
                                                 this%auxname, ibinun, this%ninterbeds, this%iout)
@@ -3746,29 +3748,29 @@ contains
                                               this%auxvar(:, ib))
         end do
       end if
-!
-! -- water compressibility
+      !
+      ! -- water compressibility
       call this%dis%record_array(this%cell_wcstor, this%iout, iprint, -ibinun, &
                                  budtxt(4), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-!
-! -- Save compaction results
-!
-! -- Set unit number for binary compaction and z-displacement output
+    !
+    ! -- Save compaction results
+    !
+    ! -- Set unit number for binary compaction and z-displacement output
     if (this%ioutcomp /= 0 .or. this%ioutzdisp /= 0) then
       ibinun = 1
     else
       ibinun = 0
     end if
     if (idvfl == 0) ibinun = 0
-!
-! -- save compaction results
+    !
+    ! -- save compaction results
     if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
-!
-! -- fill buff with total compaction
+      !
+      ! -- fill buff with total compaction
       do node = 1, this%dis%nodes
         this%buff(node) = this%cg_tcomp(node)
       end do
@@ -3776,78 +3778,78 @@ contains
         node = this%nodelist(ib)
         this%buff(node) = this%buff(node) + this%tcomp(ib)
       end do
-!
-! -- write compaction data to binary file
+      !
+      ! -- write compaction data to binary file
       if (this%ioutcomp /= 0) then
         ibinun = this%ioutcomp
         call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
                                    comptxt(1), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
       end if
-!
-! -- calculate z-displacement (subsidence) and write data to binary file
+      !
+      ! -- calculate z-displacement (subsidence) and write data to binary file
       if (this%ioutzdisp /= 0) then
         ibinun = this%ioutzdisp
-!
-! -- initialize buffusr
+        !
+        ! -- initialize buffusr
         do nodeu = 1, this%dis%nodesuser
           this%buffusr(nodeu) = DZERO
         end do
-!
-! -- fill buffusr with buff
+        !
+        ! -- fill buffusr with buff
         do node = 1, this%dis%nodes
           nodeu = this%dis%get_nodeuser(node)
           this%buffusr(nodeu) = this%buff(node)
         end do
-!
-! -- calculate z-displacement
+        !
+        ! -- calculate z-displacement
         ncpl = this%dis%get_ncpl()
-!
-! -- disu
+        !
+        ! -- disu
         if (this%dis%ndim == 1) then
-! TO DO -
-! -- disv or dis
+          ! TO DO -
+          ! -- disv or dis
         else
           nlay = this%dis%nodesuser/ncpl
           do k = nlay - 1, 1, -1
-          do i = 1, ncpl
-            node = (k - 1)*ncpl + i
-            nodem = k*ncpl + i
-            this%buffusr(node) = this%buffusr(node) + this%buffusr(nodem)
-          end do
+            do i = 1, ncpl
+              node = (k - 1)*ncpl + i
+              nodem = k*ncpl + i
+              this%buffusr(node) = this%buffusr(node) + this%buffusr(nodem)
+            end do
           end do
         end if
-!
-! -- fill buff with data from buffusr
+        !
+        ! -- fill buff with data from buffusr
         do nodeu = 1, this%dis%nodesuser
           node = this%dis%get_nodenumber_idx1(nodeu, 1)
           if (node /= 0) then
             this%buff(node) = this%buffusr(nodeu)
           end if
         end do
-!
-! -- write z-displacement
+        !
+        ! -- write z-displacement
         call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
                                    comptxt(6), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
 
       end if
     end if
-!
-! -- Set unit number for binary inelastic interbed compaction
+    !
+    ! -- Set unit number for binary inelastic interbed compaction
     if (this%ioutcompi /= 0) then
       ibinun = this%ioutcompi
     else
       ibinun = 0
     end if
     if (idvfl == 0) ibinun = 0
-!
-! -- save inelastic interbed compaction results
+    !
+    ! -- save inelastic interbed compaction results
     if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
-!
-! -- fill buff with inelastic interbed compaction
+      !
+      ! -- fill buff with inelastic interbed compaction
       do node = 1, this%dis%nodes
         this%buff(node) = DZERO
       end do
@@ -3855,27 +3857,27 @@ contains
         node = this%nodelist(ib)
         this%buff(node) = this%buff(node) + this%tcompi(ib)
       end do
-!
-! -- write inelastic interbed compaction data to binary file
+      !
+      ! -- write inelastic interbed compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
                                  comptxt(2), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-!
-! -- Set unit number for binary elastic interbed compaction
+    !
+    ! -- Set unit number for binary elastic interbed compaction
     if (this%ioutcompe /= 0) then
       ibinun = this%ioutcompe
     else
       ibinun = 0
     end if
     if (idvfl == 0) ibinun = 0
-!
-! -- save elastic interbed compaction results
+    !
+    ! -- save elastic interbed compaction results
     if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
-!
-! -- fill buff with elastic interbed compaction
+      !
+      ! -- fill buff with elastic interbed compaction
       do node = 1, this%dis%nodes
         this%buff(node) = DZERO
       end do
@@ -3883,27 +3885,27 @@ contains
         node = this%nodelist(ib)
         this%buff(node) = this%buff(node) + this%tcompe(ib)
       end do
-!
-! -- write elastic interbed compaction data to binary file
+      !
+      ! -- write elastic interbed compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
                                  comptxt(3), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-!
-! -- Set unit number for binary interbed compaction
+    !
+    ! -- Set unit number for binary interbed compaction
     if (this%ioutcompib /= 0) then
       ibinun = this%ioutcompib
     else
       ibinun = 0
     end if
     if (idvfl == 0) ibinun = 0
-!
-! -- save interbed compaction results
+    !
+    ! -- save interbed compaction results
     if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
-!
-! -- fill buff with interbed compaction
+      !
+      ! -- fill buff with interbed compaction
       do node = 1, this%dis%nodes
         this%buff(node) = DZERO
       end do
@@ -3911,62 +3913,62 @@ contains
         node = this%nodelist(ib)
         this%buff(node) = this%buff(node) + this%tcompe(ib) + this%tcompi(ib)
       end do
-!
-! -- write interbed compaction data to binary file
+      !
+      ! -- write interbed compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
                                  comptxt(4), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-!
-! -- Set unit number for binary coarse-grained compaction
+    !
+    ! -- Set unit number for binary coarse-grained compaction
     if (this%ioutcomps /= 0) then
       ibinun = this%ioutcomps
     else
       ibinun = 0
     end if
     if (idvfl == 0) ibinun = 0
-!
-! -- save coarse-grained compaction results
+    !
+    ! -- save coarse-grained compaction results
     if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
-!
-! -- fill buff with coarse-grained compaction
+      !
+      ! -- fill buff with coarse-grained compaction
       do node = 1, this%dis%nodes
         this%buff(node) = this%cg_tcomp(node)
       end do
-!
-! -- write coarse-grained compaction data to binary file
+      !
+      ! -- write coarse-grained compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
                                  comptxt(5), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-!
-! -- Save observations.
+    !
+    ! -- Save observations.
     if (this%obs%npakobs > 0) then
       call this%obs%obs_ot()
     end if
-!
-! -- check that final effective stress values for the time step
-!    are greater than zero
+    !
+    ! -- check that final effective stress values for the time step
+    !    are greater than zero
     if (this%gwfiss == 0) then
       call this%csub_cg_chk_stress()
     end if
-!
-! -- update maximum count of delay interbeds that violate
-!    basic head assumptions for delay beds and write a message
-!    for delay interbeds in non-convertible gwf cells that
-!    violate these head assumptions
+    !
+    ! -- update maximum count of delay interbeds that violate
+    !    basic head assumptions for delay beds and write a message
+    !    for delay interbeds in non-convertible gwf cells that
+    !    violate these head assumptions
     if (this%ndelaybeds > 0) then
-    if (this%idb_nconv_count(1) > this%idb_nconv_count(2)) then
-      this%idb_nconv_count(2) = this%idb_nconv_count(1)
+      if (this%idb_nconv_count(1) > this%idb_nconv_count(2)) then
+        this%idb_nconv_count(2) = this%idb_nconv_count(1)
+      end if
+      if (this%idb_nconv_count(1) > 0) then
+        write (this%iout, fmtnconv) this%idb_nconv_count(1)
+      end if
     end if
-    if (this%idb_nconv_count(1) > 0) then
-      write (this%iout, fmtnconv) this%idb_nconv_count(1)
-    end if
-    end if
-!
-! -- Return
+    !
+    ! -- return
     return
   end subroutine csub_bdsav
 
@@ -3985,11 +3987,10 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes                !< number of active model nodes
     real(DP), dimension(nodes), intent(in) :: hnew   !< current head
-    ! -- local
+    ! -- local variables
     integer(I4B) :: node
     integer(I4B) :: ii
     integer(I4B) :: nn
@@ -4141,9 +4142,8 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     class(GwfCsubType) :: this
-    ! -- local
+    ! -- local variables
     character(len=20) :: cellid
     integer(I4B) :: ierr
     integer(I4B) :: node
@@ -4217,13 +4217,13 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: i
-    ! locals
+    ! -- local variables
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
 ! ------------------------------------------------------------------------------
-!
-! -- update thickness and theta
+    !
+    ! -- update thickness and theta
     comp = this%tcomp(i) + this%comp(i)
     if (ABS(comp) > DZERO) then
       thick = this%thickini(i)
@@ -4256,6 +4256,10 @@ contains
   !!  no-delay interbed to the right-hand side of the groundwater flow
   !!  equation for the cell.
   !!
+  !!  @param[in,out]  rho1  no-delay storage value using Sske
+  !!  @param[in,out]  rho2  no-delay storage value using Ssk
+  !!  @param[in,out]  rhs   no-delay right-hand side contribution
+  !!
   !<
   subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs, &
                              argtled)
@@ -4266,7 +4270,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TdisModule, only: delt
-    implicit none
     ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: ib              !< interbed number
@@ -4275,7 +4278,7 @@ contains
     real(DP), intent(inout) :: rho1             !< current storage coefficient value using Sske
     real(DP), intent(inout) :: rho2             !< current storage coefficient value based on Ssk
     real(DP), intent(inout) :: rhs              !< no-delay interbed contribution to the right-hand side
-    real(DP), intent(in), optional :: argtled   !< optional recipricol of the time step length
+    real(DP), intent(in), optional :: argtled   !< optional reciprocal of the time step length
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: tled
@@ -4369,6 +4372,10 @@ contains
   !!  Method calculates the compaction for a no-delay interbed. The method
   !!  also calculates the storage coefficients for the no-delay interbed.
   !!
+  !!  @param[in,out]  comp  no-delay compaction
+  !!  @param[in,out]  rho1  no-delay storage value using Sske
+  !!  @param[in,out]  rho2  no-delay storage value using Ssk
+  !!
   !<
   subroutine csub_nodelay_calc_comp(this, ib, hcell, hcellold, comp, rho1, rho2)
 ! ******************************************************************************
@@ -4378,7 +4385,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: ib         !< interbed number
@@ -4820,6 +4826,9 @@ contains
   !!  Method formulates the coefficient matrix and right-hand side terms
   !!  for coarse grained materials in a cell.
   !!
+  !!  @param[in,out]  hcof  coarse-grained A matrix entry
+  !!  @param[in,out]  rhs   coarse-grained right-hand side entry
+  !!
   !<
   subroutine csub_cg_fc(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -4828,7 +4837,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     class(GwfCsubType) :: this
     ! -- dummy variables
     integer(I4B), intent(in) :: node    !< cell node number
@@ -4836,8 +4844,8 @@ contains
     real(DP), intent(in) :: area        !< horizontal cell area
     real(DP), intent(in) :: hcell       !< current head
     real(DP), intent(in) :: hcellold    !< previous head
-    real(DP), intent(inout) :: hcof     !< diagonal of A matrix
-    real(DP), intent(inout) :: rhs      !< right-hand side
+    real(DP), intent(inout) :: hcof     !< coarse-grained A matrix entry
+    real(DP), intent(inout) :: rhs      !< coarse-grained right-hand side entry
     ! -- local variables
     real(DP) :: top
     real(DP) :: bot
@@ -4888,6 +4896,16 @@ contains
     return
   end subroutine csub_cg_fc
 
+  !> @ brief Formulate coarse-grained Newton-Raphson terms
+  !!
+  !!  Method formulates the coefficient matrix and right-hand side terms
+  !!  for coarse grained materials in a cell when using the Newton-Raphson
+  !!  formulation.
+  !!
+  !!  @param[in,out]  hcof  coarse-grained A matrix entry
+  !!  @param[in,out]  rhs   coarse-grained right-hand side entry
+  !!
+  !<
   subroutine csub_cg_fn(this, node, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
 ! csub_cg_fn -- Formulate coarse-grained storage newton terms
@@ -4895,15 +4913,15 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
+    ! -- dummy variables
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: area
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! locals
+    integer(I4B), intent(in) :: node  !< node number
+    real(DP), intent(in) :: tled      !< reciprocal of the time step length
+    real(DP), intent(in) :: area      !< horizontal cell area
+    real(DP), intent(in) :: hcell     !< current head in cell
+    real(DP), intent(inout) :: hcof   !< coarse-grained A matrix entry
+    real(DP), intent(inout) :: rhs    !< coarse-grained right-hand side entry
+    ! -- local variables
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
@@ -4961,6 +4979,15 @@ contains
     return
   end subroutine csub_cg_fn
 
+  !> @ brief Formulate the coefficients for a interbed
+  !!
+  !!  Method formulates the coefficient matrix and right-hand side terms
+  !!  for a interbed in a cell.
+  !!
+  !!  @param[in,out]  hcof  interbed A matrix entry
+  !!  @param[in,out]  rhs   interbed right-hand side entry
+  !!
+  !<
   subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_fc -- Formulate the HCOF and RHS terms for interbeds
@@ -4968,16 +4995,16 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
+    ! -- dummy variable
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: area
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! -- locals
+    integer(I4B), intent(in) :: ib      !< interbed number
+    integer(I4B), intent(in) :: node    !< cell node number
+    real(DP), intent(in) :: area        !< horizontal cell area
+    real(DP), intent(in) :: hcell       !< current head in cell
+    real(DP), intent(in) :: hcellold    !< previous head in cell
+    real(DP), intent(inout) :: hcof     !< interbed A matrix entry
+    real(DP), intent(inout) :: rhs      !< interbed right-hand side
+    ! -- local variables
     real(DP) :: snnew
     real(DP) :: snold
     real(DP) :: comp
@@ -5048,6 +5075,15 @@ contains
     return
   end subroutine csub_interbed_fc
 
+  !> @ brief Formulate the coefficients for a interbed
+  !!
+  !!  Method formulates the Newton-Raphson formulation coefficient matrix and
+  !!  right-hand side terms for a interbed in a cell.
+  !!
+  !!  @param[in,out]  hcof  interbed A matrix entry
+  !!  @param[in,out]  rhs   interbed right-hand side entry
+  !!
+  !<
   subroutine csub_interbed_fn(this, ib, node, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_interbed_fn -- Formulate interbed newton terms. No newton terms for
@@ -5056,16 +5092,17 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
-    implicit none
+    ! -- dummy variables
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! -- locals
+    integer(I4B), intent(in) :: ib     !< interbed number
+    integer(I4B), intent(in) :: node   !< cell node number
+    real(DP), intent(in) :: hcell      !< current head in a cell
+    real(DP), intent(in) :: hcellold   !< previous head in a cell
+    real(DP), intent(inout) :: hcof    !< interbed A matrix entry
+    real(DP), intent(inout) :: rhs     !< interbed right-hand side entry
+    ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: hcofn
     real(DP) :: rhsn
@@ -5141,38 +5178,13 @@ contains
     return
   end subroutine csub_interbed_fn
 
-  subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- create the header list label
-    this%listlabel = trim(this%filtyp)//' NO.'
-    if (this%dis%ndim == 3) then
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif (this%dis%ndim == 2) then
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
-    else
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    end if
-    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'SIG0'
-    if (this%inamedbound == 1) then
-      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    end if
-    !
-    ! -- return
-    return
-  end subroutine define_listlabel
-
+  !> @ brief Calculate Sske for a cell
+  !!
+  !!  Method calculates Sske for coarse-grained materials in a cell.
+  !!
+  !!  @param[in,out]  sske  coarse-grained Sske
+  !!
+  !<
   subroutine csub_cg_calc_sske(this, n, sske, hcell)
 ! ******************************************************************************
 ! csub_cg_calc_sske -- Calculate sske for a gwf cell.
@@ -5180,10 +5192,11 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: n
-    real(DP), intent(inout) :: sske
-    real(DP), intent(in) :: hcell
+    integer(I4B), intent(in) :: n      !< cell node number
+    real(DP), intent(inout) :: sske    !< coarse grained Sske
+    real(DP), intent(in) :: hcell      !< current head in cell
     ! -- local variables
     real(DP) :: top
     real(DP) :: bot
@@ -5231,6 +5244,13 @@ contains
     return
   end subroutine csub_cg_calc_sske
 
+  !> @ brief Calculate coarse-grained compaction in a cell
+  !!
+  !!  Method calculates coarse-grained compaction in a cell.
+  !!
+  !!  @param[in,out]  comp  coarse-grained compaction
+  !!
+  !<
   subroutine csub_cg_calc_comp(this, node, hcell, hcellold, comp)
 ! ******************************************************************************
 ! csub_cg_calc_comp -- Calculate coarse-grained compaction
@@ -5238,13 +5258,13 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
+    ! -- dummy variables
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: comp
-    ! locals
+    integer(I4B), intent(in) :: node   !< cell node number
+    real(DP), intent(in) :: hcell      !< current head in cell
+    real(DP), intent(in) :: hcellold   !< previous head in cell
+    real(DP), intent(inout) :: comp    !< coarse-grained compaction
+    ! -- local variables
     real(DP) :: area
     real(DP) :: tled
     real(DP) :: hcof
@@ -5265,6 +5285,11 @@ contains
     return
   end subroutine csub_cg_calc_comp
 
+  !> @ brief Update coarse-grained material properties
+  !!
+  !!  Method updates coarse-grained material proerties in a cell.
+  !!
+  !<
   subroutine csub_cg_update(this, node)
 ! ******************************************************************************
 ! csub_cg_update -- Update material properties for coarse grained sediments.
@@ -5272,16 +5297,17 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    ! locals
+    integer(I4B), intent(in) :: node    !< cell node number
+    ! -- local variables
     character(len=20) :: cellid
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
 ! ------------------------------------------------------------------------------
-!
-! -- update thickness and theta
+    !
+    ! -- update thickness and theta
     comp = this%cg_tcomp(node) + this%cg_comp(node)
     call this%dis%noder_to_string(node, cellid)
     if (ABS(comp) > DZERO) then
@@ -5308,6 +5334,16 @@ contains
     return
   end subroutine csub_cg_update
 
+  !> @ brief Formulate coarse-grained water compressibility coefficients
+  !!
+  !!  Method formulates the standard formulation coefficient matrix and
+  !!  right-hand side terms for water compressibility in coarse-grained
+  !!  sediments.
+  !!
+  !!  @param[in,out]  hcof  coarse-grained A matrix entry
+  !!  @param[in,out]  rhs   coarse-grained right-hand side entry
+  !!
+  !<
   subroutine csub_cg_wcomp_fc(this, node, tled, area, hcell, hcellold, &
                               hcof, rhs)
 ! ******************************************************************************
@@ -5316,15 +5352,16 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: area
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! locals
+    integer(I4B), intent(in) :: node   !< cell node number
+    real(DP), intent(in) :: tled       !< reciprocal of the time step length
+    real(DP), intent(in) :: area       !< horizontal cell area
+    real(DP), intent(in) :: hcell      !< current head in cell
+    real(DP), intent(in) :: hcellold   !< previous head in cell
+    real(DP), intent(inout) :: hcof    !< coarse-grained A matrix entry
+    real(DP), intent(inout) :: rhs     !< coarse-grained right-hand side entry
+    ! -- local variables
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
@@ -5334,8 +5371,8 @@ contains
     real(DP) :: wc
     real(DP) :: wc0
 ! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     !
@@ -5362,6 +5399,16 @@ contains
     return
   end subroutine csub_cg_wcomp_fc
 
+  !> @ brief Formulate coarse-grained water compressibility coefficients
+  !!
+  !!  Method formulates the Newton-Raphson formulation coefficient matrix and
+  !!  right-hand side terms for water compressibility in coarse-grained
+  !!  sediments.
+  !!
+  !!  @param[in,out]  hcof  coarse-grained A matrix entry
+  !!  @param[in,out]  rhs   coarse-grained right-hand side entry
+  !!
+  !<
   subroutine csub_cg_wcomp_fn(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_cg_wcomp_fn -- Calculate water compressibility newton-rephson terms for
@@ -5370,15 +5417,16 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: area
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! locals
+    integer(I4B), intent(in) :: node   !< cell node number
+    real(DP), intent(in) :: tled       !< reciprocal of the time step length
+    real(DP), intent(in) :: area       !< horizontal cell area
+    real(DP), intent(in) :: hcell      !< current head in cell
+    real(DP), intent(in) :: hcellold   !< previous head in cell
+    real(DP), intent(inout) :: hcof    !< coarse-grained A matrix entry
+    real(DP), intent(inout) :: rhs     !< coarse-grained right-hand side entry
+    ! -- local variables
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
@@ -5388,8 +5436,8 @@ contains
     real(DP) :: wc
     real(DP) :: wc0
 ! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     !
@@ -5424,6 +5472,16 @@ contains
     return
   end subroutine csub_cg_wcomp_fn
 
+  !> @ brief Formulate no-delay interbed water compressibility coefficients
+  !!
+  !!  Method formulates the standard formulation coefficient matrix and
+  !!  right-hand side terms for water compressibility in no-delay
+  !!  interbeds.
+  !!
+  !!  @param[in,out]  hcof  no-delay A matrix entry
+  !!  @param[in,out]  rhs   no-delay right-hand side entry
+  !!
+  !<
   subroutine csub_nodelay_wcomp_fc(this, ib, node, tled, area, &
                                    hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -5433,16 +5491,17 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: area
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! locals
+    integer(I4B), intent(in) :: ib       !< interbed number
+    integer(I4B), intent(in) :: node     !< cell node number
+    real(DP), intent(in) :: tled         !< reciprocal of time step length
+    real(DP), intent(in) :: area         !< horizontal cell area
+    real(DP), intent(in) :: hcell        !< current head in cell
+    real(DP), intent(in) :: hcellold     !< previous head in cell
+    real(DP), intent(inout) :: hcof      !< no-delay A matrix entry
+    real(DP), intent(inout) :: rhs       !< no-delay right-hand side entry
+    ! -- local variables
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: snold
@@ -5451,8 +5510,8 @@ contains
     real(DP) :: wc
     real(DP) :: wc0
 ! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     !
@@ -5474,6 +5533,16 @@ contains
     return
   end subroutine csub_nodelay_wcomp_fc
 
+  !> @ brief Formulate no-delay interbed water compressibility coefficients
+  !!
+  !!  Method formulates the Newton-Raphson formulation coefficient matrix and
+  !!  right-hand side terms for water compressibility in no-delay
+  !!  interbeds.
+  !!
+  !!  @param[in,out]  hcof  no-delay A matrix entry
+  !!  @param[in,out]  rhs   no-delay right-hand side entry
+  !!
+  !<
   subroutine csub_nodelay_wcomp_fn(this, ib, node, tled, area, &
                                    hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -5483,16 +5552,17 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: area
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
-    ! locals
+    integer(I4B), intent(in) :: ib      !< interbed number
+    integer(I4B), intent(in) :: node    !< cell node number
+    real(DP), intent(in) :: tled        !< reciprocal of time step length
+    real(DP), intent(in) :: area        !< horizontal cell area
+    real(DP), intent(in) :: hcell       !< current head in cell
+    real(DP), intent(in) :: hcellold    !< previous head in cell
+    real(DP), intent(inout) :: hcof     !< no-delay A matrix entry
+    real(DP), intent(inout) :: rhs      !< no-delay right-hand side entry
+    ! -- local variables
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: f
@@ -5500,8 +5570,8 @@ contains
     real(DP) :: wc0
     real(DP) :: satderv
 ! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     !
@@ -5614,6 +5684,16 @@ contains
     return
   end function csub_calc_interbed_thickness
 
+  !> @brief Calculate the cell node
+  !!
+  !! Function to calculate elevation of the node between the specified corrected
+  !! elevation zbar and the bottom elevation. If zbar is greater than the top
+  !! elevation, the node elevation is halfway between the top and bottom
+  !! elevations. The corrected elevation (zbar) is always greater than or
+  !! equal to bottom.
+  !!
+  !! @return      znode               node elevation
+  !<
   function csub_calc_znode(this, top, bottom, zbar) result(znode)
 ! ******************************************************************************
 ! csub_calc_znode -- Calculate elevation of the node between the specified
@@ -5627,10 +5707,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    real(DP), intent(in) :: top
-    real(DP), intent(in) :: bottom
-    real(DP), intent(in) :: zbar
+    ! -- dummy variables
+    real(DP), intent(in) :: top       !< top of cell
+    real(DP), intent(in) :: bottom    !< bottom of cell
+    real(DP), intent(in) :: zbar      !< corrected elevation
     ! -- local variables
     real(DP) :: znode
     real(DP) :: v
@@ -5646,21 +5726,29 @@ contains
     return
   end function csub_calc_znode
 
+  !> @brief Calculate the effective stress at elevation z
+  !!
+  !! Function to calculate the effective stress at specified elevation z
+  !! using the provided effective stress (es0) calculated at elevation
+  !! z0 (which is <= z)
+  !!
+  !! @return      es              node elevation
+  !<
   function csub_calc_adjes(this, node, es0, z0, z) result(es)
 ! ******************************************************************************
 ! csub_calc_adjes -- Calculate the effective stress at specified elevation z
 !                    using the provided effective stress (es0) calculated at
-!                    elevation z0 (which is <= z)
+!                    elevation z0 (which is <= z).
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: es0
-    real(DP), intent(in) :: z0
-    real(DP), intent(in) :: z
+    ! -- dummy variables
+    integer(I4B), intent(in) :: node  !< cell node number
+    real(DP), intent(in) :: es0       !< effective stress at elevation z0
+    real(DP), intent(in) :: z0        !< elevation effective stress is calculate at
+    real(DP), intent(in) :: z         !< elevation to calculate effective stress at
     ! -- local variables
     real(DP) :: es
 ! ------------------------------------------------------------------------------
@@ -5672,6 +5760,13 @@ contains
     return
   end function csub_calc_adjes
 
+  !> @brief Check delay interbed head
+  !!
+  !! Method to determine if the delay interbed head in any delay cell
+  !! in a non-convertible gwf cell is less than the top of each delay
+  !! interbed cell.
+  !!
+  !<
   subroutine csub_delay_head_check(this, ib)
 ! ******************************************************************************
 ! csub_delay_head_check -- Determine if the delay interbed head in any delay
@@ -5682,8 +5777,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    integer(I4B), intent(in) :: ib
+    ! -- dummy variables
+    integer(I4B), intent(in) :: ib  !< interbed number
     ! -- local variables
     integer(I4B) :: iviolate
     integer(I4B) :: idelay
@@ -5725,6 +5820,15 @@ contains
     return
   end subroutine csub_delay_head_check
 
+  !> @brief Calculate cell saturation
+  !!
+  !! Method to calculate the cell saturation for the current and
+  !! previous time step.
+  !!
+  !! @param[in,out]  snnew  current saturation
+  !! @param[in,out]  snold  previous saturation
+  !!
+  !<
   subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
 ! ******************************************************************************
 ! csub_calc_sat -- Calculate current and previous cell saturation for a cell.
@@ -5733,11 +5837,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: snnew
-    real(DP), intent(inout) :: snold
+    ! -- dummy variables
+    integer(I4B), intent(in) :: node  !< cell node number
+    real(DP), intent(in) :: hcell     !< current head
+    real(DP), intent(in) :: hcellold  !< previous head
+    real(DP), intent(inout) :: snnew  !< current saturation
+    real(DP), intent(inout) :: snold  !< previous saturation
     ! -- local variables
     real(DP) :: top
     real(DP) :: bot
@@ -5759,6 +5864,13 @@ contains
     return
   end subroutine csub_calc_sat
 
+  !> @brief Calculate the saturation derivative
+  !!
+  !! Function to calculate the derivative of the saturation with
+  !! respect to the current head.
+  !!
+  !! @return      satderv              derivative of saturation
+  !<
   function csub_calc_sat_derivative(this, node, hcell) result(satderv)
 ! ******************************************************************************
 ! csub_calc_sat_derivative -- Calculate current saturation derivative for a cell.
@@ -5767,8 +5879,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
+    ! -- dummy variables
+    integer(I4B), intent(in) :: node  !< cell node number
+    real(DP), intent(in) :: hcell     !< current head
     ! -- local variables
     real(DP) :: satderv
     real(DP) :: top
@@ -5786,22 +5899,32 @@ contains
     return
   end function csub_calc_sat_derivative
 
+  !> @brief Calculate specific storage coefficient factor
+  !!
+  !! Method to calculate the factor that is used to calculate skeletal
+  !! specific storage coefficients. Can be used for coarse-grained
+  !! materials and interbeds.
+  !!
+  !! @param[in,out]  fact  skeletal storage coefficient factor
+  !!
+  !<
   subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, fact)
 ! ******************************************************************************
-! csub_calc_sfacts -- Calculate sske and factor for a gwf cell or
-!                     interbed.
+! csub_calc_sfacts -- Calculate specific storage coefficient factor for a
+!                     gwf cell or interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: bot
+    ! -- dummy variables
+    integer(I4B), intent(in) :: node  !< cell node number
+    real(DP), intent(in) :: bot       !
     real(DP), intent(in) :: znode
-    real(DP), intent(in) :: theta
-    real(DP), intent(in) :: es
-    real(DP), intent(in) :: es0
-    real(DP), intent(inout) :: fact
+    real(DP), intent(in) :: theta     !< porosity
+    real(DP), intent(in) :: es        !< current effective stress
+    real(DP), intent(in) :: es0       !< previous effective stress
+    real(DP), intent(inout) :: fact   !< skeletal storage coefficient factor (1/((1+void)*bar(es)))
     ! -- local variables
     real(DP) :: esv
     real(DP) :: void
@@ -5828,6 +5951,14 @@ contains
     return
   end subroutine csub_calc_sfacts
 
+  !> @brief Calculate new material properties
+  !!
+  !! Method to calculate the current thickness and porosity.
+  !!
+  !! @param[in,out]  thick  initial and current thickness
+  !! @param[in,out]  theta  initial and current porosity
+  !!
+  !<
   subroutine csub_adj_matprop(this, comp, thick, theta)
 ! ******************************************************************************
 ! csub_adj_matprop -- Adjust theta and thickness based on compaction.
@@ -5836,9 +5967,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    real(DP), intent(in) :: comp
-    real(DP), intent(inout) :: thick
-    real(DP), intent(inout) :: theta
+    ! -- dummy variables
+    real(DP), intent(in) :: comp        !< compaction
+    real(DP), intent(inout) :: thick    !< thickness
+    real(DP), intent(inout) :: theta    !< porosity
     ! -- local variables
     real(DP) :: strain
     real(DP) :: void
@@ -5860,6 +5992,13 @@ contains
     return
   end subroutine csub_adj_matprop
 
+  !> @brief Solve delay interbed continuity equation
+  !!
+  !! Method to calculate solve the delay interbed continuity equation for a
+  !! delay interbed. The method encapsulates the non-linear loop and calls the
+  !! linear solution.
+  !!
+  !<
   subroutine csub_delay_sln(this, ib, hcell, update)
 ! ******************************************************************************
 ! csub_delay_sln -- Calculate flow in delay interbeds.
@@ -5868,9 +6007,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
-    logical, intent(in), optional :: update
+    ! -- dummy variables
+    integer(I4B), intent(in) :: ib           !< interbed number
+    real(DP), intent(in) :: hcell            !< current head in a cell
+    logical, intent(in), optional :: update  !< optional logical variable indicating
+                                             !! if the maximum head change variable
+                                             !! in a delay bed should be updated
     ! -- local variables
     logical :: lupdate
     integer(I4B) :: n
@@ -5951,6 +6093,16 @@ contains
     return
   end subroutine csub_delay_sln
 
+  !> @brief Calculate delay interbed znode and z relative to interbed center
+  !!
+  !! Method to calculate the initial center of each delay interbed cell,
+  !! assuming the delay bed head is equal to the top of the delay interbed.
+  !! The method also calculates the distance of the center of each delay
+  !! bed cell from the center of the delay interbed (z_offset) that is used
+  !! to calculate average skeletal specific storage values for a delay interbed
+  !! centered on the center of the saturated thickness for a cell.
+  !!
+  !<
   subroutine csub_delay_init_zcell(this, ib)
 ! ******************************************************************************
 ! csub_delay_init_zcell -- Calculate initial znode for delay interbeds cells.
@@ -5959,7 +6111,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
+    ! -- dummy variables
+    integer(I4B), intent(in) :: ib  !< interbed number
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: node
@@ -6012,6 +6165,12 @@ contains
 
   end subroutine csub_delay_init_zcell
 
+  !> @brief Calculate delay interbed stress values
+  !!
+  !! Method to calculate the geostatic and effective stress in delay interbed
+  !! cells using the passed the current head value in a cell.
+  !!
+  !<
   subroutine csub_delay_calc_stress(this, ib, hcell)
 ! ******************************************************************************
 ! csub_delay_calc_stress -- Calculate geostatic and effective stress in delay
@@ -6021,8 +6180,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
+    ! -- dummy variables
+    integer(I4B), intent(in) :: ib  !< interbed number
+    real(DP), intent(in) :: hcell   !< current head in a cell
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: idelay
@@ -6092,6 +6252,16 @@ contains
     return
   end subroutine csub_delay_calc_stress
 
+  !> @brief Calculate delay interbed cell storage coefficients
+  !!
+  !! Method to calculate the ssk and sske value for a node in a delay
+  !! interbed cell.
+  !!
+  !! @param[in,out]  ssk  skeletal specific storage value dependent on the
+  !!                      preconsolidation stress
+  !! @param[in,out]  sske elastic skeletal specific storage value
+  !!
+  !<
   subroutine csub_delay_calc_ssksske(this, ib, n, hcell, ssk, sske)
 ! ******************************************************************************
 ! csub_delay_calc_ssksske -- Calculate ssk and sske for a node in a delay
@@ -6101,11 +6271,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: n
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: ssk
-    real(DP), intent(inout) :: sske
+    ! -- dummy variables
+    integer(I4B), intent(in) :: ib   !< interbed number
+    integer(I4B), intent(in) :: n    !< delay interbed cell number
+    real(DP), intent(in) :: hcell    !< current head in a cell
+    real(DP), intent(inout) :: ssk   !< delay interbed skeletal specific storage
+    real(DP), intent(inout) :: sske  !< delay interbed elastic skeletal specific storage
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
@@ -6197,6 +6368,13 @@ contains
     return
   end subroutine csub_delay_calc_ssksske
 
+  !> @brief Assemble delay interbed coefficients
+  !!
+  !! Method to assemble matrix and right-hand side coefficients for a delay
+  !! interbed. The method calls the appropriate standard or Newton-Raphson
+  !! assembly routines and fills all of the entries for a delay interbed.
+  !!
+  !<
   subroutine csub_delay_assemble(this, ib, hcell)
 ! ******************************************************************************
 ! csub_delay_assemble -- Assemble coefficients for delay interbeds cells.
@@ -6206,8 +6384,8 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
+    integer(I4B), intent(in) :: ib   !< interbed number
+    real(DP), intent(in) :: hcell    !< current head in a cell
     ! -- local variables
     integer(I4B) :: n
     real(DP) :: aii
@@ -6238,6 +6416,12 @@ contains
 
   end subroutine csub_delay_assemble
 
+  !> @brief Assemble delay interbed standard formulation coefficients
+  !!
+  !! Method to assemble standard formulation matrix and right-hand side
+  !! coefficients for a delay interbed.
+  !!
+  !<
   subroutine csub_delay_assemble_fc(this, ib, n, hcell, aii, au, al, r)
 ! ******************************************************************************
 ! csub_delay_assemble_fc -- Assemble coefficients for delay interbeds cells
@@ -6249,13 +6433,13 @@ contains
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: n
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: aii
-    real(DP), intent(inout) :: au
-    real(DP), intent(inout) :: al
-    real(DP), intent(inout) :: r
+    integer(I4B), intent(in) :: ib   !< interbed number
+    integer(I4B), intent(in) :: n    !< delay interbed cell number
+    real(DP), intent(in) :: hcell    !< current head in a cell
+    real(DP), intent(inout) :: aii   !< diagonal in the A matrix
+    real(DP), intent(inout) :: au    !< upper term in the A matrix
+    real(DP), intent(inout) :: al    !< lower term in the A matrix
+    real(DP), intent(inout) :: r     !< right-hand side term
     ! -- local variables
     integer(I4B) :: node
     integer(I4B) :: idelay
@@ -6374,6 +6558,12 @@ contains
 
   end subroutine csub_delay_assemble_fc
 
+  !> @brief Assemble delay interbed Newton-Raphson formulation coefficients
+  !!
+  !! Method to assemble Newton-Raphson formulation matrix and right-hand side
+  !! coefficients for a delay interbed.
+  !!
+  !<
   subroutine csub_delay_assemble_fn(this, ib, n, hcell, aii, au, al, r)
 ! ******************************************************************************
 ! csub_delay_assemble_fn -- Assemble coefficients for delay interbeds cells
@@ -6385,13 +6575,13 @@ contains
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: n
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: aii
-    real(DP), intent(inout) :: au
-    real(DP), intent(inout) :: al
-    real(DP), intent(inout) :: r
+    integer(I4B), intent(in) :: ib    !< interbed number
+    integer(I4B), intent(in) :: n     !< delay interbed cell number
+    real(DP), intent(in) :: hcell     !< current head in a cell
+    real(DP), intent(inout) :: aii    !< diagonal in the A matrix
+    real(DP), intent(inout) :: au     !< upper term in the A matrix
+    real(DP), intent(inout) :: al     !< lower term in the A matrix
+    real(DP), intent(inout) :: r      !< right-hand side term
     ! -- local variables
     integer(I4B) :: node
     integer(I4B) :: idelay
@@ -6543,6 +6733,12 @@ contains
 
   end subroutine csub_delay_assemble_fn
 
+  !> @brief Delay interbed linear solution
+  !!
+  !! Method to solve the tridiagonal linear equations for a delay interbed
+  !! using the Thomas algorithm.
+  !!
+  !<
   subroutine csub_delay_solve(n, tl, td, tu, b, x, w)
 ! ******************************************************************************
 ! csub_delay_solve -- Solve for head change in delay interbeds cells.
@@ -6550,13 +6746,14 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    integer(I4B), intent(in) :: n
-    real(DP), dimension(n), intent(in) :: tl
-    real(DP), dimension(n), intent(in) :: td
-    real(DP), dimension(n), intent(in) :: tu
-    real(DP), dimension(n), intent(in) :: b
-    real(DP), dimension(n), intent(inout) :: x
-    real(DP), dimension(n), intent(inout) :: w
+    ! -- dummy variables
+    integer(I4B), intent(in) :: n                 !< number of matrix rows
+    real(DP), dimension(n), intent(in) :: tl      !< lower matrix terms
+    real(DP), dimension(n), intent(in) :: td      !< diagonal matrix terms
+    real(DP), dimension(n), intent(in) :: tu      !< upper matrix terms
+    real(DP), dimension(n), intent(in) :: b       !< right-hand side vector
+    real(DP), dimension(n), intent(inout) :: x    !< solution vectot
+    real(DP), dimension(n), intent(inout) :: w    !< work vector
     ! -- local variables
     integer(I4B) :: j
     real(DP) :: bet
@@ -6585,6 +6782,14 @@ contains
     return
   end subroutine csub_delay_solve
 
+  !> @brief Calculate delay interbed saturation
+  !!
+  !! Method to calculate the saturation in a delay interbed cell.
+  !!
+  !! @param[in,out]  snnew  current saturation in delay interbed cell n
+  !! @param[in,out]  snold  previous saturation in delay interbed cell n
+  !!
+  !<
   subroutine csub_delay_calc_sat(this, node, idelay, n, hcell, hcellold, &
                                  snnew, snold)
 ! ******************************************************************************
@@ -6594,14 +6799,15 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    integer(I4B), intent(in) :: idelay
-    integer(I4B), intent(in) :: n
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: snnew
-    real(DP), intent(inout) :: snold
+    integer(I4B), intent(in) :: node     !< cell node number
+    integer(I4B), intent(in) :: idelay   !< delay interbed number
+    integer(I4B), intent(in) :: n        !< delay interbed cell number
+    real(DP), intent(in) :: hcell        !< current head in delay interbed cell n
+    real(DP), intent(in) :: hcellold     !< previous head in delay interbed cell n
+    real(DP), intent(inout) :: snnew     !< current saturation in delay interbed cell n
+    real(DP), intent(inout) :: snold     !< previous saturation in delay interbed cell n
     ! -- local variables
     real(DP) :: dzhalf
     real(DP) :: top
@@ -6625,6 +6831,13 @@ contains
     return
   end subroutine csub_delay_calc_sat
 
+  !> @brief Calculate the delay interbed cell saturation derivative
+  !!
+  !! Function to calculate the derivative of the saturation with
+  !! respect to the current head in delay interbed cell n.
+  !!
+  !! @return      satderv              derivative of saturation
+  !<
   function csub_delay_calc_sat_derivative(this, node, idelay, n, hcell) &
     result(satderv)
 ! ******************************************************************************
@@ -6634,11 +6847,12 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    integer(I4B), intent(in) :: idelay
-    integer(I4B), intent(in) :: n
-    real(DP), intent(in) :: hcell
+    integer(I4B), intent(in) :: node     !< cell node number
+    integer(I4B), intent(in) :: idelay   !< delay interbed number
+    integer(I4B), intent(in) :: n        !< delay interbed cell number
+    real(DP), intent(in) :: hcell        !< current head in delay interbed cell n
     ! -- local variables
     real(DP) :: satderv
     real(DP) :: dzhalf
@@ -6658,6 +6872,14 @@ contains
     return
   end function csub_delay_calc_sat_derivative
 
+  !> @brief Calculate delay interbed storage change
+  !!
+  !! Method to calculate the storage change in a delay interbed.
+  !!
+  !! @param[in,out]  stoe   current elastic storage change in delay interbed
+  !! @param[in,out]  stoi   current inelastic storage changes in delay interbed
+  !!
+  !<
   subroutine csub_delay_calc_dstor(this, ib, hcell, stoe, stoi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
@@ -6667,10 +6889,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(inout) :: hcell
-    real(DP), intent(inout) :: stoe
-    real(DP), intent(inout) :: stoi
+    integer(I4B), intent(in) :: ib     !< interbed number
+    real(DP), intent(in) :: hcell      !< current head in cell
+    real(DP), intent(inout) :: stoe    !< elastic storage change
+    real(DP), intent(inout) :: stoi    !< inelastic storage change
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
@@ -6746,6 +6968,13 @@ contains
     return
   end subroutine csub_delay_calc_dstor
 
+  !> @brief Calculate delay interbed water compressibility
+  !!
+  !! Method to calculate the change in water compressibility in a delay interbed.
+  !!
+  !! @param[in,out]  dwc    current water compressibility change in delay interbed
+  !!
+  !<
   subroutine csub_delay_calc_wcomp(this, ib, dwc)
 ! ******************************************************************************
 ! csub_delay_calc_wcomp -- Calculate change in storage in a delay interbed
@@ -6757,8 +6986,8 @@ contains
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(inout) :: dwc
+    integer(I4B), intent(in) :: ib   !< interbed number
+    real(DP), intent(inout) :: dwc   !< water compressibility change
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: node
@@ -6800,6 +7029,15 @@ contains
     return
   end subroutine csub_delay_calc_wcomp
 
+  !> @brief Calculate delay interbed compaction
+  !!
+  !! Method to calculate the compaction in a delay interbed.
+  !!
+  !! @param[in,out]  comp   compaction in delay interbed
+  !! @param[in,out]  compi  inelastic compaction in delay interbed
+  !! @param[in,out]  compe  elastic compaction in delay interbed
+  !!
+  !<
   subroutine csub_delay_calc_comp(this, ib, hcell, hcellold, comp, compi, compe)
 ! ******************************************************************************
 ! csub_delay_calc_comp -- Calculate compaction in a delay interbed.
@@ -6807,13 +7045,14 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
-    real(DP), intent(in) :: hcellold
-    real(DP), intent(inout) :: comp
-    real(DP), intent(inout) :: compi
-    real(DP), intent(inout) :: compe
+    integer(I4B), intent(in) :: ib    !< interbed number
+    real(DP), intent(in) :: hcell     !< current head in cell
+    real(DP), intent(in) :: hcellold  !< previous head in cell
+    real(DP), intent(inout) :: comp   !< compaction in delay interbed
+    real(DP), intent(inout) :: compi  !< inelastic compaction in delay interbed
+    real(DP), intent(inout) :: compe  !< elastic compaction in delay interbed
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
@@ -6884,6 +7123,11 @@ contains
     return
   end subroutine csub_delay_calc_comp
 
+  !> @brief Update delay interbed material properties
+  !!
+  !! Method to update the thickness and porosity of each delay interbed cell.
+  !!
+  !<
   subroutine csub_delay_update(this, ib)
 ! ******************************************************************************
 ! csub_delay_update -- Update delay interbed thickness and porosity.
@@ -6891,8 +7135,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
+    integer(I4B), intent(in) :: ib  !< interbed number
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: n
@@ -6963,6 +7208,16 @@ contains
     return
   end subroutine csub_delay_update
 
+  !> @brief Calculate delay interbed contribution to the cell
+  !!
+  !! Method to calculate the coefficients to calculate the delay interbed
+  !! contribution to a cell. The product of hcof* h - rhs equals the
+  !! delay contribution to the cell
+  !!
+  !! @param[in,out]  hcof   coefficient dependent on current head
+  !! @param[in,out]  rhs    right-hand side contributions
+  !!
+  !<
   subroutine csub_delay_fc(this, ib, hcof, rhs)
 ! ******************************************************************************
 ! csub_delay_fc -- Calculate hcof and rhs for delay interbed contribution to
@@ -6971,10 +7226,11 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs
+    integer(I4B), intent(in) :: ib   !< interbed number
+    real(DP), intent(inout) :: hcof  !< head dependent coefficient
+    real(DP), intent(inout) :: rhs   !< right-hand side
     ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: c1
@@ -6999,6 +7255,13 @@ contains
     return
   end subroutine csub_delay_fc
 
+  !> @brief Calculate the flow from delay interbed top or bottom
+  !!
+  !! Function to calculate the flow from across the top or bottom of
+  !! a delay interbed.
+  !!
+  !! @return  q  flow across the top or bottom of a delay interbed
+  !<
   function csub_calc_delay_flow(this, ib, n, hcell) result(q)
 ! ******************************************************************************
 ! csub_calc_delay_flow -- Calculate flow across top or bottom of delay interbed
@@ -7007,10 +7270,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in) :: n
-    real(DP), intent(in) :: hcell
+    ! -- dummy variables
+    integer(I4B), intent(in) :: ib  !< interbed number
+    integer(I4B), intent(in) :: n   !< delay interbed cell
+    real(DP), intent(in) :: hcell   !< current head in cell
     ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: q
@@ -7026,6 +7289,13 @@ contains
 
   !
   ! -- Procedures related to observations (type-bound)
+
+  !> @brief Determine if observations are supported.
+  !!
+  !! Function to determine if observations are supported by the CSUB package.
+  !! Observations are supported by the CSUB package.
+  !!
+  !<
   logical function csub_obs_supported(this)
     ! ******************************************************************************
     ! csub_obs_supported
@@ -7034,12 +7304,20 @@ contains
     !
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType) :: this
     ! ------------------------------------------------------------------------------
     csub_obs_supported = .true.
+    !
+    ! -- return
     return
   end function csub_obs_supported
 
+  !> @brief Define the observation types available in the package
+  !!
+  !! Method to define the observation types available in the CSUB package.
+  !!
+  !<
   subroutine csub_df_obs(this)
     ! ******************************************************************************
     ! csub_df_obs (implements bnd_df_obs)
@@ -7049,9 +7327,9 @@ contains
     !
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType) :: this
-    ! -- local
+    ! -- local variables
     integer(I4B) :: indx
     ! ------------------------------------------------------------------------------
     !
@@ -7233,6 +7511,11 @@ contains
     return
   end subroutine csub_df_obs
 
+  !> @brief Set the observations for this time step
+  !!
+  !! Method to set the CSUB package observations for this time step.
+  !!
+  !<
   subroutine csub_bd_obs(this)
     ! **************************************************************************
     ! csub_bd_obs
@@ -7242,9 +7525,9 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! -- local
+    ! -- local variables
     type(ObserveType), pointer :: obsrv => null()
     integer(I4B) :: i
     integer(I4B) :: j
@@ -7458,11 +7741,16 @@ contains
     return
   end subroutine csub_bd_obs
 
+  !> @brief Read and prepare the observations
+  !!
+  !! Method to read and prepare the observations for the CSUB package.
+  !!
+  !<
   subroutine csub_rp_obs(this)
     use TdisModule, only: kper
-    ! -- dummy
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! -- local
+    ! -- local variables
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     integer(I4B) :: i
@@ -7622,15 +7910,21 @@ contains
   end subroutine csub_rp_obs
   !
   ! -- Procedures related to observations (NOT type-bound)
+
+  !> @brief Process the observation IDs for the package
+  !!
+  !! Method to process the observation IDs for the CSUB package.
+  !!
+  !<
   subroutine csub_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
     !    the ID string of an observation definition for csub-package observations.
-    ! -- dummy
-    type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
-    ! -- local
+    ! -- dummy variables
+    type(ObserveType), intent(inout) :: obsrv   !< observation type
+    class(DisBaseType), intent(in)    :: dis    !< pointer to the model discretization
+    integer(I4B), intent(in)    :: inunitobs    !< unit number of the observation file
+    integer(I4B), intent(in)    :: iout         !< unit number to the model listing file
+    ! -- local variables
     integer(I4B) :: nn1
     integer(I4B) :: nn2
     integer(I4B) :: icol, istart, istop
@@ -7698,5 +7992,42 @@ contains
     ! -- return
     return
   end subroutine csub_process_obsID
+
+  !> @ brief Define the list label for the package
+  !!
+  !!  Method defined the list label for the CSUB package.
+  !!
+  !<
+  subroutine define_listlabel(this)
+    ! ******************************************************************************
+    ! define_listlabel -- Define the list heading that is written to iout when
+    !   PRINT_INPUT option is used.
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! ------------------------------------------------------------------------------
+    !
+    ! -- create the header list label
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    else
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'SIG0'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
+    !
+    ! -- return
+    return
+  end subroutine define_listlabel
 
 end module GwfCsubModule
