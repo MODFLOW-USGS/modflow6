@@ -1,5 +1,9 @@
 # Get executables and build targets
-# can compile mf6 direcetly using this command:
+
+# to use ifort on windows, run this
+# python test000_setup.py -fc ifort
+
+# can compile only mf6 directly using this command:
 #  python -c "import test000_setup; test000_setup.test_build_modflow6()"
 
 import os
@@ -64,6 +68,7 @@ def build_mf6():
     pm.appdir = os.path.join('..', 'bin')
     pm.include_subdirs = True
     pm.inplace = True
+    pm.makeclean = True
     if pm.fc == "gfortran":
         pm.fflags = strict_flags
 
@@ -75,7 +80,7 @@ def build_mf6():
 
 
 def build_mf6_so():
-    pm = pymake.Pymake()
+    pm = pymake.Pymake(verbose=True)
     pm.target = "libmf6" + soext
     pm.srcdir = os.path.join('..', 'srcbmi')
     pm.srcdir2 = os.path.join('..', 'src')
@@ -84,6 +89,7 @@ def build_mf6_so():
     pm.include_subdirs = True
     pm.sharedobject = True
     pm.inplace = True
+    pm.makeclean = True
     if pm.fc == "gfortran":
         pm.fflags = strict_flags
 
@@ -128,6 +134,7 @@ def build_zbud6():
     pm.extrafiles = os.path.join('..', 'utils', 'zonebudget', 'pymake',
                                  'extrafiles.txt')
     pm.inplace = True
+    pm.makeclean = True
     if pm.fc == "gfortran":
         pm.fflags = strict_flags
 
@@ -148,8 +155,8 @@ def test_create_dirs():
     return
 
 
-def test_getmfexes():
-    pymake.getmfexes(mfexe_pth)
+def test_getmfexes(verify=True):
+    pymake.getmfexes(mfexe_pth, verify=verify)
     for target in os.listdir(mfexe_pth):
         srcpth = os.path.join(mfexe_pth, target)
         if os.path.isfile(srcpth):
@@ -177,7 +184,7 @@ def test_build_zbud6():
 
 if __name__ == "__main__":
     test_create_dirs()
-    test_getmfexes()
+    test_getmfexes(verify=False)
     test_build_modflow6()
     test_build_modflow6_so()
     test_build_mf5to6()
