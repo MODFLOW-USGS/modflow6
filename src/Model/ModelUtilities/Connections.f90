@@ -21,7 +21,7 @@ module ConnectionsModule
     integer(I4B), pointer                           :: nodes      => null()      !< number of nodes
     integer(I4B), pointer                           :: nja        => null()      !< number of connections
     integer(I4B), pointer                           :: njas       => null()      !< number of symmetric connections
-    integer(I4B), pointer                           :: ianglex    => null()      !< indicates whether or not anglex was read
+    integer(I4B), pointer                           :: ianglex    => null()      !< indicates whether or not anglex is present
     integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !< (size:nodes+1) csr index array
     integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !< (size:nja) csr pointer array
     integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !< (size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!    

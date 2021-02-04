@@ -17,7 +17,7 @@ module GwfInterfaceModelModule
   ! multiple grids, possibly of different type.
   type, public, extends(GwfModelType) :: GwfInterfaceModelType    
     class(GridConnectionType), pointer    :: gridConnection => null()
-    class(GwfModelType), private, pointer :: gwfModel => null() ! conveniently points to the owning model in gridconnection
+    class(GwfModelType), private, pointer :: owner => null() ! conveniently points to the owning model in gridconnection
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
@@ -62,10 +62,10 @@ contains
     numMod => this%gridConnection%model
     select type (numMod)
       class is (GwfModelType)
-        this%gwfModel => numMod
+        this%owner => numMod
       end select
     
-    this%inewton = this%gwfModel%inewton
+    this%inewton = this%owner%inewton
       
     ! create discretization and packages
     call this%buildDiscretization()
@@ -74,7 +74,7 @@ contains
     ! continue as in gwf_cr...
     
     ! set XT3D when the owning model has XT3D enabled
-    this%npf%ixt3d = 0!this%gwfModel%npf%ixt3d
+    this%npf%ixt3d = 0!this%owner%npf%ixt3d
     
   end subroutine createModel
   
@@ -209,28 +209,28 @@ contains
     ! local
     type(GwfInterfaceModelType), pointer :: ifModel
     integer :: icell, idx, nrOfCells
-    class(GwfModelType), pointer :: gwfModel
-    integer(I4B) :: im
     class(*), pointer :: objPtr
+    class(GwfModelType), pointer :: gwfModel
     
     ! cast to interface model here, should never fail
     ifModel => CastAsGwfInterfaceModelClass(ifaceModelObj)
-      
-    ! loop over models that make up the interface and 
-    ! determine 'merged' properties...
-    do im = 1, ifModel%gridConnection%regionalModels%Count()
-      objPtr => ifModel%gridConnection%regionalModels%GetItem(im)
-      gwfModel => CastAsGwfModelClass(objPtr)
-      
-      ! do 'OR' on the K properties
-      if (gwfModel%npf%ik22 > 0) npf%ik22 = 1
-      if (gwfModel%npf%ik33 > 0) npf%ik33 = 1
-      if (gwfModel%npf%iangle1 > 0) npf%iangle1 = 1
-      if (gwfModel%npf%iangle2 > 0) npf%iangle2 = 1
-      if (gwfModel%npf%iangle3 > 0) npf%iangle3 = 1
-      if (gwfModel%npf%icalcspdis > 0) npf%icalcspdis = 1
-    end do
 
+    ! the properties from the owning model are leading,
+    ! we have to talk about inhomogeneity later on...
+    npf%ik22 = ifModel%owner%npf%ik22
+    npf%ik33 = ifModel%owner%npf%ik33
+    npf%iangle1 = ifModel%owner%npf%iangle1
+    npf%iangle2 = ifModel%owner%npf%iangle2
+    npf%iangle3 = ifModel%owner%npf%iangle3
+    npf%icellavg = ifModel%owner%npf%icellavg
+
+    npf%icalcspdis = ifModel%owner%npf%icalcspdis
+
+    npf%irewet = ifModel%owner%npf%irewet
+    npf%ihdwet = ifModel%owner%npf%ihdwet
+    npf%wetfct = ifModel%owner%npf%wetfct
+    npf%hdry = ifModel%owner%npf%hdry
+    npf%iwetdry = ifModel%owner%npf%iwetdry
 
     ! set the data in the npf package
     nrOfCells = ifModel%gridConnection%nrOfCells
@@ -239,10 +239,13 @@ contains
       objPtr => ifModel%gridConnection%idxToGlobal(icell)%model
       gwfModel => CastAsGwfModelClass(objPtr)
       
-      npf%icelltype(icell) = gwfModel%npf%icelltype(idx) 
+      npf%icelltype(icell) = gwfModel%npf%icelltype(idx)
       npf%k11(icell) = gwfModel%npf%k11(idx)      
       if (npf%ik22 > 0) npf%k22(icell) = gwfModel%npf%k22(idx)
       if (npf%ik33 > 0) npf%k33(icell) = gwfModel%npf%k33(idx)
+
+      ! rewetting
+      npf%wetdry(icell) = gwfModel%npf%wetdry(idx)
       
       ! angles, zero when not present in one of the models
       if (npf%iangle1 > 0) then
@@ -275,10 +278,10 @@ contains
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(GwfModelType), pointer :: res
-    !
+
     res => null()
     if (.not. associated(obj)) return
-    !
+
     select type (obj)
     class is (GwfModelType)
       res => obj
@@ -290,10 +293,10 @@ contains
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(GwfInterfaceModelType), pointer :: res
-    !
+    
     res => null()
     if (.not. associated(obj)) return
-    !
+    
     select type (obj)
     class is (GwfInterfaceModelType)
       res => obj

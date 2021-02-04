@@ -703,6 +703,8 @@ module GridConnectionModule
       if (numEx%naux > 0) then
         ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
         if (ivalAngldegx > 0) then
+          ! TODO_MJR: this means that angledegx is present for the num. ex.
+          ! but is it the case for angledegx in the interior?
           conn%ianglex = 1
         end if
       end if
