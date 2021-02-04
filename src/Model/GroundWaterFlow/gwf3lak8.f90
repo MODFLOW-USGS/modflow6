@@ -95,7 +95,11 @@ module LakModule
     real(DP), dimension(:,:), pointer, contiguous :: lauxvar => null()
     !
     ! -- table data
-    type (LakTabType), dimension(:), pointer, contiguous :: laketables => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ialaktab => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabstage => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabvolume => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabsarea => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabwarea => null()
     !
     ! -- lake solution data
     integer(I4B), dimension(:), pointer, contiguous :: ncncvr => null()
@@ -253,6 +257,7 @@ module LakModule
     procedure, private :: lak_linear_interpolation
     procedure, private :: lak_setup_budobj
     procedure, private :: lak_fill_budobj
+    procedure, private :: laktables_to_vectors
     ! -- table
     procedure, private :: lak_setup_tableobj
     ! -- density
@@ -988,11 +993,13 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
+    type (LakTabType), dimension(:), allocatable :: laketables
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: n
+    integer(I4B) :: iconn
     integer(I4B) :: ntabs
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
 ! ------------------------------------------------------------------------------
@@ -1011,7 +1018,7 @@ contains
     end do
     !
     ! -- allocate derived type for table data
-    allocate(this%laketables(this%nlakes))
+    allocate(laketables(this%nlakes))
     !
     ! -- get lake_tables block
     call this%parser%GetBlock('TABLES', isfound, ierr, &
@@ -1020,7 +1027,7 @@ contains
     ! -- parse lake_tables block if detected
     if (isfound) then
       ntabs = 0
-      ! -- process the lake connection data
+      ! -- process the lake table data
       write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//        &
         ' LAKE_TABLES'
       readtable: do
@@ -1050,7 +1057,7 @@ contains
               cycle readtable
             end if
             call this%parser%GetString(line)
-            call this%lak_read_table(n, line)
+            call this%lak_read_table(n, line, laketables(n))
           case default
             write(errmsg,'(a,1x,i4,1x,a)')                                       &
               'LAKE TABLE ENTRY for LAKE ', n, 'MUST INCLUDE TAB6 KEYWORD'
@@ -1088,13 +1095,86 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-
+    !
+    ! -- convert laketables to vectors
+    call this%laktables_to_vectors(laketables)
+    !
+    ! -- destroy laketables
+    do n = 1, this%nlakes
+      if (this%ntabrow(n) > 0) then
+        deallocate(laketables(n)%tabstage)
+        deallocate(laketables(n)%tabvolume)
+        deallocate(laketables(n)%tabsarea)
+        iconn = this%idxlakeconn(n)
+        if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
+          deallocate(laketables(n)%tabwarea)
+        end if
+      end if
+    end do
+    deallocate(laketables)
     !
     ! -- return
     return
   end subroutine lak_read_tables
+  
+  subroutine laktables_to_vectors(this, laketables)
+! ******************************************************************************
+! laktables_to_vectors -- Copy the laketables structure data into flattened
+!   vectors that are stored in the memory manager
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(LakType), intent(inout) :: this
+    type (LakTabType), intent(in), dimension(:), contiguous :: laketables
+    integer(I4B) :: n
+    integer(I4B) :: ntabrows
+    integer(I4B) :: j
+    integer(I4B) :: ipos
+    integer(I4B) :: iconn
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate index array for lak tables
+    call mem_allocate(this%ialaktab, this%nlakes + 1, 'IALAKTAB', this%memoryPath)
+    !
+    ! -- Move the laktables structure information into flattened arrays
+    this%ialaktab(1) = 1
+    do n = 1, this%nlakes
+      ! -- ialaktab contains a pointer into the flattened lak table data
+      this%ialaktab(n + 1) = this%ialaktab(n) + this%ntabrow(n)
+    end do
+    !
+    ! -- Allocate vectors for storing all lake table data
+    ntabrows = this%ialaktab(this%nlakes + 1) - 1
+    call mem_allocate(this%tabstage, ntabrows, 'TABSTAGE', this%memoryPath)
+    call mem_allocate(this%tabvolume, ntabrows, 'TABVOLUME', this%memoryPath)
+    call mem_allocate(this%tabsarea, ntabrows, 'TABSAREA', this%memoryPath)
+    call mem_allocate(this%tabwarea, ntabrows, 'TABWAREA', this%memoryPath)
+    !
+    ! -- Copy data from laketables into vectors
+    do n = 1, this%nlakes
+      j = 1
+      do ipos = this%ialaktab(n), this%ialaktab(n + 1) - 1
+        this%tabstage(ipos) = laketables(n)%tabstage(j)
+        this%tabvolume(ipos) = laketables(n)%tabvolume(j)
+        this%tabsarea(ipos) = laketables(n)%tabsarea(j)
+        iconn = this%idxlakeconn(n)
+        if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
+          !
+          ! -- tabwarea only filled for ictype 2 and 3
+          this%tabwarea(ipos) = laketables(n)%tabwarea(j)
+        else
+          this%tabwarea(ipos) = DZERO
+        end if
+        j = j + 1
+      end do
+    end do
+    !
+    ! -- return
+    return
+  end subroutine laktables_to_vectors
 
-  subroutine lak_read_table(this, ilak, filename)
+  subroutine lak_read_table(this, ilak, filename, laketable)
 ! ******************************************************************************
 ! lak_read_table -- Read the lake table for this package
 ! ******************************************************************************
@@ -1108,11 +1188,9 @@ contains
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     character (len=*), intent(in) :: filename
-
+    type (LakTabType), intent(inout) :: laketable
     ! -- local
     character(len=LINELENGTH) :: keyword
-    character(len=13) :: arrName
-    character(len=4) :: citem
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: iu
@@ -1148,9 +1226,9 @@ contains
     ! -- get dimensions block
     call parser%GetBlock('DIMENSIONS', isfound, ierr, supportOpenClose=.true.)
     !
-    ! -- parse well_connections block if detected
+    ! -- parse lak table dimensions block if detected
     if (isfound) then
-      ! -- process the lake connection data
+      ! -- process the lake table dimension data
       if (this%iprpak /= 0) then
         write(this%iout,'(/1x,a)')                                               &
           'PROCESSING ' // trim(adjustl(this%text)) // ' DIMENSIONS'
@@ -1212,21 +1290,14 @@ contains
       !
       ! -- allocate space
       this%ntabrow(ilak) = n
-      write(citem,'(i4.4)') ilak
-      ! -- build arrName for outlet
-      arrName = 'TABSTAGE' // citem
-      call mem_allocate(this%laketables(ilak)%tabstage, n, arrName, this%memoryPath)
-      arrName = 'TABVOLUME' // citem
-      call mem_allocate(this%laketables(ilak)%tabvolume, n, arrName, this%memoryPath)
-      arrName = 'TABSAREA' // citem
-      call mem_allocate(this%laketables(ilak)%tabsarea, n, arrName, this%memoryPath)
+      allocate(laketable%tabstage(n))
+      allocate(laketable%tabvolume(n))
+      allocate(laketable%tabsarea(n))
       ipos = this%idxlakeconn(ilak)
       if (this%ictype(ipos) == 2 .or. this%ictype(ipos) == 3) then
-        arrName = 'tabwarea' // citem
-        call mem_allocate(this%laketables(ilak)%tabwarea, n, arrName, this%memoryPath)
+        allocate(laketable%tabwarea(n))
       end if
-
-
+      
       ! -- get table block
       call parser%GetBlock('TABLE', isfound, ierr, supportOpenClose=.true.)
       !
@@ -1247,11 +1318,11 @@ contains
           if (ipos > this%ntabrow(ilak)) then
             cycle readtabledata
           end if
-          this%laketables(ilak)%tabstage(ipos) = parser%GetDouble()
-          this%laketables(ilak)%tabvolume(ipos) = parser%GetDouble()
-          this%laketables(ilak)%tabsarea(ipos) = parser%GetDouble()
+          laketable%tabstage(ipos) = parser%GetDouble()
+          laketable%tabvolume(ipos) = parser%GetDouble()
+          laketable%tabsarea(ipos) = parser%GetDouble()
           if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
-            this%laketables(ilak)%tabwarea(ipos) = parser%GetDouble()
+            laketable%tabwarea(ipos) = parser%GetDouble()
           end if
         end do readtabledata
         
@@ -1274,62 +1345,62 @@ contains
       iconn = this%idxlakeconn(ilak)
       if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
         do n = 1, this%ntabrow(ilak)
-          vol = this%laketables(ilak)%tabvolume(n)
-          sa = this%laketables(ilak)%tabsarea(n)
-          wa = this%laketables(ilak)%tabwarea(n)
+          vol = laketable%tabvolume(n)
+          sa = laketable%tabsarea(n)
+          wa = laketable%tabwarea(n)
           vol = vol * sa * wa
           ! -- check if all entries are zero
           if (vol > DZERO) exit
           ! -- set lake bottom
-          this%lakebot(ilak) = this%laketables(ilak)%tabstage(n)
-          this%belev(ilak) = this%laketables(ilak)%tabstage(n)
+          this%lakebot(ilak) = laketable%tabstage(n)
+          this%belev(ilak) = laketable%tabstage(n)
         end do
         ! -- set maximum surface area for rainfall
         n = this%ntabrow(ilak)
-        this%sareamax(ilak) = this%laketables(ilak)%tabsarea(n)
+        this%sareamax(ilak) = laketable%tabsarea(n)
       end if
       !
       ! -- verify the table data
       do n = 2, this%ntabrow(ilak)
-        v = this%laketables(ilak)%tabstage(n)
-        v0 = this%laketables(ilak)%tabstage(n-1)
+        v = laketable%tabstage(n)
+        v0 = laketable%tabstage(n-1)
         if (v <= v0) then
           write(errmsg,fmttaberr)                                                &
-            'TABLE STAGE ENTRY', n, '(', this%laketables(ilak)%tabstage(n),      &
+            'TABLE STAGE ENTRY', n, '(', laketable%tabstage(n),                  &
             ') FOR LAKE ', ilak, 'MUST BE GREATER THAN THE PREVIOUS STAGE ENTRY',&
-            n-1, '(', this%laketables(ilak)%tabstage(n-1), ')'
+            n-1, '(', laketable%tabstage(n-1), ')'
           call store_error(errmsg)
         end if
-        v = this%laketables(ilak)%tabvolume(n)
-        v0 = this%laketables(ilak)%tabvolume(n-1)
+        v = laketable%tabvolume(n)
+        v0 = laketable%tabvolume(n-1)
         if (v <= v0) then
           write(errmsg,fmttaberr)                                                &
-            'TABLE VOLUME ENTRY', n, '(', this%laketables(ilak)%tabvolume(n),    &
+            'TABLE VOLUME ENTRY', n, '(', laketable%tabvolume(n),                &
             ') FOR LAKE ',                                                       &
             ilak, 'MUST BE GREATER THAN THE PREVIOUS VOLUME ENTRY',              &
-            n-1, '(', this%laketables(ilak)%tabvolume(n-1), ')'
+            n-1, '(', laketable%tabvolume(n-1), ')'
           call store_error(errmsg)
         end if
-        v = this%laketables(ilak)%tabsarea(n)
-        v0 = this%laketables(ilak)%tabsarea(n-1)
+        v = laketable%tabsarea(n)
+        v0 = laketable%tabsarea(n-1)
         if (v < v0) then
           write(errmsg,fmttaberr)                                                &
             'TABLE SURFACE AREA ENTRY', n, '(',                                  &
-            this%laketables(ilak)%tabsarea(n), ') FOR LAKE ', ilak,              &
+            laketable%tabsarea(n), ') FOR LAKE ', ilak,                          &
             'MUST BE GREATER THAN OR EQUAL TO THE PREVIOUS SURFACE AREA ENTRY',  &
-            n-1, '(', this%laketables(ilak)%tabsarea(n-1), ')'
+            n-1, '(', laketable%tabsarea(n-1), ')'
           call store_error(errmsg)
         end if
         iconn = this%idxlakeconn(ilak)
         if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
-          v = this%laketables(ilak)%tabwarea(n)
-          v0 = this%laketables(ilak)%tabwarea(n-1)
+          v = laketable%tabwarea(n)
+          v0 = laketable%tabwarea(n-1)
           if (v < v0) then
             write(errmsg,fmttaberr)                                              &
               'TABLE EXCHANGE AREA ENTRY', n, '(',                               &
-              this%laketables(ilak)%tabwarea(n), ') FOR LAKE ', ilak,            &
+              laketable%tabwarea(n), ') FOR LAKE ', ilak,                        &
               'MUST BE GREATER THAN OR EQUAL TO THE PREVIOUS EXCHANGE AREA ' //  &
-              'ENTRY', n-1, '(', this%laketables(ilak)%tabwarea(n-1), ')'
+              'ENTRY', n-1, '(', laketable%tabwarea(n-1), ')'
             call store_error(errmsg)
           end if
         end if
@@ -1961,6 +2032,8 @@ contains
     real(DP), intent(inout) :: sarea
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: ifirst
+    integer(I4B) :: ilast
     real(DP) :: topl
     real(DP) :: botl
     real(DP) :: sat
@@ -1968,15 +2041,17 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     sarea = DZERO
-    if (this%ntabrow(ilak) > 0) then
-      i = this%ntabrow(ilak)
-      if (stage <= this%laketables(ilak)%tabstage(1)) then
-        sarea = this%laketables(ilak)%tabsarea(1)
-      else if (stage >= this%laketables(ilak)%tabstage(i)) then
-        sarea = this%laketables(ilak)%tabsarea(i)
+    i = this%ntabrow(ilak)
+    if (i > 0) then
+      ifirst = this%ialaktab(ilak)
+      ilast = this%ialaktab(ilak + 1) - 1
+      if (stage <= this%tabstage(ifirst)) then
+        sarea = this%tabsarea(ifirst)
+      else if (stage >= this%tabstage(ilast)) then
+        sarea = this%tabsarea(ilast)
       else
-        call this%lak_linear_interpolation(i, this%laketables(ilak)%tabstage, &
-                                           this%laketables(ilak)%tabsarea, &
+        call this%lak_linear_interpolation(i, this%tabstage(ifirst:ilast),     &
+                                           this%tabsarea(ifirst:ilast),        &
                                            stage, sarea)
       end if
     else
@@ -2046,6 +2121,8 @@ contains
     real(DP), intent(inout) :: wa
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: ifirst
+    integer(I4B) :: ilast
     integer(I4B) :: node
     real(DP) :: topl
     real(DP) :: botl
@@ -2060,13 +2137,15 @@ contains
     if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
       if (vv > topl) vv = topl
       i = this%ntabrow(ilak)
-      if (vv <= this%laketables(ilak)%tabstage(1)) then
-        wa = this%laketables(ilak)%tabwarea(1)
-      else if (vv >= this%laketables(ilak)%tabstage(i)) then
-        wa = this%laketables(ilak)%tabwarea(i)
+      ifirst = this%ialaktab(ilak)
+      ilast = this%ialaktab(ilak + 1) - 1
+      if (vv <= this%tabstage(ifirst)) then
+        wa = this%tabwarea(ifirst)
+      else if (vv >= this%tabstage(ilast)) then
+        wa = this%tabwarea(ilast)
       else
-        call this%lak_linear_interpolation(i, this%laketables(ilak)%tabstage, &
-                                           this%laketables(ilak)%tabwarea, &
+        call this%lak_linear_interpolation(i, this%tabstage(ifirst:ilast),     &
+                                           this%tabwarea(ifirst:ilast),        &
                                            vv, wa)
       end if
     else
@@ -2100,6 +2179,8 @@ contains
     real(DP), intent(inout) :: volume
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: ifirst
+    integer(I4B) :: ilast
     real(DP) :: topl
     real(DP) :: botl
     real(DP) :: ds
@@ -2109,17 +2190,19 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     volume = DZERO
-    if (this%ntabrow(ilak) > 0) then
-      i = this%ntabrow(ilak)
-      if (stage <= this%laketables(ilak)%tabstage(1)) then
-        volume = this%laketables(ilak)%tabvolume(1)
-      else if (stage >= this%laketables(ilak)%tabstage(i)) then
-        ds = stage - this%laketables(ilak)%tabstage(i)
-        sa = this%laketables(ilak)%tabsarea(i)
-        volume = this%laketables(ilak)%tabvolume(i) + ds * sa
+    i = this%ntabrow(ilak)
+    if (i > 0) then
+      ifirst = this%ialaktab(ilak)
+      ilast = this%ialaktab(ilak + 1) - 1
+      if (stage <= this%tabstage(ifirst)) then
+        volume = this%tabvolume(ifirst)
+      else if (stage >= this%tabstage(ilast)) then
+        ds = stage - this%tabstage(ilast)
+        sa = this%tabsarea(ilast)
+        volume = this%tabvolume(ilast) + ds * sa
       else
-        call this%lak_linear_interpolation(i, this%laketables(ilak)%tabstage, &
-                                           this%laketables(ilak)%tabvolume, &
+        call this%lak_linear_interpolation(i, this%tabstage(ifirst:ilast),     &
+                                           this%tabvolume(ifirst:ilast),       &
                                            stage, volume)
       end if
     else
@@ -4336,8 +4419,6 @@ contains
     ! -- dummy
     class(LakType) :: this
     ! -- local
-    integer(I4B) :: n
-    integer(I4B) :: iconn
     ! -- format
     ! --------------------------------------------------------------------------
     !
@@ -4353,19 +4434,12 @@ contains
     call mem_deallocate(this%denseterms)
     !
     ! -- tables
-    do n = 1, this%nlakes
-      if (this%ntabrow(n) > 0) then
-        call mem_deallocate(this%laketables(n)%tabstage)
-        call mem_deallocate(this%laketables(n)%tabvolume)
-        call mem_deallocate(this%laketables(n)%tabsarea)
-        iconn = this%idxlakeconn(n)
-        if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
-          call mem_deallocate(this%laketables(n)%tabwarea)
-        end if
-      end if
-    end do
     if (this%ntables > 0) then
-      deallocate(this%laketables)
+      call mem_deallocate(this%ialaktab)
+      call mem_deallocate(this%tabstage)
+      call mem_deallocate(this%tabvolume)
+      call mem_deallocate(this%tabsarea)
+      call mem_deallocate(this%tabwarea)
     end if
     !
     ! -- budobj

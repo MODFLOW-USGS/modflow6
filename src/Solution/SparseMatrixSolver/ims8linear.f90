@@ -13,7 +13,7 @@
   IMPLICIT NONE
   private
   
-  TYPE, PUBLIC :: IMSLINEAR_DATA
+  TYPE, PUBLIC :: ImsLinearDataType
     character(len=LENMEMPATH) :: memoryPath                !< the path for storing variables in the memory manager
     integer(I4B), POINTER :: iout => NULL()
     integer(I4B), POINTER :: IPRIMS => NULL()
@@ -91,7 +91,7 @@
       procedure, private :: allocate_scalars
       ! -- PRIVATE PROCEDURES
       PROCEDURE, PRIVATE :: SET_IMSLINEAR_INPUT
-  END TYPE IMSLINEAR_DATA
+  END TYPE ImsLinearDataType
   
   type(BlockParserType), private :: parser
 
@@ -112,7 +112,7 @@
                            deprecation_warning
       !IMPLICIT NONE
 !     + + + DUMMY VARIABLES + + +
-      CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
+      CLASS(ImsLinearDataType), INTENT(INOUT) :: THIS
       CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME
       integer(I4B), INTENT(IN) :: IN
       integer(I4B), INTENT(IN) :: IOUT
@@ -535,7 +535,7 @@
     END SUBROUTINE IMSLINEAR_AR
 
     subroutine imslinear_summary(this, mxiter)
-      class(IMSLINEAR_DATA), intent(inout) :: this
+      class(ImsLinearDataType), intent(inout) :: this
       integer(I4B), intent(in) :: mxiter
 !     + + + LOCAL VARIABLES + + +
       CHARACTER (LEN= 10) :: clin(0:2)
@@ -642,7 +642,7 @@
     
     subroutine allocate_scalars(this)
       use MemoryManagerModule, only: mem_allocate
-      class(IMSLINEAR_DATA), intent(inout) :: this
+      class(ImsLinearDataType), intent(inout) :: this
       !
       ! -- scalars
       call mem_allocate(this%iout, 'IOUT', this%memoryPath)
@@ -700,7 +700,7 @@
     
     subroutine IMSLINEAR_DA(this)
       use MemoryManagerModule, only: mem_deallocate
-      class(IMSLINEAR_DATA), intent(inout) :: this
+      class(ImsLinearDataType), intent(inout) :: this
       !
       ! -- arrays
       call mem_deallocate(this%dscale)
@@ -771,7 +771,7 @@
     SUBROUTINE SET_IMSLINEAR_INPUT(THIS, IFDPARAM)
       IMPLICIT NONE
 !     + + + DUMMY ARGUMENTS + + +
-      CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
+      CLASS(ImsLinearDataType), INTENT(INOUT) :: THIS
       integer(I4B), INTENT(IN) :: IFDPARAM
 !     + + + LOCAL DEFINITIONS + + +
 !     + + + PARAMETERS + + +
@@ -837,7 +837,7 @@
       USE SimModule
       IMPLICIT NONE
 !     + + + DUMMY ARGUMENTS + + +
-      CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
+      CLASS(ImsLinearDataType), INTENT(INOUT) :: THIS
       integer(I4B), INTENT(INOUT)                          :: ICNVG
       integer(I4B), INTENT(IN)                             :: KSTP
       integer(I4B), INTENT(IN)                             :: KITER

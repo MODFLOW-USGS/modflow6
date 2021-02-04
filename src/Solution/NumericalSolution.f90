@@ -119,7 +119,7 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: ptcrat => NULL()
     !
     ! -- linear accelerator storage
-    type(IMSLINEAR_DATA), POINTER                        :: imslinear => NULL()
+    type(ImsLinearDataType), POINTER                        :: imslinear => NULL()
     !
     ! -- sparse object
     type(sparsematrix)                                   :: sparse
