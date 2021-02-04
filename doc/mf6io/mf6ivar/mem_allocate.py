@@ -13,7 +13,7 @@ from fortran_parser import source_dir_to_dict, get_inheritance_dict
 # Set up and check paths
 source_dir = "../../../src"
 markdown_file = os.path.join("md", "mf6memvar.md")
-latex_file = os.path.join("..", "..", "mf6bmi", "memvars.tex")
+latex_file = None
 assert os.path.isdir(source_dir)
 print("Starting...")
 
@@ -188,8 +188,9 @@ fmd = open(markdown_file, "w")
 write_md_header(fmd)
 
 # setup a latex file
-ftex = open(latex_file, "w")
-write_tex_header(ftex)
+if latex_file is not None:
+    ftex = open(latex_file, "w")
+    write_tex_header(ftex)
 
 i = 0
 for root, dirs, files in os.walk(source_dir):
@@ -202,9 +203,11 @@ for root, dirs, files in os.walk(source_dir):
                 print("{} -- {}".format(i, f))
                 i += 1
             write_md(memvar_list, fmd)
-            write_tex(memvar_list, ftex)
+            if latex_file is not None:
+                write_tex(memvar_list, ftex)
 
-write_tex_footer(ftex)
+if latex_file is not None:
+    write_tex_footer(ftex)
 
 ihd = get_inheritance_dict(source_dir)
 print("\ninheritance structure")
