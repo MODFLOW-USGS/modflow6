@@ -1,5 +1,5 @@
 \subsection{Array Input (READARRAY)}
-Some GWF Model packages require arrays of information to be provided by the user.  This information is read using a generic READARRAY capability in \mfdot  Within this user guide, variables that are read with READARRAY are marked accordingly, as shown in example input instructions for a DATA block.  
+Some GWF Model packages require arrays of information to be provided by the user.  This information is read using a generic READARRAY capability in \mf.  Within this user guide, variables that are read with READARRAY are marked accordingly, as shown in example input instructions for a DATA block.  
 
 \begin{lstlisting}[style=blockdefinition]
 BEGIN DATA
@@ -128,7 +128,7 @@ Variables starting with the letters I-N are most commonly integers; however, in 
 
 Free formatting is used throughout the input instructions.  With free format, values are not required to occupy a fixed number of columns in a line. Each value can occupy one or more columns as required to represent the value; however, the values must still be included in the prescribed order. One or more spaces, or a single comma optionally combined with spaces, must separate adjacent values. Also, a numeric value of zero must be explicitly represented with 0 and not by one or more spaces when free format is used, because detecting the difference between a space that represents 0 and a space that represents a value separator is not possible. Free format is similar to Fortran's list directed input.
 
-Two capabilities included in Fortran's list-directed input are not included in the free-format input implemented in \mfdot Null values in which input values are left unchanged from their previous values are not allowed. In general, MODFLOW's input values are not defined prior to their input.  A ``/'' cannot be used to terminate an input line without including values for all the variables; data values for all required input variables must be explicitly specified on an input line.  For character data, MODFLOW's free format implementation is less stringent than the list-directed input of Fortran. Fortran requires character data to be delineated by apostrophes. MODFLOW does not require apostrophes unless a blank or a comma is part of a character variable.
+Two capabilities included in Fortran's list-directed input are not included in the free-format input implemented in \mf. Null values in which input values are left unchanged from their previous values are not allowed. In general, MODFLOW's input values are not defined prior to their input.  A ``/'' cannot be used to terminate an input line without including values for all the variables; data values for all required input variables must be explicitly specified on an input line.  For character data, MODFLOW's free format implementation is less stringent than the list-directed input of Fortran. Fortran requires character data to be delineated by apostrophes. MODFLOW does not require apostrophes unless a blank or a comma is part of a character variable.
 
 As an example of a list, consider the PERIOD block for the GHB Package.  The input format is  shown below:
 
