@@ -14,7 +14,7 @@ module GwtSrcModule
   public :: src_create
   !
   character(len=LENFTYPE) :: ftype = 'SRC'
-  character(len=16)       :: text  = '     MASS SOURCE'
+  character(len=16)       :: text  = '             SRC'
   !
   type, extends(BndType) :: GwtSrcType
   contains

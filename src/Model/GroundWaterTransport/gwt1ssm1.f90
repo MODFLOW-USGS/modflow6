@@ -465,8 +465,8 @@ module GwtSsmModule
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun /= 0) then
       naux = 0
-      call this%dis%record_srcdst_list_header(text, this%name_model,      &
-                  this%name_model, this%name_model, this%packName, naux,           &
+      call this%dis%record_srcdst_list_header(text, this%name_model,           &
+                  this%name_model, this%name_model, this%packName, naux,       &
                   auxname, ibinun, this%nbound, this%iout)
     endif
     !
