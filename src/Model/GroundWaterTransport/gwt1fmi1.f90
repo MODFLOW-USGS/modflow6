@@ -382,7 +382,7 @@ module GwtFmiModule
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
     integer(I4B) :: n, ipos, idiag
-    integer(I4B) :: ip, i
+    integer(I4B) :: ip, i, nbound
     real(DP) :: qbnd
 ! ------------------------------------------------------------------------------
     !
@@ -404,7 +404,8 @@ module GwtFmiModule
       !
       ! -- Add package flow terms
       do ip = 1, this%nflowpack
-        do i = 1, this%gwfpackages(ip)%nbound
+        nbound = this%gwfpackages(ip)%nbound
+        do i = 1, nbound
           n = this%gwfpackages(ip)%nodelist(i)
           if (this%ibound(n) <= 0) cycle
           qbnd = this%gwfpackages(ip)%get_flow(i)
