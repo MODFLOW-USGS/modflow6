@@ -2934,9 +2934,7 @@ contains
       end if
     end if
     !
-    ! -- terminate if the head in the cell is below the top of the cell for
-    !    non-convertible cells or top of the interbed for delay beds or if
-    !    errors encountered when updating material properties
+    ! -- terminate if errors encountered when updating material properties
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
@@ -3193,9 +3191,13 @@ contains
       end if
       final_check: do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
+        node = this%nodelist(ib)
         !
         ! -- skip nodelay interbeds
         if (idelay == 0) cycle
+        !
+        ! -- skip inactive cells
+        if (this%ibound(node) < 1) cycle
         !
         ! -- evaluate the maximum head change in the interbed
         dh = this%dbdhmax(idelay)
@@ -3203,7 +3205,6 @@ contains
         ! -- evaluate difference between storage changes
         !    in the interbed and exchange between the interbed
         !    and the gwf cell
-        node = this%nodelist(ib)
         area = this%dis%get_area(node)
         hcell = hnew(node)
         hcellold = hold(node)
