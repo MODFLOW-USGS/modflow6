@@ -6,7 +6,7 @@ The file formats for the binary files are described in the following sections. T
 
 \newpage
 \subsection{Binary Grid File}
-\mf~writes a binary grid file that can be used for post processing model results.  The file structure was designed to be self-documenting so that it can evolve if necessary.  The file name is assigned automatically by the program by adding ``.grb'' to the end of the discretization input file name.  The structure of the binary grid file depends on the type of discretization package that is used.  The following subsections summarize the binary grid file for the different grid types.  The red text is not written to the binary grid file, but is shown here to explain the file content.
+\mf~writes a binary grid file that can be used for post processing model results.  The file structure was designed to be self-documenting so that it can evolve if necessary.  The file name is assigned automatically by the program by adding ``.grb'' to the end of the discretization input file name.  The structure of the binary grid file depends on the type of discretization package that is used.  The following subsections summarize the binary grid file for the different grid types.  The red text is not written to the binary grid file, but is shown here to explain the file content.  The binary grid file is written for the GWF Model, but is not written for the GWT Model.
 
 \newpage
 \subsubsection{DIS Grids}
@@ -191,7 +191,7 @@ The binary grid file for DISU grids may contain information on the vertices and 
 
 \newpage
 \subsection{Dependent Variable File}
-In the present \mf version, the \texttt{TEXT} value is specified as ``HEAD''.  Cells that have been assigned an IDOMAIN value of zero or less are assigned a head value of $1.0$ x $10^{30}$.  Cells that have converted to dry are assigned a dry value of $-1.0$ x $10^{30}$.  The large negative value allows the results from a previous simulation to be used as starting heads for a subsequent simulation.  Cells assigned a large negative value as an initial condition will start the simulation as dry.  Note that the dry value is not used if the Newton-Raphson Formulation is active.  In this case, a dry cell will have a calculated head value that is below or at the bottom of the cell.
+In the present \mf version, the \texttt{TEXT} value is specified as ``HEAD'' for the GWF Model and ``CONCENTRATION'' for the GWT Model.  Cells that have been assigned an IDOMAIN value of zero or less are assigned a head value of $1.0$ x $10^{30}$.  Cells that have converted to dry are assigned a dry value of $-1.0$ x $10^{30}$.  The large negative value allows the results from a previous simulation to be used as starting heads for a subsequent simulation.  Cells assigned a large negative value as an initial condition will start the simulation as dry.  Note that the dry value is not used if the Newton-Raphson Formulation is active.  In this case, a dry cell will have a calculated head value that is below or at the bottom of the cell.
 
 \subsubsection{DIS Grids}
 For each stress period, time step, and layer for which data are saved to the binary output file, the following two records are written:
@@ -258,9 +258,32 @@ For each stress period, time step, and layer for which data are saved to the bin
 \end{description}
 
 \newpage
-\subsubsection{LAK, MAW, and SFR Packages}
+\subsubsection{Advanced Flow and Transport Packages}
 
 \vspace{5mm}
+The dependent variable can be saved to a binary file for the LAK, SFR, and MAW Packages of the GWF Model and for the LKT, SFT, MWT, and UZT Packages of the GWT Model.  Table~\ref{table:adpdv} shows the text identifier and description of the dependent variable for these packages.
+
+\begin{longtable}{p{3cm} p{3.5 cm} p{5cm}}
+\caption{Dependent variable written for advanced flow and transport packages} 
+\tabularnewline
+\hline
+\textbf{Model/Package} & \textbf{TEXT} & \textbf{Description}  \\
+\hline
+\endhead
+\hline
+\endfoot
+GWF/LAK & STAGE & Simulated lake stage  \\
+GWF/SFR & STAGE & Simulated stream reach stage  \\
+GWF/MAW & HEAD & Simulated well head  \\
+GWT/LKT & CONCENTRATION & Simulated lake concentration  \\
+GWT/SFT & CONCENTRATION & Simulated stream reach concentration  \\
+GWT/MWT & CONCENTRATION & Simulated well concentration  \\
+GWT/UZT & CONCENTRATION & Simulated unsaturated zone cell concentration  \\
+\label{table:adpdv}
+\end{longtable}
+
+
+
 For each stress period, time step, and layer for which data are saved to the binary output file, the following two records are written:
 
 \vspace{5mm}
@@ -282,8 +305,8 @@ For each stress period, time step, and layer for which data are saved to the bin
 
 
 \newpage
-\subsection{Groundwater Flow Model Budget File}
-The budget file for the GWF Model contains intercell flows, flows due to changes in storage, flows from the stress packages and advanced stress packages, and exchange flows with another model.  The intent of budget file is to contain all flow to and from any cell in the model.  Users must activate saving of flow terms in the Output Control Package and in the individual packages.  
+\subsection{Model Budget Files}
+\mf can optionally write a budget file, also referred to as a cell-by-cell flow file.  The budget file is written in a binary format that can be post-processed using other software programs, such as ZONEBUDGET.  The budget file for the \mf models, such as the GWF and GWT Models, contains intercell water and solute flows, flows due to changes in storage, flows from the stress packages and advanced stress packages, and exchange flows with another model.  The intent of budget file is to contain all flow to and from any cell in the model.  Users must activate saving of flow terms in the Output Control Package and in the individual packages.  
 
 The format for the budget file is different from the formats for previous MODFLOW versions.  Specifically, intercell flows are written in a different manner using a compressed sparse row storage scheme.  The record structure for the stress packages is also different and uses a method code 6, to distinguish it from the five method codes available in previous MODFLOW versions.  The new code 6 indicates that additional text identifiers are present, that auxiliary variables may be present, and that two identifying integer numbers are contained in the list (one for the node number of the GWF Model cell, and the other for an identifier to where the flow is from).  
 
@@ -337,8 +360,30 @@ Record 10: \texttt{((ID1(N),ID2(N),(DATA2D(I,N),I=1,NDAT)),N=1,NLIST)}\\
 \item \texttt{DATA2D} is a double precision 2D array of size (NDAT,NLIST).  The first column in DATA2D is the budget term; any remaining columns are auxiliary variable values.
 \end{description}
 
+\subsubsection{Intercell Flows}
+
+\mf writes a special budget record for flow between connected cells. This record has a TEXT identifier equal to FLOW-JA-FACE. For this record (corresponding to Record 3 for IMETH=1), the total number of values is equal to NJA, which is the total number of connections.  For each cell, the number of connections is equal to the number of connections to adjacent cells plus one, to represent the cell itself. Therefore, this budget record corresponds to the JA array. A value of zero is written to the node positions in the FLOW-JA-FACE record.  The JA array that is written in the binary grid corresponds directly to the FLOW-JA-FACE record.
+
+For regular MODFLOW grids, there are no longer records for FLOW RIGHT FACE, FLOW FRONT FACE,  and FLOW LOWER FACE.  Instead, intercell flows are written to the FLOW-JA-FACE record.  Writing FLOW-JA-FACE allows face flows to be specified in straightforward manner, particularly when the IDOMAIN capability is used to remove cells and specify vertical pass-through cells.  
+
+The following pseudocode shows how to loop through and process intercell flows using the IA and JA arrays (which can be read from the binary grid file) and the FLOWJA array, which is written to the budget file.  For a cell (N) that has been eliminated with IDOMAIN, the value for IA(N) and IA(N+1) will be equal, indicating that there are no connections or flows for that cell.
+
+\begin{verbatim}
+DO N = 1, NCELLS
+  PRINT *, 'THIS IS CELL: ', N
+  NCON = IA(N+1) - IA(N) - 1
+  IF(NCON<0) NCON=0
+  PRINT*, 'NUMBER OF CONNECTED CELLS IS ', NCON
+  DO IPOS = IA(N) + 1, IA(N + 1) - 1
+    M = JA(IPOS)
+    Q = FLOWJA(IPOS)
+    PRINT *,'  N M Q: ', N,M,Q
+  ENDDO
+ENDDO
+\end{verbatim}
+ 
 \subsubsection{Variations for Discretization Types}
-The format for the GWF Model budget file is the same no matter what discretization package is used; however, the variables may have different meanings depending on the grid type and the TEXT identifier.  If the TEXT identifier in Record 1 is FLOW-JA-FACE and IMETH is 1, then the DATA array contains intercell flows and is of size NJA.  If the TEXT identifier in Record 1 is something other than FLOW-JA-FACE (STO-SS or STO-SY, for example), then the dimension variables in Record 1 (NDIM1, NDIM2, and NDIM3) provide information about the size of the grid (table \ref{table:ndim}).  
+The format for the GWF and GWT Model budget files is the same no matter what discretization package is used; however, the variables may have different meanings depending on the grid type and the TEXT identifier.  If the TEXT identifier in Record 1 is FLOW-JA-FACE and IMETH is 1, then the DATA array contains intercell flows and is of size NJA.  If the TEXT identifier in Record 1 is something other than FLOW-JA-FACE (STO-SS or STO-SY, for example), then the dimension variables in Record 1 (NDIM1, NDIM2, and NDIM3) provide information about the size of the grid (table \ref{table:ndim}).  
 
 \begin{longtable}{p{3cm} p{3cm} p{3cm} p{3cm}}
 \caption{Budget file variations that depend on discretization package type} 
@@ -356,9 +401,10 @@ FLOW-JA-FACE, IMETH=1 & NJA & 1 & 1 \\
 \label{table:ndim}
 \end{longtable}
 
-\subsubsection{Budget File Contents}
+\newpage
+\subsubsection{Budget File Contents for the GWF Model}
 
-The type of information that is written to the budget file for a GWF Model depends on the packages used for the model and whether or not the save flags are set.  Table \ref{table:gwfbud} contains a list of the types of information that may be contained in a GWF Model budget file.  In all cases, the flows in table \ref{table:gwfbud} are flows to or a from a GWF Model cell.  As described in the next section, intercell flows are written as FLOW-JA-FACE using IMETH=1.  If the model has an active Storage Package, then STORAGE-SS and STORAGE-SY are written to the budget file using IMETH=1. If the model has an active Skeletal Storage, Compaction, and Subsidence Package, then CSUB-CGELASTIC and CSUB-WATERCOMP are written to the budget file using IMETH=1.
+The type of information that is written to the budget file for a GWF Model depends on the packages used for the model and whether or not the save flags are set.  Table \ref{table:gwfbud} contains a list of the types of information that may be contained in a GWF Model budget file.  In all cases, the flows in table \ref{table:gwfbud} are flows to or a from a GWF Model cell.  As described previously, intercell flows are written as FLOW-JA-FACE using IMETH=1.  If the model has an active Storage Package, then STORAGE-SS and STORAGE-SY are written to the budget file using IMETH=1. If the model has an active Skeletal Storage, Compaction, and Subsidence Package, then CSUB-CGELASTIC and CSUB-WATERCOMP are written to the budget file using IMETH=1.
 
 The remaining flow terms in table \ref{table:gwfbud} are all written using IMETH=6.  When IMETH=6 is used, the records contain additional text descriptors and two identifying numbers.  For all records in the GWF Model budget file, TXT1ID1 is the name of the GWF Model and TXT2ID1 is also the name of the GWF Model.  These text identifiers describe what is contained in ID1.  For the GWF Model budget file, ID1 is the cell or node number in the GWF Model grid.  The second set of text identifiers refer to the information in ID2.  Unless noted otherwise in the description in table \ref{table:gwfbud}, TXT1ID2 is the name of the GWF Model, TXT2ID2 is the name of the package, and ID2 is the bound number in the package; for example, this is the first constant head cell, second constant head cell, and so forth.  
 
@@ -402,30 +448,8 @@ The remaining flow terms in table \ref{table:gwfbud} are all written using IMETH
 \label{table:gwfbud}
 \end{longtable}
 
-\subsubsection{Intercell Flows}
-
-\mf writes a special budget record for flow between connected cells. This record has a TEXT identifier equal to FLOW-JA-FACE. For this record, the total number of values is equal to NJA, which is the total number of connections.  For each cell, the number of connections is equal to the number of connections to adjacent cells plus one, to represent the cell itself. Therefore, this budget record corresponds to the JA array. A value of zero is written to the node positions in the FLOW-JA-FACE record.  The JA array that is written in the binary grid corresponds directly to the FLOW-JA-FACE record.
-
-For regular MODFLOW grids, there are no longer records for FLOW RIGHT FACE, FLOW FRONT FACE,  and FLOW LOWER FACE.  Instead, intercell flows are written to the FLOW-JA-FACE record.  Writing FLOW-JA-FACE allows face flows to be specified in straightforward manner, particularly when the IDOMAIN capability is used to remove cells and specify vertical pass-through cells.  
-
-The following pseudocode shows how to loop through and process intercell flows using the IA and JA arrays (which can be read from the binary grid file) and the FLOWJA array, which is written to the budget file.  For a cell (N) that has been eliminated with IDOMAIN, the value for IA(N) and IA(N+1) will be equal, indicating that there are no connections or flows for that cell.
-
-\begin{verbatim}
-DO N = 1, NCELLS
-  PRINT *, 'THIS IS CELL: ', N
-  NCON = IA(N+1) - IA(N) - 1
-  IF(NCON<0) NCON=0
-  PRINT*, 'NUMBER OF CONNECTED CELLS IS ', NCON
-  DO IPOS = IA(N) + 1, IA(N + 1) - 1
-    M = JA(IPOS)
-    Q = FLOWJA(IPOS)
-    PRINT *,'  N M Q: ', N,M,Q
-  ENDDO
-ENDDO
-\end{verbatim}
- 
 \newpage
-\subsubsection{CSUB Package}
+\subsubsection{GWF Model CSUB Package}
 
 \vspace{5mm}
 For each stress period, time step, and compaction data type that is saved to the CSUB Package binary output files as \texttt{IMETH=1} budget file type. The compaction data that are written to the CSUB Package binary files are summarized in Tables~\ref{table:binarycsub}.
@@ -448,11 +472,10 @@ For each stress period, time step, and compaction data type that is saved to the
 	\label{table:binarycsub}
 \end{longtable}
 
-\subsubsection{LAK, MAW, SFR, and UZF Packages}
+\subsubsection{GWF Model LAK, MAW, SFR, and UZF Packages}
 
 \vspace{5mm}
-For each stress period, time step, and data type that is saved to the LAK, MAW, SFR, and UZF Packages binary output files as \texttt{IMETH=6} budget file type. For all advanced packages, \texttt{NDIM1} is equal to the number of nodes, \texttt{NDIM2} is equal to 1, and \texttt{NDIM3} is equal to -1. The data that are written to the LAK, MAW, SFR, and UZF Package binary files are summarized in Tables~\ref{table:binarylak}
- to~\ref{table:binaryuzf}, respectively.
+For each stress period, time step, and data type that is saved to the LAK, MAW, SFR, and UZF Packages binary output files as \texttt{IMETH=6} budget file type. For all advanced packages, \texttt{NDIM1} is equal to the number of nodes, \texttt{NDIM2} is equal to 1, and \texttt{NDIM3} is equal to -1. The data that are written to the LAK, MAW, SFR, and UZF Package binary files are summarized in Tables~\ref{table:binarylak} to~\ref{table:binaryuzf}, respectively.
 
 
 % lake package binary budget output
@@ -586,6 +609,45 @@ For each stress period, time step, and data type that is saved to the LAK, MAW, 
 \texttt{AUXILIARY} & 6 & \texttt{naux}+1 / \texttt{maxbound} & Auxiliary variables, if specified in the UZF Package, are saved to this flow term. The first entry of the \texttt{DATA2D} column has a value of zero.  The UZF cell number is written to (\texttt{ID1}) and (\texttt{ID2}). 
 \label{table:binaryuzf}
 \end{longtable}
+
+
+\newpage
+\subsubsection{Budget File Contents for the GWT Model}
+
+The type of information that is written to the budget file for a GWT Model depends on the packages used for the model and whether or not the save flags are set.  Table \ref{table:gwtbud} contains a list of the types of information that may be contained in a GWT Model budget file.  In all cases, the flows in table \ref{table:gwtbud} are solute flows to or a from a GWT Model cell.  Intercell flows are written as FLOW-JA-FACE using IMETH=1.
+
+The remaining flow terms in table \ref{table:gwtbud} are all written using IMETH=6.  When IMETH=6 is used, the records contain additional text descriptors and two identifying numbers.  For all records in the GWT Model budget file, TXT1ID1 is the name of the GWT Model and TXT2ID1 is also the name of the GWT Model.  These text identifiers describe what is contained in ID1.  For the GWT Model budget file, ID1 is the cell or node number in the GWT Model grid.  The second set of text identifiers refer to the information in ID2.  Unless noted otherwise in the description in table \ref{table:gwtbud}, TXT1ID2 is the name of the GWT Model, TXT2ID2 is the name of the package, and ID2 is the bound number in the package; for example, this is the first constant concentration cell, second constant concentration cell, and so forth.  
+
+\begin{longtable}{p{3.5cm} p{2cm} p{9cm}}
+\caption{Types of information that may be contained in the GWT Model budget file.  All terms represent solute flows in dimensions of mass per time} 
+\tabularnewline
+\hline
+\textbf{Flow Type (TEXT)} & \textbf{Method Code (IMETH)} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\endfoot
+\texttt{FLOW-JA-FACE} & 1 & intercell solute flow due to advection and dispersion; array of size(NJA) \\
+\texttt{STORAGE-AQUEOUS} & 1 & solute aqueous storage; array of size (NCELLS) \\
+\texttt{DECAY-AQUEOUS} & 1 & solute aqueous decay; array of size (NCELLS) \\
+\texttt{STORAGE-SORBED} & 1 & solute sorbed storage; array of size (NCELLS) \\
+\texttt{DECAY-SORBED} & 1 & solute sorbed decay; array of size (NCELLS) \\
+\texttt{SOURCE-SINK MIX} & 6 & mass flow from SSM sources and sinks \\
+\texttt{CNC} & 6 & mass flow for constant-concentration cells \\
+\texttt{SRC} & 6 & mass flow for specified mass source cells \\
+\texttt{LKT} & 6 & mass flow between lake and aquifer \\
+\texttt{SFT} & 6 & mass flow between stream and aquifer \\
+\texttt{MWT} & 6 & mass flow between multi-aquifer well and aquifer \\
+\texttt{UZT} & 6 & mass flow between unsaturated zone cell and aquifer \\
+\texttt{IST} & 6 & mass flow between mobile and immobile domain \\
+\texttt{FLOW-JA-FACE} & 6 & flow to or from a cell in another GWT Model (note that this is not implemented yet for the GWT Model); TXT1ID1 is the name of the GWT Model described by this budget file, TXT2ID1 is the name of the GWF-GWF Exchange, TXT1ID2 is the name of the connected GWT Model, TXT2ID2 is the name of the GWT-GWT Exchange, and ID2 is the cell or node number of the cell in the connected model \\
+\label{table:gwtbud}
+\end{longtable}
+
+\subsubsection{GWT Model LKT, MWT, SFT, and UZT Packages}
+
+\vspace{5mm}
+For each stress period, time step, and data type that is saved to theLKT, MWT, SFT, and UZT Packages binary output files as \texttt{IMETH=6} budget file type. For all advanced transport packages, \texttt{NDIM1} is equal to the number of nodes, \texttt{NDIM2} is equal to 1, and \texttt{NDIM3} is equal to -1. The data that are written to the LKT, MWT, SFT, and UZT Package binary files are mass flows with entries similar to those listed in Tables~\ref{table:binarylak} to~\ref{table:binaryuzf} for the advanced flow packages.
 
 
 \newpage

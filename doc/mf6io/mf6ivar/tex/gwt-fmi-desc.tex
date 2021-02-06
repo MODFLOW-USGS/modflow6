@@ -3,7 +3,7 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{FLOW\_IMBALANCE\_CORRECTION}---correct for an imbalance in flows by assuming that any residual flow error comes in or leaves at the concentration of the cell.
+\item \texttt{FLOW\_IMBALANCE\_CORRECTION}---correct for an imbalance in flows by assuming that any residual flow error comes in or leaves at the concentration of the cell.  When this option is activated, the GWT Model budget written to the listing file will contain two additional entries: FLOW-ERROR and FLOW-CORRECTION.  These two entries will be equal but opposite in sign.  The FLOW-CORRECTION term is a mass flow that is added to offset the error caused by an imprecise flow balance.  If these terms are not relatively small, the flow model should be rerun with stricter convergence tolerances.
 
 \end{description}
 \item \textbf{Block: PACKAGEDATA}

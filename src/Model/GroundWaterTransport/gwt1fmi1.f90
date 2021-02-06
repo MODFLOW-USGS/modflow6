@@ -1,7 +1,7 @@
 module GwtFmiModule
   
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH
+  use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT
   use SimModule,              only: store_error, store_error_unit, ustop
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
@@ -15,6 +15,10 @@ module GwtFmiModule
   private
   public :: GwtFmiType
   public :: fmi_cr
+
+  integer(I4B), parameter :: NBDITEMS = 2
+  character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
+  data budtxt / '      FLOW-ERROR', ' FLOW-CORRECTION'  /
   
   type :: DataAdvancedPackageType
     real(DP), dimension(:), contiguous, pointer :: concpack => null()
@@ -27,33 +31,33 @@ module GwtFmiModule
   
   type, extends(NumericalPackageType) :: GwtFmiType
     
-    logical, pointer                                :: flows_from_file => null() ! if .false., then flows come from GWF through GWF-GWT exg
-    integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfpackages
-    type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
-    integer(I4B), pointer                           :: iflowsupdated => null()  ! flows were updated for this time step
-    integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
-    real(DP), dimension(:), pointer, contiguous     :: flowerr => null()        ! residual error of the flow solution
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()         ! pointer to GWT ibound
-    real(DP), dimension(:), pointer, contiguous     :: gwfflowja => null()      ! pointer to the GWF flowja array
-    real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis  => null()      ! pointer to npf specific discharge array
-    real(DP), dimension(:), pointer, contiguous     :: gwfhead   => null()      ! pointer to the GWF head array
-    real(DP), dimension(:), pointer, contiguous     :: gwfsat    => null()      ! pointer to the GWF saturation array
-    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null()     ! mark cells with saturation = 0 to exclude from dispersion
-    real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()      ! pointer to flow model QSTOSS
-    real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()      ! pointer to flow model QSTOSY
-    integer(I4B), pointer                           :: igwfstrgss => null()     ! indicates if gwfstrgss is available
-    integer(I4B), pointer                           :: igwfstrgsy => null()     ! indicates if gwfstrgsy is available
-    integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
-    integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
-    integer(I4B), pointer                           :: iumvr => null()          ! unit number GWF mover budget file
-    integer(I4B), pointer                           :: nflowpack => null()      ! number of GWF flow packages
-    type(BudgetFileReaderType)                      :: bfr                      ! budget file reader
-    type(HeadFileReaderType)                        :: hfr                      ! head file reader
-    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages           ! used to get flows between a package and gwf
-    type(BudgetObjectType), pointer                 :: mvrbudobj    => null()   ! pointer to the mover budget budget object
+    logical, pointer                                :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-GWT exg
+    integer(I4B), dimension(:), pointer, contiguous :: iatp => null()            !< advanced transport package applied to gwfpackages
+    type(ListType), pointer                         :: gwfbndlist => null()      !< list of gwf stress packages
+    integer(I4B), pointer                           :: iflowsupdated => null()   !< flows were updated for this time step
+    integer(I4B), pointer                           :: iflowerr => null()        !< add the flow error correction
+    real(DP), dimension(:), pointer, contiguous     :: flowerr => null()         !< residual error of the flow solution
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< pointer to GWT ibound
+    real(DP), dimension(:), pointer, contiguous     :: gwfflowja => null()       !< pointer to the GWF flowja array
+    real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis  => null()       !< pointer to npf specific discharge array
+    real(DP), dimension(:), pointer, contiguous     :: gwfhead   => null()       !< pointer to the GWF head array
+    real(DP), dimension(:), pointer, contiguous     :: gwfsat    => null()       !< pointer to the GWF saturation array
+    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null()      !< mark cells with saturation = 0 to exclude from dispersion
+    real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()       !< pointer to flow model QSTOSS
+    real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()       !< pointer to flow model QSTOSY
+    integer(I4B), pointer                           :: igwfstrgss => null()      !< indicates if gwfstrgss is available
+    integer(I4B), pointer                           :: igwfstrgsy => null()      !< indicates if gwfstrgsy is available
+    integer(I4B), pointer                           :: iubud => null()           !< unit number GWF budget file
+    integer(I4B), pointer                           :: iuhds => null()           !< unit number GWF head file
+    integer(I4B), pointer                           :: iumvr => null()           !< unit number GWF mover budget file
+    integer(I4B), pointer                           :: nflowpack => null()       !< number of GWF flow packages
+    type(BudgetFileReaderType)                      :: bfr                       !< budget file reader
+    type(HeadFileReaderType)                        :: hfr                       !< head file reader
+    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages            !< used to get flows between a package and gwf
+    type(BudgetObjectType), pointer                 :: mvrbudobj    => null()    !< pointer to the mover budget budget object
     type(DataAdvancedPackageType), dimension(:), pointer, contiguous :: datp => null()
-    character(len=16), dimension(:), allocatable    :: flowpacknamearray        ! array of boundary package names (e.g. LAK-1, SFR-3, etc.)
-    type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj              ! flow budget objects for the advanced packages
+    character(len=16), dimension(:), allocatable    :: flowpacknamearray         !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
+    type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj                 !< flow budget objects for the advanced packages
   contains
   
     procedure :: fmi_df
@@ -378,7 +382,7 @@ module GwtFmiModule
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
     integer(I4B) :: n, ipos, idiag
-    integer(I4B) :: ip, i
+    integer(I4B) :: ip, i, nbound
     real(DP) :: qbnd
 ! ------------------------------------------------------------------------------
     !
@@ -400,7 +404,8 @@ module GwtFmiModule
       !
       ! -- Add package flow terms
       do ip = 1, this%nflowpack
-        do i = 1, this%gwfpackages(ip)%nbound
+        nbound = this%gwfpackages(ip)%nbound
+        do i = 1, nbound
           n = this%gwfpackages(ip)%nodelist(i)
           if (this%ibound(n) <= 0) cycle
           qbnd = this%gwfpackages(ip)%get_flow(i)
@@ -459,8 +464,12 @@ module GwtFmiModule
         endif
       enddo
       !
-      ! -- Add contributions to model budget
-      call model_budget%addentry(rin, rout, delt, ' FLOW-CORRECTION',          &
+      ! -- Add the flow error term to model budget
+      call model_budget%addentry(rout, rin, delt, budtxt(1),                   &
+                                 isuppress_output, rowlabel=this%packName)
+      !
+      ! -- Add the flow correction term to model budget
+      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
                                  isuppress_output, rowlabel=this%packName)
     end if
     !

@@ -597,6 +597,7 @@ contains
     !
     ! -- increment maxbound
     this%maxbound = this%maxbound + this%nodes
+    this%nbound = this%maxbound
     !
     ! -- verify dimensions were set
     if (this%nodes <= 0) then

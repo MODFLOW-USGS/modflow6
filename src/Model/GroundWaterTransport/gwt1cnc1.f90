@@ -15,7 +15,7 @@ module GwtCncModule
   public :: cnc_create
   !
   character(len=LENFTYPE)       :: ftype = 'CNC'
-  character(len=LENPACKAGENAME) :: text  = '   CONSTANT CONC'
+  character(len=LENPACKAGENAME) :: text  = '             CNC'
   !
   type, extends(BndType) :: GwtCncType
     contains
