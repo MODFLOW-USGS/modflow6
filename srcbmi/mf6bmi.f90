@@ -343,7 +343,8 @@ module mf6bmi
     real(DP), pointer :: src_ptr, tgt_ptr
     real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
     real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
-    integer(I4B) :: i, j
+    real(DP), dimension(:,:,:), pointer, contiguous :: src3D_ptr, tgt3D_ptr
+    integer(I4B) :: i, j, k
 
     bmi_status = BMI_FAILURE
 
@@ -370,6 +371,16 @@ module mf6bmi
       do j = 1, size(tgt2D_ptr,2)
         do i = 1, size(tgt2D_ptr,1)
           tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else if (rank == 3) then
+      call mem_setptr(src3D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt3D_ptr, shape(src3D_ptr))
+      do k = 1, size(tgt3D_ptr,3)
+        do j = 1, size(tgt3D_ptr,2)
+          do i = 1, size(tgt3D_ptr,1)
+            tgt3D_ptr(i,j,k) = src3D_ptr(i,j,k)
+          end do
         end do
       end do
     else
@@ -403,7 +414,8 @@ module mf6bmi
     integer(I4B), pointer :: src_ptr, tgt_ptr
     integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
     integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
-    integer(I4B) :: i, j
+    integer(I4B), dimension(:,:,:), pointer, contiguous :: src3D_ptr, tgt3D_ptr
+    integer(I4B) :: i, j, k
 
     bmi_status = BMI_FAILURE
 
@@ -430,6 +442,16 @@ module mf6bmi
       do j = 1, size(tgt2D_ptr,2)
         do i = 1, size(tgt2D_ptr,1)
           tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else if (rank == 3) then
+      call mem_setptr(src3D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt3D_ptr, shape(src3D_ptr))
+      do k = 1, size(tgt3D_ptr,3)
+        do j = 1, size(tgt3D_ptr,2)
+          do i = 1, size(tgt3D_ptr,1)
+            tgt3D_ptr(i,j,k) = src3D_ptr(i,j,k)
+          end do
         end do
       end do
     else
@@ -461,6 +483,7 @@ module mf6bmi
     real(DP), pointer :: scalar_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:,:), pointer, contiguous :: array2D_ptr
+    real(DP), dimension(:,:,:), pointer, contiguous :: array3D_ptr
     integer(I4B) :: rank    
     
     bmi_status = BMI_FAILURE
@@ -478,6 +501,9 @@ module mf6bmi
     else if (rank == 2) then
       call mem_setptr(array2D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
+    else if (rank == 3) then
+      call mem_setptr(array3D_ptr, var_name, mem_path)
+      c_arr_ptr = c_loc(array3D_ptr)
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
       return
@@ -508,6 +534,7 @@ module mf6bmi
     integer(I4B), pointer :: scalar_ptr
     integer(I4B), dimension(:), pointer, contiguous :: array_ptr
     integer(I4B), dimension(:,:), pointer, contiguous :: array2D_ptr
+    integer(I4B), dimension(:,:,:), pointer, contiguous :: array3D_ptr
     
     bmi_status = BMI_FAILURE
 
@@ -523,8 +550,11 @@ module mf6bmi
       call mem_setptr(array_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array_ptr)
     else if (rank == 2) then
-      call mem_setptr(array_ptr, var_name, mem_path)
+      call mem_setptr(array2D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
+    else if (rank == 3) then
+      call mem_setptr(array3D_ptr, var_name, mem_path)
+      c_arr_ptr = c_loc(array3D_ptr)
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
       return
