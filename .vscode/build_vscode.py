@@ -12,7 +12,7 @@ if sys.platform.lower() == "win32":
 
 def build_mf6(mode, onlytouched):
     
-    target = '../bin/mf6'
+    target = os.path.join('..', 'bin', 'mf6')
     fc = 'gfortran'
     cc = 'gcc'
     srcdir = os.path.join('..', 'src')
