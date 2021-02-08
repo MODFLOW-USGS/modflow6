@@ -38,20 +38,40 @@ contains
   !! Splits the full address string into a memory path and variable name,
   !! following the rules used by the memory manager.
   !<
-  subroutine split_address(c_var_address, mem_path, var_name)
+  subroutine split_address(c_var_address, mem_path, var_name, found)
     use MemoryHelperModule, only: memPathSeparator
     character (kind=c_char), intent(in) :: c_var_address(*) !< full address of a variable
     character(len=LENMEMPATH), intent(out) :: mem_path      !< memory path used by the memory manager
     character(len=LENVARNAME), intent(out) :: var_name      !< name of the variable
+    logical(LGP), intent(out)              :: found         !< true when found
     ! local
-    character(len=LENMEMPATH) :: var_address   
+    character(len=LENMEMPATH) :: var_address 
 
     ! convert to fortran string
     var_address = char_array_to_string(c_var_address, strlen(c_var_address)) 
-
     call split_mem_address(var_address, mem_path, var_name)
+    call check_mem_address(mem_path, var_name, found)
 
   end subroutine split_address
+
+  !> @brief Check if the variable exists in the memory manager
+  !<
+  subroutine check_mem_address(mem_path, var_name, found)
+  use MemoryManagerModule, only: get_from_memorylist
+  use MemoryTypeModule, only: MemoryType
+    character(len=LENMEMPATH), intent(out) :: mem_path      !< memory path used by the memory manager
+    character(len=LENVARNAME), intent(out) :: var_name      !< name of the variable
+    logical(LGP), intent(out)              :: found         !< true when found
+    ! local
+    type(MemoryType), pointer :: mt
+
+    found = .false.
+    mt => null()
+
+    ! check = false: otherwise stop is called when the variable does not exist
+    call get_from_memorylist(var_name, mem_path, mt, found, check=.false.)
+
+  end subroutine check_mem_address
 
   !> @brief Returns the string length without the trailing null character
   !<
