@@ -5,10 +5,18 @@
     "tasks": [
         {
             "label": "Build MF6 (Release)",
-            "type": "shell",
-            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "args": [
+                    "${workspaceFolder}\\.vscode\\build_vscode.py",
+                    "-exe",
+                    "-release",
+                    "-only"
+                ],    
+              },
             "args": [
-                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "${workspaceFolder}/.vscode/build_vscode.py",
                 "-exe",
                 "-release",
                 "-only"
@@ -22,9 +30,18 @@
         {
             "label": "Rebuild MF6 (Release)",
             "type": "shell",
-            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "args": [
+                    "${workspaceFolder}\\.vscode\\build_vscode.py",
+                    "-exe",
+                    "-release",
+                    "-all"
+                ],    
+              },
             "args": [
-                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "${workspaceFolder}/.vscode/build_vscode.py",
                 "-exe",
                 "-release",
                 "-all"
@@ -41,9 +58,18 @@
         {
             "label": "Build MF6 (Debug)",
             "type": "shell",
-            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "args": [
+                    "${workspaceFolder}\\.vscode\\build_vscode.py",
+                    "-exe",
+                    "-debug",
+                    "-only"
+                ],    
+              },
             "args": [
-                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "${workspaceFolder}/.vscode/build_vscode.py",
                 "-exe",
                 "-debug",
                 "-only"
@@ -60,14 +86,23 @@
         {
           "label": "Rebuild MF6 (Debug)",
           "type": "shell",
-          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "command": "${workspaceFolder}/.vscode/run_python.sh",
+          "windows": {
+              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+              "args": [
+                  "${workspaceFolder}\\.vscode\\build_vscode.py",
+                  "-exe",
+                  "-debug",
+                  "-all"
+              ],    
+            },
           "args": [
-              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "${workspaceFolder}/.vscode/build_vscode.py",
               "-exe",
               "-debug",
               "-all"
           ],
-          "group": {
+        "group": {
               "kind": "build",
               "isDefault": true
           },
@@ -79,9 +114,18 @@
         {
             "label": "Build MF6 dll (Release)",
             "type": "shell",
-            "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "args": [
+                    "${workspaceFolder}\\.vscode\\build_vscode.py",
+                    "-dll",
+                    "-release",
+                    "-only"
+                ],    
+              },
             "args": [
-                "${workspaceFolder}\\.vscode\\build_vscode.py",
+                "${workspaceFolder}/.vscode/build_vscode.py",
                 "-dll",
                 "-release",
                 "-only"
@@ -95,14 +139,23 @@
         {
           "label": "Rebuild MF6 dll (Release)",
           "type": "shell",
-          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "command": "${workspaceFolder}/.vscode/run_python.sh",
+          "windows": {
+              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+              "args": [
+                  "${workspaceFolder}\\.vscode\\build_vscode.py",
+                  "-dll",
+                  "-release",
+                  "-all"
+              ],    
+            },
           "args": [
-              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "${workspaceFolder}/.vscode/build_vscode.py",
               "-dll",
               "-release",
               "-all"
           ],
-          "group": "build",
+        "group": "build",
           "presentation": {
               "reveal": "silent"
           },
@@ -111,14 +164,23 @@
         {
           "label": "Build MF6 dll (Debug)",
           "type": "shell",
-          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "command": "${workspaceFolder}/.vscode/run_python.sh",
+          "windows": {
+              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+              "args": [
+                  "${workspaceFolder}\\.vscode\\build_vscode.py",
+                  "-dll",
+                  "-debug",
+                  "-only"
+              ],    
+            },
           "args": [
-              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "${workspaceFolder}/.vscode/build_vscode.py",
               "-dll",
               "-debug",
               "-only"
           ],
-          "group": "build",
+        "group": "build",
           "presentation": {
               "reveal": "silent"
           },
@@ -127,9 +189,18 @@
         {
           "label": "Rebuild MF6 dll (Debug)",
           "type": "shell",
-          "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+          "command": "${workspaceFolder}/.vscode/run_python.sh",
+          "windows": {
+              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+              "args": [
+                  "${workspaceFolder}\\.vscode\\build_vscode.py",
+                  "-dll",
+                  "-debug",
+                  "-all"
+              ],    
+            },
           "args": [
-              "${workspaceFolder}\\.vscode\\build_vscode.py",
+              "${workspaceFolder}/.vscode/build_vscode.py",
               "-dll",
               "-debug",
               "-all"
