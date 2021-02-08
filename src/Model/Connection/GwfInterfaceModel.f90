@@ -37,6 +37,7 @@ contains
     class(GwfInterfaceModelType), intent(inout) :: this
     character(len=*), intent(in)  :: name
     
+    ! TODO_MJR: name should be different from connection...    
     this%memoryPath = create_mem_path(name)    
     call this%allocate_scalars(name)
     this%name = name
@@ -245,7 +246,7 @@ contains
       if (npf%ik33 > 0) npf%k33(icell) = gwfModel%npf%k33(idx)
 
       ! rewetting
-      npf%wetdry(icell) = gwfModel%npf%wetdry(idx)
+      if (npf%iwetdry > 0) npf%wetdry(icell) = gwfModel%npf%wetdry(idx)
       
       ! angles, zero when not present in one of the models
       if (npf%iangle1 > 0) then
