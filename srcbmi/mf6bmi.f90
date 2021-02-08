@@ -181,9 +181,6 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: get_input_item_count
     integer(kind=c_int), intent(out) :: count !< the number of input variables
     integer(kind=c_int) :: bmi_status         !< BMI status code
-    ! local
-    integer(I4B) :: ipos
-    type(MemoryType), pointer :: mt => null()
 
     count = memorylist%count()
 
@@ -199,9 +196,6 @@ module mf6bmi
     !DEC$ ATTRIBUTES DLLEXPORT :: get_output_item_count
       integer(kind=c_int), intent(out) :: count !< the number of output variables
       integer(kind=c_int) :: bmi_status         !< BMI status code
-      ! local
-      integer(I4B) :: ipos
-      type(MemoryType), pointer :: mt => null()
   
       count = memorylist%count()
   
@@ -287,12 +281,19 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! local
     character(len=LENMEMPATH) :: mem_path
-    character(len=LENVARNAME) :: var_name_only
-        
-    call split_address(c_var_address, mem_path, var_name_only)
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: found
     
     bmi_status = BMI_SUCCESS
-    call get_mem_elem_size(var_name_only, mem_path, var_size)
+
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    call get_mem_elem_size(var_name, mem_path, var_size)
     if (var_size == -1) bmi_status = BMI_FAILURE
         
   end function get_var_itemsize
@@ -308,10 +309,17 @@ module mf6bmi
     integer(I4B) :: var_size, isize
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-        
-    call split_address(c_var_address, mem_path, var_name)
+    logical(LGP) :: found
     
     bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE  
+      return
+    end if
+
     call get_mem_elem_size(var_name, mem_path, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
     call get_isize(var_name, mem_path, isize)
@@ -337,17 +345,22 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    integer(I4B) :: access_type
     logical(LGP) :: found
     integer(I4B) :: rank
     real(DP), pointer :: src_ptr, tgt_ptr
     real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
     real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
-    integer(I4B) :: i, j
+    real(DP), dimension(:,:,:), pointer, contiguous :: src3D_ptr, tgt3D_ptr
+    integer(I4B) :: i, j, k
 
-    bmi_status = BMI_FAILURE
+    bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name)
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
 
     ! convert pointer and copy data from memory manager into 
     ! the passed array, using loops to avoid stack overflow
@@ -372,12 +385,21 @@ module mf6bmi
           tgt2D_ptr(i,j) = src2D_ptr(i,j)
         end do
       end do
+    else if (rank == 3) then
+      call mem_setptr(src3D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt3D_ptr, shape(src3D_ptr))
+      do k = 1, size(tgt3D_ptr,3)
+        do j = 1, size(tgt3D_ptr,2)
+          do i = 1, size(tgt3D_ptr,1)
+            tgt3D_ptr(i,j,k) = src3D_ptr(i,j,k)
+          end do
+        end do
+      end do
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
       return
     end if
-
-    bmi_status = BMI_SUCCESS
 
   end function get_value_double
 
@@ -397,17 +419,22 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    integer(I4B) :: access_type
     logical(LGP) :: found
     integer(I4B) :: rank
     integer(I4B), pointer :: src_ptr, tgt_ptr
     integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
     integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
-    integer(I4B) :: i, j
+    integer(I4B), dimension(:,:,:), pointer, contiguous :: src3D_ptr, tgt3D_ptr
+    integer(I4B) :: i, j, k
 
-    bmi_status = BMI_FAILURE
+    bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name)
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
 
     ! convert pointer and copy data from memory manager into 
     ! the passed array, using loops to avoid stack overflow
@@ -432,12 +459,21 @@ module mf6bmi
           tgt2D_ptr(i,j) = src2D_ptr(i,j)
         end do
       end do
+    else if (rank == 3) then
+      call mem_setptr(src3D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt3D_ptr, shape(src3D_ptr))
+      do k = 1, size(tgt3D_ptr,3)
+        do j = 1, size(tgt3D_ptr,2)
+          do i = 1, size(tgt3D_ptr,1)
+            tgt3D_ptr(i,j,k) = src3D_ptr(i,j,k)
+          end do
+        end do
+      end do
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
       return
     end if
-
-    bmi_status = BMI_SUCCESS
 
   end function get_value_int
 
@@ -456,16 +492,21 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    integer(I4B) :: access_type
     logical(LGP) :: found
     real(DP), pointer :: scalar_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:,:), pointer, contiguous :: array2D_ptr
+    real(DP), dimension(:,:,:), pointer, contiguous :: array3D_ptr
     integer(I4B) :: rank    
     
-    bmi_status = BMI_FAILURE
+    bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name)
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     rank = -1
     call get_mem_rank(var_name, mem_path, rank)
@@ -478,12 +519,14 @@ module mf6bmi
     else if (rank == 2) then
       call mem_setptr(array2D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
+    else if (rank == 3) then
+      call mem_setptr(array3D_ptr, var_name, mem_path)
+      c_arr_ptr = c_loc(array3D_ptr)
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
       return
-    end if
-
-    bmi_status = BMI_SUCCESS    
+    end if   
     
   end function get_value_ptr_double
   
@@ -502,16 +545,21 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    integer(I4B) :: access_type
     logical(LGP) :: found
     integer(I4B) :: rank
     integer(I4B), pointer :: scalar_ptr
     integer(I4B), dimension(:), pointer, contiguous :: array_ptr
     integer(I4B), dimension(:,:), pointer, contiguous :: array2D_ptr
+    integer(I4B), dimension(:,:,:), pointer, contiguous :: array3D_ptr
     
-    bmi_status = BMI_FAILURE
+    bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name)
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
 
     rank = -1
     call get_mem_rank(var_name, mem_path, rank)
@@ -523,14 +571,16 @@ module mf6bmi
       call mem_setptr(array_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array_ptr)
     else if (rank == 2) then
-      call mem_setptr(array_ptr, var_name, mem_path)
+      call mem_setptr(array2D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
+    else if (rank == 3) then
+      call mem_setptr(array3D_ptr, var_name, mem_path)
+      c_arr_ptr = c_loc(array3D_ptr)
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
       return
     end if
-    
-    bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_int
 
@@ -549,7 +599,6 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    integer(I4B) :: access_type
     logical(LGP) :: found
     integer(I4B) :: rank
     real(DP), pointer :: src_ptr, tgt_ptr
@@ -558,9 +607,14 @@ module mf6bmi
     integer(I4B) :: i, j
     integer(I4B) :: status
 
-    bmi_status = BMI_FAILURE
+    bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name)
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
 
     ! convert pointer and copy, using loops to avoid stack overflow
     rank = -1
@@ -586,6 +640,7 @@ module mf6bmi
       end do
     else
       write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
       return
     end if
 
@@ -594,10 +649,9 @@ module mf6bmi
     if (status /= 0) then
       ! something went terribly wrong here, aborting       
       write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
+      bmi_status = BMI_FAILURE
       return
     end if
-
-    bmi_status = BMI_SUCCESS
 
   end function set_value_double
 
@@ -606,65 +660,69 @@ module mf6bmi
   !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2.
   !<
   function set_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_int")
-    !DEC$ ATTRIBUTES DLLEXPORT :: set_value_int
-      use MemorySetHandlerModule, only: on_memory_set
-      character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
-      type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the integer array
-      integer :: bmi_status                                   !< BMI status code
-      ! local
-      character(len=LENMEMPATH) :: mem_path
-      character(len=LENVARNAME) :: var_name
-      integer(I4B) :: access_type
-      logical(LGP) :: found
-      integer(I4B) :: rank
-      integer(I4B), pointer :: src_ptr, tgt_ptr
-      integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
-      integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
-      integer(I4B) :: i, j
-      integer(I4B) :: status
-  
-      bmi_status = BMI_FAILURE
-  
-      call split_address(c_var_address, mem_path, var_name)
-  
-      ! convert pointer and copy, using loops to avoid stack overflow
-      rank = -1
-      call get_mem_rank(var_name, mem_path, rank)
-  
-      if (rank == 0) then
-        call mem_setptr(tgt_ptr, var_name, mem_path)
-        call c_f_pointer(c_arr_ptr, src_ptr)
-        tgt_ptr = src_ptr
-      else if (rank == 1) then
-        call mem_setptr(tgt1D_ptr, var_name, mem_path)
-        call c_f_pointer(c_arr_ptr, src1D_ptr, shape(tgt1D_ptr))
-        do i = 1, size(tgt1D_ptr)
-          tgt1D_ptr(i) = src1D_ptr(i)
-        end do
-      else if (rank == 2) then
-        call mem_setptr(tgt2D_ptr, var_name, mem_path)
-        call c_f_pointer(c_arr_ptr, src2D_ptr, shape(tgt2D_ptr))
-        do j = 1, size(tgt2D_ptr,2)
-          do i = 1, size(tgt2D_ptr,1)
-            tgt2D_ptr(i,j) = src2D_ptr(i,j)
-          end do
-        end do
-      else
-        write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
-        return
-      end if
-  
-      ! trigger event:
-      call on_memory_set(var_name, mem_path, status)
-      if (status /= 0) then
-        ! something went terribly wrong here, aborting        
-        write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
-        return
-      end if
+  !DEC$ ATTRIBUTES DLLEXPORT :: set_value_int
+    use MemorySetHandlerModule, only: on_memory_set
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the integer array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: found
+    integer(I4B) :: rank
+    integer(I4B), pointer :: src_ptr, tgt_ptr
+    integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+    integer(I4B) :: i, j
+    integer(I4B) :: status
 
-      bmi_status = BMI_SUCCESS
-  
-    end function set_value_int
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! convert pointer and copy, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(tgt_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(tgt1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src1D_ptr, shape(tgt1D_ptr))
+      do i = 1, size(tgt1D_ptr)
+        tgt1D_ptr(i) = src1D_ptr(i)
+      end do
+    else if (rank == 2) then
+      call mem_setptr(tgt2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src2D_ptr, shape(tgt2D_ptr))
+      do j = 1, size(tgt2D_ptr,2)
+        do i = 1, size(tgt2D_ptr,1)
+          tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! trigger event:
+    call on_memory_set(var_name, mem_path, status)
+    if (status /= 0) then
+      ! something went terribly wrong here, aborting        
+      write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function set_value_int
   
   !> @brief Get the variable type as a string
   !!
@@ -682,10 +740,17 @@ module mf6bmi
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
     character(len=LENMEMTYPE) :: mem_type
-    
-    call split_address(c_var_address, mem_path, var_name)
-    
+    logical(LGP) :: found
+
     bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if    
+    
     call get_mem_type(var_name, mem_path, mem_type)
     c_var_type(1:len(trim(mem_type))+1) = string_to_char_array(trim(mem_type), len(trim(mem_type)))
 
@@ -708,16 +773,22 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
+    logical(LGP) :: found
     
-    call split_address(c_var_address, mem_path, var_name)
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     call get_mem_rank(var_name, mem_path, c_var_rank)
     if (c_var_rank == -1) then
         bmi_status = BMI_FAILURE
         return
     end if
-    
-    bmi_status = BMI_SUCCESS
     
   end function get_var_rank
   
@@ -743,8 +814,16 @@ module mf6bmi
     integer(I4B) :: var_rank
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-        
-    call split_address(c_var_address, mem_path, var_name)
+    logical(LGP) :: found
+       
+    bmi_status = BMI_SUCCESS
+     
+    call split_address(c_var_address, mem_path, var_name, found)
+    if (.not. found) then
+      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     var_shape = 0
     var_rank = 0
@@ -760,8 +839,6 @@ module mf6bmi
     ! This we need to convert to C-style which should be (1,100).
     ! Hence, we reverse the array and drop undef:
     c_var_shape(1:var_rank) = var_shape(var_rank:1:-1)
-    
-    bmi_status = BMI_SUCCESS
     
   end function get_var_shape  
  

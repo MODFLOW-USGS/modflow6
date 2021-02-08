@@ -68,8 +68,8 @@ module MemoryManagerModule
   
   interface mem_setptr
     module procedure setptr_logical,                                             &
-                     setptr_int, setptr_int1d, setptr_int2d,                     &
-                     setptr_dbl, setptr_dbl1d, setptr_dbl2d
+                     setptr_int, setptr_int1d, setptr_int2d, setptr_int3d,       &
+                     setptr_dbl, setptr_dbl1d, setptr_dbl2d, setptr_dbl3d
   end interface mem_setptr
   
   interface mem_copyptr
@@ -1264,6 +1264,23 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine setptr_int2d
+  
+  !> @brief Set pointer to 3d integer array
+  !<
+  subroutine setptr_int3d(aint, name, mem_path)
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint !< pointer to 3d integer array
+    character(len=*), intent(in) :: name                                         !< variable name
+    character(len=*), intent(in) :: mem_path                                     !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)    
+    aint => mt%aint3d
+    !
+    ! -- return
+    return
+  end subroutine setptr_int3d
     
   !> @brief Set pointer to a real scalar
   !<
@@ -1315,6 +1332,23 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine setptr_dbl2d
+  
+   !> @brief Set pointer to a 3d real array
+  !<
+  subroutine setptr_dbl3d(adbl, name, mem_path)
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl !< pointer to 3d real array
+    character(len=*), intent(in) :: name                                     !< variable name
+    character(len=*), intent(in) :: mem_path                                 !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)    
+    adbl => mt%adbl3d
+    !
+    ! -- return
+    return
+  end subroutine setptr_dbl3d
 
   !> @brief Make a copy of a 1-dimensional integer array
   !<
