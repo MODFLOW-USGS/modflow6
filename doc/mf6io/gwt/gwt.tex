@@ -10,7 +10,7 @@ The GWT Model is designed to permit input to be gathered, as it is needed, from 
 
 The GWT Model reads a file called the Name File, which specifies most of the files that will be used in a simulation. Several files are always required whereas other files are optional depending on the simulation. The Output Control Package receives instructions from the user to control the amount and frequency of output.  Details about the Name File and the Output Control Package are described in this section.
 
-For the GWT Model, ``flows'' (unless stated otherwise) represent mass flow in mass per time, rather than groundwater flow.  
+For the GWT Model, ``flows'' (unless stated otherwise) represent solute mass ``flow'' in mass per time, rather than groundwater flow.  
 
 \subsection{Information for Existing Solute Transport Modelers}
 The \mf GWT Model contains most of the functionality of MODFLOW-GWT, MT3DMS, MT3D-USGS and MODFLOW-USG.  The following list summarizes major differences between the GWT Model in \mf and previous MODFLOW-based solute transport programs.
@@ -29,7 +29,7 @@ The \mf GWT Model contains most of the functionality of MODFLOW-GWT, MT3DMS, MT3
 
 \item The GWT model includes the MST and IST Packages.  These two package collectively comprise the capabilities of the MT3DMS Reactions Package.
 
-\item The MST and IST Packages contain only the linear isotherm for representation of sorbtion.    Nonlinear isotherms, such as the Langmuir and Freundlich isotherms, are not commonly used in practice and require additional code complexity and numerical overhead. 
+\item The MST Package contains the linear, Freundlich, and Langmuir isotherms for representing sorption.  The IST Packages contains only the linear isotherm for representation of sorption. 
 
 \item The GWT model was designed so that the user can specify as many immobile domains and necessary to represent observed contaminant transport patterns and solute breakthrough curves.  The effects of an immobile domain are represented using the Immobile Storage and Transfer (IST) Package, and the user can specify as many IST Packages as necessary.  
 
@@ -39,7 +39,7 @@ The \mf GWT Model contains most of the functionality of MODFLOW-GWT, MT3DMS, MT3
 
 \item The GWT Model described in this report is capable of simulating solute transport in the advanced stress packages of \mfcomma including the Lake, Streamflow Routing, Multi-Aquifer Well and Unsaturated Zone Transport Packages.  The present implementation simulates solute advection between package features, such as between two stream reaches, but dispersive transport is not represented.  Likewise, solute transport between the advanced packages and the aquifer occurs only through advection.
 
-\item The GWT Model has not been programmed to work with the Skeletal Storage, Compaction, and Subsidence (CSUB) Package for the GWF Model.  
+\item The GWT Model has not yet been programmed to work with the Skeletal Storage, Compaction, and Subsidence (CSUB) Package for the GWF Model.  
 
 \item There are many other differences between the \mf GWT Model and other solute transport models that work with MODFLOW, especially with regards to program design and input and output.  Descriptions for the GWT input and output are described here.
 
@@ -53,7 +53,7 @@ A summary of all inflow (sources) and outflow (sinks) of solute mass is called a
 
 \subsection{Time Stepping}
 
-For the present implementation of the GWT Model, all terms in the solute transport equation are solved implicitly.  With the implicit approach applied to the transport equation, it is possible to take relatively large time steps and efficiently obtain a stable solution.  If the time steps are too large, however, accuracy of the model results will suffer, so there is usually some compromise required between the desired level of accuracy and length of the time step.
+For the present implementation of the GWT Model, all terms in the solute transport equation are solved implicitly.  With the implicit approach applied to the transport equation, it is possible to take relatively large time steps and efficiently obtain a stable solution.  If the time steps are too large, however, accuracy of the model results will suffer, so there is usually some compromise required between the desired level of accuracy and length of the time step.  An assessment of accuracy can be performed by simply running simulations with shorter time steps and comparing results.
 
 In \mf time step lengths are controlled by the user and specified in the Temporal Discretization (TDIS) input file.  When the flow model and transport model are included in the same simulation, then the length of the time step specified in TDIS is used for both models.  If the GWT Model runs in a separate simulation from the GWT Model, then the time steps used for the transport model can be different, and likely shorter, than the time steps used for the flow solution.  Instructions for specifying time steps are described in the TDIS section of this user guide; additional information on GWF and GWT configurations are in the Flow Model Interface section.  
 

@@ -1,4 +1,4 @@
-\begin{thebibliography}{29}
+\begin{thebibliography}{31}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -78,6 +78,14 @@ Hill, M.C., Banta, E.R., Harbaugh, A.W., and Anderman, E.R., 2000,
   three post-processing programs: {U.S. Geological Survey Open-File Report
   00--184, 210 p.}
 
+\bibitem[{Hoffmann and others(2003)Hoffmann, Leake, Galloway, and
+  Wilson}]{hoffmann2003modflow}
+Hoffmann, J{\"o}rn, Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003,
+  MODFLOW-2000 Ground-Water Model---User Guide to the Subsidence and
+  Aquifer-System Compaction (SUB) Package: {U.S. Geological Survey Open-File
+  Report 03--233, 44 p.}, accessed June 27, 2017, at
+  \url{https://pubs.usgs.gov/of/2003/ofr03-233/}.
+
 \bibitem[{Hsieh and Freckleton(1993)}]{hsieh1993hfb}
 Hsieh, P.A., and Freckleton, J.R., 1993, Documentation of a computer program to
   simulate horizontal-flow barriers using the U.S. Geological Survey's modular
@@ -128,6 +136,13 @@ Langevin, C.D., Hughes, J.D., Provost, A.M., Banta, E.R., Niswonger, R.G., and
 Langevin, C.D., Panday, Sorab, and Provost, A.M., 2020, Hydraulic-head
   formulation for density-dependent flow and transport: Groundwater, v.~58,
   no.~3, p.~349--362.
+
+\bibitem[{Leake and Galloway(2007)}]{leake2007modflow}
+Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model---User guide
+  to the Subsidence and Aquifer-System Compaction Package (SUB-WT) for
+  Water-Table Aquifers: {U.S. Geological Survey Techniques and Methods, book 6,
+  chap. A23, 42 p.}, accessed June 27, 2017, at
+  \url{https://pubs.er.usgs.gov/publication/tm6A23}.
 
 \bibitem[{Leake and Lilly(1997)}]{leake1997documentation}
 Leake, S.A., and Lilly, M.R., 1997, Documentation of computer program (FHB1)
