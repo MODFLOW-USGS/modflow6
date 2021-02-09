@@ -102,7 +102,7 @@ sgs = 2.0
 void = 0.82
 theta = void / (1. + void)
 beta = 0.
-crnd0 = 6e-6 * np.ones(shape3d, dtype=np.float)
+crnd0 = 6e-6 * np.ones(shape3d, dtype=float)
 crnd0[:, 0, 0] = 0.
 
 
@@ -315,7 +315,7 @@ def eval_comp(sim):
             key = '{}_OUT'.format(text)
             d[key][idx] = qout
 
-    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()

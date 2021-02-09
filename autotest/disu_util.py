@@ -5,11 +5,11 @@ def get_disu_kwargs(nlay, nrow, ncol, delr, delc, tp, botm):
     def get_nn(k, i, j):
         return k * nrow * ncol + i * ncol + j
     nodes = nlay * nrow * ncol
-    iac = np.zeros((nodes), dtype=np.int)
+    iac = np.zeros((nodes), dtype=int)
     ja = []
-    area = np.zeros((nodes), dtype=np.float)
-    top = np.zeros((nodes), dtype=np.float)
-    bot = np.zeros((nodes), dtype=np.float)
+    area = np.zeros((nodes), dtype=float)
+    top = np.zeros((nodes), dtype=float)
+    bot = np.zeros((nodes), dtype=float)
     ihc = []
     cl12 = []
     hwva = []
@@ -76,9 +76,9 @@ def get_disu_kwargs(nlay, nrow, ncol, delr, delc, tp, botm):
                         dz = botm[k - 1] - botm[k]
                     cl12.append(.5 * dz)
                     hwva.append(delr[i] * delc[j])
-    ja = np.array(ja, dtype=np.int)
+    ja = np.array(ja, dtype=int)
     nja = ja.shape[0]
-    hwva = np.array(hwva, dtype=np.float)
+    hwva = np.array(hwva, dtype=float)
     kw = {}
     kw['nodes'] = nodes
     kw['nja'] = nja

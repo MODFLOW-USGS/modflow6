@@ -245,7 +245,7 @@ def eval_hds(sim):
     ncolt = 0
     for ncol in ncolst:
         ncolt += ncol
-    hval = np.zeros((nper, ncolt), dtype=np.float)
+    hval = np.zeros((nper, ncolt), dtype=float)
     imid = int(nrow/2)
 
     for j in range(nmodels):
@@ -258,7 +258,7 @@ def eval_hds(sim):
         for n, t in enumerate(times):
             h = hobj.get_data(totim=t)[:, imid, :]
             h = h.reshape((nlay, ncolst[j]))
-            ht = np.ones(h.shape[1], dtype=np.float) * 1e30
+            ht = np.ones(h.shape[1], dtype=float) * 1e30
             for k in range(nlay):
                 v = h[k, :].copy()
                 kdx = (ht == 1e30) & (v != -1e30)

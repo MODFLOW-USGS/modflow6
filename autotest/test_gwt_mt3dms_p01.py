@@ -78,10 +78,10 @@ def p01mt3d(model_ws, al, retardation, rc1, mixelm,
     dis = flopy.modflow.ModflowDis(mf, nlay=nlay, nrow=nrow, ncol=ncol,
                                    delr=delr, delc=delc, top=top, botm=botm,
                                    perlen=perlen)
-    ibound = np.ones((nlay, nrow, ncol), dtype=np.int)
+    ibound = np.ones((nlay, nrow, ncol), dtype=int)
     ibound[0, 0, 0] = -1
     ibound[0, 0, -1] = -1
-    strt = np.zeros((nlay, nrow, ncol), dtype=np.float)
+    strt = np.zeros((nlay, nrow, ncol), dtype=float)
     h1 = q * Lx
     strt[0, 0, 0] = h1
     bas = flopy.modflow.ModflowBas(mf, ibound=ibound, strt=strt)
@@ -95,9 +95,9 @@ def p01mt3d(model_ws, al, retardation, rc1, mixelm,
     mt = flopy.mt3d.Mt3dms(modelname=modelname_mt, model_ws=model_ws,
                            exe_name=exe_name_mt, modflowmodel=mf)
     c0 = 1.
-    icbund = np.ones((nlay, nrow, ncol), dtype=np.int)
+    icbund = np.ones((nlay, nrow, ncol), dtype=int)
     icbund[0, 0, 0] = -1
-    sconc = np.zeros((nlay, nrow, ncol), dtype=np.float)
+    sconc = np.zeros((nlay, nrow, ncol), dtype=float)
     sconc[0, 0, 0] = c0
     btn = flopy.mt3d.Mt3dBtn(mt, laycon=laytyp, icbund=icbund,
                              prsity=prsity, sconc=sconc, dt0=dt0, ifmtcn=1)
@@ -224,11 +224,11 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
                                   idomain=np.ones((nlay, nrow, ncol),
-                                                  dtype=np.int),
+                                                  dtype=int),
                                   filename='{}.dis'.format(gwfname))
 
     # initial conditions
-    strt = np.zeros((nlay, nrow, ncol), dtype=np.float)
+    strt = np.zeros((nlay, nrow, ncol), dtype=float)
     h1 = q * Lx
     strt[0, 0, 0] = h1
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,

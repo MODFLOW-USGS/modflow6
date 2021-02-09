@@ -61,12 +61,12 @@ steady = [True] + [False for i in range(nper - 1)]
 # spatial discretization
 ft2m = 1. / 3.28081
 nlay, nrow, ncol = 3, 21, 20
-delr = np.ones(ncol, dtype=np.float) * 0.5
+delr = np.ones(ncol, dtype=float) * 0.5
 for idx in range(1, ncol):
     delr[idx] = min(delr[idx - 1] * 1.2, 15.)
 delc = 50.
 top = 0.
-botm = np.array([-40, -70., -100.], dtype=np.float) * ft2m
+botm = np.array([-40, -70., -100.], dtype=float) * ft2m
 zthick = [top - botm[0],
           botm[0] - botm[1],
           botm[1] - botm[2]]
@@ -121,10 +121,10 @@ lnd = [0, 1, 2]
 thicknd0 = [zthick[0], zthick[1], zthick[2]]
 sske = np.array([1.e-5, 2.e-4, 9.e-8]) / ft2m
 
-gl0 = np.zeros((nrow, ncol), dtype=np.float)
+gl0 = np.zeros((nrow, ncol), dtype=float)
 jj = 0
 gl0[0, jj] = 1.86
-sig0 = np.zeros((nlay, nrow, ncol), dtype=np.float)
+sig0 = np.zeros((nlay, nrow, ncol), dtype=float)
 sig0[0, 0, jj] = 1.86
 tsnames = []
 sig0 = []
@@ -143,7 +143,7 @@ train2 = 2.8274
 fcar1 = 0.8165
 fcar2 = 1.63293447
 fcar3 = 2.8274  # 2.9635 #2.4494
-icnt = np.zeros((nrow), dtype=np.int)
+icnt = np.zeros((nrow), dtype=int)
 v = []
 tstime = []
 i0 = 0
@@ -494,7 +494,7 @@ def eval_comp(sim):
             key = '{}_OUT'.format(text)
             d[key][idx] = qout
 
-    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()

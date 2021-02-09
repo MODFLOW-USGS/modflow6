@@ -32,7 +32,7 @@ def build_model(ws, name, timeseries=False):
     tdis_rc = []
     for idx in range(nper):
         tdis_rc.append((1., 1, 1.0))
-    ts_times = np.arange(0., 2., 1., dtype=np.float)
+    ts_times = np.arange(0., 2., 1., dtype=float)
 
     auxnames = ['temp', 'conc']
     temp, conc = 32.5, 0.1

@@ -125,7 +125,7 @@ def get_model(idx, dir):
                                   filename='{}.ims'.format(gwfname))
     sim.register_ims_package(imsgwf, [gwf.name])
 
-    itri = np.zeros((nrow, ncol), dtype=np.int)
+    itri = np.zeros((nrow, ncol), dtype=int)
     itri[:, 1:ncol - 1] = 1
     verts, iverts = grid_triangulator(itri, delr, delc)
     vertices, cell2d = cvfd_to_cell2d(verts, iverts)
@@ -143,7 +143,7 @@ def get_model(idx, dir):
     #dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
     #                              delr=delr, delc=delc,
     #                              top=top, botm=botm,
-    #                              idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
+    #                              idomain=np.ones((nlay, nrow, ncol), dtype=int),
     #                              filename='{}.dis'.format(gwfname))
 
     # initial conditions

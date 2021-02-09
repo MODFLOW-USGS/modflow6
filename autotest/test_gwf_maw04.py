@@ -56,7 +56,7 @@ xlen = 1000.
 common_ratio = 1.01
 nhalf = int(0.5 * ncol) + 1
 first_term = 0.5 * xlen / ((1 - common_ratio**nhalf) / (1 - common_ratio))
-delr = np.zeros((ncol), dtype=np.float)
+delr = np.zeros((ncol), dtype=float)
 for n in range(nhalf):
     if n == 0:
         v = first_term
