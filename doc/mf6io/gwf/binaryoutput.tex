@@ -614,7 +614,7 @@ For each stress period, time step, and data type that is saved to the LAK, MAW, 
 \newpage
 \subsubsection{Budget File Contents for the GWT Model}
 
-The type of information that is written to the budget file for a GWT Model depends on the packages used for the model and whether or not the save flags are set.  Table \ref{table:gwtbud} contains a list of the types of information that may be contained in a GWT Model budget file.  In all cases, the flows in table \ref{table:gwtbud} are solute flows to or a from a GWT Model cell.  Intercell flows are written as FLOW-JA-FACE using IMETH=1.
+The type of information that is written to the budget file for a GWT Model depends on the packages used for the model and whether or not the save flags are set.  Table \ref{table:gwtbud} contains a list of the types of information that may be contained in a GWT Model budget file.  In all cases, the flows in table \ref{table:gwtbud} are solute mass flows (in mass per time) to or a from a GWT Model cell.  Intercell flows are written as FLOW-JA-FACE using IMETH=1.
 
 The remaining flow terms in table \ref{table:gwtbud} are all written using IMETH=6.  When IMETH=6 is used, the records contain additional text descriptors and two identifying numbers.  For all records in the GWT Model budget file, TXT1ID1 is the name of the GWT Model and TXT2ID1 is also the name of the GWT Model.  These text identifiers describe what is contained in ID1.  For the GWT Model budget file, ID1 is the cell or node number in the GWT Model grid.  The second set of text identifiers refer to the information in ID2.  Unless noted otherwise in the description in table \ref{table:gwtbud}, TXT1ID2 is the name of the GWT Model, TXT2ID2 is the name of the package, and ID2 is the bound number in the package; for example, this is the first constant concentration cell, second constant concentration cell, and so forth.  
 
@@ -670,7 +670,7 @@ When the BINARY option is used to open an observation output file (see section `
 \noindent where
 
 \begin{description} \itemsep0pt \parskip0pt \parsep0pt
-\item \texttt{TYPE} (bytes 1--4 of Record 1) is ``cont `` ---  ``cont'' indicates the file contains continuous observations ;
+\item \texttt{TYPE} (bytes 1--4 of Record 1) is ``cont `` ---  ``cont'' indicates the file contains continuous observations;
 \item \texttt{PRECISION} (bytes 6--11 of Record 1) will always be ``double'' to indicate that floating-point values are written in double precision (8 bytes);
 \item \texttt{LENOBSNAME} (bytes 12--15 of Record 1) is an integer indicating the number of characters used to store each observation name in following records (in the initial release of MODFLOW~6, LENOBSNAME equals 40);
 \item \texttt{NOBS} (4-byte integer) is the number of observations recorded in the file;
