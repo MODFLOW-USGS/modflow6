@@ -38,7 +38,7 @@ frequency = 4
 wellfact = 0.25
 
 def get_idomain(nlay, nrow, ncol, lx, lz, fx, fz):
-    idomain = np.ones((nlay, nrow, ncol), dtype=np.int)
+    idomain = np.ones((nlay, nrow, ncol), dtype=int)
     x1 = fx * lx
     y1 = lz
     x2 = lx

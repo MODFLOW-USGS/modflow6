@@ -154,9 +154,9 @@ def qxqyqz(fname, nlay, nrow, ncol):
     nodes = nlay * nrow * ncol
     cbb = flopy.utils.CellBudgetFile(fname, precision='double')
     spdis = cbb.get_data(text='DATA-SPDIS')[0]
-    qx = np.ones((nodes), dtype=np.float) * 1.e30
-    qy = np.ones((nodes), dtype=np.float) * 1.e30
-    qz = np.ones((nodes), dtype=np.float) * 1.e30
+    qx = np.ones((nodes), dtype=float) * 1.e30
+    qy = np.ones((nodes), dtype=float) * 1.e30
+    qz = np.ones((nodes), dtype=float) * 1.e30
     n0 = spdis['node'] - 1
     qx[n0] = spdis['qx']
     qy[n0] = spdis['qy']

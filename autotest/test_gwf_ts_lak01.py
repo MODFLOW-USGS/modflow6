@@ -45,7 +45,7 @@ delr = delc = [250.00, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0,
                1000.0, 1000.0, 1000.0, 1000.0, 250.00]
 top = 500.
 botm = [107., 97., 87., 77., 67.]
-idomain = np.ones(shape3d, dtype=np.int)
+idomain = np.ones(shape3d, dtype=int)
 idomain[0, 6:11, 6:11] = 0
 idomain[1, 7:10, 7:10] = 0
 
@@ -186,7 +186,7 @@ ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'outlet',
 ts_methods = ['linearend'] * len(ts_names)
 
 ts_data = []
-ts_times = np.arange(0., sim_time + 2. * pertime, pertime, dtype=np.float)
+ts_times = np.arange(0., sim_time + 2. * pertime, pertime, dtype=float)
 for t in ts_times:
     ts_data.append((t, stage, recharge, evap, runoff, withdrawal, rate,
                     temp, conc, recharge, -rate, -withdrawal))

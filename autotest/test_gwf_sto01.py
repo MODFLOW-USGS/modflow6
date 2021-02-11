@@ -59,7 +59,7 @@ hdry = -1e30
 
 # calculate hk
 hk1fact = 1. / 50.
-hk1 = np.ones((nrow, ncol), dtype=np.float) * 0.5 * hk1fact
+hk1 = np.ones((nrow, ncol), dtype=float) * 0.5 * hk1fact
 hk1[0, :] = 1000. * hk1fact
 hk1[-1, :] = 1000. * hk1fact
 hk1[:, 0] = 1000. * hk1fact
@@ -107,7 +107,7 @@ maxwel = len(wd[1])
 
 # recharge data
 q = 3000. / (delr * delc)
-v = np.zeros((nrow, ncol), dtype=np.float)
+v = np.zeros((nrow, ncol), dtype=float)
 for r, c in zip(wr, wc):
     v[r, c] = q
 rech = {0: v}
@@ -269,7 +269,7 @@ def eval_sto(sim):
             qout = 0.
             v = cobj.get_data(kstpkper=k, text=text)[0]
             if isinstance(v, np.recarray):
-                vt = np.zeros(size3d, dtype=np.float)
+                vt = np.zeros(size3d, dtype=float)
                 for jdx, node in enumerate(v['node']):
                     vt[node-1] += v['q'][jdx]
                 v = vt.reshape(shape3d)
@@ -289,7 +289,7 @@ def eval_sto(sim):
             key = '{}_OUT'.format(text)
             d[key][idx] = qout
 
-    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()

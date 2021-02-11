@@ -73,7 +73,7 @@ def get_model(idx, dir):
     bot0 = np.loadtxt(fname)
     botm = [bot0] + [bot0 - (15. * k) for k in range(1, nlay)]
     fname = os.path.join(data_ws, 'idomain1.dat')
-    idomain0 = np.loadtxt(fname, dtype=np.int)
+    idomain0 = np.loadtxt(fname, dtype=int)
     idomain = nlay * [idomain0]
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
@@ -174,7 +174,7 @@ def get_model(idx, dir):
                                       perioddata=sfrperioddata)
 
     fname = os.path.join(data_ws, 'lakibd.dat')
-    lakibd = np.loadtxt(fname, dtype=np.int)
+    lakibd = np.loadtxt(fname, dtype=int)
     lakeconnectiondata = []
     nlakecon = [0, 0]
     lak_leakance = 1.

@@ -125,7 +125,7 @@ def get_model(idx, dir):
                                   filename='{}.ims'.format(gwfname))
     sim.register_ims_package(imsgwf, [gwf.name])
 
-    itri = np.zeros((nrow, ncol), dtype=np.int)
+    itri = np.zeros((nrow, ncol), dtype=int)
     itri[:, 1:ncol - 1] = 1
     verts, iverts = grid_triangulator(itri, delr, delc)
     vertices, cell2d = cvfd_to_cell2d(verts, iverts)

@@ -21,7 +21,7 @@ ddir = 'data'
 
 # read bottom data
 fpth = os.path.join(ddir, 'nwtp03_bot.ref')
-botm = np.loadtxt(fpth, dtype=np.float)
+botm = np.loadtxt(fpth, dtype=float)
 nlay = 1
 nrow, ncol = botm.shape
 top = 200
@@ -38,7 +38,7 @@ strt = botm + 20.
 
 # read recharge data
 fpth = os.path.join(ddir, 'nwtp03_rch.ref')
-rch = np.loadtxt(fpth, dtype=np.float)
+rch = np.loadtxt(fpth, dtype=float)
 
 
 def build_mf6(idx, ws, storage=True):

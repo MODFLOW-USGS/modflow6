@@ -82,7 +82,7 @@ def test_disu_idomain_simple():
     delc = 10. * np.ones(nrow)
     top = 0
     botm = [-10, -20, -30]
-    idomain = np.ones(nlay*nrow*ncol, dtype=np.int)
+    idomain = np.ones(nlay*nrow*ncol, dtype=int)
     idomain[1] = 0
     disukwargs = get_disu_kwargs(nlay, nrow, ncol, delr, delc, top, botm)
     disukwargs['idomain'] = idomain

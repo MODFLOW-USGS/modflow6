@@ -398,7 +398,7 @@ def eval_comp(sim):
             key = "{}_OUT".format(text)
             d[key][idx] = qout
 
-    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()

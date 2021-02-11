@@ -96,7 +96,7 @@ def build_models():
                                       delr=delr, delc=delc,
                                       top=top, botm=botm,
                                       idomain=np.ones((nlay, nrow, ncol),
-                                                      dtype=np.int))
+                                                      dtype=int))
 
         # initial conditions
         ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)

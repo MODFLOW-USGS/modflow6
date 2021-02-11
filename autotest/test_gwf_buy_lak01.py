@@ -96,7 +96,7 @@ def get_model(idx, dir):
                                   top=top, botm=botm, idomain=idomain)
 
     # initial conditions
-    strt = np.zeros((nlay, nrow, ncol), dtype=np.float)
+    strt = np.zeros((nlay, nrow, ncol), dtype=float)
     strt[0, 0, :] = 3.5
     strt[1, 0, :] = 3.0
     strt[1, 0, 1:6] = 2.5

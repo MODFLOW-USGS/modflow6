@@ -99,7 +99,7 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
+                                  idomain=np.ones((nlay, nrow, ncol), dtype=int),
                                   filename='{}.dis'.format(gwfname))
 
     # initial conditions

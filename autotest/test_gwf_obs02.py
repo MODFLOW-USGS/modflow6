@@ -85,7 +85,7 @@ def get_model(idx, dir):
                             delr=delr, delc=delc,
                             top=top, botm=botm,
                             idomain=np.ones((nlay, nrow, ncol),
-                                            dtype=np.int))
+                                            dtype=int))
 
     # build list of obs csv files to create
     obsdict = {}
@@ -138,7 +138,7 @@ def build_models():
 def eval_model(sim):
     print('evaluating model observations...')
     name = ex[sim.idxsim]
-    headcsv = np.empty((nlay, nrow, ncol), dtype=np.float)
+    headcsv = np.empty((nlay, nrow, ncol), dtype=float)
     for i in range(nrow):
         fname = '{}.{}.obs.csv'.format(name, i)
         print('Loading and testing {}'.format(fname))

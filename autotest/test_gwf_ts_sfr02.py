@@ -32,7 +32,7 @@ def build_model(ws, name, timeseries=False):
     tdis_rc = []
     for idx in range(nper):
         tdis_rc.append((1., 1, 1.0))
-    ts_times = np.arange(0., 2., 1., dtype=np.float)
+    ts_times = np.arange(0., 2., 1., dtype=float)
 
     auxnames = ['temp', 'conc']
     temp, conc = 32.5, 0.1
@@ -379,7 +379,7 @@ def eval_model(sim):
         if node in nodes:
             q.append(v0['q'][idx])
     v0 = np.array(q)
-    check = np.ones(v0.shape, dtype=np.float) * 5e-2
+    check = np.ones(v0.shape, dtype=float) * 5e-2
     check[1] = 0.76743
     check[-2] = 4e-2
     assert np.allclose(v0, check), 'FLOW-JA-FACE failed'

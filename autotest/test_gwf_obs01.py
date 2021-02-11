@@ -116,7 +116,7 @@ def get_model(idx, dir):
                             delr=delr, delc=delc,
                             top=top, botm=botm,
                             idomain=np.ones((nlay, nrow, ncol),
-                                            dtype=np.int))
+                                            dtype=int))
     flopy.mf6.ModflowUtlobs(gwf, pname='head_obs',
                             digits=20,
                             continuous=get_obs(idx))

@@ -92,7 +92,7 @@ for idx in range(nper):
     tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
 # this used to work
-# ib = np.zeros((nlay, nrow, ncol), dtype=np.int)
+# ib = np.zeros((nlay, nrow, ncol), dtype=int)
 # for k in range(nlay):
 ib = [1]
 
@@ -383,7 +383,7 @@ def cbc_compare(sim):
             qout = 0.
             v = cobj.get_data(kstpkper=k, text=text)[0]
             if isinstance(v, np.recarray):
-                vt = np.zeros(size3d, dtype=np.float)
+                vt = np.zeros(size3d, dtype=float)
                 for jdx, node in enumerate(v['node']):
                     vt[node - 1] += v['q'][jdx]
                 v = vt.reshape(shape3d)
@@ -403,7 +403,7 @@ def cbc_compare(sim):
             key = '{}_OUT'.format(text)
             d[key][idx] = qout
 
-    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()

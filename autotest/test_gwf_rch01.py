@@ -49,7 +49,7 @@ def get_model(idx, dir):
 
     delr = delc = 1.
     strt = [[[25., 25., 75., 25., 25.], [25., 25., 75., 25., 25.]]]
-    strt = np.array(strt, dtype=np.float)
+    strt = np.array(strt, dtype=float)
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-9, 1e-3, 0.97

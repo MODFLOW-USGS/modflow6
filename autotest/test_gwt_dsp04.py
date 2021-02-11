@@ -50,7 +50,7 @@ def get_model(idx, dir):
     sy = 0.1
 
     chdlist = []
-    ib = np.ones((nlay, nrow, ncol), dtype=np.int)
+    ib = np.ones((nlay, nrow, ncol), dtype=int)
     ib[:, 1:nrow-1, 1:ncol-1] = 0
     idloc = np.where(ib > 0)
     for k, i, j in zip(idloc[0], idloc[1], idloc[2]):
@@ -97,7 +97,7 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
+                                  idomain=np.ones((nlay, nrow, ncol), dtype=int),
                                   filename='{}.dis'.format(gwfname))
 
     # initial conditions

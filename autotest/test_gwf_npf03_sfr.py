@@ -26,7 +26,7 @@ continuous_integration = [True for idx in range(len(exdirs))]
 # read hk data
 fpth = os.path.join(ddir, 'npf03_hk.ref')
 shape = (50, 108)
-hk = flopy.utils.Util2d.load_txt(shape, fpth, dtype=np.float, fmtin='(FREE)')
+hk = flopy.utils.Util2d.load_txt(shape, fpth, dtype=float, fmtin='(FREE)')
 n1 = hk.shape[1]
 nd = 40
 
@@ -3022,7 +3022,7 @@ def eval_hds(sim):
     ncolt = 0
     for ncol in ncolst:
         ncolt += ncol
-    hval = np.zeros(hdata.shape, dtype=np.float)
+    hval = np.zeros(hdata.shape, dtype=float)
 
     i0 = 0
     for j in range(nmodels):
