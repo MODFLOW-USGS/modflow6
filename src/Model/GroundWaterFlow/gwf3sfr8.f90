@@ -2712,6 +2712,8 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: jj
     integer(I4B) :: idiv
+    character (len=10) :: cp
+    real(DP) :: divq
     real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -2804,6 +2806,16 @@ contains
         call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,     &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'DIVFLOW')
+        !
+        ! -- if diversion cprior is 'fraction', ensure that 0.0 <= fraction <= 1.0
+        cp = this%divcprior(ii)
+        divq = this%divflow(ii) 
+        if (cp == 'FRACTION' .and. (divq < 0.0 .or. divq > 1.0)) then
+          write(errmsg,'(a,1x,i0,a)')                                            &
+                'cprior is type FRACTION for diversion no.', ii,                 &
+                ', but divflow not within the range 0.0 to 1.0'
+          call store_error(errmsg)
+        endif
       case ('UPSTREAM_FRACTION')
         ichkustrm = 1
         call this%parser%GetString(text)
