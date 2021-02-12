@@ -13,32 +13,40 @@
   !
   private
   public :: tdis_cr
+  public :: tdis_pu
+  public :: tdis_dt
   public :: tdis_tu
   public :: tdis_ot
   public :: tdis_da
+  public :: iskperats
   !
-  integer(I4B), public, pointer                            :: nper               !< number of stress period
-  integer(I4B), public, pointer                            :: itmuni             !< flag indicating time units
-  integer(I4B), public, pointer                            :: kper               !< current stress period number
-  integer(I4B), public, pointer                            :: kstp               !< current time step number
-  logical(LGP), public, pointer                            :: readnewdata        !< flag indicating time to read new data
-  logical(LGP), public, pointer                            :: endofperiod        !< flag indicating end of stress period
-  logical(LGP), public, pointer                            :: endofsimulation    !< flag indicating end of simulation
-  real(DP), public, pointer                                :: delt               !< length of the current time step
-  real(DP), public, pointer                                :: pertim             !< time relative to start of stress period
-  real(DP), public, pointer                                :: totim              !< time relative to start of simulation
-  real(DP), public, pointer                                :: totimc             !< simulation time at start of time step
-  real(DP), public, pointer                                :: deltsav            !< saved value for delt, used for subtiming
-  real(DP), public, pointer                                :: totimsav           !< saved value for totim, used for subtiming
-  real(DP), public, pointer                                :: pertimsav          !< saved value for pertim, used for subtiming
-  real(DP), public, pointer                                :: totalsimtime       !< time at end of simulation
-  real(DP), public, dimension(:), pointer, contiguous      :: perlen             !< length of each stress period
-  integer(I4B), public, dimension(:), pointer, contiguous  :: nstp               !< number of time steps in each stress period
-  real(DP), public, dimension(:), pointer, contiguous      :: tsmult             !< time step multiplier for each stress period
-  character(len=LENDATETIME), pointer                      :: datetime0          !< starting date and time for the simulation
+  integer(I4B), public, pointer                            :: nper => null()     !< number of stress period
+  integer(I4B), public, pointer                            :: itmuni => null()   !< flag indicating time units
+  integer(I4B), public, pointer                            :: kper => null()     !< current stress period number
+  integer(I4B), public, pointer                            :: kstp => null()     !< current time step number
+  logical(LGP), public, pointer                            :: readnewdata => null() !< flag indicating time to read new data
+  logical(LGP), public, pointer                            :: endofperiod => null() !< flag indicating end of stress period
+  logical(LGP), public, pointer                            :: endofsimulation => null() !< flag indicating end of simulation
+  real(DP), public, pointer                                :: delt => null()     !< length of the current time step
+  real(DP), public, pointer                                :: pertim => null()   !< time relative to start of stress period
+  real(DP), public, pointer                                :: totim => null()    !< time relative to start of simulation
+  real(DP), public, pointer                                :: totimc => null()   !< simulation time at start of time step
+  real(DP), public, pointer                                :: deltsav => null()  !< saved value for delt, used for subtiming
+  real(DP), public, pointer                                :: totimsav => null() !< saved value for totim, used for subtiming
+  real(DP), public, pointer                                :: pertimsav => null() !< saved value for pertim, used for subtiming
+  real(DP), public, pointer                                :: totalsimtime => null() !< time at end of simulation
+  real(DP), public, dimension(:), pointer, contiguous      :: perlen => null()   !< length of each stress period
+  integer(I4B), public, dimension(:), pointer, contiguous  :: nstp => null()     !< number of time steps in each stress period
+  real(DP), public, dimension(:), pointer, contiguous      :: tsmult => null()   !< time step multiplier for each stress period
+  character(len=LENDATETIME), pointer                      :: datetime0 => null() !< starting date and time for the simulation
   !
   type(BlockParserType), private :: parser
-
+  !
+  ! -- ats
+  logical(LGP), public, pointer                            :: atsactive => null() !< flag indicating ats is active for simulation
+  real(DP), public, pointer                                :: dtstable => null()  !< delt value required for stability
+  integer(I4B), dimension(:), pointer, contiguous          :: kperats => null()   !< array of stress period numbers to apply ats
+  
   contains
 
   subroutine tdis_cr(fname)
@@ -51,6 +59,7 @@
     ! -- modules
     use InputOutputModule, only: getunit, openfile
     use ConstantsModule, only: LINELENGTH, DZERO
+    use AdaptiveTimeStepModule, only: ats_ar
     ! -- dummy
     character(len=*),intent(in) :: fname
     ! -- local
@@ -90,10 +99,85 @@
     ! -- Close the file
     call parser%Clear()
     !
+    ! -- ats
+    if (atsactive) then
+      call ats_ar(nper, kperats)
+    end if
+    !
     ! -- return
     return
   end subroutine tdis_cr
 
+  subroutine tdis_pu()
+! ******************************************************************************
+! tdis_pu -- Period Update.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DNODATA, MNORMAL, MVALIDATE
+    use GenericUtilitiesModule, only: sim_message
+    use SimVariablesModule, only: isim_mode
+    ! -- local
+    character(len=LINELENGTH) :: line
+    ! -- formats
+    character(len=*),parameter :: fmtspts =                                    &
+      "('    Solving:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
+    character(len=*),parameter :: fmtvspts =                                   &
+      "(' Validating:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
+    character(len=*),parameter :: fmtspi =                                     &
+      "('1',/28X,'STRESS PERIOD NO. ',I0,', LENGTH =',G15.7,/                  &
+       &28X,47('-'),/                                                          &
+       &28X,'NUMBER OF TIME STEPS = ',I0,/                                     &
+       &28X,'MULTIPLIER FOR DELT =',F10.3)"
+    character(len=*),parameter :: fmtats =                                     &
+      "(28X,'PERIOD TDIS SETINGS OVERRIDDEN BY ATS CONTROLS',/)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize variables for this step
+    readnewdata = .false.
+    dtstable = DNODATA
+    !
+    ! -- Increment kstp and kper and set readnewdata
+    if (endofperiod) then
+      kstp = 1
+      kper = kper + 1
+      readnewdata = .true.
+    else
+      kstp = kstp + 1
+    endif
+    !
+    ! -- Print stress period and time step to console
+    select case(isim_mode)
+      case(MVALIDATE)  
+        write(line, fmtvspts) kper, kstp
+      case(MNORMAL)
+        write(line, fmtspts) kper, kstp
+    end select
+    call sim_message(line, level=VALL)
+    call sim_message(line, iunit=iout, skipbefore=1, skipafter=1)
+    !
+    ! -- Write message if first time step
+    if (kstp == 1) then
+      write(iout, fmtspi) kper, perlen(kper), nstp(kper), tsmult(kper)
+      if (iskperats()) then
+        write(iout, fmtats)
+      end if
+    end if
+    return    
+  end subroutine tdis_pu
+  
+  function iskperats() result (lv)
+    logical(LGP) :: lv
+    lv = .false.
+    if (atsactive) then
+      if (kperats(kper) /= 0) then
+        lv = .true.
+      end if
+    end if
+  end function iskperats
+    
   subroutine tdis_tu()
 ! ******************************************************************************
 ! tdis_tu -- Time Update.
@@ -102,41 +186,43 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DONE, DZERO, MNORMAL, MVALIDATE
-    use SimVariablesModule, only: isim_mode
-    use GenericUtilitiesModule, only: sim_message
+    use AdaptiveTimeStepModule, only: ats_tu
     ! -- local
-    character(len=LINELENGTH) :: line
-    ! -- formats
-    character(len=*),parameter :: fmtspi =                                     &
-      "('1',/28X,'STRESS PERIOD NO. ',I4,', LENGTH =',G15.7,/                  &
-       &28X,47('-'),//                                                         &
-       &30X,'NUMBER OF TIME STEPS =',I6,//                                     &
-       &31X,'MULTIPLIER FOR DELT =',F10.3)"
-    character(len=*),parameter :: fmttsi =                                     &
-      "(1X,/28X,'INITIAL TIME STEP SIZE =',G15.7)"
-    character(len=*),parameter :: fmtspts =                                    &
-      "('    Solving:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
-    character(len=*),parameter :: fmtvspts =                                   &
-      "(' Validating:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Increment kstp and kper
-    if (endofperiod) then
-      kstp = 1
-      kper = kper + 1
+    ! -- Call standard time update or ats time update
+    if (iskperats()) then
+      call ats_tu(endofperiod, endofsimulation, readnewdata, &
+                  kstp, kper, perlen, nstp, &
+                  tsmult, delt, dtstable, pertim, pertimsav, totim, totimsav, &
+                  totalsimtime, totimc, kperats)
     else
-      kstp = kstp + 1
-    endif
+      call tdis_tu_std()
+    end if
     !
-    ! -- Set readnewdata to .false. and change if new stress period
-    readnewdata = .false.
+    ! -- return
+    return
+  end subroutine tdis_tu
+
+  subroutine tdis_tu_std()
+! ******************************************************************************
+! tdis_tu_std -- Standard time update
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DONE, DZERO, MNORMAL, MVALIDATE
+    ! -- formats
+    character(len=*),parameter :: fmttsi =                                     &
+      "(28X,'INITIAL TIME STEP SIZE =',G15.7)"
+! ------------------------------------------------------------------------------
     !
     ! -- Setup new stress period if kstp is 1
     if(kstp == 1) then
       !
       ! -- Write stress period information to simulation list file
-      write(iout,fmtspi) kper, perlen(kper), nstp(kper), tsmult(kper)
+      !write(iout,fmtspi) kper, perlen(kper), nstp(kper), tsmult(kper)
       !
       ! -- Calculate the first value of delt for this stress period
       delt = perlen(kper) / float(nstp(kper))
@@ -152,25 +238,12 @@
       !
       ! -- Clear flag that indicates last time step of a stress period
       endofperiod = .false.
-      !
-      ! -- Read new data
-      readnewdata = .true.
-      !
     endif
     !
     ! -- Calculate delt for kstp > 1
     if (kstp /= 1) then
       delt = tsmult(kper) * delt
     end if
-    !
-    ! -- Print stress period and time step to console
-    select case(isim_mode)
-      case(MVALIDATE)  
-        write(line, fmtvspts) kper, kstp
-      case(MNORMAL)
-        write(line, fmtspts) kper, kstp
-    end select
-    call sim_message(line, level=VALL)
     !
     ! -- Store totim and pertim, which are times at end of previous time step
     totimsav = totim
@@ -192,7 +265,7 @@
     !
     ! -- return
     return
-  end subroutine tdis_tu
+  end subroutine tdis_tu_std
 
   subroutine tdis_ot(iout)
 ! ******************************************************************************
@@ -277,8 +350,15 @@
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use AdaptiveTimeStepModule, only: ats_da
     use MemoryManagerModule, only: mem_deallocate
 ! ------------------------------------------------------------------------------
+    !
+    ! -- ats
+    if (atsactive) then
+      call ats_da()
+    end if
     !
     ! -- Scalars
     call mem_deallocate(nper)
@@ -288,7 +368,9 @@
     call mem_deallocate(readnewdata)
     call mem_deallocate(endofperiod)
     call mem_deallocate(endofsimulation)
+    call mem_deallocate(atsactive)
     call mem_deallocate(delt)
+    call mem_deallocate(dtstable)
     call mem_deallocate(pertim)
     call mem_deallocate(totim)
     call mem_deallocate(totimc)
@@ -304,6 +386,7 @@
     call mem_deallocate(perlen)
     call mem_deallocate(nstp)
     call mem_deallocate(tsmult)
+    call mem_deallocate(kperats)
     !
     ! -- Return
     return
@@ -319,9 +402,10 @@
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error
+    use AdaptiveTimeStepModule, only: ats_cr
     ! -- dummy
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword, fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     logical :: undspec
@@ -381,6 +465,16 @@
         case ('START_DATE_TIME')
           call parser%GetString(datetime0)
           write(iout, fmtdatetime0) datetime0
+        case ('ATS6')
+          call parser%GetStringCaps(keyword)
+          if(trim(adjustl(keyword)) /= 'FILEIN') then
+            errmsg = 'ATS6 keyword must be followed by "FILEIN" ' //          &
+                      'then by filename.'
+            call store_error(errmsg)
+          endif
+          call parser%GetString(fname)
+          call ats_cr(fname)
+          atsactive = .true.
         case default
           write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN TDIS OPTION: ',        &
                                     trim(keyword)
@@ -423,7 +517,9 @@
     call mem_allocate(readnewdata, 'READNEWDATA', 'TDIS')
     call mem_allocate(endofperiod, 'ENDOFPERIOD', 'TDIS')
     call mem_allocate(endofsimulation, 'ENDOFSIMULATION', 'TDIS')
+    call mem_allocate(atsactive, 'ATSACTIVE', 'TDIS')
     call mem_allocate(delt, 'DELT', 'TDIS')
+    call mem_allocate(dtstable, 'DTSTABLE', 'TDIS')
     call mem_allocate(pertim, 'PERTIM', 'TDIS')
     call mem_allocate(totim, 'TOTIM', 'TDIS')
     call mem_allocate(totimc, 'TOTIMC', 'TDIS')
@@ -443,7 +539,9 @@
     readnewdata = .true.
     endofperiod = .true.
     endofsimulation = .false.
+    atsactive = .false.
     delt = DZERO
+    dtstable = DZERO
     pertim = DZERO
     totim = DZERO
     totimc = DZERO
@@ -467,11 +565,19 @@
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     call mem_allocate(perlen, nper, 'PERLEN', 'TDIS')
     call mem_allocate(nstp, nper, 'NSTP', 'TDIS')
     call mem_allocate(tsmult, nper, 'TSMULT', 'TDIS')
+    call mem_allocate(kperats, nper, 'KPERATS', 'ATS')
+    !
+    ! -- initialize
+    do n = 1, nper
+      kperats(n) = 0
+    end do
     !
     ! -- return
     return
@@ -686,6 +792,19 @@
     ! -- Return
     return
   end subroutine check_tdis_timing
+
+  subroutine tdis_dt(dt, sloc)
+    real(DP), intent(in) :: dt
+    character(len=*), intent(in) :: sloc
+    character(len=*), parameter :: fmtdtsubmit =                                 &
+      &"(1x, 'ATS: ', A,' SUBMITTED A PREFERRED TIME STEP SIZE OF ', G15.7)"
+    if (iskperats() .and. kstp > 1) then
+      write(iout, fmtdtsubmit) trim(adjustl(sloc)), dt
+    end if
+    if (dt < dtstable) then
+      dtstable = dt
+    end if
+  end subroutine tdis_dt
 
 end module TdisModule
 

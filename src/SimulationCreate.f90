@@ -227,6 +227,7 @@ module SimulationCreateModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TdisModule, only: tdis_cr
+    use AdaptiveTimeStepModule, only: ats_cr
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr

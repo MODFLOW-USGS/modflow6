@@ -76,6 +76,7 @@ module NumericalSolutionModule
     integer(I4B), pointer                                :: icnvg => NULL()
     integer(I4B), pointer                                :: itertot_timestep => NULL()   !< total nr. of linear solves per call to sln_ca
     integer(I4B), pointer                                :: itertot_sim => NULL()        !< total nr. of inner iterations for simulation
+    integer(I4B), pointer                                :: kiter_saved => NULL()        !< number of outer iterations
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -119,7 +120,7 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: ptcrat => NULL()
     !
     ! -- linear accelerator storage
-    type(ImsLinearDataType), POINTER                        :: imslinear => NULL()
+    type(ImsLinearDataType), POINTER                     :: imslinear => NULL()
     !
     ! -- sparse object
     type(sparsematrix)                                   :: sparse
@@ -131,6 +132,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
+    procedure :: sln_tu
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -258,6 +260,7 @@ contains
     call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
     call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memoryPath)
     call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
+    call mem_allocate(this%kiter_saved, 'KITER_SAVED', this%memoryPath)
     call mem_allocate(this%mxiter, 'MXITER', this%memoryPath)
     call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
     call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)
@@ -304,6 +307,7 @@ contains
     this%icnvg = 0
     this%itertot_timestep = 0
     this%itertot_sim = 0
+    this%kiter_saved = 0
     this%mxiter = 0
     this%linmeth = 1
     this%nonmeth = 0
@@ -998,6 +1002,41 @@ contains
     return
   end subroutine sln_ar
 
+   subroutine sln_tu(this)
+! ******************************************************************************
+! sln_tu -- Time update
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: tdis_dt, delt
+    use ConstantsModule, only: DTWO
+    ! -- dummy
+    class(NumericalSolutionType) :: this
+    ! -- local
+    real(DP) :: dtstable
+    real(DP) :: tsadj  ! should come from user input
+    real(DP) :: fact   ! should probably come from user input
+! ------------------------------------------------------------------------------
+    !
+    ! -- increase or decrease delt based on kiter fraction
+    tsadj = DTWO
+    fact = this%mxiter / 3.d0
+    if (this%kiter_saved < int(fact)) then
+      dtstable = delt * tsadj
+    else if (this%kiter_saved > int(DTWO * fact)) then
+      dtstable = delt / tsadj
+    else
+      dtstable = delt
+    end if
+    !
+    ! -- submit stable dt for upcoming step
+    call tdis_dt(dtstable, this%memoryPath)
+    !
+    return
+  end subroutine sln_tu
+  
    subroutine sln_ad(this)
 ! ******************************************************************************
 ! sln_ad -- Advance solution
@@ -1155,6 +1194,7 @@ contains
     call mem_deallocate(this%icnvg)
     call mem_deallocate(this%itertot_timestep)
     call mem_deallocate(this%itertot_sim)
+    call mem_deallocate(this%kiter_saved)
     call mem_deallocate(this%mxiter)
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
@@ -1233,6 +1273,7 @@ contains
         end do outerloop
       
         ! finish up, write convergence info, CSV file, budgets and flows, ...
+        this%kiter_saved = kiter
         call this%finalizeSolve(kiter, isgcnvg, isuppress_output)   
     end select
     !
@@ -1434,7 +1475,7 @@ contains
         end if
         !
         ! -- initialize table and define columns
-        title = 'OUTER ITERATION SUMMARY'
+        title = trim(this%memoryPath) // ' OUTER ITERATION SUMMARY'
         call table_cr(this%outertab, this%name, title)
         call this%outertab%table_df(ntabrows, ntabcols, iout,        &
                                     finalize=.FALSE.)
@@ -1893,7 +1934,7 @@ contains
       ntabcols = 7
       !
       ! -- initialize table and define columns
-      title = 'INNER ITERATION SUMMARY'
+      title = trim(this%memoryPath) // ' INNER ITERATION SUMMARY'
       call table_cr(this%innertab, this%name, title)
       call this%innertab%table_df(ntabrows, ntabcols, iu)
       tag = 'TOTAL ITERATION'
