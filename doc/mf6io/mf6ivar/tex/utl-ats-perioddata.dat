@@ -1,0 +1,5 @@
+BEGIN PERIODDATA
+  <iperats> <dt0> <dtmin> <dtmax>
+  <iperats> <dt0> <dtmin> <dtmax>
+  ...
+END PERIODDATA

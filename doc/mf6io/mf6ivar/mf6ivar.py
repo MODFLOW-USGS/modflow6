@@ -683,7 +683,8 @@ if __name__ == '__main__':
                   'utl-lak-tab',  # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',
-                  'utl-tas']
+                  'utl-tas',
+                  'utl-ats']
 
     # directories
     dfndir = os.path.join('.', 'dfn')

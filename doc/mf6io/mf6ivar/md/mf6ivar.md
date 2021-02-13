@@ -21,6 +21,9 @@
 | SIM | NAM | SOLUTIONGROUP | SLNMNAMES | STRING (:) | is the array of model names to add to this solution.  The number of model names is determined by the number of model names the user provides on this line. |
 | SIM | TDIS | OPTIONS | TIME_UNITS | STRING | is the time units of the simulation.  This is a text string that is used as a label within model output files.  Values for time\_units may be ``unknown'',  ``seconds'', ``minutes'', ``hours'', ``days'', or ``years''.  The default time unit is ``unknown''. |
 | SIM | TDIS | OPTIONS | START_DATE_TIME | STRING | is the starting date and time of the simulation.  This is a text string that is used as a label within the simulation list file.  The value has no affect on the simulation.  The recommended format for the starting date and time is described at https://www.w3.org/TR/NOTE-datetime. |
+| SIM | TDIS | OPTIONS | ATS6 | KEYWORD | keyword to specify that record corresponds to an adaptive time stepping file. |
+| SIM | TDIS | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
+| SIM | TDIS | OPTIONS | ATS6_FILENAME | STRING | defines an adaptive time step (ATS) input file defining ATS controls.  Records in the ATS file can be used to override the time step behavior for selected stress periods. |
 | SIM | TDIS | DIMENSIONS | NPER | INTEGER | is the number of stress periods for the simulation. |
 | SIM | TDIS | PERIODDATA | PERLEN | DOUBLE PRECISION | is the length of a stress period. |
 | SIM | TDIS | PERIODDATA | NSTP | INTEGER | is the number of time steps in a stress period. |
@@ -1054,3 +1057,8 @@
 | UTL | TAS | ATTRIBUTES | SFACVAL | DOUBLE PRECISION TIME_SERIES_NAME | Scale factor, which will multiply all array values in time series. SFAC is an optional attribute; if omitted, SFAC = 1.0. |
 | UTL | TAS | TIME | TIME_FROM_MODEL_START | DOUBLE PRECISION | A numeric time relative to the start of the simulation, in the time unit used in the simulation. Times must be strictly increasing. |
 | UTL | TAS | TIME | TAS_ARRAY | DOUBLE PRECISION (UNKNOWN) | An array of numeric, floating-point values, or a constant value, readable by the U2DREL array-reading utility. |
+| UTL | ATS | DIMENSIONS | MAXATS | INTEGER | is the number of records in the subsequent perioddata block that will be used for adaptive time stepping. |
+| UTL | ATS | PERIODDATA | IPERATS | INTEGER | is the period number to designate for adaptive time stepping.  The remaining ATS values on this line will apply to period iperats. |
+| UTL | ATS | PERIODDATA | DT0 | DOUBLE PRECISION | is the initial time step length for period iperats.  If the value is zero, then the final step from the previous stress period will be used as the initial time step. |
+| UTL | ATS | PERIODDATA | DTMIN | DOUBLE PRECISION | is the minimum time step length for this period.  This value must be less than or equal to tsmax and less than or equal to dt0. |
+| UTL | ATS | PERIODDATA | DTMAX | DOUBLE PRECISION | is the maximum time step length for this period.  This value must be greater than or equal to tsmin and greater than or equal to dt0. |
