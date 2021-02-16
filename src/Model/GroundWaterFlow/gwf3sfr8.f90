@@ -2698,6 +2698,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
+    use ConstantsModule, only: DZERO, DONE
     use SimModule, only: ustop, store_error
     ! -- dummy
     class(SfrType),intent(inout) :: this
@@ -2810,7 +2811,7 @@ contains
         ! -- if diversion cprior is 'fraction', ensure that 0.0 <= fraction <= 1.0
         cp = this%divcprior(ii)
         divq = this%divflow(ii) 
-        if (cp == 'FRACTION' .and. (divq < 0.0 .or. divq > 1.0)) then
+        if (cp == 'FRACTION' .and. (divq < DZERO .or. divq > DONE)) then
           write(errmsg,'(a,1x,i0,a)')                                            &
                 'cprior is type FRACTION for diversion no.', ii,                 &
                 ', but divflow not within the range 0.0 to 1.0'
