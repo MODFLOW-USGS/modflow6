@@ -299,12 +299,6 @@ contains
   !!
   !<
   subroutine csub_cr(csubobj, name_model, istounit, stoPckName, inunit, iout)
-! ******************************************************************************
-! csub_cr -- Create a new CSUB object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     type(GwfCsubType), pointer :: csubobj            !< pointer to default package type
     character(len=*), intent(in) :: name_model       !< model name
@@ -313,7 +307,6 @@ contains
     character(len=*), intent(in) :: stoPckName       !< name of the storage package
     integer(I4B), intent(in) :: iout                 !< unit number of lst output file
     ! -- local variables
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (csubobj)
@@ -346,12 +339,6 @@ contains
   !!
   !<
   subroutine csub_ar(this, dis, ibound)
-    ! ******************************************************************************
-    ! csub_ar -- Allocate and Read
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     use ConstantsModule, only: LINELENGTH
@@ -387,7 +374,6 @@ contains
     character(len=*), parameter :: fmtcsub = &
       "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 12/15/2019',            &
      &' INPUT READ FROM UNIT ', i0, //)"
-    ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the csub package.
     write (this%iout, fmtcsub) this%inunit
@@ -594,12 +580,7 @@ contains
   !!
   !<
   subroutine read_options(this)
-    ! ******************************************************************************
-    ! read_options -- set options
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
@@ -641,7 +622,6 @@ contains
                                    "(4x, A, 1X, G0)"
     character(len=*), parameter :: fmtfileout = &
                                    "(4x, 'CSUB ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
-    ! -----------------------------------------------------------------------------
     !
     ! -- initialize variables
     ibrg = 0
@@ -1042,15 +1022,9 @@ contains
   !!
   !<
   subroutine csub_read_dimensions(this)
-! ******************************************************************************
-! csub_read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBOUNDNAME
     use KindModule, only: I4B
-!    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     ! -- local variables
@@ -1058,7 +1032,6 @@ contains
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
     this%ninterbeds = -1
@@ -1122,17 +1095,10 @@ contains
   !!
   !<
   subroutine csub_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- call standard NumericalPackageType allocate scalars
     call this%NumericalPackageType%allocate_scalars()
@@ -1242,15 +1208,9 @@ contains
   !!
   !<
   subroutine csub_allocate_arrays(this)
-    ! ******************************************************************************
-    ! allocate_arrays -- Allocate Package Members
-    ! Subroutine: (1) allocate
-    !             (2) initialize
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     ! -- local variables
     integer(I4B) :: j
@@ -1258,7 +1218,7 @@ contains
     integer(I4B) :: iblen
     integer(I4B) :: ilen
     integer(I4B) :: naux
-
+    !
     ! -- grid based data
     if (this%ioutcomp == 0 .and. this%ioutcompi == 0 .and. &
         this%ioutcompe == 0 .and. this%ioutcompib == 0 .and. &
@@ -1268,48 +1228,48 @@ contains
       call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%memoryPath))
     end if
     if (this%ioutcomp == 0 .and. this%ioutzdisp == 0) then
-      call mem_allocate(this%buffusr, 1, 'buffusr', trim(this%memoryPath))
+      call mem_allocate(this%buffusr, 1, 'BUFFUSR', trim(this%memoryPath))
     else
-      call mem_allocate(this%buffusr, this%dis%nodesuser, 'buffusr', &
+      call mem_allocate(this%buffusr, this%dis%nodesuser, 'BUFFUSR', &
                         trim(this%memoryPath))
     end if
-    call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%memoryPath))
-    call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%memoryPath))
-    call mem_allocate(this%cg_ske_cr, this%dis%nodes, 'cg_ske_cr', &
+    call mem_allocate(this%sgm, this%dis%nodes, 'SGM', trim(this%memoryPath))
+    call mem_allocate(this%sgs, this%dis%nodes, 'SGS', trim(this%memoryPath))
+    call mem_allocate(this%cg_ske_cr, this%dis%nodes, 'CG_SKE_CR', &
                       trim(this%memoryPath))
-    call mem_allocate(this%cg_es, this%dis%nodes, 'cg_es', trim(this%memoryPath))
-    call mem_allocate(this%cg_es0, this%dis%nodes, 'cg_es0', trim(this%memoryPath))
-    call mem_allocate(this%cg_pcs, this%dis%nodes, 'cg_pcs', trim(this%memoryPath))
-    call mem_allocate(this%cg_comp, this%dis%nodes, 'cg_comp', trim(this%memoryPath))
-    call mem_allocate(this%cg_tcomp, this%dis%nodes, 'cg_tcomp', &
+    call mem_allocate(this%cg_es, this%dis%nodes, 'CG_ES', trim(this%memoryPath))
+    call mem_allocate(this%cg_es0, this%dis%nodes, 'CG_ES0', trim(this%memoryPath))
+    call mem_allocate(this%cg_pcs, this%dis%nodes, 'CG_PCS', trim(this%memoryPath))
+    call mem_allocate(this%cg_comp, this%dis%nodes, 'CG_COMP', trim(this%memoryPath))
+    call mem_allocate(this%cg_tcomp, this%dis%nodes, 'CG_TCOMP', &
                       trim(this%memoryPath))
-    call mem_allocate(this%cg_stor, this%dis%nodes, 'cg_stor', trim(this%memoryPath))
-    call mem_allocate(this%cg_ske, this%dis%nodes, 'cg_ske', trim(this%memoryPath))
-    call mem_allocate(this%cg_sk, this%dis%nodes, 'cg_sk', trim(this%memoryPath))
-    call mem_allocate(this%cg_thickini, this%dis%nodes, 'cg_thickini', &
+    call mem_allocate(this%cg_stor, this%dis%nodes, 'CG_STOR', trim(this%memoryPath))
+    call mem_allocate(this%cg_ske, this%dis%nodes, 'CG_SKE', trim(this%memoryPath))
+    call mem_allocate(this%cg_sk, this%dis%nodes, 'CG_SK', trim(this%memoryPath))
+    call mem_allocate(this%cg_thickini, this%dis%nodes, 'CG_THICKINI', &
                       trim(this%memoryPath))
-    call mem_allocate(this%cg_thetaini, this%dis%nodes, 'cg_thetaini', &
+    call mem_allocate(this%cg_thetaini, this%dis%nodes, 'CG_THETAINI', &
                       trim(this%memoryPath))
     if (this%iupdatematprop == 0) then
-      call mem_setptr(this%cg_thick, 'cg_thickini', trim(this%memoryPath))
-      call mem_setptr(this%cg_thick0, 'cg_thickini', trim(this%memoryPath))
-      call mem_setptr(this%cg_theta, 'cg_thetaini', trim(this%memoryPath))
-      call mem_setptr(this%cg_theta0, 'cg_thetaini', trim(this%memoryPath))
+      call mem_setptr(this%cg_thick, 'CG_THICKINI', trim(this%memoryPath))
+      call mem_setptr(this%cg_thick0, 'CG_THICKINI', trim(this%memoryPath))
+      call mem_setptr(this%cg_theta, 'CG_THETAINI', trim(this%memoryPath))
+      call mem_setptr(this%cg_theta0, 'CG_THETAINI', trim(this%memoryPath))
     else
-      call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick', &
+      call mem_allocate(this%cg_thick, this%dis%nodes, 'CG_THICK', &
                         trim(this%memoryPath))
-      call mem_allocate(this%cg_thick0, this%dis%nodes, 'cg_thick0', &
+      call mem_allocate(this%cg_thick0, this%dis%nodes, 'CG_THICK0', &
                         trim(this%memoryPath))
-      call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta', &
+      call mem_allocate(this%cg_theta, this%dis%nodes, 'CG_THETA', &
                         trim(this%memoryPath))
-      call mem_allocate(this%cg_theta0, this%dis%nodes, 'cg_theta0', &
+      call mem_allocate(this%cg_theta0, this%dis%nodes, 'CG_THETA0', &
                         trim(this%memoryPath))
     end if
     !
     ! -- cell storage data
-    call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor', &
+    call mem_allocate(this%cell_wcstor, this%dis%nodes, 'CELL_WCSTOR', &
                       trim(this%memoryPath))
-    call mem_allocate(this%cell_thick, this%dis%nodes, 'cell_thick', &
+    call mem_allocate(this%cell_thick, this%dis%nodes, 'CELL_THICK', &
                       trim(this%memoryPath))
     !
     ! -- interbed data
@@ -1327,38 +1287,38 @@ contains
         this%auxvar(j, n) = DZERO
       end do
     end do
-    call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%memoryPath))
-    call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%memoryPath))
-    call mem_allocate(this%cg_gs, this%dis%nodes, 'cg_gs', trim(this%memoryPath))
-    call mem_allocate(this%pcs, iblen, 'pcs', trim(this%memoryPath))
-    call mem_allocate(this%rnb, iblen, 'rnb', trim(this%memoryPath))
-    call mem_allocate(this%kv, iblen, 'kv', trim(this%memoryPath))
-    call mem_allocate(this%h0, iblen, 'h0', trim(this%memoryPath))
-    call mem_allocate(this%ci, iblen, 'ci', trim(this%memoryPath))
-    call mem_allocate(this%rci, iblen, 'rci', trim(this%memoryPath))
-    call mem_allocate(this%idelay, iblen, 'idelay', trim(this%memoryPath))
-    call mem_allocate(this%ielastic, iblen, 'ielastic', trim(this%memoryPath))
-    call mem_allocate(this%iconvert, iblen, 'iconvert', trim(this%memoryPath))
-    call mem_allocate(this%comp, iblen, 'comp', trim(this%memoryPath))
-    call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%memoryPath))
-    call mem_allocate(this%tcompi, iblen, 'tcompi', trim(this%memoryPath))
-    call mem_allocate(this%tcompe, iblen, 'tcompe', trim(this%memoryPath))
-    call mem_allocate(this%storagee, iblen, 'storagee', trim(this%memoryPath))
-    call mem_allocate(this%storagei, iblen, 'storagei', trim(this%memoryPath))
-    call mem_allocate(this%ske, iblen, 'ske', trim(this%memoryPath))
-    call mem_allocate(this%sk, iblen, 'sk', trim(this%memoryPath))
-    call mem_allocate(this%thickini, iblen, 'thickini', trim(this%memoryPath))
-    call mem_allocate(this%thetaini, iblen, 'thetaini', trim(this%memoryPath))
+    call mem_allocate(this%unodelist, iblen, 'UNODELIST', trim(this%memoryPath))
+    call mem_allocate(this%nodelist, iblen, 'NODELIST', trim(this%memoryPath))
+    call mem_allocate(this%cg_gs, this%dis%nodes, 'CG_GS', trim(this%memoryPath))
+    call mem_allocate(this%pcs, iblen, 'PCS', trim(this%memoryPath))
+    call mem_allocate(this%rnb, iblen, 'RNB', trim(this%memoryPath))
+    call mem_allocate(this%kv, iblen, 'KV', trim(this%memoryPath))
+    call mem_allocate(this%h0, iblen, 'H0', trim(this%memoryPath))
+    call mem_allocate(this%ci, iblen, 'CI', trim(this%memoryPath))
+    call mem_allocate(this%rci, iblen, 'RCI', trim(this%memoryPath))
+    call mem_allocate(this%idelay, iblen, 'IDELAY', trim(this%memoryPath))
+    call mem_allocate(this%ielastic, iblen, 'IELASTIC', trim(this%memoryPath))
+    call mem_allocate(this%iconvert, iblen, 'ICONVERT', trim(this%memoryPath))
+    call mem_allocate(this%comp, iblen, 'COMP', trim(this%memoryPath))
+    call mem_allocate(this%tcomp, iblen, 'TCOMP', trim(this%memoryPath))
+    call mem_allocate(this%tcompi, iblen, 'TCOMPI', trim(this%memoryPath))
+    call mem_allocate(this%tcompe, iblen, 'TCOMPE', trim(this%memoryPath))
+    call mem_allocate(this%storagee, iblen, 'STORAGEE', trim(this%memoryPath))
+    call mem_allocate(this%storagei, iblen, 'STORAGEI', trim(this%memoryPath))
+    call mem_allocate(this%ske, iblen, 'SKE', trim(this%memoryPath))
+    call mem_allocate(this%sk, iblen, 'SK', trim(this%memoryPath))
+    call mem_allocate(this%thickini, iblen, 'THICKINI', trim(this%memoryPath))
+    call mem_allocate(this%thetaini, iblen, 'THETAINI', trim(this%memoryPath))
     if (this%iupdatematprop == 0) then
-      call mem_setptr(this%thick, 'thickini', trim(this%memoryPath))
-      call mem_setptr(this%thick0, 'thickini', trim(this%memoryPath))
-      call mem_setptr(this%theta, 'thetaini', trim(this%memoryPath))
-      call mem_setptr(this%theta0, 'thetaini', trim(this%memoryPath))
+      call mem_setptr(this%thick, 'THICKINI', trim(this%memoryPath))
+      call mem_setptr(this%thick0, 'THICKINI', trim(this%memoryPath))
+      call mem_setptr(this%theta, 'THETAINI', trim(this%memoryPath))
+      call mem_setptr(this%theta0, 'THETAINI', trim(this%memoryPath))
     else
-      call mem_allocate(this%thick, iblen, 'thick', trim(this%memoryPath))
-      call mem_allocate(this%thick0, iblen, 'thick0', trim(this%memoryPath))
-      call mem_allocate(this%theta, iblen, 'theta', trim(this%memoryPath))
-      call mem_allocate(this%theta0, iblen, 'theta0', trim(this%memoryPath))
+      call mem_allocate(this%thick, iblen, 'THICK', trim(this%memoryPath))
+      call mem_allocate(this%thick0, iblen, 'THICK0', trim(this%memoryPath))
+      call mem_allocate(this%theta, iblen, 'THETA', trim(this%memoryPath))
+      call mem_allocate(this%theta0, iblen, 'THETA0', trim(this%memoryPath))
     end if
     !
     ! -- delay bed storage - allocated in csub_read_packagedata
@@ -1417,12 +1377,7 @@ contains
   !!
   !<
   subroutine csub_read_packagedata(this)
-! ******************************************************************************
-! csub_read_packagedata -- Read the package data for the CSUB package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy variables
@@ -1742,70 +1697,70 @@ contains
       ! -- reallocate and initialize delay interbed arrays
       if (ierr == 0) then
         call mem_allocate(this%idb_nconv_count, 2, &
-                          'idb_nconv_count', trim(this%memoryPath))
+                          'IDB_NCONV_COUNT', trim(this%memoryPath))
         call mem_allocate(this%idbconvert, this%ndelaycells, ndelaybeds, &
-                          'idbconvert', trim(this%memoryPath))
+                          'IDBCONVERT', trim(this%memoryPath))
         call mem_allocate(this%dbdhmax, ndelaybeds, &
-                          'dbdhmax', trim(this%memoryPath))
+                          'DBDHMAX', trim(this%memoryPath))
         call mem_allocate(this%dbz, this%ndelaycells, ndelaybeds, &
-                          'dbz', trim(this%memoryPath))
+                          'DBZ', trim(this%memoryPath))
         call mem_allocate(this%dbrelz, this%ndelaycells, ndelaybeds, &
-                          'dbrelz', trim(this%memoryPath))
+                          'DBRELZ', trim(this%memoryPath))
         call mem_allocate(this%dbh, this%ndelaycells, ndelaybeds, &
-                          'dbh', trim(this%memoryPath))
+                          'DBH', trim(this%memoryPath))
         call mem_allocate(this%dbh0, this%ndelaycells, ndelaybeds, &
-                          'dbh0', trim(this%memoryPath))
+                          'DBH0', trim(this%memoryPath))
         call mem_allocate(this%dbgeo, this%ndelaycells, ndelaybeds, &
-                          'dbgeo', trim(this%memoryPath))
+                          'DBGEO', trim(this%memoryPath))
         call mem_allocate(this%dbes, this%ndelaycells, ndelaybeds, &
-                          'dbes', trim(this%memoryPath))
+                          'DBES', trim(this%memoryPath))
         call mem_allocate(this%dbes0, this%ndelaycells, ndelaybeds, &
-                          'dbes0', trim(this%memoryPath))
+                          'DBES0', trim(this%memoryPath))
         call mem_allocate(this%dbpcs, this%ndelaycells, ndelaybeds, &
-                          'dbpcs', trim(this%memoryPath))
+                          'DBPCS', trim(this%memoryPath))
         call mem_allocate(this%dbflowtop, ndelaybeds, &
-                          'dbflowtop', trim(this%memoryPath))
+                          'DBFLOWTOP', trim(this%memoryPath))
         call mem_allocate(this%dbflowbot, ndelaybeds, &
-                          'dbflowbot', trim(this%memoryPath))
+                          'DBFLOWBOT', trim(this%memoryPath))
         call mem_allocate(this%dbdzini, this%ndelaycells, ndelaybeds, &
-                          'dbdzini', trim(this%memoryPath))
+                          'DBDZINI', trim(this%memoryPath))
         call mem_allocate(this%dbthetaini, this%ndelaycells, ndelaybeds, &
-                          'dbthetaini', trim(this%memoryPath))
+                          'DBTHETAINI', trim(this%memoryPath))
         call mem_allocate(this%dbcomp, this%ndelaycells, ndelaybeds, &
-                          'dbcomp', trim(this%memoryPath))
+                          'DBCOMP', trim(this%memoryPath))
         call mem_allocate(this%dbtcomp, this%ndelaycells, ndelaybeds, &
-                          'dbtcomp', trim(this%memoryPath))
+                          'DBTCOMP', trim(this%memoryPath))
         !
         ! -- allocate delay bed arrays
         if (this%iupdatematprop == 0) then
-          call mem_setptr(this%dbdz, 'dbdzini', trim(this%memoryPath))
-          call mem_setptr(this%dbdz0, 'dbdzini', trim(this%memoryPath))
-          call mem_setptr(this%dbtheta, 'dbthetaini', trim(this%memoryPath))
-          call mem_setptr(this%dbtheta0, 'dbthetaini', trim(this%memoryPath))
+          call mem_setptr(this%dbdz, 'DBDZINI', trim(this%memoryPath))
+          call mem_setptr(this%dbdz0, 'DBDZINI', trim(this%memoryPath))
+          call mem_setptr(this%dbtheta, 'DBTHETAINI', trim(this%memoryPath))
+          call mem_setptr(this%dbtheta0, 'DBTHETAINI', trim(this%memoryPath))
         else
           call mem_allocate(this%dbdz, this%ndelaycells, ndelaybeds, &
-                            'dbdz', trim(this%memoryPath))
+                            'DBDZ', trim(this%memoryPath))
           call mem_allocate(this%dbdz0, this%ndelaycells, ndelaybeds, &
-                            'dbdz0', trim(this%memoryPath))
+                            'DBDZ0', trim(this%memoryPath))
           call mem_allocate(this%dbtheta, this%ndelaycells, ndelaybeds, &
-                            'dbtheta', trim(this%memoryPath))
+                            'DBTHETA', trim(this%memoryPath))
           call mem_allocate(this%dbtheta0, this%ndelaycells, ndelaybeds, &
-                            'dbtheta0', trim(this%memoryPath))
+                            'DBTHETA0', trim(this%memoryPath))
         end if
         !
         ! -- allocate delay interbed solution arrays
         call mem_allocate(this%dbal, this%ndelaycells, &
-                          'dbal', trim(this%memoryPath))
+                          'DBAL', trim(this%memoryPath))
         call mem_allocate(this%dbad, this%ndelaycells, &
-                          'dbad', trim(this%memoryPath))
+                          'DBAD', trim(this%memoryPath))
         call mem_allocate(this%dbau, this%ndelaycells, &
-                          'dbau', trim(this%memoryPath))
+                          'DBAU', trim(this%memoryPath))
         call mem_allocate(this%dbrhs, this%ndelaycells, &
-                          'dbrhs', trim(this%memoryPath))
+                          'DBRHS', trim(this%memoryPath))
         call mem_allocate(this%dbdh, this%ndelaycells, &
-                          'dbdh', trim(this%memoryPath))
+                          'DBDH', trim(this%memoryPath))
         call mem_allocate(this%dbaw, this%ndelaycells, &
-                          'dbaw', trim(this%memoryPath))
+                          'DBAW', trim(this%memoryPath))
         !
         ! -- initialize delay bed counters
         do n = 1, 2
@@ -1880,12 +1835,6 @@ contains
   !!
   !<
   subroutine csub_fp(this)
-! **************************************************************************
-! csub_cc -- Final processing for package
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType) :: this
     ! -- local variables
@@ -1915,8 +1864,6 @@ contains
     integer(I4B), dimension(:), allocatable :: imap_sel
     integer(I4B), dimension(:), allocatable :: locs
     real(DP), dimension(:), allocatable :: pctcomp_arr
-    ! format
-! --------------------------------------------------------------------------
     !
     ! -- initialize locs
     allocate (locs(this%dis%ndim))
@@ -2299,17 +2246,10 @@ contains
   !!
   !<
   subroutine csub_da(this)
-! ******************************************************************************
-! csub_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
     class(GwfCsubType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package is active
     if (this%inunit > 0) then
@@ -2529,14 +2469,7 @@ contains
   !!
   !<
   subroutine csub_rp(this)
-    ! ******************************************************************************
-    ! csub_rp -- Read and Prepare
-    ! Subroutine: (1) read itmp
-    !             (2) read new boundaries if itmp>0
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
@@ -2559,8 +2492,8 @@ contains
                                    "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*), parameter :: fmtlsp = &
                                    "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-    ! ------------------------------------------------------------------------------
     !
+    ! -- return if data is not read from file
     if (this%inunit == 0) return
     !
     ! -- get stress period data
@@ -2699,12 +2632,7 @@ contains
   !!
   !<
   subroutine csub_ad(this, nodes, hnew)
-    ! ******************************************************************************
-    ! csub_ad -- Advance csub data
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: nper, kper
     ! -- dummy variables
     class(GwfCsubType) :: this
@@ -2718,7 +2646,6 @@ contains
     real(DP) :: h
     real(DP) :: es
     real(DP) :: pcs
-    ! ------------------------------------------------------------------------------
     !
     ! -- evaluate if steady-state stress periods are specified for more
     !    than the first and last stress period if interbeds are simulated
@@ -2826,12 +2753,7 @@ contains
   !!
   !<
   subroutine csub_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
-    ! ******************************************************************************
-    ! csub_fc -- Fill the solution amat and rhs with storage contribution terms
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType) :: this
@@ -2852,7 +2774,6 @@ contains
     real(DP) :: hcof
     real(DP) :: rhsterm
     real(DP) :: comp
-    ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
     call this%csub_cg_calc_stress(this%dis%nodes, hnew)
@@ -2954,13 +2875,7 @@ contains
   !!
   !<
   subroutine csub_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
-    ! ******************************************************************************
-    ! csub_fn -- Fill the solution amat and rhs with csub contribution newton
-    !               term
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType) :: this
@@ -2980,7 +2895,6 @@ contains
     real(DP) :: area
     real(DP) :: hcof
     real(DP) :: rhsterm
-    ! ------------------------------------------------------------------------------
     !
     ! -- formulate csub terms
     if (this%gwfiss == 0) then
@@ -3071,12 +2985,7 @@ contains
   !<
   subroutine csub_cc(this, innertot, kiter, iend, icnvgmod, nodes, &
                      hnew, hold, cpak, ipak, dpak)
-! **************************************************************************
-! csub_cc -- Final convergence check for package
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy variables
     class(GwfCsubType) :: this
@@ -3120,10 +3029,8 @@ contains
     real(DP) :: v1
     real(DP) :: v2
     real(DP) :: df
-! format
-! --------------------------------------------------------------------------
-!
-! -- initialize local variables
+    !
+    ! -- initialize local variables
     icheck = this%iconvchk
     ipakfail = 0
     locdhmax = 0
@@ -3303,13 +3210,6 @@ contains
   !<
   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, &
                          model_budget)
-! ******************************************************************************
-! csub_bd -- calculate budget for coarse-grained storage, interbeds, and water
-!            compression
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
@@ -3362,10 +3262,9 @@ contains
     real(DP) :: rratewc
     real(DP) :: ratewcin
     real(DP) :: ratewcout
-! -- for observations
+    ! -- for observations
     integer(I4B) :: iprobslocal
-! -- formats
-! --------------------------------------------------------------------------
+    ! -- formats
     !
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
@@ -3669,18 +3568,12 @@ contains
 !!
 !<
   subroutine csub_bdsav(this, idvfl, icbcfl, icbcun)
-! ******************************************************************************
-! sto_bdsav -- Save budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-! -- dummy variables
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: idvfl     !< flag to output dependent variable data
     integer(I4B), intent(in) :: icbcfl    !< flag to output budget data
     integer(I4B), intent(in) :: icbcun    !< unit number for cell-by-cell file
-! -- local variables
+    ! -- local variables
     character(len=1) :: cdatafmp = ' '
     character(len=1) :: editdesc = ' '
     integer(I4B) :: ibinun
@@ -3698,12 +3591,10 @@ contains
     integer(I4B) :: naux
     real(DP) :: dinact
     real(DP) :: Q
-! -- formats
+    ! -- formats
     character(len=*), parameter :: fmtnconv = &
     "(/4x, 'DELAY INTERBED CELL HEADS IN ', i0, ' INTERBEDS IN',               &
     &' NON-CONVERTIBLE GWF CELLS WERE LESS THAN THE TOP OF THE INTERBED CELL')"
-
-! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -3981,13 +3872,7 @@ contains
   !!
   !<
   subroutine csub_cg_calc_stress(this, nodes, hnew)
-! ******************************************************************************
-! csub_cg_calc_stress -- calculate the geostatic stress for every gwf node
-!                           in the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes                !< number of active model nodes
     real(DP), dimension(nodes), intent(in) :: hnew   !< current head
@@ -4011,8 +3896,6 @@ contains
     real(DP) :: phead
     real(DP) :: hwva
     real(DP) :: sadd
-
-! ------------------------------------------------------------------------------
     !
     ! -- calculate geostatic stress if necessary
     if (this%iupdatestress /= 0) then
@@ -4136,13 +4019,7 @@ contains
   !!
   !<
   subroutine csub_cg_chk_stress(this)
-! ******************************************************************************
-! csub_cg_chk_stress -- check that the effective stress for every gwf node
-!                       in the model is a positive value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType) :: this
     ! -- local variables
     character(len=20) :: cellid
@@ -4153,8 +4030,6 @@ contains
     real(DP) :: hcell
     real(DP) :: es
     real(DP) :: phead
-
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     ierr = 0
@@ -4210,19 +4085,13 @@ contains
   !!
   !<
   subroutine csub_nodelay_update(this, i)
-! ******************************************************************************
-! csub_nodelay_update -- Update material properties for no-delay interbeds.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: i
     ! -- local variables
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
-! ------------------------------------------------------------------------------
     !
     ! -- update thickness and theta
     comp = this%tcomp(i) + this%comp(i)
@@ -4264,12 +4133,7 @@ contains
   !<
   subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs, &
                              argtled)
-! ******************************************************************************
-! csub_nodelay_fc -- Calculate rho1, rho2, and rhs for no-delay interbeds
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType) :: this
@@ -4299,7 +4163,8 @@ contains
     real(DP) :: f
     real(DP) :: f0
     real(DP) :: rcorr
-! ------------------------------------------------------------------------------
+    !
+    ! -- process optional variables
     if (present(argtled)) then
       tled = argtled
     else
@@ -4379,13 +4244,6 @@ contains
   !!
   !<
   subroutine csub_nodelay_calc_comp(this, ib, hcell, hcellold, comp, rho1, rho2)
-! ******************************************************************************
-! csub_nodelay_calc_comp -- Calculate compaction, rho1, and rho2 for no-delay
-!                           interbeds
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: ib         !< interbed number
@@ -4401,7 +4259,6 @@ contains
     real(DP) :: pcs
     real(DP) :: tled
     real(DP) :: rhs
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     node = this%nodelist(ib)
@@ -4432,13 +4289,7 @@ contains
   !!
   !<
   subroutine csub_set_initial_state(this, nodes, hnew)
-! ******************************************************************************
-! csub_set_initial_state -- Set initial state for coarse-grained materials
-!                           and interbeds
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType) :: this
     ! -- dummy variables
     integer(I4B), intent(in) :: nodes               !< number of active model nodes
@@ -4466,7 +4317,6 @@ contains
     real(DP) :: dzhalf
     real(DP) :: zbot
     real(DP) :: dbpcs
-! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
     call this%csub_cg_calc_stress(nodes, hnew)
@@ -4832,14 +4682,8 @@ contains
   !!
   !<
   subroutine csub_cg_fc(this, node, tled, area, hcell, hcellold, hcof, rhs)
-! ******************************************************************************
-! csub_cg_fc -- Formulate the HCOF and RHS coarse-grained storage terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType) :: this
     ! -- dummy variables
+    class(GwfCsubType) :: this
     integer(I4B), intent(in) :: node    !< cell node number
     real(DP), intent(in) :: tled        !< recripicol of the time step length
     real(DP), intent(in) :: area        !< horizontal cell area
@@ -4856,9 +4700,8 @@ contains
     real(DP) :: hbar
     real(DP) :: sske
     real(DP) :: rho1
-! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     !
@@ -4908,12 +4751,6 @@ contains
   !!
   !<
   subroutine csub_cg_fn(this, node, tled, area, hcell, hcof, rhs)
-! ******************************************************************************
-! csub_cg_fn -- Formulate coarse-grained storage newton terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: node  !< node number
@@ -4933,9 +4770,8 @@ contains
     real(DP) :: hbarderv
     real(DP) :: sske
     real(DP) :: rho1
-! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     !
@@ -4990,13 +4826,7 @@ contains
   !!
   !<
   subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
-! ******************************************************************************
-! csub_fc -- Formulate the HCOF and RHS terms for interbeds
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy variable
+    ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: ib      !< interbed number
     integer(I4B), intent(in) :: node    !< cell node number
@@ -5014,9 +4844,8 @@ contains
     real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: f
-! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     comp = DZERO
@@ -5086,13 +4915,6 @@ contains
   !!
   !<
   subroutine csub_interbed_fn(this, ib, node, hcell, hcellold, hcof, rhs)
-! ******************************************************************************
-! csub_interbed_fn -- Formulate interbed newton terms. No newton terms for
-!                     delay interbeds.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
@@ -5119,9 +4941,8 @@ contains
     real(DP) :: hbarderv
     real(DP) :: rho1
     real(DP) :: rho2
-! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     rhsn = DZERO
@@ -5187,12 +5008,6 @@ contains
   !!
   !<
   subroutine csub_cg_calc_sske(this, n, sske, hcell)
-! ******************************************************************************
-! csub_cg_calc_sske -- Calculate sske for a gwf cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: n      !< cell node number
@@ -5208,7 +5023,6 @@ contains
     real(DP) :: theta
     real(DP) :: f
     real(DP) :: f0
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     sske = DZERO
@@ -5253,12 +5067,6 @@ contains
   !!
   !<
   subroutine csub_cg_calc_comp(this, node, hcell, hcellold, comp)
-! ******************************************************************************
-! csub_cg_calc_comp -- Calculate coarse-grained compaction
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: node   !< cell node number
@@ -5270,9 +5078,8 @@ contains
     real(DP) :: tled
     real(DP) :: hcof
     real(DP) :: rhs
-! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     area = DONE
     tled = DONE
     !
@@ -5292,12 +5099,6 @@ contains
   !!
   !<
   subroutine csub_cg_update(this, node)
-! ******************************************************************************
-! csub_cg_update -- Update material properties for coarse grained sediments.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node    !< cell node number
@@ -5306,7 +5107,6 @@ contains
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
-! ------------------------------------------------------------------------------
     !
     ! -- update thickness and theta
     comp = this%cg_tcomp(node) + this%cg_comp(node)
@@ -5347,12 +5147,6 @@ contains
   !<
   subroutine csub_cg_wcomp_fc(this, node, tled, area, hcell, hcellold, &
                               hcof, rhs)
-! ******************************************************************************
-! csub_cg_wcomp_fc -- Calculate water compressibility term for a gwf cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node   !< cell node number
@@ -5371,7 +5165,6 @@ contains
     real(DP) :: snnew
     real(DP) :: wc
     real(DP) :: wc0
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     rhs = DZERO
@@ -5411,13 +5204,6 @@ contains
   !!
   !<
   subroutine csub_cg_wcomp_fn(this, node, tled, area, hcell, hcellold, hcof, rhs)
-! ******************************************************************************
-! csub_cg_wcomp_fn -- Calculate water compressibility newton-rephson terms for
-!                     a gwf cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node   !< cell node number
@@ -5436,7 +5222,6 @@ contains
     real(DP) :: f
     real(DP) :: wc
     real(DP) :: wc0
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     rhs = DZERO
@@ -5485,13 +5270,6 @@ contains
   !<
   subroutine csub_nodelay_wcomp_fc(this, ib, node, tled, area, &
                                    hcell, hcellold, hcof, rhs)
-! ******************************************************************************
-! csub_nodelay_wcomp_fc -- Calculate water compressibility term for an
-!                          interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib       !< interbed number
@@ -5510,7 +5288,6 @@ contains
     real(DP) :: f
     real(DP) :: wc
     real(DP) :: wc0
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     rhs = DZERO
@@ -5546,13 +5323,6 @@ contains
   !<
   subroutine csub_nodelay_wcomp_fn(this, ib, node, tled, area, &
                                    hcell, hcellold, hcof, rhs)
-! ******************************************************************************
-! csub_nodelay_wcomp_fn -- Calculate water compressibility newton-raphson
-!                          terms for an interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib      !< interbed number
@@ -5570,7 +5340,6 @@ contains
     real(DP) :: wc
     real(DP) :: wc0
     real(DP) :: satderv
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     rhs = DZERO
@@ -5612,18 +5381,12 @@ contains
   !! @return      void                void ratio
   !<
   function csub_calc_void(this, theta) result(void)
-! ******************************************************************************
-! csub_calc_void -- Calculate void ratio from the porosity
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     real(DP), intent(in) :: theta  !< porosity
     ! -- local variables
     real(DP) :: void
-! ------------------------------------------------------------------------------
+    ! -- calculate void ratio
     void = theta/(DONE - theta)
     !
     ! -- return
@@ -5637,18 +5400,13 @@ contains
   !! @return      theta               porosity
   !<
   function csub_calc_theta(this, void) result(theta)
-! ******************************************************************************
-! csub_calc_theta -- Calculate porosity from the void ratio
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     real(DP), intent(in) :: void
     ! -- local variables
     real(DP) :: theta
-! ------------------------------------------------------------------------------
+    !
+    ! -- calculate theta
     theta = void/(DONE + void)
     !
     ! -- return
@@ -5662,19 +5420,14 @@ contains
   !! @return      thick               interbed thickness
   !<
   function csub_calc_interbed_thickness(this, ib) result(thick)
-! ******************************************************************************
-! csub_calc_interbed_thickness -- Calculate interbed thickness
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib  !< interbed number
     ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: thick
-! ------------------------------------------------------------------------------
+    !
+    ! -- calculate interbed thickness
     idelay = this%idelay(ib)
     thick = this%thick(ib)
     if (idelay /= 0) then
@@ -5696,26 +5449,16 @@ contains
   !! @return      znode               node elevation
   !<
   function csub_calc_znode(this, top, bottom, zbar) result(znode)
-! ******************************************************************************
-! csub_calc_znode -- Calculate elevation of the node between the specified
-!                    corrected elevation zbar and the bottom elevation. If zbar
-!                    is greater than the top elevation, the node elevation is
-!                    halfway between the top and bottom elevations. The
-!                    corrected elevation (zbar) is always greater than or
-!                    equal to bottom
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     real(DP), intent(in) :: top       !< top of cell
     real(DP), intent(in) :: bottom    !< bottom of cell
     real(DP), intent(in) :: zbar      !< corrected elevation
     ! -- local variables
     real(DP) :: znode
     real(DP) :: v
-! ------------------------------------------------------------------------------
+    !
+    ! -- calculate the node elevation
     if (zbar > top) then
       v = top
     else
@@ -5736,23 +5479,14 @@ contains
   !! @return      es              node elevation
   !<
   function csub_calc_adjes(this, node, es0, z0, z) result(es)
-! ******************************************************************************
-! csub_calc_adjes -- Calculate the effective stress at specified elevation z
-!                    using the provided effective stress (es0) calculated at
-!                    elevation z0 (which is <= z).
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node  !< cell node number
     real(DP), intent(in) :: es0       !< effective stress at elevation z0
     real(DP), intent(in) :: z0        !< elevation effective stress is calculate at
     real(DP), intent(in) :: z         !< elevation to calculate effective stress at
     ! -- local variables
     real(DP) :: es
-! ------------------------------------------------------------------------------
     !
     ! -- adjust effective stress to vertical node position
     es = es0 - (z - z0)*(this%sgs(node) - DONE)
@@ -5769,16 +5503,8 @@ contains
   !!
   !<
   subroutine csub_delay_head_check(this, ib)
-! ******************************************************************************
-! csub_delay_head_check -- Determine if the delay interbed head in any delay
-!                          cell in a non-convertible gwf cell is less than the
-!                          top of each delay interbed cell
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib  !< interbed number
     ! -- local variables
     integer(I4B) :: iviolate
@@ -5789,7 +5515,6 @@ contains
     real(DP) :: h
     real(DP) :: dzhalf
     real(DP) :: ztop
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     iviolate = 0
@@ -5831,14 +5556,8 @@ contains
   !!
   !<
   subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
-! ******************************************************************************
-! csub_calc_sat -- Calculate current and previous cell saturation for a cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node  !< cell node number
     real(DP), intent(in) :: hcell     !< current head
     real(DP), intent(in) :: hcellold  !< previous head
@@ -5847,7 +5566,8 @@ contains
     ! -- local variables
     real(DP) :: top
     real(DP) :: bot
-! ------------------------------------------------------------------------------
+    !
+    ! -- calculate cell saturation
     if (this%stoiconv(node) /= 0) then
       top = this%dis%top(node)
       bot = this%dis%bot(node)
@@ -5873,14 +5593,8 @@ contains
   !! @return      satderv              derivative of saturation
   !<
   function csub_calc_sat_derivative(this, node, hcell) result(satderv)
-! ******************************************************************************
-! csub_calc_sat_derivative -- Calculate current saturation derivative for a cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node  !< cell node number
     real(DP), intent(in) :: hcell     !< current head
     ! -- local variables
@@ -5910,15 +5624,8 @@ contains
   !!
   !<
   subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, fact)
-! ******************************************************************************
-! csub_calc_sfacts -- Calculate specific storage coefficient factor for a
-!                     gwf cell or interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node  !< cell node number
     real(DP), intent(in) :: bot       !
     real(DP), intent(in) :: znode
@@ -5930,7 +5637,6 @@ contains
     real(DP) :: esv
     real(DP) :: void
     real(DP) :: denom
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     fact = DZERO
@@ -5961,21 +5667,14 @@ contains
   !!
   !<
   subroutine csub_adj_matprop(this, comp, thick, theta)
-! ******************************************************************************
-! csub_adj_matprop -- Adjust theta and thickness based on compaction.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     real(DP), intent(in) :: comp        !< compaction
     real(DP), intent(inout) :: thick    !< thickness
     real(DP), intent(inout) :: theta    !< porosity
     ! -- local variables
     real(DP) :: strain
     real(DP) :: void
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     strain = DZERO
@@ -6001,14 +5700,8 @@ contains
   !!
   !<
   subroutine csub_delay_sln(this, ib, hcell, update)
-! ******************************************************************************
-! csub_delay_sln -- Calculate flow in delay interbeds.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib           !< interbed number
     real(DP), intent(in) :: hcell            !< current head in a cell
     logical, intent(in), optional :: update  !< optional logical variable indicating
@@ -6024,7 +5717,6 @@ contains
     real(DP) :: dhmax
     real(DP) :: dhmax0
     real(DP), parameter :: dclose = DHUNDRED*DPREC
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     if (present(update)) then
@@ -6105,14 +5797,8 @@ contains
   !!
   !<
   subroutine csub_delay_init_zcell(this, ib)
-! ******************************************************************************
-! csub_delay_init_zcell -- Calculate initial znode for delay interbeds cells.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib  !< interbed number
     ! -- local variables
     integer(I4B) :: n
@@ -6127,7 +5813,6 @@ contains
     real(DP) :: zr
     real(DP) :: b
     real(DP) :: dz
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -6173,15 +5858,8 @@ contains
   !!
   !<
   subroutine csub_delay_calc_stress(this, ib, hcell)
-! ******************************************************************************
-! csub_delay_calc_stress -- Calculate geostatic and effective stress in delay
-!                      interbeds.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib  !< interbed number
     real(DP), intent(in) :: hcell   !< current head in a cell
     ! -- local variables
@@ -6201,7 +5879,6 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: phead
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -6264,15 +5941,8 @@ contains
   !!
   !<
   subroutine csub_delay_calc_ssksske(this, ib, n, hcell, ssk, sske)
-! ******************************************************************************
-! csub_delay_calc_ssksske -- Calculate ssk and sske for a node in a delay
-!                            interbed cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib   !< interbed number
     integer(I4B), intent(in) :: n    !< delay interbed cell number
     real(DP), intent(in) :: hcell    !< current head in a cell
@@ -6299,7 +5969,6 @@ contains
     real(DP) :: theta
     real(DP) :: f
     real(DP) :: f0
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     sske = DZERO
@@ -6377,12 +6046,6 @@ contains
   !!
   !<
   subroutine csub_delay_assemble(this, ib, hcell)
-! ******************************************************************************
-! csub_delay_assemble -- Assemble coefficients for delay interbeds cells.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib   !< interbed number
@@ -6393,7 +6056,6 @@ contains
     real(DP) :: au
     real(DP) :: al
     real(DP) :: r
-! ------------------------------------------------------------------------------
     !
     ! -- calculate matrix terms for each delay bed cell
     do n = 1, this%ndelaycells
@@ -6424,13 +6086,7 @@ contains
   !!
   !<
   subroutine csub_delay_assemble_fc(this, ib, n, hcell, aii, au, al, r)
-! ******************************************************************************
-! csub_delay_assemble_fc -- Assemble coefficients for delay interbeds cells
-!                           for the standard formulation.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
@@ -6472,7 +6128,6 @@ contains
     real(DP) :: h
     real(DP) :: h0
     real(DP) :: hbar
-! ------------------------------------------------------------------------------
     !
     ! -- initialize accumulators
     aii = DZERO
@@ -6566,13 +6221,7 @@ contains
   !!
   !<
   subroutine csub_delay_assemble_fn(this, ib, n, hcell, aii, au, al, r)
-! ******************************************************************************
-! csub_delay_assemble_fn -- Assemble coefficients for delay interbeds cells
-!                           for the newton-raphson formulation.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
@@ -6620,7 +6269,6 @@ contains
     real(DP) :: stoderv
     real(DP) :: qwc
     real(DP) :: wcderv
-! ------------------------------------------------------------------------------
     !
     ! -- initialize accumulators
     aii = DZERO
@@ -6741,12 +6389,6 @@ contains
   !!
   !<
   subroutine csub_delay_solve(n, tl, td, tu, b, x, w)
-! ******************************************************************************
-! csub_delay_solve -- Solve for head change in delay interbeds cells.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     integer(I4B), intent(in) :: n                 !< number of matrix rows
     real(DP), dimension(n), intent(in) :: tl      !< lower matrix terms
@@ -6759,7 +6401,6 @@ contains
     integer(I4B) :: j
     real(DP) :: bet
     real(DP) :: beti
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     w(1) = DZERO
@@ -6793,13 +6434,6 @@ contains
   !<
   subroutine csub_delay_calc_sat(this, node, idelay, n, hcell, hcellold, &
                                  snnew, snold)
-! ******************************************************************************
-! csub_delay_calc_sat -- Calculate current and previous cell saturation for
-!                        a delay cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node     !< cell node number
@@ -6813,7 +6447,8 @@ contains
     real(DP) :: dzhalf
     real(DP) :: top
     real(DP) :: bot
-! ------------------------------------------------------------------------------
+    !
+    ! -- calculate delay interbed cell saturation
     if (this%stoiconv(node) /= 0) then
       dzhalf = DHALF*this%dbdzini(n, idelay)
       top = this%dbz(n, idelay) + dzhalf
@@ -6841,13 +6476,6 @@ contains
   !<
   function csub_delay_calc_sat_derivative(this, node, idelay, n, hcell) &
     result(satderv)
-! ******************************************************************************
-! csub_delay_calc_sat_derivative -- Calculate current saturation derivative for
-!                                   a delay cell cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: node     !< cell node number
@@ -6882,12 +6510,6 @@ contains
   !!
   !<
   subroutine csub_delay_calc_dstor(this, ib, hcell, stoe, stoi)
-! ******************************************************************************
-! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib     !< interbed number
@@ -6914,7 +6536,6 @@ contains
     real(DP) :: dsn0
     real(DP) :: hbar
     real(DP) :: dzhalf
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -6977,13 +6598,7 @@ contains
   !!
   !<
   subroutine csub_delay_calc_wcomp(this, ib, dwc)
-! ******************************************************************************
-! csub_delay_calc_wcomp -- Calculate change in storage in a delay interbed
-!                          resulting from water compressibility.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
@@ -7003,7 +6618,6 @@ contains
     real(DP) :: wc
     real(DP) :: wc0
     real(DP) :: v
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     dwc = DZERO
@@ -7040,12 +6654,6 @@ contains
   !!
   !<
   subroutine csub_delay_calc_comp(this, ib, hcell, hcellold, comp, compi, compe)
-! ******************************************************************************
-! csub_delay_calc_comp -- Calculate compaction in a delay interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib    !< interbed number
@@ -7071,7 +6679,6 @@ contains
     real(DP) :: v
     real(DP) :: v1
     real(DP) :: v2
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -7130,12 +6737,6 @@ contains
   !!
   !<
   subroutine csub_delay_update(this, ib)
-! ******************************************************************************
-! csub_delay_update -- Update delay interbed thickness and porosity.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib  !< interbed number
@@ -7147,7 +6748,6 @@ contains
     real(DP) :: theta
     real(DP) :: tthick
     real(DP) :: wtheta
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -7220,13 +6820,6 @@ contains
   !!
   !<
   subroutine csub_delay_fc(this, ib, hcof, rhs)
-! ******************************************************************************
-! csub_delay_fc -- Calculate hcof and rhs for delay interbed contribution to
-!                  GWF cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib   !< interbed number
@@ -7236,7 +6829,6 @@ contains
     integer(I4B) :: idelay
     real(DP) :: c1
     real(DP) :: c2
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -7264,14 +6856,8 @@ contains
   !! @return  q  flow across the top or bottom of a delay interbed
   !<
   function csub_calc_delay_flow(this, ib, n, hcell) result(q)
-! ******************************************************************************
-! csub_calc_delay_flow -- Calculate flow across top or bottom of delay interbed
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
     ! -- dummy variables
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib  !< interbed number
     integer(I4B), intent(in) :: n   !< delay interbed cell
     real(DP), intent(in) :: hcell   !< current head in cell
@@ -7279,7 +6865,8 @@ contains
     integer(I4B) :: idelay
     real(DP) :: q
     real(DP) :: c
-! ------------------------------------------------------------------------------
+    !
+    ! -- calculate flow between delay interbed and GWF
     idelay = this%idelay(ib)
     c = DTWO*this%kv(ib)/this%dbdzini(n, idelay)
     q = c*(hcell - this%dbh(n, idelay))
@@ -7298,16 +6885,10 @@ contains
   !!
   !<
   logical function csub_obs_supported(this)
-    ! ******************************************************************************
-    ! csub_obs_supported
-    !   -- Return true because csub package supports observations.
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType) :: this
-    ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
     csub_obs_supported = .true.
     !
     ! -- return
@@ -7320,19 +6901,10 @@ contains
   !!
   !<
   subroutine csub_df_obs(this)
-    ! ******************************************************************************
-    ! csub_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by csub package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType) :: this
     ! -- local variables
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for csub observation type.
@@ -7518,14 +7090,6 @@ contains
   !!
   !<
   subroutine csub_bd_obs(this)
-    ! **************************************************************************
-    ! csub_bd_obs
-    !   -- Calculate observations this time step and call
-    !      ObsType%SaveOneSimval for each GwfCsubType observation.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     ! -- local variables
@@ -7539,7 +7103,6 @@ contains
     real(DP) :: v
     real(DP) :: r
     real(DP) :: f
-    !---------------------------------------------------------------------------
     !
     ! -- Fill simulated values for all csub observations
     if (this%obs%npakobs > 0) then
@@ -7748,6 +7311,7 @@ contains
   !!
   !<
   subroutine csub_rp_obs(this)
+    ! -- modules
     use TdisModule, only: kper
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
@@ -7914,12 +7478,12 @@ contains
 
   !> @brief Process the observation IDs for the package
   !!
-  !! Method to process the observation IDs for the CSUB package.
+  !! Method to process the observation IDs for the CSUB package. This
+  !! procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes the
+  !! ID string of an observation definition for csub-package observations.
   !!
   !<
   subroutine csub_process_obsID(obsrv, dis, inunitobs, iout)
-    ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
-    !    the ID string of an observation definition for csub-package observations.
     ! -- dummy variables
     type(ObserveType), intent(inout) :: obsrv   !< observation type
     class(DisBaseType), intent(in)    :: dis    !< pointer to the model discretization
@@ -7934,6 +7498,7 @@ contains
     logical :: flag_string
     !--------------------------------------------------------------------------
     !
+    ! -- initialize variables
     strng = obsrv%IDstring
     !
     ! -- Extract reach number from strng and store it.
@@ -7996,19 +7561,13 @@ contains
 
   !> @ brief Define the list label for the package
   !!
-  !!  Method defined the list label for the CSUB package.
+  !!  Method defined the list label for the CSUB package. The list label is
+  !!  the heading that is written to iout when PRINT_INPUT option is used.
   !!
   !<
   subroutine define_listlabel(this)
-    ! ******************************************************************************
-    ! define_listlabel -- Define the list heading that is written to iout when
-    !   PRINT_INPUT option is used.
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
