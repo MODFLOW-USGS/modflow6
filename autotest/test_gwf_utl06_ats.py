@@ -39,11 +39,11 @@ def get_model(idx, dir):
     mu = 5.
     sigma = 1.23
     np.random.seed(seed=9001)
-    hk = np.random.lognormal(mu, sigma, (nrow, ncol))
+    hk = 1. #np.random.lognormal(mu, sigma, (nrow, ncol))
 
     nc = int((nrow - 1) / 2) + 1
-    welsp = [((0, nc, nc), -10000.)]
-    welspd = {1: welsp}
+    welsp = [((0, nc, nc), -1000000.)]
+    welspd = {1: welsp, 2:[[]]}
 
     c = []
     c6 = []
@@ -67,7 +67,7 @@ def get_model(idx, dir):
                                  exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
-    atsperiod = [(1, 0.01, 1.e-5, 10),
+    atsperiod = [(1, 100,  1.e-5, 100),
                  (2, 0.01, 1.e-5, 10),]
     ats = flopy.mf6.ModflowUtlats(sim, maxats=len(atsperiod),
                                   perioddata=atsperiod)
@@ -79,18 +79,18 @@ def get_model(idx, dir):
                                  perioddata=tdis_rc)
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=True)
 
     # create iterative model solution and register the gwf model with it
-    nouter, ninner = 20, 25
+    nouter, ninner = 20, 100  # was 20 25
     hclose, rclose, relax = 1e-6, 0.01, 1.
-    ims = flopy.mf6.ModflowIms(sim, print_option='NONE',
+    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
                                outer_dvclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='NONE',
                                inner_maximum=ninner,
                                inner_dvclose=hclose, rcloserecord=rclose,
-                               linear_acceleration='CG',
+                               linear_acceleration='BICGSTAB',
                                scaling_method='NONE',
                                reordering_method='NONE',
                                relaxation_factor=relax)
@@ -137,7 +137,7 @@ def get_model(idx, dir):
                                      'DIGITS', 6, 'GENERAL')],
                                 saverecord=[('HEAD', 'LAST')],
                                 printrecord=[('HEAD', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+                                             ('BUDGET', 'ALL')])
 
     return sim
 

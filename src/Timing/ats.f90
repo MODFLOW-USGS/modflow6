@@ -1,15 +1,19 @@
 ! todo:
 !   - fail if ats is active for a steady state period
-!   - add print times to output control?
-!   - add deltsubmit() routines for model/exchange/solution
-!   - if kiter >= mxiter, reduce delt = delt / tsadj; if newdelt < tsmin, end
-!   - if kiter < mxiter / 3; delt = delt * tsadj
-!   - if kiter > 2 * mxiter / 3; delt = delt / tsadj
-!   - if new delt > tsmaxats; delt = tsmaxats
+!   - read ats info for numerical solution
 !   - handle solver failure
-!   - use maxats to dimension ats arrays, and store record pointer in kperats
-!   - move kperats to tdis, allocate it of size nper, and set it to zero; then fill from ats
+!       - Set failed flag (this needs to be available to tdis_pu)
+!       - Do not call budget routines or write results
+!       - Do not increment kstp
+!       - Set readnewdata to .false.
+!       - Reset pertim/totim back to previous values
+!       - PrepareSolve should not advance routines
+!       - Reset all dependent values to old values (hnew = hold)
+!       - Cut down size of delt
+!       - If cut down size is < tsminats, then solution should be marked as not converged
+!       - 
 !   - write time step history to csv file
+!   - time series
 
 module AdaptiveTimeStepModule
 
@@ -331,6 +335,7 @@ module AdaptiveTimeStepModule
         tsminats(n) = parser%GetDouble()
         tsmaxats(n) = parser%GetDouble()
         !tsfactats(n) = parser%GetDouble()
+        n = n + 1
       enddo
       !
       ! -- Check timing information
@@ -357,7 +362,8 @@ module AdaptiveTimeStepModule
   subroutine ats_tu(endofperiod, endofsimulation, readnewdata, &
                     kstp, kper, perlen, nstp, &
                     tsmult, delt, dtstable, pertim, pertimsav, totim, totimsav, &
-                    totalsimtime, totimc, kperats)
+                    totalsimtime, totimc, &
+                    kperats, latsfailed, atskeeptrying)
 ! ******************************************************************************
 ! ats_tu -- Time update
 ! ******************************************************************************
@@ -384,41 +390,57 @@ module AdaptiveTimeStepModule
     real(DP), intent(inout) :: totalsimtime
     real(DP), intent(inout) :: totimc
     integer(I4B), dimension(:), contiguous, intent(in) :: kperats
+    logical(LGP), intent(in) :: latsfailed
+    logical(LGP), intent(inout) :: atskeeptrying
     ! -- local
     integer(I4B) :: n
     ! -- formats
     character(len=*),parameter :: fmttsi =                                     &
       "(1X, 'ATS: INITIAL TIME STEP SIZE =', G15.7)"
     character(len=*), parameter :: fmtdelt =                                   &
-      &"(1x, 'ATS: TIME STEP LENGTH SET TO ', G15.7)"
+      &"(1x, 'ATS: TIME STEP SIZE SET TO ', G15.7)"
 ! ------------------------------------------------------------------------------
     !
-    ! initialize
+    ! -- initialize the record position (n) for this stress period
     n = kperats(kper)
     !
-    ! -- Setup new stress period if kstp is 1
-    if(kstp == 1) then
+    ! -- If the last step failed, then reset
+    atskeeptrying = .true.
+    if (latsfailed) then
+      pertim = pertimsav
+      totim = totimsav
+      delt = delt / 2.d0   ! chop it down (make this an input variable)
+      print *, 'ats_tu redoing time step with size ', delt
       !
-      ! -- Assign first value of delt for this stress period
-      if (deltats(n) /= DZERO) then
-        delt = deltats(n)
-      end if
+      ! -- If the length of the next retry would be less than tsmin, then
+      !    this must be the last ats retry
+      if (delt / 2.d0 < tsminats(n)) atskeeptrying = .false.
+    else
       !
-      ! -- Print length of first time step
-      write(iout, fmttsi) delt
+      ! -- Setup new stress period if kstp is 1
+      if(kstp == 1) then
+        !
+        ! -- Assign first value of delt for this stress period
+        if (deltats(n) /= DZERO) then
+          delt = deltats(n)
+        end if
+        !
+        ! -- Print length of first time step
+        write(iout, fmttsi) delt
+        !
+        ! -- Initialize pertim (Elapsed time within stress period)
+        pertim = DZERO
+        !
+        ! -- Clear flag that indicates last time step of a stress period
+        endofperiod = .false.
+        !
+      endif
       !
-      ! -- Initialize pertim (Elapsed time within stress period)
-      pertim = DZERO
-      !
-      ! -- Clear flag that indicates last time step of a stress period
-      endofperiod = .false.
-      !
-    endif
-    !
-    ! -- Assign delt based on stability
-    if (kstp > 1) then
-      if (dtstable /= DNODATA) then
-        delt = dtstable
+      ! -- Assign delt based on stability
+      if (kstp > 1) then
+        if (dtstable /= DNODATA) then
+          delt = dtstable
+        end if
       end if
     end if
     !
@@ -447,9 +469,11 @@ module AdaptiveTimeStepModule
     totim = totimsav + delt
     pertim = pertimsav + delt
     !
-    ! -- End of stress period and/or simulation?
+    ! -- End of stress period and/or simulation?  THIS NEEDS TO BE FIXED
     if (abs(pertim - perlen(kper)) < 1.d-5) then
       endofperiod = .true.
+    else
+      endofperiod = .false.
     end if
     if (endofperiod .and. kper==nperats) then
       endofsimulation = .true.

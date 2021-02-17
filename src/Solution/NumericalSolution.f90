@@ -1274,7 +1274,7 @@ contains
       
         ! finish up, write convergence info, CSV file, budgets and flows, ...
         this%kiter_saved = kiter
-        call this%finalizeSolve(kiter, isgcnvg, isuppress_output)   
+        call this%finalizeSolve(kiter, isgcnvg, isuppress_output)
     end select
     !
     ! -- return
@@ -1391,7 +1391,7 @@ contains
       call mp%model_ad()
     enddo
     
-    ! advance models and exchanges
+    ! advance solution
     call this%sln_ad()
     
   end subroutine prepareSolve
@@ -1811,7 +1811,7 @@ contains
   
   ! finalize the solution calculate, called after the outer iteration loop
   subroutine finalizeSolve(this, kiter, isgcnvg, isuppress_output)
-    use TdisModule, only: kper, kstp
+    use TdisModule, only: kper, kstp, latsfailed, atskeeptrying, iskperats
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
     integer(I4B), intent(inout) :: isgcnvg
@@ -1820,6 +1820,7 @@ contains
     integer(I4B) :: ic, im
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
+    logical :: skipBudget
     
     ! -- formats for convergence info 
     character(len=*), parameter :: fmtnocnvg =                                 &
@@ -1845,6 +1846,7 @@ contains
     !
     ! -- convergence was not achieved
     else
+      latsfailed = .true.
       write(iout, fmtnocnvg) this%id, kper, kstp
     end if
     !
@@ -1863,30 +1865,41 @@ contains
     !
     ! -- set solution goup convergence flag
     if (this%icnvg == 0) isgcnvg = 0
-    !
-    ! -- Calculate flow for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cq(this%icnvg, isuppress_output)
-    enddo
-    !
-    ! -- Calculate flow for each exchange
-    do ic = 1, this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cq(isgcnvg, isuppress_output, this%id)
-    enddo
-    !
-    ! -- Budget terms for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_bd(this%icnvg, isuppress_output)
-    enddo
-    !
-    ! -- Budget terms for each exchange
-    do ic = 1, this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_bd(isgcnvg, isuppress_output, this%id)
-    enddo
+    
+    skipBudget = .false.
+    if (iskperats()) then
+      if (atskeeptrying) then
+        if (this%icnvg == 0) isgcnvg = 1
+        skipBudget = .true.
+      end if
+    end if
+    
+    if (.not. skipBudget) then
+      !
+      ! -- Calculate flow for each model
+      do im=1,this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_cq(this%icnvg, isuppress_output)
+      enddo
+      !
+      ! -- Calculate flow for each exchange
+      do ic = 1, this%exchangelist%Count()
+        cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+        call cp%exg_cq(isgcnvg, isuppress_output, this%id)
+      enddo
+      !
+      ! -- Budget terms for each model
+      do im=1,this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_bd(this%icnvg, isuppress_output)
+      enddo
+      !
+      ! -- Budget terms for each exchange
+      do ic = 1, this%exchangelist%Count()
+        cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+        call cp%exg_bd(isgcnvg, isuppress_output, this%id)
+      enddo
+    end if
     
   end subroutine finalizeSolve
   

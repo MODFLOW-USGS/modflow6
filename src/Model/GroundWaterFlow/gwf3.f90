@@ -504,6 +504,7 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: natsfailed
     use SimVariablesModule, only: isimcheck
     ! -- dummy
     class(GwfModelType) :: this
@@ -513,9 +514,15 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- copy x into xold
-    do n=1,this%dis%nodes
-      this%xold(n)=this%x(n)
-    enddo
+    if (natsfailed == 0) then
+      do n=1,this%dis%nodes
+        this%xold(n) = this%x(n)
+      enddo
+    else
+      do n=1,this%dis%nodes
+        this%x(n) = this%xold(n)
+      enddo
+    end if      
     !
     ! -- Advance
     if(this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold)

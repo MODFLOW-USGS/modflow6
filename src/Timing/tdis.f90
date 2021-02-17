@@ -44,6 +44,9 @@
   !
   ! -- ats
   logical(LGP), public, pointer                            :: atsactive => null() !< flag indicating ats is active for simulation
+  logical(LGP), public, pointer                            :: latsfailed => null() !< flag indicating the last ats solution failed
+  logical(LGP), public, pointer                            :: atskeeptrying => null() !< keep trying ats solutions
+  integer(I4B), public, pointer                            :: natsfailed => null() !< number of ats failures for this step
   real(DP), public, pointer                                :: dtstable => null()  !< delt value required for stability
   integer(I4B), dimension(:), pointer, contiguous          :: kperats => null()   !< array of stress period numbers to apply ats
   
@@ -139,14 +142,20 @@
     readnewdata = .false.
     dtstable = DNODATA
     !
-    ! -- Increment kstp and kper and set readnewdata
-    if (endofperiod) then
-      kstp = 1
-      kper = kper + 1
-      readnewdata = .true.
+    ! -- Increment kstp and kper and set readnewdata if the last time step
+    !    did not fail
+    if (latsfailed) then
+      natsfailed = natsfailed + 1
     else
-      kstp = kstp + 1
-    endif
+      natsfailed = 0
+      if (endofperiod) then
+        kstp = 1
+        kper = kper + 1
+        readnewdata = .true.
+      else
+        kstp = kstp + 1
+      endif
+    end if
     !
     ! -- Print stress period and time step to console
     select case(isim_mode)
@@ -159,12 +168,14 @@
     call sim_message(line, iunit=iout, skipbefore=1, skipafter=1)
     !
     ! -- Write message if first time step
-    if (kstp == 1) then
+    if (kstp == 1 .and. natsfailed == 0) then
       write(iout, fmtspi) kper, perlen(kper), nstp(kper), tsmult(kper)
       if (iskperats()) then
         write(iout, fmtats)
       end if
     end if
+    !
+    ! -- return
     return    
   end subroutine tdis_pu
   
@@ -190,15 +201,22 @@
     ! -- local
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize
+    atskeeptrying = .false.
+    !
     ! -- Call standard time update or ats time update
     if (iskperats()) then
       call ats_tu(endofperiod, endofsimulation, readnewdata, &
                   kstp, kper, perlen, nstp, &
                   tsmult, delt, dtstable, pertim, pertimsav, totim, totimsav, &
-                  totalsimtime, totimc, kperats)
+                  totalsimtime, totimc, kperats, latsfailed, atskeeptrying)
     else
       call tdis_tu_std()
     end if
+    !
+    ! -- Set failure flag to .false.  This will be reset to .true. if any
+    !    numerical solution fails
+    latsfailed = .false.
     !
     ! -- return
     return
@@ -369,6 +387,9 @@
     call mem_deallocate(endofperiod)
     call mem_deallocate(endofsimulation)
     call mem_deallocate(atsactive)
+    call mem_deallocate(latsfailed)
+    call mem_deallocate(atskeeptrying)
+    call mem_deallocate(natsfailed)
     call mem_deallocate(delt)
     call mem_deallocate(dtstable)
     call mem_deallocate(pertim)
@@ -518,6 +539,9 @@
     call mem_allocate(endofperiod, 'ENDOFPERIOD', 'TDIS')
     call mem_allocate(endofsimulation, 'ENDOFSIMULATION', 'TDIS')
     call mem_allocate(atsactive, 'ATSACTIVE', 'TDIS')
+    call mem_allocate(latsfailed, 'LATSFAILED', 'TDIS')
+    call mem_allocate(atskeeptrying, 'ATSKEEPTRYING', 'TDIS')
+    call mem_allocate(natsfailed, 'NATSFAILED', 'TDIS')
     call mem_allocate(delt, 'DELT', 'TDIS')
     call mem_allocate(dtstable, 'DTSTABLE', 'TDIS')
     call mem_allocate(pertim, 'PERTIM', 'TDIS')
@@ -539,9 +563,7 @@
     readnewdata = .true.
     endofperiod = .true.
     endofsimulation = .false.
-    atsactive = .false.
     delt = DZERO
-    dtstable = DZERO
     pertim = DZERO
     totim = DZERO
     totimc = DZERO
@@ -550,6 +572,13 @@
     pertimsav = DZERO
     totalsimtime = DZERO
     datetime0 = ''
+    !
+    ! -- ats
+    atsactive = .false.
+    latsfailed = .false.
+    atskeeptrying = .false.
+    natsfailed = 0
+    dtstable = DZERO    
     !
     ! -- return
     return
