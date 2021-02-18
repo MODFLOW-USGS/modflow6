@@ -9,7 +9,7 @@ BEGIN CONTINUOUS FILEOUT my_model.chd01.csv
   chd_2_2  CHD       1 2 2
   chd_2_3  CHD       1 3 2
   chd_2_4  CHD       1 4 2
-END SINGLE
+END CONTINUOUS
 
 BEGIN CONTINUOUS FILEOUT my_model.chd02.csv
 # obsname     obstype   ID
