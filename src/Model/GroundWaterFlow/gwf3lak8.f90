@@ -343,7 +343,7 @@ contains
     call mem_allocate(this%surfdep, 'SURFDEP', this%memoryPath)
     call mem_allocate(this%delh, 'DELH', this%memoryPath)
     call mem_allocate(this%pdmax, 'PDMAX', this%memoryPath)
-    call mem_allocate(this%check_attr, 'check_attr', this%memoryPath)
+    call mem_allocate(this%check_attr, 'CHECK_ATTR', this%memoryPath)
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
