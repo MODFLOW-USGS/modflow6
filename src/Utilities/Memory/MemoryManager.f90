@@ -2423,20 +2423,35 @@ module MemoryManagerModule
   subroutine mem_da()
     ! -- modules
     use VersionModule, only: IDEVELOPMODE
+    use InputOutputModule, only: UPCASE
     ! -- local
     class(MemoryType), pointer :: mt
     character(len=LINELENGTH) :: error_msg
+    character(len=LENVARNAME) :: ucname
     integer(I4B) :: ipos
     ! -- code
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
+        !
+        ! -- check if memory has been deallocated
         if (mt%mt_associated() .and. mt%isize > 0) then
           error_msg = trim(adjustl(mt%path)) // ' ' // &
                       trim(adjustl(mt%name)) // ' not deallocated'
           call store_error(trim(error_msg))
         end if
+        !
+        ! -- check case of varname
+        ucname = mt%name
+        call UPCASE(ucname)
+        if (mt%name /= ucname) then
+          error_msg = trim(adjustl(mt%path)) // ' ' // &
+                      trim(adjustl(mt%name)) // ' not upper case'
+          call store_error(trim(error_msg))
+        end if
       end if
+      !
+      ! -- deallocate instance of memory type
       deallocate(mt)
     enddo
     call memorylist%clear()
