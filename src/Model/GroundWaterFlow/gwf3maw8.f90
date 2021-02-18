@@ -279,7 +279,7 @@ contains
     call mem_allocate(this%imawiss, 'IMAWISS', this%memoryPath)
     call mem_allocate(this%imawissopt, 'IMAWISSOPT', this%memoryPath)
     call mem_allocate(this%nmawwells, 'NMAWWELLS', this%memoryPath)
-    call mem_allocate(this%check_attr, 'check_attr', this%memoryPath)
+    call mem_allocate(this%check_attr, 'CHECK_ATTR', this%memoryPath)
     call mem_allocate(this%ishutoffcnt, 'ISHUTOFFCNT', this%memoryPath)
     call mem_allocate(this%ieffradopt, 'IEFFRADOPT', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
