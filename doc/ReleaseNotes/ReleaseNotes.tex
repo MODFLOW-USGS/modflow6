@@ -154,37 +154,28 @@ MODFLOW~6 is tested with a large number of example problems, and new capabilitie
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.2.1--February 18, 2021
+	\item Version mf6.2.2--Month, day, year
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item The Source and Sink Mixing (SSM) Package for the Groundwater Transport Model was modified to include an alternative option for the concentration value assigned to sinks.  A new AUXMIXED option was added to represent evaporation-like sinks where the solute or a portion of the solute may be left behind.  The AUXMIXED option provides an alternative method for determining the groundwater sink concentration.  If the cell concentration is larger than the user-specified sink concentration, then the concentration of the sink will be assigned as the specified concentration.  Alternatively, if the specified concentration is larger than the cell concentration, then water will be withdrawn at the cell concentration.  Thus, the AUXMIXED option is designed to work with the Evapotranspiration and Recharge packages where water may be withdrawn at a concentration that is less than the cell concentration.  
-	        \item Add support for the Freundlich and Langmuir isotherms to the Mass Storage and Transfer (MST) Package of the Groundwater Transport Model.
+	        \item --  
+	        \item --
 	\end{itemize}
 	
 	\underline{EXAMPLES}
 	\begin{itemize}
 	        \item Added the following new examples: 
 	        \begin{itemize}
-	          \item ex-gwt-mt3dms-p02
-	          \item ex-gwt-rotate
-	          \item ex-gwt-saltlake
-	          \item ex-gwt-uzt-2d
+	          \item --
+	          \item --
 	        \end{itemize}
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-	        \item The way in which the dispersion coefficients are calculated with the simple option (XT3D\_OFF) for the Dispersion Package was modified.  When the velocity within a cell is not aligned with a principal grid direction, the  dispersion coefficients are calculated using a simple arithmetic weighting, rather than harmonic weighting as is done for the simple option for anisotropic flow in the NPF Package.  The arithmetic weighting option eliminates a possible discontinuity when a principal flow-aligned dispersion component is zero.
-	        \item The mass flow between two cells is calculated and optionally written to the GWT budget file.  There was an error in this calculation of mass flow when the TVD scheme was specified in the Advection (ADV) Package.  Consequently, the mass flows written to the budget file were not correct in this situation.  Because these mass flows are also used in the budget calculations for the Constant Concentration (CNC) Package, reported CNC mass flows were also not correct.  This could result in large budget discrepancies in the GWT budget table.  Simulated concentrations were not affected by this error.  A small correction was made to the routine that adds the advective mass flow for the TVD scheme.
-	        \item Several packages had input blocks that could not be specified using the OPEN/CLOSE keyword.  The program was modified so that OPEN/CLOSE is supported for all intended blocks.
-	        \item The Immobile domain Storage and Transfer (IST) Package for the GWT Model is based on a conceptual model in which the immobile domain is always fully saturated, and so the saturation of the immobile domain does not depend on head in a cell.  The program was modified so that none of the immobile domain terms include saturation, except for the mass transfer equation itself, in which the transfer of solute between the mobile and immobile domain is multiplied by the cell saturation.
-	        \item Budget terms for the Immobile domain Storage and Transfer (IST) Package were not being written to the binary budget file for the GWT Model.  The package was modified to write these rate terms to the GWT binary budget file using the settings specified in the GWT Output Control file.
-	        \item Bulk density does not need to be specified for the Immobile domain Storage and Transfer (IST) Package if sorption is not active; however the program was trying to access bulk density even though it is not needed, which resulted in an access violation.  Program was fixed so that bulk density does not need to be specified by the user unless sorption is active for the IST Package.
-	        \item Budget tables printed to the listing file had numeric values that were missing the `E` character if the exponent had three digits (e.g. 1.e-100 or 1.e100).  Writing of the budget table was modified to include the `E` character in this case.  This change should make it easier for programs written in other languages to parse these tables.
-	        \item In the Mass Transfer and Storage (MST) and the Immobile Storage and Transfer (IST) Packages, the keyword to activate sorption was changed from SORBTION to SORPTION.  The program will still accept SORBTION, but this keyword will be deprecated in the future.
-	        \item Revised several of the text strings written to the headers within the GWT binary budget file.  A table of possible text strings for the GWT binary budget file are now included in the mf6io.pdf document.
+	        \item --
+	        \item --
 	\end{itemize}
 
 %	\underline{STRESS PACKAGES}
@@ -196,11 +187,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item The CONSTANT term used to report the rate of mass provided by a constant-concentration condition in the LKT, SFT, MWT, and UZT did not include the contribution to adjacent package features.  For example, if a stream reach was marked as constant-concentration boundary and it had flow into a downstream reach, then that flow was not included in the budget calculations.  Consequently, reported budgets in the listing file would show discrepancies that were larger than what was actually simulated by the model.  The program code was modified to include these mass flows to adjacent features.
-	        \item The ET formulation in UZF was not reducing the residual pET passed to deeper UZF objects when the extinction depth spanned multiple UZF objects (layers).  As a result, too much water was removed when the water table was shallow.  Or, in some cases, water was removed from dry cells that were above the water table but within the extinction depth interval. The ET code within the UZF package was modified to remove only eligible water from the unsaturated and saturated zones.
-            \item The UZF package should exit with an appropriate error message when SURFDEP > cell thickness.  When this condition is not enforced, bad mass balances may result.  
-            \item The FLOW\_IMBALANCE\_CORRECTION implemented in the GWT FMI Package did not work properly with the GWF UZF Package.  The issue was fixed by ensuring that the FMI Package could accurately calculate the flow residual for cells that had a UZF entry.
-            \item The SFR package should exit with an appropriate error message when a diversion has a cprior type of FRACTION but the divflow value is outside the range 0.0 to 1.0 as stated in the documentation.
+	        \item --
+	        \item --
 	\end{itemize}
 
 %	\underline{SOLUTION}
