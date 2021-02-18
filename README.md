@@ -3,7 +3,7 @@
 
 This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The  official USGS distribution is available at [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html).
 
-### Version 6.2.1 release candidate
+### Version 6.2.2 release candidate
 
 ![MODFLOW 6 CI with latest gfortran](https://github.com/MODFLOW-USGS/modflow6/workflows/MODFLOW%206%20CI%20with%20latest%20gfortran/badge.svg)
 
@@ -69,7 +69,7 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 #### ***Software/Code***
 
-[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2020, MODFLOW 6 Modular Hydrologic Model version 6.2.1 release candidate: U.S. Geological Survey Software Release, 22 October 2020, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2021, MODFLOW 6 Modular Hydrologic Model version 6.2.2 release candidate: U.S. Geological Survey Software Release, 18 February 2021, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
 
 Disclaimer
