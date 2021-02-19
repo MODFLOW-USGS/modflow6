@@ -1,19 +1,14 @@
 ! todo:
 !   - fail if ats is active for a steady state period
 !   - read ats info for numerical solution
-!   - handle solver failure
-!       - Set failed flag (this needs to be available to tdis_pu)
-!       - Do not call budget routines or write results
-!       - Do not increment kstp
-!       - Set readnewdata to .false.
-!       - Reset pertim/totim back to previous values
-!       - PrepareSolve should not advance routines
-!       - Reset all dependent values to old values (hnew = hold)
-!       - Cut down size of delt
-!       - If cut down size is < tsminats, then solution should be marked as not converged
-!       - 
+!   - Generalized way to shut off budget and ot routines?
+!   - make time step retry an option (where?  ats?  sln?)
 !   - write time step history to csv file
-!   - time series
+!   - sln csv output files need nfail info
+!   - need two types of ad routines (advance and reset?)
+!   - Need method for avoiding time slivers
+!   - time series -- do they work with ats?
+!   - how to change parameters with time? mxiter, ats settings, etc.
 
 module AdaptiveTimeStepModule
 
