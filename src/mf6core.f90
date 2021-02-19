@@ -336,6 +336,7 @@ contains
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule,              only: converge_check
     use SimVariablesModule,     only: isim_mode
+    use TdisModule,             only: iskperats, atskeeptrying, latsfailed
     ! -- dummy
     logical(LGP) :: hasConverged    
     ! -- local
@@ -347,42 +348,58 @@ contains
     integer(I4B) :: im
     integer(I4B) :: ic
     integer(I4B) :: is
+    logical :: skipOutput
     ! -- code
+    
     !
-    ! -- initialize format and line
-    fmt = "(/,a,/)"
-    line = 'end timestep'
-    !
-    ! -- evaluate simulation mode
-    select case (isim_mode)
-      case(MVALIDATE)
-        !
-        ! -- Write final message for timestep for each model 
-        do im = 1, basemodellist%Count()
-          mp => GetBaseModelFromList(basemodellist, im)
-          call mp%model_message(line, fmt=fmt)
-        end do
-      case(MNORMAL)
-        !
-        ! -- Write output and final message for timestep for each model 
-        do im = 1, basemodellist%Count()
-          mp => GetBaseModelFromList(basemodellist, im)
-          call mp%model_ot()
-          call mp%model_message(line, fmt=fmt)
-        enddo
-        !
-        ! -- Write output for each exchange
-        do ic = 1, baseexchangelist%Count()
-          ep => GetBaseExchangeFromList(baseexchangelist, ic)
-          call ep%exg_ot()
-        enddo
-        !
-        ! -- Write output for each solution
-        do is=1,basesolutionlist%Count()
-          sp => GetBaseSolutionFromList(basesolutionlist, is)
-          call sp%sln_ot()
-        enddo
-    end select
+    ! -- If a solution failed, but ATS is going to keep trying
+    !    then skip output
+    skipOutput = .false.
+    if (iskperats()) then
+      if (atskeeptrying) then
+        if (latsfailed) then
+          skipOutput = .true.
+        end if
+      end if
+    end if
+    
+    if (.not. skipOutput) then
+      !
+      ! -- initialize format and line
+      fmt = "(/,a,/)"
+      line = 'end timestep'
+      !
+      ! -- evaluate simulation mode
+      select case (isim_mode)
+        case(MVALIDATE)
+          !
+          ! -- Write final message for timestep for each model 
+          do im = 1, basemodellist%Count()
+            mp => GetBaseModelFromList(basemodellist, im)
+            call mp%model_message(line, fmt=fmt)
+          end do
+        case(MNORMAL)
+          !
+          ! -- Write output and final message for timestep for each model 
+          do im = 1, basemodellist%Count()
+            mp => GetBaseModelFromList(basemodellist, im)
+            call mp%model_ot()
+            call mp%model_message(line, fmt=fmt)
+          enddo
+          !
+          ! -- Write output for each exchange
+          do ic = 1, baseexchangelist%Count()
+            ep => GetBaseExchangeFromList(baseexchangelist, ic)
+            call ep%exg_ot()
+          enddo
+          !
+          ! -- Write output for each solution
+          do is=1,basesolutionlist%Count()
+            sp => GetBaseSolutionFromList(basesolutionlist, is)
+            call sp%sln_ot()
+          enddo
+      end select
+    end if
     !
     ! -- Check if we're done
     call converge_check(hasConverged)

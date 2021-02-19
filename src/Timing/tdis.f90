@@ -124,9 +124,13 @@
     use SimVariablesModule, only: isim_mode
     ! -- local
     character(len=LINELENGTH) :: line
+    character(len=4) :: cpref
+    character(len=10) :: cend
     ! -- formats
     character(len=*),parameter :: fmtspts =                                    &
-      "('    Solving:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
+      "(a, 'Solving:  &
+      &Stress period: ',i5,4x, &
+      &'Time step: ',i5,4x, a)"
     character(len=*),parameter :: fmtvspts =                                   &
       "(' Validating:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
     character(len=*),parameter :: fmtspi =                                     &
@@ -144,8 +148,13 @@
     !
     ! -- Increment kstp and kper and set readnewdata if the last time step
     !    did not fail
+    cpref = '    '
+    cend = ''
     if (latsfailed) then
       natsfailed = natsfailed + 1
+      cpref = ' Re-'
+      cend = 'Retry: '
+      write(cend, '(a, i0)') 'Retry: ', natsfailed
     else
       natsfailed = 0
       if (endofperiod) then
@@ -162,7 +171,7 @@
       case(MVALIDATE)  
         write(line, fmtvspts) kper, kstp
       case(MNORMAL)
-        write(line, fmtspts) kper, kstp
+        write(line, fmtspts) cpref, kper, kstp, trim(cend)
     end select
     call sim_message(line, level=VALL)
     call sim_message(line, iunit=iout, skipbefore=1, skipafter=1)

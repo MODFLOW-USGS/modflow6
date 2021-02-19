@@ -410,7 +410,6 @@ module AdaptiveTimeStepModule
       pertim = pertimsav
       totim = totimsav
       delt = delt / 2.d0   ! chop it down (make this an input variable)
-      print *, 'ats_tu redoing time step with size ', delt
       !
       ! -- If the length of the next retry would be less than tsmin, then
       !    this must be the last ats retry

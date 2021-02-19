@@ -1869,8 +1869,10 @@ contains
     skipBudget = .false.
     if (iskperats()) then
       if (atskeeptrying) then
-        if (this%icnvg == 0) isgcnvg = 1
-        skipBudget = .true.
+        if (this%icnvg == 0) then
+          isgcnvg = 1
+          skipBudget = .true.
+        end if
       end if
     end if
     

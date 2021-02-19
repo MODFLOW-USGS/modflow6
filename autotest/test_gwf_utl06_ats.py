@@ -39,10 +39,10 @@ def get_model(idx, dir):
     mu = 5.
     sigma = 1.23
     np.random.seed(seed=9001)
-    hk = 1. #np.random.lognormal(mu, sigma, (nrow, ncol))
+    hk = 1.0 #np.random.lognormal(mu, sigma, (nrow, ncol))
 
     nc = int((nrow - 1) / 2) + 1
-    welsp = [((0, nc, nc), -1000000.)]
+    welsp = [((0, nc, nc), -150000.)]
     welspd = {1: welsp, 2:[[]]}
 
     c = []
@@ -63,13 +63,15 @@ def get_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
     atsperiod = [(1, 100,  1.e-5, 100),
                  (2, 0.01, 1.e-5, 10),]
-    ats = flopy.mf6.ModflowUtlats(sim, maxats=len(atsperiod),
+    ats = flopy.mf6.ModflowUtlats(sim,
+                                  maxats=len(atsperiod),
                                   perioddata=atsperiod)
 
     tdis = flopy.mf6.ModflowTdis(sim,
@@ -123,10 +125,12 @@ def get_model(idx, dir):
                                                    save_flows=False)
 
     # wel files
-    wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
+    wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True,
+                                  print_flows=True,
                                   maxbound=len(welsp),
                                   stress_period_data=welspd,
-                                  save_flows=False)
+                                  save_flows=False,
+                                  auto_flow_reduce=False)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
