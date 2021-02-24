@@ -15,7 +15,4 @@ IF "%VS_VER%"=="2019_build_tools" (
 for /f "tokens=* usebackq" %%f in (`dir /b "C:\Program Files (x86)\Intel\oneAPI\compiler\" ^| findstr /V latest ^| sort`) do @set "LATEST_VERSION=%%f"
 @call "C:\Program Files (x86)\Intel\oneAPI\compiler\%LATEST_VERSION%\env\vars.bat"
 
-cd .github/intel-scripts
-ifort hello.f90 /exe:hello.exe
-dir /b
-hello.exe
+nosetests -v --with-id --with-timer -w ./autotest
