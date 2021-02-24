@@ -6,4 +6,4 @@
 
 source /opt/intel/oneapi/setvars.sh
 
-nosetests -v --with-id --with-timer -w ./autotest
+nosetests -v --nocapture --with-id --with-timer -w ./autotest get_build_exes.py

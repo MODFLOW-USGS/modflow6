@@ -114,6 +114,10 @@ jobs:
         python update_flopy.py
         cd ..
 
-    - name: Build and test applications
+    - name: Build applications
+      run: |
+        nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
+
+    - name: Test applications
       run: |
         nosetests -v --with-id --with-timer -w ./autotest

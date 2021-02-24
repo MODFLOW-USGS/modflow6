@@ -1,10 +1,10 @@
 # Get executables and build targets
 
 # to use ifort on windows, run this
-# python test000_setup.py -fc ifort
+# python get_build_exes.py -fc ifort
 
 # can compile only mf6 directly using this command:
-#  python -c "import test000_setup; test000_setup.test_build_modflow6()"
+#  python -c "import get_build_exes; get_build_exes.test_build_modflow6()"
 
 import os
 import sys
@@ -17,7 +17,7 @@ if running_on_CI():
     print("running on CI environment")
     os.environ["PYMAKE_DOUBLE"] = "1"
 
-# paths to executables for  previous versions of MODFLOW
+# paths to executables for previous versions of MODFLOW
 ebindir = os.path.abspath(
     os.path.join(os.path.expanduser("~"), ".local", "bin")
 )

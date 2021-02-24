@@ -163,9 +163,13 @@ jobs:
           python update_flopy.py
           cd ..
 
-      - name: activate ifort, build, and test applications
+      - name: activate ifort and build applications
         run: |
           .github/intel-scripts/${{ matrix.build_script }}
+
+      - name: Test applications
+        run: |
+          nosetests -v --with-id --with-timer -w ./autotest
 
       - name: exclude unused files from cache on linux
         if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'

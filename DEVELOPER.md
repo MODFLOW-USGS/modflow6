@@ -87,7 +87,7 @@ cd modflow6/autotest
 nosetests -v
 
 # Build MODFLOW 6, MODFLOW 6 utilities, and all versions of MODFLOW used in comparison tests
-nosetests -v test000_setup.py
+nosetests -v get_build_exes.py
 
 # Build MODFLOW 6 tests generated using flopy
 nosetests -v test_*
