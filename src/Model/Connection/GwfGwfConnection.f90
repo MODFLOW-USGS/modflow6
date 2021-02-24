@@ -212,15 +212,18 @@ contains
   ! GwfGwfExchange%gwf_gwf_df(...) that the exchange data is being read from file
   ! So, in this routine, we have to do create, define, and allocate&read 
   subroutine gwfgwfcon_ar(this)
+  use GridConnectionModule, only: GridConnectionType
     class(GwfGwfConnectionType), intent(inout)  :: this
     ! local    
-    integer(I4B) :: icell, idx
+    integer(I4B) :: icell, idx, localIdx
     class(NumericalModelType), pointer :: model
+    type(GridConnectionType), pointer :: gc
     
+    gc => this%gridConnection
     ! init x and ibound with model data
-    do icell = 1, this%gridConnection%nrOfCells     
-      idx = this%gridConnection%idxToGlobal(icell)%index
-      model => this%gridConnection%idxToGlobal(icell)%model
+    do icell = 1, gc%nrOfCells     
+      idx = gc%idxToGlobal(icell)%index
+      model => gc%idxToGlobal(icell)%model
       
       this%interfaceModel%x(icell) = model%x(idx)
       this%interfaceModel%ibound(icell) = model%ibound(idx)      
@@ -228,7 +231,14 @@ contains
     
     ! *_ar
     call this%interfaceModel%allocateAndReadModel()  
-    
+
+    ! fill mapping to global coordinate index, which can be
+    ! done now because moffset is set in sln_df
+    do localIdx = 1, gc%nrOfCells
+      gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index +        &
+                                    gc%idxToGlobal(localIdx)%model%moffset
+    end do
+
     ! TODO_MJR: ar mover
     ! TODO_MJR: angledx checks    
     ! TODO_MJR: ar observation

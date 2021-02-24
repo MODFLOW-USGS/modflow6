@@ -2,6 +2,7 @@ module GridConnectionModule
   use KindModule, only: I4B, DP
   use SimModule, only: ustop
   use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
@@ -70,7 +71,9 @@ module GridConnectionModule
     ! --
     
     integer(I4B), pointer :: nrOfCells => null()                                              ! the total number of cells in the interface
-    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()                      ! a map from interface index to global coordinate    
+    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()                      ! a map from interface index to global coordinate
+    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null()                    ! a (flat) map from interface index to global index
+
      
     integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()  ! sparse mapping from those regional indices that are within the interface domain
     type(ListType)                                    :: regionalModels                       ! the models (NumericalModelType) that make up the interface
@@ -512,6 +515,7 @@ module GridConnectionModule
     
     ! to map the interface index to global coordinates
     allocate(this%idxToGlobal(this%nrOfCells))
+    call mem_allocate(this%idxToGlobalIdx, this%nrOfCells, 'IDXTOGLOBALIDX', this%memoryPath)
     
     ! create sparse, to temporarily hold connections
     allocate(sparse)
@@ -910,6 +914,9 @@ module GridConnectionModule
     call mem_deallocate(this%nrOfBoundaryCells)
     call mem_deallocate(this%indexCount)
     call mem_deallocate(this%nrOfCells)
+
+    ! arrays
+    call mem_deallocate(this%idxToGlobalIdx)
     
   end subroutine deallocateGridConn
   
