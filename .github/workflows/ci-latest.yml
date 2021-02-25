@@ -25,7 +25,6 @@ jobs:
       uses: s-weigand/setup-conda@v1.0.5
       with:
         update-conda: true
-        miniconda-version: "latest"
 
     - name: Setup symbolic links on Linux
       if: runner.os == 'Linux'

@@ -50,7 +50,6 @@ jobs:
         uses: s-weigand/setup-conda@v1.0.5
         with:
           update-conda: true
-          miniconda-version: "latest"
 
       - name: cache install ifort on linux
         if: runner.os == 'Linux'

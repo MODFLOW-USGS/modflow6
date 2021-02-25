@@ -73,8 +73,14 @@ def get_mf5to6_models():
         'test028_sfr_simple',
     ]
     os_name = sys.platform.lower()
+    fc = os.environ.get("FC")
+    ci_ifort = False
+    if fc is not None:
+        if fc == "ifort":
+            ci_ifort = True
     if os_name in ("win32", "linux", "darwin"):
-        exclude.append("testlgrsfr")
+        if not ci_ifort:
+            exclude.append("testlgrsfr")
     elif os_name in ("linux", "darwin"):
         exclude.append("test059_mvlake_laksfr_tr")
 

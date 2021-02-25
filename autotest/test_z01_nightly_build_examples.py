@@ -186,6 +186,7 @@ def get_htol(dir):
     htol = None
     htol_dict = {
         "test059_mvlake_laksfr_tr": {
+            "linux": 0.002,
             "darwin": 0.002,
         },
         "test045_lake4ss": {
