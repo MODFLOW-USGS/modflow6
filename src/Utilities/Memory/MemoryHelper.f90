@@ -1,5 +1,5 @@
 module MemoryHelperModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, LENVARNAME, LENCOMPONENTNAME
   use SimModule, only: store_error, ustop
   use SimVariablesModule, only: errmsg
@@ -53,10 +53,11 @@ contains
 
   !> @brief Split a memory address string into memory path and variable name
   !<
-  subroutine split_mem_address(mem_address, mem_path, var_name)
+  subroutine split_mem_address(mem_address, mem_path, var_name, success)
     character(len=*), intent(in) :: mem_address         !< the full memory address string
     character(len=LENMEMPATH), intent(out) :: mem_path  !< the memory path
     character(len=LENVARNAME), intent(out) :: var_name  !< the variable name
+    logical(LGP), intent(out) :: success                !< true when successful
     ! local
     integer(I4B) :: idx
 
@@ -65,17 +66,14 @@ contains
     ! if no separator, or it's at the end of the string,
     ! the memory address is not valid:
     if(idx < 1 .or. idx == len(mem_address)) then
-      write(errmsg, '(*(G0))')                                                  &
-        'Fatal error in Memory Manager, cannot split invalid memory address: ', &
-         mem_address
-
-      ! -- store error and stop program execution
-      call store_error(errmsg)
-      call ustop()
+      success = .false.
+      mem_path = ''
+      var_name = ''
+    else
+      success = .true.
+      mem_path = mem_address(:idx-1)
+      var_name = mem_address(idx+1:)
     end if
-
-    mem_path = mem_address(:idx-1)
-    var_name = mem_address(idx+1:)
     
   end subroutine split_mem_address
 

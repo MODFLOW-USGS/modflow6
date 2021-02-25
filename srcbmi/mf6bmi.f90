@@ -17,7 +17,7 @@
 !<
 module mf6bmi
   use mf6bmiUtil
-  use bmif, only: BMI_FAILURE, BMI_SUCCESS
+  use mf6bmiError
   use Mf6CoreModule
   use TdisModule, only: kper, kstp
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr,   &
@@ -37,6 +37,17 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: istdout_to_file
   
   contains  
+
+  function bmi_get_component_name(name) result(bmi_status) bind(C, name="get_component_name")
+  !DEC$ ATTRIBUTES DLLEXPORT :: bmi_get_component_name
+    character(kind=c_char), intent(out) :: name(BMI_LENCOMPONENTNAME)
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! local
+
+    name = string_to_char_array('MODFLOW 6', 9)
+    bmi_status = BMI_SUCCESS
+
+  end function bmi_get_component_name
 
   !> @brief Initialize the computational core
   !!
@@ -282,13 +293,12 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -309,14 +319,13 @@ module mf6bmi
     integer(I4B) :: var_size, isize
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
-      bmi_status = BMI_FAILURE  
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
       return
     end if
 
@@ -345,7 +354,7 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     integer(I4B) :: rank
     real(DP), pointer :: src_ptr, tgt_ptr
     real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
@@ -355,9 +364,8 @@ module mf6bmi
 
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -396,7 +404,8 @@ module mf6bmi
         end do
       end do
     else
-      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      write(bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -419,7 +428,7 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     integer(I4B) :: rank
     integer(I4B), pointer :: src_ptr, tgt_ptr
     integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
@@ -429,9 +438,8 @@ module mf6bmi
 
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -470,7 +478,8 @@ module mf6bmi
         end do
       end do
     else
-      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      write(bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -492,7 +501,7 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     real(DP), pointer :: scalar_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:,:), pointer, contiguous :: array2D_ptr
@@ -501,9 +510,8 @@ module mf6bmi
     
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -523,7 +531,8 @@ module mf6bmi
       call mem_setptr(array3D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array3D_ptr)
     else
-      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      write(bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if   
@@ -545,7 +554,7 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     integer(I4B) :: rank
     integer(I4B), pointer :: scalar_ptr
     integer(I4B), dimension(:), pointer, contiguous :: array_ptr
@@ -554,9 +563,8 @@ module mf6bmi
     
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -577,7 +585,8 @@ module mf6bmi
       call mem_setptr(array3D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array3D_ptr)
     else
-      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      write(bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -599,7 +608,7 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     integer(I4B) :: rank
     real(DP), pointer :: src_ptr, tgt_ptr
     real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
@@ -609,9 +618,8 @@ module mf6bmi
 
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -639,7 +647,8 @@ module mf6bmi
         end do
       end do
     else
-      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      write(bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -647,8 +656,9 @@ module mf6bmi
     ! trigger event:
     call on_memory_set(var_name, mem_path, status)
     if (status /= 0) then
-      ! something went terribly wrong here, aborting       
-      write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
+      ! something went terribly wrong here, aborting
+      write(bmi_last_error, fmt_invalid_mem_access) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -668,7 +678,7 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     integer(I4B) :: rank
     integer(I4B), pointer :: src_ptr, tgt_ptr
     integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
@@ -678,9 +688,8 @@ module mf6bmi
 
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -708,7 +717,8 @@ module mf6bmi
         end do
       end do
     else
-      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      write(bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -717,7 +727,8 @@ module mf6bmi
     call on_memory_set(var_name, mem_path, status)
     if (status /= 0) then
       ! something went terribly wrong here, aborting        
-      write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
+      write(bmi_last_error, fmt_invalid_mem_access) trim(var_name)
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
     end if
@@ -740,21 +751,22 @@ module mf6bmi
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
     character(len=LENMEMTYPE) :: mem_type
-    logical(LGP) :: found
+    logical(LGP) :: valid
 
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
-    end if    
+    end if  
     
     call get_mem_type(var_name, mem_path, mem_type)
     c_var_type(1:len(trim(mem_type))+1) = string_to_char_array(trim(mem_type), len(trim(mem_type)))
 
-    if (mem_type == 'UNKNOWN') then
+    if (mem_type == 'UNKNOWN') then 
+      write(bmi_last_error, fmt_general_err) 'unknown memory type'
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
     end if
 
@@ -773,13 +785,12 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
     
     bmi_status = BMI_SUCCESS
 
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -814,13 +825,12 @@ module mf6bmi
     integer(I4B) :: var_rank
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
-    logical(LGP) :: found
+    logical(LGP) :: valid
        
     bmi_status = BMI_SUCCESS
      
-    call split_address(c_var_address, mem_path, var_name, found)
-    if (.not. found) then
-      write(istdout,*) 'BMI Error: unknown variable '//var_name//' at '//mem_path
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
       bmi_status = BMI_FAILURE
       return
     end if
