@@ -61,19 +61,20 @@ def get_mf5to6_models():
         Get a list of test models
     """
     # list of example files to exclude
-    exclude = ['test1ss_ic1',
-               'test9.5-3layer',
-               'testmm2',
-               'testmm3',
-               'testmmSimple',
-               'testps3a',
-               'testTwri',
-               'testTwrip',
-               'test028_sfr_simple',
-               ]
+    exclude = [
+        'test1ss_ic1',
+        'test9.5-3layer',
+        'testmm2',
+        'testmm3',
+        'testmmSimple',
+        'testps3a',
+        'testTwri',
+        'testTwrip',
+        'test028_sfr_simple',
+    ]
     os_name = sys.platform.lower()
-    if os_name == 'win32':
-        exclude.append('testlgrsfr')
+    if os_name in ("win32", "linux", "darwin"):
+        exclude.append("testlgrsfr")
     elif os_name in ("linux", "darwin"):
         exclude.append("test059_mvlake_laksfr_tr")
 
