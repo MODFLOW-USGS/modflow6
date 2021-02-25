@@ -87,9 +87,9 @@
 module mf6xmi
   use mf6bmi
   use mf6bmiUtil
+  use mf6bmiError
   use Mf6CoreModule
   use KindModule
-  use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int, c_char  
   implicit none
  
@@ -143,6 +143,8 @@ module mf6xmi
     if (hasConverged) then
       bmi_status = BMI_SUCCESS
     else
+      write(bmi_last_error, fmt_general_err) 'simulation failed to converge'
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
     end if
     
@@ -279,6 +281,8 @@ module mf6xmi
     if (hasConverged == 1) then
       bmi_status = BMI_SUCCESS
     else
+      write(bmi_last_error, fmt_fail_cvg_sol) subcomponent_idx
+      call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
     end if
     

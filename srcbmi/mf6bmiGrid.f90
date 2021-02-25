@@ -1,10 +1,13 @@
 !> @brief This module contains BMI routines to expose the MODFLOW 6 discretization
 !!
-!! NB: this module is experimental and still under development.
+!! NB: this module is experimental and still under development:
+!! - add error handling
+!! - add var address checks
+!! - ...
 !<
-module mf6bmiGrid  
-  use bmif, only: BMI_SUCCESS, BMI_FAILURE
+module mf6bmiGrid
   use mf6bmiUtil
+  use mf6bmiError
   use iso_c_binding, only: c_double, c_ptr, c_loc
   use ConstantsModule, only: LENMODELNAME, LENMEMPATH
   use KindModule, only: DP, I4B
@@ -26,13 +29,19 @@ contains
     character(len=LENMODELNAME) :: model_name
     character(len=LENMEMPATH) :: var_address
     integer(I4B) :: i
+    logical(LGP) :: success
     class(BaseModelType), pointer :: baseModel
 
+    var_grid = -1
+    
     bmi_status = BMI_FAILURE
     var_address = char_array_to_string(c_var_address, strlen(c_var_address))    
-    model_name = extract_model_name(var_address)
+    model_name = extract_model_name(var_address, success)
+    if (.not. success) then
+      ! we failed
+      return
+    end if    
     
-    var_grid = 0
     do i = 1,basemodellist%Count()
       baseModel => GetBaseModelFromList(basemodellist, i)
       if (baseModel%name == model_name) then
