@@ -9,7 +9,5 @@ LATEST_VERSION=$(ls -1 /opt/intel/oneapi/compiler/ | grep -v latest | sort | tai
 # shellcheck source=/dev/null
 source /opt/intel/oneapi/compiler/"$LATEST_VERSION"/env/vars.sh
 
-cd .github/intel-scripts
-ifort hello.f90 -o hello.out
-ls
-./hello.out
+nosetests -v --nocapture --with-id --with-timer -w ./autotest get_build_exes.py
+

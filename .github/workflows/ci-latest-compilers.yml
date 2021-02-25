@@ -26,7 +26,6 @@ jobs:
       uses: s-weigand/setup-conda@v1.0.5
       with:
         auto-update-conda: true
-        miniconda-version: "latest"
 
     - name: Set up gfortran ${{ matrix.GCC_V }}
       run: |
@@ -114,6 +113,10 @@ jobs:
         python update_flopy.py
         cd ..
 
-    - name: Build and test applications
+    - name: Build applications
+      run: |
+        nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
+
+    - name: Test applications
       run: |
         nosetests -v --with-id --with-timer -w ./autotest

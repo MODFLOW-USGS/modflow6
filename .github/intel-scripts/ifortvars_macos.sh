@@ -6,7 +6,4 @@
 
 source /opt/intel/oneapi/setvars.sh
 
-cd .github/intel-scripts
-ifort hello.f90 -o hello.out
-ls
-./hello.out
+nosetests -v --nocapture --with-id --with-timer -w ./autotest get_build_exes.py

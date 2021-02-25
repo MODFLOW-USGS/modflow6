@@ -184,9 +184,30 @@ def get_mf6_models():
 
 def get_htol(dir):
     htol = None
-    if dir == 'test059_mvlake_laksfr_tr':
-        if sys.platform.lower() == 'darwin':
-            htol = 0.002
+    htol_dict = {
+        "test059_mvlake_laksfr_tr": {
+            "linux": 0.002,
+            "darwin": 0.002,
+        },
+        "test045_lake4ss": {
+            "linux": 0.007,
+            "darwin": 0.007,
+            "win32": 0.007,
+        },
+        "test045_lake4ss_nr_dev": {
+            "linux": 0.002,
+            "darwin": 0.002,
+            "win32": 0.002,
+        },
+
+    }
+    htol_keys = list(htol_dict.keys())
+    if dir in htol_keys:
+        dir_dict = htol_dict[dir]
+        os_keys = list(dir_dict.keys())
+        os_key = sys.platform.lower()
+        if os_key in os_keys:
+            htol = dir_dict[os_key]
     return htol
 
 
