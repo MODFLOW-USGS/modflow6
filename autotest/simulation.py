@@ -169,12 +169,12 @@ class Simulation(object):
             success = False
 
         if self.require_failure is None:
-            assert success
+            assert success, "MODFLOW 6 model did not terminate normally"
         else:
             if self.require_failure:
-                assert success is False
+                assert success is False, "MODFLOW 6 model should have failed"
             else:
-                assert success is True
+                assert success is True, "MODFLOW 6 model should not have failed"
 
         self.nam_cmp = None
         if success:
@@ -214,7 +214,7 @@ class Simulation(object):
                                           self.name + '/' + key)
                         print(msg)
 
-                    assert success_cmp
+                    assert success_cmp, "Unsuccessful comparison"
 
         return
 
