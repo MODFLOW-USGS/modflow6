@@ -152,15 +152,17 @@ contains
     character(len=LENCOMPONENTNAME) :: dummy_component
     character(len=LENVARNAME) :: var_name
     logical(LGP) :: split_succeeded
+    
+    success = .false.
 
     call split_mem_address(var_address, mem_path, var_name, split_succeeded)
     if (.not. split_succeeded) then
-      success = .false.
       return
     end if
 
     call split_mem_path(mem_path, model_name, dummy_component)
-    
+    success = .true.
+
   end function extract_model_name
 
   !> @brief Get the model name from the grid id
