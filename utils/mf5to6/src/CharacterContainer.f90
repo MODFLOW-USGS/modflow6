@@ -46,7 +46,7 @@ contains
     type(ListType), intent(inout) :: list
     character(len=*), intent(in) :: string
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     type(CharacterContainerType), pointer :: newCharacterContainer
     !
     newCharacterContainer => null()
@@ -66,7 +66,7 @@ contains
     integer, intent(in) :: indx
     character(len=:), allocatable :: string
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     type(CharacterContainerType), pointer :: charcont
     !
     string = ''

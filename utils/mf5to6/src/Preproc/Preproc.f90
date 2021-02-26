@@ -555,7 +555,7 @@ contains
     integer :: i
     character(len=MAXCHARLEN) :: ermsg
     type(Dis3dType), pointer :: dis3d
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => this%dis
     dis3d => CastAsDis3dType(obj)

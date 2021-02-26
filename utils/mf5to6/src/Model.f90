@@ -760,7 +760,7 @@ contains
     class(ModelType) :: this
     class(PackageWriterType), pointer :: PkgWriter
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     PkgWriter%iulist = this%iulist
     obj => PkgWriter
@@ -1157,7 +1157,7 @@ contains
     ! local
     class(PackageWriterType), pointer :: pkgWriter => null()
     integer :: i, indxLak, indxSfr, npkg
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     logical :: destroyValue
     !
     indxLak = 0

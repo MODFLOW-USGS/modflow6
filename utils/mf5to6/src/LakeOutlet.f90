@@ -80,7 +80,7 @@ contains
     type(ListType), pointer :: list
     type(LakeOutletType), pointer :: lakeOutlet
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => lakeOutlet
     call list%Add(obj)
@@ -95,7 +95,7 @@ contains
     integer, intent(in) :: idx
     type(LakeOutletType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => list%GetItem(idx)
     res => CastAsLakeOutletType(obj)

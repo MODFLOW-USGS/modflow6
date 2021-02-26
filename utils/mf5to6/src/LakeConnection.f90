@@ -80,7 +80,7 @@ contains
     type(ListType), pointer :: list
     type(LakeConnectionType), pointer :: lakeConnection
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => lakeConnection
     call list%Add(obj)
@@ -95,7 +95,7 @@ contains
     integer, intent(in) :: idx
     type(LakeConnectionType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => list%GetItem(idx)
     res => CastAsLakeConnectionType(obj)

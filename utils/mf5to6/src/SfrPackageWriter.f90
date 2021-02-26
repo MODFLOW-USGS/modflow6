@@ -83,7 +83,7 @@ contains
     ! dummy
     type(SfrPackageWriterType), pointer, intent(inout) :: sfrPkgWriter
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => sfrPkgWriter
     call AllSfrPkgWriters%Add(obj)
@@ -97,7 +97,7 @@ contains
     integer, intent(in) :: idx
     type(SfrPackageWriterType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     res => null()
     obj => AllSfrPkgWriters%GetItem(idx)

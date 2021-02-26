@@ -101,7 +101,7 @@ contains
     type(ListType) :: moverList
     type(MoverType), pointer :: mover
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => mover
     call moverList%Add(obj)
@@ -116,7 +116,7 @@ contains
     integer, intent(in) :: idx
     type(MoverType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => moverList%GetItem(idx)
     res => CastAsMoverType(obj)

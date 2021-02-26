@@ -125,7 +125,7 @@ contains
     type(ModelType), pointer  :: parent => null()
     type(ModelType), pointer  :: child => null()
     type(ExchangeType), pointer :: exchange => null()
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     ! formats
     1 format()
     10 format(a)
