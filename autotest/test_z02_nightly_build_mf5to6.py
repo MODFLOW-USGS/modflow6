@@ -72,11 +72,11 @@ def get_mf5to6_models():
         'testTwrip',
         'test028_sfr_simple',
     ]
-    os_name = sys.platform.lower()
-    if os_name in ("win32", "linux", "darwin"):
-        exclude.append("testlgrsfr")
-    elif os_name in ("linux", "darwin"):
-        exclude.append("test059_mvlake_laksfr_tr")
+    # os_name = sys.platform.lower()
+    # if os_name in ("win32", "linux", "darwin"):
+    #     exclude.append("testlgrsfr")
+    # elif os_name in ("linux", "darwin"):
+    #     exclude.append("test059_mvlake_laksfr_tr")
 
     # write a summary of the files to exclude
     print('list of tests to exclude:')

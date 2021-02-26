@@ -49,7 +49,7 @@ contains
     type(ListType),             intent(inout) :: list
     type(TimeSeriesRecordType), pointer, intent(inout) :: tsrecord
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => tsrecord
     call list%Add(obj)

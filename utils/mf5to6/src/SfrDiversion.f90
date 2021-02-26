@@ -62,7 +62,7 @@ contains
     type(ListType), pointer :: DiversionList
     type(SfrDiversionType), pointer :: diversion
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => diversion
     call DiversionList%Add(obj)
@@ -77,7 +77,7 @@ contains
     integer, intent(in) :: idx
     type(SfrDiversionType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     res => null()
     obj => DiversionList%GetItem(idx)

@@ -181,7 +181,7 @@ contains
     integer, intent(in) :: idx
     type(SfrReachType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => reachList%GetItem(idx)
     res => CastAsSfrReachType(obj)
@@ -195,7 +195,7 @@ contains
     type(ListType), pointer :: reachList
     type(SfrReachType), pointer :: reach
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => reach
     call reachList%Add(obj)
