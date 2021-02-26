@@ -19,7 +19,7 @@ module MemoryListModule
   subroutine add(this, mt)
     class(MemoryListType) :: this
     type(MemoryType), pointer :: mt
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     obj => mt
     call this%list%add(obj)
   end subroutine add
@@ -28,7 +28,7 @@ module MemoryListModule
     class(MemoryListType) :: this
     integer(I4B), intent(in) :: ipos
     type(MemoryType), pointer :: res
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     obj => this%list%getitem(ipos)
     select type (obj)
     type is (MemoryType)

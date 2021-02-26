@@ -249,7 +249,7 @@ contains
     type(ListType), pointer :: list
     type(LakeType), pointer :: lake
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => lake
     call list%Add(obj)
@@ -264,7 +264,7 @@ contains
     integer, intent(in) :: idx
     type(LakeType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => list%GetItem(idx)
     res => CastAsLakeType(obj)

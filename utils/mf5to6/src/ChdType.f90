@@ -104,7 +104,7 @@ contains
     type(ListType) :: chdList
     type(ChdType), pointer :: chd
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => chd
     call chdList%Add(obj)

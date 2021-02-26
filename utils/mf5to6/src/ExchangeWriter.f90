@@ -55,7 +55,7 @@ contains
     type(ModelConverterType), pointer :: parentConverter
     type(ExchangeType), pointer :: exchange
     type(ModelType), pointer :: parent => null(), child => null()
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     ! formats
     10 format()
     !
@@ -106,7 +106,7 @@ contains
     class(ExchangeWriterType) :: this
     ! local
     integer :: i, nexg
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     type(ExchangeType), pointer :: exg => null()
     !
     nexg = this%Exchanges%Count()

@@ -157,7 +157,7 @@ contains
     type(ListType),                      intent(inout) :: list
     class(TimeSeriesFileType), pointer, intent(inout) :: tsfile
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     obj => tsfile
@@ -178,7 +178,7 @@ contains
     integer(I4B),             intent(in)    :: idx
     type(TimeSeriesFileType), pointer :: res
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     obj => list%GetItem(idx)
@@ -876,7 +876,7 @@ contains
     class(TimeSeriesType) :: this
     type(TimeSeriesRecordType), pointer, intent(inout) :: tsr
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     obj => tsr
@@ -897,7 +897,7 @@ contains
     ! result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     obj => null()
@@ -922,7 +922,7 @@ contains
     ! result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     obj => null()
@@ -947,7 +947,7 @@ contains
     ! result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     obj => null()
@@ -1025,7 +1025,7 @@ contains
     double precision :: badtime, time, time0, time1
     type(TimeSeriesRecordType), pointer :: tsrEarlier, tsrLater
     type(ListNodeType), pointer :: nodeEarlier, nodeLater
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     badtime = -9.0d30
@@ -1110,7 +1110,7 @@ contains
     integer :: nrecords
     double precision :: endtime
     type(TimeSeriesRecordType), pointer :: tsr
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
     !
     nrecords = this%list%Count()

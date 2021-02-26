@@ -61,7 +61,7 @@ contains
     class(SfrSegmentType) :: this
     type(SfrReachType), pointer :: reach
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => reach
     call this%SegReaches%Add(obj)
@@ -117,7 +117,7 @@ contains
     integer, intent(in) :: idx
     type(SfrSegmentType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => segmentList%GetItem(idx)
     res => CastAsSfrSegmentType(obj)
@@ -131,7 +131,7 @@ contains
     type(ListType), pointer :: segmentList
     type(SfrSegmentType), pointer :: segmnt
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => segmnt
     call segmentList%Add(obj)

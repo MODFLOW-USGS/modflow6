@@ -67,7 +67,7 @@ contains
     type(ListType), pointer :: list
     type(AuxiliaryType), pointer :: auxiliary
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => auxiliary
     call list%Add(obj)
@@ -82,7 +82,7 @@ contains
     integer, intent(in) :: idx
     type(AuxiliaryType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     res => null()
     obj => list%GetItem(idx)
