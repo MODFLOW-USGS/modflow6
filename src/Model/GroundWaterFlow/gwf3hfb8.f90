@@ -35,9 +35,14 @@ module GwfHfbModule
     real(DP), dimension(:), pointer, contiguous :: top => null()                 !pointer to model top
     real(DP), dimension(:), pointer, contiguous :: bot => null()                 !pointer to model bot
     real(DP), dimension(:), pointer, contiguous :: hwva => null()                !pointer to model hwva
+    !
+    integer(I4B), pointer                           :: kchangeper   => null()    !NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer                           :: kchangestp   => null()    !NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), dimension(:), pointer, contiguous :: nodekchange  => null()    !NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
   contains
     procedure :: hfb_ar
     procedure :: hfb_rp
+    procedure :: hfb_ad
     procedure :: hfb_fc
     procedure :: hfb_cq
     procedure :: hfb_da
@@ -48,6 +53,7 @@ module GwfHfbModule
     procedure, private :: read_data
     procedure, private :: check_data
     procedure, private :: condsat_reset
+    procedure, private :: condsat_modify_all
     procedure, private :: condsat_modify
   end type GwfHfbType
 
@@ -126,6 +132,9 @@ module GwfHfbModule
     call mem_setptr(this%top, 'TOP', create_mem_path(this%name_model, 'DIS'))
     call mem_setptr(this%bot, 'BOT', create_mem_path(this%name_model, 'DIS'))
     call mem_setptr(this%hwva, 'HWVA', create_mem_path(this%name_model, 'CON'))
+    call mem_setptr(this%kchangeper, 'KCHANGEPER', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%kchangestp, 'KCHANGESTP', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%nodekchange, 'NODEKCHANGE', create_mem_path(this%name_model, 'NPF'))
     !
     call this%read_options()
     call this%read_dimensions()
@@ -189,7 +198,7 @@ module GwfHfbModule
     if(this%ionper == kper) then
       call this%condsat_reset()
       call this%read_data()
-      call this%condsat_modify()
+      call this%condsat_modify_all()
     else
       write(this%iout,fmtlsp) 'HFB'
     endif
@@ -197,6 +206,35 @@ module GwfHfbModule
     ! -- return
     return
   end subroutine hfb_rp
+
+  subroutine hfb_ad(this)
+! ******************************************************************************
+! hfb_ad -- Advance
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kper, kstp
+    ! -- dummy
+    class(GwfHfbType) :: this
+    ! -- local
+    integer(I4B) :: ihfb, n, m
+! ------------------------------------------------------------------------------
+    !
+    ! -- Update saved condsat entries and reapply modifications when any K values change
+    if(this%kchangeper == kper .and. this%kchangestp == kstp) then
+      do ihfb = 1, this%nhfb
+        n = this%noden(ihfb)
+        m = this%nodem(ihfb)
+        if(this%nodekchange(n) /= 0 .or. this%nodekchange(m) /= 0) then
+          call this%condsat_modify(ihfb)
+        endif
+      enddo
+    endif
+    !
+    return
+  end subroutine hfb_ad
 
   subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
@@ -481,6 +519,9 @@ module GwfHfbModule
     this%top        => null()
     this%bot        => null()
     this%hwva       => null()
+    this%kchangeper => null()
+    this%kchangestp => null()
+    this%nodekchange => null()
     !
     ! -- return
     return
@@ -816,9 +857,9 @@ module GwfHfbModule
     return
   end subroutine condsat_reset
 
-  subroutine condsat_modify(this)
+  subroutine condsat_modify_all(this)
 ! ******************************************************************************
-! condsat_modify -- Modify condsat for the following conditions:
+! condsat_modify_all -- Modify condsat for the following conditions:
 !   1.  If Newton is active
 !   2.  If icelltype for n and icelltype for m is 0
 ! ******************************************************************************
@@ -830,44 +871,67 @@ module GwfHfbModule
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
-    integer(I4B) :: ihfb, n, m
+    integer(I4B) :: ihfb
+! ------------------------------------------------------------------------------
+    !
+    do ihfb = 1, this%nhfb
+      call this%condsat_modify(ihfb)
+    enddo
+    !
+    ! -- return
+    return
+  end subroutine condsat_modify_all
+
+  subroutine condsat_modify(this, ihfb)
+! ******************************************************************************
+! condsat_modify -- Modify condsat for the following conditions (index ihfb):
+!   1.  If Newton is active
+!   2.  If icelltype for n and icelltype for m is 0
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DHALF, DZERO
+    ! -- dummy
+    class(GwfHfbType) :: this
+    integer(I4B), intent(in) :: ihfb
+    ! -- local
+    integer(I4B) :: n, m
     integer(I4B) :: ipos
     real(DP) :: cond, condhfb
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
 ! ------------------------------------------------------------------------------
     !
-    do ihfb = 1, this%nhfb
-      ipos = this%idxloc(ihfb)
-      cond = this%condsat(this%jas(ipos))
-      this%csatsav(ihfb) = cond
-      n = this%noden(ihfb)
-      m = this%nodem(ihfb)
-      if(this%inewton == 1 .or. &
-         (this%icelltype(n) == 0 .and. this%icelltype(m) == 0) ) then
-        !
-        ! -- Calculate hfb conductance
-        topn = this%top(n)
-        topm = this%top(m)
-        botn = this%bot(n)
-        botm = this%bot(m)
-        if(this%ihc(this%jas(ipos)) == 2) then
-          faheight = min(topn, topm) - max(botn, botm)
-        else
-          faheight = DHALF * ( (topn - botn) + (topm - botm) )
-        endif
-        if(this%hydchr(ihfb) > DZERO) then
-          fawidth = this%hwva(this%jas(ipos))
-          condhfb = this%hydchr(ihfb) * fawidth * faheight
-          cond = cond * condhfb / (cond + condhfb)
-        else
-          cond = - cond * this%hydchr(ihfb)
-        endif
-        this%condsat(this%jas(ipos)) = cond
+    ipos = this%idxloc(ihfb)
+    cond = this%condsat(this%jas(ipos))
+    this%csatsav(ihfb) = cond
+    n = this%noden(ihfb)
+    m = this%nodem(ihfb)
+    if(this%inewton == 1 .or. &
+        (this%icelltype(n) == 0 .and. this%icelltype(m) == 0) ) then
+      !
+      ! -- Calculate hfb conductance
+      topn = this%top(n)
+      topm = this%top(m)
+      botn = this%bot(n)
+      botm = this%bot(m)
+      if(this%ihc(this%jas(ipos)) == 2) then
+        faheight = min(topn, topm) - max(botn, botm)
+      else
+        faheight = DHALF * ( (topn - botn) + (topm - botm) )
       endif
-    enddo
+      if(this%hydchr(ihfb) > DZERO) then
+        fawidth = this%hwva(this%jas(ipos))
+        condhfb = this%hydchr(ihfb) * fawidth * faheight
+        cond = cond * condhfb / (cond + condhfb)
+      else
+        cond = - cond * this%hydchr(ihfb)
+      endif
+      this%condsat(this%jas(ipos)) = cond
+    endif
     !
-    ! -- return
     return
   end subroutine condsat_modify
 
