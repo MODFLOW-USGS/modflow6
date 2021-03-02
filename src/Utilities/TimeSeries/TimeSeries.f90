@@ -60,6 +60,7 @@ module TimeSeriesModule
     integer(I4B), public :: inunit = 0
     integer(I4B), public :: iout = 0
     integer(I4B), public :: nTimeSeries = 0
+    logical, public :: finishedReading = .false.
     character(len=LINELENGTH), public :: datafile = ''
     type(TimeSeriesType), dimension(:), pointer, contiguous, public :: timeSeries => null()
     type(BlockParserType), pointer, public :: parser
@@ -229,7 +230,7 @@ contains
 
   ! Type-bound procedures of TimeSeriesType
 
-  function GetValue(this, time0, time1)
+  function GetValue(this, time0, time1, extendToEndOfSimulation)
 ! ******************************************************************************
 ! GetValue -- get ts value
 !    If iMethod is STEPWISE or LINEAR:
@@ -247,13 +248,22 @@ contains
     class(TimeSeriesType), intent(inout) :: this
     real(DP),      intent(in)    :: time0
     real(DP),      intent(in)    :: time1
+    logical, intent(in), optional :: extendToEndOfSimulation
+    !
+    logical :: extend
 ! ------------------------------------------------------------------------------
+    !
+    if(present(extendToEndOfSimulation)) then
+      extend = extendToEndOfSimulation
+    else
+      extend = .false.
+    endif
     !
     select case (this%iMethod)
     case (STEPWISE, LINEAR)
-      GetValue = this%get_average_value(time0, time1)
+      GetValue = this%get_average_value(time0, time1, extend)
     case (LINEAREND)
-      GetValue =  this%get_value_at_time(time1)
+      GetValue =  this%get_value_at_time(time1, extend)
     end select
     !
     return
@@ -513,12 +523,21 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
+    ! -- If we have already encountered the end of the TIMESERIES block, do not try to read any further
+    if (this%tsfile%finishedReading) then
+      read_next_record = .false.
+      return
+    endif
+    !
     read_next_record = this%tsfile%read_tsfile_line()
+    if (.not. read_next_record) then
+      this%tsfile%finishedReading = .true.
+    endif
     return
     !
   end function read_next_record
 
-  function get_value_at_time(this, time)
+  function get_value_at_time(this, time, extendToEndOfSimulation)
 ! ******************************************************************************
 ! get_value_at_time -- get value for a time
 !   Return a value for a specified time, same units as time-series values.
@@ -531,6 +550,7 @@ contains
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     real(DP),      intent(in)    :: time ! time of interest
+    logical, intent(in) :: extendToEndOfSimulation
     ! -- local
     integer(I4B) :: ierr
     real(DP) :: ratio, time0, time1, timediff, timediffi, val0, val1, &
@@ -571,7 +591,7 @@ contains
           ierr = 1
         endif
       else
-        if (IS_SAME(tsrEarlier%tsrTime, time)) then
+        if (extendToEndOfSimulation .or. IS_SAME(tsrEarlier%tsrTime, time)) then
           get_value_at_time = tsrEarlier%tsrValue
         else
           ! -- Only earlier time is available, and it is not time of interest;
@@ -607,7 +627,7 @@ contains
     return
   end function get_value_at_time
 
-  function get_integrated_value(this, time0, time1)
+  function get_integrated_value(this, time0, time1, extendToEndOfSimulation)
 ! ******************************************************************************
 ! get_integrated_value -- get integrated value
 !   Return an integrated value for a specified time span.
@@ -622,9 +642,10 @@ contains
     class(TimeSeriesType), intent(inout) :: this
     real(DP),      intent(in)    :: time0
     real(DP),      intent(in)    :: time1
+    logical, intent(in) :: extendToEndOfSimulation
     ! -- local
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, t01, t1, &
-                        timediff, value, value0, value1, valuediff
+                        timediff, value, value0, value1, valuediff, currVal, nextVal
     logical :: ldone
     character(len=LINELENGTH) :: errmsg
     type(ListNodeType), pointer :: tslNodePreceding => null()
@@ -654,16 +675,30 @@ contains
           if (.not. associated(currNode%nextNode)) then
             ! -- try to read the next record
             if (.not. this%read_next_record()) then
-              write(errmsg,10)trim(this%Name),time0,time1
-              call store_error(errmsg)
-              call ustop()
+              if(.not. extendToEndOfSimulation) then
+                write(errmsg,10)trim(this%Name),time0,time1
+                call store_error(errmsg)
+                call ustop()
+              endif
             endif
           endif
+          !
+          currVal = currRecord%tsrValue
           if (associated(currNode%nextNode)) then
             nextNode => currNode%nextNode
             nextObj => nextNode%GetItem()
             nextRecord => CastAsTimeSeriesRecordType(nextObj)
             nextTime = nextRecord%tsrTime
+            nextVal = nextRecord%tsrValue
+          elseif (extendToEndOfSimulation) then
+            ! -- Last time series value extends forever, so integrate the final value over all simulation time after the end of the series
+            nextTime = time1
+            nextVal = currVal
+          else
+            ldone = .true.
+          endif
+          !
+          if (.not. ldone) then
             ! -- determine lower and upper limits of time span of interest
             !    within current interval
             if (currTime > time0 .or. IS_SAME(currTime, time0)) then
@@ -681,16 +716,16 @@ contains
             select case (this%iMethod)
             case (STEPWISE)
               ! -- compute area of a rectangle
-              value0 = currRecord%tsrValue
+              value0 = currVal
               area = value0 * t01
             case (LINEAR, LINEAREND)
               ! -- compute area of a trapezoid
               timediff = nextTime - currTime
               ratio0 = (t0 - currTime) / timediff
               ratio1 = (t1 - currTime) / timediff
-              valuediff = nextRecord%tsrValue - currRecord%tsrValue
-              value0 = currRecord%tsrValue + ratio0 * valuediff
-              value1 = currRecord%tsrValue + ratio1 * valuediff
+              valuediff = nextVal - currVal
+              value0 = currVal + ratio0 * valuediff
+              value1 = currVal + ratio1 * valuediff
               if (this%iMethod == LINEAR) then
                 area = 0.5d0 * t01 * (value0 + value1)
               elseif (this%iMethod == LINEAREND) then
@@ -735,7 +770,7 @@ contains
     return
   end function get_integrated_value
 
-  function get_average_value(this, time0, time1)
+  function get_average_value(this, time0, time1, extendToEndOfSimulation)
 ! ******************************************************************************
 ! get_average_value -- get average value
 !   Return a time-weighted average value for a specified time span.
@@ -750,13 +785,14 @@ contains
     class(TimeSeriesType), intent(inout) :: this
     real(DP),      intent(in)    :: time0
     real(DP),      intent(in)    :: time1
+    logical, intent(in) :: extendToEndOfSimulation
     ! -- local
     real(DP) :: timediff, value, valueIntegrated
 ! ------------------------------------------------------------------------------
     !
     timediff = time1 - time0
     if (timediff > 0) then
-      valueIntegrated = this%get_integrated_value(time0, time1)
+      valueIntegrated = this%get_integrated_value(time0, time1, extendToEndOfSimulation)
       if (this%iMethod == LINEAREND) then
         value = valueIntegrated
       else
@@ -764,7 +800,7 @@ contains
       endif
     else
       ! -- time0 and time1 are the same
-      value = this%get_value_at_time(time0)
+      value = this%get_value_at_time(time0, extendToEndOfSimulation)
     endif
     get_average_value = value
     !
@@ -773,7 +809,7 @@ contains
 
   subroutine get_latest_preceding_node(this, time, tslNode)
 ! ******************************************************************************
-! get_latest_preceding_node -- get latest prececing node
+! get_latest_preceding_node -- get latest preceding node
 !   Return pointer to ListNodeType object for the node
 !   representing the latest preceding time in the time series
 ! ******************************************************************************
@@ -1097,7 +1133,7 @@ contains
     return
   end subroutine InsertTsr
 
-  function FindLatestTime(this) result (endtime)
+  function FindLatestTime(this, readToEnd) result (endtime)
 ! ******************************************************************************
 ! FindLatestTime -- find latest time
 ! ******************************************************************************
@@ -1106,12 +1142,21 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
+    logical, intent(in), optional :: readToEnd
     ! -- local
     integer :: nrecords
     double precision :: endtime
     type(TimeSeriesRecordType), pointer :: tsr
     class(*), pointer :: obj => null()
 ! ------------------------------------------------------------------------------
+    !
+    ! -- If the caller requested the very last time in the series (readToEnd is true), check that we have first read all records
+    if (present(readToEnd)) then
+      if (readToEnd) then
+        do while (this%read_next_record())
+        enddo
+      endif
+    endif
     !
     nrecords = this%list%Count()
     obj => this%list%GetItem(nrecords)
@@ -1405,16 +1450,20 @@ contains
     ! -- local
     real(DP) :: tsrTime, tsrValue
     integer(I4B) :: i
-    logical :: eof, endOfBlock
+    logical :: endOfBlock
     type(TimeSeriesRecordType), pointer :: tsRecord => null()
 ! ------------------------------------------------------------------------------
     !
-    eof = .false.
     read_tsfile_line = .false.
     !
     ! -- Get an arbitrary length, non-comment, non-blank line
     !    from the input file.
     call this%parser%GetNextLine(endOfBlock)
+    !
+    ! -- Check if we've reached the end of the TIMESERIES block
+    if (endOfBlock) then
+      return
+    endif
     !
     ! -- Get the time
     tsrTime = this%parser%GetDouble()

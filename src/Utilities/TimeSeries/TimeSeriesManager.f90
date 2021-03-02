@@ -10,7 +10,7 @@ module TimeSeriesManagerModule
   use SimModule,                 only: store_error, store_error_unit, ustop
   use TdisModule,                only: delt, kper, kstp, totim, totimc, &
                                        totimsav
-  use TimeSeriesFileListModule, only: TimeSeriesFileListType
+  use TimeSeriesFileListModule,  only: TimeSeriesFileListType
   use TimeSeriesLinkModule,      only: TimeSeriesLinkType, &
                                        ConstructTimeSeriesLink, &
                                        GetTimeSeriesLinkFromList, &
@@ -32,6 +32,8 @@ module TimeSeriesManagerModule
     type(ListType), pointer, public :: boundTsLinks => null()                    ! links to bound and aux
     integer(I4B) :: numtsfiles = 0                                               ! number of ts files
     character(len=MAXCHARLEN), allocatable, dimension(:) :: tsfiles              ! list of ts files
+    logical, private :: removeTsLinksOnCompletion = .false.                      ! flag indicating whether time series links should be removed in ad() once simulation time passes the end of the time series
+    logical, private :: extendTsToEndOfSimulation = .false.                      ! flag indicating whether time series should be extended to provide their final value for all times after the series end time
     type(ListType), pointer, private :: auxvarTsLinks => null()                  ! list of aux links
     type(HashTableType), pointer, private :: BndTsHashTable => null()            ! hash of ts to tsobj
     type(TimeSeriesContainerType), allocatable, dimension(:),                   &
@@ -53,7 +55,7 @@ module TimeSeriesManagerModule
 
   contains
   
-  subroutine tsmanager_cr(this, iout)
+  subroutine tsmanager_cr(this, iout, removeTsLinksOnCompletion, extendTsToEndOfSimulation)
 ! ******************************************************************************
 ! tsmanager_cr -- create the tsmanager
 ! ******************************************************************************
@@ -63,9 +65,17 @@ module TimeSeriesManagerModule
     ! -- dummy
     type(TimeSeriesManagerType) :: this
     integer(I4B), intent(in) :: iout
+    logical, intent(in), optional :: removeTsLinksOnCompletion
+    logical, intent(in), optional :: extendTsToEndOfSimulation
 ! ------------------------------------------------------------------------------
     !
     this%iout = iout
+    if(present(removeTsLinksOnCompletion)) then
+      this%removeTsLinksOnCompletion = removeTsLinksOnCompletion
+    endif
+    if(present(extendTsToEndOfSimulation)) then
+      this%extendTsToEndOfSimulation = extendTsToEndOfSimulation
+    endif
     allocate(this%boundTsLinks)
     allocate(this%auxvarTsLinks)
     allocate(this%tsfileList)
@@ -153,7 +163,7 @@ module TimeSeriesManagerModule
     type(TimeSeriesLinkType), pointer :: tsLink => null()
     type(TimeSeriesType), pointer :: timeseries => null()
     integer(I4B) :: i, nlinks, nauxlinks
-    real(DP) :: begintime, endtime
+    real(DP) :: begintime, endtime, tsendtime
     character(len=LENPACKAGENAME+2) :: pkgID
     ! formats
     character(len=*),parameter :: fmt5 =                                       &
@@ -177,15 +187,27 @@ module TimeSeriesManagerModule
     !    elements of auxvar with average value obtained from
     !    appropriate time series.  Need to do auxvartslinks
     !    first because they may be a multiplier column
-    do i = 1, nauxlinks
+    i = 1
+    do while(i <= nauxlinks)
       tsLink => GetTimeSeriesLinkFromList(this%auxvarTsLinks, i)
       timeseries => tsLink%timeSeries
+      !
+      ! -- Remove time series link once its end time has passed, if requested
+      if (this%removeTsLinksOnCompletion) then
+        tsendtime = timeseries%FindLatestTime(.true.)
+        if (tsendtime < begintime) then
+          call this%auxvarTsLinks%RemoveNode(i, .TRUE.)
+          nauxlinks = this%auxvartslinks%Count()
+          cycle
+        endif
+      endif
+      !
       if (i == 1) then
         if (tsLink%Iprpak == 1) then
           write(this%iout, fmt5) kper, kstp
         endif
       endif
-      tsLink%BndElement = timeseries%GetValue(begintime, endtime)
+      tsLink%BndElement = timeseries%GetValue(begintime, endtime, this%extendTsToEndOfSimulation)
       !
       ! -- Write time series values to output file
       if (tsLink%Iprpak == 1) then
@@ -212,13 +234,28 @@ module TimeSeriesManagerModule
           endif
         endif
       endif
+      !
+      i = i + 1
     enddo
     !
     ! -- Iterate through boundtslinks and replace specified
     !    elements of bound with average value obtained from
     !    appropriate time series. (For list-type packages)
-    do i = 1, nlinks
+    i = 1
+    do while(i <= nlinks)
       tsLink => GetTimeSeriesLinkFromList(this%boundTsLinks, i)
+      timeseries => tsLink%timeSeries
+      !
+      ! -- Remove time series link once its end time has passed, if requested
+      if (this%removeTsLinksOnCompletion) then
+        tsendtime = timeseries%FindLatestTime(.true.)
+        if (tsendtime < begintime) then
+          call this%boundTsLinks%RemoveNode(i, .TRUE.)
+          nlinks = this%boundTsLinks%Count()
+          cycle
+        endif
+      endif
+      !
       if (i == 1 .and. nauxlinks == 0) then
         if (tsLink%Iprpak == 1) then
           write(this%iout, fmt5) kper, kstp
@@ -229,7 +266,7 @@ module TimeSeriesManagerModule
       ! this%bound(4,ibnd)), it uses this%mawwells(n)%rate%value
       if (tsLink%UseDefaultProc) then
         timeseries => tsLink%timeSeries
-        tsLink%BndElement = timeseries%GetValue(begintime, endtime)
+        tsLink%BndElement = timeseries%GetValue(begintime, endtime, this%extendTsToEndOfSimulation)
         !
         ! -- If multiplier is active and it applies to this element, 
         !    do the multiplication.  This must be done after the auxlinks
@@ -269,6 +306,8 @@ module TimeSeriesManagerModule
           tsLink%BndElement = tsLink%BndElement * tsLink%CellArea
         endif
       endif
+      !
+      i = i + 1
     enddo
     !
     ! -- Finish with ending line
@@ -583,7 +622,7 @@ module TimeSeriesManagerModule
       if (associated(timeseries)) then
         ! -- Assign value from time series to current
         !    array element
-        r = timeseries%GetValue(totimsav, totim)
+        r = timeseries%GetValue(totimsav, totim, tsManager%extendTsToEndOfSimulation)
         bndElem = r
         ! Look to see if this array element already has a time series
         ! linked to it.  If not, make a link to it.
@@ -686,7 +725,7 @@ module TimeSeriesManagerModule
       if (associated(timeseries)) then
         !
         ! -- Assign average value from time series to current array element
-        v = timeseries%GetValue(totimsav, totim)
+        v = timeseries%GetValue(totimsav, totim, tsManager%extendTsToEndOfSimulation)
         bndElem = v
         !
         ! -- remove existing link if it exists for this boundary element
