@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|x64" OutputDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" IntermediateDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" DisableSpecificDiagnostics="7712" WarnDeclarations="true" WarnUnusedVariables="true" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" DisableSpecificDiagnostics="7712" WarnDeclarations="true" WarnUnusedVariables="true" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
 				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -14,7 +14,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" IntermediateDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DisableSpecificDiagnostics="7712" WarnDeclarations="true" WarnUnusedVariables="true" FloatingPointExceptionHandling="fpe0" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DisableSpecificDiagnostics="7712" WarnDeclarations="true" WarnUnusedVariables="true" FloatingPointExceptionHandling="fpe0"/>
 				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -23,7 +23,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug|Win32" OutputDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" IntermediateDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" DisableSpecificDiagnostics="7712" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" DisableSpecificDiagnostics="7712" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
 				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -32,7 +32,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" IntermediateDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DisableSpecificDiagnostics="7712" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DisableSpecificDiagnostics="7712"/>
 				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -78,6 +78,9 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvbase8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvk8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
 		<Filter Name="GroundWaterTransport">
