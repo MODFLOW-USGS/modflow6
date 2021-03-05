@@ -148,6 +148,8 @@ module UzfModule
     procedure :: bnd_ad => uzf_ad
     procedure :: bnd_cf => uzf_cf
     procedure :: bnd_cc => uzf_cc
+    procedure :: bnd_cq => uzf_cq
+    procedure :: bnd_mb => uzf_mb
     procedure :: bnd_bd => uzf_bd
     procedure :: bnd_ot => uzf_ot
     procedure :: bnd_fc => uzf_fc
@@ -219,6 +221,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 0  ! not supported
+    packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
@@ -1337,6 +1340,612 @@ contains
     return
   end subroutine uzf_cc
 
+  subroutine uzf_cq(this, x, flowja, iadv)
+! **************************************************************************
+! uzf_cq -- Calculate flows
+  ! -- todo: this is not finished yet.  Need to unweave bd into cq and bdsav!
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    use ConstantsModule, only: LENBOUNDNAME, DZERO, DHNOFLO, DHDRY
+    use BudgetModule, only: BudgetType
+    use InputOutputModule, only: ulasav, ubdsv06
+    ! -- dummy
+    class(UzfType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    integer(I4B), optional, intent(in) :: iadv
+    ! -- local
+    class(ObserveType),   pointer :: obsrv => null()
+    character(len=LINELENGTH) :: title
+    character(len=20) :: nodestr
+    integer(I4B) :: maxrows
+    integer(I4B) :: nodeu
+    integer(I4B) :: i, node, ibinun
+    integer(I4B) :: n, m, ivertflag, ierr
+    integer(I4B) :: n2
+    real(DP) :: rfinf
+    real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
+    real(DP) :: hgwf,hgwflm1,ratin,ratout,rrate,rrech
+    real(DP) :: trhsgwet,thcofgwet,derivgwet
+    real(DP) :: qfrommvr, qformvr, qgwformvr
+    real(DP) :: qfinf
+    real(DP) :: qrejinf
+    real(DP) :: qrejinftomvr
+    real(DP) :: qout
+    real(DP) :: qfact
+    real(DP) :: qtomvr
+    real(DP) :: sqtomvr
+    real(DP) :: q
+    real(DP) :: rfrommvr
+    real(DP) :: qseep
+    real(DP) :: qseeptomvr
+    real(DP) :: qgwet
+    real(DP) :: cvv
+    integer(I4B) :: naux, numobs
+    ! -- for observations
+    integer(I4B) :: j
+    character(len=LENBOUNDNAME) :: bname
+    ! -- formats
+    character(len=*), parameter :: fmttkk = &
+      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize accumulators
+    ierr = 0
+    rfinf = DZERO
+    rin = DZERO
+    rout = DZERO
+    rrech = DZERO
+    rsto = DZERO
+    ret = DZERO
+    retgw = DZERO
+    rgwseep = DZERO
+    rvflux = DZERO
+    qfinf = DZERO
+    qfrommvr = DZERO
+    qtomvr = DZERO
+    qrejinf = DZERO
+    qrejinftomvr = DZERO
+    sqtomvr = DZERO
+    rfrommvr = DZERO
+    qseep = DZERO
+    qseeptomvr = DZERO
+    qgwet = DZERO
+    this%uzfobj%pet = this%uzfobj%petmax
+!cdl    !
+!cdl    ! -- set kstp, kper, and maxrows
+!cdl    maxrows = 0
+!cdl    if (this%iprflow /= 0) then
+!cdl      call this%outputtab%set_kstpkper(kstp, kper)
+!cdl      do i = 1, this%nodes
+!cdl        node = this%nodelist(i)
+!cdl        if (this%ibound(node) > 0) then
+!cdl          maxrows = maxrows + 1
+!cdl        end if
+!cdl      end do
+!cdl      call this%outputtab%set_maxbound(maxrows)
+!cdl    end if
+    !
+    ! -- Go through and process each UZF cell
+    do i = 1, this%nodes
+      !
+      ! -- Initialize variables
+      n = this%nodelist(i)
+      ivertflag = this%uzfobj%ivertcon(i)
+      !
+      ! -- Skip if cell is not active
+      if (this%ibound(n) < 1) cycle
+      !
+      ! -- Water mover added to infiltration
+      qfrommvr = DZERO
+      qformvr = DZERO
+      if(this%imover == 1) then
+        qfrommvr = this%pakmvrobj%get_qfrommvr(i)
+        rfrommvr = rfrommvr + qfrommvr
+      endif
+      !
+      hgwf = this%xnew(n)
+      !
+      m = n
+      hgwflm1 = hgwf
+      !
+      ! -- for now set cvv = DZERO
+      ! cvv = this%gwfhcond(m)
+      cvv = DZERO
+      !
+      ! -- Get obs information, check if there is obs in uzf cell
+      numobs = 0
+      do j = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(j)%obsrv
+        if ( obsrv%intPak1 == i ) then
+          numobs = numobs + 1
+          this%obs_num(numobs) = j
+          this%obs_depth(j) = obsrv%dblPak1
+        end if
+      end do
+!cdl      !
+!cdl      ! -- Call budget routine of the uzf kinematic object
+!cdl      call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
+!cdl                              rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
+!cdl                              this%ietflag,this%iseepflag,this%issflag,hgwf,   &
+!cdl                              hgwflm1,cvv,numobs,this%obs_num,                 &
+!cdl                              this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
+!cdl                              qgwformvr,ierr)
+!cdl      if ( ierr > 0 ) then
+!cdl        if ( ierr == 1 ) &
+!cdl          errmsg = 'UZF variable NWAVESETS needs to be increased.'
+!cdl        call store_error(errmsg)
+!cdl        call ustop()
+!cdl      end if 
+
+      !
+      ! -- Calculate gwet
+      if (this%igwetflag > 0) then
+        call this%uzfobj%setgwpet(i)
+        derivgwet = DZERO
+        call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
+                                 derivgwet)
+        retgw = retgw + this%uzfobj%gwet(i)
+      end if
+      !
+      ! -- distribute PET to deeper cells
+        if (this%ietflag > 0) then
+          if (this%uzfobj%ivertcon(i) > 0) then
+            call this%uzfobj%setbelowpet(i, ivertflag)
+          end if
+        end if
+      !
+      ! -- Calculate flows for cbc output and observations
+      if (hgwf > this%uzfobj%celbot(i)) then
+        this%recharge(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
+      else
+        if (ivertflag == 0) then
+          this%recharge(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
+        else
+          this%recharge(i) = this%uzfobj%surflux(ivertflag) * this%uzfobj%uzfarea(i)
+        end if
+      end if
+
+      this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
+
+      this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
+      this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
+
+      this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
+
+      qout = this%rejinf(i) + this%uzfobj%surfseep(i)
+      qtomvr = DZERO
+      if (this%imover == 1) then
+        qtomvr = this%pakmvrobj%get_qtomvr(i)
+        sqtomvr = sqtomvr + qtomvr
+      end if
+
+      qfact = DZERO
+      if (qout > DZERO) then
+        qfact = this%rejinf(i) / qout
+      end if
+      q = this%rejinf(i)
+      this%rejinftomvr(i) = qfact * qtomvr
+      !
+      ! -- set rejected infiltration to the remainder
+      q = q - this%rejinftomvr(i)
+      !
+      ! -- values less than zero represent a volumetric error resulting
+      !    from qtomvr being greater than water available to the mover
+      if (q < DZERO) then
+        q = DZERO
+      end if
+      this%rejinf(i) = q
+
+      this%gwd(i) = this%uzfobj%surfseep(i)
+      qfact = DZERO
+      if (qout > DZERO) then
+        qfact = this%gwd(i) / qout
+      end if
+      q = this%gwd(i)
+      this%gwdtomvr(i) = qfact * qtomvr
+      !
+      ! -- set groundwater discharge to the remainder
+      q = q - this%gwdtomvr(i)
+      !
+      ! -- values less than zero represent a volumetric error resulting
+      !    from qtomvr being greater than water available to the mover
+      if (q < DZERO) then
+        q = DZERO
+      end if
+      this%gwd(i) = q
+
+      qfinf = qfinf + this%appliedinf(i)
+      qrejinf = qrejinf + this%rejinf(i)
+      qrejinftomvr = qrejinftomvr + this%rejinftomvr(i)
+
+      qseep = qseep + this%gwd(i)
+      qseeptomvr = qseeptomvr + this%gwdtomvr(i)
+
+      this%gwet(i) = this%uzfobj%gwet(i)
+      this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
+      this%qsto(i) = this%uzfobj%delstor(i) / delt
+
+      ! -- accumulate groundwater et
+      qgwet = qgwet + this%gwet(i)
+
+      !
+      ! -- End of UZF cell loop
+      !
+    end do
+!cdl    !
+!cdl    ! -- For continuous observations, save simulated values.
+!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+!cdl      call this%uzf_bd_obs()
+!cdl    endif
+    !
+    ! add cumulative flows to UZF budget
+    this%infilsum = rin * delt
+    this%rechsum = rout * delt
+    rrech = rout
+    this%delstorsum = rsto * delt
+    this%uzetsum = ret * delt
+    this%vfluxsum = rvflux
+    !
+    !
+!cdl    rin = DZERO
+!cdl    rout = DZERO
+!cdl    if(rsto < DZERO) then
+!cdl      rin = -rsto
+!cdl    else
+!cdl      rout = rsto
+!cdl    endif
+!cdl    !
+!cdl    ! -- Clear accumulators and set flags
+!cdl    ratin = dzero
+!cdl    ratout = dzero
+!cdl    rrate = dzero
+!cdl    !iauxsv = 1  !always used compact budget
+!cdl    !
+!cdl    ! -- Set unit number for binary output
+!cdl    if(this%ipakcb < 0) then
+!cdl      ibinun = icbcun
+!cdl    elseif(this%ipakcb == 0) then
+!cdl      ibinun = 0
+!cdl    else
+!cdl      ibinun = this%ipakcb
+!cdl    endif
+!cdl    if(icbcfl == 0) ibinun = 0
+!cdl    if (isuppress_output /= 0) ibinun = 0
+!cdl    !
+!cdl    ! -- If cell-by-cell flows will be saved as a list, write header.
+!cdl    if (ibinun /= 0 .or. ibudfl /= 0) then
+!cdl      naux = this%naux
+!cdl      !
+!cdl      ! -- uzf-gwrch
+!cdl      if (ibinun /= 0) then
+!cdl        call this%dis%record_srcdst_list_header(this%bdtxt(2), this%name_model, &
+!cdl                    this%name_model, this%name_model, this%packName, naux,          &
+!cdl                    this%auxname, ibinun, this%nodes, this%iout)
+!cdl      end if
+!cdl      !
+!cdl      ! -- Loop through each boundary calculating flow.
+!cdl      do i = 1, this%nodes
+!cdl        node = this%nodelist(i)
+!cdl        ! -- assign boundary name
+!cdl        if (this%inamedbound > 0) then
+!cdl          bname = this%boundname(i)
+!cdl        else
+!cdl          bname = ''
+!cdl        end if
+!cdl        !
+!cdl        ! -- reset table title
+!cdl        if (this%iprflow /= 0) then
+!cdl          title = trim(this%text) // ' PACKAGE (' // trim(this%packName) //          &
+!cdl                  ') ' // trim(adjustl(this%bdtxt(2))) // ' FLOW RATES'
+!cdl          call this%outputtab%set_title(title)
+!cdl        end if
+!cdl        !
+!cdl        ! -- If cell is no-flow or constant-head, then ignore it.
+!cdl        rrate = DZERO
+!cdl        if (this%ibound(node) > 0) then
+!cdl          !
+!cdl          ! -- Calculate the flow rate into the cell.
+!cdl          !rrate = this%hcof(i) * x(node) - this%rhs(i)
+!cdl          rrate = this%rch(i)
+!cdl          !
+!cdl          ! -- Print the individual rates if requested(this%iprflow<0)
+!cdl          if (ibudfl /= 0) then
+!cdl            if (this%iprflow /= 0) then
+!cdl              !
+!cdl              ! -- set nodestr and write outputtab table
+!cdl              nodeu = this%dis%get_nodeuser(node)
+!cdl              call this%dis%nodeu_to_string(nodeu, nodestr)
+!cdl              call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+!cdl            end if
+!cdl          end if
+!cdl        end if
+!cdl        !
+!cdl        ! -- If saving cell-by-cell flows in list, write flow
+!cdl        if (ibinun /= 0) then
+!cdl          n2 = i
+!cdl          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+!cdl                                                  naux, this%auxvar(:,i),      &
+!cdl                                                  olconv2=.FALSE.)
+!cdl        end if
+!cdl      end do
+!cdl      !
+!cdl      ! -- uzf-gwd
+!cdl      if (this%iseepflag == 1) then
+!cdl        if (ibinun /= 0) then
+!cdl          call this%dis%record_srcdst_list_header(this%bdtxt(3),               &
+!cdl                      this%name_model,                                         &
+!cdl                      this%name_model, this%name_model, this%packName, naux,       &
+!cdl                      this%auxname, ibinun, this%nodes, this%iout)
+!cdl        end if
+!cdl        !
+!cdl        ! -- reset table title
+!cdl        if (this%iprflow /= 0) then
+!cdl          title = trim(this%text) // ' PACKAGE (' // trim(this%packName) //          &
+!cdl                  ') ' // trim(adjustl(this%bdtxt(4))) // ' FLOW RATES'
+!cdl          call this%outputtab%set_title(title)
+!cdl        end if
+!cdl        !
+!cdl        ! -- Loop through each boundary calculating flow.
+!cdl        do i = 1, this%nodes
+!cdl          node = this%nodelist(i)
+!cdl          ! -- assign boundary name
+!cdl          if (this%inamedbound > 0) then
+!cdl            bname = this%boundname(i)
+!cdl          else
+!cdl            bname = ''
+!cdl          end if
+!cdl          !
+!cdl          ! -- If cell is no-flow or constant-head, then ignore it.
+!cdl          rrate = DZERO
+!cdl          if (this%ibound(node) > 0) then
+!cdl            !
+!cdl            ! -- Calculate the flow rate into the cell.
+!cdl            rrate = -this%gwd(i)
+!cdl            !
+!cdl            ! -- Print the individual rates if requested(this%iprflow<0)
+!cdl            if (ibudfl /= 0) then
+!cdl              if (this%iprflow /= 0) then
+!cdl                !
+!cdl                ! -- set nodestr and write outputtab table
+!cdl                nodeu = this%dis%get_nodeuser(node)
+!cdl                call this%dis%nodeu_to_string(nodeu, nodestr)
+!cdl                call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+!cdl              end if
+!cdl            end if
+!cdl          end if
+!cdl          !
+!cdl          ! -- If saving cell-by-cell flows in list, write flow
+!cdl          if (ibinun /= 0) then
+!cdl            n2 = i
+!cdl            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
+!cdl                                                    naux, this%auxvar(:,i),     &
+!cdl                                                    olconv2=.FALSE.)
+!cdl          end if
+!cdl        end do
+!cdl        !
+!cdl        ! -- uzf-gwd to mover
+!cdl        if (this%imover == 1) then
+!cdl          if (ibinun /= 0) then
+!cdl            call this%dis%record_srcdst_list_header(this%bdtxt(5),              &
+!cdl                        this%name_model, this%name_model,                       &
+!cdl                        this%name_model, this%packName, naux,                       &
+!cdl                        this%auxname, ibinun, this%nodes, this%iout)
+!cdl          end if
+!cdl          !
+!cdl          ! -- reset table title
+!cdl          if (this%iprflow /= 0) then
+!cdl            title = trim(this%text) // ' PACKAGE (' // trim(this%packName) //        &
+!cdl                    ') ' // trim(adjustl(this%bdtxt(5))) // ' FLOW RATES'
+!cdl            call this%outputtab%set_title(title)
+!cdl          end if
+!cdl          !
+!cdl          ! -- Loop through each boundary calculating flow.
+!cdl          do i = 1, this%nodes
+!cdl            node = this%nodelist(i)
+!cdl            ! -- assign boundary name
+!cdl            if (this%inamedbound > 0) then
+!cdl              bname = this%boundname(i)
+!cdl            else
+!cdl              bname = ''
+!cdl            end if
+!cdl            !
+!cdl            ! -- If cell is no-flow or constant-head, then ignore it.
+!cdl            rrate = DZERO
+!cdl            if (this%ibound(node) > 0) then
+!cdl              !
+!cdl              ! -- Calculate the flow rate into the cell.
+!cdl              rrate = -this%gwdtomvr(i)
+!cdl              !
+!cdl              ! -- Print the individual rates if requested(this%iprflow<0)
+!cdl              if (ibudfl /= 0) then
+!cdl                if (this%iprflow /= 0) then
+!cdl                  !
+!cdl                  ! -- set nodestr and write outputtab table
+!cdl                  nodeu = this%dis%get_nodeuser(node)
+!cdl                  call this%dis%nodeu_to_string(nodeu, nodestr)
+!cdl                  call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+!cdl                end if
+!cdl              end if
+!cdl            end if
+!cdl            !
+!cdl            ! -- If saving cell-by-cell flows in list, write flow
+!cdl            if (ibinun /= 0) then
+!cdl              n2 = i
+!cdl              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,  &
+!cdl                                                      naux, this%auxvar(:,i),   &
+!cdl                                                      olconv2=.FALSE.)
+!cdl            end if
+!cdl          end do
+!cdl        end if
+!cdl      end if
+!cdl      ! -- uzf-evt
+!cdl      if (this%ietflag /= 0) then
+!cdl        if (ibinun /= 0) then
+!cdl          call this%dis%record_srcdst_list_header(this%bdtxt(4), this%name_model,&
+!cdl                      this%name_model, this%name_model, this%packName, naux,        &
+!cdl                      this%auxname, ibinun, this%nodes, this%iout)
+!cdl        end if
+!cdl        !
+!cdl        ! -- reset table title
+!cdl        if (this%iprflow /= 0) then
+!cdl          title = trim(this%text) // ' PACKAGE (' // trim(this%packName) //          &
+!cdl                  ') ' // trim(adjustl(this%bdtxt(4))) // ' FLOW RATES'
+!cdl          call this%outputtab%set_title(title)
+!cdl        end if
+!cdl        !
+!cdl        ! -- Loop through each boundary calculating flow.
+!cdl        do i = 1, this%nodes
+!cdl          node = this%nodelist(i)
+!cdl          ! -- assign boundary name
+!cdl          if (this%inamedbound > 0) then
+!cdl            bname = this%boundname(i)
+!cdl          else
+!cdl            bname = ''
+!cdl          end if
+!cdl          !
+!cdl          ! -- If cell is no-flow or constant-head, then ignore it.
+!cdl          rrate = DZERO
+!cdl          if (this%ibound(node) > 0) then
+!cdl            !
+!cdl            ! -- Calculate the flow rate into the cell.
+!cdl            rrate = -this%gwet(i)
+!cdl            !
+!cdl            ! -- Print the individual rates if requested(this%iprflow<0)
+!cdl            if (ibudfl /= 0) then
+!cdl              if (this%iprflow /= 0) then
+!cdl                !
+!cdl                ! -- set nodestr and write outputtab table
+!cdl                nodeu = this%dis%get_nodeuser(node)
+!cdl                call this%dis%nodeu_to_string(nodeu, nodestr)
+!cdl                call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+!cdl              end if
+!cdl            end if
+!cdl          end if
+!cdl          !
+!cdl          ! -- If saving cell-by-cell flows in list, write flow
+!cdl          if (ibinun /= 0) then
+!cdl            n2 = i
+!cdl            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
+!cdl                                                    naux, this%auxvar(:,i),     &
+!cdl                                                    olconv2=.FALSE.)
+!cdl          end if
+!cdl        end do
+!cdl      end if
+!cdl    end if
+!cdl    !
+!cdl    ! -- Add the UZF rates to the model budget
+!cdl    !
+!cdl    ! -- uzf recharge
+!cdl    ratin = rrech
+!cdl    ratout = DZERO
+!cdl    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                   &
+!cdl                               isuppress_output, this%packName)
+!cdl    !
+!cdl    ! -- groundwater discharge
+!cdl    if (this%iseepflag == 1) then
+!cdl      ratin = DZERO
+!cdl      ratout = qseep !rgwseep
+!cdl      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
+!cdl                                 isuppress_output, this%packName)
+!cdl      !
+!cdl      ! -- groundwater discharge to mover
+!cdl      if (this%imover == 1) then
+!cdl        ratin = DZERO
+!cdl        ratout = qseeptomvr
+!cdl        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
+!cdl                                   isuppress_output, this%packName)
+!cdl      end if
+!cdl    end if
+!cdl    !
+!cdl    ! -- groundwater et
+!cdl    if (this%igwetflag /= 0) then
+!cdl      ratin = DZERO
+!cdl      ratout = qgwet !retgw
+!cdl      !ratout = DZERO
+!cdl      !if (retgw > DZERO) then
+!cdl      !  ratout = -retgw
+!cdl      !end if
+!cdl      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
+!cdl                                 isuppress_output, this%packName)
+!cdl    end if
+!cdl    !
+!cdl    ! -- set unit number for binary dependent variable output
+!cdl    ibinun = 0
+!cdl    if(this%iwcontout /= 0) then
+!cdl      ibinun = this%iwcontout
+!cdl    end if
+!cdl    if(idvfl == 0) ibinun = 0
+!cdl    if (isuppress_output /= 0) ibinun = 0
+!cdl    !
+!cdl    ! -- write uzf binary moisture-content output
+!cdl    if (ibinun > 0) then
+!cdl      ! here is where you add the code to write the simulated moisture content
+!cdl      ! may want to write a cell-by-cell file with imeth=6 (see sfr and lake)
+!cdl    end if
+    !
+    ! -- fill the budget object
+    call this%uzf_fill_budobj()
+!cdl    !
+!cdl    ! -- write the flows from the budobj
+!cdl    ibinun = 0
+!cdl    if(this%ibudgetout /= 0) then
+!cdl      ibinun = this%ibudgetout
+!cdl    end if
+!cdl    if(icbcfl == 0) ibinun = 0
+!cdl    if (isuppress_output /= 0) ibinun = 0
+!cdl    if (ibinun > 0) then
+!cdl      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+!cdl                                  pertim, totim, this%iout)
+!cdl    end if
+    !
+    ! -- return
+    return
+  end subroutine uzf_cq
+
+  subroutine uzf_mb(this, model_budget)
+    ! -- add package ratin/ratout to model budget
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    class(UzfType) :: this
+    type(BudgetType), intent(inout) :: model_budget
+    character (len=LENPACKAGENAME) :: text
+    real(DP) :: ratin
+    real(DP) :: ratout
+    integer(I4B) :: isuppress_output
+    isuppress_output = 0
+    
+    ! -- Calculate flow from uzf to gwf (UZF-GWRCH)
+    call rate_accumulator(this%rch, ratin, ratout)
+    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                 &
+                               isuppress_output, this%packName)
+
+    ! -- GW discharge and GW discharge to mover
+    if (this%iseepflag == 1) then
+      call rate_accumulator(this%gwd, ratin, ratout)
+      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
+                                 isuppress_output, this%packName)
+      if (this%imover == 1) then
+        call rate_accumulator(this%gwdtomvr, ratin, ratout)
+        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
+                                   isuppress_output, this%packName)
+      end if
+    end if
+    
+    ! -- groundwater et (gwet array is positive, so switch ratin/ratout)
+    if (this%igwetflag /= 0) then
+      call rate_accumulator(this%gwet, ratout, ratin)
+      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
+                                 isuppress_output, this%packName)
+    end if
+    
+    return
+  end subroutine uzf_mb  
+  
   subroutine uzf_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
 ! ******************************************************************************
@@ -1355,7 +1964,6 @@ contains
     use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(UzfType) :: this
-    class(ObserveType),   pointer :: obsrv => null()
     real(DP),dimension(:),intent(in) :: x
     integer(I4B), intent(in) :: idvfl
     integer(I4B), intent(in) :: icbcfl
@@ -1367,6 +1975,7 @@ contains
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
+    class(ObserveType),   pointer :: obsrv => null()
     character(len=LINELENGTH) :: title
     character(len=20) :: nodestr
     integer(I4B) :: maxrows
@@ -1846,40 +2455,40 @@ contains
     end if
     !
     ! -- Add the UZF rates to the model budget
-    !
-    ! -- uzf recharge
-    ratin = rrech
-    ratout = DZERO
-    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                   &
-                               isuppress_output, this%packName)
-    !
-    ! -- groundwater discharge
-    if (this%iseepflag == 1) then
-      ratin = DZERO
-      ratout = qseep !rgwseep
-      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
-                                 isuppress_output, this%packName)
-      !
-      ! -- groundwater discharge to mover
-      if (this%imover == 1) then
-        ratin = DZERO
-        ratout = qseeptomvr
-        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
-                                   isuppress_output, this%packName)
-      end if
-    end if
-    !
-    ! -- groundwater et
-    if (this%igwetflag /= 0) then
-      ratin = DZERO
-      ratout = qgwet !retgw
-      !ratout = DZERO
-      !if (retgw > DZERO) then
-      !  ratout = -retgw
-      !end if
-      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
-                                 isuppress_output, this%packName)
-    end if
+!cdl    !
+!cdl    ! -- uzf recharge
+!cdl    ratin = rrech
+!cdl    ratout = DZERO
+!cdl    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                   &
+!cdl                               isuppress_output, this%packName)
+!cdl    !
+!cdl    ! -- groundwater discharge
+!cdl    if (this%iseepflag == 1) then
+!cdl      ratin = DZERO
+!cdl      ratout = qseep !rgwseep
+!cdl      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
+!cdl                                 isuppress_output, this%packName)
+!cdl      !
+!cdl      ! -- groundwater discharge to mover
+!cdl      if (this%imover == 1) then
+!cdl        ratin = DZERO
+!cdl        ratout = qseeptomvr
+!cdl        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
+!cdl                                   isuppress_output, this%packName)
+!cdl      end if
+!cdl    end if
+!cdl    !
+!cdl    ! -- groundwater et
+!cdl    if (this%igwetflag /= 0) then
+!cdl      ratin = DZERO
+!cdl      ratout = qgwet !retgw
+!cdl      !ratout = DZERO
+!cdl      !if (retgw > DZERO) then
+!cdl      !  ratout = -retgw
+!cdl      !end if
+!cdl      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
+!cdl                                 isuppress_output, this%packName)
+!cdl    end if
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
@@ -1894,9 +2503,9 @@ contains
       ! here is where you add the code to write the simulated moisture content
       ! may want to write a cell-by-cell file with imeth=6 (see sfr and lake)
     end if
-    !
-    ! -- fill the budget object
-    call this%uzf_fill_budobj()
+!cdl    !
+!cdl    ! -- fill the budget object
+!cdl    call this%uzf_fill_budobj()
     !
     ! -- write the flows from the budobj
     ibinun = 0
@@ -3274,6 +3883,7 @@ contains
     !
     ! -- return
     return
+    
   end subroutine uzf_setup_budobj
 
   subroutine uzf_fill_budobj(this)

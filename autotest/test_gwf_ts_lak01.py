@@ -267,6 +267,13 @@ def get_model(idx, dir):
 
 def eval_budget(sim):
     print('evaluating budgets...')
+    from budget_file_compare import eval_bud_diff
+
+    # get ia/ja from binary grid file
+    fname = '{}.dis.grb'.format(os.path.basename(sim.name))
+    fpth = os.path.join(sim.simpath, fname)
+    grbobj = flopy.utils.MfGrdFile(fpth)
+    ia = grbobj._datadict['IA'] - 1
 
     fname = '{}.cbc'.format(os.path.basename(sim.name))
 
@@ -278,74 +285,10 @@ def eval_budget(sim):
     fpth = os.path.join(sim.simpath, 'mf6', fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision='double')
 
-    # build list of cbc data to retrieve
-    avail = cobj1.get_unique_record_names()
-
-    # initialize list for storing totals for each budget term terms
-    cbc_keys = []
-    for t in avail:
-        if isinstance(t, bytes):
-            t = t.decode()
-        t = t.strip()
-        cbc_keys.append(t)
-
-    # set criteria
-    dtol = 1e-6
-    diffmax = 0.
-    difftag = 'None'
-    difftime = None
-    fail = False
-
-    # open a summary file and write header
+    # define file path and evaluate difference
     fname = '{}.cbc.cmp.out'.format(os.path.basename(sim.name))
     fpth = os.path.join(sim.simpath, fname)
-    f = open(fpth, 'w')
-    line = '{:15s}'.format('Time')
-    line += '{:15s}'.format('Datatype')
-    line += ' {:15s}'.format('Variables')
-    line += ' {:15s}'.format('Timeseries')
-    line += ' {:15s}'.format('Difference')
-    f.write(line + '\n')
-    f.write(len(line) * '-' + '\n')
-
-    # get data from cbc file
-    kk = cobj0.get_kstpkper()
-    times = cobj0.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
-        for key in cbc_keys:
-            v0 = cobj0.get_data(kstpkper=k, text=key)[0]
-            v1 = cobj1.get_data(kstpkper=k, text=key)[0]
-            if isinstance(v0, np.recarray):
-                v0 = v0['q'].sum()
-                v1 = v1['q'].sum()
-            else:
-                v0 = v0.flatten().sum()
-                v1 = v1.flatten().sum()
-
-            diff = v0 - v1
-            if abs(diff) > abs(diffmax):
-                diffmax = diff
-                difftag = key
-                difftime = t
-            if abs(diff) > dtol:
-                fail = True
-            line = '{:15g}'.format(t)
-            line += '{:15s}'.format(key)
-            line += ' {:15g}'.format(v0)
-            line += ' {:15g}'.format(v1)
-            line += ' {:15g}'.format(diff)
-            f.write(line + '\n')
-
-    msg = 'Maximum cbc difference:        {}\n'.format(diffmax)
-    msg += 'Maximum cbc difference time:   {}\n'.format(difftime)
-    msg += 'Maximum cbc datatype:          {}\n'.format(difftag)
-    if fail:
-        msg += 'Maximum cbc citeria exceeded:  {}\n'.format(dtol)
-    assert not fail, msg
-
-    # close summary file and print the final message
-    f.close()
-    print(msg)
+    eval_bud_diff(fpth, cobj0, cobj1, ia, dtol=0.1)
 
     return
 

@@ -149,6 +149,7 @@ module GwfMvrModule
     procedure :: mvr_fc
     procedure :: mvr_cc
     procedure :: mvr_bd
+    procedure :: mvr_bdsav
     procedure :: mvr_ot
     procedure :: mvr_da
     procedure :: read_options
@@ -490,9 +491,55 @@ module GwfMvrModule
     return
   end subroutine mvr_cc
   
-  subroutine mvr_bd(this, icbcfl, ibudfl, isuppress_output)
+  subroutine mvr_bd(this)
 ! ******************************************************************************
-! mvr_bd -- Write mover terms to listing file
+! mvr_bd -- fill the mover budget object
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only : kstp, kper, delt, pertim, totim
+    use InputOutputModule, only: ubdsv06, ubdsvd
+    ! -- dummy
+    class(GwfMvrType) :: this
+!cdl    integer(I4B), intent(in) :: icbcfl
+!cdl    integer(I4B), intent(in) :: ibudfl
+!cdl    integer(I4B), intent(in) :: isuppress_output
+    ! -- locals
+    integer(I4B) :: ibinun
+    ! -- formats
+    character(len=*), parameter :: fmttkk = &
+      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+! ------------------------------------------------------------------------------
+!cdl    !
+!cdl    ! -- Write the flow table
+!cdl    if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
+!cdl      call this%mvr_print_outputtab()
+!cdl    end if
+    !
+    ! -- fill the budget object
+    call this%mvr_fill_budobj()
+!cdl    !
+!cdl    ! -- write the flows from the budobj
+!cdl    ibinun = 0
+!cdl    if(this%ibudgetout /= 0) then
+!cdl      ibinun = this%ibudgetout
+!cdl    end if
+!cdl    if(icbcfl == 0) ibinun = 0
+!cdl    if (isuppress_output /= 0) ibinun = 0
+!cdl    if (ibinun > 0) then
+!cdl      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+!cdl                        pertim, totim, this%iout)
+!cdl    end if
+    !
+    ! -- Return
+    return
+  end subroutine mvr_bd
+
+  subroutine mvr_bdsav(this, icbcfl, ibudfl, isuppress_output)
+! ******************************************************************************
+! mvr_bd -- Write mover terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -516,9 +563,9 @@ module GwfMvrModule
     if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
       call this%mvr_print_outputtab()
     end if
-    !
-    ! -- fill the budget object
-    call this%mvr_fill_budobj()
+!cdl    !
+!cdl    ! -- fill the budget object
+!cdl    call this%mvr_fill_budobj()
     !
     ! -- write the flows from the budobj
     ibinun = 0
@@ -534,7 +581,7 @@ module GwfMvrModule
     !
     ! -- Return
     return
-  end subroutine mvr_bd
+  end subroutine mvr_bdsav
 
   subroutine mvr_ot(this)
 ! ******************************************************************************

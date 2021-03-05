@@ -33,6 +33,7 @@ module GwfStoModule
     procedure :: sto_ad
     procedure :: sto_fc
     procedure :: sto_fn
+    procedure :: sto_cq
     procedure :: bdcalc   => sto_bdcalc
     procedure :: bdsav    => sto_bdsav
     procedure :: sto_da
@@ -434,7 +435,7 @@ module GwfStoModule
     return
   end subroutine sto_fn
 
-  subroutine sto_bdcalc(this, nodes, hnew, hold, isuppress_output, model_budget)
+  subroutine sto_cq(this, flowja, hnew, hold)
 ! ******************************************************************************
 ! sto_bdcalc -- Calculate budget terms
 ! ******************************************************************************
@@ -443,46 +444,35 @@ module GwfStoModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule,        only: delt
-    use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwfStoType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hnew
-    real(DP), intent(in), dimension(nodes) :: hold
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    real(DP), dimension(:), contiguous, intent(in) :: hnew
+    real(DP), dimension(:), contiguous, intent(in) :: hold
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: idiag
     real(DP) :: rate
     real(DP) :: tled, rho1, rho2
     real(DP) :: tp, bt, tthk
     real(DP) :: snold, snnew
     real(DP) :: ss0, ss1, ssh0, ssh1
-    real(DP) :: rssin, rssout, rsyin, rsyout
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize accumulators
-    rssin = DZERO
-    rssout = DZERO
-    rsyin = DZERO
-    rsyout = DZERO
+    ! -- initialize strg arrays
+    do n = 1, this%dis%nodes
+      this%strgss(n) = DZERO
+      this%strgsy(n) = DZERO
+    end do
     !
     ! -- Set strt to zero or calculate terms if not steady-state stress period
-    if (this%iss == 1) then
-      do n = 1, nodes
-        this%strgss(n) = DZERO
-        this%strgsy(n) = DZERO
-      end do
-      !
-    else
+    if (this%iss == 0) then
       !
       ! -- set variables
       tled = DONE / delt
       !
       ! -- Calculate storage change
-      do n = 1, nodes
-        this%strgss(n) = DZERO
-        this%strgsy(n) = DZERO
+      do n = 1, this%dis%nodes
         if(this%ibound(n) <= 0) cycle
         ! -- aquifer elevations and thickness
         tp = this%dis%top(n)
@@ -508,6 +498,7 @@ module GwfStoModule
         ! -- storage coefficients
         rho1 = this%sc1(n) * tled
         rho2 = this%sc2(n) * tled
+        !
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
           rate = rho1 * ss0 * ssh0 - rho1 * ss1 * hnew(n) - rho1 * ssh1
@@ -515,6 +506,11 @@ module GwfStoModule
           rate = rho1 * hold(n) - rho1 * hnew(n)
         end if
         this%strgss(n) = rate
+        !
+        ! -- add storage term to flowja
+        idiag = this%dis%con%ia(n)
+        flowja(idiag) = flowja(idiag) + rate
+        !
         ! -- specific yield
         rate = DZERO
         if (this%iconvert(n) /= 0) then
@@ -522,34 +518,51 @@ module GwfStoModule
         end if
         this%strgsy(n) = rate
         !
-        ! -- accumulate ss
-        if(this%strgss(n) < DZERO) then
-          rssout = rssout - this%strgss(n)
-        else
-          rssin = rssin + this%strgss(n)
-        endif
-        !
-        ! -- accumulate sy
-        if(this%strgsy(n) < DZERO) then
-          rsyout = rsyout - this%strgsy(n)
-        else
-          rsyin = rsyin + this%strgsy(n)
-        endif
+        ! -- add storage term to flowja
+        idiag = this%dis%con%ia(n)
+        flowja(idiag) = flowja(idiag) + rate
       enddo
     endif
     !
-    ! -- Add contributions to model budget
-    call model_budget%addentry(rssin, rssout, delt, budtxt(1),                 &
+    ! -- Return
+    return
+  end subroutine sto_cq
+
+  subroutine sto_bdcalc(this, isuppress_output, model_budget)
+! ******************************************************************************
+! sto_bdcalc -- Calculate budget terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    ! -- dummy
+    class(GwfStoType) :: this
+    integer(I4B), intent(in) :: isuppress_output
+    type(BudgetType), intent(inout) :: model_budget
+    ! -- local
+    real(DP) :: rin
+    real(DP) :: rout
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add confined storage rates to model budget
+    call rate_accumulator(this%strgss, rin, rout)
+    call model_budget%addentry(rin, rout, delt, budtxt(1),                     &
                                isuppress_output, '         STORAGE')
+    !
+    ! -- Add unconfined storage rates to model budget
     if (this%iusesy == 1) then
-      call model_budget%addentry(rsyin, rsyout, delt, budtxt(2),               &
+      call rate_accumulator(this%strgsy, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
                                  isuppress_output, '         STORAGE')
     end if
     !
     ! -- Return
     return
   end subroutine sto_bdcalc
-
+  
   subroutine sto_bdsav(this, icbcfl, icbcun)
 ! ******************************************************************************
 ! sto_bdsav -- Save budget terms
@@ -563,7 +576,6 @@ module GwfStoModule
     integer(I4B), intent(in) :: icbcun
     ! -- local
     integer(I4B) :: ibinun
-    !character(len=16), dimension(2) :: aname
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp=' ', editdesc=' '
     real(DP) :: dinact

@@ -231,4 +231,26 @@ module SparseModule
       return
     end subroutine sortintarray
 
+    subroutine csr_diagsum(ia, flowja)
+      !Add up the off diagonal terms and put the sum in the
+      !diagonal position
+      ! -- dummy
+      integer(I4B), dimension(:), contiguous :: ia
+      real(DP), dimension(:), contiguous :: flowja
+      ! -- local
+      integer(I4B) :: nodes
+      integer(I4B) :: n
+      integer(I4B) :: iposdiag
+      integer(I4B) :: ipos
+      ! -- code
+      nodes = size(ia) - 1
+      do n = 1, nodes
+        iposdiag = ia(n)
+        do ipos = ia(n) + 1, ia(n + 1) - 1
+          flowja(iposdiag) = flowja(iposdiag) + flowja(ipos)
+        end do
+      end do
+      return
+    end subroutine csr_diagsum
+
 end module SparseModule

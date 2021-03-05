@@ -141,6 +141,7 @@ module SfrModule
     procedure :: bnd_fc => sfr_fc
     procedure :: bnd_fn => sfr_fn
     procedure :: bnd_cc => sfr_cc
+    procedure :: bnd_cq => sfr_cq
     procedure :: bnd_bd => sfr_bd
     procedure :: bnd_ot => sfr_ot
     procedure :: bnd_da => sfr_da
@@ -231,6 +232,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
+    packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
@@ -1931,6 +1933,140 @@ contains
     return
   end subroutine sfr_cc
 
+  subroutine sfr_cq(this, x, flowja, iadv)
+! **************************************************************************
+! sfr_cq -- Calculate flows
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    use ConstantsModule, only: LENBOUNDNAME
+    use InputOutputModule, only: ulasav, ubdsv06
+    use BudgetModule, only: BudgetType
+    ! -- dummy
+    class(SfrType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    integer(I4B), optional, intent(in) :: iadv
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: ibinun
+    real(DP) :: qext
+    ! -- for budget
+    integer(I4B) :: n
+    real(DP) :: d
+    real(DP) :: v
+    real(DP) :: qoutflow
+    real(DP) :: qfrommvr
+    real(DP) :: qtomvr
+    ! -- for observations
+    integer(I4B) :: iprobslocal
+    ! -- formats
+! --------------------------------------------------------------------------
+!cdl    !
+!cdl    ! -- Suppress saving of simulated values; they
+!cdl    !    will be saved at end of this procedure.
+!cdl    iprobslocal = 0
+    !
+    ! -- call base functionality in bnd_cq.  This will calculate sfr-gwf flows
+    !    and put them into this%simvals
+    call this%BndType%bnd_cq(x, flowja, iadv=1)
+    !
+    ! -- Calculate qextoutflow and qoutflow for subsequent budgets
+    do n = 1, this%maxbound
+      !
+      ! -- mover
+      qfrommvr = DZERO
+      qtomvr = DZERO
+      if (this%imover == 1) then
+        qfrommvr = this%pakmvrobj%get_qfrommvr(n)
+        qtomvr = this%pakmvrobj%get_qtomvr(n)
+        if (qtomvr > DZERO) then
+          qtomvr = -qtomvr
+        end if
+      endif
+      !
+      ! -- external downstream stream flow
+      qext = this%dsflow(n)
+      qoutflow = DZERO
+      if (qext > DZERO) then
+        qext = -qext
+      end if
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) > 0) cycle
+        qext = DZERO
+        exit
+      end do
+      !
+      ! -- adjust external downstream stream flow using qtomvr
+      if (qext < DZERO) then
+        if (qtomvr < DZERO) then
+          qext = qext - qtomvr
+        end if
+      else
+        qoutflow = this%dsflow(n)
+        if (qoutflow > DZERO) then
+          qoutflow = -qoutflow
+        end if
+      end if
+      !
+      ! -- set qextoutflow and qoutflow for cell by cell budget
+      !    output and observations
+      this%qextoutflow(n) = qext
+      this%qoutflow(n) = qoutflow
+      !
+    end do
+!cdl    !
+!cdl    ! -- For continuous observations, save simulated values.
+!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+!cdl      call this%sfr_bd_obs()
+!cdl    end if
+!cdl    !
+!cdl    ! -- set unit number for binary dependent variable output
+!cdl    ibinun = 0
+!cdl    if(this%istageout /= 0) then
+!cdl      ibinun = this%istageout
+!cdl    end if
+!cdl    if(idvfl == 0) ibinun = 0
+!cdl    if (isuppress_output /= 0) ibinun = 0
+!cdl    !
+!cdl    ! -- write sfr binary output
+!cdl    if (ibinun > 0) then
+!cdl      do n = 1, this%maxbound
+!cdl        d = this%depth(n)
+!cdl        v = this%stage(n)
+!cdl        if (this%iboundpak(n) == 0) then
+!cdl          v = DHNOFLO
+!cdl        else if (d == DZERO) then
+!cdl          v = DHDRY
+!cdl        end if
+!cdl        this%dbuff(n) = v
+!cdl      end do
+!cdl      call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
+!cdl                  this%maxbound, 1, 1, ibinun)
+!cdl    end if
+    !
+    ! -- fill the budget object
+    call this%sfr_fill_budobj()
+!cdl    !
+!cdl    ! -- write the flows from the budobj
+!cdl    ibinun = 0
+!cdl    if(this%ibudgetout /= 0) then
+!cdl      ibinun = this%ibudgetout
+!cdl    end if
+!cdl    if(icbcfl == 0) ibinun = 0
+!cdl    if (isuppress_output /= 0) ibinun = 0
+!cdl    if (ibinun > 0) then
+!cdl      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+!cdl                                  pertim, totim, this%iout)
+!cdl    end if
+    !
+    !
+    ! -- return
+    return
+  end subroutine sfr_cq
 
   subroutine sfr_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,         &
                     isuppress_output, model_budget, imap, iadv)
@@ -1983,51 +2119,51 @@ contains
     ! -- call base functionality in bnd_bd
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, iadv=1)
-    !
-    ! -- Calculate qextoutflow and qoutflow for subsequent budgets
-    do n = 1, this%maxbound
-      !
-      ! -- mover
-      qfrommvr = DZERO
-      qtomvr = DZERO
-      if (this%imover == 1) then
-        qfrommvr = this%pakmvrobj%get_qfrommvr(n)
-        qtomvr = this%pakmvrobj%get_qtomvr(n)
-        if (qtomvr > DZERO) then
-          qtomvr = -qtomvr
-        end if
-      endif
-      !
-      ! -- external downstream stream flow
-      qext = this%dsflow(n)
-      qoutflow = DZERO
-      if (qext > DZERO) then
-        qext = -qext
-      end if
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
-        if (this%idir(i) > 0) cycle
-        qext = DZERO
-        exit
-      end do
-      !
-      ! -- adjust external downstream stream flow using qtomvr
-      if (qext < DZERO) then
-        if (qtomvr < DZERO) then
-          qext = qext - qtomvr
-        end if
-      else
-        qoutflow = this%dsflow(n)
-        if (qoutflow > DZERO) then
-          qoutflow = -qoutflow
-        end if
-      end if
-      !
-      ! -- set qextoutflow and qoutflow for cell by cell budget
-      !    output and observations
-      this%qextoutflow(n) = qext
-      this%qoutflow(n) = qoutflow
-      !
-    end do
+!cdl    !
+!cdl    ! -- Calculate qextoutflow and qoutflow for subsequent budgets
+!cdl    do n = 1, this%maxbound
+!cdl      !
+!cdl      ! -- mover
+!cdl      qfrommvr = DZERO
+!cdl      qtomvr = DZERO
+!cdl      if (this%imover == 1) then
+!cdl        qfrommvr = this%pakmvrobj%get_qfrommvr(n)
+!cdl        qtomvr = this%pakmvrobj%get_qtomvr(n)
+!cdl        if (qtomvr > DZERO) then
+!cdl          qtomvr = -qtomvr
+!cdl        end if
+!cdl      endif
+!cdl      !
+!cdl      ! -- external downstream stream flow
+!cdl      qext = this%dsflow(n)
+!cdl      qoutflow = DZERO
+!cdl      if (qext > DZERO) then
+!cdl        qext = -qext
+!cdl      end if
+!cdl      do i = this%ia(n) + 1, this%ia(n+1) - 1
+!cdl        if (this%idir(i) > 0) cycle
+!cdl        qext = DZERO
+!cdl        exit
+!cdl      end do
+!cdl      !
+!cdl      ! -- adjust external downstream stream flow using qtomvr
+!cdl      if (qext < DZERO) then
+!cdl        if (qtomvr < DZERO) then
+!cdl          qext = qext - qtomvr
+!cdl        end if
+!cdl      else
+!cdl        qoutflow = this%dsflow(n)
+!cdl        if (qoutflow > DZERO) then
+!cdl          qoutflow = -qoutflow
+!cdl        end if
+!cdl      end if
+!cdl      !
+!cdl      ! -- set qextoutflow and qoutflow for cell by cell budget
+!cdl      !    output and observations
+!cdl      this%qextoutflow(n) = qext
+!cdl      this%qoutflow(n) = qoutflow
+!cdl      !
+!cdl    end do
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
@@ -2057,9 +2193,9 @@ contains
       call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
                   this%maxbound, 1, 1, ibinun)
     end if
-    !
-    ! -- fill the budget object
-    call this%sfr_fill_budobj()
+!cdl    !
+!cdl    ! -- fill the budget object
+!cdl    call this%sfr_fill_budobj()
     !
     ! -- write the flows from the budobj
     ibinun = 0

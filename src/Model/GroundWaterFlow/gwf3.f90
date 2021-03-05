@@ -81,6 +81,7 @@ module GwfModule
     procedure :: allocate_scalars
     procedure :: package_create
     procedure :: ftype_check
+    procedure :: gwf_bd_sav
     !
   end type GwfModelType
 
@@ -915,12 +916,15 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SparseModule, only: csr_diagsum
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: ip
+    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
     ! -- Construct the flowja array.  Flowja is calculated each time, even if
@@ -933,10 +937,26 @@ module GwfModule
     if(this%inhfb > 0) call this%hfb%hfb_flowja(this%x, this%flowja)
     if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
     !
+    if(this%insto > 0) call this%sto%sto_cq(this%flowja, this%x, this%xold)
+    !need csub_cq() here
+    !
+    ! -- Go through packages and call cq routines
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cf(reset_mover=.false.)
+      if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
+      call packobj%bnd_cq(this%x, this%flowja)
+    enddo
+    !
+    ! -- Finalize calculation of flowja by adding face flows to the diagonal.
+    !    This results in the flow residual being stored in the diagonal
+    !    position for each cell.
+    call csr_diagsum(this%dis%con%ia, this%flowja)
+    !
     ! -- Return
     return
   end subroutine gwf_cq
-
+  
   subroutine gwf_bd(this, icnvg, isuppress_output)
 ! ******************************************************************************
 ! gwf_bd --GroundWater Flow Model Budget
@@ -953,42 +973,78 @@ module GwfModule
     ! -- local
     integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
-    class(BndType),pointer :: packobj
+    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
     ! -- Save the solution convergence flag
     this%icnvg = icnvg
     !
-    ! -- Set write and print flags differently if output is suppressed.
-    if(isuppress_output == 0) then
-      idvfl = 0
-      if(this%oc%oc_save('HEAD')) idvfl = 1
-      icbcfl = 0
-      if(this%oc%oc_save('BUDGET')) icbcfl = 1
-      icbcun = this%oc%oc_save_unit('BUDGET')
-      ibudfl = 0
-      if(this%oc%oc_print('BUDGET')) ibudfl = 1
-      iprobs = 1
-    else
-      icbcfl = 0
-      ibudfl = 0
-      icbcun = 0
-      iprobs = 0
-      idvfl  = 0
-    endif
-    !
-    ! -- Budget routines (start by resetting)
+    ! -- Budget routines (start by resetting).  Sole purpose of this section
+    !    is to add in and outs to model budget.  All ins and out for a model
+    !    should be added here to this%budget.  In a subsequent exchange call,
+    !    exchange flows might also be added.
     call this%budget%reset()
+    if(this%insto > 0) call this%sto%bdcalc(isuppress_output, this%budget)
+    ! todo: csub_bd here
+    if(this%inmvr > 0) call this%mvr%mvr_bd()
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_mb(this%budget)
+    enddo
+    !
+    ! -- npf velocities have to be calculated here, after gwf-gwf exchanges
+    !    have passed in their contributions from exg_cq()
+    if (this%innpf > 0) then
+      if (this%npf%icalcspdis /= 0) then
+        call this%npf%calc_spdis(this%flowja)
+      end if
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine gwf_bd
+
+  subroutine gwf_bd_sav(this)
+! ******************************************************************************
+! gwf_bd --GroundWater Flow Model Budget
+! Subroutine: (1) Calculate stress package contributions to model budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfModelType) :: this
+    ! -- local
+    integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
+    integer(I4B) :: ip
+    integer(I4B) :: isuppress_output
+    class(BndType), pointer :: packobj
+! ------------------------------------------------------------------------------
+    !
+    ! -- Do not suppress any output
+    isuppress_output = 0
+    !
+    ! -- Set write and print flags
+    idvfl = 0
+    if(this%oc%oc_save('HEAD')) idvfl = 1
+    icbcfl = 0
+    if(this%oc%oc_save('BUDGET')) icbcfl = 1
+    icbcun = this%oc%oc_save_unit('BUDGET')
+    ibudfl = 0
+    if(this%oc%oc_print('BUDGET')) ibudfl = 1
+    iprobs = 1
     !
     ! -- Storage
     if(this%insto > 0) then
-      call this%sto%bdcalc(this%dis%nodes, this%x, this%xold,                  &
-                           isuppress_output, this%budget)
       call this%sto%bdsav(icbcfl, icbcun)
     endif
     !
     ! -- Skeletal storage, compaction and subsidence
     if (this%incsub > 0) then
+      ! -- todo: this needs to be refactored following sto.  The flow calc
+      !    should be moved into a new cq routine.  bdcalc should be refactored 
+      !    to calc the rate accumulators.   
       call this%csub%bdcalc(this%dis%nodes, this%x, this%xold,                 &
                             isuppress_output, this%budget)
       call this%csub%bdsav(idvfl, icbcfl, icbcun)
@@ -1008,15 +1064,7 @@ module GwfModule
     call this%obs%obs_bd_clear()
     !
     ! -- Mover budget
-    if(this%inmvr > 0) call this%mvr%mvr_bd(icbcfl, ibudfl, isuppress_output)
-    !
-    ! -- Recalculate package hcof and rhs so that bnd_bd will calculate
-    !    flows based on the final head solution
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cf(reset_mover=.false.)
-      if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
-    enddo
+    if(this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, isuppress_output)
     !
     ! -- Boundary packages calculate budget and total flows to model budget
     do ip = 1, this%bndlist%Count()
@@ -1032,7 +1080,7 @@ module GwfModule
     !
     ! -- Return
     return
-  end subroutine gwf_bd
+  end subroutine gwf_bd_sav
 
   subroutine gwf_ot(this)
 ! ******************************************************************************
@@ -1055,6 +1103,9 @@ module GwfModule
       "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
       &I0,' OF STRESS PERIOD ',I0,'****')"
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Save budgets
+    call this%gwf_bd_sav()
     !
     ! -- Set ibudfl and ihedfl flags for printing budget and heads information
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
