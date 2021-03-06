@@ -20,15 +20,14 @@ module CommandArguments
   !
   contains
   
+  !> @brief Get command line arguments
+  !!
+  !! Subroutine to get and write information on command line arguments.
+  !!
+  !<
   subroutine GetCommandLineArguments()
-! ******************************************************************************
-! Write information on command line arguments
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    ! -- local
+    ! -- dummy variables
+    ! -- local variables
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: uctag
     character(len=LENHUGELINE) :: line
@@ -250,11 +249,16 @@ module CommandArguments
     return
   end subroutine GetCommandLineArguments
   
+  !> @brief Write command line argument usage
+  !!
+  !! Subroutine to write usage information for command line arguments.
+  !!
+  !<
   subroutine write_usage(header, cexe)
-    ! -- dummy
-    character(len=*), intent(in) :: header
-    character(len=*), intent(in) :: cexe
-    ! -- local
+    ! -- dummy variables
+    character(len=*), intent(in) :: header !< header for usage 
+    character(len=*), intent(in) :: cexe   !< executable name
+    ! -- local variables
     character(len=LINELENGTH) :: line
     ! -- format
     character(len=*), parameter :: OPTIONSFMT =                                  &

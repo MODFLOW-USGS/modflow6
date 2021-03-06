@@ -24,32 +24,16 @@ module mf6bmiUtil
   integer(I4B), parameter :: LENGRIDTYPE = 16 !< max length for Fortran grid type string
 
   integer(c_int), bind(C, name="BMI_LENVARTYPE") :: BMI_LENVARTYPE = LENMEMTYPE + 1 !< max. length for variable type C-strings
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENVARTYPE
-# endif
-#endif
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVARTYPE
 
   integer(c_int), bind(C, name="BMI_LENGRIDTYPE") :: BMI_LENGRIDTYPE = LENGRIDTYPE + 1 !< max. length for grid type C-strings
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENGRIDTYPE
-# endif
-#endif
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENGRIDTYPE
 
   integer(c_int), bind(C, name="BMI_LENVARADDRESS") :: BMI_LENVARADDRESS = LENMEMADDRESS + 1 !< max. length for the variable's address C-string
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
-# endif
-#endif
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
 
   integer(c_int), bind(C, name="BMI_LENCOMPONENTNAME") :: BMI_LENCOMPONENTNAME = 256 !< component name length, i.e. 'MODFLOW 6'
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENCOMPONENTNAME
-# endif
-#endif
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENCOMPONENTNAME
 
 contains
 
@@ -179,7 +163,7 @@ contains
     character(len=LENCOMPONENTNAME) :: dummy_component
     character(len=LENVARNAME) :: var_name
     logical(LGP) :: split_succeeded
-    
+
     success = .false.
 
     call split_mem_address(var_address, mem_path, var_name, split_succeeded)

@@ -14,11 +14,7 @@ module mf6bmiError
 
   integer(I4B), parameter :: LENERRMESSAGE = 1024 !< max length for the error message
   integer(c_int), bind(C, name="BMI_LENERRMESSAGE") :: BMI_LENERRMESSAGE = LENERRMESSAGE + 1 !< max. length for the (exported) C-style error message
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-  !DEC$ ATTRIBUTES DLLEXPORT :: BMI_LENERRMESSAGE
-# endif
-#endif
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENERRMESSAGE
 
   character(len=LENERRMESSAGE) :: bmi_last_error = 'No BMI error reported' !< module variable containing the last error as a Fortran string
 
@@ -51,11 +47,7 @@ contains
     !! with size BMI_LENERRMESSAGE
   !<
   function get_last_bmi_error(c_error) result(bmi_status) bind(C, name="get_last_bmi_error")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_last_bmi_error
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_last_bmi_error
     ! -- dummy variables
     character(kind=c_char, len=1), intent(out) :: c_error(BMI_LENERRMESSAGE)  !< C style char array with error
     integer(kind=c_int) :: bmi_status !< BMI status code

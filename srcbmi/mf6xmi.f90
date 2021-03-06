@@ -104,11 +104,7 @@ contains
   !! here.
   !<
   function xmi_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_prepare_time_step
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_prepare_time_step
     ! -- dummy variables
     double precision, intent(in) :: dt  !< time step
     integer(kind=c_int) :: bmi_status   !< BMI status code
@@ -124,11 +120,7 @@ contains
   !! the calculate function on all solutions in there.
   !<
   function xmi_do_time_step() result(bmi_status) bind(C, name="do_time_step")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_do_time_step
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_do_time_step
     ! -- dummy variables
     integer(kind=c_int) :: bmi_status !< BMI status code
 
@@ -143,11 +135,7 @@ contains
   !! to call this to finish the time step.
   !<
   function xmi_finalize_time_step() result(bmi_status) bind(C, name="finalize_time_step")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_finalize_time_step
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_finalize_time_step
     ! -- dummy variables
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
@@ -172,11 +160,7 @@ contains
   !! you are most likely not using more than one...)
   !<
   function xmi_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_get_subcomponent_count
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_get_subcomponent_count
     ! -- modules
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: istdout
@@ -207,11 +191,7 @@ contains
   !! by xmi_get_subcomponent_count().
   !<
   function xmi_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_prepare_solve
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_prepare_solve
     ! -- modules
     use ListsModule, only: solutiongrouplist
     use NumericalSolutionModule
@@ -250,11 +230,7 @@ contains
   !! this, a matching call to xmi_prepare_solve() should be done.
   !<
   function xmi_solve(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="solve")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_solve
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_solve
     ! -- modules
     use NumericalSolutionModule
     ! -- dummy variables
@@ -291,11 +267,7 @@ contains
   !! @return      bmi_status          the BMI status code
   !<
   function xmi_finalize_solve(subcomponent_idx) result(bmi_status) bind(C, name="finalize_solve")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: xmi_finalize_solve
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_finalize_solve
     ! -- modules
     use NumericalSolutionModule
     ! -- dummy variables
@@ -339,11 +311,7 @@ contains
   function get_var_address(c_component_name, c_subcomponent_name, &
                            c_var_name, c_var_address) &
     result(bmi_status) bind(C, name="get_var_address")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_address
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_address
     ! -- modules
     use MemoryHelperModule, only: create_mem_path, create_mem_address
     use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME, LENMEMPATH, LENMEMADDRESS

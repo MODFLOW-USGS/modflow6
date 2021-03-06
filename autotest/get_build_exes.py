@@ -105,7 +105,6 @@ def build_mf6_so():
     pm.appdir = os.path.join("..", "bin")
     pm.excludefiles = [os.path.join(pm.srcdir2, "mf6.f90")]
     pm.include_subdirs = True
-    pm.sharedobject = True
     pm.inplace = True
     pm.makeclean = True
 

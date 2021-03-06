@@ -19,11 +19,7 @@ contains
 
   ! Get the grid identifier for the given variable.
   function get_var_grid(c_var_address, var_grid) result(bmi_status) bind(C, name="get_var_grid")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_grid
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_grid
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
@@ -60,11 +56,7 @@ contains
 
   ! Get the grid type as a string.
   function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_type
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     character(kind=c_char), intent(out) :: grid_type(BMI_LENGRIDTYPE)
@@ -92,11 +84,7 @@ contains
 
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_rank
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
@@ -123,11 +111,7 @@ contains
 
   ! Get the total number of elements in the computational grid.
   function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_size
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_size
@@ -159,11 +143,7 @@ contains
 
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_shape
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_shape(*)
@@ -191,11 +171,7 @@ contains
 
   ! Provides an array (whose length is the number of rows) that gives the x-coordinate for each row.
   function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_x
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     real(kind=c_double), intent(out) :: grid_x(*)
@@ -235,11 +211,7 @@ contains
 
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_y
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_y
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     real(kind=c_double), intent(out) :: grid_y(*)
@@ -279,11 +251,7 @@ contains
   ! NOTE: node in BMI-terms is a vertex in Modflow terms
   ! Get the number of nodes in an unstructured grid.
   function get_grid_node_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_node_count")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_node_count
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_node_count
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: count
@@ -305,11 +273,7 @@ contains
   ! TODO_JH: This currently only works for 2D DISU models
   ! Get the number of faces in an unstructured grid.
   function get_grid_face_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_face_count")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_count
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_face_count
     ! -- modules
     use ListsModule, only: basemodellist
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
@@ -338,11 +302,7 @@ contains
 
   ! Get the face-node connectivity.
   function get_grid_face_nodes(grid_id, face_nodes) result(bmi_status) bind(C, name="get_grid_face_nodes")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_nodes
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_face_nodes
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: face_nodes(*)
@@ -376,11 +336,7 @@ contains
 
   ! Get the number of nodes for each face.
   function get_grid_nodes_per_face(grid_id, nodes_per_face) result(bmi_status) bind(C, name="get_grid_nodes_per_face")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: nodes_per_face(*)

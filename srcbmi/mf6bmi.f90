@@ -34,20 +34,12 @@ module mf6bmi
   implicit none
 
   integer(c_int), bind(C, name="ISTDOUTTOFILE") :: istdout_to_file = 1  !< output control: =0 to screen, >0 to file
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-  !DEC$ ATTRIBUTES DLLEXPORT :: istdout_to_file
-# endif
-#endif
+  !DIR$ ATTRIBUTES DLLEXPORT :: istdout_to_file
 
 contains
 
   function bmi_get_component_name(name) result(bmi_status) bind(C, name="get_component_name")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: bmi_get_component_name
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: bmi_get_component_name
     ! -- dummy variables
     character(kind=c_char), intent(out) :: name(BMI_LENCOMPONENTNAME)
     integer(kind=c_int) :: bmi_status !< BMI status code
@@ -69,11 +61,7 @@ contains
   !! process for that.
   !<
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     ! -- dummy variables
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
@@ -102,11 +90,7 @@ contains
   !! to the simulation's end time is reached.
   !<
   function bmi_update() result(bmi_status) bind(C, name="update")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: bmi_update
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: bmi_update
     ! -- dummy variables
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
@@ -123,11 +107,7 @@ contains
   !! call should match the call to bmi_initialize()
   !<
   function bmi_finalize() result(bmi_status) bind(C, name="finalize")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: bmi_finalize
     ! -- modules
     use SimVariablesModule, only: iforcestop
     ! -- dummy variables
@@ -147,11 +127,7 @@ contains
   !! returning 0.0 for now. New version...
   !<
   function get_start_time(start_time) result(bmi_status) bind(C, name="get_start_time")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_start_time
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_start_time
     ! -- dummy variables
     double precision, intent(out) :: start_time !< start time
     integer(kind=c_int) :: bmi_status           !< BMI status code
@@ -167,11 +143,7 @@ contains
   !! equal to the total runtime.
   !<
   function get_end_time(end_time) result(bmi_status) bind(C, name="get_end_time")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_end_time
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_end_time
     ! -- modules
     use TdisModule, only: totalsimtime
     ! -- dummy variables
@@ -189,11 +161,7 @@ contains
   !! equal to the time passed w.r.t. the start time of the simulation.
   !<
   function get_current_time(current_time) result(bmi_status) bind(C, name="get_current_time")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_current_time
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_current_time
     ! -- modules
     use TdisModule, only: totim
     ! -- dummy variables
@@ -211,11 +179,7 @@ contains
   !! depending on your time discretization settings in the TDIS package.
   !<
   function get_time_step(time_step) result(bmi_status) bind(C, name="get_time_step")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_time_step
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_time_step
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
@@ -232,11 +196,7 @@ contains
   !! This concerns all variables stored in the memory manager
   !<
   function get_input_item_count(count) result(bmi_status) bind(C, name="get_input_item_count")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_input_item_count
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_input_item_count
     ! -- dummy variables
     integer(kind=c_int), intent(out) :: count !< the number of input variables
     integer(kind=c_int) :: bmi_status         !< BMI status code
@@ -252,11 +212,7 @@ contains
   !! This concerns all variables stored in the memory manager
   !<
   function get_output_item_count(count) result(bmi_status) bind(C, name="get_output_item_count")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_output_item_count
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_output_item_count
     ! -- dummy variables
     integer(kind=c_int), intent(out) :: count !< the number of output variables
     integer(kind=c_int) :: bmi_status         !< BMI status code
@@ -282,11 +238,7 @@ contains
   !! c_names = 'variable_address_1\x00 ... variable_address_2\x00 ... ' etc.
   !<
   function get_input_var_names(c_names) result(bmi_status) bind(C, name="get_input_var_names")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_input_var_names
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_input_var_names
     ! -- dummy variables
     character(kind=c_char, len=1), intent(inout) :: c_names(*) !< array with memory paths for input variables
     integer(kind=c_int) :: bmi_status                         !< BMI status code
@@ -317,11 +269,7 @@ contains
   !! which is all of them!
   !<
   function get_output_var_names(c_names) result(bmi_status) bind(C, name="get_output_var_names")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_output_var_names
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_output_var_names
     ! -- dummy variables
     character(kind=c_char, len=1), intent(inout) :: c_names(*) !< array with memory paths for output variables
     integer(kind=c_int) :: bmi_status                         !< BMI status code
@@ -348,11 +296,7 @@ contains
   !> @brief Get the size (in bytes) of a single element of a variable
   !<
   function get_var_itemsize(c_var_address, var_size) result(bmi_status) bind(C, name="get_var_itemsize")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_itemsize
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_itemsize
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     integer, intent(out) :: var_size                        !< size of the element in bytes
@@ -378,11 +322,7 @@ contains
   !> @brief Get size of the variable, in bytes
   !<
   function get_var_nbytes(c_var_address, var_nbytes) result(bmi_status) bind(C, name="get_var_nbytes")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_nbytes
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_nbytes
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     integer, intent(out) :: var_nbytes                      !< size in bytes
@@ -418,11 +358,7 @@ contains
   !! arrays are supported.
   !<
   function get_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_double")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_value_double
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_double
     ! -- modules
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
@@ -498,11 +434,7 @@ contains
   !! arrays are supported.
   !<
   function get_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_int")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_value_int
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_int
     ! -- modules
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
@@ -578,11 +510,7 @@ contains
   !! its shape.
   !<
   function get_value_ptr_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_ptr_double")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     type(c_ptr), intent(inout) :: c_arr_ptr                 !< pointer to the array
@@ -635,11 +563,7 @@ contains
   !! can be used to get the variable's dimensionality.
   !<
   function get_value_ptr_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_ptr_int")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     type(c_ptr), intent(inout) :: c_arr_ptr                 !< pointer to the array
@@ -693,11 +617,7 @@ contains
   !! rank > 1.
   !<
   function set_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_double")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: set_value_double
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: set_value_double
     ! -- modules
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
@@ -769,11 +689,7 @@ contains
   !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2.
   !<
   function set_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_int")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: set_value_int
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: set_value_int
     ! -- modules
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
@@ -847,11 +763,7 @@ contains
   !! be found, the string 'UNKNOWN' is assigned.
   !<
   function get_var_type(c_var_address, c_var_type) result(bmi_status) bind(C, name="get_var_type")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-!DEC$ ATTRIBUTES DLLEXPORT :: get_var_type
-# endif
-#endif
+!DIR$ ATTRIBUTES DLLEXPORT :: get_var_type
     ! -- modules
     use ConstantsModule, only: LENMEMTYPE
     ! -- dummy variables
@@ -889,11 +801,7 @@ contains
   !! access to the rank of the array.
   !<
   function get_var_rank(c_var_address, c_var_rank) result(bmi_status) bind(C, name="get_var_rank")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_rank
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_rank
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     integer(kind=c_int), intent(out) :: c_var_rank          !< variable rank
@@ -930,11 +838,7 @@ contains
   !! to C-style.
   !<
   function get_var_shape(c_var_address, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
-#ifdef __INTEL_COMPILER
-# ifdef _WIN32
-    !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
-# endif
-#endif
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_shape
     ! -- modules
     use ConstantsModule, only: MAXMEMRANK
     ! -- dummy variables
