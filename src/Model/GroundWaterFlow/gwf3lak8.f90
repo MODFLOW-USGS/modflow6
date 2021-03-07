@@ -4189,8 +4189,7 @@ contains
     real(DP) :: chratin, chratout
     ! -- for budget
     integer(I4B) :: j, n
-    integer(I4B) :: igwfnode
-    real(DP) :: hlak, hgwf
+    real(DP) :: hlak
     real(DP) :: v0, v1
 ! ------------------------------------------------------------------------------
     !
@@ -4263,61 +4262,15 @@ contains
     do n = 1, this%nlakes
       if (this%iboundpak(n) == 0) cycle
       rrate = DZERO
-!cdl      hlak = this%xnewpak(n)
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-!cdl        igwfnode = this%cellid(j)
-!cdl        hgwf = this%xnew(igwfnode)
-!cdl        call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate)
-        ! -- todo: can we get rrate out of this%simval instead?
         rrate = this%simvals(j)
         this%qleak(j) = -rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
       end do
     end do
-!cdl    !
-!cdl    ! -- For continuous observations, save simulated values.
-!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-!cdl      call this%lak_bd_obs()
-!cdl    endif
-!cdl    !
-!cdl    ! -- set unit number for binary dependent variable output
-!cdl    ibinun = 0
-!cdl    if(this%istageout /= 0) then
-!cdl      ibinun = this%istageout
-!cdl    end if
-!cdl    if(idvfl == 0) ibinun = 0
-!cdl    if (isuppress_output /= 0) ibinun = 0
-!cdl    !
-!cdl    ! -- write lake binary output
-!cdl    if (ibinun > 0) then
-!cdl      do n = 1, this%nlakes
-!cdl        v = this%xnewpak(n)
-!cdl        d = v - this%lakebot(n)
-!cdl        if (this%iboundpak(n) == 0) then
-!cdl          v = DHNOFLO
-!cdl        else if (d <= DZERO) then
-!cdl          v = DHDRY
-!cdl        end if
-!cdl        this%dbuff(n) = v
-!cdl      end do
-!cdl      call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
-!cdl                  this%nlakes, 1, 1, ibinun)
-!cdl    end if
     !
     ! -- fill the budget object
     call this%lak_fill_budobj()
-    !
-!cdl    ! -- write the flows from the budobj
-!cdl    ibinun = 0
-!cdl    if(this%ibudgetout /= 0) then
-!cdl      ibinun = this%ibudgetout
-!cdl    end if
-!cdl    if(icbcfl == 0) ibinun = 0
-!cdl    if (isuppress_output /= 0) ibinun = 0
-!cdl    if (ibinun > 0) then
-!cdl      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-!cdl                        pertim, totim, this%iout)
-!cdl    end if
     !
     ! -- return
     return
@@ -4353,26 +4306,14 @@ contains
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: ibinun
-    real(DP) :: rrate
-    real(DP) :: chratin, chratout
     ! -- for budget
-    integer(I4B) :: j, n
-    integer(I4B) :: igwfnode
-    real(DP) :: hlak, hgwf
-    real(DP) :: v0, v1
+    integer(I4B) :: n
     real(DP) :: d
     real(DP) :: v
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
 ! ------------------------------------------------------------------------------
-    !
-    ! -- recalculate package HCOF and RHS terms with latest groundwater and
-    !    lak heads prior to calling base budget functionality
-    !call this%lak_cfupdate()
-    !
-    ! -- update the lake hcof and rhs terms
-!cdl     call this%lak_solve(.false.)
     !
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
@@ -4382,79 +4323,6 @@ contains
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
-    !
-    ! -- calculate several budget terms
-!cdl     chratin = DZERO
-!cdl     chratout = DZERO
-!cdl     do n = 1, this%nlakes
-!cdl       this%chterm(n) = DZERO
-!cdl       if (this%iboundpak(n) == 0) cycle
-!cdl       hlak = this%xnewpak(n)
-!cdl       call this%lak_calculate_vol(n, hlak, v1)
-!cdl       !
-!cdl       ! -- add budget terms for active lakes
-!cdl       if (this%iboundpak(n) /= 0) then
-!cdl         !
-!cdl         ! -- rainfall
-!cdl         rrate = this%precip(n)
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         !
-!cdl         ! -- evaporation
-!cdl         rrate = this%evap(n)
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         !
-!cdl         ! -- runoff
-!cdl         rrate = this%runoff(n)
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         !
-!cdl         ! -- inflow
-!cdl         rrate = this%inflow(n)
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         !
-!cdl         ! -- withdrawals
-!cdl         rrate = this%withr(n)
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         !
-!cdl         ! -- add lake storage changes
-!cdl         rrate = DZERO
-!cdl         if (this%iboundpak(n) > 0) then
-!cdl           if (this%gwfiss /= 1) then
-!cdl             call this%lak_calculate_vol(n, this%xoldpak(n), v0)
-!cdl             rrate = -(v1 - v0) / delt
-!cdl             call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl           end if
-!cdl         end if
-!cdl         this%qsto(n) = rrate
-!cdl         !
-!cdl         ! -- add external outlets
-!cdl         call this%lak_get_external_outlet(n, rrate)
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         !
-!cdl         ! -- add mover terms
-!cdl         if (this%imover == 1) then
-!cdl           if (this%iboundpak(n) /= 0) then
-!cdl             rrate = this%pakmvrobj%get_qfrommvr(n)
-!cdl           else
-!cdl             rrate = DZERO
-!cdl           end if
-!cdl           call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl         endif
-!cdl       end if
-!cdl     end do
-!cdl     !
-!cdl     ! -- gwf flow and constant flow to lake
-!cdl     do n = 1, this%nlakes
-!cdl       if (this%iboundpak(n) == 0) cycle
-!cdl       rrate = DZERO
-!cdl       hlak = this%xnewpak(n)
-!cdl       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-!cdl         igwfnode = this%cellid(j)
-!cdl         hgwf = this%xnew(igwfnode)
-!cdl         call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate)
-!cdl         this%qleak(j) = rrate
-!cdl         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-!cdl       end do
-!cdl     end do
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
@@ -4484,9 +4352,6 @@ contains
       call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
                   this%nlakes, 1, 1, ibinun)
     end if
-!cdl    !
-!cdl    ! -- fill the budget object
-!cdl    call this%lak_fill_budobj()
     !
     ! -- write the flows from the budobj
     ibinun = 0
@@ -4527,7 +4392,7 @@ contains
     ! -- format
     ! --------------------------------------------------------------------------
     !
-    ! -- write lake stage
+    ! -- Output lake stage table
     if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
       ! -- set table kstp and kper
@@ -4550,12 +4415,12 @@ contains
       end do
     end if
     !
-    ! -- Output lake flow table
+    ! -- Output lake flows table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
-    ! -- Output lake budget
+    ! -- Output lake budget summary table
     call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- return

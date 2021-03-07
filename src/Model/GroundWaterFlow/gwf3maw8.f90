@@ -2682,7 +2682,7 @@ contains
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
+    use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME
     use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
@@ -2692,7 +2692,6 @@ contains
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun
     real(DP) :: rrate
     ! -- for budget
     integer(I4B) :: j
@@ -2701,23 +2700,13 @@ contains
     integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: cfw
-    real(DP) :: cmaw
-    real(DP) :: cterm
-    real(DP) :: term
-    real(DP) :: v
-    real(DP) :: d
     ! -- for observations
-    integer(I4B) :: iprobslocal
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- recalculate package HCOF and RHS terms with latest groundwater and
     !    maw heads prior to calling base budget functionality
     call this%maw_cfupdate()
-!cdl    !
-!cdl    ! -- Suppress saving of simulated values; they
-!cdl    !    will be saved at end of this procedure.
-!cdl    iprobslocal = 0
     !
     ! -- call base functionality in bnd_cq.  This will calculate maw-gwf flows
     !    and put them into this%simvals
@@ -2772,16 +2761,7 @@ contains
       hmaw = this%xnewpak(n)
       this%qconst(n) = DZERO
       do j = 1, this%ngwfnodes(n)
-        this%qleak(ibnd) = DZERO
-        !
-        ! -- Calculate the rate for this well connection relative to gwf
-        if (this%iboundpak(n) == 0) then
-          rrate = DZERO
-        else
-          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
-                                             rrate)
-        end if
-        !
+        rrate = -this%simvals(ibnd)
         this%qleak(ibnd) = rrate
         if (this%iboundpak(n) < 0) then
           this%qconst(n) = this%qconst(n) - rrate
@@ -2813,51 +2793,9 @@ contains
         end if
       end if
     end do
-!cdl    !
-!cdl    ! -- For continuous observations, save simulated values.
-!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-!cdl      call this%maw_bd_obs()
-!cdl    end if
-!cdl    !
-!cdl    ! -- set unit number for binary dependent variable output
-!cdl    ibinun = 0
-!cdl    if(this%iheadout /= 0) then
-!cdl      ibinun = this%iheadout
-!cdl    end if
-!cdl    if(idvfl == 0) ibinun = 0
-!cdl    if (isuppress_output /= 0) ibinun = 0
-!cdl    !
-!cdl    ! -- write maw binary output
-!cdl    if (ibinun > 0) then
-!cdl      do n = 1, this%nmawwells
-!cdl        v = this%xnewpak(n)
-!cdl        d = v - this%bot(n)
-!cdl        if (this%iboundpak(n) == 0) then
-!cdl          v = DHNOFLO
-!cdl        else if (d <= DZERO) then
-!cdl          v = DHDRY
-!cdl        end if
-!cdl        this%dbuff(n) = v
-!cdl      end do
-!cdl      call ulasav(this%dbuff, '            HEAD',                               &
-!cdl                  kstp, kper, pertim, totim,                                    &
-!cdl                  this%nmawwells, 1, 1, ibinun)
-!cdl    end if
     !
     ! -- fill the budget object
     call this%maw_fill_budobj()
-!cdl    !
-!cdl    ! -- write the flows from the budobj
-!cdl    ibinun = 0
-!cdl    if(this%ibudgetout /= 0) then
-!cdl      ibinun = this%ibudgetout
-!cdl    end if
-!cdl    if(icbcfl == 0) ibinun = 0
-!cdl    if (isuppress_output /= 0) ibinun = 0
-!cdl    if (ibinun > 0) then
-!cdl      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-!cdl                                  pertim, totim, this%iout)
-!cdl    end if
     !
     ! -- return
     return
@@ -2893,27 +2831,14 @@ contains
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: ibinun
-    real(DP) :: rrate
     ! -- for budget
-    integer(I4B) :: j
     integer(I4B) :: n
-    integer(I4B) :: ibnd
-    integer(I4B) :: icflow
-    real(DP) :: hmaw
-    real(DP) :: cfw
-    real(DP) :: cmaw
-    real(DP) :: cterm
-    real(DP) :: term
     real(DP) :: v
     real(DP) :: d
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
 ! ------------------------------------------------------------------------------
-!cdl    !
-!cdl    ! -- recalculate package HCOF and RHS terms with latest groundwater and
-!cdl    !    maw heads prior to calling base budget functionality
-!cdl    call this%maw_cfupdate()
     !
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
@@ -2923,97 +2848,6 @@ contains
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
-!cdl    !
-!cdl    ! -- calculate maw budget flow and storage terms
-!cdl    do n = 1, this%nmawwells
-!cdl      this%qout(n) = DZERO
-!cdl      this%qsto(n) = DZERO
-!cdl      if (this%iflowingwells > 0) then
-!cdl        this%qfw(n) = DZERO
-!cdl      end if
-!cdl      if (this%iboundpak(n) == 0) then
-!cdl        cycle
-!cdl      end if
-!cdl      !
-!cdl      ! -- set hmaw and xsto
-!cdl      hmaw = this%xnewpak(n)
-!cdl      this%xsto(n) = hmaw
-!cdl      !
-!cdl      ! -- add pumping rate to active maw well
-!cdl      rrate = this%ratesim(n)
-!cdl      !
-!cdl      ! -- If flow is out of maw set qout to rrate.
-!cdl      if (rrate < DZERO) then
-!cdl        this%qout(n) = rrate
-!cdl      end if
-!cdl      !
-!cdl      ! -- add flowing well
-!cdl      if (this%iflowingwells > 0) then
-!cdl        if (this%fwcond(n) > DZERO) then
-!cdl          cfw = this%fwcondsim(n)
-!cdl          this%xsto(n) = this%fwelev(n)
-!cdl          rrate = cfw * (this%fwelev(n) - hmaw)
-!cdl          this%qfw(n) = rrate
-!cdl          !
-!cdl          ! -- Subtract flowing well rrate from qout.
-!cdl          this%qout(n) = this%qout(n) + rrate
-!cdl        end if
-!cdl      end if
-!cdl      !
-!cdl      ! -- Calculate qsto
-!cdl      if (this%imawiss /= 1) then
-!cdl        rrate = -this%area(n) * (this%xsto(n) - this%xoldsto(n)) / delt
-!cdl        this%qsto(n) = rrate
-!cdl      end if
-!cdl    end do
-!cdl    !
-!cdl    ! -- gwf and constant flow
-!cdl    ibnd = 1
-!cdl    do n = 1, this%nmawwells
-!cdl      hmaw = this%xnewpak(n)
-!cdl      this%qconst(n) = DZERO
-!cdl      do j = 1, this%ngwfnodes(n)
-!cdl        this%qleak(ibnd) = DZERO
-!cdl        !
-!cdl        ! -- Calculate the rate for this well connection relative to gwf
-!cdl        if (this%iboundpak(n) == 0) then
-!cdl          rrate = DZERO
-!cdl        else
-!cdl          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
-!cdl                                             rrate)
-!cdl        end if
-!cdl        !
-!cdl        this%qleak(ibnd) = rrate
-!cdl        if (this%iboundpak(n) < 0) then
-!cdl          this%qconst(n) = this%qconst(n) - rrate
-!cdl          !
-!cdl          ! -- If flow is out increment qout by -rrate.
-!cdl          if (-rrate < DZERO) then
-!cdl            this%qout(n) = this%qout(n) - rrate
-!cdl          end if
-!cdl        end if
-!cdl        !
-!cdl        ! -- increment ibnd counter
-!cdl        ibnd = ibnd + 1
-!cdl      end do
-!cdl      !
-!cdl      ! -- add additional flow terms to constant head term
-!cdl      if (this%iboundpak(n) < 0) then
-!cdl        !
-!cdl        ! -- add well pumping rate
-!cdl        this%qconst(n) = this%qconst(n) - this%ratesim(n)
-!cdl        !
-!cdl        ! -- add flowing well rate
-!cdl        if (this%iflowingwells > 0) then
-!cdl          this%qconst(n) = this%qconst(n) - this%qfw(n)
-!cdl        end if
-!cdl        !
-!cdl        ! -- add storage term
-!cdl        if (this%imawiss /= 1) then
-!cdl          this%qconst(n) = this%qconst(n) - this%qsto(n)
-!cdl        end if
-!cdl      end if
-!cdl    end do
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
@@ -3044,9 +2878,6 @@ contains
                   kstp, kper, pertim, totim,                                    &
                   this%nmawwells, 1, 1, ibinun)
     end if
-!cdl    !
-!cdl    ! -- fill the budget object
-!cdl    call this%maw_fill_budobj()
     !
     ! -- write the flows from the budobj
     ibinun = 0

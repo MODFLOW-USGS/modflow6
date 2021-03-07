@@ -2,7 +2,6 @@
 module UzfModule
 
   use KindModule, only: DP, I4B
-  !use ArrayHandlersModule, only: ExpandArray
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
                              DONE, DHUNDRED,                                    &
                              LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
@@ -1416,19 +1415,6 @@ contains
     qseeptomvr = DZERO
     qgwet = DZERO
     this%uzfobj%pet = this%uzfobj%petmax
-!cdl    !
-!cdl    ! -- set kstp, kper, and maxrows
-!cdl    maxrows = 0
-!cdl    if (this%iprflow /= 0) then
-!cdl      call this%outputtab%set_kstpkper(kstp, kper)
-!cdl      do i = 1, this%nodes
-!cdl        node = this%nodelist(i)
-!cdl        if (this%ibound(node) > 0) then
-!cdl          maxrows = maxrows + 1
-!cdl        end if
-!cdl      end do
-!cdl      call this%outputtab%set_maxbound(maxrows)
-!cdl    end if
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes

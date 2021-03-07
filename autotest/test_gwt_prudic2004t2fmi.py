@@ -298,6 +298,23 @@ def run_flow_model():
             sfstage = bobj.get_data().flatten()
             bobj.file.close()
 
+    if mover_on:
+        fname = gwfname + '.mvr.bud'
+        fname = os.path.join(wsf, fname)
+        bobj = flopy.utils.CellBudgetFile(fname, precision='double')
+        ra = bobj.recordarray
+        print(ra)
+        print(ra.dtype)
+        for idx in range(ra.shape[0]):
+            d = bobj.get_data(idx=idx)[0]
+            if d.shape[0] > 0:
+                p1 = ra[idx]["paknam"].decode().strip()
+                p2 = ra[idx]["paknam2"].decode().strip()
+                print(ra[idx]["kstp"], ra[idx]["kper"], ra[idx]["paknam"], ra[idx]["paknam2"])
+                for node, node2, q in d:
+                    print(p1, node, p2, node2, q)
+
+
     return
 
 
@@ -533,8 +550,8 @@ def test_prudic2004t2fmi():
     run_flow_model()
     run_transport_model()
     d = os.path.join(testdir, testgroup)
-    if os.path.isdir(d):
-        shutil.rmtree(d)
+#    if os.path.isdir(d):
+#        shutil.rmtree(d)
     return
 
 

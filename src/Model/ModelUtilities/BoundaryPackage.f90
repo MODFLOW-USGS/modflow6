@@ -621,29 +621,6 @@ module BndModule
             !
             ! -- Calculate the flow rate into the cell.
             rrate = this%hcof(i) * hnew(node) - this%rhs(i)
-            !
-            ! -- modify rrate with to mover
-!cdl            if (rrate < DZERO) then
-!cdl              if (imover == 1) then
-!cdl                qtomvr = this%pakmvrobj%get_qtomvr(i)
-!cdl                !
-!cdl                ! -- Evaluate if qtomvr exceeds the calculated rrate.
-!cdl                !    When fact is greater than 1, qtomvr is numerically
-!cdl                !    larger than rrate (which should never happen) and 
-!cdl                !    represents a water budget error. When this happens,
-!cdl                !    rrate is set to 0. so that the water budget error is
-!cdl                !    correctly accounted for in the listing water budget. 
-!cdl                fact = -qtomvr / rrate
-!cdl                if (fact > DONE) then
-!cdl                  ! -- all flow goes to mover
-!cdl                  rrate = DZERO
-!cdl                else
-!cdl                  ! -- magnitude of rrate (which is negative) is reduced by 
-!cdl                  !    qtomvr (which is positive)
-!cdl                  rrate = rrate + qtomvr
-!cdl                end if
-!cdl              end if
-!cdl            end if
           end if
           flowja(idiag) = flowja(idiag) + rrate
         end if
