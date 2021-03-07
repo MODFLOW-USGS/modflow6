@@ -74,7 +74,6 @@ def get_compiler_envvar(fc):
             fc = env_var
     return fc
 
-
 def build_mf6():
     pm = pymake.Pymake()
     pm.target = "mf6" + eext
@@ -106,7 +105,6 @@ def build_mf6_so():
     pm.appdir = os.path.join("..", "bin")
     pm.excludefiles = [os.path.join(pm.srcdir2, "mf6.f90")]
     pm.include_subdirs = True
-    pm.sharedobject = True
     pm.inplace = True
     pm.makeclean = True
 
@@ -128,6 +126,7 @@ def build_mf5to6():
     # define default compilers
     fc = "gfortran"
     cc = None
+    fflags = None
 
     # reset compiler based on environmental variable, if defined
     fc = get_compiler_envvar(fc)
@@ -136,7 +135,8 @@ def build_mf5to6():
     for idx, arg in enumerate(sys.argv):
         if arg == "-fc":
             fc = sys.argv[idx + 1]
-            break
+        elif arg in ("-ff", "--fflags"):
+            fflags = sys.argv[idx + 1]
 
     # set source and target paths
     srcdir = os.path.join("..", "utils", "mf5to6", "src")
@@ -152,6 +152,7 @@ def build_mf5to6():
         target,
         fc=fc,
         cc=cc,
+        fflags=fflags,
         include_subdirs=True,
         extrafiles=extrafiles,
         inplace=True,
