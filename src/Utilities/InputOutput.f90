@@ -20,7 +20,7 @@ module InputOutputModule
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
             same_word, get_node, get_ijk, unitinquire,                         &
             ParseLine, ulaprufw, openfile,                                     &
-            linear_interpolate, lowcase,                                       &
+            lowcase,                                                           &
             read_line, uget_any_block,                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, uget_block_line, print_format, BuildFixedFormat,           &
@@ -1638,36 +1638,6 @@ module InputOutputModule
     !
     return
   end subroutine ulaprufw
-
-  function linear_interpolate(t0, t1, y0, y1, t) result(y)
-    implicit none
-    ! -- dummy
-    real(DP), intent(in) :: t, t0, t1, y0, y1
-    real(DP)             :: y
-    ! -- local
-    real(DP) :: delt, dely, slope
-    character(len=100) :: msg
-    !
-    ! -- don't get bitten by rounding errors or divide-by-zero
-    if (IS_SAME(t0, t1) .or. IS_SAME(t, t1)) then
-      y = y1
-    elseif (t == t0) then
-      y = y0
-    elseif ((t0 < t .and. t < t1) .or. (t1 < t .and. t < t0)) then
-      ! -- perform linear interpolation
-      delt = t1 - t0
-      dely = y1 - y0
-      slope = dely / delt
-      y = y0 + slope * (t - t0)
-    else
-      ! -- t is outside range t0 to t1
-      msg = 'Error: in linear_interpolate, t is outside range t0 to t1'
-      call store_error(msg)
-      call ustop()
-    endif
-    !
-    return
-  end function linear_interpolate
 
   function read_line(iu, eof) result (astring)
     ! This function reads a line of arbitrary length and returns

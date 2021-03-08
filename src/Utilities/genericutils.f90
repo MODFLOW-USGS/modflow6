@@ -10,8 +10,9 @@ module GenericUtilitiesModule
   
   public :: sim_message
   public :: write_centered
-  public :: is_same
   public :: stop_with_error
+  public :: is_same
+  public :: linear_interpolate
 
   contains
 
@@ -167,6 +168,44 @@ module GenericUtilitiesModule
     ! -- retirn
     return
   end subroutine write_centered
+
+
+  subroutine stop_with_error(ierr)
+  ! ******************************************************************************
+  ! Stop the program and issue the correct return code 
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    integer(I4B), intent(in), optional :: ierr
+    ! -- local
+    integer(I4B) :: ireturn_err
+  !-------------------------------------------------------------------------------
+    !
+    ! -- process optional dummy variables
+    if (present(ierr)) then
+      ireturn_err = ierr
+    else
+      ireturn_err = 0
+    end if
+  
+    ! -- return the correct return code
+    select case (ireturn_err)
+      case (0)
+        stop
+      case (1)
+        stop 1
+      case (2)
+        stop 2
+      case (138)
+        stop 138
+      case default
+        stop 999
+    end select
+  
+  end subroutine stop_with_error  
   
   function is_same(a, b, eps) result(lvalue)
   ! ******************************************************************************
@@ -221,42 +260,30 @@ module GenericUtilitiesModule
     ! -- return
     return
   end function is_same
-
-  subroutine stop_with_error(ierr)
-  ! ******************************************************************************
-  ! Stop the program and issue the correct return code 
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-    ! -- modules
+  
+  function linear_interpolate(t0, t1, y0, y1, t) result(y)
+    implicit none
     ! -- dummy
-    integer(I4B), intent(in), optional :: ierr
+    real(DP), intent(in) :: t, t0, t1, y0, y1
+    real(DP)             :: y
     ! -- local
-    integer(I4B) :: ireturn_err
-  !-------------------------------------------------------------------------------
+    real(DP) :: delt, dely, slope
+    character(len=100) :: msg
     !
-    ! -- process optional dummy variables
-    if (present(ierr)) then
-      ireturn_err = ierr
-    else
-      ireturn_err = 0
-    end if
-  
-    ! -- return the correct return code
-    select case (ireturn_err)
-      case (0)
-        stop
-      case (1)
-        stop 1
-      case (2)
-        stop 2
-      case (138)
-        stop 138
-      case default
-        stop 999
-    end select
-  
-  end subroutine stop_with_error  
+    ! -- don't get bitten by rounding errors or divide-by-zero
+    if (IS_SAME(t0, t1) .or. IS_SAME(t, t1)) then
+      y = y1
+    elseif (t == t0) then
+      y = y0
+    elseif ((t0 < t .and. t < t1) .or. (t1 < t .and. t < t0)) then
+      ! -- perform linear interpolation
+      delt = t1 - t0
+      dely = y1 - y0
+      slope = dely / delt
+      y = y0 + slope * (t - t0)
+    endif
+    !
+    return
+  end function linear_interpolate
 
   end module GenericUtilitiesModule
