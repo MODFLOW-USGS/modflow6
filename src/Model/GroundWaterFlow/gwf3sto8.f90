@@ -34,8 +34,8 @@ module GwfStoModule
     procedure :: sto_fc
     procedure :: sto_fn
     procedure :: sto_cq
-    procedure :: bdcalc   => sto_bdcalc
-    procedure :: bdsav    => sto_bdsav
+    procedure :: sto_mb
+    procedure :: sto_save_model_flows
     procedure :: sto_da
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
@@ -437,7 +437,7 @@ module GwfStoModule
 
   subroutine sto_cq(this, flowja, hnew, hold)
 ! ******************************************************************************
-! sto_bdcalc -- Calculate budget terms
+! sto_cq -- Calculate storage flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -528,9 +528,9 @@ module GwfStoModule
     return
   end subroutine sto_cq
 
-  subroutine sto_bdcalc(this, isuppress_output, model_budget)
+  subroutine sto_mb(this, isuppress_output, model_budget)
 ! ******************************************************************************
-! sto_bdcalc -- Calculate budget terms
+! sto_mb -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -561,11 +561,11 @@ module GwfStoModule
     !
     ! -- Return
     return
-  end subroutine sto_bdcalc
+  end subroutine sto_mb
   
-  subroutine sto_bdsav(this, icbcfl, icbcun)
+  subroutine sto_save_model_flows(this, icbcfl, icbcun)
 ! ******************************************************************************
-! sto_bdsav -- Save budget terms
+! sto_save_model_flows -- Save budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -611,7 +611,7 @@ module GwfStoModule
     !
     ! -- Return
     return
-  end subroutine sto_bdsav
+  end subroutine sto_save_model_flows
 
   subroutine sto_da(this)
 ! ******************************************************************************

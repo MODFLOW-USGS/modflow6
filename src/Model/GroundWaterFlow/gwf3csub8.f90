@@ -220,9 +220,13 @@ module GwfCsubModule
     procedure :: csub_fc
     procedure :: csub_fn
     procedure :: csub_cc
+    procedure :: csub_cq
+    procedure :: csub_mb
+    procedure :: csub_save_model_flows
+    procedure :: csub_ot_dv
     procedure :: csub_fp
-    procedure :: bdcalc => csub_bdcalc
-    procedure :: bdsav => csub_bdsav
+!cdl    procedure :: bdcalc => csub_bdcalc
+!cdl    procedure :: bdsav => csub_bdsav
     procedure :: read_dimensions => csub_read_dimensions
     procedure, private :: csub_allocate_scalars
     procedure, private :: csub_allocate_arrays
@@ -288,7 +292,7 @@ module GwfCsubModule
     procedure, public :: csub_obs_supported
     procedure, public :: csub_df_obs
     procedure, private :: csub_rp_obs
-    procedure, private :: csub_bd_obs
+    procedure, public :: csub_bd_obs
   end type GwfCsubType
 
 contains
@@ -3199,28 +3203,26 @@ contains
     return
   end subroutine csub_cc
 
-  !> @ brief Budget calculation for package
+  !> @ brief Calculate flows for package
   !!
-  !!  Budget calculation for the CSUB package components. Components include
+  !!  Flow calculation for the CSUB package components. Components include
   !!  coarse-grained storage, delay and no-delay interbeds, and water
   !!  compressibility.
   !!
   !!  @param[in,out]  model_budget  model budget object
   !!
   !<
-  subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, &
-                         model_budget)
+  subroutine csub_cq(this, nodes, hnew, hold, isuppress_output, flowja)
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
-    use BudgetModule, only: BudgetType
     ! -- dummy variables
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes                 !< number of active model nodes
     real(DP), intent(in), dimension(nodes) :: hnew    !< current head
     real(DP), intent(in), dimension(nodes) :: hold    !< head for the previous time step
     integer(I4B), intent(in) :: isuppress_output      !< flag indicating if budget output should be suppressed
-    type(BudgetType), intent(inout) :: model_budget   !< model budget object
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local variables
     integer(I4B) :: ib
     integer(I4B) :: idelay
@@ -3229,6 +3231,7 @@ contains
     integer(I4B) :: node
     integer(I4B) :: nn
     integer(I4B) :: n
+    integer(I4B) :: idiag
     real(DP) :: es
     real(DP) :: pcs
     real(DP) :: rho1
@@ -3253,15 +3256,7 @@ contains
     real(DP) :: stoi
     real(DP) :: b
     real(DP) :: q
-    real(DP) :: ratecgin
-    real(DP) :: ratecgout
-    real(DP) :: rateibein
-    real(DP) :: rateibeout
-    real(DP) :: rateibiin
-    real(DP) :: rateibiout
     real(DP) :: rratewc
-    real(DP) :: ratewcin
-    real(DP) :: ratewcout
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -3271,13 +3266,10 @@ contains
     iprobslocal = 0
     ratein = DZERO
     rateout = DZERO
-    ratewcin = DZERO
-    ratewcout = DZERO
     !
     ! -- coarse-grained coarse-grained storage
-    ratecgin = DZERO
-    ratecgout = DZERO
     do node = 1, this%dis%nodes
+      idiag = this%dis%con%ia(node)
       area = this%dis%get_area(node)
       comp = DZERO
       rrate = DZERO
@@ -3298,24 +3290,10 @@ contains
           ! -- calculate compaction
           call this%csub_cg_calc_comp(node, hnew(node), hold(node), comp)
           !
-          ! -- budget terms
-          if (rrate < DZERO) then
-            ratecgout = ratecgout - rrate
-          else
-            ratecgin = ratecgin + rrate
-          end if
-          !
           ! -- calculate coarse-grained water compressibility storage terms
           call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node), &
                                      hcof, rhs)
           rratewc = hcof*hnew(node) - rhs
-          !
-          ! -- water compressibility budget terms
-          if (rratewc < DZERO) then
-            ratewcout = ratewcout - rratewc
-          else
-            ratewcin = ratewcin + rratewc
-          end if
         end if
       end if
       !
@@ -3333,6 +3311,7 @@ contains
       if (isuppress_output == 0) then
         !
         ! -- calculate strain and change in coarse-grained void ratio and thickness
+        ! todo: consider moving error check in csub_cg_update to ot()
         if (this%iupdatematprop /= 0) then
           call this%csub_cg_update(node)
         end if
@@ -3340,13 +3319,13 @@ contains
         ! -- update total compaction
         this%cg_tcomp(node) = this%cg_tcomp(node) + comp
       end if
+      !
+      ! -- update flowja
+      flowja(idiag) = flowja(idiag) + rrate
+      flowja(idiag) = flowja(idiag) + rratewc
     end do
     !
     ! -- interbed storage
-    rateibein = DZERO
-    rateibeout = DZERO
-    rateibiin = DZERO
-    rateibiout = DZERO
     !
     ! -- reset delay bed counters for the current time step
     if (this%ndelaybeds > 0) then
@@ -3373,6 +3352,7 @@ contains
       !
       ! -- set variables required for no-delay and delay interbeds
       node = this%nodelist(ib)
+      idiag = this%dis%con%ia(node)
       area = this%dis%get_area(node)
       !
       ! -- add interbed thickness to cell thickness
@@ -3461,6 +3441,7 @@ contains
             call this%csub_delay_calc_comp(ib, h, h0, comp, compi, compe)
             !
             ! - calculate strain and change in interbed void ratio and thickness
+            ! todo: consider moving error check in csub_delay_update to ot()
             if (this%iupdatematprop /= 0) then
               call this%csub_delay_update(ib)
             end if
@@ -3481,18 +3462,6 @@ contains
           end if
         end if
         !
-        ! -- budget terms
-        if (this%storagee(ib) < DZERO) then
-          rateibeout = rateibeout - this%storagee(ib)
-        else
-          rateibein = rateibein + this%storagee(ib)
-        end if
-        if (this%storagei(ib) < DZERO) then
-          rateibiout = rateibiout - this%storagei(ib)
-        else
-          rateibiin = rateibiin + this%storagei(ib)
-        end if
-        !
         ! -- interbed water compressibility
         !
         ! -- no-delay interbed
@@ -3508,12 +3477,8 @@ contains
         end if
         this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
         !
-        ! -- water compressibility budget terms
-        if (rratewc < DZERO) then
-          ratewcout = ratewcout - rratewc
-        else
-          ratewcin = ratewcin + rratewc
-        end if
+        ! -- flowja
+        flowja(idiag) = flowja(idiag) + rratewc
       else
         this%storagee(ib) = DZERO
         this%storagei(ib) = DZERO
@@ -3522,30 +3487,11 @@ contains
           this%dbflowbot(idelay) = DZERO
         end if
       end if
+      !
+      ! -- flowja
+      flowja(idiag) = flowja(idiag) + this%storagee(ib)
+      flowja(idiag) = flowja(idiag) + this%storagei(ib)
     end do
-    !
-    ! -- Add contributions to model budget
-    !
-    ! -- interbed elastic storage
-    call model_budget%addentry(ratecgin, ratecgout, delt, budtxt(1), &
-                               isuppress_output, '            CSUB')
-    if (this%ninterbeds > 0) then
-      !
-      ! -- interbed elastic storage
-      call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2), &
-                                 isuppress_output, '            CSUB')
-      !
-      ! -- interbed elastic storage
-      call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3), &
-                                 isuppress_output, '            CSUB')
-    end if
-    call model_budget%addentry(ratewcin, ratewcout, delt, budtxt(4), &
-                               isuppress_output, '            CSUB')
-    !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0) then
-      call this%csub_bd_obs()
-    end if
     !
     ! -- terminate if errors encountered when updating material properties
     if (this%iupdatematprop /= 0) then
@@ -3558,7 +3504,736 @@ contains
     ! -- return
     return
 
-  end subroutine csub_bdcalc
+  end subroutine csub_cq
+
+  !> @ brief Model budget calculation for package
+  !!
+  !!  Budget calculation for the CSUB package components. Components include
+  !!  coarse-grained storage, delay and no-delay interbeds, and water
+  !!  compressibility.
+  !!
+  !!  @param[in,out]  model_budget  model budget object
+  !!
+  !<
+  subroutine csub_mb(this, isuppress_output, model_budget)
+    ! -- modules
+    use TdisModule, only: delt
+    use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
+    use BudgetModule, only: BudgetType, rate_accumulator
+    ! -- dummy variables
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: isuppress_output
+    type(BudgetType), intent(inout) :: model_budget   !< model budget object
+    ! -- local
+    real(DP) :: rin
+    real(DP) :: rout
+    !
+    ! -- interbed elastic storage  (this%cg_stor)
+    call rate_accumulator(this%cg_stor, rin, rout)
+    call model_budget%addentry(rin, rout, delt, budtxt(1), &
+                               isuppress_output, '            CSUB')
+    if (this%ninterbeds > 0) then
+      !
+      ! -- interbed elastic storage (this%storagee)
+      call rate_accumulator(this%storagee, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(2), &
+                                 isuppress_output, '            CSUB')
+      !
+      ! -- interbed elastic storage (this%storagei)
+      call rate_accumulator(this%storagei, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(3), &
+                                 isuppress_output, '            CSUB')
+    end if
+    call rate_accumulator(this%cell_wcstor, rin, rout)
+    call model_budget%addentry(rin, rout, delt, budtxt(4), &  
+                               isuppress_output, '            CSUB')
+    return
+  end subroutine csub_mb
+    
+!cdl  !> @ brief Budget calculation for package
+!cdl  !!
+!cdl  !!  Budget calculation for the CSUB package components. Components include
+!cdl  !!  coarse-grained storage, delay and no-delay interbeds, and water
+!cdl  !!  compressibility.
+!cdl  !!
+!cdl  !!  @param[in,out]  model_budget  model budget object
+!cdl  !!
+!cdl  !<
+!cdl  subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, &
+!cdl                         model_budget)
+!cdl    ! -- modules
+!cdl    use TdisModule, only: delt
+!cdl    use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
+!cdl    use BudgetModule, only: BudgetType
+!cdl    ! -- dummy variables
+!cdl    class(GwfCsubType) :: this
+!cdl    integer(I4B), intent(in) :: nodes                 !< number of active model nodes
+!cdl    real(DP), intent(in), dimension(nodes) :: hnew    !< current head
+!cdl    real(DP), intent(in), dimension(nodes) :: hold    !< head for the previous time step
+!cdl    integer(I4B), intent(in) :: isuppress_output      !< flag indicating if budget output should be suppressed
+!cdl    type(BudgetType), intent(inout) :: model_budget   !< model budget object
+!cdl    ! -- local variables
+!cdl    integer(I4B) :: ib
+!cdl    integer(I4B) :: idelay
+!cdl    integer(I4B) :: ielastic
+!cdl    integer(I4B) :: iconvert
+!cdl    integer(I4B) :: node
+!cdl    integer(I4B) :: nn
+!cdl    integer(I4B) :: n
+!cdl    real(DP) :: es
+!cdl    real(DP) :: pcs
+!cdl    real(DP) :: rho1
+!cdl    real(DP) :: rho2
+!cdl    real(DP) :: tled
+!cdl    real(DP) :: tledm
+!cdl    real(DP) :: es0
+!cdl    real(DP) :: rrate
+!cdl    real(DP) :: ratein
+!cdl    real(DP) :: rateout
+!cdl    real(DP) :: comp
+!cdl    real(DP) :: compi
+!cdl    real(DP) :: compe
+!cdl    real(DP) :: area
+!cdl    real(DP) :: h
+!cdl    real(DP) :: h0
+!cdl    real(DP) :: snnew
+!cdl    real(DP) :: snold
+!cdl    real(DP) :: hcof
+!cdl    real(DP) :: rhs
+!cdl    real(DP) :: stoe
+!cdl    real(DP) :: stoi
+!cdl    real(DP) :: b
+!cdl    real(DP) :: q
+!cdl    real(DP) :: ratecgin
+!cdl    real(DP) :: ratecgout
+!cdl    real(DP) :: rateibein
+!cdl    real(DP) :: rateibeout
+!cdl    real(DP) :: rateibiin
+!cdl    real(DP) :: rateibiout
+!cdl    real(DP) :: rratewc
+!cdl    real(DP) :: ratewcin
+!cdl    real(DP) :: ratewcout
+!cdl    ! -- for observations
+!cdl    integer(I4B) :: iprobslocal
+!cdl    ! -- formats
+!cdl    !
+!cdl    ! -- Suppress saving of simulated values; they
+!cdl    !    will be saved at end of this procedure.
+!cdl    iprobslocal = 0
+!cdl    ratein = DZERO
+!cdl    rateout = DZERO
+!cdl    ratewcin = DZERO
+!cdl    ratewcout = DZERO
+!cdl    !
+!cdl    ! -- coarse-grained coarse-grained storage
+!cdl    ratecgin = DZERO
+!cdl    ratecgout = DZERO
+!cdl    do node = 1, this%dis%nodes
+!cdl      area = this%dis%get_area(node)
+!cdl      comp = DZERO
+!cdl      rrate = DZERO
+!cdl      rratewc = DZERO
+!cdl      if (this%gwfiss == 0) then
+!cdl        if (DELT > DZERO) then
+!cdl          tled = DONE/DELT
+!cdl        else
+!cdl          tled = DZERO
+!cdl        end if
+!cdl        if (this%ibound(node) > 0 .and. this%cg_thickini(node) > DZERO) then
+!cdl          !
+!cdl          ! -- calculate coarse-grained storage terms
+!cdl          call this%csub_cg_fc(node, tled, area, hnew(node), hold(node), &
+!cdl                               hcof, rhs)
+!cdl          rrate = hcof*hnew(node) - rhs
+!cdl          !
+!cdl          ! -- calculate compaction
+!cdl          call this%csub_cg_calc_comp(node, hnew(node), hold(node), comp)
+!cdl          !
+!cdl          ! -- budget terms
+!cdl          if (rrate < DZERO) then
+!cdl            ratecgout = ratecgout - rrate
+!cdl          else
+!cdl            ratecgin = ratecgin + rrate
+!cdl          end if
+!cdl          !
+!cdl          ! -- calculate coarse-grained water compressibility storage terms
+!cdl          call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node), &
+!cdl                                     hcof, rhs)
+!cdl          rratewc = hcof*hnew(node) - rhs
+!cdl          !
+!cdl          ! -- water compressibility budget terms
+!cdl          if (rratewc < DZERO) then
+!cdl            ratewcout = ratewcout - rratewc
+!cdl          else
+!cdl            ratewcin = ratewcin + rratewc
+!cdl          end if
+!cdl        end if
+!cdl      end if
+!cdl      !
+!cdl      ! -- update coarse-grained storage and water
+!cdl      !    compresion variables
+!cdl      this%cg_stor(node) = rrate
+!cdl      this%cell_wcstor(node) = rratewc
+!cdl      this%cell_thick(node) = this%cg_thick(node)
+!cdl      !
+!cdl      ! -- update incremental coarse-grained compaction
+!cdl      this%cg_comp(node) = comp
+!cdl      !
+!cdl      !
+!cdl      ! -- update states if required
+!cdl      if (isuppress_output == 0) then
+!cdl        !
+!cdl        ! -- calculate strain and change in coarse-grained void ratio and thickness
+!cdl        if (this%iupdatematprop /= 0) then
+!cdl          call this%csub_cg_update(node)
+!cdl        end if
+!cdl        !
+!cdl        ! -- update total compaction
+!cdl        this%cg_tcomp(node) = this%cg_tcomp(node) + comp
+!cdl      end if
+!cdl    end do
+!cdl    !
+!cdl    ! -- interbed storage
+!cdl    rateibein = DZERO
+!cdl    rateibeout = DZERO
+!cdl    rateibiin = DZERO
+!cdl    rateibiout = DZERO
+!cdl    !
+!cdl    ! -- reset delay bed counters for the current time step
+!cdl    if (this%ndelaybeds > 0) then
+!cdl      this%idb_nconv_count(1) = 0
+!cdl    end if
+!cdl    !
+!cdl    ! -- initialize tled
+!cdl    tled = DONE
+!cdl    !
+!cdl    ! -- calculate budget terms for each interbed
+!cdl    do ib = 1, this%ninterbeds
+!cdl      rratewc = DZERO
+!cdl      idelay = this%idelay(ib)
+!cdl      ielastic = this%ielastic(ib)
+!cdl      !
+!cdl      ! -- calculate interbed thickness
+!cdl      ! -- no delay interbeds
+!cdl      if (idelay == 0) then
+!cdl        b = this%thick(ib)
+!cdl        ! -- delay interbeds
+!cdl      else
+!cdl        b = this%thick(ib)*this%rnb(ib)
+!cdl      end if
+!cdl      !
+!cdl      ! -- set variables required for no-delay and delay interbeds
+!cdl      node = this%nodelist(ib)
+!cdl      area = this%dis%get_area(node)
+!cdl      !
+!cdl      ! -- add interbed thickness to cell thickness
+!cdl      this%cell_thick(node) = this%cell_thick(node) + b
+!cdl      !
+!cdl      ! -- update budget terms if transient stress period
+!cdl      if (this%gwfiss == 0) then
+!cdl        if (DELT > DZERO) then
+!cdl          tledm = DONE/DELT
+!cdl        else
+!cdl          tledm = DZERO
+!cdl        end if
+!cdl        !
+!cdl        ! -- skip inactive and constant head cells
+!cdl        if (this%ibound(node) < 1) cycle
+!cdl        !
+!cdl        ! -- no delay interbeds
+!cdl        if (idelay == 0) then
+!cdl          iconvert = this%iconvert(ib)
+!cdl          stoi = DZERO
+!cdl          !
+!cdl          ! -- calculate compaction
+!cdl          call this%csub_nodelay_calc_comp(ib, hnew(node), hold(node), comp, &
+!cdl                                           rho1, rho2)
+!cdl          !
+!cdl          ! -- interbed stresses
+!cdl          es = this%cg_es(node)
+!cdl          pcs = this%pcs(ib)
+!cdl          es0 = this%cg_es0(node)
+!cdl          !
+!cdl          ! -- calculate inelastic and elastic compaction
+!cdl          if (ielastic > 0 .or. iconvert == 0) then
+!cdl            stoe = comp
+!cdl          else
+!cdl            stoi = -pcs*rho2 + (rho2*es)
+!cdl            stoe = pcs*rho1 - (rho1*es0)
+!cdl          end if
+!cdl          compe = stoe
+!cdl          compi = stoi
+!cdl          stoe = stoe*area
+!cdl          stoi = stoi*area
+!cdl          this%storagee(ib) = stoe*tledm
+!cdl          this%storagei(ib) = stoi*tledm
+!cdl          !
+!cdl          ! -- update compaction
+!cdl          this%comp(ib) = comp
+!cdl          !
+!cdl          ! -- update states if required
+!cdl          if (isuppress_output == 0) then
+!cdl            !
+!cdl            ! -- calculate strain and change in interbed void ratio and thickness
+!cdl            if (this%iupdatematprop /= 0) then
+!cdl              call this%csub_nodelay_update(ib)
+!cdl            end if
+!cdl            !
+!cdl            ! -- update total compaction
+!cdl            this%tcomp(ib) = this%tcomp(ib) + comp
+!cdl            this%tcompe(ib) = this%tcompe(ib) + compe
+!cdl            this%tcompi(ib) = this%tcompi(ib) + compi
+!cdl          end if
+!cdl          !
+!cdl          ! -- delay interbeds
+!cdl        else
+!cdl          h = hnew(node)
+!cdl          h0 = hold(node)
+!cdl          !
+!cdl          ! -- calculate cell saturation
+!cdl          call this%csub_calc_sat(node, h, h0, snnew, snold)
+!cdl          !
+!cdl          ! -- calculate inelastic and elastic storage contributions
+!cdl          call this%csub_delay_calc_dstor(ib, h, stoe, stoi)
+!cdl          this%storagee(ib) = stoe*area*this%rnb(ib)*tledm
+!cdl          this%storagei(ib) = stoi*area*this%rnb(ib)*tledm
+!cdl          !
+!cdl          ! -- calculate flow across the top and bottom of the delay interbed
+!cdl          q = this%csub_calc_delay_flow(ib, 1, h)*area*this%rnb(ib)
+!cdl          this%dbflowtop(idelay) = q
+!cdl          nn = this%ndelaycells
+!cdl          q = this%csub_calc_delay_flow(ib, nn, h)*area*this%rnb(ib)
+!cdl          this%dbflowbot(idelay) = q
+!cdl          !
+!cdl          ! -- update states if required
+!cdl          if (isuppress_output == 0) then
+!cdl            !
+!cdl            ! -- calculate sum of compaction in delay interbed
+!cdl            call this%csub_delay_calc_comp(ib, h, h0, comp, compi, compe)
+!cdl            !
+!cdl            ! - calculate strain and change in interbed void ratio and thickness
+!cdl            if (this%iupdatematprop /= 0) then
+!cdl              call this%csub_delay_update(ib)
+!cdl            end if
+!cdl            !
+!cdl            ! -- update total compaction for interbed
+!cdl            this%tcomp(ib) = this%tcomp(ib) + comp
+!cdl            this%tcompi(ib) = this%tcompi(ib) + compi
+!cdl            this%tcompe(ib) = this%tcompe(ib) + compe
+!cdl            !
+!cdl            ! -- update total compaction for each delay bed cell
+!cdl            do n = 1, this%ndelaycells
+!cdl              this%dbtcomp(n, idelay) = this%dbtcomp(n, idelay) + this%dbcomp(n, idelay)
+!cdl            end do
+!cdl            !
+!cdl            ! -- check delay bed heads relative to the top and bottom of each
+!cdl            !    delay bed cell for convertible and non-convertible gwf cells
+!cdl            call this%csub_delay_head_check(ib)
+!cdl          end if
+!cdl        end if
+!cdl        !
+!cdl        ! -- budget terms
+!cdl        if (this%storagee(ib) < DZERO) then
+!cdl          rateibeout = rateibeout - this%storagee(ib)
+!cdl        else
+!cdl          rateibein = rateibein + this%storagee(ib)
+!cdl        end if
+!cdl        if (this%storagei(ib) < DZERO) then
+!cdl          rateibiout = rateibiout - this%storagei(ib)
+!cdl        else
+!cdl          rateibiin = rateibiin + this%storagei(ib)
+!cdl        end if
+!cdl        !
+!cdl        ! -- interbed water compressibility
+!cdl        !
+!cdl        ! -- no-delay interbed
+!cdl        if (idelay == 0) then
+!cdl          call this%csub_nodelay_wcomp_fc(ib, node, tledm, area, &
+!cdl                                          hnew(node), hold(node), hcof, rhs)
+!cdl          rratewc = hcof*hnew(node) - rhs
+!cdl          !
+!cdl          ! -- delay interbed
+!cdl        else
+!cdl          call this%csub_delay_calc_wcomp(ib, q)
+!cdl          rratewc = q*area*this%rnb(ib)
+!cdl        end if
+!cdl        this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
+!cdl        !
+!cdl        ! -- water compressibility budget terms
+!cdl        if (rratewc < DZERO) then
+!cdl          ratewcout = ratewcout - rratewc
+!cdl        else
+!cdl          ratewcin = ratewcin + rratewc
+!cdl        end if
+!cdl      else
+!cdl        this%storagee(ib) = DZERO
+!cdl        this%storagei(ib) = DZERO
+!cdl        if (idelay /= 0) then
+!cdl          this%dbflowtop(idelay) = DZERO
+!cdl          this%dbflowbot(idelay) = DZERO
+!cdl        end if
+!cdl      end if
+!cdl    end do
+!cdl    !
+!cdl    ! -- Add contributions to model budget
+!cdl    !
+!cdl    ! -- interbed elastic storage
+!cdl    call model_budget%addentry(ratecgin, ratecgout, delt, budtxt(1), &
+!cdl                               isuppress_output, '            CSUB')
+!cdl    if (this%ninterbeds > 0) then
+!cdl      !
+!cdl      ! -- interbed elastic storage
+!cdl      call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2), &
+!cdl                                 isuppress_output, '            CSUB')
+!cdl      !
+!cdl      ! -- interbed elastic storage
+!cdl      call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3), &
+!cdl                                 isuppress_output, '            CSUB')
+!cdl    end if
+!cdl    call model_budget%addentry(ratewcin, ratewcout, delt, budtxt(4), &
+!cdl                               isuppress_output, '            CSUB')
+!cdl    !
+!cdl    ! -- For continuous observations, save simulated values.
+!cdl    if (this%obs%npakobs > 0) then
+!cdl      call this%csub_bd_obs()
+!cdl    end if
+!cdl    !
+!cdl    ! -- terminate if errors encountered when updating material properties
+!cdl    if (this%iupdatematprop /= 0) then
+!cdl      if (count_errors() > 0) then
+!cdl        call this%parser%StoreErrorUnit()
+!cdl        call ustop()
+!cdl      end if
+!cdl    end if
+!cdl    !
+!cdl    ! -- return
+!cdl    return
+!cdl
+!cdl  end subroutine csub_bdcalc
+
+!> @ brief Save model flows for package
+!!
+!!  Save cell-by-cell budget terms for the CSUB package. 
+!!
+!<
+  subroutine csub_save_model_flows(this, icbcfl, icbcun)
+    ! -- dummy variables
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: icbcfl    !< flag to output budget data
+    integer(I4B), intent(in) :: icbcun    !< unit number for cell-by-cell file
+    ! -- local variables
+    character(len=1) :: cdatafmp = ' '
+    character(len=1) :: editdesc = ' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint
+    integer(I4B) :: nvaluesp
+    integer(I4B) :: nwidthp
+    integer(I4B) :: ib
+    integer(I4B) :: node
+    integer(I4B) :: naux
+    real(DP) :: dinact
+    real(DP) :: Q
+    ! -- formats
+    !
+    ! -- Set unit number for binary output
+    if (this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif (this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    end if
+    if (icbcfl == 0) ibinun = 0
+    !
+    ! -- Record the storage rates if requested
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DZERO
+      !
+      ! -- coarse-grained storage (sske)
+      call this%dis%record_array(this%cg_stor, this%iout, iprint, -ibinun, &
+                                 budtxt(1), cdatafmp, nvaluesp, &
+                                 nwidthp, editdesc, dinact)
+      if (this%ninterbeds > 0) then
+        naux = 0
+        !
+        ! -- interbed elastic storage
+        call this%dis%record_srcdst_list_header(budtxt(2), this%name_model, &
+                                                this%name_model, this%name_model, this%packName, naux, &
+                                                this%auxname, ibinun, this%ninterbeds, this%iout)
+        do ib = 1, this%ninterbeds
+          q = this%storagee(ib)
+          node = this%nodelist(ib)
+          call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux, &
+                                              this%auxvar(:, ib))
+        end do
+        !
+        ! -- interbed inelastic storage
+        call this%dis%record_srcdst_list_header(budtxt(3), this%name_model, &
+                                                this%name_model, this%name_model, this%packName, naux, &
+                                                this%auxname, ibinun, this%ninterbeds, this%iout)
+        do ib = 1, this%ninterbeds
+          q = this%storagei(ib)
+          node = this%nodelist(ib)
+          call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux, &
+                                              this%auxvar(:, ib))
+        end do
+      end if
+      !
+      ! -- water compressibility
+      call this%dis%record_array(this%cell_wcstor, this%iout, iprint, -ibinun, &
+                                 budtxt(4), cdatafmp, nvaluesp, &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_save_model_flows
+
+!> @ brief Save and print dependent values for package
+!!
+!!  Method saves cell-by-cell compaction and z-displacement terms. The method 
+!!  also calls the method to process observation output.
+!!
+!<
+  subroutine csub_ot_dv(this, idvfl, idvprint)
+    ! -- dummy variables
+    class(GwfCsubType) :: this 
+    integer(I4B), intent(in) :: idvfl       !< flag to save dependent variable data
+    integer(I4B), intent(in) :: idvprint    !< flag to print dependent variable data
+    ! -- local variables
+    character(len=1) :: cdatafmp = ' '
+    character(len=1) :: editdesc = ' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint
+    integer(I4B) :: nvaluesp
+    integer(I4B) :: nwidthp
+    integer(I4B) :: ib
+    integer(I4B) :: node
+    integer(I4B) :: nodem
+    integer(I4B) :: nodeu
+    integer(I4B) :: i
+    integer(I4B) :: k
+    integer(I4B) :: ncpl
+    integer(I4B) :: nlay
+    integer(I4B) :: naux
+    real(DP) :: dinact
+    ! -- formats
+    character(len=*), parameter :: fmtnconv = &
+    "(/4x, 'DELAY INTERBED CELL HEADS IN ', i0, ' INTERBEDS IN',               &
+    &' NON-CONVERTIBLE GWF CELLS WERE LESS THAN THE TOP OF THE INTERBED CELL')"
+    !
+    ! -- Save compaction results
+    !
+    ! -- Set unit number for binary compaction and z-displacement output
+    if (this%ioutcomp /= 0 .or. this%ioutzdisp /= 0) then
+      ibinun = 1
+    else
+      ibinun = 0
+    end if
+    if (idvfl == 0) ibinun = 0
+    !
+    ! -- save compaction results
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with total compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = this%cg_tcomp(node)
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcomp(ib)
+      end do
+      !
+      ! -- write compaction data to binary file
+      if (this%ioutcomp /= 0) then
+        ibinun = this%ioutcomp
+        call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
+                                   comptxt(1), cdatafmp, nvaluesp, &
+                                   nwidthp, editdesc, dinact)
+      end if
+      !
+      ! -- calculate z-displacement (subsidence) and write data to binary file
+      if (this%ioutzdisp /= 0) then
+        ibinun = this%ioutzdisp
+        !
+        ! -- initialize buffusr
+        do nodeu = 1, this%dis%nodesuser
+          this%buffusr(nodeu) = DZERO
+        end do
+        !
+        ! -- fill buffusr with buff
+        do node = 1, this%dis%nodes
+          nodeu = this%dis%get_nodeuser(node)
+          this%buffusr(nodeu) = this%buff(node)
+        end do
+        !
+        ! -- calculate z-displacement
+        ncpl = this%dis%get_ncpl()
+        !
+        ! -- disu
+        if (this%dis%ndim == 1) then
+          ! TO DO -
+          ! -- disv or dis
+        else
+          nlay = this%dis%nodesuser/ncpl
+          do k = nlay - 1, 1, -1
+            do i = 1, ncpl
+              node = (k - 1)*ncpl + i
+              nodem = k*ncpl + i
+              this%buffusr(node) = this%buffusr(node) + this%buffusr(nodem)
+            end do
+          end do
+        end if
+        !
+        ! -- fill buff with data from buffusr
+        do nodeu = 1, this%dis%nodesuser
+          node = this%dis%get_nodenumber_idx1(nodeu, 1)
+          if (node /= 0) then
+            this%buff(node) = this%buffusr(nodeu)
+          end if
+        end do
+        !
+        ! -- write z-displacement
+        call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
+                                   comptxt(6), cdatafmp, nvaluesp, &
+                                   nwidthp, editdesc, dinact)
+
+      end if
+    end if
+    !
+    ! -- Set unit number for binary inelastic interbed compaction
+    if (this%ioutcompi /= 0) then
+      ibinun = this%ioutcompi
+    else
+      ibinun = 0
+    end if
+    if (idvfl == 0) ibinun = 0
+    !
+    ! -- save inelastic interbed compaction results
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with inelastic interbed compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = DZERO
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcompi(ib)
+      end do
+      !
+      ! -- write inelastic interbed compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
+                                 comptxt(2), cdatafmp, nvaluesp, &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
+    ! -- Set unit number for binary elastic interbed compaction
+    if (this%ioutcompe /= 0) then
+      ibinun = this%ioutcompe
+    else
+      ibinun = 0
+    end if
+    if (idvfl == 0) ibinun = 0
+    !
+    ! -- save elastic interbed compaction results
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with elastic interbed compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = DZERO
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcompe(ib)
+      end do
+      !
+      ! -- write elastic interbed compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
+                                 comptxt(3), cdatafmp, nvaluesp, &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
+    ! -- Set unit number for binary interbed compaction
+    if (this%ioutcompib /= 0) then
+      ibinun = this%ioutcompib
+    else
+      ibinun = 0
+    end if
+    if (idvfl == 0) ibinun = 0
+    !
+    ! -- save interbed compaction results
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with interbed compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = DZERO
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcompe(ib) + this%tcompi(ib)
+      end do
+      !
+      ! -- write interbed compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
+                                 comptxt(4), cdatafmp, nvaluesp, &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
+    ! -- Set unit number for binary coarse-grained compaction
+    if (this%ioutcomps /= 0) then
+      ibinun = this%ioutcomps
+    else
+      ibinun = 0
+    end if
+    if (idvfl == 0) ibinun = 0
+    !
+    ! -- save coarse-grained compaction results
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with coarse-grained compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = this%cg_tcomp(node)
+      end do
+      !
+      ! -- write coarse-grained compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun, &
+                                 comptxt(5), cdatafmp, nvaluesp, &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
+    ! -- check that final effective stress values for the time step
+    !    are greater than zero
+    if (this%gwfiss == 0) then
+      call this%csub_cg_chk_stress()
+    end if
+    !
+    ! -- update maximum count of delay interbeds that violate
+    !    basic head assumptions for delay beds and write a message
+    !    for delay interbeds in non-convertible gwf cells that
+    !    violate these head assumptions
+    if (this%ndelaybeds > 0) then
+      if (this%idb_nconv_count(1) > this%idb_nconv_count(2)) then
+        this%idb_nconv_count(2) = this%idb_nconv_count(1)
+      end if
+      if (this%idb_nconv_count(1) > 0) then
+        write (this%iout, fmtnconv) this%idb_nconv_count(1)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_ot_dv
 
 !> @ brief Save budget for package
 !!
@@ -3835,11 +4510,11 @@ contains
                                  comptxt(5), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- Save observations.
-    if (this%obs%npakobs > 0) then
-      call this%obs%obs_ot()
-    end if
+!cdl    !
+!cdl    ! -- Save observations.
+!cdl    if (this%obs%npakobs > 0) then
+!cdl      call this%obs%obs_ot()
+!cdl    end if
     !
     ! -- check that final effective stress values for the time step
     !    are greater than zero
@@ -7149,9 +7824,9 @@ contains
                 case ('DELAY-HEAD', 'DELAY-PRECONSTRESS', &
                       'DELAY-GSTRESS', 'DELAY-ESTRESS')
                   if (n > this%ndelaycells) then
-                    r = real(n, DP)/real(this%ndelaycells, DP)
-                    idelay = int(floor(r)) + 1
-                    ncol = mod(n, this%ndelaycells)
+                    r = real(n - 1, DP)/real(this%ndelaycells, DP)
+                    idelay = int(floor(r)) + 1                    
+                    ncol = n - int(floor(r)) * this%ndelaycells
                   else
                     idelay = 1
                     ncol = n

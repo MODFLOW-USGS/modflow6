@@ -28,6 +28,7 @@ module BndModule
 
   private
   public :: BndType, AddBndToList, GetBndFromList
+  public :: save_print_model_flows
   private :: CastAsBndClass
 
   type, extends(NumericalPackageType) :: BndType
@@ -59,7 +60,7 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !right-hand side contribution
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     real(DP), dimension(:), pointer, contiguous :: simvals => null()             !simulated values
-    real(DP), dimension(:), pointer, contiguous  :: simtomvr => null()           !simulated values
+    real(DP), dimension(:), pointer, contiguous  :: simtomvr => null()           !simulated to mover values
     !
     ! -- water mover flag and object
     integer(I4B), pointer :: imover => null()
@@ -107,6 +108,11 @@ module BndModule
     procedure :: bnd_mb
     procedure :: bnd_bd
     procedure :: bnd_ot
+    procedure :: bnd_ot_flow
+    procedure :: bnd_ot_model_flows
+    procedure :: bnd_ot_package_flows
+    procedure :: bnd_ot_dv
+    procedure :: bnd_ot_bdsummary
     procedure :: bnd_da
 
     procedure :: allocate_scalars
@@ -1041,15 +1047,499 @@ module BndModule
 !cdl                                 isuppress_output, this%packName)
 
     end if
-    !
-    ! -- Save the simulated values to the ObserveType objects
-    if (iprobs /= 0 .and. this%obs%npakobs > 0) then
-      call this%bnd_bd_obs()
-    end if
+!cdl    !
+!cdl    ! -- Save the simulated values to the ObserveType objects
+!cdl    if (iprobs /= 0 .and. this%obs%npakobs > 0) then
+!cdl      call this%bnd_bd_obs()
+!cdl    end if
     !
     ! -- return
     return
   end subroutine bnd_bd
+
+  subroutine bnd_ot_package_flows(this, icbcfl, ibudfl)
+    class(BndType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    !
+    ! -- override for advanced packages
+  end subroutine bnd_ot_package_flows
+  
+  subroutine bnd_ot_dv(this, idvsave, idvprint)
+    class(BndType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    !
+    ! -- override for advanced packages
+  end subroutine bnd_ot_dv
+  
+  subroutine bnd_ot_bdsummary(this, kstp, kper, iout)
+    class(BndType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    !
+    ! -- override for advanced packages
+  end subroutine bnd_ot_bdsummary
+  
+  subroutine bnd_ot_model_flows(this,  icbcfl, ibudfl, icbcun, imap)
+! ******************************************************************************
+! bnd_ot_model_flows -- write flows to binary file and/or print flows to budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt, kstp, kper
+    use ConstantsModule, only: LENBOUNDNAME, DZERO
+    ! -- dummy
+    class(BndType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- local
+    character (len=LINELENGTH) :: title
+    character(len=20) :: nodestr
+    character (len=LENPACKAGENAME) :: text
+    integer(I4B) :: nodeu
+    integer(I4B) :: maxrows
+    integer(I4B) :: imover
+    integer(I4B) :: i
+    integer(I4B) :: node
+    integer(I4B) :: n2
+    integer(I4B) :: ibinun
+    integer(I4B) :: naux
+    integer(I4B) :: nbound
+    real(DP) :: q
+    real(DP) :: qtomvr
+    real(DP) :: rrate
+    real(DP) :: fact
+    ! -- for observations
+    character(len=LENBOUNDNAME) :: bname
+    ! -- formats
+! ------------------------------------------------------------------------------
+    ! -- TODO: use new save_print_model_flows subroutine for all this
+    !
+    ! -- Set mover flag, and shut off if this is an advanced package.
+    imover = this%imover
+    if (this%isadvpak /= 0) imover = 0
+    !
+    ! -- set table kstp and kper
+    if (this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
+    end if
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0) then
+          if (this%ibound(node) > 0) then
+            maxrows = maxrows + 1
+          end if
+        end if
+      end do
+      if (maxrows > 0) then
+        call this%outputtab%set_maxbound(maxrows)
+      end if
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //     &
+              ') FLOW RATES'
+      call this%outputtab%set_title(title)
+    end if
+    !
+    ! -- Set unit number for binary output
+    if (this%ipakcb < 0) then
+      ibinun = icbcun
+    else if (this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    end if
+    if (icbcfl == 0) then
+      ibinun = 0
+    end if
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      !
+      ! -- Count nbound as the number of entries with node > 0
+      !    SFR, for example, can have a 'none' connection, which
+      !    means it should be excluded from budget file
+      nbound = 0
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0) nbound = nbound + 1
+      end do
+      naux = this%naux
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  this%auxname, ibinun, nbound, this%iout)
+    endif
+    !
+    ! -- If no boundaries, skip flow calculations.
+    if (this%nbound > 0) then
+      !
+      ! -- Loop through each boundary calculating flow.
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        ! -- assign boundary name
+        if (this%inamedbound > 0) then
+          bname = this%boundname(i)
+        else
+          bname = ''
+        end if
+        !
+        ! -- If cell is no-flow or constant-head, then ignore it.
+        rrate = DZERO
+        if (node > 0) then
+            !
+            ! -- Use simval, which was calculated in cq()
+            rrate = this%simvals(i)
+            !
+            ! -- Print the individual rates if the budget is being printed
+            !    and PRINT_FLOWS was specified (this%iprflow<0)
+            if (ibudfl /= 0) then
+              if (this%iprflow /= 0) then
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                     rrate, bname)
+              end if
+            end if
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            if (present(imap)) n2 = imap(i)
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                naux, this%auxvar(:,i),          &
+                                                olconv2=.FALSE.)
+          end if
+        end if
+        !
+      end do
+      if (ibudfl /= 0) then
+        if (this%iprflow /= 0) then
+           write(this%iout,'(1x)')
+        end if
+      end if
+
+    endif
+    !
+    ! -- Write/save mover rates
+    if (imover == 1) then
+      text = trim(adjustl(this%text)) // '-TO-MVR'
+      text = adjustr(text)
+      if (ibudfl /= 0 .and. this%iprflow /= 0) then
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
+                trim(this%packName) // ') FLOW RATES TO-MVR'
+        call this%outputtab%set_title(title)
+      end if
+      !
+      ! -- If MOVER cell-by-cell flows will be saved as a list, write header.
+      if(ibinun /= 0) then
+        naux = this%naux
+        call this%dis%record_srcdst_list_header(text, this%name_model,         &
+                    this%name_model, this%name_model, this%packName, naux,     &
+                    this%auxname, ibinun, nbound, this%iout)
+      end if
+      !
+      ! -- If no boundaries, skip flow calculations.
+      if (this%nbound > 0) then
+        !
+        ! -- Loop through each boundary calculating flow.
+        do i = 1, this%nbound
+          node = this%nodelist(i)
+          ! -- assign boundary name
+          if (this%inamedbound>0) then
+            bname = this%boundname(i)
+          else
+            bname = ''
+          end if
+          !
+          ! -- If cell is no-flow or constant-head, then ignore it.
+          rrate = DZERO
+          if (node > 0) then
+            if(this%ibound(node) > 0) then
+              !
+              ! -- Set rrate to simtomvr, which was calculated in cq()
+              rrate = this%simtomvr(i)
+              !
+              ! -- Print the individual rates if the budget is being printed
+              !    and PRINT_FLOWS was specified (this%iprflow<0)
+              if(ibudfl /= 0) then
+                if(this%iprflow /= 0) then
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = this%dis%get_nodeuser(node)
+                  call this%dis%nodeu_to_string(nodeu, nodestr)
+                  call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),&
+                                                       rrate, bname)
+                end if
+              end if
+            end if
+            !
+            ! -- If saving cell-by-cell flows in list, write flow
+            if (ibinun /= 0) then
+              n2 = i
+              if (present(imap)) n2 = imap(i)
+              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,     &
+                                                  naux, this%auxvar(:,i),      &
+                                                  olconv2=.FALSE.)
+            end if
+          end if
+          !
+        end do
+      end if
+
+    end if
+    !
+    ! -- return
+    return
+  end subroutine bnd_ot_model_flows
+
+  subroutine bnd_ot_flow(this,  icbcfl, ibudfl, icbcun, imap)
+! ******************************************************************************
+! bnd_bd -- save flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt, kstp, kper
+    use ConstantsModule, only: LENBOUNDNAME, DZERO
+    ! -- dummy
+    class(BndType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- local
+    character (len=LINELENGTH) :: title
+    character(len=20) :: nodestr
+    character (len=LENPACKAGENAME) :: text
+    integer(I4B) :: nodeu
+    integer(I4B) :: maxrows
+    integer(I4B) :: imover
+    integer(I4B) :: i
+    integer(I4B) :: node
+    integer(I4B) :: n2
+    integer(I4B) :: ibinun
+    integer(I4B) :: naux
+    integer(I4B) :: nbound
+    real(DP) :: q
+    real(DP) :: qtomvr
+    real(DP) :: rrate
+    real(DP) :: fact
+    ! -- for observations
+    character(len=LENBOUNDNAME) :: bname
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set mover flag, and shut off if this is an advanced package.
+    imover = this%imover
+    if (this%isadvpak /= 0) imover = 0
+    !
+    ! -- set table kstp and kper
+    if (this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
+    end if
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0) then
+          if (this%ibound(node) > 0) then
+            maxrows = maxrows + 1
+          end if
+        end if
+      end do
+      if (maxrows > 0) then
+        call this%outputtab%set_maxbound(maxrows)
+      end if
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //     &
+              ') FLOW RATES'
+      call this%outputtab%set_title(title)
+    end if
+    !
+    ! -- Set unit number for binary output
+    if (this%ipakcb < 0) then
+      ibinun = icbcun
+    else if (this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    end if
+    if (icbcfl == 0) then
+      ibinun = 0
+    end if
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      !
+      ! -- Count nbound as the number of entries with node > 0
+      !    SFR, for example, can have a 'none' connection, which
+      !    means it should be excluded from budget file
+      nbound = 0
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0) nbound = nbound + 1
+      end do
+      naux = this%naux
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  this%auxname, ibinun, nbound, this%iout)
+    endif
+    !
+    ! -- If no boundaries, skip flow calculations.
+    if (this%nbound > 0) then
+      !
+      ! -- Loop through each boundary calculating flow.
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        ! -- assign boundary name
+        if (this%inamedbound > 0) then
+          bname = this%boundname(i)
+        else
+          bname = ''
+        end if
+        !
+        ! -- If cell is no-flow or constant-head, then ignore it.
+        rrate = DZERO
+        if (node > 0) then
+            !
+            ! -- Use simval, which was calculated in cq()
+            rrate = this%simvals(i)
+            !
+            ! -- modify rrate with to mover
+            if (rrate < DZERO) then
+              if (imover == 1) then
+                qtomvr = this%pakmvrobj%get_qtomvr(i)
+                !
+                ! -- Evaluate if qtomvr exceeds the calculated rrate.
+                !    When fact is greater than 1, qtomvr is numerically
+                !    larger than rrate (which should never happen) and 
+                !    represents a water budget error. When this happens,
+                !    rrate is set to 0. so that the water budget error is
+                !    correctly accounted for in the listing water budget. 
+                fact = -qtomvr / rrate
+                if (fact > DONE) then
+                  rrate = DZERO
+                else
+                  rrate = rrate + qtomvr
+                end if
+              end if
+            end if
+            !
+            ! -- Print the individual rates if the budget is being printed
+            !    and PRINT_FLOWS was specified (this%iprflow<0)
+            if (ibudfl /= 0) then
+              if (this%iprflow /= 0) then
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                     rrate, bname)
+              end if
+            end if
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            if (present(imap)) n2 = imap(i)
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                naux, this%auxvar(:,i),          &
+                                                olconv2=.FALSE.)
+          end if
+        end if
+        !
+      end do
+      if (ibudfl /= 0) then
+        if (this%iprflow /= 0) then
+           write(this%iout,'(1x)')
+        end if
+      end if
+
+    endif
+    !
+    ! -- Write/save mover rates
+    if (imover == 1) then
+      text = trim(adjustl(this%text)) // '-TO-MVR'
+      text = adjustr(text)
+      if (ibudfl /= 0 .and. this%iprflow /= 0) then
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
+                trim(this%packName) // ') FLOW RATES TO-MVR'
+        call this%outputtab%set_title(title)
+      end if
+      !
+      ! -- If MOVER cell-by-cell flows will be saved as a list, write header.
+      if(ibinun /= 0) then
+        naux = this%naux
+        call this%dis%record_srcdst_list_header(text, this%name_model,         &
+                    this%name_model, this%name_model, this%packName, naux,     &
+                    this%auxname, ibinun, nbound, this%iout)
+      end if
+      !
+      ! -- If no boundaries, skip flow calculations.
+      if (this%nbound > 0) then
+        !
+        ! -- Loop through each boundary calculating flow.
+        do i = 1, this%nbound
+          node = this%nodelist(i)
+          ! -- assign boundary name
+          if (this%inamedbound>0) then
+            bname = this%boundname(i)
+          else
+            bname = ''
+          end if
+          !
+          ! -- If cell is no-flow or constant-head, then ignore it.
+          rrate = DZERO
+          if (node > 0) then
+            if(this%ibound(node) > 0) then
+              !
+              ! -- Set rrate to simtomvr, which was calculated in cq()
+              rrate = this%simtomvr(i)
+              !
+              ! -- Print the individual rates if the budget is being printed
+              !    and PRINT_FLOWS was specified (this%iprflow<0)
+              if(ibudfl /= 0) then
+                if(this%iprflow /= 0) then
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = this%dis%get_nodeuser(node)
+                  call this%dis%nodeu_to_string(nodeu, nodestr)
+                  call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),&
+                                                       rrate, bname)
+                end if
+              end if
+            end if
+            !
+            ! -- If saving cell-by-cell flows in list, write flow
+            if (ibinun /= 0) then
+              n2 = i
+              if (present(imap)) n2 = imap(i)
+              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,     &
+                                                  naux, this%auxvar(:,i),      &
+                                                  olconv2=.FALSE.)
+            end if
+          end if
+          !
+        end do
+      end if
+
+    end if
+    !
+    ! -- return
+    return
+  end subroutine bnd_ot_flow
 
   subroutine bnd_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
@@ -1736,7 +2226,7 @@ module BndModule
       call this%outputtab%initialize_column(text, 15, alignment=TABCENTER)
       if (this%inamedbound > 0) then
         text = 'NAME'
-        call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+        call this%outputtab%initialize_column(text, LENBOUNDNAME, alignment=TABLEFT)
       end if
     end if
     !
@@ -1966,5 +2456,167 @@ module BndModule
     !
     return
   end function GetBndFromList
+
+  subroutine save_print_model_flows(icbcfl, ibudfl, icbcun, iprflow, &
+    outputtab, nbound, nodelist, flow, ibound, title, text, ipakcb, dis, naux, &
+    textmodel, textpackage, dstmodel, dstpackage, auxname, auxvar, iout, &
+    inamedbound, boundname, imap)
+! ******************************************************************************
+! save_print_model_flows -- write flows to binary file and/or print flows to budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt, kstp, kper
+    use ConstantsModule, only: LENBOUNDNAME, DZERO
+    ! -- dummy
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), intent(in) :: iprflow !< print flows to list file
+    type(TableType), intent(inout) :: outputtab
+    integer(I4B), intent(in) :: nbound
+    integer(I4B), dimension(:), contiguous, intent(in) :: nodelist
+    real(DP), dimension(:), contiguous, intent(in) :: flow
+    integer(I4B), dimension(:), contiguous, intent(in) :: ibound
+    character(len=*), intent(in) :: title
+    character(len=*), intent(in) :: text
+    integer(I4B), intent(in) :: ipakcb
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: naux
+    character(len=*), intent(in) :: textmodel
+    character(len=*), intent(in) :: textpackage
+    character(len=*), intent(in) :: dstmodel
+    character(len=*), intent(in) :: dstpackage
+    character(len=*), dimension(:), intent(in) :: auxname
+    real(DP), dimension(:, :), intent(in) :: auxvar
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: inamedbound
+    character(len=LENBOUNDNAME), dimension(:), contiguous :: boundname
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- local
+    character(len=20) :: nodestr
+    integer(I4B) :: nodeu
+    integer(I4B) :: maxrows
+    integer(I4B) :: i
+    integer(I4B) :: node
+    integer(I4B) :: n2
+    integer(I4B) :: ibinun
+    integer(I4B) :: nboundcount
+    real(DP) :: q
+    real(DP) :: qtomvr
+    real(DP) :: rrate
+    real(DP) :: fact
+    ! -- for observations
+    character(len=LENBOUNDNAME) :: bname
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- set table kstp and kper
+    if (iprflow /= 0) then
+      call outputtab%set_kstpkper(kstp, kper)
+    end if
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. iprflow /= 0) then
+      do i = 1, nbound
+        node = nodelist(i)
+        if (node > 0) then
+          if (ibound(node) > 0) then
+            maxrows = maxrows + 1
+          end if
+        end if
+      end do
+      if (maxrows > 0) then
+        call outputtab%set_maxbound(maxrows)
+      end if
+      call outputtab%set_title(title)
+    end if
+    !
+    ! -- Set unit number for binary output
+    if (ipakcb < 0) then
+      ibinun = icbcun
+    else if (ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = ipakcb
+    end if
+    if (icbcfl == 0) then
+      ibinun = 0
+    end if
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      !
+      ! -- Count nbound as the number of entries with node > 0
+      !    SFR, for example, can have a 'none' connection, which
+      !    means it should be excluded from budget file
+      nboundcount = 0
+      do i = 1, nbound
+        node = nodelist(i)
+        if (node > 0) nboundcount = nboundcount + 1
+      end do
+      call dis%record_srcdst_list_header(text, textmodel, textpackage, &
+                  dstmodel, dstpackage, naux,                          &
+                  auxname, ibinun, nboundcount, iout)
+    endif
+    !
+    ! -- If no boundaries, skip flow calculations.
+    if (nbound > 0) then
+      !
+      ! -- Loop through each boundary calculating flow.
+      do i = 1, nbound
+        node = nodelist(i)
+        ! -- assign boundary name
+        if (inamedbound > 0) then
+          bname = boundname(i)
+        else
+          bname = ''
+        end if
+        !
+        ! -- If cell is no-flow or constant-head, then ignore it.
+        rrate = DZERO
+        if (node > 0) then
+            !
+            ! -- Use simval, which was calculated in cq()
+            rrate = flow(i)
+            !
+            ! -- Print the individual rates if the budget is being printed
+            !    and PRINT_FLOWS was specified (iprflow < 0)
+            if (ibudfl /= 0) then
+              if (iprflow /= 0) then
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = dis%get_nodeuser(node)
+                call dis%nodeu_to_string(nodeu, nodestr)
+                call outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                     rrate, bname)
+              end if
+            end if
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            if (present(imap)) n2 = imap(i)
+            call dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                naux, auxvar(:,i),          &
+                                                olconv2=.FALSE.)
+          end if
+        end if
+        !
+      end do
+      if (ibudfl /= 0) then
+        if (iprflow /= 0) then
+           write(iout,'(1x)')
+        end if
+      end if
+
+    endif
+    !
+    ! -- return
+    return
+  end subroutine save_print_model_flows
 
 end module BndModule

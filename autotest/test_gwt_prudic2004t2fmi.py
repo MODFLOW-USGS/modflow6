@@ -66,7 +66,7 @@ def run_flow_model():
     nouter = 1000
     ninner = 100
     relax = 0.99
-    imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
+    imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
                                   outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
@@ -234,6 +234,19 @@ def run_flow_model():
                 nlakecon[ilak] += 1
                 lakeconnectiondata.append(v)
 
+
+    lak_obs = {(gwfname + '.lak.obs.csv',):
+        [
+            ('lake1stage', 'STAGE', 'lake1'),
+            ('lake2stage', 'STAGE', 'lake2'),
+            ('lake1leakage', 'LAK', 'lake1'),
+            ('lake2leakage', 'LAK', 'lake2'),
+        ],
+    }
+    sfr_obs['digits'] = 7
+    sfr_obs['print_input'] = True
+    sfr_obs['filename'] = gwfname + '.sfr.obs'
+
     i, j = np.where(lakibd > 0)
     idomain[0, i, j] = 0
     gwf.dis.idomain.set_data(idomain[0], layer=0, multiplier=[1])
@@ -254,7 +267,8 @@ def run_flow_model():
                                       nlakes=2, noutlets=len(outlets),
                                       outlets=outlets,
                                       packagedata=lakpackagedata,
-                                      connectiondata=lakeconnectiondata)
+                                      connectiondata=lakeconnectiondata,
+                                      observations=lak_obs)
 
     mover_on = True
     if mover_on:

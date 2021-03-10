@@ -150,6 +150,10 @@ module UzfModule
     procedure :: bnd_cq => uzf_cq
     procedure :: bnd_mb => uzf_mb
     procedure :: bnd_bd => uzf_bd
+    procedure :: bnd_ot_model_flows => uzf_ot_model_flows
+    procedure :: bnd_ot_package_flows => uzf_ot_package_flows
+    procedure :: bnd_ot_dv => uzf_ot_dv
+    procedure :: bnd_ot_bdsummary => uzf_ot_bdsummary
     procedure :: bnd_ot => uzf_ot
     procedure :: bnd_fc => uzf_fc
     procedure :: bnd_fn => uzf_fn
@@ -160,7 +164,7 @@ module UzfModule
     procedure, public :: bnd_obs_supported => uzf_obs_supported
     procedure, public :: bnd_df_obs => uzf_df_obs
     procedure, public :: bnd_rp_obs => uzf_rp_obs
-    procedure, private :: uzf_bd_obs
+    procedure, public :: bnd_bd_obs => uzf_bd_obs
     !
     ! -- methods specific for uzf
     procedure, private :: uzf_solve
@@ -1453,20 +1457,22 @@ contains
           this%obs_depth(j) = obsrv%dblPak1
         end if
       end do
-!cdl      !
-!cdl      ! -- Call budget routine of the uzf kinematic object
-!cdl      call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
-!cdl                              rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
-!cdl                              this%ietflag,this%iseepflag,this%issflag,hgwf,   &
-!cdl                              hgwflm1,cvv,numobs,this%obs_num,                 &
-!cdl                              this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
-!cdl                              qgwformvr,ierr)
-!cdl      if ( ierr > 0 ) then
-!cdl        if ( ierr == 1 ) &
-!cdl          errmsg = 'UZF variable NWAVESETS needs to be increased.'
-!cdl        call store_error(errmsg)
-!cdl        call ustop()
-!cdl      end if 
+      !
+      ! -- Call budget routine of the uzf kinematic object
+      ! todo: this will require additional work for ATS because waves are moved forward
+      !       without a way to restore the state
+      call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
+                              rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
+                              this%ietflag,this%iseepflag,this%issflag,hgwf,   &
+                              hgwflm1,cvv,numobs,this%obs_num,                 &
+                              this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
+                              qgwformvr,ierr)
+      if ( ierr > 0 ) then
+        if ( ierr == 1 ) &
+          errmsg = 'UZF variable NWAVESETS needs to be increased.'
+        call store_error(errmsg)
+        call ustop()
+      end if 
 
       !
       ! -- Calculate gwet
@@ -1912,11 +1918,11 @@ contains
 
     ! -- GW discharge and GW discharge to mover
     if (this%iseepflag == 1) then
-      call rate_accumulator(this%gwd, ratin, ratout)
+      call rate_accumulator(-this%gwd, ratin, ratout)
       call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
                                  isuppress_output, this%packName)
       if (this%imover == 1) then
-        call rate_accumulator(this%gwdtomvr, ratin, ratout)
+        call rate_accumulator(-this%gwdtomvr, ratin, ratout)
         call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
                                    isuppress_output, this%packName)
       end if
@@ -1924,7 +1930,7 @@ contains
     
     ! -- groundwater et (gwet array is positive, so switch ratin/ratout)
     if (this%igwetflag /= 0) then
-      call rate_accumulator(this%gwet, ratout, ratin)
+      call rate_accumulator(-this%gwet, ratin, ratout)
       call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
                                  isuppress_output, this%packName)
     end if
@@ -2179,11 +2185,11 @@ contains
       ! -- End of UZF cell loop
       !
     end do
-    !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%uzf_bd_obs()
-    endif
+!cdl    !
+!cdl    ! -- For continuous observations, save simulated values.
+!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+!cdl      call this%uzf_bd_obs()
+!cdl    endif
     !
     ! add cumulative flows to UZF budget
     this%infilsum = rin * delt
@@ -2509,6 +2515,120 @@ contains
     return
   end subroutine uzf_bd
 
+  subroutine uzf_ot_model_flows(this,  icbcfl, ibudfl, icbcun, imap)
+! ******************************************************************************
+! bnd_ot_model_flows -- write flows to binary file and/or print flows to budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt, kstp, kper
+    use ConstantsModule, only: LENBOUNDNAME, DZERO
+    use BndModule, only: save_print_model_flows
+    ! -- dummy
+    class(UzfType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- local
+    character (len=LINELENGTH) :: title
+    integer(I4B) :: itxt
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- UZF-GWRCH
+    itxt = 2
+    title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
+            ') FLOW RATES'
+    call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+    this%outputtab, this%nbound, this%nodelist, -this%rch, &
+    this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
+    this%name_model, this%name_model, this%name_model, this%packName, &
+    this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+    !
+    ! -- UZF-GWD
+    if (this%iseepflag == 1) then
+      itxt = 3
+      title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
+              ') FLOW RATES'
+      call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+      this%outputtab, this%nbound, this%nodelist, -this%gwd, &
+      this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
+      this%name_model, this%name_model, this%name_model, this%packName, &
+      this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+      !
+      ! -- UZF-GWD TO-MVR
+      if (this%imover == 1) then
+        itxt = 5
+        title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
+                ') FLOW RATES'
+        call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+        this%outputtab, this%nbound, this%nodelist, -this%gwdtomvr, &
+        this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
+        this%name_model, this%name_model, this%name_model, this%packName, &
+        this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+      end if
+    end if
+    !
+    ! -- UZF-GWET
+    if (this%igwetflag /= 0) then
+      itxt = 4
+      title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
+              ') FLOW RATES'
+      call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+      this%outputtab, this%nbound, this%nodelist, -this%gwet, &
+      this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
+      this%name_model, this%name_model, this%name_model, this%packName, &
+      this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine uzf_ot_model_flows
+
+  subroutine uzf_ot_package_flows(this, icbcfl, ibudfl)
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    class(UzfType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    ! -- Print lake flows table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
+    end if
+    
+  end subroutine uzf_ot_package_flows
+
+  subroutine uzf_ot_dv(this, idvsave, idvprint)
+    class(UzfType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    !
+    ! -- todo: put saving and printing of water content here
+  end subroutine uzf_ot_dv
+  
+  subroutine uzf_ot_bdsummary(this, kstp, kper, iout)
+    class(UzfType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    call this%budobj%write_budtable(kstp, kper, iout)
+  end subroutine uzf_ot_bdsummary
+  
   subroutine uzf_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
 ! uzf_ot -- UZF package budget

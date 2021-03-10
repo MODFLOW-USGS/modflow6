@@ -207,12 +207,17 @@ module LakModule
     procedure :: bnd_cq => lak_cq
     procedure :: bnd_bd => lak_bd
     procedure :: bnd_ot => lak_ot
+    procedure :: bnd_ot_model_flows => lak_ot_model_flows
+    procedure :: bnd_ot_package_flows => lak_ot_package_flows
+    procedure :: bnd_ot_dv => lak_ot_dv
+    procedure :: bnd_ot_bdsummary => lak_ot_bdsummary
     procedure :: bnd_da => lak_da
     procedure :: define_listlabel
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => lak_obs_supported
     procedure, public :: bnd_df_obs => lak_df_obs
     procedure, public :: bnd_rp_obs => lak_rp_obs
+    procedure, public :: bnd_bd_obs => lak_bd_obs
     ! -- private procedures
     procedure, private :: lak_read_lakes
     procedure, private :: lak_read_lake_connections
@@ -224,7 +229,6 @@ module LakModule
     procedure, private :: lak_set_attribute_error
     procedure, private :: lak_cfupdate
     procedure, private :: lak_bound_update
-    procedure, private :: lak_bd_obs
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
     procedure, private :: lak_calculate_conn_warea
@@ -4323,11 +4327,11 @@ contains
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
-    !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%lak_bd_obs()
-    endif
+!cdl    !
+!cdl    ! -- For continuous observations, save simulated values.
+!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+!cdl      call this%lak_bd_obs()
+!cdl    endif
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
@@ -4368,7 +4372,116 @@ contains
     ! -- return
     return
   end subroutine lak_bd
+                    
+  subroutine lak_ot_package_flows(this, icbcfl, ibudfl)
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    class(LakType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    ! -- Print lake flows table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
+    end if
+    
+  end subroutine lak_ot_package_flows
 
+  subroutine lak_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+    class(LakType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)
+  end subroutine lak_ot_model_flows
+
+  subroutine lak_ot_dv(this, idvsave, idvprint)
+    use TdisModule, only: kstp, kper, pertim, totim
+    use ConstantsModule, only: DHNOFLO, DHDRY
+    use InputOutputModule, only: ulasav
+    class(LakType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B) :: ibinun
+    integer(I4B) :: n
+    real(DP) :: v
+    real(DP) :: d
+    real(DP) :: stage
+    real(DP) :: sa
+    real(DP) :: wa
+    !
+    !
+    ! -- set unit number for binary dependent variable output
+    ibinun = 0
+    if(this%istageout /= 0) then
+      ibinun = this%istageout
+    end if
+    if(idvsave == 0) ibinun = 0
+    !
+    ! -- write lake binary output
+    if (ibinun > 0) then
+      do n = 1, this%nlakes
+        v = this%xnewpak(n)
+        d = v - this%lakebot(n)
+        if (this%iboundpak(n) == 0) then
+          v = DHNOFLO
+        else if (d <= DZERO) then
+          v = DHDRY
+        end if
+        this%dbuff(n) = v
+      end do
+      call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
+                  this%nlakes, 1, 1, ibinun)
+    end if
+    !
+    ! -- Print lake stage table
+    if (idvprint /= 0 .and. this%iprhed /= 0) then
+      !
+      ! -- set table kstp and kper
+      call this%stagetab%set_kstpkper(kstp, kper)
+      !
+      ! -- write data
+      do n = 1, this%nlakes
+        stage = this%xnewpak(n)
+        call this%lak_calculate_sarea(n, stage, sa)
+        call this%lak_calculate_warea(n, stage, wa)
+        call this%lak_calculate_vol(n, stage, v)
+        if(this%inamedbound==1) then
+          call this%stagetab%add_term(this%lakename(n))
+        end if
+        call this%stagetab%add_term(n)
+        call this%stagetab%add_term(stage)
+        call this%stagetab%add_term(sa)
+        call this%stagetab%add_term(wa)
+        call this%stagetab%add_term(v)
+      end do
+    end if
+    
+  end subroutine lak_ot_dv
+  
+  subroutine lak_ot_bdsummary(this, kstp, kper, iout)
+    class(LakType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    call this%budobj%write_budtable(kstp, kper, iout)
+  end subroutine lak_ot_bdsummary
+  
   subroutine lak_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
     ! lak_ot -- Output package budget
@@ -4414,11 +4527,11 @@ contains
         call this%stagetab%add_term(v)
       end do
     end if
-    !
-    ! -- Output lake flows table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
-    end if
+!cdl    !
+!cdl    ! -- Output lake flows table
+!cdl    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+!cdl      call this%budobj%write_flowtable(this%dis, kstp, kper)
+!cdl    end if
     !
     ! -- Output lake budget summary table
     call this%budobj%write_budtable(kstp, kper, iout)
@@ -4806,7 +4919,7 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     ! -- dummy
-    class(LakType), intent(inout) :: this
+    class(LakType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: igwfnode
@@ -6127,11 +6240,11 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%nlakes
-      hlak = this%xnewpak(n)
+      !cdl hlak = this%xnewpak(n)
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         n2 = this%cellid(j)
-        hgwf = this%xnew(n2)
-        call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
+        !cdl hgwf = this%xnew(n2)
+        !cdl call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
         q = this%qleak(j)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do

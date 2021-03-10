@@ -150,7 +150,9 @@ module GwfMvrModule
     procedure :: mvr_cc
     procedure :: mvr_bd
     procedure :: mvr_bdsav
-    procedure :: mvr_ot
+    procedure :: mvr_ot_saveflow
+    procedure :: mvr_ot_printflow
+    procedure :: mvr_ot_bdsummary
     procedure :: mvr_da
     procedure :: read_options
     procedure :: check_options
@@ -535,12 +537,12 @@ module GwfMvrModule
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Write the flow table
+    ! -- Print the mover flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
       call this%mvr_print_outputtab()
     end if
     !
-    ! -- write the flows from the budobj
+    ! -- Save the mover flows from the budobj to a mover binary file
     ibinun = 0
     if(this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
@@ -556,7 +558,63 @@ module GwfMvrModule
     return
   end subroutine mvr_bdsav
 
-  subroutine mvr_ot(this)
+  subroutine mvr_ot_saveflow(this, icbcfl, ibudfl)
+! ******************************************************************************
+! mvr_bd -- Write mover terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only : kstp, kper, delt, pertim, totim
+    ! -- dummy
+    class(GwfMvrType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    ! -- locals
+    integer(I4B) :: ibinun
+! ------------------------------------------------------------------------------
+    !
+    ! -- Save the mover flows from the budobj to a mover binary file
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                        pertim, totim, this%iout)
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine mvr_ot_saveflow
+
+  subroutine mvr_ot_printflow(this, icbcfl, ibudfl)
+! ******************************************************************************
+! mvr_ot_printflow -- Print mover flow table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfMvrType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    ! -- locals
+! ------------------------------------------------------------------------------
+    !
+    ! -- Print the mover flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%mvr_print_outputtab()
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine mvr_ot_printflow
+
+  subroutine mvr_ot_bdsummary(this)
 ! ******************************************************************************
 ! mvr_ot -- Write mover budget to listing file
 ! ******************************************************************************
@@ -618,7 +676,7 @@ module GwfMvrModule
     !
     ! -- Return
     return
-  end subroutine mvr_ot
+  end subroutine mvr_ot_bdsummary
 
   subroutine mvr_da(this)
 ! ******************************************************************************
