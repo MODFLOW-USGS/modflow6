@@ -6,8 +6,7 @@ module NumericalSolutionModule
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC,   &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
-                                     DONE, DTHREE, DHUNDRED, DEP6, DEP20,      &
-                                     DNODATA,                                  &
+                                     DONE, DTHREE, DEP3, DEP6, DEP20, DNODATA, &
                                      TABLEFT, TABRIGHT,                        &
                                      MNORMAL, MVALIDATE,                       &
                                      LENMEMPATH
@@ -2499,7 +2498,7 @@ contains
               CALL random_seed(PUT=iseed)
             end if
             call random_number(rand_val)
-            this%x(n) = this%xtemp(n) + rand_val * DHUNDRED * DPREC
+            this%x(n) = this%xtemp(n) + rand_val * DEP3 * DPREC
             irandom_value = irandom_value + 1
           end if
         end if

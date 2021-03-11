@@ -37,7 +37,7 @@ module ImsPackageWriterModule
     character(len=7) :: print_option = 'SUMMARY'
     character(len=8) :: complexity = 'SIMPLE'
     ! Nonlinear solver
-    real             :: outer_hclose = 0.01
+    real             :: outer_dvclose = 0.01
     integer          :: outer_maximum = 100
     character(len=6) :: under_relaxation = 'NONE'
     double precision :: UNDER_RELAXATION_THETA = DZERO
@@ -47,7 +47,7 @@ module ImsPackageWriterModule
     character(len=4) :: linear_solver = 'PCGU'
 !    character(len=4) :: linear_solver = 'XMD'
     ! Linear solvers
-    real             :: inner_hclose = 0.001
+    real             :: inner_dvclose = 0.001
     real             :: inner_rclose = 0.1
     double precision :: preconditioner_drop_tolerance = -0.001d0
     integer          :: inner_maximum = 100
@@ -106,7 +106,7 @@ contains
     !
     select case (this%mf2005_solver)
     case ('DE4')
-      this%outer_hclose = HCLOSEDE4
+      this%outer_dvclose = HCLOSEDE4
       if (ifreqd4==1) then
         this%outer_maximum = GreaterOf(this%outer_maximum, MINOUTER)
       else
@@ -118,7 +118,7 @@ contains
         endif
       endif
     case ('GMG')
-      this%outer_hclose = HCLOSEGMG
+      this%outer_dvclose = HCLOSEGMG
       this%outer_maximum = GreatestOf(this%outer_maximum, MINOUTER, mxitergmg)
       this%inner_rclose = RCLOSEGMG
       this%inner_maximum = iitergmg
@@ -135,7 +135,7 @@ contains
         endif
       endif
     case ('PCG')
-      this%outer_hclose = HCLOSEPCG
+      this%outer_dvclose = HCLOSEPCG
       this%outer_maximum = GreatestOf(this%outer_maximum, MINOUTER, mxiterpcg)
       this%inner_maximum = iter1pcg
       this%inner_rclose = RCLOSEPCG
@@ -150,7 +150,7 @@ contains
         endif
       endif
     case ('PCGN')
-      this%outer_hclose = PCGNDAT(igrid)%HCLOSE
+      this%outer_dvclose = PCGNDAT(igrid)%HCLOSE
       this%outer_maximum = GreatestOf(this%outer_maximum, MINOUTER, PCGNDAT(igrid)%MO_ITER)
       this%inner_maximum = PCGNDAT(igrid)%MI_ITER
       this%inner_rclose = PCGNDAT(igrid)%RCLOSE
@@ -168,7 +168,7 @@ contains
         endif
       endif
     case ('SIP')
-      this%outer_hclose = hclosesip
+      this%outer_dvclose = hclosesip
       this%outer_maximum = GreatestOf(this%outer_maximum, MINOUTER, mxitersip)
       if (acclsip < 1.0 .and. this%linear_solver=='PCGU') then
         msg = 'In SIP package input, ACCL < 1. You may need to ' // &
@@ -177,7 +177,7 @@ contains
       endif
     case ('NWT')
       ! Nonlinear parameters
-      this%outer_hclose = Tol
+      this%outer_dvclose = Tol
       this%outer_maximum = GreatestOf(this%outer_maximum, MINOUTER, mxiterNwt)
       !this%RELAXATION_FACTOR = RelaxNwt
       this%under_relaxation = 'DBD'
@@ -234,17 +234,17 @@ contains
       call store_warning(msg)
     end select
     !
-    ! Adjust inner_hclose if it's too large
+    ! Adjust inner_dvclose if it's too large
     if (associated(HCloseLinear)) then
-      this%inner_hclose = HCloseLinear
+      this%inner_dvclose = HCloseLinear
     endif
     if (this%linear_solver == 'XMD') then
-      if (this%inner_hclose > (this%outer_hclose * 0.1)) then
-        this%inner_hclose = 0.1 * this%outer_hclose
+      if (this%inner_dvclose > (this%outer_dvclose * 0.1)) then
+        this%inner_dvclose = 0.1 * this%outer_dvclose
       endif
     elseif (this%linear_solver == 'PCGU') then
-      if (this%inner_hclose > (this%outer_hclose * 0.01)) then
-        this%inner_hclose = 0.1 * this%outer_hclose
+      if (this%inner_dvclose > (this%outer_dvclose * 0.01)) then
+        this%inner_dvclose = 0.1 * this%outer_dvclose
       endif
     endif
     !!
@@ -304,7 +304,7 @@ contains
     write(iu,10)'END Options'
     write(iu,1)
     write(iu,10)'BEGIN Nonlinear'
-    write(iu,40)'OUTER_HCLOSE', this%outer_hclose
+    write(iu,40)'OUTER_DVCLOSE', this%outer_dvclose
     write(iu,20)'OUTER_MAXIMUM', this%outer_maximum
     write(iu,30)'UNDER_RELAXATION', trim(this%under_relaxation)
 !    if (this%linear_solver /= 'PCGU') then
@@ -324,7 +324,7 @@ contains
     write(iu,1)
     write(iu,10)'BEGIN LINEAR'
     write(iu,20)'INNER_MAXIMUM', this%inner_maximum
-    write(iu,40)'INNER_HCLOSE', this%inner_hclose
+    write(iu,40)'INNER_DVCLOSE', this%inner_dvclose
     write(iu,40)'INNER_RCLOSE', this%inner_rclose
     write(iu,30)'LINEAR_ACCELERATION', trim(this%linear_acceleration)
     if (this%RELAXATION_FACTOR > DZERO) then
