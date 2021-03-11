@@ -93,74 +93,31 @@ jobs:
 
       - name: Install python packages
         run: |
-          conda info
-          conda install pip requests appdirs nose
-          pip install nose-timer
-          # use pip to install numpy and matplotlib because of a windows issue
-          pip install numpy matplotlib
-          pip install https://github.com/modflowpy/flopy/zipball/develop
-          pip install https://github.com/modflowpy/pymake/zipball/master
-          pip install https://github.com/Deltares/xmipy/zipball/develop
+          .github/common/install-python.sh
 
       - name: Print conda version
-        run: conda --version
+        run: |
+          conda --version
 
       - name: Print python package versions
-        shell: python
         run: |
-          import sys
-          import nose
-          import numpy as np
-          import matplotlib as mpl
-          import flopy
-          import pymake
-          flopypth = flopy.__path__[0]
-          pymakepth = pymake.__path__[0]
-          print("python version:     {}".format(sys.version))
-          print("nosetest version:   {}".format(nose.__version__))
-          print("numpy version:      {}".format(np.__version__))
-          print("matplotlib version: {}".format(mpl.__version__))
-          print("flopy version:      {}".format(flopy.__version__))
-          print("pymake version:     {}".format(pymake.__version__))
-          print("")
-          print("flopy is installed in:  {}".format(flopypth))
-          print("pymake is installed in: {}".format(pymakepth))
+          .github/common/python-version.sh
 
       - name: Set and print branch name
-        shell: bash
         run: |
-          echo GITHUB_REF branch name ${GITHUB_REF##*/}
-          echo GITHUB_REF=${GITHUB_REF}
-          echo GITHUB_HEAD_REF=${GITHUB_HEAD_REF}
-          echo GITHUB_BASE_REF=${GITHUB_BASE_REF}
-          if [ -z ${GITHUB_BASE_REF+x} ]; then
-            export BRANCH=${GITHUB_REF##*/};
-          else export BRANCH=${GITHUB_HEAD_REF}; fi
-          echo BRANCH=${BRANCH}
+          .github/common/git-branch-export.sh
 
       - name: Get regression test files
-        shell: bash
         run: |
-          echo $HOME
-          pwd
-          git clone https://github.com/MODFLOW-USGS/modflow6-testmodels ../modflow6-testmodels
+          .github/common/get-regression-files.sh
 
       - name: Check out the correct regression test branch
-        shell: bash
         run: |
-          cd ../modflow6-testmodels
-          if git show-ref -q --heads ${BRANCH}; then
-            git checkout ${BRANCH}; echo switched to modflow6-testmodels branch ${BRANCH};
-          else echo using modflow6-testmodels branch master;  fi
-          git branch
-          cd ../modflow6
-          ls ../
+          .github/common/checkout-regression-branch.sh
 
       - name: Update flopy MODFLOW 6 classes
         run: |
-          cd autotest
-          python update_flopy.py
-          cd ..
+          .github/common/update-flopy.sh
 
       - name: activate ifort and build applications
         run: |
