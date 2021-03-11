@@ -188,6 +188,7 @@ def get_htol(dir):
         "test059_mvlake_laksfr_tr": {
             "linux": 0.002,
             "darwin": 0.002,
+            "win32": 0.002,
         },
         "test045_lake4ss": {
             "linux": 0.007,
