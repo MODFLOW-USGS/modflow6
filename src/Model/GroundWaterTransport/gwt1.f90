@@ -4,6 +4,7 @@
 !   * Program GWT-GWT exchange transport (awaiting implementation of interface model)
 !   * Consider implementation of steady-state transport (affects MST, IST)
 !   * Check and handle pore space discrepancy between flow and transport (porosity vs specific yield)
+!   * UZT may not have the required porosity term
   
 module GwtModule
 
@@ -73,7 +74,11 @@ module GwtModule
     procedure, private :: package_create
     procedure, private :: ftype_check
     procedure :: get_iasym => gwt_get_iasym
-    procedure, private :: gwt_bdsav
+    procedure, private :: gwt_ot_flow
+    procedure, private :: gwt_ot_flowja
+    procedure, private :: gwt_ot_dv
+    procedure, private :: gwt_ot_bdsummary
+    procedure, private :: gwt_ot_obs
     
   end type GwtModelType
 
@@ -627,21 +632,46 @@ module GwtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SparseModule, only: csr_diagsum
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: ip
+    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
     ! -- Construct the flowja array.  Flowja is calculated each time, even if
-    !    output is suppressed.  (flowja is positive into a cell.)
+    !    output is suppressed.  (flowja is positive into a cell.)  The diagonal
+    !    position of the flowja array will contain the flow residual after
+    !    these routines are called, so each package is responsible for adding
+    !    its flow to this diagonal position.
     do i = 1, this%nja
       this%flowja(i) = DZERO
     enddo
+    ! todo: rename _flowja() methods to _cq()
     if(this%inadv > 0) call this%adv%adv_flowja(this%x, this%flowja)
     if(this%indsp > 0) call this%dsp%dsp_flowja(this%x, this%flowja)
+    if(this%inmst > 0) call this%mst%mst_cq(this%dis%nodes, this%x, this%xold, &
+                                            this%flowja)
+    if(this%inssm > 0) call this%ssm%ssm_cq(this%flowja)
+    if(this%infmi > 0) call this%fmi%fmi_cq(this%x, this%flowja)
+    !
+    ! -- Go through packages and call cq routines.  cf() routines are called
+    !    first to regenerate non-linear terms to be consistent with the final
+    !    conc solution.
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cf(reset_mover=.false.)
+      call packobj%bnd_cq(this%x, this%flowja)
+    enddo
+    !
+    ! -- Finalize calculation of flowja by adding face flows to the diagonal.
+    !    This results in the flow residual being stored in the diagonal
+    !    position for each cell.
+    call csr_diagsum(this%dis%con%ia, this%flowja)
     !
     ! -- Return
     return
@@ -662,7 +692,6 @@ module GwtModule
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     ! -- local
-    integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
     class(BndType),pointer :: packobj
 ! ------------------------------------------------------------------------------
@@ -670,73 +699,160 @@ module GwtModule
     ! -- Save the solution convergence flag
     this%icnvg = icnvg
     !
-    ! -- Set write and print flags differently if output is suppressed.
-    if(isuppress_output == 0) then
-      idvfl = 0
-      if(this%oc%oc_save('CONCENTRATION')) idvfl = 1
-      icbcfl = 0
-      if(this%oc%oc_save('BUDGET')) icbcfl = 1
-      icbcun = this%oc%oc_save_unit('BUDGET')
-      ibudfl = 0
-      if(this%oc%oc_print('BUDGET')) ibudfl = 1
-      iprobs = 1
-    else
-      icbcfl = 0
-      ibudfl = 0
-      icbcun = 0
-      iprobs = 0
-      idvfl  = 0
-    endif
-    !
-    ! -- Budget routines (start by resetting)
+    ! -- Budget routines (start by resetting).  Sole purpose of this section
+    !    is to add in and outs to model budget.  All ins and out for a model
+    !    should be added here to this%budget.  In a subsequent exchange call,
+    !    exchange flows might also be added.
     call this%budget%reset()
     !
-    ! -- Mass storage and transfer budgets
-    if(this%inmst > 0) then
-      call this%mst%mst_bdcalc(this%dis%nodes, this%x, this%xold,              &
-                               isuppress_output, this%budget)
-      call this%mst%mst_bdsav(icbcfl, icbcun)
-    endif
-    !
-    ! -- Advection and dispersion flowja
-    call this%gwt_bdsav(this%nja, this%flowja, icbcfl, icbcun)
-    !
-    ! -- SSM
-    if(this%inssm > 0) then
-      call this%ssm%ssm_bdcalc(isuppress_output, this%budget)
-      call this%ssm%ssm_bdsav(icbcfl, ibudfl, icbcun, iprobs, isuppress_output)
-    endif
-    !
-    ! - FMI
-    call this%fmi%fmi_bdcalc(this%x, isuppress_output, this%budget)
-    !
-    ! -- Clear obs
-    call this%obs%obs_bd_clear()
-    !
-    ! -- Mover budget
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_bd(icbcfl, ibudfl, isuppress_output, this%x)
-    end if
-    !
-    ! -- Boundary packages calculate budget and total flows to model budget
+    if(this%inmst > 0) call this%mst%mst_bd(isuppress_output, this%budget)
+    if(this%inssm > 0) call this%ssm%ssm_bd(isuppress_output, this%budget)
+    if(this%infmi > 0) call this%fmi%fmi_bd(isuppress_output, this%budget)
+    if(this%inmvt > 0) call this%mvt%mvt_bd(this%x)
+
     do ip = 1, this%bndlist%Count()
+      ! -- todo: rename bnd_mb to bnd_bd
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_bd(this%x, idvfl, icbcfl, ibudfl, icbcun, iprobs,       &
-                          isuppress_output, this%budget)
+      call packobj%bnd_mb(this%budget)
     enddo
-    !
-    ! -- Calculate and write simulated values for observations
-    if(iprobs /= 0) then
-      call this%obs%obs_bd()
-    endif
+
     !
     ! -- Return
     return
   end subroutine gwt_bd
 
-  subroutine gwt_bdsav(this, nja, flowja, icbcfl, icbcun)
+  subroutine gwt_ot(this)
 ! ******************************************************************************
-! gwt_bdsav -- Write intercell flows
+! gwt_ot -- GroundWater Transport Model Output
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule,only:kstp, kper, endofperiod, tdis_ot
+    ! -- dummy
+    class(GwtModelType) :: this
+    ! -- local
+    integer(I4B) :: idvsave
+    integer(I4B) :: idvprint
+    integer(I4B) :: icbcfl
+    integer(I4B) :: icbcun
+    integer(I4B) :: ibudfl
+    integer(I4B) :: ip
+    integer(I4B) :: ipflag
+    class(BndType), pointer :: packobj
+    ! -- formats
+    character(len=*),parameter :: fmtnocnvg = &
+      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
+      &I0,' OF STRESS PERIOD ',I0,'****')"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set write and print flags
+    idvsave = 0
+    idvprint = 0
+    icbcfl = 0
+    ibudfl = 0
+    if(this%oc%oc_save('CONCENTRATION')) idvsave = 1
+    if(this%oc%oc_print('CONCENTRATION')) idvprint = 1
+    if(this%oc%oc_save('BUDGET')) icbcfl = 1
+    if(this%oc%oc_print('BUDGET')) ibudfl = 1
+    icbcun = this%oc%oc_save_unit('BUDGET')
+    !
+    !   Calculate and save observations
+    call this%gwt_ot_obs()
+    !    
+    !   Save and print flows
+    call this%gwt_ot_flow(icbcfl, ibudfl, icbcun)
+    !
+    ! -- Write non-convergence message
+    ! -- todo: write budgets if not simcontinue and icnvg == 0
+    this%budget%budperc = 1.e30
+    if(this%icnvg == 0) then
+      write(this%iout, fmtnocnvg) kstp, kper
+    endif
+    !    
+    !   Save and print dependent variables
+    call this%gwt_ot_dv(idvsave, idvprint, ipflag)
+    !    
+    !   Print budget summaries
+    call this%gwt_ot_bdsummary(ibudfl, ipflag)
+    !
+    ! -- Timing Output
+    if(ipflag == 1) call tdis_ot(this%iout)
+    !
+    ! -- Return
+    return
+  end subroutine gwt_ot
+  
+  subroutine gwt_ot_obs(this)
+    class(GwtModelType) :: this
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    
+    ! -- Calculate and save observations
+    call this%obs%obs_bd()
+    call this%obs%obs_ot()
+    
+    ! -- Calculate and save package obserations
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_bd_obs()
+      call packobj%bnd_ot_obs()
+    end do
+    
+  end subroutine gwt_ot_obs
+  
+  subroutine gwt_ot_flow(this, icbcfl, ibudfl, icbcun)
+    class(GwtModelType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+
+    ! -- Save GWT flows
+    call this%gwt_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
+    if(this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
+    if(this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
+    if(this%inssm > 0) call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+    end do
+    
+    ! -- Save advanced package flows
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_package_flows(icbcfl=icbcfl, ibudfl=0)
+    end do
+    if(this%inmvt > 0) then
+      call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
+    end if
+
+    ! -- Print GWF flows
+    ! no need to print flowja
+    ! no need to print mst
+    ! no need to print fmi
+    if(this%inssm > 0) call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+    end do
+    
+    ! -- Print advanced package flows
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_package_flows(icbcfl=0, ibudfl=ibudfl)
+    end do
+    if(this%inmvt > 0) then
+      call this%mvt%mvt_ot_printflow(icbcfl, ibudfl)
+    end if
+    
+  end subroutine gwt_ot_flow
+  
+  subroutine gwt_ot_flowja(this, nja, flowja, icbcfl, icbcun)
+! ******************************************************************************
+! gwt_ot_flowja -- Write intercell flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -769,9 +885,56 @@ module GwtModule
     !
     ! -- Return
     return
-  end subroutine gwt_bdsav
+  end subroutine gwt_ot_flowja
 
-  subroutine gwt_ot(this)
+  subroutine gwt_ot_dv(this, idvsave, idvprint, ipflag)
+    class(GwtModelType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B), intent(inout) :: ipflag
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    
+    ! -- Print advanced package dependent variables
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_dv(idvsave, idvprint)
+    end do
+    
+    ! -- save head and print head
+    call this%oc%oc_ot(ipflag)
+    
+  end subroutine gwt_ot_dv
+  
+  subroutine gwt_ot_bdsummary(this, ibudfl, ipflag)
+    use TdisModule, only: kstp, kper
+    class(GwtModelType) :: this
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(inout) :: ipflag
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+
+    if (ibudfl /= 0) then
+      ipflag = 1
+      !
+      ! -- Package budget summary
+      do ip = 1, this%bndlist%Count()
+        packobj => GetBndFromList(this%bndlist, ip)
+        call packobj%bnd_ot_bdsummary(kstp, kper, this%iout)
+      enddo
+      
+      ! -- mover budget summary
+      if(this%inmvt > 0) then
+        call this%mvt%mvt_ot_bdsummary()
+      end if
+      
+      ! -- model budget summary
+      call this%budget%budget_ot(kstp, kper, this%iout)
+    end if
+    
+  end subroutine gwt_ot_bdsummary
+  
+  subroutine gwt_otxxx(this)
 ! ******************************************************************************
 ! gwt_ot -- GroundWater Transport Model Output
 ! Subroutine: (1) Output budget items
@@ -796,6 +959,14 @@ module GwtModule
     ! -- Set ibudfl and ihedfl flags for printing budget and conc information
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
     ihedfl = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
+
+    
+    !
+    ! -- Advection and dispersion flowja
+!    call this%gwt_bdsav(this%nja, this%flowja, icbcfl, icbcun)
+!      call this%ssm%ssm_bdsav(icbcfl, ibudfl, icbcun, iprobs, isuppress_output)
+    
+    
     !
     ! -- Output individual flows if requested
     if(ibudfl /= 0) then
@@ -826,7 +997,7 @@ module GwtModule
       if (ibudfl /= 0) then
         !
         ! -- Mover budget output
-        if(this%inmvt > 0) call this%mvt%mvt_ot()
+!cdl        if(this%inmvt > 0) call this%mvt%mvt_ot()
         !
         ! -- gwt model budget
         call this%budget%budget_ot(kstp, kper, this%iout)
@@ -845,7 +1016,7 @@ module GwtModule
     !
     ! -- return
     return
-  end subroutine gwt_ot
+  end subroutine gwt_otxxx
 
   subroutine gwt_da(this)
 ! ******************************************************************************

@@ -577,7 +577,11 @@ module BndModule
       imover = this%imover
     end if
     !
-    ! -- Calculate flows
+    ! -- Calculate package flows.  In the first call, simval is calculated
+    !    from hcof, rhs, and head.  The second call may reduce the value in
+    !    simval by what is sent to the mover.  The mover rate is stored in
+    !    simtomvr.  imover is set to zero here for advanced packages, which
+    !    handle and store mover quantities separately.
     call this%bnd_cq_simrate(x, flowja, imover)
     if (imover == 1) then
       call this%bnd_cq_simtomvr(flowja)

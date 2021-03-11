@@ -932,10 +932,14 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Construct the flowja array.  Flowja is calculated each time, even if
-    !    output is suppressed.  (flowja is positive into a cell.)
+    !    output is suppressed.  (flowja is positive into a cell.)  The diagonal
+    !    position of the flowja array will contain the flow residual after
+    !    these routines are called, so each package is responsible for adding
+    !    its flow to this diagonal position.
     do i = 1, this%nja
       this%flowja(i) = DZERO
     enddo
+    ! todo: rename _flowja() methods to _cq()
     if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
     if(this%inbuy > 0) call this%buy%buy_flowja(this%x, this%flowja)
     if(this%inhfb > 0) call this%hfb%hfb_flowja(this%x, this%flowja)
@@ -945,7 +949,9 @@ module GwfModule
                                                 this%xold, isuppress_output,   &
                                                 this%flowja)
     !
-    ! -- Go through packages and call cq routines
+    ! -- Go through packages and call cq routines.  cf() routines are called
+    !    first to regenerate non-linear terms to be consistent with the final
+    !    head solution.
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cf(reset_mover=.false.)
@@ -976,7 +982,6 @@ module GwfModule
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     ! -- local
-    integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
@@ -990,6 +995,7 @@ module GwfModule
     !    exchange flows might also be added.
     call this%budget%reset()
     
+    ! -- todo: rename to _bd()
     if(this%insto > 0) call this%sto%sto_mb(isuppress_output, this%budget)
     if(this%incsub > 0) call this%csub%csub_mb(isuppress_output, this%budget)
     if(this%inmvr > 0) call this%mvr%mvr_bd()
@@ -1113,9 +1119,7 @@ module GwfModule
     if(this%innpf > 0) then
       call this%npf%npf_save_model_flows(this%flowja, icbcfl, icbcun)
     endif
-    
     if(this%incsub > 0) call this%csub%csub_save_model_flows(icbcfl, icbcun)
-    
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)

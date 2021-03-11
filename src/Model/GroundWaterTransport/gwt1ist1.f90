@@ -38,6 +38,7 @@ module GwtIstModule
     real(DP), dimension(:), pointer, contiguous      :: decay => null()         ! first or zero order rate constant for liquid
     real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  ! first or zero order rate constant for sorbed mass
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! mass transfer rate
+    real(DP), dimension(2, NBDITEMS)                 :: budterm                 ! immmobile domain mass summaries
     
     type(BudgetType), pointer                        :: budget => null()        ! budget object
     type(OutputControlDataType), pointer             :: ocd => null()           ! output control object for cim
@@ -47,7 +48,12 @@ module GwtIstModule
     procedure :: bnd_ar => ist_ar
     procedure :: bnd_rp => ist_rp
     procedure :: bnd_fc => ist_fc
+    procedure :: bnd_cq => ist_cq
+    procedure :: bnd_mb => ist_mb
     procedure :: bnd_bd => ist_bd
+    procedure :: bnd_ot_model_flows => ist_ot_model_flows
+    procedure :: bnd_ot_dv => ist_ot_dv
+    procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
     procedure :: bnd_ot => ist_ot
     procedure :: bnd_da => ist_da
     procedure :: allocate_scalars
@@ -285,6 +291,115 @@ module GwtIstModule
     return
   end subroutine ist_fc
   
+  subroutine ist_cq(this, x, flowja, iadv)
+! ******************************************************************************
+! ist_cq -- Calculate flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    use ConstantsModule, only: DZERO
+    ! -- dummy
+    class(GwtIstType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    integer(I4B), optional, intent(in) :: iadv
+    ! -- local
+    integer(I4B) :: idiag
+    integer(I4B) :: n
+    real(DP) :: rate
+    real(DP) :: swt, swtpdt
+    real(DP) :: hhcof, rrhs
+    real(DP) :: vcell
+    real(DP) :: thetamfrac
+    real(DP) :: thetaimfrac
+    real(DP) :: kd
+    real(DP) :: rhob
+    real(DP) :: lambda1im
+    real(DP) :: lambda2im
+    real(DP) :: gamma1im
+    real(DP) :: gamma2im
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate immobile domain rhs and hcof
+    do n = 1, this%dis%nodes
+      !
+      ! -- skip if transport inactive
+      rate = DZERO
+      if(this%ibound(n) > 0) then
+        !
+        ! -- calculate new and old water volumes
+        vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+        swtpdt = this%fmi%gwfsat(n)
+        swt = this%fmi%gwfsatold(n, delt)
+        !
+        ! -- Set thetamfrac and thetaimfrac
+        thetamfrac = this%mst%get_thetamfrac(n)
+        thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
+        !
+        ! -- Calculate exchange with immobile domain
+        rate = DZERO
+        hhcof = DZERO
+        rrhs = DZERO
+        kd = DZERO
+        rhob = DZERO
+        lambda1im = DZERO
+        lambda2im = DZERO
+        gamma1im = DZERO
+        gamma2im = DZERO
+        if (this%idcy == 1) lambda1im = this%decay(n)
+        if (this%idcy == 2) gamma1im = this%decay(n)
+        if (this%isrb > 0) then
+          kd = this%distcoef(n)
+          rhob = this%bulk_density(n)
+          if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+          if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+        end if
+        call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
+                            thetamfrac, thetaimfrac, rhob, kd,                 &
+                            lambda1im, lambda2im, gamma1im, gamma2im,          &
+                            this%zetaim(n), this%cim(n), hhcof, rrhs)
+        rate = hhcof * x(n) - rrhs
+      end if
+      
+      this%strg(n) = rate
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
+      
+      !
+    enddo
+    !
+    ! -- update cim
+    call this%calccim(this%cim, x)
+    !
+    ! -- Calculate and store the rates for the immobile domain
+    this%budterm(:, :) = DZERO
+    call this%calcddbud(this%budterm, x)
+    !
+    ! -- return
+    return
+  end subroutine ist_cq
+
+  subroutine ist_mb(this, model_budget)
+    ! -- add package ratin/ratout to model budget
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    class(GwtIstType) :: this
+    type(BudgetType), intent(inout) :: model_budget
+    character (len=LENPACKAGENAME) :: text
+    real(DP) :: ratin
+    real(DP) :: ratout
+    integer(I4B) :: isuppress_output
+    isuppress_output = 0
+    call rate_accumulator(this%strg(:), ratin, ratout)
+    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
+                               isuppress_output, this%packName)
+    
+  end subroutine ist_mb
+
   subroutine ist_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
 ! ******************************************************************************
@@ -457,6 +572,117 @@ module GwtIstModule
     return
   end subroutine ist_bd
 
+  subroutine ist_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+! ******************************************************************************
+! ist_ot_model_flows -- write flows to binary file and/or print flows to budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy
+    class(GwtIstType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- loca
+    integer(I4B) :: n
+    integer(I4B) :: ibinun
+    integer(I4B) :: nbound
+    integer(I4B) :: naux
+    real(DP) :: rate
+    !
+    ! -- Set unit number for binary output
+    if(this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif(this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    endif
+    if(icbcfl == 0) ibinun = 0
+    !
+    ! -- Record the storage rate if requested
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      nbound = this%dis%nodes
+      naux = 0
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  this%auxname, ibinun, nbound, this%iout)
+    endif
+    !
+    ! -- Calculate immobile domain rhs and hcof
+    do n = 1, this%dis%nodes
+      !
+      ! -- skip if transport inactive
+      rate = DZERO
+      if(this%ibound(n) > 0) then
+        !
+        ! -- set rate from this%strg
+        rate = this%strg(n)
+      end if
+      !
+      ! -- If saving cell-by-cell flows in list, write flow
+      if (ibinun /= 0) then
+        call this%dis%record_mf6_list_entry(ibinun, n, n, rate,                &
+                                            naux, this%auxvar(:,n),            &
+                                            olconv=.TRUE.,                     &
+                                            olconv2=.TRUE.)
+      end if
+      !
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine ist_ot_model_flows
+    
+  subroutine ist_ot_dv(this, idvsave, idvprint)
+    ! -- modules
+    use TdisModule, only: kstp, kper, nstp
+    class(GwtIstType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    ! -- local
+    integer(I4B) :: ipflg
+    integer(I4B) :: ibinun
+    !
+    ! -- Save cim to a binary file. ibinun is a flag where 1 indicates that
+    !    cim should be written to a binary file if a binary file is open
+    !    for it.
+    ipflg = 0
+    ibinun = 1
+    if(idvsave == 0) ibinun = 0
+    if (ibinun /= 0) then
+      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                 &
+                           iprint_opt=0, isav_opt=ibinun)
+    endif
+    !
+    ! -- Print immobile domain concentrations to listing file
+    if (idvprint /= 0) then
+      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                      &
+                           iprint_opt=idvprint, isav_opt=0)
+    endif
+  end subroutine ist_ot_dv
+  
+  subroutine ist_ot_bdsummary(this, kstp, kper, iout)
+    use TdisModule, only: delt
+    class(GwtIstType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    integer(I4B) :: isuppress_output = 0
+    !
+    ! -- Write budget to list file
+    call this%budget%reset()
+    call this%budget%addentry(this%budterm, delt, budtxt, isuppress_output)
+    call this%budget%budget_ot(kstp, kper, iout)
+    
+  end subroutine ist_ot_bdsummary
+  
   subroutine ist_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
 ! ist_ot -- Output package budget
@@ -594,6 +820,7 @@ module GwtIstModule
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
+    !    nbound and maxbound are 0 in order to keep memory footprint low
     call this%BndType%allocate_arrays()
     !
     ! -- allocate ist arrays of size nodes

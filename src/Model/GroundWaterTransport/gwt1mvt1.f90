@@ -39,7 +39,9 @@ module GwtMvtModule
     procedure :: mvt_fc
     procedure :: mvt_cc
     procedure :: mvt_bd
-    procedure :: mvt_ot
+    procedure :: mvt_ot_saveflow
+    procedure :: mvt_ot_printflow
+    procedure :: mvt_ot_bdsummary
     procedure :: mvt_da
     procedure :: allocate_scalars
     procedure :: read_options
@@ -296,7 +298,7 @@ module GwtMvtModule
     return
   end subroutine mvt_cc
   
-  subroutine mvt_bd(this, icbcfl, ibudfl, isuppress_output, cnew)
+  subroutine mvt_bd(this, cnew)
 ! ******************************************************************************
 ! mvt_bd -- Write mover terms to listing file
 ! ******************************************************************************
@@ -304,49 +306,78 @@ module GwtMvtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
     ! -- dummy
     class(GwtMvtType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: isuppress_output
-    real(DP), intent(in), dimension(:) :: cnew
+    real(DP), dimension(:), intent(in)  :: cnew
     ! -- local
-    integer(I4B) :: ibinun
-    ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
-    character(len=*), parameter :: fmtmvt = &
-      "(1x, a, ' ID ', i0, ' PROVIDED ', 1(1pg15.6), ' TO ', a, ' ID ', i0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- fill the budget object
     call this%mvt_fill_budobj(cnew)
     !
-    ! -- Write the flow table
-    if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
-      call this%mvt_print_outputtab()
-    end if
+    ! -- return
+    return
+  end subroutine mvt_bd
+  
+  subroutine mvt_ot_saveflow(this, icbcfl, ibudfl)
+! ******************************************************************************
+! mvt_bd -- Write mover terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only : kstp, kper, delt, pertim, totim
+    ! -- dummy
+    class(GwtMvttype) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    ! -- locals
+    integer(I4B) :: ibinun
+! ------------------------------------------------------------------------------
     !
-    ! -- write the flows from the budobj
+    ! -- Save the mover flows from the budobj to a mover binary file
     ibinun = 0
     if(this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
     if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
                         pertim, totim, this%iout)
     end if
     !
-    ! -- return
+    ! -- Return
     return
-  end subroutine mvt_bd
-  
-  subroutine mvt_ot(this)
+  end subroutine mvt_ot_saveflow
+
+  subroutine mvt_ot_printflow(this, icbcfl, ibudfl)
 ! ******************************************************************************
-! mvt_ot -- Write mover budget to listing file
+! mvr_ot_printflow -- Print mover flow table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtMvtType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    ! -- locals
+! ------------------------------------------------------------------------------
+    !
+    ! -- Print the mover flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%mvt_print_outputtab()
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine mvt_ot_printflow
+
+  subroutine mvt_ot_bdsummary(this)
+! ******************************************************************************
+! mvt_ot_bdsummary -- Write mover budget to listing file
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -413,7 +444,7 @@ module GwtMvtModule
     !
     ! -- Return
     return
-  end subroutine mvt_ot
+  end subroutine mvt_ot_bdsummary
 
   subroutine mvt_da(this)
 ! ******************************************************************************

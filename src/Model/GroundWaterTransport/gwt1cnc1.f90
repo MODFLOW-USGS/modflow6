@@ -18,12 +18,17 @@ module GwtCncModule
   character(len=LENPACKAGENAME) :: text  = '             CNC'
   !
   type, extends(BndType) :: GwtCncType
+      real(DP), dimension(:), pointer, contiguous :: ratecncin => null()        !simulated flows into constant conc (excluding other concs)
+      real(DP), dimension(:), pointer, contiguous :: ratecncout => null()       !simulated flows out of constant conc (excluding to other concs)
     contains
     procedure :: bnd_rp => cnc_rp
     procedure :: bnd_ad => cnc_ad
     procedure :: bnd_ck => cnc_ck
     procedure :: bnd_fc => cnc_fc
-    procedure :: bnd_bd => cnc_bd
+    procedure :: bnd_cq => cnc_cq
+    procedure :: bnd_mb => cnc_mb
+    procedure :: bnd_da => cnc_da
+    procedure :: allocate_arrays => cnc_allocate_arrays
     procedure :: define_listlabel
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => cnc_obs_supported
@@ -81,6 +86,38 @@ contains
     return
   end subroutine cnc_create
 
+  subroutine cnc_allocate_arrays(this, nodelist, auxvar)
+! ******************************************************************************
+! allocate_scalars -- allocate arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtCncType) :: this
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_arrays()
+    !
+    ! -- allocate ratecncex
+    call mem_allocate(this%ratecncin, this%maxbound, 'RATECNCIN', this%memoryPath)
+    call mem_allocate(this%ratecncout, this%maxbound, 'RATECNCOUT', this%memoryPath)
+    do i = 1, this%maxbound
+      this%ratecncin(i) = DZERO
+      this%ratecncout(i) = DZERO
+    end do
+    !
+    ! -- return
+    return
+  end subroutine cnc_allocate_arrays
+  
   subroutine cnc_rp(this)
 ! ******************************************************************************
 ! cnc_rp -- Read and prepare
@@ -228,143 +265,256 @@ contains
     return
   end subroutine cnc_fc
 
-  subroutine cnc_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
+  subroutine cnc_cq(this, x, flowja, iadv)
 ! ******************************************************************************
-! cnc_bd -- Calculate constant concentration flow budget
+! cnc_cq -- Calculate constant concenration flow.  This method overrides bnd_cq().
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt, kstp, kper
-    use ConstantsModule, only: LENBOUNDNAME
-    use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtCncType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(GwtCncType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    character(len=20) :: nodestr
-    integer(I4B) :: nodeu
-    integer(I4B) :: i, node, ibinun, n2
-    real(DP) :: rrate, chin, chout, q
-    integer(I4B) :: ibdlbl, naux, ipos
-    ! -- for observations
-    character(len=LENBOUNDNAME) :: bname
-    ! -- formats
+    integer(I4B) :: i
+    integer(I4B) :: ipos
+    integer(I4B) :: node
+    integer(I4B) :: n2
+    integer(I4B) :: idiag
+    real(DP) :: rate
+    real(DP) :: ratein, rateout
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
-    !
-    chin = DZERO
-    chout = DZERO
-    ibdlbl = 0
-    !
-    ! -- Set unit number for binary output
-    if(this%ipakcb < 0) then
-      ibinun = icbcun
-    elseif(this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    endif
-    if(icbcfl == 0) ibinun = 0
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if(ibinun /= 0) then
-      naux = this%naux
-      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
-                  this%name_model, this%name_model, this%packName, naux,           &
-                  this%auxname, ibinun, this%nbound, this%iout)
-    endif
     !
     ! -- If no boundaries, skip flow calculations.
     if(this%nbound > 0) then
       !
-      ! -- reset size of table
-      if (this%iprflow /= 0) then
-        call this%outputtab%set_kstpkper(kstp, kper)
-        call this%outputtab%set_maxbound(this%nbound)
-      end if
-      !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
         node = this%nodelist(i)
-        rrate = DZERO
-        ! -- assign boundary name
-        if (this%inamedbound>0) then
-          bname = this%boundname(i)
-        else
-          bname = ''
-        endif
+        idiag = this%dis%con%ia(node)
+        rate = DZERO
+        ratein = DZERO
+        rateout = DZERO
         !
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
                   this%dis%con%ia(node + 1) - 1
-          q = this%flowja(ipos)
-          rrate = rrate - q
+          q = flowja(ipos)
+          rate = rate - q
           ! -- only accumulate chin and chout for active
           !    connected cells
           n2 = this%dis%con%ja(ipos)
-          if (this%ibound(n2) < 1) cycle
-          if (q < DZERO) then
-            chin = chin - q
-          else
-            chout = chout + q
+          if (this%ibound(n2) > 0) then
+            if (q < DZERO) then
+              ratein = ratein - q
+            else
+              rateout = rateout + q
+            end if
           end if
         end do
         !
-        ! -- For cnc, store total flow in rhs so it is available for other 
+        ! -- For CNC, store total flow in rhs so it is available for other 
         !    calculations
-        this%rhs(i) = -rrate
+        this%rhs(i) = -rate
         this%hcof(i) = DZERO
         !
-        ! -- Print the individual rates if requested(this%iprflow<0)
-        if (ibudfl /= 0) then
-          if(this%iprflow /= 0) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%dis%get_nodeuser(node)
-            call this%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-          end if
-        end if
-        !
-        ! -- If saving cell-by-cell flows in list, write flow
-        if (ibinun /= 0) then
-          n2 = i
-          if (present(imap)) n2 = imap(i)
-          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
-                                                  naux, this%auxvar(:,i),      &
-                                                  olconv2=.FALSE.)
-        end if
-        !
         ! -- Save simulated value to simvals array.
-        this%simvals(i) = rrate
+        this%simvals(i) = rate
+        this%ratecncin(i) = ratein
+        this%ratecncout(i) = rateout
+        flowja(idiag) = flowja(idiag) + rate
         !
       end do
       !
     end if
     !
-    ! -- Store the rates
-    call model_budget%addentry(chin, chout, delt, this%text,                   &
+    ! -- return
+    return
+  end subroutine cnc_cq
+
+  subroutine cnc_mb(this, model_budget)
+    ! -- add package ratin/ratout to model budget
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    class(GwtCncType) :: this
+    type(BudgetType), intent(inout) :: model_budget
+    character (len=LENPACKAGENAME) :: text
+    real(DP) :: ratin
+    real(DP) :: ratout
+    real(DP) :: dum
+    integer(I4B) :: isuppress_output
+    isuppress_output = 0
+    call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
+    call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
+    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%packName)
+  end subroutine cnc_mb
+
+!cdl  subroutine cnc_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
+!cdl                    isuppress_output, model_budget, imap, iadv)
+!cdl! ******************************************************************************
+!cdl! cnc_bd -- Calculate constant concentration flow budget
+!cdl! ******************************************************************************
+!cdl!
+!cdl!    SPECIFICATIONS:
+!cdl! ------------------------------------------------------------------------------
+!cdl    ! -- modules
+!cdl    use TdisModule, only: delt, kstp, kper
+!cdl    use ConstantsModule, only: LENBOUNDNAME
+!cdl    use BudgetModule, only: BudgetType
+!cdl    ! -- dummy
+!cdl    class(GwtCncType) :: this
+!cdl    real(DP),dimension(:),intent(in) :: x
+!cdl    integer(I4B), intent(in) :: idvfl
+!cdl    integer(I4B), intent(in) :: icbcfl
+!cdl    integer(I4B), intent(in) :: ibudfl
+!cdl    integer(I4B), intent(in) :: icbcun
+!cdl    integer(I4B), intent(in) :: iprobs
+!cdl    integer(I4B), intent(in) :: isuppress_output
+!cdl    type(BudgetType), intent(inout) :: model_budget
+!cdl    integer(I4B), dimension(:), optional, intent(in) :: imap
+!cdl    integer(I4B), optional, intent(in) :: iadv
+!cdl    ! -- local
+!cdl    character(len=20) :: nodestr
+!cdl    integer(I4B) :: nodeu
+!cdl    integer(I4B) :: i, node, ibinun, n2
+!cdl    real(DP) :: rrate, chin, chout, q
+!cdl    integer(I4B) :: ibdlbl, naux, ipos
+!cdl    ! -- for observations
+!cdl    character(len=LENBOUNDNAME) :: bname
+!cdl    ! -- formats
+!cdl! ------------------------------------------------------------------------------
+!cdl    !
+!cdl    chin = DZERO
+!cdl    chout = DZERO
+!cdl    ibdlbl = 0
+!cdl    !
+!cdl    ! -- Set unit number for binary output
+!cdl    if(this%ipakcb < 0) then
+!cdl      ibinun = icbcun
+!cdl    elseif(this%ipakcb == 0) then
+!cdl      ibinun = 0
+!cdl    else
+!cdl      ibinun = this%ipakcb
+!cdl    endif
+!cdl    if(icbcfl == 0) ibinun = 0
+!cdl    !
+!cdl    ! -- If cell-by-cell flows will be saved as a list, write header.
+!cdl    if(ibinun /= 0) then
+!cdl      naux = this%naux
+!cdl      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
+!cdl                  this%name_model, this%name_model, this%packName, naux,           &
+!cdl                  this%auxname, ibinun, this%nbound, this%iout)
+!cdl    endif
+!cdl    !
+!cdl    ! -- If no boundaries, skip flow calculations.
+!cdl    if(this%nbound > 0) then
+!cdl      !
+!cdl      ! -- reset size of table
+!cdl      if (this%iprflow /= 0) then
+!cdl        call this%outputtab%set_kstpkper(kstp, kper)
+!cdl        call this%outputtab%set_maxbound(this%nbound)
+!cdl      end if
+!cdl      !
+!cdl      ! -- Loop through each boundary calculating flow.
+!cdl      do i = 1, this%nbound
+!cdl        node = this%nodelist(i)
+!cdl        rrate = DZERO
+!cdl        ! -- assign boundary name
+!cdl        if (this%inamedbound>0) then
+!cdl          bname = this%boundname(i)
+!cdl        else
+!cdl          bname = ''
+!cdl        endif
+!cdl        !
+!cdl        ! -- Calculate the flow rate into the cell.
+!cdl        do ipos = this%dis%con%ia(node) + 1, &
+!cdl                  this%dis%con%ia(node + 1) - 1
+!cdl          q = this%flowja(ipos)
+!cdl          rrate = rrate - q
+!cdl          ! -- only accumulate chin and chout for active
+!cdl          !    connected cells
+!cdl          n2 = this%dis%con%ja(ipos)
+!cdl          if (this%ibound(n2) < 1) cycle
+!cdl          if (q < DZERO) then
+!cdl            chin = chin - q
+!cdl          else
+!cdl            chout = chout + q
+!cdl          end if
+!cdl        end do
+!cdl        !
+!cdl        ! -- For cnc, store total flow in rhs so it is available for other 
+!cdl        !    calculations
+!cdl        this%rhs(i) = -rrate
+!cdl        this%hcof(i) = DZERO
+!cdl        !
+!cdl        ! -- Print the individual rates if requested(this%iprflow<0)
+!cdl        if (ibudfl /= 0) then
+!cdl          if(this%iprflow /= 0) then
+!cdl            !
+!cdl            ! -- set nodestr and write outputtab table
+!cdl            nodeu = this%dis%get_nodeuser(node)
+!cdl            call this%dis%nodeu_to_string(nodeu, nodestr)
+!cdl            call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+!cdl          end if
+!cdl        end if
+!cdl        !
+!cdl        ! -- If saving cell-by-cell flows in list, write flow
+!cdl        if (ibinun /= 0) then
+!cdl          n2 = i
+!cdl          if (present(imap)) n2 = imap(i)
+!cdl          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+!cdl                                                  naux, this%auxvar(:,i),      &
+!cdl                                                  olconv2=.FALSE.)
+!cdl        end if
+!cdl        !
+!cdl        ! -- Save simulated value to simvals array.
+!cdl        this%simvals(i) = rrate
+!cdl        !
+!cdl      end do
+!cdl      !
+!cdl    end if
+!cdl    !
+!cdl    ! -- Store the rates
+!cdl    call model_budget%addentry(chin, chout, delt, this%text,                   &
+!cdl                               isuppress_output, this%packName)
+!cdl    !
+!cdl    ! -- Save the simulated values to the ObserveType objects
+!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+!cdl      call this%bnd_bd_obs()
+!cdl    end if
+!cdl    !
+!cdl    ! -- return
+!cdl    return
+!cdl  end subroutine cnc_bd
+
+  subroutine cnc_da(this)
+! ******************************************************************************
+! cnc_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(GwtCncType) :: this
+! ------------------------------------------------------------------------------
     !
-    ! -- Save the simulated values to the ObserveType objects
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%bnd_bd_obs()
-    end if
+    ! -- Deallocate parent package
+    call this%BndType%bnd_da()
+    !
+    ! -- arrays
+    call mem_deallocate(this%ratecncin)
+    call mem_deallocate(this%ratecncout)
     !
     ! -- return
     return
-  end subroutine cnc_bd
+  end subroutine cnc_da
 
   subroutine define_listlabel(this)
 ! ******************************************************************************

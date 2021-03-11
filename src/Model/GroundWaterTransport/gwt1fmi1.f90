@@ -36,6 +36,7 @@ module GwtFmiModule
     type(ListType), pointer                         :: gwfbndlist => null()      !< list of gwf stress packages
     integer(I4B), pointer                           :: iflowsupdated => null()   !< flows were updated for this time step
     integer(I4B), pointer                           :: iflowerr => null()        !< add the flow error correction
+    real(DP), dimension(:), pointer, contiguous     :: flowcorrect => null()     !< mass flow correction
     real(DP), dimension(:), pointer, contiguous     :: flowerr => null()         !< residual error of the flow solution
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< pointer to GWT ibound
     real(DP), dimension(:), pointer, contiguous     :: gwfflowja => null()       !< pointer to the GWF flowja array
@@ -65,7 +66,9 @@ module GwtFmiModule
     procedure :: fmi_rp
     procedure :: fmi_ad
     procedure :: fmi_fc
-    procedure :: fmi_bdcalc
+    procedure :: fmi_cq
+    procedure :: fmi_bd
+    procedure :: fmi_ot_flow
     procedure :: fmi_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -425,58 +428,171 @@ module GwtFmiModule
     return
   end subroutine fmi_fc
   
-  subroutine fmi_bdcalc(this, cnew, isuppress_output, model_budget)
+!cdl  subroutine fmi_bdcalc(this, cnew, isuppress_output, model_budget)
+!cdl! ******************************************************************************
+!cdl! fmi_fc -- Calculate coefficients and fill amat and rhs
+!cdl! ******************************************************************************
+!cdl!
+!cdl!    SPECIFICATIONS:
+!cdl! ------------------------------------------------------------------------------
+!cdl    ! -- modules
+!cdl    use TdisModule, only: delt
+!cdl    use BudgetModule, only: BudgetType
+!cdl    ! -- dummy
+!cdl    class(GwtFmiType) :: this
+!cdl    real(DP), intent(in), dimension(:) :: cnew
+!cdl    integer(I4B), intent(in) :: isuppress_output
+!cdl    type(BudgetType), intent(inout) :: model_budget
+!cdl    ! -- local
+!cdl    integer(I4B) :: n, nodes
+!cdl    real(DP) :: rate, rin, rout
+!cdl! ------------------------------------------------------------------------------
+!cdl    !
+!cdl    ! -- If not adding flow error correction, return
+!cdl    if (this%iflowerr /= 0) then
+!cdl      !
+!cdl      ! -- initialize 
+!cdl      rin = DZERO
+!cdl      rout = DZERO
+!cdl      nodes = this%dis%nodes
+!cdl      !
+!cdl      ! -- Accumulate the flow correction term
+!cdl      do n = 1, nodes
+!cdl        if (this%ibound(n) <= 0) cycle
+!cdl        rate = -this%flowerr(n) * cnew(n)
+!cdl        if (rate < DZERO) then
+!cdl          rout = rout - rate
+!cdl        else
+!cdl          rin = rin + rate
+!cdl        endif
+!cdl      enddo
+!cdl      !
+!cdl      ! -- Add the flow error term to model budget
+!cdl      call model_budget%addentry(rout, rin, delt, budtxt(1),                   &
+!cdl                                 isuppress_output, rowlabel=this%packName)
+!cdl      !
+!cdl      ! -- Add the flow correction term to model budget
+!cdl      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
+!cdl                                 isuppress_output, rowlabel=this%packName)
+!cdl    end if
+!cdl    !
+!cdl    ! -- Return
+!cdl    return
+!cdl  end subroutine fmi_bdcalc
+  
+  subroutine fmi_cq(this, cnew, flowja)
 ! ******************************************************************************
-! fmi_fc -- Calculate coefficients and fill amat and rhs
+! fmi_cq -- Calculate flow correction
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtFmiType) :: this
+    real(DP), intent(in), dimension(:) :: cnew
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: nodes
+    integer(I4B) :: idiag
+    real(DP) :: rate
+! ------------------------------------------------------------------------------
+    !
+    ! -- If not adding flow error correction, return
+    if (this%iflowerr /= 0) then
+      !
+      ! -- Accumulate the flow correction term
+      do n = 1, this%dis%nodes
+        rate = DZERO
+        if (this%ibound(n) > 0) then
+          rate = -this%flowerr(n) * cnew(n)
+        end if
+        this%flowcorrect(n) = rate
+        idiag = this%dis%con%ia(n)
+        flowja(idiag) = flowja(idiag) + rate
+      enddo
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine fmi_cq
+  
+  subroutine fmi_bd(this, isuppress_output, model_budget)
+! ******************************************************************************
+! mst_bd -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
-    use BudgetModule, only: BudgetType
+    use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
     class(GwtFmiType) :: this
-    real(DP), intent(in), dimension(:) :: cnew
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
-    integer(I4B) :: n, nodes
-    real(DP) :: rate, rin, rout
+    real(DP) :: rin
+    real(DP) :: rout
 ! ------------------------------------------------------------------------------
     !
-    ! -- If not adding flow error correction, return
+    ! -- flow correction
     if (this%iflowerr /= 0) then
-      !
-      ! -- initialize 
-      rin = DZERO
-      rout = DZERO
-      nodes = this%dis%nodes
-      !
-      ! -- Accumulate the flow correction term
-      do n = 1, nodes
-        if (this%ibound(n) <= 0) cycle
-        rate = -this%flowerr(n) * cnew(n)
-        if (rate < DZERO) then
-          rout = rout - rate
-        else
-          rin = rin + rate
-        endif
-      enddo
-      !
-      ! -- Add the flow error term to model budget
-      call model_budget%addentry(rout, rin, delt, budtxt(1),                   &
-                                 isuppress_output, rowlabel=this%packName)
-      !
-      ! -- Add the flow correction term to model budget
-      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
-                                 isuppress_output, rowlabel=this%packName)
+      call rate_accumulator(this%flowcorrect, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(2), isuppress_output)
     end if
     !
     ! -- Return
     return
-  end subroutine fmi_bdcalc
+  end subroutine fmi_bd
   
+  subroutine fmi_ot_flow(this, icbcfl, icbcun)
+! ******************************************************************************
+! fmi_ot_flow -- Save budget terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtFmiType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: icbcun
+    ! -- local
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint, nvaluesp, nwidthp
+    character(len=1) :: cdatafmp=' ', editdesc=' '
+    real(DP) :: dinact
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set unit number for binary output
+    if(this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif(this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    endif
+    if(icbcfl == 0) ibinun = 0
+    !
+    ! -- Do not save flow corrections if not active
+    if(this%iflowerr == 0) ibinun = 0
+    !
+    ! -- Record the storage rates if requested
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DZERO
+      !
+      ! -- flow correction
+      call this%dis%record_array(this%flowcorrect, this%iout, iprint, -ibinun, &
+                                 budtxt(2), cdatafmp, nvaluesp,                &
+                                 nwidthp, editdesc, dinact)
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine fmi_ot_flow
+
   subroutine fmi_da(this)
 ! ******************************************************************************
 ! fmi_da -- Deallocate variables
@@ -497,6 +613,7 @@ module GwtFmiModule
     deallocate(this%flowpacknamearray)
     deallocate(this%aptbudobj)
     call mem_deallocate(this%flowerr)
+    call mem_deallocate(this%flowcorrect)
     call mem_deallocate(this%iatp)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
@@ -593,11 +710,14 @@ module GwtFmiModule
     ! -- Allocate variables needed for all cases
     if (this%iflowerr == 0) then
       call mem_allocate(this%flowerr, 1, 'FLOWERR', this%memoryPath)
+      call mem_allocate(this%flowcorrect, 1, 'FLOWCORRECT', this%memoryPath)
     else
       call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%memoryPath)
+      call mem_allocate(this%flowcorrect, nodes, 'FLOWCORRECT', this%memoryPath)
     end if
     do n = 1, size(this%flowerr)
       this%flowerr(n) = DZERO
+      this%flowcorrect(n) = DZERO
     enddo
     !
     ! -- Allocate ibdgwfsat0, which is an indicator array marking cells with
@@ -701,6 +821,9 @@ module GwtFmiModule
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+    character(len=*), parameter :: fmtisvflow =                                &
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
+      "WHENEVER ICBCFL IS NOT ZERO AND FLOW IMBALANCE CORRECTION ACTIVE.')"
     character(len=*), parameter :: fmtifc =                                    &
       "(4x,'MASS WILL BE ADDED OR REMOVED TO COMPENSATE FOR FLOW IMBALANCE.')"
 ! ------------------------------------------------------------------------------
@@ -717,6 +840,9 @@ module GwtFmiModule
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
+          case ('SAVE_FLOWS')
+            this%ipakcb = -1
+            write(this%iout, fmtisvflow)
           case ('FLOW_IMBALANCE_CORRECTION')
             write(this%iout, fmtifc)
             this%iflowerr = 1
