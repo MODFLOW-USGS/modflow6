@@ -3,14 +3,14 @@
 ../../../src/Utilities/BlockParser.f90
 ../../../src/Utilities/Budget.f90
 ../../../src/Utilities/Constants.f90
-../../../src/Utilities/compilerversion.fpp
+../../../src/Utilities/compilerversion.f90
 ../../../src/Utilities/genericutils.f90
 ../../../src/Utilities/InputOutput.f90
 ../../../src/Utilities/kind.f90
 ../../../src/Utilities/OpenSpec.f90
 ../../../src/Utilities/sort.f90
 ../../../src/Utilities/Message.f90
-../../../src/Utilities/defmacro.fpp
+../../../src/Utilities/defmacro.f90
 ../../../src/Utilities/Sim.f90
 ../../../src/Utilities/SimVariables.f90
 ../../../src/Utilities/version.f90

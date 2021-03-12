@@ -43,7 +43,7 @@ contains
     type(ListType) :: modpkglist
     type(ModelPackageType), pointer, intent(inout) :: modpkg
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => modpkg
     call modpkglist%Add(obj)
@@ -58,7 +58,7 @@ contains
     integer, intent(in) :: idx
     type(ModelPackageType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => modpkgList%GetItem(idx)
     res => CastAsModelPackageType(obj)

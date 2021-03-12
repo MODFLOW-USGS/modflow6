@@ -158,7 +158,7 @@ def test_sim_errors():
     sim = get_minimal_gwf_simulation(ws,
                                      chdkwargs=chdkwargs)
     sim.write_simulation()
-    err_str = ["1. ERROR OCCURRED WHILE READING FILE 'test.chd'"]
+    err_str = ["1. Cell is already a constant head ((1,1,1))."]
     run_mf6_error(ws, err_str)
     return
 

@@ -7,7 +7,7 @@ import pymake
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from test000_setup import build_mf6, build_mf6_so, build_mf5to6, build_zbud6
+from get_build_exes import build_mf6, build_mf6_so, build_mf5to6, build_zbud6
 
 # make sure exe extension is used on windows
 eext = ''

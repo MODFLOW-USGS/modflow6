@@ -689,7 +689,7 @@ contains
     !logical, allocatable, dimension(:) :: complete
     type(TimeSeriesRecordType), pointer :: tsr, tsRecEarlier, tsRecLater, tsrNew
     type(ChdType), pointer :: chd
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     lasttime = .false.
     badtime = huge(badtime)

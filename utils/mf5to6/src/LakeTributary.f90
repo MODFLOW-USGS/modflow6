@@ -49,7 +49,7 @@ contains
     type(ListType), pointer :: list
     type(LakeTributaryType), pointer :: lakeTrib
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => lakeTrib
     call list%Add(obj)
@@ -64,7 +64,7 @@ contains
     integer, intent(in) :: idx
     type(LakeTributaryType), pointer :: res
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     obj => list%GetItem(idx)
     res => CastAsLakeTributaryType(obj)
