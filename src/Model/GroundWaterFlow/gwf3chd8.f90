@@ -19,18 +19,23 @@ module ChdModule
   character(len=LENPACKAGENAME) :: text  = '             CHD'
   !
   type, extends(BndType) :: ChdType
+      real(DP), dimension(:), pointer, contiguous :: ratechdin => null()        !simulated flows into constant head (excluding other chds)
+      real(DP), dimension(:), pointer, contiguous :: ratechdout => null()       !simulated flows out of constant head (excluding to other chds)
     contains
-    procedure :: bnd_rp => chd_rp
-    procedure :: bnd_ad => chd_ad
-    procedure :: bnd_ck => chd_ck
-    procedure :: bnd_fc => chd_fc
-    procedure :: bnd_bd => chd_bd
-    procedure :: define_listlabel
-    ! -- methods for observations
-    procedure, public :: bnd_obs_supported => chd_obs_supported
-    procedure, public :: bnd_df_obs => chd_df_obs
-    ! -- method for time series
-    procedure, public :: bnd_rp_ts => chd_rp_ts
+      procedure :: bnd_rp => chd_rp
+      procedure :: bnd_ad => chd_ad
+      procedure :: bnd_ck => chd_ck
+      procedure :: bnd_fc => chd_fc
+      procedure :: bnd_cq => chd_cq
+      procedure :: bnd_mb => chd_mb
+      procedure :: bnd_da => chd_da
+      procedure :: allocate_arrays => chd_allocate_arrays
+      procedure :: define_listlabel
+      ! -- methods for observations
+      procedure, public :: bnd_obs_supported => chd_obs_supported
+      procedure, public :: bnd_df_obs => chd_df_obs
+      ! -- method for time series
+      procedure, public :: bnd_rp_ts => chd_rp_ts
   end type ChdType
 
 contains
@@ -83,6 +88,38 @@ contains
     return
   end subroutine chd_create
 
+  subroutine chd_allocate_arrays(this, nodelist, auxvar)
+! ******************************************************************************
+! allocate_scalars -- allocate arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(ChdType) :: this
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_arrays()
+    !
+    ! -- allocate ratechdex
+    call mem_allocate(this%ratechdin, this%maxbound, 'RATECHDIN', this%memoryPath)
+    call mem_allocate(this%ratechdout, this%maxbound, 'RATECHDOUT', this%memoryPath)
+    do i = 1, this%maxbound
+      this%ratechdin(i) = DZERO
+      this%ratechdout(i) = DZERO
+    end do
+    !
+    ! -- return
+    return
+  end subroutine chd_allocate_arrays
+  
   subroutine chd_rp(this)
 ! ******************************************************************************
 ! chd_rp -- Read and prepare
@@ -236,145 +273,117 @@ contains
     return
   end subroutine chd_fc
 
-  subroutine chd_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
+  subroutine chd_cq(this, x, flowja, iadv)
 ! ******************************************************************************
-! chd_bd -- Calculate constant head flow budget
+! chd_cq -- Calculate constant head flow.  This method overrides bnd_cq().
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt, kstp, kper
-    use ConstantsModule, only: LENBOUNDNAME
-    use BudgetModule, only: BudgetType
     ! -- dummy
-    class(ChdType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(ChdType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    character(len=20) :: nodestr
-    integer(I4B) :: nodeu
-    integer(I4B) :: i, node, ibinun, n2
-    real(DP) :: rrate, chin, chout, q
-    integer(I4B) :: naux, ipos
-    ! -- for observations
-    character(len=LENBOUNDNAME) :: bname
-    ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+    integer(I4B) :: i
+    integer(I4B) :: ipos
+    integer(I4B) :: node
+    integer(I4B) :: n2
+    integer(I4B) :: idiag
+    real(DP) :: rate
+    real(DP) :: ratein, rateout
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize local variables
-    chin = DZERO
-    chout = DZERO
-    !
-    ! -- Set unit number for binary output
-    if(this%ipakcb < 0) then
-      ibinun = icbcun
-    elseif(this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    endif
-    if(icbcfl == 0) ibinun = 0
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if(ibinun /= 0) then
-      naux = this%naux
-      call this%dis%record_srcdst_list_header(this%text, this%name_model,  &
-                  this%name_model, this%name_model, this%packName, naux,           &
-                  this%auxname, ibinun, this%nbound, this%iout)
-    endif
     !
     ! -- If no boundaries, skip flow calculations.
     if(this%nbound > 0) then
       !
-      ! -- set kstp and kper and reset size of table
-      if (this%iprflow /= 0) then
-        call this%outputtab%set_kstpkper(kstp, kper)
-        call this%outputtab%set_maxbound(this%nbound)
-      end if
-      !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
         node = this%nodelist(i)
-        rrate = DZERO
-        ! -- assign boundary name
-        if (this%inamedbound>0) then
-          bname = this%boundname(i)
-        else
-          bname = ''
-        endif
+        idiag = this%dis%con%ia(node)
+        rate = DZERO
+        ratein = DZERO
+        rateout = DZERO
         !
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
                   this%dis%con%ia(node + 1) - 1
-          q = this%flowja(ipos)
-          rrate = rrate - q
+          q = flowja(ipos)
+          rate = rate - q
           ! -- only accumulate chin and chout for active
           !    connected cells
           n2 = this%dis%con%ja(ipos)
-          if (this%ibound(n2) < 1) cycle
-          if (q < DZERO) then
-            chin = chin - q
-          else
-            chout = chout + q
+          if (this%ibound(n2) > 0) then
+            if (q < DZERO) then
+              ratein = ratein - q
+            else
+              rateout = rateout + q
+            end if
           end if
-                  end do
+        end do
         !
         ! -- For chd, store total flow in rhs so it is available for other 
         !    calculations
-        this%rhs(i) = -rrate
+        this%rhs(i) = -rate
         this%hcof(i) = DZERO
         !
-        ! -- Print the individual rates if requested(this%iprflow<0)
-        if (ibudfl /= 0) then
-          if(this%iprflow /= 0) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%dis%get_nodeuser(node)
-            call this%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-          end if
-        end if
-        !
-        ! -- If saving cell-by-cell flows in list, write flow
-        if (ibinun /= 0) then
-          n2 = i
-          if (present(imap)) n2 = imap(i)
-          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
-                                                  naux, this%auxvar(:,i),      &
-                                                  olconv2=.FALSE.)
-        end if
-        !
         ! -- Save simulated value to simvals array.
-        this%simvals(i) = rrate
+        this%simvals(i) = rate
+        this%ratechdin(i) = ratein
+        this%ratechdout(i) = rateout
+        flowja(idiag) = flowja(idiag) + rate
         !
       end do
       !
     end if
     !
-    ! -- Store the rates
-    call model_budget%addentry(chin, chout, delt, this%text,                   &
+    ! -- return
+    return
+  end subroutine chd_cq
+
+  subroutine chd_mb(this, model_budget)
+    ! -- add package ratin/ratout to model budget
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    class(ChdType) :: this
+    type(BudgetType), intent(inout) :: model_budget
+    real(DP) :: ratin
+    real(DP) :: ratout
+    real(DP) :: dum
+    integer(I4B) :: isuppress_output
+    isuppress_output = 0
+    call rate_accumulator(this%ratechdin(1:this%nbound), ratin, dum)
+    call rate_accumulator(this%ratechdout(1:this%nbound), ratout, dum)
+    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%packName)
+  end subroutine chd_mb
+
+  subroutine chd_da(this)
+! ******************************************************************************
+! chd_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(ChdType) :: this
+! ------------------------------------------------------------------------------
     !
-    ! -- Save the simulated values to the ObserveType objects
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%bnd_bd_obs()
-    end if
+    ! -- Deallocate parent package
+    call this%BndType%bnd_da()
+    !
+    ! -- arrays
+    call mem_deallocate(this%ratechdin)
+    call mem_deallocate(this%ratechdout)
     !
     ! -- return
     return
-  end subroutine chd_bd
+  end subroutine chd_da
 
   subroutine define_listlabel(this)
 ! ******************************************************************************

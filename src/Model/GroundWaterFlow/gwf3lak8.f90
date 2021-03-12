@@ -204,14 +204,19 @@ module LakModule
     procedure :: bnd_fc => lak_fc
     procedure :: bnd_fn => lak_fn
     procedure :: bnd_cc => lak_cc
-    procedure :: bnd_bd => lak_bd
+    procedure :: bnd_cq => lak_cq
     procedure :: bnd_ot => lak_ot
+    procedure :: bnd_ot_model_flows => lak_ot_model_flows
+    procedure :: bnd_ot_package_flows => lak_ot_package_flows
+    procedure :: bnd_ot_dv => lak_ot_dv
+    procedure :: bnd_ot_bdsummary => lak_ot_bdsummary
     procedure :: bnd_da => lak_da
     procedure :: define_listlabel
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => lak_obs_supported
     procedure, public :: bnd_df_obs => lak_df_obs
     procedure, public :: bnd_rp_obs => lak_rp_obs
+    procedure, public :: bnd_bd_obs => lak_bd_obs
     ! -- private procedures
     procedure, private :: lak_read_lakes
     procedure, private :: lak_read_lake_connections
@@ -223,7 +228,6 @@ module LakModule
     procedure, private :: lak_set_attribute_error
     procedure, private :: lak_cfupdate
     procedure, private :: lak_bound_update
-    procedure, private :: lak_bd_obs
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
     procedure, private :: lak_calculate_conn_warea
@@ -306,6 +310,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3
     packobj%iscloc = 0  ! not supported
+    packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
@@ -4168,65 +4173,34 @@ contains
     return
   end subroutine lak_cc
 
-  subroutine lak_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
+  subroutine lak_cq(this, x, flowja, iadv)
 ! ******************************************************************************
-! lak_bd -- Calculate Volumetric Budget for the lake
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
+! lak_cq -- Calculate flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use ConstantsModule, only: LENBOUNDNAME, DHNOFLO, DHDRY
-    use BudgetModule, only: BudgetType
-    use InputOutputModule, only: ulasav, ubdsv06
+    use TdisModule, only: delt
     ! -- dummy
-    class(LakType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(LakType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun
     real(DP) :: rrate
     real(DP) :: chratin, chratout
     ! -- for budget
     integer(I4B) :: j, n
-    integer(I4B) :: igwfnode
-    real(DP) :: hlak, hgwf
+    real(DP) :: hlak
     real(DP) :: v0, v1
-    real(DP) :: d
-    real(DP) :: v
-    ! -- for observations
-    integer(I4B) :: iprobslocal
-    ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- recalculate package HCOF and RHS terms with latest groundwater and
-    !    lak heads prior to calling base budget functionality
-    !call this%lak_cfupdate()
+    call this%lak_solve(update=.false.)
     !
-    ! -- update the lake hcof and rhs terms
-    call this%lak_solve(.false.)
-    !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget, this%imap,        &
-                             iadv=1)
+    ! -- call base functionality in bnd_cq.  This will calculate lake-gwf flows
+    !    and put them into this%simvals
+    call this%BndType%bnd_cq(x, flowja, iadv=1)
     !
     ! -- calculate several budget terms
     chratin = DZERO
@@ -4291,28 +4265,78 @@ contains
     do n = 1, this%nlakes
       if (this%iboundpak(n) == 0) cycle
       rrate = DZERO
-      hlak = this%xnewpak(n)
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-        igwfnode = this%cellid(j)
-        hgwf = this%xnew(igwfnode)
-        call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate)
-        this%qleak(j) = rrate
+        rrate = this%simvals(j)
+        this%qleak(j) = -rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
       end do
     end do
     !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%lak_bd_obs()
-    endif
+    ! -- fill the budget object
+    call this%lak_fill_budobj()
+    !
+    ! -- return
+    return
+  end subroutine lak_cq
+
+  subroutine lak_ot_package_flows(this, icbcfl, ibudfl)
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    class(LakType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    ! -- Print lake flows table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
+    end if
+    
+  end subroutine lak_ot_package_flows
+
+  subroutine lak_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+    class(LakType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    !
+    ! -- write the flows from the budobj
+    call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)
+  end subroutine lak_ot_model_flows
+
+  subroutine lak_ot_dv(this, idvsave, idvprint)
+    use TdisModule, only: kstp, kper, pertim, totim
+    use ConstantsModule, only: DHNOFLO, DHDRY
+    use InputOutputModule, only: ulasav
+    class(LakType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B) :: ibinun
+    integer(I4B) :: n
+    real(DP) :: v
+    real(DP) :: d
+    real(DP) :: stage
+    real(DP) :: sa
+    real(DP) :: wa
+    !
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
     if(this%istageout /= 0) then
       ibinun = this%istageout
     end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if(idvsave == 0) ibinun = 0
     !
     ! -- write lake binary output
     if (ibinun > 0) then
@@ -4330,25 +4354,39 @@ contains
                   this%nlakes, 1, 1, ibinun)
     end if
     !
-    ! -- fill the budget object
-    call this%lak_fill_budobj()
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
+    ! -- Print lake stage table
+    if (idvprint /= 0 .and. this%iprhed /= 0) then
+      !
+      ! -- set table kstp and kper
+      call this%stagetab%set_kstpkper(kstp, kper)
+      !
+      ! -- write data
+      do n = 1, this%nlakes
+        stage = this%xnewpak(n)
+        call this%lak_calculate_sarea(n, stage, sa)
+        call this%lak_calculate_warea(n, stage, wa)
+        call this%lak_calculate_vol(n, stage, v)
+        if(this%inamedbound==1) then
+          call this%stagetab%add_term(this%lakename(n))
+        end if
+        call this%stagetab%add_term(n)
+        call this%stagetab%add_term(stage)
+        call this%stagetab%add_term(sa)
+        call this%stagetab%add_term(wa)
+        call this%stagetab%add_term(v)
+      end do
     end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine lak_bd
-
+    
+  end subroutine lak_ot_dv
+  
+  subroutine lak_ot_bdsummary(this, kstp, kper, iout)
+    class(LakType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    call this%budobj%write_budtable(kstp, kper, iout)
+  end subroutine lak_ot_bdsummary
+  
   subroutine lak_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
     ! lak_ot -- Output package budget
@@ -4372,7 +4410,7 @@ contains
     ! -- format
     ! --------------------------------------------------------------------------
     !
-    ! -- write lake stage
+    ! -- Output lake stage table
     if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
       ! -- set table kstp and kper
@@ -4395,12 +4433,7 @@ contains
       end do
     end if
     !
-    ! -- Output lake flow table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
-    end if
-    !
-    ! -- Output lake budget
+    ! -- Output lake budget summary table
     call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- return
@@ -4786,7 +4819,7 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     ! -- dummy
-    class(LakType), intent(inout) :: this
+    class(LakType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: igwfnode
@@ -6068,7 +6101,6 @@ contains
     integer(I4B) :: jj
     integer(I4B) :: idx
     integer(I4B) :: nlen
-    real(DP) :: hlak, hgwf
     real(DP) :: v, v1
     real(DP) :: q
     ! -- formats
@@ -6107,11 +6139,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%nlakes
-      hlak = this%xnewpak(n)
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         n2 = this%cellid(j)
-        hgwf = this%xnew(n2)
-        call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
         q = this%qleak(j)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do

@@ -35,8 +35,10 @@ module GwtSsmModule
     procedure :: ssm_ar
     procedure :: ssm_ad
     procedure :: ssm_fc
-    procedure :: ssm_bdcalc
-    procedure :: ssm_bdsav
+    procedure :: ssm_cq
+    procedure :: ssm_bd
+    procedure :: ssm_ot_flow
+!    procedure :: ssm_bdsav
     procedure :: ssm_da
     procedure :: allocate_scalars
     procedure, private :: ssm_term
@@ -329,9 +331,49 @@ module GwtSsmModule
     return
   end subroutine ssm_fc
   
-  subroutine ssm_bdcalc(this, isuppress_output, model_budget)
+  subroutine ssm_cq(this, flowja)
 ! ******************************************************************************
 ! ssm_bdcalc -- Calculate budget terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtSsmType) :: this
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    ! -- local
+    integer(I4B) :: ip
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: rate
+! ------------------------------------------------------------------------------
+    !
+    ! -- do for each flow package
+    do ip = 1, this%fmi%nflowpack
+      !
+      ! -- cycle if package is being managed as an advanced package
+      if (this%fmi%iatp(ip) /= 0) cycle
+      !
+      ! -- do for each boundary
+      do i = 1, this%fmi%gwfpackages(ip)%nbound
+        n = this%fmi%gwfpackages(ip)%nodelist(i)
+        call this%ssm_term(ip, i, rrate=rate)
+        idiag = this%dis%con%ia(n)
+        flowja(idiag) = flowja(idiag) + rate
+        !
+      enddo
+      !
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine ssm_cq
+
+  subroutine ssm_bd(this, isuppress_output, model_budget)
+! ******************************************************************************
+! ssm_bd -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -386,7 +428,7 @@ module GwtSsmModule
     !
     ! -- Return
     return
-  end subroutine ssm_bdcalc
+  end subroutine ssm_bd
 
   subroutine ssm_bdsav(this, icbcfl, ibudfl, icbcun, iprobs,                   &
                        isuppress_output, imap)
@@ -507,8 +549,130 @@ module GwtSsmModule
                                                     olconv2=.FALSE.)
           end if
           !
-          ! -- Save simulated value to simvals array.
-          !this%simvals(i) = rrate
+        enddo
+        !
+      enddo
+    endif
+    if (ibudfl /= 0) then
+      if (this%iprflow /= 0) then
+          write(this%iout,'(1x)')
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine ssm_bdsav
+
+  subroutine ssm_ot_flow(this, icbcfl, ibudfl, icbcun)
+! ******************************************************************************
+! ssm_bdsav -- Calculate SSM Budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
+    use BudgetModule, only: BudgetType
+    ! -- dummy
+    class(GwtSsmType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    ! -- local
+    character (len=LINELENGTH) :: title
+    integer(I4B) :: node, nodeu
+    character(len=20) :: nodestr
+    integer(I4B) :: maxrows
+    integer(I4B) :: ip
+    integer(I4B) :: i, n2, ibinun
+    real(DP) :: rrate
+    integer(I4B) :: naux
+    real(DP), dimension(0,0) :: auxvar
+    character(len=LENAUXNAME), dimension(0) :: auxname
+    ! -- for observations
+    character(len=LENBOUNDNAME) :: bname
+    ! -- formats
+    character(len=*), parameter :: fmttkk = &
+      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
+      do ip = 1, this%fmi%nflowpack
+        if (this%fmi%iatp(ip) /= 0) cycle
+        !
+        ! -- do for each boundary
+        do i = 1, this%fmi%gwfpackages(ip)%nbound
+          node = this%fmi%gwfpackages(ip)%nodelist(i)
+          if (node > 0) then
+            maxrows = maxrows + 1
+          end if
+        end do
+      end do
+      if (maxrows > 0) then
+        call this%outputtab%set_maxbound(maxrows)
+      end if
+      title = 'SSM PACKAGE (' // trim(this%packName) //     &
+              ') FLOW RATES'
+      call this%outputtab%set_title(title)
+    end if
+    !
+    ! -- Set unit number for binary output
+    if (this%ipakcb < 0) then
+      ibinun = icbcun
+    else if (this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    end if
+    if (icbcfl == 0) ibinun = 0
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      naux = 0
+      call this%dis%record_srcdst_list_header(text, this%name_model,           &
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  auxname, ibinun, this%nbound, this%iout)
+    endif
+    !
+    ! -- If no boundaries, skip flow calculations.
+    if(this%nbound > 0) then
+      !
+      ! -- Loop through each boundary calculating flow.
+      do ip = 1, this%fmi%nflowpack
+        if (this%fmi%iatp(ip) /= 0) cycle
+        !
+        ! -- do for each boundary
+        do i = 1, this%fmi%gwfpackages(ip)%nbound
+          !
+          ! -- Calculate rate for this entry
+          node = this%fmi%gwfpackages(ip)%nodelist(i)
+          call this%ssm_term(ip, i, rrate=rrate)
+          !
+          ! -- Print the individual rates if the budget is being printed
+          !    and PRINT_FLOWS was specified (this%iprflow<0)
+          if (ibudfl /= 0) then
+            if (this%iprflow /= 0) then
+              !
+              ! -- set nodestr and write outputtab table
+              nodeu = this%dis%get_nodeuser(node)
+              call this%dis%nodeu_to_string(node, nodestr)
+              bname = this%fmi%gwfpackages(ip)%name
+              call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                   rrate, bname)
+            end if
+          end if
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,       &
+                                                naux, auxvar(:,i),             &
+                                                olconv2=.FALSE.)
+          end if
           !
         enddo
         !
@@ -520,14 +684,9 @@ module GwtSsmModule
       end if
     end if
     !
-    ! -- Save the simulated values to the ObserveType objects
-    !if (iprobs /= 0 .and. this%obs%npakobs > 0) then
-    !  call this%bnd_bd_obs()
-    !endif
-    !
     ! -- return
     return
-  end subroutine ssm_bdsav
+  end subroutine ssm_ot_flow
 
   subroutine ssm_da(this)
 ! ******************************************************************************

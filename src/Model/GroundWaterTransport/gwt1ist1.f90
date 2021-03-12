@@ -38,6 +38,7 @@ module GwtIstModule
     real(DP), dimension(:), pointer, contiguous      :: decay => null()         ! first or zero order rate constant for liquid
     real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  ! first or zero order rate constant for sorbed mass
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! mass transfer rate
+    real(DP), dimension(2, NBDITEMS)                 :: budterm                 ! immmobile domain mass summaries
     
     type(BudgetType), pointer                        :: budget => null()        ! budget object
     type(OutputControlDataType), pointer             :: ocd => null()           ! output control object for cim
@@ -47,7 +48,11 @@ module GwtIstModule
     procedure :: bnd_ar => ist_ar
     procedure :: bnd_rp => ist_rp
     procedure :: bnd_fc => ist_fc
-    procedure :: bnd_bd => ist_bd
+    procedure :: bnd_cq => ist_cq
+    procedure :: bnd_mb => ist_mb
+    procedure :: bnd_ot_model_flows => ist_ot_model_flows
+    procedure :: bnd_ot_dv => ist_ot_dv
+    procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
     procedure :: bnd_ot => ist_ot
     procedure :: bnd_da => ist_da
     procedure :: allocate_scalars
@@ -285,39 +290,24 @@ module GwtIstModule
     return
   end subroutine ist_fc
   
-  subroutine ist_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
+  subroutine ist_cq(this, x, flowja, iadv)
 ! ******************************************************************************
-! ist_bd -- Calculate Budget
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
+! ist_cq -- Calculate flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, nstp, delt
-    use ConstantsModule, only: LENBOUNDNAME, DZERO
-    use BudgetModule, only: BudgetType
+    use TdisModule, only: delt
+    use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtIstType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(GwtIstType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun, ipflg
-    real(DP) :: ratin, ratout
+    integer(I4B) :: idiag
     integer(I4B) :: n
-    integer(I4B) :: nbound
-    integer(I4B) :: naux
     real(DP) :: rate
     real(DP) :: swt, swtpdt
     real(DP) :: hhcof, rrhs
@@ -330,40 +320,8 @@ module GwtIstModule
     real(DP) :: lambda2im
     real(DP) :: gamma1im
     real(DP) :: gamma2im
-    real(DP), dimension(2, NBDITEMS) :: budterm
     ! -- formats
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Clear accumulators and set flags
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Set unit number for binary output
-    if (this%ipakcb < 0) then
-      ibinun = icbcun
-    else if (this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    end if
-    if (icbcfl == 0) then
-      ibinun = 0
-    end if
-    if (isuppress_output /= 0) then
-      ibinun = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if(ibinun /= 0) then
-      nbound = this%dis%nodes
-      naux = 0
-      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
-                  this%name_model, this%name_model, this%packName, naux,       &
-                  this%auxname, ibinun, nbound, this%iout)
-    endif
-    !
-    ! -- Reset budget object for this immobile domain package
-    call this%budget%reset()
     !
     ! -- Calculate immobile domain rhs and hcof
     do n = 1, this%dis%nodes
@@ -405,13 +363,94 @@ module GwtIstModule
                             this%zetaim(n), this%cim(n), hhcof, rrhs)
         rate = hhcof * x(n) - rrhs
       end if
+      
+      this%strg(n) = rate
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
+      
       !
-      ! -- Accumulate rate
-      if (rate < DZERO) then
-        ratout = ratout - rate
-      else
-        ratin = ratin + rate
-      endif
+    enddo
+    !
+    ! -- update cim
+    call this%calccim(this%cim, x)
+    !
+    ! -- Calculate and store the rates for the immobile domain
+    this%budterm(:, :) = DZERO
+    call this%calcddbud(this%budterm, x)
+    !
+    ! -- return
+    return
+  end subroutine ist_cq
+
+  subroutine ist_mb(this, model_budget)
+    ! -- add package ratin/ratout to model budget
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    class(GwtIstType) :: this
+    type(BudgetType), intent(inout) :: model_budget
+    real(DP) :: ratin
+    real(DP) :: ratout
+    integer(I4B) :: isuppress_output
+    isuppress_output = 0
+    call rate_accumulator(this%strg(:), ratin, ratout)
+    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
+                               isuppress_output, this%packName)
+    
+  end subroutine ist_mb
+
+  subroutine ist_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+! ******************************************************************************
+! ist_ot_model_flows -- write flows to binary file and/or print flows to budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy
+    class(GwtIstType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- loca
+    integer(I4B) :: n
+    integer(I4B) :: ibinun
+    integer(I4B) :: nbound
+    integer(I4B) :: naux
+    real(DP) :: rate
+    !
+    ! -- Set unit number for binary output
+    if(this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif(this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    endif
+    if(icbcfl == 0) ibinun = 0
+    !
+    ! -- Record the storage rate if requested
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      nbound = this%dis%nodes
+      naux = 0
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
+                  this%name_model, this%name_model, this%packName, naux,       &
+                  this%auxname, ibinun, nbound, this%iout)
+    endif
+    !
+    ! -- Calculate immobile domain rhs and hcof
+    do n = 1, this%dis%nodes
+      !
+      ! -- skip if transport inactive
+      rate = DZERO
+      if(this%ibound(n) > 0) then
+        !
+        ! -- set rate from this%strg
+        rate = this%strg(n)
+      end if
       !
       ! -- If saving cell-by-cell flows in list, write flow
       if (ibinun /= 0) then
@@ -423,40 +462,53 @@ module GwtIstModule
       !
     enddo
     !
-    ! -- Store the rates for the GWT model budget, which is the transfer
-    !    from the immobile domain to the mobile domain.
-    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
-                               isuppress_output, this%packName)
-    !
-    ! -- Calculate and store the rates for the immobile domain
-    budterm(:, :) = DZERO
-    call this%calcddbud(budterm, x)
-    call this%budget%addentry(budterm, delt, budtxt, isuppress_output)
-    !
-    ! -- Save the simulated values to the ObserveType objects
-    if (iprobs /= 0 .and. this%obs%npakobs > 0) then
-      call this%bnd_bd_obs()
-    endif
-    !
-    ! -- update cim
-    call this%calccim(this%cim, x)
+    ! -- Return
+    return
+  end subroutine ist_ot_model_flows
+    
+  subroutine ist_ot_dv(this, idvsave, idvprint)
+    ! -- modules
+    use TdisModule, only: kstp, kper, nstp
+    class(GwtIstType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    ! -- local
+    integer(I4B) :: ipflg
+    integer(I4B) :: ibinun
     !
     ! -- Save cim to a binary file. ibinun is a flag where 1 indicates that
     !    cim should be written to a binary file if a binary file is open
     !    for it.
     ipflg = 0
     ibinun = 1
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if(idvsave == 0) ibinun = 0
     if (ibinun /= 0) then
       call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                 &
                            iprint_opt=0, isav_opt=ibinun)
     endif
     !
-    ! -- return
-    return
-  end subroutine ist_bd
-
+    ! -- Print immobile domain concentrations to listing file
+    if (idvprint /= 0) then
+      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                      &
+                           iprint_opt=idvprint, isav_opt=0)
+    endif
+  end subroutine ist_ot_dv
+  
+  subroutine ist_ot_bdsummary(this, kstp, kper, iout)
+    use TdisModule, only: delt
+    class(GwtIstType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    integer(I4B) :: isuppress_output = 0
+    !
+    ! -- Write budget to list file
+    call this%budget%reset()
+    call this%budget%addentry(this%budterm, delt, budtxt, isuppress_output)
+    call this%budget%budget_ot(kstp, kper, iout)
+    
+  end subroutine ist_ot_bdsummary
+  
   subroutine ist_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
 ! ist_ot -- Output package budget
@@ -594,6 +646,7 @@ module GwtIstModule
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
+    !    nbound and maxbound are 0 in order to keep memory footprint low
     call this%BndType%allocate_arrays()
     !
     ! -- allocate ist arrays of size nodes

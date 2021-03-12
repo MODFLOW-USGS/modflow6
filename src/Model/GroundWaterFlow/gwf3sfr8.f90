@@ -141,7 +141,10 @@ module SfrModule
     procedure :: bnd_fc => sfr_fc
     procedure :: bnd_fn => sfr_fn
     procedure :: bnd_cc => sfr_cc
-    procedure :: bnd_bd => sfr_bd
+    procedure :: bnd_cq => sfr_cq
+    procedure :: bnd_ot_package_flows => sfr_ot_package_flows
+    procedure :: bnd_ot_dv => sfr_ot_dv
+    procedure :: bnd_ot_bdsummary => sfr_ot_bdsummary
     procedure :: bnd_ot => sfr_ot
     procedure :: bnd_da => sfr_da
     procedure :: define_listlabel
@@ -149,7 +152,7 @@ module SfrModule
     procedure, public :: bnd_obs_supported => sfr_obs_supported
     procedure, public :: bnd_df_obs => sfr_df_obs
     procedure, public :: bnd_rp_obs => sfr_rp_obs
-    procedure, private :: sfr_bd_obs
+    procedure, public :: bnd_bd_obs => sfr_bd_obs
     ! -- private procedures
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
@@ -231,6 +234,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
+    packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
@@ -1931,58 +1935,37 @@ contains
     return
   end subroutine sfr_cc
 
-
-  subroutine sfr_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,         &
-                    isuppress_output, model_budget, imap, iadv)
+  subroutine sfr_cq(this, x, flowja, iadv)
 ! **************************************************************************
-! bnd_bd -- Calculate Volumetric Budget
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
+! sfr_cq -- Calculate flows
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
     use ConstantsModule, only: LENBOUNDNAME
     use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(SfrType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(SfrType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: i
-    integer(I4B) :: ibinun
     real(DP) :: qext
     ! -- for budget
     integer(I4B) :: n
-    real(DP) :: d
-    real(DP) :: v
     real(DP) :: qoutflow
     real(DP) :: qfrommvr
     real(DP) :: qtomvr
     ! -- for observations
-    integer(I4B) :: iprobslocal
     ! -- formats
 ! --------------------------------------------------------------------------
     !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget, iadv=1)
+    ! -- call base functionality in bnd_cq.  This will calculate sfr-gwf flows
+    !    and put them into this%simvals
+    call this%BndType%bnd_cq(x, flowja, iadv=1)
     !
     ! -- Calculate qextoutflow and qoutflow for subsequent budgets
     do n = 1, this%maxbound
@@ -2029,18 +2012,65 @@ contains
       !
     end do
     !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%sfr_bd_obs()
+    ! -- fill the budget object
+    call this%sfr_fill_budobj()
+    !
+    ! -- return
+    return
+  end subroutine sfr_cq
+
+  subroutine sfr_ot_package_flows(this, icbcfl, ibudfl)
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
     end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    ! -- Print lake flows table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
+    end if
+    
+  end subroutine sfr_ot_package_flows
+
+  subroutine sfr_ot_dv(this, idvsave, idvprint)
+    use TdisModule, only: kstp, kper, pertim, totim
+    use ConstantsModule, only: DHNOFLO, DHDRY
+    use InputOutputModule, only: ulasav
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    character (len=20) :: cellid
+    integer(I4B) :: ibinun
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: d
+    real(DP) :: v
+    real(DP) :: hgwf
+    real(DP) :: sbot
+    real(DP) :: depth
+    real(DP) :: stage
+    real(DP) :: w
+    real(DP) :: cond
+    real(DP) :: grad
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
     if(this%istageout /= 0) then
       ibinun = this%istageout
     end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if(idvsave == 0) ibinun = 0
     !
     ! -- write sfr binary output
     if (ibinun > 0) then
@@ -2057,27 +2087,63 @@ contains
       call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
                   this%maxbound, 1, 1, ibinun)
     end if
-    !
-    ! -- fill the budget object
-    call this%sfr_fill_budobj()
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                                  pertim, totim, this%iout)
-    end if
-    !
-    !
-    ! -- return
-    return
-  end subroutine sfr_bd
-
+     !
+     ! -- print sfr stage and depth table
+     if (idvprint /= 0 .and. this%iprhed /= 0) then
+      !
+      ! -- set table kstp and kper
+      call this%stagetab%set_kstpkper(kstp, kper)
+      !
+      ! -- fill stage data
+      do n = 1, this%maxbound
+        node = this%igwfnode(n)
+        if (node > 0) then
+          call this%dis%noder_to_string(node, cellid)
+          hgwf = this%xnew(node)
+        else
+          cellid = 'NONE'
+        end if
+        if(this%inamedbound==1) then
+          call this%stagetab%add_term(this%boundname(n))
+        end if
+        call this%stagetab%add_term(n)
+        call this%stagetab%add_term(cellid)
+        depth = this%depth(n)
+        stage = this%stage(n)
+        w = this%top_width_wet(n, depth)
+        call this%stagetab%add_term(stage)
+        call this%stagetab%add_term(depth)
+        call this%stagetab%add_term(w)
+        call this%sfr_calc_cond(n, cond)
+        if (node > 0) then
+          sbot = this%strtop(n) - this%bthick(n)
+          if (hgwf < sbot) then
+            grad = stage - sbot
+          else
+            grad = stage - hgwf
+          end if
+          grad = grad / this%bthick(n)
+          call this%stagetab%add_term(hgwf)
+          call this%stagetab%add_term(cond)
+          call this%stagetab%add_term(grad)
+        else
+          call this%stagetab%add_term('--')
+          call this%stagetab%add_term('--')
+          call this%stagetab%add_term('--')
+        end if
+      end do
+     end if
+    
+  end subroutine sfr_ot_dv
+  
+  subroutine sfr_ot_bdsummary(this, kstp, kper, iout)
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    call this%budobj%write_budtable(kstp, kper, iout)
+  end subroutine sfr_ot_bdsummary
+  
   subroutine sfr_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
 ! sfr_ot -- Output package budget
@@ -2467,7 +2533,7 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     ! -- dummy
-    class(SfrType), intent(inout) :: this
+    class(SfrType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -4745,7 +4811,7 @@ contains
       ! -- Go through and set up table budget term
       if (this%inamedbound == 1) then
         text = 'NAME'
-        call this%stagetab%initialize_column(text, 20, alignment=TABLEFT)
+        call this%stagetab%initialize_column(text, LENBOUNDNAME, alignment=TABLEFT)
       end if
       !
       ! -- reach number

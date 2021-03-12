@@ -46,7 +46,7 @@ module GwtAptModule
   use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
-  use TableModule, only: table_cr
+  use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
@@ -107,6 +107,9 @@ module GwtAptModule
     ! -- budget objects
     type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
     type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! GWF flow budget object
+    !
+    ! -- table objects
+    type(TableType), pointer :: dvtab => null()
     
   contains
   
@@ -125,8 +128,11 @@ module GwtAptModule
     procedure :: apt_set_stressperiod
     procedure :: pak_set_stressperiod
     procedure :: apt_accumulate_ccterm
-    procedure :: bnd_bd => apt_bd
+    procedure :: bnd_cq => apt_cq
     procedure :: bnd_ot => apt_ot
+    procedure :: bnd_ot_package_flows => apt_ot_package_flows
+    procedure :: bnd_ot_dv => apt_ot_dv
+    procedure :: bnd_ot_bdsummary => apt_ot_bdsummary
     procedure :: bnd_da => apt_da
     procedure :: allocate_scalars
     procedure :: apt_allocate_arrays
@@ -143,7 +149,7 @@ module GwtAptModule
     procedure :: bnd_df_obs => apt_df_obs
     procedure :: pak_df_obs
     procedure :: bnd_rp_obs => apt_rp_obs
-    procedure :: apt_bd_obs
+    procedure :: bnd_bd_obs => apt_bd_obs
     procedure :: pak_bd_obs
     procedure :: get_volumes
     procedure :: pak_get_nbudterms
@@ -155,6 +161,7 @@ module GwtAptModule
     procedure, private :: apt_tmvr_term
     procedure, private :: apt_fjf_term
     procedure, private :: apt_copy2flowp
+    procedure, private :: apt_setup_tableobj
     
   end type GwtAptType
 
@@ -962,42 +969,22 @@ module GwtAptModule
     return
   end subroutine apt_cfupdate
 
-  subroutine apt_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
+  subroutine apt_cq(this, x, flowja, iadv)
 ! ******************************************************************************
-! apt_bd -- Calculate Volumetric Budget for the feature
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
+! apt_cq -- Calculate flows for the feature
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use ConstantsModule, only: LENBOUNDNAME, DHNOFLO, DHDRY
-    use BudgetModule, only: BudgetType
-    use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
-    class(GwtAptType) :: this
-    real(DP),dimension(:), intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(GwtAptType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun
     integer(I4B) :: n, n1, n2
-    real(DP) :: c
     real(DP) :: rrate
-    ! -- for observations
-    integer(I4B) :: iprobslocal
-    ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- Solve the feature concentrations again or update the feature hcof 
@@ -1008,13 +995,8 @@ module GwtAptModule
       call this%apt_cfupdate()
     end if
     !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget)
+    ! -- call base functionality in bnd_cq
+    call this%BndType%bnd_cq(x, flowja)
     !
     ! -- calculate storage term
     do n = 1, this%ncv
@@ -1025,13 +1007,58 @@ module GwtAptModule
       this%qsto(n) = rrate
     end do
     !
+    ! -- Copy concentrations into the flow package auxiliary variable
+    call this%apt_copy2flowp()
+    !
+    ! -- fill the budget object
+    call this%apt_fill_budobj(x)
+    !
+    ! -- return
+    return
+  end subroutine apt_cq
+
+  subroutine apt_ot_package_flows(this, icbcfl, ibudfl)
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    class(GwtAptType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    ! -- Print lake flows table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
+    end if
+    
+  end subroutine apt_ot_package_flows
+
+  subroutine apt_ot_dv(this, idvsave, idvprint)
+    use TdisModule, only: kstp, kper, pertim, totim
+    use ConstantsModule, only: DHNOFLO, DHDRY
+    use InputOutputModule, only: ulasav
+    class(GwtAptType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B) :: ibinun
+    integer(I4B) :: n
+    real(DP) :: c
+    !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
     if(this%iconcout /= 0) then
       ibinun = this%iconcout
     end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if(idvsave == 0) ibinun = 0
     !
     ! -- write binary output
     if (ibinun > 0) then
@@ -1045,44 +1072,33 @@ module GwtAptModule
       call ulasav(this%dbuff, '   CONCENTRATION', kstp, kper, pertim, totim,   &
                   this%ncv, 1, 1, ibinun)
     end if
-    !
-    ! -- Copy concentrations into the flow package auxiliary variable
-    call this%apt_copy2flowp()
-    !
-    ! -- Set unit number for binary budget output
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- fill the budget object
-    call this%apt_fill_budobj(x)
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
-    end if
-    !    
-    ! -- For continuous observations, save simulated values.  This
-    !    needs to be called after apt_fill_budobj() so that the budget
-    !    terms have been calculated
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%apt_bd_obs()
-    endif
-    !
-    ! -- return
-    return
-  end subroutine apt_bd
-
+     !
+     ! -- write apt conc table
+     if (idvprint /= 0 .and. this%iprconc /= 0) then
+      !
+      ! -- set table kstp and kper
+      call this%dvtab%set_kstpkper(kstp, kper)
+      !
+      ! -- fill concentration data
+      do n = 1, this%ncv
+        if(this%inamedbound==1) then
+          call this%dvtab%add_term(this%featname(n))
+        end if
+        call this%dvtab%add_term(n)
+        call this%dvtab%add_term(this%xnewpak(n))
+      end do
+     end if
+    
+  end subroutine apt_ot_dv
+  
+  subroutine apt_ot_bdsummary(this, kstp, kper, iout)
+    class(GwtAptType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    call this%budobj%write_budtable(kstp, kper, iout)
+  end subroutine apt_ot_bdsummary
+  
   subroutine apt_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
 ! apt_ot
@@ -1319,6 +1335,13 @@ module GwtAptModule
     deallocate(this%budobj)
     nullify(this%budobj)
     !
+    ! -- conc table
+    if (this%iprconc > 0) then
+      call this%dvtab%table_da()
+      deallocate(this%dvtab)
+      nullify(this%dvtab)
+    end if
+    !
     ! -- index pointers
     deallocate(this%idxlocnode)
     deallocate(this%idxpakdiag)
@@ -1433,7 +1456,8 @@ module GwtAptModule
           this%iconcout = getunit()
           call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)',  &
                        form, access, 'REPLACE')
-          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'CONCENTRATION', fname, this%iconcout
+          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'CONCENTRATION', &
+            trim(fname), this%iconcout
           found = .true.
         else
           call store_error('OPTIONAL CONCENTRATION KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -1445,7 +1469,8 @@ module GwtAptModule
           this%ibudgetout = getunit()
           call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
                         form, access, 'REPLACE')
-          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'BUDGET', fname, this%ibudgetout
+          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'BUDGET', &
+            trim(fname), this%ibudgetout
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -1526,6 +1551,9 @@ module GwtAptModule
     !
     ! -- setup the budget object
     call this%apt_setup_budobj()
+    !
+    ! -- setup the conc table object
+    call this%apt_setup_tableobj()
     !
     ! -- return
     return
@@ -2824,7 +2852,7 @@ subroutine apt_rp_obs(this)
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(GwtAptType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: igwfnode
@@ -2992,4 +3020,58 @@ subroutine apt_rp_obs(this)
     return
   end subroutine apt_process_obsID
   
+  subroutine apt_setup_tableobj(this)
+! ******************************************************************************
+! apt_setup_tableobj -- Set up the table object that is used to write the apt 
+!                       conc data. The terms listed here must correspond in  
+!                       in the apt_ot method.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, LENBUDTXT
+    ! -- dummy
+    class(GwtAptType) :: this
+    ! -- local
+    integer(I4B) :: nterms
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+! ------------------------------------------------------------------------------
+    !
+    ! -- setup well head table
+    if (this%iprconc > 0) then
+      !
+      ! -- Determine the number of head table columns
+      nterms = 2
+      if (this%inamedbound == 1) nterms = nterms + 1
+      !
+      ! -- set up table title
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%packName)) //') CONCENTRATION FOR EACH CONTROL VOLUME'
+      !
+      ! -- set up dv tableobj
+      call table_cr(this%dvtab, this%packName, title)
+      call this%dvtab%table_df(this%ncv, nterms, this%iout,              &
+                               transient=.TRUE.)
+      !
+      ! -- Go through and set up table budget term
+      if (this%inamedbound == 1) then
+        text = 'NAME'
+        call this%dvtab%initialize_column(text, 20, alignment=TABLEFT)
+      end if
+      !
+      ! -- feature number
+      text = 'NUMBER'
+      call this%dvtab%initialize_column(text, 10, alignment=TABCENTER)
+      !
+      ! -- feature conc
+      text = 'CONC'
+      call this%dvtab%initialize_column(text, 12, alignment=TABCENTER)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine apt_setup_tableobj
+
 end module GwtAptModule

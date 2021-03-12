@@ -378,8 +378,8 @@ def cbc_compare(sim):
 
     if diffmax > budtol:
         sim.success = False
-        msg += 'exceeds {}'.format(dtol)
-        assert diffmax < dtol, msg
+        msg += 'diffmax {} exceeds tolerance {}'.format(diffmax, budtol)
+        assert diffmax < budtol, msg
     else:
         sim.success = True
         print('    ' + msg)
