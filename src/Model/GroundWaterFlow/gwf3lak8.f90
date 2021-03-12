@@ -205,7 +205,6 @@ module LakModule
     procedure :: bnd_fn => lak_fn
     procedure :: bnd_cc => lak_cc
     procedure :: bnd_cq => lak_cq
-    procedure :: bnd_bd => lak_bd
     procedure :: bnd_ot => lak_ot
     procedure :: bnd_ot_model_flows => lak_ot_model_flows
     procedure :: bnd_ot_package_flows => lak_ot_package_flows
@@ -4280,99 +4279,6 @@ contains
     return
   end subroutine lak_cq
 
-  subroutine lak_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
-! ******************************************************************************
-! lak_bd -- Calculate Volumetric Budget for the lake
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use ConstantsModule, only: LENBOUNDNAME, DHNOFLO, DHDRY
-    use BudgetModule, only: BudgetType
-    use InputOutputModule, only: ulasav, ubdsv06
-    ! -- dummy
-    class(LakType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B), optional, intent(in) :: iadv
-    ! -- local
-    integer(I4B) :: ibinun
-    ! -- for budget
-    integer(I4B) :: n
-    real(DP) :: d
-    real(DP) :: v
-    ! -- for observations
-    integer(I4B) :: iprobslocal
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget, this%imap,        &
-                             iadv=1)
-!cdl    !
-!cdl    ! -- For continuous observations, save simulated values.
-!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-!cdl      call this%lak_bd_obs()
-!cdl    endif
-    !
-    ! -- set unit number for binary dependent variable output
-    ibinun = 0
-    if(this%istageout /= 0) then
-      ibinun = this%istageout
-    end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write lake binary output
-    if (ibinun > 0) then
-      do n = 1, this%nlakes
-        v = this%xnewpak(n)
-        d = v - this%lakebot(n)
-        if (this%iboundpak(n) == 0) then
-          v = DHNOFLO
-        else if (d <= DZERO) then
-          v = DHDRY
-        end if
-        this%dbuff(n) = v
-      end do
-      call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
-                  this%nlakes, 1, 1, ibinun)
-    end if
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine lak_bd
-                    
   subroutine lak_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim
     class(LakType) :: this
@@ -4404,7 +4310,6 @@ contains
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: icbcun
     integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B) :: ibinun
     !
     ! -- write the flows from the budobj
     call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)
@@ -6201,7 +6106,6 @@ contains
     integer(I4B) :: jj
     integer(I4B) :: idx
     integer(I4B) :: nlen
-    real(DP) :: hlak, hgwf
     real(DP) :: v, v1
     real(DP) :: q
     ! -- formats

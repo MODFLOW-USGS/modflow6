@@ -729,7 +729,7 @@ module GwtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,only:kstp, kper, endofperiod, tdis_ot
+    use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
@@ -738,9 +738,7 @@ module GwtModule
     integer(I4B) :: icbcfl
     integer(I4B) :: icbcun
     integer(I4B) :: ibudfl
-    integer(I4B) :: ip
     integer(I4B) :: ipflag
-    class(BndType), pointer :: packobj
     ! -- formats
     character(len=*),parameter :: fmtnocnvg = &
       "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
@@ -757,6 +755,11 @@ module GwtModule
     if(this%oc%oc_save('BUDGET')) icbcfl = 1
     if(this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
+    !
+    ! -- Override ibudfl and idvsave flags for nonconvergence
+    !    and end of period
+    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
+    idvsave = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwt_ot_obs()

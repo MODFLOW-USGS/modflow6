@@ -428,58 +428,6 @@ module GwtFmiModule
     return
   end subroutine fmi_fc
   
-!cdl  subroutine fmi_bdcalc(this, cnew, isuppress_output, model_budget)
-!cdl! ******************************************************************************
-!cdl! fmi_fc -- Calculate coefficients and fill amat and rhs
-!cdl! ******************************************************************************
-!cdl!
-!cdl!    SPECIFICATIONS:
-!cdl! ------------------------------------------------------------------------------
-!cdl    ! -- modules
-!cdl    use TdisModule, only: delt
-!cdl    use BudgetModule, only: BudgetType
-!cdl    ! -- dummy
-!cdl    class(GwtFmiType) :: this
-!cdl    real(DP), intent(in), dimension(:) :: cnew
-!cdl    integer(I4B), intent(in) :: isuppress_output
-!cdl    type(BudgetType), intent(inout) :: model_budget
-!cdl    ! -- local
-!cdl    integer(I4B) :: n, nodes
-!cdl    real(DP) :: rate, rin, rout
-!cdl! ------------------------------------------------------------------------------
-!cdl    !
-!cdl    ! -- If not adding flow error correction, return
-!cdl    if (this%iflowerr /= 0) then
-!cdl      !
-!cdl      ! -- initialize 
-!cdl      rin = DZERO
-!cdl      rout = DZERO
-!cdl      nodes = this%dis%nodes
-!cdl      !
-!cdl      ! -- Accumulate the flow correction term
-!cdl      do n = 1, nodes
-!cdl        if (this%ibound(n) <= 0) cycle
-!cdl        rate = -this%flowerr(n) * cnew(n)
-!cdl        if (rate < DZERO) then
-!cdl          rout = rout - rate
-!cdl        else
-!cdl          rin = rin + rate
-!cdl        endif
-!cdl      enddo
-!cdl      !
-!cdl      ! -- Add the flow error term to model budget
-!cdl      call model_budget%addentry(rout, rin, delt, budtxt(1),                   &
-!cdl                                 isuppress_output, rowlabel=this%packName)
-!cdl      !
-!cdl      ! -- Add the flow correction term to model budget
-!cdl      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
-!cdl                                 isuppress_output, rowlabel=this%packName)
-!cdl    end if
-!cdl    !
-!cdl    ! -- Return
-!cdl    return
-!cdl  end subroutine fmi_bdcalc
-  
   subroutine fmi_cq(this, cnew, flowja)
 ! ******************************************************************************
 ! fmi_cq -- Calculate flow correction
@@ -494,7 +442,6 @@ module GwtFmiModule
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: nodes
     integer(I4B) :: idiag
     real(DP) :: rate
 ! ------------------------------------------------------------------------------

@@ -4016,7 +4016,6 @@ contains
     integer(I4B) :: k
     integer(I4B) :: ncpl
     integer(I4B) :: nlay
-    integer(I4B) :: naux
     real(DP) :: dinact
     ! -- formats
     character(len=*), parameter :: fmtnconv = &

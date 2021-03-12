@@ -50,7 +50,6 @@ module GwtIstModule
     procedure :: bnd_fc => ist_fc
     procedure :: bnd_cq => ist_cq
     procedure :: bnd_mb => ist_mb
-    procedure :: bnd_bd => ist_bd
     procedure :: bnd_ot_model_flows => ist_ot_model_flows
     procedure :: bnd_ot_dv => ist_ot_dv
     procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
@@ -389,7 +388,6 @@ module GwtIstModule
     use BudgetModule, only: BudgetType, rate_accumulator
     class(GwtIstType) :: this
     type(BudgetType), intent(inout) :: model_budget
-    character (len=LENPACKAGENAME) :: text
     real(DP) :: ratin
     real(DP) :: ratout
     integer(I4B) :: isuppress_output
@@ -399,178 +397,6 @@ module GwtIstModule
                                isuppress_output, this%packName)
     
   end subroutine ist_mb
-
-  subroutine ist_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
-! ******************************************************************************
-! ist_bd -- Calculate Budget
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper, nstp, delt
-    use ConstantsModule, only: LENBOUNDNAME, DZERO
-    use BudgetModule, only: BudgetType
-    ! -- dummy
-    class(GwtIstType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B), optional, intent(in) :: iadv
-    ! -- local
-    integer(I4B) :: ibinun, ipflg
-    real(DP) :: ratin, ratout
-    integer(I4B) :: n
-    integer(I4B) :: nbound
-    integer(I4B) :: naux
-    real(DP) :: rate
-    real(DP) :: swt, swtpdt
-    real(DP) :: hhcof, rrhs
-    real(DP) :: vcell
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
-    real(DP) :: kd
-    real(DP) :: rhob
-    real(DP) :: lambda1im
-    real(DP) :: lambda2im
-    real(DP) :: gamma1im
-    real(DP) :: gamma2im
-    real(DP), dimension(2, NBDITEMS) :: budterm
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Clear accumulators and set flags
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Set unit number for binary output
-    if (this%ipakcb < 0) then
-      ibinun = icbcun
-    else if (this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    end if
-    if (icbcfl == 0) then
-      ibinun = 0
-    end if
-    if (isuppress_output /= 0) then
-      ibinun = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if(ibinun /= 0) then
-      nbound = this%dis%nodes
-      naux = 0
-      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
-                  this%name_model, this%name_model, this%packName, naux,       &
-                  this%auxname, ibinun, nbound, this%iout)
-    endif
-    !
-    ! -- Reset budget object for this immobile domain package
-    call this%budget%reset()
-    !
-    ! -- Calculate immobile domain rhs and hcof
-    do n = 1, this%dis%nodes
-      !
-      ! -- skip if transport inactive
-      rate = DZERO
-      if(this%ibound(n) > 0) then
-        !
-        ! -- calculate new and old water volumes
-        vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-        swtpdt = this%fmi%gwfsat(n)
-        swt = this%fmi%gwfsatold(n, delt)
-        !
-        ! -- Set thetamfrac and thetaimfrac
-        thetamfrac = this%mst%get_thetamfrac(n)
-        thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-        !
-        ! -- Calculate exchange with immobile domain
-        rate = DZERO
-        hhcof = DZERO
-        rrhs = DZERO
-        kd = DZERO
-        rhob = DZERO
-        lambda1im = DZERO
-        lambda2im = DZERO
-        gamma1im = DZERO
-        gamma2im = DZERO
-        if (this%idcy == 1) lambda1im = this%decay(n)
-        if (this%idcy == 2) gamma1im = this%decay(n)
-        if (this%isrb > 0) then
-          kd = this%distcoef(n)
-          rhob = this%bulk_density(n)
-          if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-          if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
-        end if
-        call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                            thetamfrac, thetaimfrac, rhob, kd,                 &
-                            lambda1im, lambda2im, gamma1im, gamma2im,          &
-                            this%zetaim(n), this%cim(n), hhcof, rrhs)
-        rate = hhcof * x(n) - rrhs
-      end if
-      !
-      ! -- Accumulate rate
-      if (rate < DZERO) then
-        ratout = ratout - rate
-      else
-        ratin = ratin + rate
-      endif
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      if (ibinun /= 0) then
-        call this%dis%record_mf6_list_entry(ibinun, n, n, rate,                &
-                                            naux, this%auxvar(:,n),            &
-                                            olconv=.TRUE.,                     &
-                                            olconv2=.TRUE.)
-      end if
-      !
-    enddo
-    !
-    ! -- Store the rates for the GWT model budget, which is the transfer
-    !    from the immobile domain to the mobile domain.
-    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
-                               isuppress_output, this%packName)
-    !
-    ! -- Calculate and store the rates for the immobile domain
-    budterm(:, :) = DZERO
-    call this%calcddbud(budterm, x)
-    call this%budget%addentry(budterm, delt, budtxt, isuppress_output)
-    !
-    ! -- Save the simulated values to the ObserveType objects
-    if (iprobs /= 0 .and. this%obs%npakobs > 0) then
-      call this%bnd_bd_obs()
-    endif
-    !
-    ! -- update cim
-    call this%calccim(this%cim, x)
-    !
-    ! -- Save cim to a binary file. ibinun is a flag where 1 indicates that
-    !    cim should be written to a binary file if a binary file is open
-    !    for it.
-    ipflg = 0
-    ibinun = 1
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun /= 0) then
-      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                 &
-                           iprint_opt=0, isav_opt=ibinun)
-    endif
-    !
-    ! -- return
-    return
-  end subroutine ist_bd
 
   subroutine ist_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
 ! ******************************************************************************

@@ -81,7 +81,6 @@ module GwfModule
     procedure :: allocate_scalars
     procedure :: package_create
     procedure :: ftype_check
-    procedure :: gwf_bd_sav
     procedure :: gwf_ot_obs
     procedure :: gwf_ot_flow
     procedure :: gwf_ot_dv
@@ -1025,7 +1024,7 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,only:kstp, kper, endofperiod, tdis_ot
+    use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local
@@ -1034,9 +1033,7 @@ module GwfModule
     integer(I4B) :: icbcfl
     integer(I4B) :: icbcun
     integer(I4B) :: ibudfl
-    integer(I4B) :: ip
     integer(I4B) :: ipflag
-    class(BndType), pointer :: packobj
     ! -- formats
     character(len=*),parameter :: fmtnocnvg = &
       "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
@@ -1053,6 +1050,11 @@ module GwfModule
     if(this%oc%oc_save('BUDGET')) icbcfl = 1
     if(this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
+    !
+    ! -- Override ibudfl and idvsave flags for nonconvergence
+    !    and end of period
+    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
+    idvsave = this%oc%set_print_flag('HEAD', this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwf_ot_obs()
@@ -1208,167 +1210,6 @@ module GwfModule
     
   end subroutine gwf_ot_bdsummary
   
-  subroutine gwf_bd_sav(this)
-! ******************************************************************************
-! gwf_bd --GroundWater Flow Model Budget
-! Subroutine: (1) Calculate stress package contributions to model budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GwfModelType) :: this
-    ! -- local
-    integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
-    integer(I4B) :: ip
-    integer(I4B) :: isuppress_output
-    class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
-    !
-    ! -- Do not suppress any output
-    isuppress_output = 0
-    !
-    ! -- Set write and print flags
-    idvfl = 0
-    if(this%oc%oc_save('HEAD')) idvfl = 1
-    icbcfl = 0
-    if(this%oc%oc_save('BUDGET')) icbcfl = 1
-    icbcun = this%oc%oc_save_unit('BUDGET')
-    ibudfl = 0
-    if(this%oc%oc_print('BUDGET')) ibudfl = 1
-    iprobs = 1
-!cdl    !
-!cdl    ! -- Storage
-!cdl    if(this%insto > 0) then
-!cdl      call this%sto%bdsav(icbcfl, icbcun)
-!cdl    endif
-!cdl    !
-!cdl    ! -- Skeletal storage, compaction and subsidence
-!cdl    if (this%incsub > 0) then
-!cdl      ! -- todo: this needs to be refactored following sto.  The flow calc
-!cdl      !    should be moved into a new cq routine.  bdcalc should be refactored 
-!cdl      !    to calc the rate accumulators.   
-!cdl      call this%csub%bdcalc(this%dis%nodes, this%x, this%xold,                 &
-!cdl                            isuppress_output, this%budget)
-!cdl      call this%csub%bdsav(idvfl, icbcfl, icbcun)
-!cdl    end if
-!cdl    !
-!cdl    ! -- Buoyancy save density -- TODO: move to DV
-!cdl    if (this%inbuy > 0) then
-!cdl      call this%buy%buy_bdsav(idvfl, icbcfl, icbcun)
-!cdl    end if
-!cdl    !
-!cdl    ! -- Node Property Flow
-!cdl    if(this%innpf > 0) then
-!cdl      call this%npf%npf_bdadj(this%flowja, icbcfl, icbcun)
-!cdl    endif
-!cdl    !
-!cdl    ! -- Clear obs
-!cdl    call this%obs%obs_bd_clear()
-    !
-    ! -- Mover budget
-!cdl    if(this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, isuppress_output)
-    !
-    ! -- Boundary packages calculate budget and total flows to model budget
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_bd(this%x, idvfl, icbcfl, ibudfl, icbcun, iprobs,       &
-                          isuppress_output, this%budget)
-    enddo
-!cdl    !
-!cdl    ! -- Calculate and write simulated values for observations
-!cdl    if(iprobs /= 0) then
-!cdl      call this%obs%obs_bd()
-!cdl    endif
-    !
-    ! -- Return
-    return
-  end subroutine gwf_bd_sav
-  
-  subroutine gwf_otxxx(this)
-! ******************************************************************************
-! gwf_ot -- GroundWater Flow Model Output
-! Subroutine: (1) Output budget items
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule,only:kstp, kper, endofperiod, tdis_ot
-    ! -- dummy
-    class(GwfModelType) :: this
-    ! -- local
-    integer(I4B) :: ipflg, ibudfl, ihedfl
-    integer(I4B) :: ip
-    class(BndType), pointer :: packobj
-    ! -- formats
-    character(len=*),parameter :: fmtnocnvg = &
-      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
-      &I0,' OF STRESS PERIOD ',I0,'****')"
-! ------------------------------------------------------------------------------
-    !
-    ! -- Save budgets
-    call this%gwf_bd_sav()
-    !
-    ! -- Set ibudfl and ihedfl flags for printing budget and heads information
-    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    ihedfl = this%oc%set_print_flag('HEAD', this%icnvg, endofperiod)
-!cdl    !
-!cdl    ! -- Output individual flows if requested
-!cdl    if(ibudfl /= 0) then
-!cdl      !
-!cdl      ! -- NPF output
-!cdl      if(this%innpf > 0) call this%npf%npf_ot(this%flowja)
-!cdl      !
-!cdl      ! -- GNC output
-!cdl      if(this%ingnc > 0) &
-!cdl        call this%gnc%gnc_ot()
-!cdl    endif
-    !
-    ! -- Output control
-    ipflg = 0
-    this%budget%budperc = 1.e30
-    if(this%icnvg == 0) then
-      write(this%iout,fmtnocnvg) kstp, kper
-      ipflg = 1
-    endif
-    call this%oc%oc_ot(ipflg)
-    !
-    ! -- Write Budget and Head if these conditions are met
-    if (ibudfl /= 0 .or. ihedfl /=0) then
-      ipflg = 1
-      !
-      ! -- Package budget output
-      do ip = 1, this%bndlist%Count()
-        packobj => GetBndFromList(this%bndlist, ip)
-        call packobj%bnd_ot(kstp, kper, this%iout, ihedfl, ibudfl)
-      enddo
-      !
-      if (ibudfl /= 0) then
-!cdl        !
-!cdl        ! -- Mover budget output
-!cdl        if(this%inmvr > 0) call this%mvr%mvr_ot()
-        !
-        ! -- gwf model budget
-        call this%budget%budget_ot(kstp, kper, this%iout)
-      end if
-    end if
-    !
-    ! -- Timing Output
-    if(ipflg == 1) call tdis_ot(this%iout)
-    !
-    ! -- OBS output
-    call this%obs%obs_ot()
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_obs()
-    enddo
-    !
-    ! -- return
-    return
-  end subroutine gwf_otxxx
-
   subroutine gwf_fp(this)
 ! ******************************************************************************
 ! gwf_fp -- Final processing

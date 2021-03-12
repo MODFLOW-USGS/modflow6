@@ -17,7 +17,7 @@ module GwfIcModule
     procedure          :: ic_da
     procedure, private :: allocate_arrays
     procedure, private :: read_options
-    procedure, private :: read_data
+    procedure          :: read_data
   end type GwfIcType
 
   contains

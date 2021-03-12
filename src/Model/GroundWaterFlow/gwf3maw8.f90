@@ -175,7 +175,6 @@ module MawModule
     procedure :: bnd_fn => maw_fn
     procedure :: bnd_nur => maw_nur
     procedure :: bnd_cq => maw_cq
-    procedure :: bnd_bd => maw_bd
     procedure :: bnd_ot_model_flows => maw_ot_model_flows
     procedure :: bnd_ot_package_flows => maw_ot_package_flows
     procedure :: bnd_ot_dv => maw_ot_dv
@@ -2701,7 +2700,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: ibnd
-    integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: cfw
     ! -- for observations
@@ -2805,107 +2803,12 @@ contains
     return
   end subroutine maw_cq
 
-  subroutine maw_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
-! ******************************************************************************
-! bnd_bd -- Calculate Volumetric Budget
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use ConstantsModule, only: LENBOUNDNAME
-    use InputOutputModule, only: ulasav, ubdsv06
-    use BudgetModule, only: BudgetType
-    ! -- dummy
-    class(MawType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B), optional, intent(in) :: iadv
-    ! -- local
-    integer(I4B) :: ibinun
-    ! -- for budget
-    integer(I4B) :: n
-    real(DP) :: v
-    real(DP) :: d
-    ! -- for observations
-    integer(I4B) :: iprobslocal
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget, this%imap,        &
-                             iadv=1)
-!cdl    !
-!cdl    ! -- For continuous observations, save simulated values.
-!cdl    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-!cdl      call this%maw_bd_obs()
-!cdl    end if
-    !
-    ! -- set unit number for binary dependent variable output
-    ibinun = 0
-    if(this%iheadout /= 0) then
-      ibinun = this%iheadout
-    end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write maw binary output
-    if (ibinun > 0) then
-      do n = 1, this%nmawwells
-        v = this%xnewpak(n)
-        d = v - this%bot(n)
-        if (this%iboundpak(n) == 0) then
-          v = DHNOFLO
-        else if (d <= DZERO) then
-          v = DHDRY
-        end if
-        this%dbuff(n) = v
-      end do
-      call ulasav(this%dbuff, '            HEAD',                               &
-                  kstp, kper, pertim, totim,                                    &
-                  this%nmawwells, 1, 1, ibinun)
-    end if
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                                  pertim, totim, this%iout)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine maw_bd
-
   subroutine maw_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
     class(MawType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: icbcun
     integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B) :: ibinun
     !
     ! -- write the flows from the budobj
     call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)

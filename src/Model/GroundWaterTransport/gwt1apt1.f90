@@ -129,7 +129,6 @@ module GwtAptModule
     procedure :: pak_set_stressperiod
     procedure :: apt_accumulate_ccterm
     procedure :: bnd_cq => apt_cq
-    procedure :: bnd_bd => apt_bd
     procedure :: bnd_ot => apt_ot
     procedure :: bnd_ot_package_flows => apt_ot_package_flows
     procedure :: bnd_ot_dv => apt_ot_dv
@@ -978,20 +977,14 @@ module GwtAptModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use ConstantsModule, only: LENBOUNDNAME, DHNOFLO, DHDRY
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun
     integer(I4B) :: n, n1, n2
     real(DP) :: rrate
-    ! -- for observations
-    integer(I4B) :: iprobslocal
-    ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- Solve the feature concentrations again or update the feature hcof 
@@ -1023,127 +1016,6 @@ module GwtAptModule
     ! -- return
     return
   end subroutine apt_cq
-
-  subroutine apt_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
-! ******************************************************************************
-! apt_bd -- Calculate Volumetric Budget for the feature
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use ConstantsModule, only: LENBOUNDNAME, DHNOFLO, DHDRY
-    use BudgetModule, only: BudgetType
-    use InputOutputModule, only: ulasav, ubdsv06
-    ! -- dummy
-    class(GwtAptType) :: this
-    real(DP),dimension(:), intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B), optional, intent(in) :: iadv
-    ! -- local
-    integer(I4B) :: ibinun
-    integer(I4B) :: n, n1, n2
-    real(DP) :: c
-    real(DP) :: rrate
-    ! -- for observations
-    integer(I4B) :: iprobslocal
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Solve the feature concentrations again or update the feature hcof 
-    !    and rhs terms
-    if (this%imatrows == 0) then
-      call this%apt_solve()
-    else
-      call this%apt_cfupdate()
-    end if
-    !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget)
-    !
-    ! -- calculate storage term
-    do n = 1, this%ncv
-      rrate = DZERO
-      if (this%iboundpak(n) > 0) then
-        call this%apt_stor_term(n, n1, n2, rrate)
-      end if
-      this%qsto(n) = rrate
-    end do
-    !
-    ! -- set unit number for binary dependent variable output
-    ibinun = 0
-    if(this%iconcout /= 0) then
-      ibinun = this%iconcout
-    end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write binary output
-    if (ibinun > 0) then
-      do n = 1, this%ncv
-        c = this%xnewpak(n)
-        if (this%iboundpak(n) == 0) then
-          c = DHNOFLO
-        end if
-        this%dbuff(n) = c
-      end do
-      call ulasav(this%dbuff, '   CONCENTRATION', kstp, kper, pertim, totim,   &
-                  this%ncv, 1, 1, ibinun)
-    end if
-    !
-    ! -- Copy concentrations into the flow package auxiliary variable
-    call this%apt_copy2flowp()
-    !
-    ! -- Set unit number for binary budget output
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- fill the budget object
-    call this%apt_fill_budobj(x)
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
-    end if
-    !    
-    ! -- For continuous observations, save simulated values.  This
-    !    needs to be called after apt_fill_budobj() so that the budget
-    !    terms have been calculated
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%bnd_bd_obs()
-    endif
-    !
-    ! -- return
-    return
-  end subroutine apt_bd
 
   subroutine apt_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim

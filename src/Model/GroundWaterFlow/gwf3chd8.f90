@@ -350,7 +350,6 @@ contains
     use BudgetModule, only: BudgetType, rate_accumulator
     class(ChdType) :: this
     type(BudgetType), intent(inout) :: model_budget
-    character (len=LENPACKAGENAME) :: text
     real(DP) :: ratin
     real(DP) :: ratout
     real(DP) :: dum
