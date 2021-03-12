@@ -4432,11 +4432,6 @@ contains
         call this%stagetab%add_term(v)
       end do
     end if
-!cdl    !
-!cdl    ! -- Output lake flows table
-!cdl    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-!cdl      call this%budobj%write_flowtable(this%dis, kstp, kper)
-!cdl    end if
     !
     ! -- Output lake budget summary table
     call this%budobj%write_budtable(kstp, kper, iout)
@@ -6144,11 +6139,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%nlakes
-      !cdl hlak = this%xnewpak(n)
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         n2 = this%cellid(j)
-        !cdl hgwf = this%xnew(n2)
-        !cdl call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
         q = this%qleak(j)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do

@@ -1054,7 +1054,7 @@ module GwfModule
     ! -- Override ibudfl and idvsave flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvsave = this%oc%set_print_flag('HEAD', this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag('HEAD', this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwf_ot_obs()

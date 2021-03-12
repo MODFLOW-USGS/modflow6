@@ -1187,9 +1187,9 @@ contains
         endif
       enddo
     endif
-!cdl    !
-!cdl    ! -- Mover budget output
-!cdl    if(this%inmvr > 0) call this%mvr%mvr_ot()
+    !
+    ! -- Mover budget output
+    if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary()
     !
     ! -- OBS output
     call this%obs%obs_ot()

@@ -937,7 +937,6 @@ module GwfNpfModule
     !
     ! -- Calculate specific discharge at cell centers and write, if requested
     if (this%icalcspdis /= 0) then
-      !cdl moved to bd -- call this%calc_spdis(flowja)
       if(ibinun /= 0) call this%sav_spdis(ibinun)
     endif
     !

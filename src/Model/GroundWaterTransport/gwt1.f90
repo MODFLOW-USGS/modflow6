@@ -759,7 +759,7 @@ module GwtModule
     ! -- Override ibudfl and idvsave flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvsave = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwt_ot_obs()
@@ -937,90 +937,6 @@ module GwtModule
     
   end subroutine gwt_ot_bdsummary
   
-  subroutine gwt_otxxx(this)
-! ******************************************************************************
-! gwt_ot -- GroundWater Transport Model Output
-! Subroutine: (1) Output budget items
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only:kstp, kper, endofperiod, tdis_ot
-    ! -- dummy
-    class(GwtModelType) :: this
-    ! -- local
-    integer(I4B) :: ipflg, ibudfl, ihedfl
-    integer(I4B) :: ip
-    class(BndType), pointer :: packobj
-    ! -- formats
-    character(len=*),parameter :: fmtnocnvg = &
-      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
-      &I0,' OF STRESS PERIOD ',I0,'****')"
-! ------------------------------------------------------------------------------
-    !
-    ! -- Set ibudfl and ihedfl flags for printing budget and conc information
-    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    ihedfl = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
-
-    
-    !
-    ! -- Advection and dispersion flowja
-!    call this%gwt_bdsav(this%nja, this%flowja, icbcfl, icbcun)
-!      call this%ssm%ssm_bdsav(icbcfl, ibudfl, icbcun, iprobs, isuppress_output)
-    
-    
-    !
-    ! -- Output individual flows if requested
-    if(ibudfl /= 0) then
-      !
-      ! -- If there is ever a need to print the GWT flowja terms to the list
-      !    file, this could be done here.
-    endif
-    !
-    ! -- Output control
-    ipflg = 0
-    this%budget%budperc = 1.e30
-    if(this%icnvg == 0) then
-      write(this%iout,fmtnocnvg) kstp, kper
-      ipflg = 1
-    endif
-    call this%oc%oc_ot(ipflg)
-    !
-    ! -- Write Budget and Head if these conditions are met
-    if (ibudfl /= 0 .or. ihedfl /= 0) then
-      ipflg = 1
-      !
-      ! -- Package budget output
-      do ip = 1, this%bndlist%Count()
-        packobj => GetBndFromList(this%bndlist, ip)
-        call packobj%bnd_ot(kstp, kper, this%iout, ihedfl, ibudfl)
-      enddo
-      !
-      if (ibudfl /= 0) then
-        !
-        ! -- Mover budget output
-!cdl        if(this%inmvt > 0) call this%mvt%mvt_ot()
-        !
-        ! -- gwt model budget
-        call this%budget%budget_ot(kstp, kper, this%iout)
-      end if
-    end if
-    !
-    ! -- Timing Output
-    if(ipflg == 1) call tdis_ot(this%iout)
-    !
-    ! -- OBS output
-    call this%obs%obs_ot()
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_obs()
-    enddo
-    !
-    ! -- return
-    return
-  end subroutine gwt_otxxx
-
   subroutine gwt_da(this)
 ! ******************************************************************************
 ! gwt_da -- Deallocate
