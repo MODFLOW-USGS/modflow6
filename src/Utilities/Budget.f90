@@ -24,7 +24,9 @@ module BudgetModule
   
   implicit none
   private
-  public BudgetType, budget_cr
+  public :: BudgetType
+  public :: budget_cr
+  public :: rate_accumulator
 
   type BudgetType
     integer(I4B), pointer :: msum => null()
@@ -143,10 +145,12 @@ module BudgetModule
     character(len=*), intent(out) :: string
     real(DP), intent(in) :: big
     real(DP), intent(in) :: small
+    real(DP) :: absval
 ! ------------------------------------------------------------------------------
     !
-    if (val /= DZERO .and. (val >= big .or. val < small)) then
-      if (val >= 1.D100 .or. val <= 1.D-100) then
+    absval = abs(val)
+    if (val /= DZERO .and. (absval >= big .or. absval < small)) then
+      if (absval >= 1.D100 .or. absval <= 1.D-100) then
         ! -- if exponent has 3 digits, then need to explicitly use the ES 
         !    format to force writing the E character
         write(string, '(es17.4E3)') val
@@ -269,8 +273,8 @@ module BudgetModule
     !
     ! -- Print differences and percent differences between input
     ! -- and output rates and volumes.
-    call value_to_string(adiffv, val1, bigvl2, small)
-    call value_to_string(adiffr, val2, bigvl2, small)
+    call value_to_string(diffv, val1, bigvl2, small)
+    call value_to_string(diffr, val2, bigvl2, small)
     write(iout,299) val1, val2
     write(iout,300) pdiffv, pdiffr
     !
@@ -633,6 +637,31 @@ module BudgetModule
     return
   end subroutine resize
   
-  
+  subroutine rate_accumulator(flow, rin, rout)
+! ******************************************************************************
+! rate_accumulator -- calculate the total rate in and rate out for a vector of
+!   flows.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    real(DP), dimension(:), contiguous, intent(in) :: flow
+    real(DP), intent(out) :: rin
+    real(DP), intent(out) :: rout
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------
+    rin = DZERO
+    rout = DZERO
+    do n = 1, size(flow)
+      if (flow(n) < DZERO) then
+        rout = rout - flow(n)
+      else
+        rin = rin + flow(n)
+      end if
+    end do
+    return
+  end subroutine rate_accumulator  
 
 end module BudgetModule

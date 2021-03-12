@@ -530,7 +530,7 @@ module GhostNodeModule
     return
   end subroutine gnc_fn
 
-  subroutine gnc_ot(this)
+  subroutine gnc_ot(this, ibudfl)
 ! ******************************************************************************
 ! gnc_ot -- Single Model GNC Output
 ! Subroutine: (1) Output GNC deltaQgnc values
@@ -540,6 +540,7 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GhostNodeType) :: this
+    integer(I4B), intent(in) :: ibudfl
     ! -- local
     integer(I4B) :: ignc
     real(DP) :: deltaQgnc
@@ -549,7 +550,7 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Process each gnc and output deltaQgnc
-    if(this%iprflow /= 0) then
+    if(ibudfl /= 0 .and. this%iprflow /= 0) then
       write(this%iout, '(//, a)') 'GHOST NODE CORRECTION RESULTS'
       write(this%iout, '(3a10, 2a15)') 'GNC NUM', 'NODEN', 'NODEM', &
         'DELTAQGNC', 'CONDNM'

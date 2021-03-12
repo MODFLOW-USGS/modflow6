@@ -174,7 +174,11 @@ module MawModule
     procedure :: bnd_fc => maw_fc
     procedure :: bnd_fn => maw_fn
     procedure :: bnd_nur => maw_nur
-    procedure :: bnd_bd => maw_bd
+    procedure :: bnd_cq => maw_cq
+    procedure :: bnd_ot_model_flows => maw_ot_model_flows
+    procedure :: bnd_ot_package_flows => maw_ot_package_flows
+    procedure :: bnd_ot_dv => maw_ot_dv
+    procedure :: bnd_ot_bdsummary => maw_ot_bdsummary
     procedure :: bnd_ot => maw_ot
     procedure :: bnd_da => maw_da
     procedure :: define_listlabel
@@ -182,6 +186,7 @@ module MawModule
     procedure, public :: bnd_obs_supported => maw_obs_supported
     procedure, public :: bnd_df_obs => maw_df_obs
     procedure, public :: bnd_rp_obs => maw_rp_obs
+    procedure, public :: bnd_bd_obs => maw_bd_obs
     ! -- private procedures
     procedure, private :: maw_read_wells
     procedure, private :: maw_read_well_connections
@@ -194,7 +199,6 @@ module MawModule
     procedure, private :: maw_calculate_wellq
     procedure, private :: maw_calculate_qpot
     procedure, private :: maw_cfupdate
-    procedure, private :: maw_bd_obs
     procedure, private :: get_jpos
     procedure, private :: get_gwfnode
     ! -- budget
@@ -248,6 +252,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
+    packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
@@ -2672,52 +2677,32 @@ contains
     return
   end subroutine maw_nur
 
-
-  subroutine maw_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                    isuppress_output, model_budget, imap, iadv)
-! ******************************************************************************
-! bnd_bd -- Calculate Volumetric Budget
-! Note that the compact budget will always be used.
-! Subroutine: (1) Process each package entry
-!             (2) Write output
-! ******************************************************************************
+  subroutine maw_cq(this, x, flowja, iadv)
+! **************************************************************************
+! maw_cq -- Calculate flows
+! **************************************************************************
 !
 !    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+! --------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt, pertim, totim
+    use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME
     use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(MawType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
+    class(MawType), intent(inout) :: this
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun
     real(DP) :: rrate
     ! -- for budget
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: ibnd
-    integer(I4B) :: icflow
     real(DP) :: hmaw
     real(DP) :: cfw
-    real(DP) :: cmaw
-    real(DP) :: cterm
-    real(DP) :: term
-    real(DP) :: v
-    real(DP) :: d
     ! -- for observations
-    integer(I4B) :: iprobslocal
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -2725,14 +2710,9 @@ contains
     !    maw heads prior to calling base budget functionality
     call this%maw_cfupdate()
     !
-    ! -- Suppress saving of simulated values; they
-    !    will be saved at end of this procedure.
-    iprobslocal = 0
-    !
-    ! -- call base functionality in bnd_bd
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
-                             isuppress_output, model_budget, this%imap,        &
-                             iadv=1)
+    ! -- call base functionality in bnd_cq.  This will calculate maw-gwf flows
+    !    and put them into this%simvals
+    call this%BndType%bnd_cq(x, flowja, iadv=1)
     !
     ! -- calculate maw budget flow and storage terms
     do n = 1, this%nmawwells
@@ -2783,16 +2763,7 @@ contains
       hmaw = this%xnewpak(n)
       this%qconst(n) = DZERO
       do j = 1, this%ngwfnodes(n)
-        this%qleak(ibnd) = DZERO
-        !
-        ! -- Calculate the rate for this well connection relative to gwf
-        if (this%iboundpak(n) == 0) then
-          rrate = DZERO
-        else
-          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
-                                             rrate)
-        end if
-        !
+        rrate = -this%simvals(ibnd)
         this%qleak(ibnd) = rrate
         if (this%iboundpak(n) < 0) then
           this%qconst(n) = this%qconst(n) - rrate
@@ -2825,18 +2796,67 @@ contains
       end if
     end do
     !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%maw_bd_obs()
+    ! -- fill the budget object
+    call this%maw_fill_budobj()
+    !
+    ! -- return
+    return
+  end subroutine maw_cq
+
+  subroutine maw_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+    class(MawType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    !
+    ! -- write the flows from the budobj
+    call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)
+  end subroutine maw_ot_model_flows
+
+  subroutine maw_ot_package_flows(this, icbcfl, ibudfl)
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    class(MawType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B) :: ibinun
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
     end if
+    if(icbcfl == 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    ! -- Print lake flows table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
+    end if
+    
+  end subroutine maw_ot_package_flows
+
+  subroutine maw_ot_dv(this, idvsave, idvprint)
+    use TdisModule, only: kstp, kper, pertim, totim
+    use ConstantsModule, only: DHNOFLO, DHDRY
+    use InputOutputModule, only: ulasav
+    class(MawType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B) :: ibinun
+    integer(I4B) :: n
+    real(DP) :: v
+    real(DP) :: d
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
     if(this%iheadout /= 0) then
       ibinun = this%iheadout
     end if
-    if(idvfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
+    if(idvsave == 0) ibinun = 0
     !
     ! -- write maw binary output
     if (ibinun > 0) then
@@ -2854,27 +2874,33 @@ contains
                   kstp, kper, pertim, totim,                                    &
                   this%nmawwells, 1, 1, ibinun)
     end if
-    !
-    ! -- fill the budget object
-    call this%maw_fill_budobj()
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                                  pertim, totim, this%iout)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine maw_bd
-
-
+     !
+     ! -- write maw head table
+     if (idvprint /= 0 .and. this%iprhed /= 0) then
+      !
+      ! -- set table kstp and kper
+      call this%headtab%set_kstpkper(kstp, kper)
+      !
+      ! -- fill stage data
+      do n = 1, this%nmawwells
+        if(this%inamedbound==1) then
+          call this%headtab%add_term(this%cmawname(n))
+        end if
+        call this%headtab%add_term(n)
+        call this%headtab%add_term(this%xnewpak(n))
+      end do
+     end if
+    
+  end subroutine maw_ot_dv
+  
+  subroutine maw_ot_bdsummary(this, kstp, kper, iout)
+    class(MawType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    call this%budobj%write_budtable(kstp, kper, iout)
+  end subroutine maw_ot_bdsummary
+  
   subroutine maw_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
     ! maw_ot -- Output package budget
@@ -3223,7 +3249,7 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     ! -- dummy
-    class(MawType), intent(inout) :: this
+    class(MawType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j

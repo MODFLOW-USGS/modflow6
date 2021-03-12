@@ -58,12 +58,13 @@ module GwtMstModule
     procedure :: mst_fc_dcy
     procedure :: mst_fc_srb
     procedure :: mst_fc_dcy_srb
-    procedure :: mst_bdcalc
-    procedure :: mst_bdcalc_sto
-    procedure :: mst_bdcalc_dcy
-    procedure :: mst_bdcalc_srb
-    procedure :: mst_bdcalc_dcy_srb
-    procedure :: mst_bdsav
+    procedure :: mst_cq
+    procedure :: mst_cq_sto
+    procedure :: mst_cq_dcy
+    procedure :: mst_cq_srb
+    procedure :: mst_cq_dcy_srb
+    procedure :: mst_bd
+    procedure :: mst_ot_flow
     procedure :: mst_da
     procedure :: allocate_scalars
     procedure :: addto_prsity2
@@ -606,80 +607,70 @@ module GwtMstModule
     return
   end subroutine mst_fc_dcy_srb
   
-  subroutine mst_bdcalc(this, nodes, cnew, cold, isuppress_output, model_budget)
+  subroutine mst_cq(this, nodes, cnew, cold, flowja)
 ! ******************************************************************************
-! mst_bdcalc -- Calculate budget terms
+! mst_cq -- Calculate mass flow terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtMstType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cnew
     real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! - storage
-    call this%mst_bdcalc_sto(nodes, cnew, cold, isuppress_output, model_budget)
+    call this%mst_cq_sto(nodes, cnew, cold, flowja)
     !
     ! -- decay
     if (this%idcy /= 0) then
-      call this%mst_bdcalc_dcy(nodes, cnew, cold, isuppress_output,            &
-                               model_budget)
+      call this%mst_cq_dcy(nodes, cnew, cold, flowja)
     end if
     !
     ! -- sorption
     if (this%isrb /= 0) then
-      call this%mst_bdcalc_srb(nodes, cnew, cold, isuppress_output,            &
-                                   model_budget)
+      call this%mst_cq_srb(nodes, cnew, cold, flowja)
     end if
     !
     ! -- decay sorbed
     if (this%isrb /= 0 .and. this%idcy /= 0) then
-      call this%mst_bdcalc_dcy_srb(nodes, cnew, cold, isuppress_output,        &
-                                   model_budget)
+      call this%mst_cq_dcy_srb(nodes, cnew, cold, flowja)
     end if
     !
     ! -- Return
     return
-  end subroutine mst_bdcalc
+  end subroutine mst_cq
 
-  subroutine mst_bdcalc_sto(this, nodes, cnew, cold, isuppress_output,         &
-                            model_budget)
+  subroutine mst_cq_sto(this, nodes, cnew, cold, flowja)
 ! ******************************************************************************
-! mst_bdcalc_sto -- Calculate budget terms
+! mst_cq_sto -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,        only: delt
-    use BudgetModule, only: BudgetType
+    use TdisModule, only: delt
     ! -- dummy
     class(GwtMstType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cnew
     real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: idiag
     real(DP) :: rate
     real(DP) :: tled
-    real(DP) :: rin, rout
     real(DP) :: vnew, vold
     real(DP) :: hhcof, rrhs
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
-    rin = DZERO
-    rout = DZERO
     tled = DONE / delt
     !
     ! -- Calculate storage change
@@ -701,52 +692,38 @@ module GwtMstModule
       rrhs = -vold * tled * cold(n)
       rate = hhcof * cnew(n) - rrhs
       this%ratesto(n) = rate
-      if(rate < DZERO) then
-        rout = rout - rate
-      else
-        rin = rin + rate
-      endif
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
     enddo
-    !
-    ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, budtxt(1), isuppress_output,   &
-                               rowlabel=this%packName)
     !
     ! -- Return
     return
-  end subroutine mst_bdcalc_sto
+  end subroutine mst_cq_sto
 
-  subroutine mst_bdcalc_dcy(this, nodes, cnew, cold, isuppress_output,         &
-                            model_budget)
+  subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)
 ! ******************************************************************************
-! mst_bdcalc_dcy -- Calculate budget terms
+! mst_cq_dcy -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,        only: delt
-    use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtMstType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cnew
     real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: rate
     real(DP) :: swtpdt
-    real(DP) :: rdcyin, rdcyout
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
-    rdcyin = DZERO
-    rdcyout = DZERO
     !
     ! -- Calculate decay change
     do n = 1, nodes
@@ -758,7 +735,6 @@ module GwtMstModule
       ! -- calculate new and old water volumes
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
-      idiag = this%dis%con%ia(n)
       !
       ! -- calculate decay gains and losses
       rate = DZERO
@@ -771,47 +747,36 @@ module GwtMstModule
       endif
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
-      if (rate < DZERO) then
-        rdcyout = rdcyout - rate
-      else
-        rdcyin = rdcyin + rate
-      endif
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
       !
     enddo
     !
-    ! -- Add decay contributions to model budget
-    call model_budget%addentry(rdcyin, rdcyout, delt, budtxt(2),               &
-                                isuppress_output, rowlabel=this%packName)
-    !
     ! -- Return
     return
-  end subroutine mst_bdcalc_dcy
+  end subroutine mst_cq_dcy
 
-  subroutine mst_bdcalc_srb(this, nodes, cnew, cold, isuppress_output,         &
-                            model_budget)
+  subroutine mst_cq_srb(this, nodes, cnew, cold, flowja)
 ! ******************************************************************************
-! mst_bdcalc_srb -- Calculate budget terms
+! mst_cq_srb -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,        only: delt
-    use BudgetModule, only: BudgetType
+    use TdisModule, only: delt
     ! -- dummy
     class(GwtMstType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cnew
     real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: rate
     real(DP) :: tled
     real(DP) :: swt, swtpdt
-    real(DP) :: rsrbin, rsrbout
     real(DP) :: vcell
     real(DP) :: rhob
     real(DP) :: const1
@@ -820,8 +785,6 @@ module GwtMstModule
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
-    rsrbin = DZERO
-    rsrbout = DZERO
     tled = DONE / delt
     !
     ! -- Calculate sorption change
@@ -837,7 +800,6 @@ module GwtMstModule
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
-      idiag = this%dis%con%ia(n)
       thetamfrac = this%get_thetamfrac(n)
       rhob = this%bulk_density(n)
       const1 = this%distcoef(n)
@@ -847,44 +809,33 @@ module GwtMstModule
                         cold(n), swtpdt, swt, const1, const2,                  &
                         rate=rate) 
       this%ratesrb(n) = rate
-      if (rate < DZERO) then
-        rsrbout = rsrbout - rate
-      else
-        rsrbin = rsrbin + rate
-      endif
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
       !
     enddo
     !
-    ! -- Add sorption contributions to model budget
-    call model_budget%addentry(rsrbin, rsrbout, delt, budtxt(3),               &
-                                isuppress_output, rowlabel=this%packName)
-    !
     ! -- Return
     return
-  end subroutine mst_bdcalc_srb
+  end subroutine mst_cq_srb
 
-  subroutine mst_bdcalc_dcy_srb(this, nodes, cnew, cold, isuppress_output,     &
-                                model_budget)
+  subroutine mst_cq_dcy_srb(this, nodes, cnew, cold, flowja)
 ! ******************************************************************************
-! mst_bdcalc_dcy_srb -- Calculate budget terms
+! mst_cq_dcy_srb -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
-    use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtMstType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cnew
     real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: idiag
     real(DP) :: rate
-    real(DP) :: rrctin, rrctout
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
     real(DP) :: swnew
@@ -896,11 +847,6 @@ module GwtMstModule
     !
     ! -- Calculate sorbed decay change
     !    This routine will only be called if sorption and decay are active
-    !
-    ! -- initialize accumulators
-    rrctin = DZERO
-    rrctout = DZERO
-    !
     do n = 1, nodes
       !
       ! -- initialize rates
@@ -951,25 +897,67 @@ module GwtMstModule
       ! -- calculate rate
       rate = hhcof * cnew(n) - rrhs
       this%ratedcys(n) = rate
-      if (rate < DZERO) then
-        rrctout = rrctout - rate
-      else
-        rrctin = rrctin + rate
-      endif
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
       !
     enddo
     !
-    ! -- Add decay contributions to model budget
-    call model_budget%addentry(rrctin, rrctout, delt, budtxt(4),               &
+    ! -- Return
+    return
+  end subroutine mst_cq_dcy_srb
+
+  subroutine mst_bd(this, isuppress_output, model_budget)
+! ******************************************************************************
+! mst_bd -- Calculate budget terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    use BudgetModule, only: BudgetType, rate_accumulator
+    ! -- dummy
+    class(GwtMstType) :: this
+    integer(I4B), intent(in) :: isuppress_output
+    type(BudgetType), intent(inout) :: model_budget
+    ! -- local
+    real(DP) :: rin
+    real(DP) :: rout
+! ------------------------------------------------------------------------------
+    !
+    ! -- sto
+    call rate_accumulator(this%ratesto, rin, rout)
+    call model_budget%addentry(rin, rout, delt, budtxt(1),                     &
                                isuppress_output, rowlabel=this%packName)
+    !
+    ! -- dcy
+    if (this%idcy /= 0) then
+      call rate_accumulator(this%ratedcy, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(1),                   &
+                               isuppress_output, rowlabel=this%packName)
+    end if
+    !
+    ! -- srb
+    if (this%isrb /= 0) then
+      call rate_accumulator(this%ratesrb, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
+                               isuppress_output, rowlabel=this%packName)
+    end if
+    !
+    ! -- srb dcy
+    if (this%isrb /= 0 .and. this%idcy /= 0) then
+      call rate_accumulator(this%ratedcys, rin, rout)
+      call model_budget%addentry(rin, rout, delt, budtxt(3),                   &
+                               isuppress_output, rowlabel=this%packName)
+    end if
     !
     ! -- Return
     return
-  end subroutine mst_bdcalc_dcy_srb
-
-  subroutine mst_bdsav(this, icbcfl, icbcun)
+  end subroutine mst_bd
+  
+  subroutine mst_ot_flow(this, icbcfl, icbcun)
 ! ******************************************************************************
-! mst_bdsav -- Save budget terms
+! mst_ot_flow -- Save budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1027,7 +1015,7 @@ module GwtMstModule
     !
     ! -- Return
     return
-  end subroutine mst_bdsav
+  end subroutine mst_ot_flow
 
   subroutine mst_da(this)
 ! ******************************************************************************

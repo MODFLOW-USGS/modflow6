@@ -36,6 +36,7 @@ module GwfGwfExchangeModule
     integer(I4B), pointer                            :: inamedbound => null()    ! flag to read boundnames
     real(DP), pointer                                :: satomega    => null()    ! saturation smoothing
     integer(I4B), dimension(:), pointer, contiguous  :: ihc         => null()    ! horizontal connection indicator array
+    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    ! simulated flow rate for each exchange
     real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    ! saturated conductance
     real(DP), dimension(:), pointer, contiguous      :: cl1         => null()    ! connection length 1
     real(DP), dimension(:), pointer, contiguous      :: cl2         => null()    ! connection length 2
@@ -79,6 +80,7 @@ module GwfGwfExchangeModule
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
+    procedure, private :: gwf_gwf_bdsav
     procedure, private :: gwf_gwf_df_obs
     procedure, private :: gwf_gwf_rp_obs
     procedure, public  :: gwf_gwf_save_simvals
@@ -729,6 +731,22 @@ contains
     real(DP) :: area
 ! ------------------------------------------------------------------------------
     !
+    ! -- calculate flow and store in simvals
+    do i = 1, this%nexg
+      rrate = DZERO
+      n1 = this%nodem1(i)
+      n2 = this%nodem2(i)
+      ibdn1 = this%gwfmodel1%ibound(n1)
+      ibdn2 = this%gwfmodel2%ibound(n2)
+      if(ibdn1 /= 0 .and. ibdn2 /= 0) then
+        rrate = this%qcalc(i, n1, n2)
+        if(this%ingnc > 0) then
+          rrate = rrate + this%gnc%deltaqgnc(i)
+        endif
+      endif
+      this%simvals(i) = rrate
+    end do
+    !
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
@@ -736,9 +754,10 @@ contains
     ! -- initialize
     iusg = 0
     !
-    ! -- Loop through all exchanges
+    ! -- Loop through all exchanges using the flow rate 
+    !    stored in simvals 
     do i = 1, this%nexg
-      rrate = DZERO
+      rrate = this%simvals(i)
       n1 = this%nodem1(i)
       n2 = this%nodem2(i)
       ihc = this%ihc(i)
@@ -755,15 +774,6 @@ contains
       satn2 = this%gwfmodel2%npf%sat(n2)
       hn1 = this%gwfmodel1%x(n1)
       hn2 = this%gwfmodel2%x(n2)
-      !
-      ! -- If both cells are active then calculate flow rate, and add ghost
-      !    node contribution
-      if(ibdn1 /= 0 .and. ibdn2 /= 0) then
-        rrate = this%qcalc(i, n1, n2)
-        if(this%ingnc > 0) then
-          rrate = rrate + this%gnc%deltaqgnc(i)
-        endif
-      endif
       !
       ! -- Calculate face normal components
       if(ihc == 0) then
@@ -836,12 +846,56 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
-    use TdisModule, only: kstp, kper
+    use BudgetModule, only: rate_accumulator
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
+    ! -- local
+    character(len=LENBUDTXT), dimension(1) :: budtxt
+    real(DP), dimension(2, 1) :: budterm
+    real(DP) :: ratin, ratout
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    budtxt(1) = '    FLOW-JA-FACE'
+    !
+    ! -- Calculate ratin/ratout and pass to model budgets
+    call rate_accumulator(this%simvals, ratin, ratout)
+    !
+    ! -- Add the budget terms to model 1
+    budterm(1, 1) = ratin
+    budterm(2, 1) = ratout
+    call this%m1%model_bdentry(budterm, budtxt, this%name)
+    !
+    ! -- Add the budget terms to model 2
+    budterm(1, 1) = ratout
+    budterm(2, 1) = ratin
+    call this%m2%model_bdentry(budterm, budtxt, this%name)
+    !
+    ! -- Call mvr bd routine
+    if(this%inmvr > 0) call this%mvr%mvr_bd()
+    !
+    ! -- return
+    return
+  end subroutine gwf_gwf_bd
+
+  subroutine gwf_gwf_bdsav(this)
+! ******************************************************************************
+! gwf_gwf_bdsav -- Budget for implicit gwf to gwf exchange; the budget for the
+!                  explicit exchange connections is handled for each model by
+!                  the exchange boundary package.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+    class(GwfExchangeType) :: this
     ! -- local
     character(len=LENBOUNDNAME) :: bname
     character(len=LENPACKAGENAME+4) :: packname1
@@ -850,15 +904,16 @@ contains
     character(len=20) :: nodestr
     integer(I4B) :: ntabrows
     integer(I4B) :: nodeu
-    real(DP), dimension(2, 1) :: budterm
     integer(I4B) :: i, n1, n2, n1u, n2u
     integer(I4B) :: ibinun1, ibinun2
     integer(I4B) :: icbcfl, ibudfl
-    real(DP) :: ratin, ratout, rrate, deltaqgnc
+    real(DP) :: ratin, ratout, rrate
+    integer(I4B) :: isuppress_output
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
+    isuppress_output = 0
     budtxt(1) = '    FLOW-JA-FACE'
     packname1 = 'EXG '//this%name
     packname1 = adjustr(packname1)
@@ -945,13 +1000,7 @@ contains
       ! -- If both cells are active then calculate flow rate
       if(this%gwfmodel1%ibound(n1) /= 0 .and. &
           this%gwfmodel2%ibound(n2) /= 0) then
-        rrate = this%qcalc(i, n1, n2)
-        !
-        ! -- add ghost node contribution
-        if(this%ingnc > 0) then
-          deltaqgnc = this%gnc%deltaqgnc(i)
-          rrate = rrate + deltaqgnc
-        endif
+        rrate = this%simvals(i)
         !
         ! -- Print the individual rates to model list files if requested
         if(this%iprflow /= 0) then
@@ -980,11 +1029,6 @@ contains
           .false., .false.)
       !
     enddo
-    !
-    ! -- Add the budget terms to model 1
-    budterm(1, 1) = ratin
-    budterm(2, 1) = ratout
-    call this%m1%model_bdentry(budterm, budtxt, this%name)
     !
     ! -- Print and write budget terms for model 2
     !
@@ -1033,13 +1077,7 @@ contains
       ! -- If both cells are active then calculate flow rate
       if(this%gwfmodel1%ibound(n1) /= 0 .and. &
           this%gwfmodel2%ibound(n2) /= 0) then
-        rrate = this%cond(i) * this%m2%x(n2) - this%cond(i) * this%m1%x(n1)
-        !
-        ! -- add ghost node contribution
-        if(this%ingnc > 0) then
-          deltaqgnc = this%gnc%deltaqgnc(i)
-          rrate = rrate + deltaqgnc
-        endif
+        rrate = this%simvals(i)
         !
         ! -- Print the individual rates to model list files if requested
         if(this%iprflow /= 0) then
@@ -1069,18 +1107,13 @@ contains
       !
     enddo
     !
-    ! -- Add the budget terms to model 2
-    budterm(1, 1) = ratout
-    budterm(2, 1) = ratin
-    call this%m2%model_bdentry(budterm, budtxt, this%name)
-    !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
     !    saved, if the options were set in the MVR package
     icbcfl = 1
     ibudfl = 1
     !
     ! -- Call mvr bd routine
-    if(this%inmvr > 0) call this%mvr%mvr_bd(icbcfl, ibudfl, isuppress_output)
+    if(this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, isuppress_output)
     !
     ! -- Calculate and write simulated values for observations
     if(this%inobs /= 0) then
@@ -1089,7 +1122,7 @@ contains
     !
     ! -- return
     return
-  end subroutine gwf_gwf_bd
+  end subroutine gwf_gwf_bdsav
 
   subroutine gwf_gwf_ot(this)
 ! ******************************************************************************
@@ -1117,6 +1150,9 @@ contains
     character(len=*), parameter :: fmtdata =                                   &
      "(2a16, 5(1pg16.6))"
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Call bdsave
+    call this%gwf_gwf_bdsav()
     !
     ! -- Initialize
     deltaqgnc = DZERO
@@ -1153,7 +1189,7 @@ contains
     endif
     !
     ! -- Mover budget output
-    if(this%inmvr > 0) call this%mvr%mvr_ot()
+    if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary()
     !
     ! -- OBS output
     call this%obs%obs_ot()
@@ -1810,6 +1846,7 @@ contains
     call mem_deallocate(this%cl2)
     call mem_deallocate(this%hwva)
     call mem_deallocate(this%condsat)
+    call mem_deallocate(this%simvals)
     deallocate(this%boundname)
     !
     ! -- output table objects
@@ -1865,6 +1902,7 @@ contains
     call mem_allocate(this%cl2, this%nexg, 'CL2', this%memoryPath)
     call mem_allocate(this%hwva, this%nexg, 'HWVA', this%memoryPath)
     call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
+    call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
     !
     ! -- Allocate boundname
     if(this%inamedbound==1) then
