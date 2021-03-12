@@ -11,38 +11,38 @@ import numpy as np
 try:
     import flopy
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 from framework import testing_framework
 from simulation import Simulation
 from binary_file_writer import write_head, write_budget, uniform_flow_field
 
-ex = ['mst05a', 'mst05b']
-isotherm = ['freundlich', 'langmuir']
-distcoef = [0.3, 100.]
+ex = ["mst05a", "mst05b"]
+isotherm = ["freundlich", "langmuir"]
+distcoef = [0.3, 100.0]
 sp2 = [0.7, 0.003]
 xmax_plot = [1500, 500]
 ymax_plot = [0.5, 1.0]
 exdirs = []
 for s in ex:
-    exdirs.append(os.path.join('temp', s))
-ddir = 'data'
+    exdirs.append(os.path.join("temp", s))
+ddir = "data"
 
 
 def get_model(idx, dir):
     nlay, nrow, ncol = 1, 1, 101
-    perlen = [160., 1340.]
+    perlen = [160.0, 1340.0]
     nper = len(perlen)
-    tslength = 10.
+    tslength = 10.0
     nstp = [p / tslength for p in perlen]
-    tsmult = nper * [1.]
+    tsmult = nper * [1.0]
     delr = 0.16
     delc = 0.16
-    top = 1.
-    botm = 0.
+    top = 1.0
+    botm = 0.0
     velocity = 0.1
     porosity = 0.37
     bulk_density = 1.587
@@ -52,7 +52,7 @@ def get_model(idx, dir):
     inflow_rate = specific_discharge * delc * (top - botm)
 
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 1.
+    hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
     tdis_rc = []
     for i in range(nper):
@@ -62,134 +62,217 @@ def get_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name='mf6',
-                                 sim_ws=ws)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+    )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='SECONDS',
-                                 nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="SECONDS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwt model
-    gwtname = 'gwt_' + name
-    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                            model_nam_file='{}.nam'.format(gwtname))
+    gwtname = "gwt_" + name
+    gwt = flopy.mf6.MFModel(
+        sim,
+        model_type="gwt6",
+        modelname=gwtname,
+        model_nam_file="{}.nam".format(gwtname),
+    )
     gwt.name_file.save_flows = True
 
     # create iterative model solution and register the gwt model with it
-    imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                  outer_dvclose=hclose,
-                                  outer_maximum=nouter,
-                                  under_relaxation='NONE',
-                                  inner_maximum=ninner,
-                                  inner_dvclose=hclose, rcloserecord=rclose,
-                                  linear_acceleration='BICGSTAB',
-                                  scaling_method='NONE',
-                                  reordering_method='NONE',
-                                  relaxation_factor=relax,
-                                  filename='{}.ims'.format(gwtname))
+    imsgwt = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwtname),
+    )
     sim.register_ims_package(imsgwt, [gwt.name])
 
-    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm)
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.)
+    dis = flopy.mf6.ModflowGwtdis(
+        gwt,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0)
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme="TVD")
-    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, alh=dispersivity,
-                                  ath1=dispersivity)
-    mst = flopy.mf6.ModflowGwtmst(gwt,
-                                  sorption=isotherm[idx],
-                                  porosity=porosity,
-                                  bulk_density=bulk_density,
-                                  distcoef=distcoef[idx],
-                                  sp2=sp2[idx])
+    dsp = flopy.mf6.ModflowGwtdsp(
+        gwt, xt3d_off=True, alh=dispersivity, ath1=dispersivity
+    )
+    mst = flopy.mf6.ModflowGwtmst(
+        gwt,
+        sorption=isotherm[idx],
+        porosity=porosity,
+        bulk_density=bulk_density,
+        distcoef=distcoef[idx],
+        sp2=sp2[idx],
+    )
 
     # sources
-    sourcerecarray = [('WEL-1', 'AUX', 'CONCENTRATION')]
+    sourcerecarray = [("WEL-1", "AUX", "CONCENTRATION")]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
     # create a heads file with head equal top
-    fname = os.path.join(ws, 'myhead.hds')
-    with open(fname, 'wb') as fbin:
+    fname = os.path.join(ws, "myhead.hds")
+    with open(fname, "wb") as fbin:
         kstp = 0
         totim = 0
         for kper in range(nper):
             totim += perlen[kper]
-            write_head(fbin, top * np.ones((nrow, ncol)),
-                       kstp=kstp + 1, kper=kper + 1,
-                       pertim=perlen[kper], totim=totim)
+            write_head(
+                fbin,
+                top * np.ones((nrow, ncol)),
+                kstp=kstp + 1,
+                kper=kper + 1,
+                pertim=perlen[kper],
+                totim=totim,
+            )
 
     # create a budget file
     qx = specific_discharge
-    qy = 0.
-    qz = 0.
+    qy = 0.0
+    qz = 0.0
     shape = (nlay, nrow, ncol)
     spdis, flowja = uniform_flow_field(qx, qy, qz, shape, delr=delr, delc=delc)
-    dt = np.dtype([('ID1', np.int32),
-                   ('ID2', np.int32),
-                   ('FLOW', np.float64),
-                   ('CONCENTRATION', np.float64),
-                   ])
-    wel = [np.array([(0 + 1, 0 + 1, inflow_rate, source_concentration)], dtype=dt),
-           np.array([(0 + 1, 0 + 1, inflow_rate, 0.)], dtype=dt)]
-    chd = np.array([(ncol - 1 + 1, ncol - 1 + 1, -inflow_rate, 0.)], dtype=dt)
+    dt = np.dtype(
+        [
+            ("ID1", np.int32),
+            ("ID2", np.int32),
+            ("FLOW", np.float64),
+            ("CONCENTRATION", np.float64),
+        ]
+    )
+    wel = [
+        np.array(
+            [(0 + 1, 0 + 1, inflow_rate, source_concentration)], dtype=dt
+        ),
+        np.array([(0 + 1, 0 + 1, inflow_rate, 0.0)], dtype=dt),
+    ]
+    chd = np.array([(ncol - 1 + 1, ncol - 1 + 1, -inflow_rate, 0.0)], dtype=dt)
 
-    dt = np.dtype([('ID1', np.int32),
-                   ('ID2', np.int32),
-                   ('FLOW', np.float64),
-                   ('SATURATION', np.float64),
-                   ])
-    sat = np.array([(i, i, 0., 1.) for i in range(nlay * nrow * ncol)], dtype=dt)
+    dt = np.dtype(
+        [
+            ("ID1", np.int32),
+            ("ID2", np.int32),
+            ("FLOW", np.float64),
+            ("SATURATION", np.float64),
+        ]
+    )
+    sat = np.array(
+        [(i, i, 0.0, 1.0) for i in range(nlay * nrow * ncol)], dtype=dt
+    )
 
-    fname = os.path.join(ws, 'mybudget.bud')
-    with open(fname, 'wb') as fbin:
+    fname = os.path.join(ws, "mybudget.bud")
+    with open(fname, "wb") as fbin:
         kstp = 0
         totim = 0
         for kper in range(nper):
             totim += perlen[kper]
             delt = perlen[kper] / nstp[kper]
-            write_budget(fbin, flowja, kstp=kstp + 1, kper=kper + 1,
-                         pertim=perlen[kper], totim=totim, delt=delt)
-            write_budget(fbin, spdis, text='      DATA-SPDIS', imeth=6,
-                         kstp=kstp + 1, kper=kper + 1,
-                         pertim=perlen[kper], totim=totim, delt=delt)
-            write_budget(fbin, sat, text='        DATA-SAT', imeth=6,
-                         kstp=kstp + 1, kper=kper + 1,
-                         pertim=perlen[kper], totim=totim, delt=delt)
-            write_budget(fbin, wel[kper], text='             WEL', imeth=6,
-                         text2id2='           WEL-1',
-                         kstp=kstp + 1, kper=kper + 1,
-                         pertim=perlen[kper], totim=totim, delt=delt)
-            write_budget(fbin, chd, text='             CHD', imeth=6,
-                         text2id2='           CHD-1',
-                         kstp=kstp + 1, kper=kper + 1,
-                         pertim=perlen[kper], totim=totim, delt=delt)
+            write_budget(
+                fbin,
+                flowja,
+                kstp=kstp + 1,
+                kper=kper + 1,
+                pertim=perlen[kper],
+                totim=totim,
+                delt=delt,
+            )
+            write_budget(
+                fbin,
+                spdis,
+                text="      DATA-SPDIS",
+                imeth=6,
+                kstp=kstp + 1,
+                kper=kper + 1,
+                pertim=perlen[kper],
+                totim=totim,
+                delt=delt,
+            )
+            write_budget(
+                fbin,
+                sat,
+                text="        DATA-SAT",
+                imeth=6,
+                kstp=kstp + 1,
+                kper=kper + 1,
+                pertim=perlen[kper],
+                totim=totim,
+                delt=delt,
+            )
+            write_budget(
+                fbin,
+                wel[kper],
+                text="             WEL",
+                imeth=6,
+                text2id2="           WEL-1",
+                kstp=kstp + 1,
+                kper=kper + 1,
+                pertim=perlen[kper],
+                totim=totim,
+                delt=delt,
+            )
+            write_budget(
+                fbin,
+                chd,
+                text="             CHD",
+                imeth=6,
+                text2id2="           CHD-1",
+                kstp=kstp + 1,
+                kper=kper + 1,
+                pertim=perlen[kper],
+                totim=totim,
+                delt=delt,
+            )
     fbin.close()
 
     # flow model interface
-    packagedata = [('GWFBUDGET', 'mybudget.bud', None),
-                   ('GWFHEAD', 'myheads.hds', None)]
+    packagedata = [
+        ("GWFBUDGET", "mybudget.bud", None),
+        ("GWFHEAD", "myheads.hds", None),
+    ]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=packagedata)
 
     # output control
-    oc = flopy.mf6.ModflowGwtoc(gwt,
-                                budget_filerecord='{}.cbc'.format(gwtname),
-                                concentration_filerecord='{}.ucn'.format(gwtname),
-                                concentrationprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'LAST'),
-                                            ('BUDGET', 'LAST')],
-                                printrecord=[('CONCENTRATION', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+    oc = flopy.mf6.ModflowGwtoc(
+        gwt,
+        budget_filerecord="{}.cbc".format(gwtname),
+        concentration_filerecord="{}.ucn".format(gwtname),
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
+        saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+    )
 
-    obs_data = {'conc_obs.csv': [
-                ('X008', 'CONCENTRATION', (0, 0, 50)),
-                ]}
+    obs_data = {
+        "conc_obs.csv": [
+            ("X008", "CONCENTRATION", (0, 0, 50)),
+        ]
+    }
 
-    obs_package = flopy.mf6.ModflowUtlobs(gwt, pname='conc_obs',
-                                          filename='{}.obs'.format(gwtname),
-                                          digits=10, print_input=True,
-                                          continuous=obs_data)
+    obs_package = flopy.mf6.ModflowUtlobs(
+        gwt,
+        pname="conc_obs",
+        filename="{}.obs".format(gwtname),
+        digits=10,
+        print_input=True,
+        continuous=obs_data,
+    )
 
     return sim
 
@@ -202,41 +285,43 @@ def build_models():
 
 
 def eval_transport(sim):
-    print('evaluating transport...')
+    print("evaluating transport...")
 
     name = ex[sim.idxsim]
-    gwtname = 'gwt_' + name
+    gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, '{}.ucn'.format(gwtname))
+    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision='double',
-                                    text='CONCENTRATION')
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    fpth = os.path.join(sim.simpath, 'conc_obs.csv')
+    fpth = os.path.join(sim.simpath, "conc_obs.csv")
     try:
         obs = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    cnorm = obs['X008'] / 0.05
+    cnorm = obs["X008"] / 0.05
     cnorm_max = [0.32842034, 0.875391418]
-    msg = '{} /= {}'.format(cnorm_max[sim.idxsim], cnorm.max())
+    msg = "{} /= {}".format(cnorm_max[sim.idxsim], cnorm.max())
     assert np.allclose(cnorm_max[sim.idxsim], cnorm.max(), atol=0.001), msg
 
     savefig = False
     if savefig:
         import matplotlib.pyplot as plt
+
         fig = plt.figure()
-        plt.plot(obs['time'], obs['X008'] / 0.05, 'bo-')
+        plt.plot(obs["time"], obs["X008"] / 0.05, "bo-")
         plt.xlim(0, xmax_plot[sim.idxsim])
         plt.ylim(0, ymax_plot[sim.idxsim])
         plt.xlabel("Time, in seconds")
-        plt.ylabel('Normalized Concentration')
+        plt.ylabel("Normalized Concentration")
         plt.title(isotherm[sim.idxsim])
-        fname = os.path.join(sim.simpath, 'results.png')
+        fname = os.path.join(sim.simpath, "results.png")
         plt.savefig(fname)
 
     return
@@ -274,7 +359,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run main routine
     main()

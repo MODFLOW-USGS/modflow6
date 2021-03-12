@@ -29,7 +29,10 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ["issue655a", "issue655b"]
-newton = [False, True,]
+newton = [
+    False,
+    True,
+]
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]
@@ -44,8 +47,8 @@ def build_models(idx, ws):
     perlen = [1000.0]
     nstp = [5]
     tsmult = [1.05]
-    xlen = 8020.
-    ylen = 8020.
+    xlen = 8020.0
+    ylen = 8020.0
     delr = xlen / float(ncol)
     delc = ylen / float(nrow)
     botm = [0.0]

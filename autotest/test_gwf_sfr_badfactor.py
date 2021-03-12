@@ -7,9 +7,9 @@ import subprocess
 try:
     import flopy
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 from framework import testing_framework
@@ -17,11 +17,11 @@ from simulation import Simulation
 
 import targets
 
-mf6_exe = os.path.abspath(targets.target_dict['mf6'])
+mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
-paktest = 'sfr'
-testname = 'ts_sfr01'
-testdir = os.path.join('temp', testname)
+paktest = "sfr"
+testname = "ts_sfr01"
+testdir = os.path.join("temp", testname)
 if not os.path.isdir(testdir):
     os.mkdir(testdir)
 everything_was_successful = True
@@ -33,108 +33,267 @@ def get_model(timeseries=False):
     nper = 1
     tdis_rc = []
     for idx in range(nper):
-        tdis_rc.append((1., 1, 1.0))
-    ts_times = np.arange(0., 2., 1., dtype=np.float)
-    
-    auxnames = ['temp', 'conc']
+        tdis_rc.append((1.0, 1, 1.0))
+    ts_times = np.arange(0.0, 2.0, 1.0, dtype=np.float)
+
+    auxnames = ["temp", "conc"]
     temp, conc = 32.5, 0.1
-    
+
     # spatial discretization data
     nlay, nrow, ncol = 3, 10, 10
-    delr, delc = 100., 100.
-    top = 0.
+    delr, delc = 100.0, 100.0
+    top = 0.0
     botm = [-10, -20, -30]
-    strt = 0.
-    
+    strt = 0.0
+
     # calculate hk
-    hk = 1.e-4
-    
+    hk = 1.0e-4
+
     # solver options
     nouter, ninner = 600, 100
-    hclose, rclose, relax = 1e-6, 0.1, 1.
-    newtonoptions = ''
-    imsla = 'BICGSTAB'
-    
+    hclose, rclose, relax = 1e-6, 0.1, 1.0
+    newtonoptions = ""
+    imsla = "BICGSTAB"
+
     # build MODFLOW 6 files
     name = testname
     ws = testdir
-    sim = flopy.mf6.MFSimulation(sim_name=name,
-                                 version='mf6',
-                                 exe_name=mf6_exe,
-                                 sim_ws=ws)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+    )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                 nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
     # set ims csv files
-    csv0 = '{}.outer.ims.csv'.format(name)
-    csv1 = '{}.inner.ims.csv'.format(name)
-    
+    csv0 = "{}.outer.ims.csv".format(name)
+    csv1 = "{}.inner.ims.csv".format(name)
+
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim,
-                               print_option='ALL',
-                               csv_outer_output_filerecord=csv0,
-                               csv_inner_output_filerecord=csv1,
-                               outer_dvclose=hclose,
-                               outer_maximum=nouter,
-                               under_relaxation='NONE',
-                               inner_maximum=ninner,
-                               inner_dvclose=hclose, rcloserecord=rclose,
-                               linear_acceleration=imsla,
-                               scaling_method='NONE',
-                               reordering_method='NONE',
-                               relaxation_factor=relax)
-    
+    ims = flopy.mf6.ModflowIms(
+        sim,
+        print_option="ALL",
+        csv_outer_output_filerecord=csv0,
+        csv_inner_output_filerecord=csv1,
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration=imsla,
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+    )
+
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
-                               newtonoptions=newtonoptions,
-                               save_flows=True, print_flows=True)
-    
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm)
-    
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=name,
+        newtonoptions=newtonoptions,
+        save_flows=True,
+        print_flows=True,
+    )
+
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+    )
+
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
-    
+
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=0, k=hk)
-    
+
     # chd files
     # chd data
-    spd = [[(0, 0, 0), 1.],
-           [(0, nrow - 1, ncol - 1), 0.], ]
-    chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=spd,
-                                          pname='chd-1')
-    
+    spd = [
+        [(0, 0, 0), 1.0],
+        [(0, nrow - 1, ncol - 1), 0.0],
+    ]
+    chd = flopy.mf6.modflow.ModflowGwfchd(
+        gwf, stress_period_data=spd, pname="chd-1"
+    )
+
     # drn file
-    drn6 = [[(0, 1, 2), -1., 1.],
-            [(0, 2, 3), -1., 1.], ]
-    drn = flopy.mf6.modflow.ModflowGwfdrn(gwf, mover=True,
-                                          stress_period_data=drn6,
-                                          pname='drn-1')
-    
+    drn6 = [
+        [(0, 1, 2), -1.0, 1.0],
+        [(0, 2, 3), -1.0, 1.0],
+    ]
+    drn = flopy.mf6.modflow.ModflowGwfdrn(
+        gwf, mover=True, stress_period_data=drn6, pname="drn-1"
+    )
+
     # sfr file
     packagedata = [
-        [0, (1 - 1, 4 - 1, 1 - 1), 3.628E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 0.0, 1, temp, conc],
-        [1, (1 - 1, 4 - 1, 2 - 1), 1.061E+002, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 3, 1.0, 1, temp, conc],
-        [2, (1 - 1, 4 - 1, 3 - 1), 6.333E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 4, 1.0, 2, temp, conc],
-        [3, (1 - 1, 5 - 1, 3 - 1), 4.279E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 3, 1.0, 1, temp, conc],
-        [4, (1 - 1, 5 - 1, 4 - 1), 6.532E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 1, 1.0, 0, temp, conc],
-        [5, (1 - 1, 4 - 1, 1 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [6, (1 - 1, 4 - 1, 2 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [7, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [8, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [9, (1 - 1, 5 - 1, 4 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
+        [
+            0,
+            (1 - 1, 4 - 1, 1 - 1),
+            3.628e001,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            1.0e-4,
+            1.0e-1,
+            2,
+            0.0,
+            1,
+            temp,
+            conc,
+        ],
+        [
+            1,
+            (1 - 1, 4 - 1, 2 - 1),
+            1.061e002,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            1.0e-4,
+            1.0e-1,
+            3,
+            1.0,
+            1,
+            temp,
+            conc,
+        ],
+        [
+            2,
+            (1 - 1, 4 - 1, 3 - 1),
+            6.333e001,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            1.0e-4,
+            1.0e-1,
+            4,
+            1.0,
+            2,
+            temp,
+            conc,
+        ],
+        [
+            3,
+            (1 - 1, 5 - 1, 3 - 1),
+            4.279e001,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            1.0e-4,
+            1.0e-1,
+            3,
+            1.0,
+            1,
+            temp,
+            conc,
+        ],
+        [
+            4,
+            (1 - 1, 5 - 1, 4 - 1),
+            6.532e001,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            1.0e-4,
+            1.0e-1,
+            1,
+            1.0,
+            0,
+            temp,
+            conc,
+        ],
+        [
+            5,
+            (1 - 1, 4 - 1, 1 - 1),
+            10.0,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            0.0,
+            1.0e-1,
+            1,
+            0.0,
+            0,
+            temp,
+            conc,
+        ],
+        [
+            6,
+            (1 - 1, 4 - 1, 2 - 1),
+            10.0,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            0.0,
+            1.0e-1,
+            1,
+            0.0,
+            0,
+            temp,
+            conc,
+        ],
+        [
+            7,
+            (1 - 1, 4 - 1, 3 - 1),
+            10.0,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            0.0,
+            1.0e-1,
+            1,
+            0.0,
+            0,
+            temp,
+            conc,
+        ],
+        [
+            8,
+            (1 - 1, 4 - 1, 3 - 1),
+            10.0,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            0.0,
+            1.0e-1,
+            1,
+            0.0,
+            0,
+            temp,
+            conc,
+        ],
+        [
+            9,
+            (1 - 1, 5 - 1, 4 - 1),
+            10.0,
+            1.0,
+            1.0e-003,
+            0.0,
+            1.0,
+            0.0,
+            1.0e-1,
+            1,
+            0.0,
+            0,
+            temp,
+            conc,
+        ],
     ]
     connectiondata = [
         [0, -1, -5],
@@ -146,195 +305,227 @@ def get_model(timeseries=False):
         [6, 1],
         [7, 2],
         [8, 2],
-        [9, 3]
+        [9, 3],
     ]
-    cprior1 = 'upto'
-    cprior2 = 'fraction'
-    divdata = [[0, 0, 5, cprior1],
-               [1, 0, 6, cprior1],
-               [2, 1, 7, cprior1],
-               [2, 0, 8, cprior1],
-               [3, 0, 9, cprior2]]
-    inflow, divflow, divflow2, upstream_fraction = 1., 0.05, 0.04, 0.
-    divflow3 = 2.    # A bad specification of factor
-    ts_names = ['inflow', 'divflow', 'ustrf'] + auxnames
-    perioddata = [[0, 'status', 'active'],
-                  [1, 'status', 'active'],
-                  [2, 'status', 'active'],
-                  [3, 'status', 'active'],
-                  [4, 'status', 'active'],
-                  [0, 'diversion', 0, divflow],
-                  [1, 'diversion', 0, divflow],
-                  [2, 'diversion', 0, divflow2],
-                  [3, 'diversion', 0, divflow3]]
+    cprior1 = "upto"
+    cprior2 = "fraction"
+    divdata = [
+        [0, 0, 5, cprior1],
+        [1, 0, 6, cprior1],
+        [2, 1, 7, cprior1],
+        [2, 0, 8, cprior1],
+        [3, 0, 9, cprior2],
+    ]
+    inflow, divflow, divflow2, upstream_fraction = 1.0, 0.05, 0.04, 0.0
+    divflow3 = 2.0  # A bad specification of factor
+    ts_names = ["inflow", "divflow", "ustrf"] + auxnames
+    perioddata = [
+        [0, "status", "active"],
+        [1, "status", "active"],
+        [2, "status", "active"],
+        [3, "status", "active"],
+        [4, "status", "active"],
+        [0, "diversion", 0, divflow],
+        [1, "diversion", 0, divflow],
+        [2, "diversion", 0, divflow2],
+        [3, "diversion", 0, divflow3],
+    ]
     if timeseries:
-        perioddata.append([0, 'inflow', 'inflow'])
-        perioddata.append([2, 'diversion', 1, 'divflow'])
-        perioddata.append([0, 'AUXILIARY', 'conc', 'conc'])
-        perioddata.append([2, 'AUXILIARY', 'temp', 'temp'])
-        perioddata.append([5, 'upstream_fraction', 'ustrf'])
-        perioddata.append([7, 'upstream_fraction', 'ustrf'])
-        perioddata.append([9, 'upstream_fraction', 'ustrf'])
-        ts_methods = ['linearend'] * len(ts_names)
+        perioddata.append([0, "inflow", "inflow"])
+        perioddata.append([2, "diversion", 1, "divflow"])
+        perioddata.append([0, "AUXILIARY", "conc", "conc"])
+        perioddata.append([2, "AUXILIARY", "temp", "temp"])
+        perioddata.append([5, "upstream_fraction", "ustrf"])
+        perioddata.append([7, "upstream_fraction", "ustrf"])
+        perioddata.append([9, "upstream_fraction", "ustrf"])
+        ts_methods = ["linearend"] * len(ts_names)
         ts_data = []
         for t in ts_times:
             ts_data.append((t, inflow, divflow, upstream_fraction, temp, conc))
     else:
-        perioddata.append([0, 'inflow', inflow])
-        perioddata.append([2, 'diversion', 1, divflow])
-    
-    budpth = '{}.{}.cbc'.format(name, paktest)
-    cnvgpth = '{}.sfr.cnvg.csv'.format(name)
-    sfr = flopy.mf6.ModflowGwfsfr(gwf,
-                                  print_stage=True,
-                                  maximum_picard_iterations=1,
-                                  auxiliary=auxnames,
-                                  print_input=True,
-                                  budget_filerecord=budpth,
-                                  mover=True,
-                                  nreaches=len(packagedata),
-                                  maximum_depth_change=1.e-5,
-                                  package_convergence_filerecord=cnvgpth,
-                                  packagedata=packagedata,
-                                  connectiondata=connectiondata,
-                                  diversions=divdata,
-                                  perioddata=perioddata, pname='sfr-1')
+        perioddata.append([0, "inflow", inflow])
+        perioddata.append([2, "diversion", 1, divflow])
+
+    budpth = "{}.{}.cbc".format(name, paktest)
+    cnvgpth = "{}.sfr.cnvg.csv".format(name)
+    sfr = flopy.mf6.ModflowGwfsfr(
+        gwf,
+        print_stage=True,
+        maximum_picard_iterations=1,
+        auxiliary=auxnames,
+        print_input=True,
+        budget_filerecord=budpth,
+        mover=True,
+        nreaches=len(packagedata),
+        maximum_depth_change=1.0e-5,
+        package_convergence_filerecord=cnvgpth,
+        packagedata=packagedata,
+        connectiondata=connectiondata,
+        diversions=divdata,
+        perioddata=perioddata,
+        pname="sfr-1",
+    )
     if timeseries:
-        fname = '{}.sfr.ts'.format(name)
-        sfr.ts.initialize(filename=fname, timeseries=ts_data,
-                          time_series_namerecord=ts_names,
-                          interpolation_methodrecord=ts_methods)
-    
-    packagedata = [[0, 1.0, -20., 0.0, 'SPECIFIED', 2], ]
+        fname = "{}.sfr.ts".format(name)
+        sfr.ts.initialize(
+            filename=fname,
+            timeseries=ts_data,
+            time_series_namerecord=ts_names,
+            interpolation_methodrecord=ts_methods,
+        )
+
+    packagedata = [
+        [0, 1.0, -20.0, 0.0, "SPECIFIED", 2],
+    ]
     nmawwells = len(packagedata)
     connectiondata = [
         [1 - 1, 1 - 1, (1 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1],
-        [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
-    perioddata = [[0, 'FLOWING_WELL', 0., 0., 0.],
-                  [0, 'RATE', 1.e-3]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf,
-                                  print_head=True,
-                                  mover=True, nmawwells=nmawwells,
-                                  packagedata=packagedata,
-                                  connectiondata=connectiondata,
-                                  perioddata=perioddata, pname='maw-1')
-    
-    packagedata = [(0, 1., 11),
-                   (1, 0.5, 11)]
-    outlets = [(0, 0, 1, 'manning', 0.001, 0., 0.1, 0.001)]
+        [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1],
+    ]
+    perioddata = [[0, "FLOWING_WELL", 0.0, 0.0, 0.0], [0, "RATE", 1.0e-3]]
+    maw = flopy.mf6.ModflowGwfmaw(
+        gwf,
+        print_head=True,
+        mover=True,
+        nmawwells=nmawwells,
+        packagedata=packagedata,
+        connectiondata=connectiondata,
+        perioddata=perioddata,
+        pname="maw-1",
+    )
+
+    packagedata = [(0, 1.0, 11), (1, 0.5, 11)]
+    outlets = [(0, 0, 1, "manning", 0.001, 0.0, 0.1, 0.001)]
     nlakes = len(packagedata)
     noutlets = len(outlets)
     connectiondata = [
-        (0, 0, (0, 0, 5), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 1, (0, 1, 4), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 2, (1, 1, 5), 'vertical', 1.e-05, -5., 0., 1., 0.),
-        (0, 3, (0, 2, 4), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 4, (0, 3, 5), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 5, (0, 2, 6), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 6, (1, 2, 5), 'vertical', 1.e-05, -5., 0., 1., 0.),
-        (0, 7, (0, 0, 6), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 8, (0, 2, 6), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 9, (0, 1, 7), 'horizontal', 1.e-05, -5., 0., 100., 100.),
-        (0, 10, (1, 1, 6), 'vertical', 1.e-05, -5., 0., 1., 0.),
-        (1, 0, (0, 0, 8), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 1, (0, 1, 7), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 2, (0, 1, 9), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 3, (1, 1, 8), 'vertical', 1.e-05, -1., 0., 0., 0.),
-        (1, 4, (0, 2, 7), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 5, (0, 2, 9), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 6, (1, 2, 8), 'vertical', 1.e-05, -1., 0., 0., 0.),
-        (1, 7, (0, 3, 7), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 8, (0, 4, 8), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 9, (0, 3, 9), 'horizontal', 1.e-05, -1., 0., 100., 100.),
-        (1, 10, (1, 3, 8), 'vertical', 1.e-05, -1., 0., 0., 0.)]
-    perioddata = [(1, 'status', 'active'),
-                  (1, 'rainfall', '0.0'),
-                  (1, 'evaporation', '0.000000000000e+000'),
-                  (1, 'runoff', '0.000000000000e+000'),
-                  (1, 'withdrawal', '0.000000000000e+000'),
-                  (0, 'rate', '1.000000000000e+000'),
-                  (0, 'invert', '1.000000000000e-003'),
-                  (0, 'width', '0.000000000000e+000'),
-                  (0, 'slope', '1.000000000000e-003'),
-                  (0, 'rough', '1.000000000000e-001')]
-    cnvgpth = '{}.lak.cnvg.csv'.format(name)
-    lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
-                                  noutlets=noutlets,
-                                  print_stage=True,
-                                  print_flows=True,
-                                  package_convergence_filerecord=cnvgpth,
-                                  packagedata=packagedata,
-                                  connectiondata=connectiondata,
-                                  outlets=outlets,
-                                  perioddata=perioddata,
-                                  pname='lak-1')
-    
-    packagedata = [
-        (0, (0, 5, 1), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (1, (0, 5, 2), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (2, (0, 5, 3), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (3, (0, 6, 1), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (4, (0, 6, 2), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (5, (0, 6, 3), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (6, (0, 7, 1), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (7, (0, 7, 2), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (8, (0, 7, 3), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5)]
-    perioddata = [[0, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [1, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [2, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [3, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [4, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [5, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [6, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [7, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [8, 1.e-8, 0, 0, 0, 0, 0, 0], ]
-    cnvgpth = '{}.uzf.cnvg.csv'.format(name)
-    uzf = flopy.mf6.ModflowGwfuzf(gwf,
-                                  mover=True,
-                                  package_convergence_filerecord=cnvgpth,
-                                  nuzfcells=len(packagedata),
-                                  ntrailwaves=7, nwavesets=40,
-                                  packagedata=packagedata,
-                                  perioddata=perioddata, pname='uzf-1')
-    
-    packages = [('drn-1',), ('lak-1',), ('maw-1',), ('sfr-1',), ('uzf-1',)]
-    perioddata = [
-        ('drn-1', 0, 'lak-1', 1, 'excess', 1.),
-        ('drn-1', 0, 'maw-1', 0, 'threshold', 2.),
-        ('drn-1', 0, 'sfr-1', 2, 'upto', 3.),
-        ('drn-1', 1, 'lak-1', 1, 'excess', 1.),
-        ('drn-1', 1, 'maw-1', 0, 'threshold', 2.),
-        ('drn-1', 1, 'sfr-1', 2, 'upto', 3.),
-        ('lak-1', 0, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 0, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 1, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 2, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 3, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 4, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 5, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 6, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 7, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.),
-        ('sfr-1', 2, 'sfr-1', 3, 'factor', 0.5),
-        ('sfr-1', 6, 'sfr-1', 4, 'factor', 0.5),
-        ('sfr-1', 8, 'sfr-1', 4, 'factor', 0.5),
+        (0, 0, (0, 0, 5), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 1, (0, 1, 4), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 2, (1, 1, 5), "vertical", 1.0e-05, -5.0, 0.0, 1.0, 0.0),
+        (0, 3, (0, 2, 4), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 4, (0, 3, 5), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 5, (0, 2, 6), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 6, (1, 2, 5), "vertical", 1.0e-05, -5.0, 0.0, 1.0, 0.0),
+        (0, 7, (0, 0, 6), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 8, (0, 2, 6), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 9, (0, 1, 7), "horizontal", 1.0e-05, -5.0, 0.0, 100.0, 100.0),
+        (0, 10, (1, 1, 6), "vertical", 1.0e-05, -5.0, 0.0, 1.0, 0.0),
+        (1, 0, (0, 0, 8), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 1, (0, 1, 7), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 2, (0, 1, 9), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 3, (1, 1, 8), "vertical", 1.0e-05, -1.0, 0.0, 0.0, 0.0),
+        (1, 4, (0, 2, 7), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 5, (0, 2, 9), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 6, (1, 2, 8), "vertical", 1.0e-05, -1.0, 0.0, 0.0, 0.0),
+        (1, 7, (0, 3, 7), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 8, (0, 4, 8), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 9, (0, 3, 9), "horizontal", 1.0e-05, -1.0, 0.0, 100.0, 100.0),
+        (1, 10, (1, 3, 8), "vertical", 1.0e-05, -1.0, 0.0, 0.0, 0.0),
     ]
-    mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
-                                  budget_filerecord='{}.mvr.bud'.format(name),
-                                  maxpackages=len(packages),
-                                  print_flows=True,
-                                  packages=packages,
-                                  perioddata=perioddata)
-    
+    perioddata = [
+        (1, "status", "active"),
+        (1, "rainfall", "0.0"),
+        (1, "evaporation", "0.000000000000e+000"),
+        (1, "runoff", "0.000000000000e+000"),
+        (1, "withdrawal", "0.000000000000e+000"),
+        (0, "rate", "1.000000000000e+000"),
+        (0, "invert", "1.000000000000e-003"),
+        (0, "width", "0.000000000000e+000"),
+        (0, "slope", "1.000000000000e-003"),
+        (0, "rough", "1.000000000000e-001"),
+    ]
+    cnvgpth = "{}.lak.cnvg.csv".format(name)
+    lak = flopy.mf6.ModflowGwflak(
+        gwf,
+        mover=True,
+        nlakes=nlakes,
+        noutlets=noutlets,
+        print_stage=True,
+        print_flows=True,
+        package_convergence_filerecord=cnvgpth,
+        packagedata=packagedata,
+        connectiondata=connectiondata,
+        outlets=outlets,
+        perioddata=perioddata,
+        pname="lak-1",
+    )
+
+    packagedata = [
+        (0, (0, 5, 1), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (1, (0, 5, 2), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (2, (0, 5, 3), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (3, (0, 6, 1), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (4, (0, 6, 2), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (5, (0, 6, 3), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (6, (0, 7, 1), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (7, (0, 7, 2), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+        (8, (0, 7, 3), 1, -1, 1.0, 1.0e-05, 0.2, 0.4, 0.3, 3.5),
+    ]
+    perioddata = [
+        [0, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [1, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [2, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [3, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [4, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [5, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [6, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [7, 1.0e-8, 0, 0, 0, 0, 0, 0],
+        [8, 1.0e-8, 0, 0, 0, 0, 0, 0],
+    ]
+    cnvgpth = "{}.uzf.cnvg.csv".format(name)
+    uzf = flopy.mf6.ModflowGwfuzf(
+        gwf,
+        mover=True,
+        package_convergence_filerecord=cnvgpth,
+        nuzfcells=len(packagedata),
+        ntrailwaves=7,
+        nwavesets=40,
+        packagedata=packagedata,
+        perioddata=perioddata,
+        pname="uzf-1",
+    )
+
+    packages = [("drn-1",), ("lak-1",), ("maw-1",), ("sfr-1",), ("uzf-1",)]
+    perioddata = [
+        ("drn-1", 0, "lak-1", 1, "excess", 1.0),
+        ("drn-1", 0, "maw-1", 0, "threshold", 2.0),
+        ("drn-1", 0, "sfr-1", 2, "upto", 3.0),
+        ("drn-1", 1, "lak-1", 1, "excess", 1.0),
+        ("drn-1", 1, "maw-1", 0, "threshold", 2.0),
+        ("drn-1", 1, "sfr-1", 2, "upto", 3.0),
+        ("lak-1", 0, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 0, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 1, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 2, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 3, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 4, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 5, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 6, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 7, "sfr-1", 0, "factor", 1.0),
+        ("uzf-1", 8, "sfr-1", 0, "factor", 1.0),
+        ("sfr-1", 2, "sfr-1", 3, "factor", 0.5),
+        ("sfr-1", 6, "sfr-1", 4, "factor", 0.5),
+        ("sfr-1", 8, "sfr-1", 4, "factor", 0.5),
+    ]
+    mvr = flopy.mf6.ModflowGwfmvr(
+        gwf,
+        maxmvr=len(perioddata),
+        budget_filerecord="{}.mvr.bud".format(name),
+        maxpackages=len(packages),
+        print_flows=True,
+        packages=packages,
+        perioddata=perioddata,
+    )
+
     # output control
-    oc = flopy.mf6.ModflowGwfoc(gwf,
-                                budget_filerecord='{}.cbc'.format(name),
-                                head_filerecord='{}.hds'.format(name),
-                                saverecord=[('HEAD', 'ALL'),
-                                            ('BUDGET', 'ALL')],
-                                printrecord=[('BUDGET', 'LAST'),
-                                             ('HEAD', 'LAST')])
-    
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        budget_filerecord="{}.cbc".format(name),
+        head_filerecord="{}.hds".format(name),
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("BUDGET", "LAST"), ("HEAD", "LAST")],
+    )
+
     return sim
 
 
@@ -343,14 +534,15 @@ def build_models():
     sim.write_simulation()
     return sim
 
+
 # - No need to change any code below
 def test_mf6model():
     # build and run the test model
     sim = build_models()
     sim.run_simulation()
-    
+
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(testdir, 'mfsim.lst'), 'r')
+    f = open(os.path.join(testdir, "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -358,12 +550,13 @@ def test_mf6model():
         if "cprior" and "divflow not within" in line:
             expected_msg = True
             error_count += 1
-    
-    assert error_count == 1, "error count = " + str(error_count) + \
-                             "but should equal 1"
-    
-    print('Finished running surfdep check')
-    
+
+    assert error_count == 1, (
+        "error count = " + str(error_count) + "but should equal 1"
+    )
+
+    print("Finished running surfdep check")
+
     return
 
 
@@ -373,7 +566,7 @@ def main():
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(testdir, 'mfsim.lst'), 'r')
+    f = open(os.path.join(testdir, "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -382,17 +575,18 @@ def main():
             expected_msg = True
             error_count += 1
 
-    assert error_count == 1, "error count = " + str(error_count) + \
-                             "but should equal 1"
+    assert error_count == 1, (
+        "error count = " + str(error_count) + "but should equal 1"
+    )
 
-    print('Finished running surfdep check')
+    print("Finished running surfdep check")
 
     return
 
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run main routine
     main()

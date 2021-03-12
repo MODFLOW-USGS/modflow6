@@ -12,56 +12,56 @@ from xmipy import XmiWrapper
 try:
     import pymake
 except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
+    msg = "Error. Pymake package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
     raise Exception(msg)
 
 try:
     import flopy
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 from framework import testing_framework
 from simulation import Simulation, bmi_return
 
-ex = ['libgwf_evt01']
+ex = ["libgwf_evt01"]
 exdirs = []
 for s in ex:
-    exdirs.append(os.path.join('temp', s))
+    exdirs.append(os.path.join("temp", s))
 
 # et variables
 et_max = 0.1
-et_depth = 5.
+et_depth = 5.0
 
 # temporal discretization
 nper = 100
 tdis_rc = []
 for i in range(nper):
-    tdis_rc.append((1., 1, 1))
+    tdis_rc.append((1.0, 1, 1))
 
 # model spatial dimensions
 nlay, nrow, ncol = 1, 1, 1
 
 # cell spacing
-delr = 10.
-delc = 10.
+delr = 10.0
+delc = 10.0
 area = delr * delc
 
 # top of the aquifer
-top = 10.
+top = 10.0
 
 # bottom of the aquifer
-botm = 0.
+botm = 0.0
 
 # hydraulic conductivity
-hk = 50.
+hk = 50.0
 
 # starting head
-strt = 15.
+strt = 15.0
 
 # solver data
 nouter, ninner = 100, 100
@@ -69,70 +69,79 @@ hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
 def build_model(ws, name, bmi=False):
-    sim = flopy.mf6.MFSimulation(sim_name=name,
-                                 version='mf6',
-                                 exe_name='mf6',
-                                 sim_ws=ws,
-                                 memory_print_option='all')
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
+        sim_ws=ws,
+        memory_print_option="all",
+    )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                 nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim,
-                               print_option='SUMMARY',
-                               outer_dvclose=hclose,
-                               outer_maximum=nouter,
-                               under_relaxation='SIMPLE',
-                               under_relaxation_gamma=0.98,
-                               inner_maximum=ninner,
-                               inner_dvclose=hclose, rcloserecord=rclose,
-                               linear_acceleration='BICGSTAB',
-                               relaxation_factor=relax)
+    ims = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="SIMPLE",
+        under_relaxation_gamma=0.98,
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        relaxation_factor=relax,
+    )
 
     # create gwf model
-    newtonoptions = ['NEWTON', 'UNDER_RELAXATION']
-    gwf = flopy.mf6.ModflowGwf(sim,
-                               newtonoptions=newtonoptions,
-                               modelname=name,
-                               print_input=True,
-                               save_flows=True)
+    newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        newtonoptions=newtonoptions,
+        modelname=name,
+        print_input=True,
+        save_flows=True,
+    )
 
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm)
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+    )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
-                                  icelltype=1,
-                                  k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=hk)
     # storage
-    sto = flopy.mf6.ModflowGwfsto(gwf,
-                                  save_flows=True,
-                                  iconvert=1,
-                                  ss=1e-5, sy=0.2,
-                                  transient={0: True})
+    sto = flopy.mf6.ModflowGwfsto(
+        gwf, save_flows=True, iconvert=1, ss=1e-5, sy=0.2, transient={0: True}
+    )
 
     # evapotranspiration
     if not bmi:
-        evt = flopy.mf6.ModflowGwfevta(gwf, surface=top,
-                                       rate=et_max,
-                                       depth=et_depth)
-    wel = flopy.mf6.ModflowGwfwel(gwf,
-                                  stress_period_data=[[(0, 0, 0), 0.]])
+        evt = flopy.mf6.ModflowGwfevta(
+            gwf, surface=top, rate=et_max, depth=et_depth
+        )
+    wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data=[[(0, 0, 0), 0.0]])
 
     # output control
-    oc = flopy.mf6.ModflowGwfoc(gwf,
-                                head_filerecord='{}.hds'.format(name),
-                                headprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL')],
-                                printrecord=[('HEAD', 'ALL'),
-                                             ('BUDGET', 'ALL')])
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        head_filerecord="{}.hds".format(name),
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        saverecord=[("HEAD", "ALL")],
+        printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+    )
     return sim
 
 
@@ -143,7 +152,7 @@ def get_model(idx, dir):
     sim = build_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, 'libmf6')
+    ws = os.path.join(dir, "libmf6")
     mc = build_model(ws, name, bmi=True)
 
     return sim, mc
@@ -162,7 +171,7 @@ def head2et_wellrate(h):
     if h > top:
         q = -et_max
     elif h < top - et_depth:
-        q = 0.
+        q = 0.0
     else:
         f = (h - (top - et_depth)) / et_depth
         q = -f * et_max
@@ -177,7 +186,7 @@ def bmifunc(exe, idx, model_ws=None):
     if model_ws is not None:
         os.chdir(model_ws)
 
-    mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
+    mf6_config_file = os.path.join(model_ws, "mfsim.nam")
     try:
         mf6 = XmiWrapper(exe)
     except Exception as e:
@@ -206,7 +215,7 @@ def bmifunc(exe, idx, model_ws=None):
     # get copy of well data
     well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
     well = mf6.get_value(well_tag)
-    
+
     twell = np.zeros(ncol, dtype=np.float64)
 
     # model time loop
@@ -233,8 +242,11 @@ def bmifunc(exe, idx, model_ws=None):
             kiter += 1
 
             if has_converged:
-                msg = "Component {}".format(1) + \
-                      " converged in {}".format(kiter) + " outer iterations"
+                msg = (
+                    "Component {}".format(1)
+                    + " converged in {}".format(kiter)
+                    + " outer iterations"
+                )
                 print(msg)
                 break
 
@@ -296,7 +308,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run main routine
     main()
