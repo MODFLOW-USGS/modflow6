@@ -218,6 +218,12 @@ def get_htol(dir):
         "test029_lgrsfr_parentchild": {
             "all": 1e-7,
         },
+        "test029_lgr_parentchild": {
+            "all": 1e-7,
+        },
+        "test034_nwtp2": {
+            "all": 1e-8,
+        },
         "test205_gwtbuy-henrytidal": {
             "all": 0.003,
         },
