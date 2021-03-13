@@ -96,6 +96,7 @@ def get_mf6_models():
     if is_CI:
         exclude_CI = (
             "test022_MNW2_Fig28",
+            "test007_751x751",
             "test007_751x751_confined",
             "test206_gwtbuy-goswami",
             "test207_gwtbuy-elderRa60",
@@ -203,7 +204,7 @@ def get_htol(dir):
             "win32": 0.002,
         },
         "test059_mvlake_laksfr_tr": {
-            "all": 0.0002,
+            "all": 0.0005,
         },
         "test059_mvlake_lak_tr": {
             "all": 6e-5,
