@@ -218,14 +218,11 @@ def get_htol(dir):
         "test029_lgrsfr_parentchild": {
             "all": 1e-7,
         },
-        "test029_lgrsfr_parentchild": {
-            "all": 0.01,
-        },
-        "test059_mvlake_lak_tr": {
-            "all": 6e-5,
-        },
         "test205_gwtbuy-henrytidal": {
             "all": 0.003,
+        },
+        "test028_sfr_rewet": {
+            "all": 5e-6,
         },
     }
     htol_keys = list(htol_dict.keys())
