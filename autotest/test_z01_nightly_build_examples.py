@@ -94,7 +94,13 @@ def get_mf6_models():
 
     # update exclude
     if is_CI:
-        exclude_CI = ("test022_MNW2_Fig28", "test007_751x751_confined")
+        exclude_CI = (
+            "test022_MNW2_Fig28",
+            "test007_751x751_confined",
+            "test206_gwtbuy-goswami",
+            "test207_gwtbuy-elderRa60",
+            "test208_gwtbuy-elderRa400",
+        )
         exclude = exclude + exclude_CI
     exclude = list(exclude)
 
@@ -201,6 +207,9 @@ def get_htol(dir):
         },
         "test059_mvlake_lak_tr": {
             "all": 6e-5,
+        },
+        "test205_gwtbuy-henrytidal": {
+            "all": 0.003,
         },
     }
     htol_keys = list(htol_dict.keys())

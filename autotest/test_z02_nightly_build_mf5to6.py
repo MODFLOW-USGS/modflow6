@@ -72,11 +72,6 @@ def get_mf5to6_models():
         "testTwrip",
         "test028_sfr_simple",
     ]
-    # os_name = sys.platform.lower()
-    # if os_name in ("win32", "linux", "darwin"):
-    #     exclude.append("testlgrsfr")
-    # elif os_name in ("linux", "darwin"):
-    #     exclude.append("test059_mvlake_laksfr_tr")
 
     # write a summary of the files to exclude
     print("list of tests to exclude:")
@@ -165,8 +160,6 @@ def run_mf5to6(sim):
     # set default version
     version = "mf2005"
     lgrpth = None
-    compare = False
-    cpth = None
 
     # determine if compare directory exists in directory or if mflgr control
     # file is in directory
@@ -243,19 +236,6 @@ def run_mf5to6(sim):
 
     assert success, msg
 
-    # path to copy
-
-    # copy files in the compare directory
-    if compare:
-        dst2 = os.path.join(dst, cpth)
-        tpth = os.path.join(exdir, sim.name, cpth)
-        shutil.copytree(tpth, dst2)
-    # copy original modflow files to the appopriate directory
-    # (mf2005, mfnwt, or mfusg) in temp/working
-    else:
-        dst2 = os.path.join(dst, version)
-        pymake.setup(npth, dst2)
-
     # standard setup
     src = dst
     dst = os.path.join("temp", sim.name)
@@ -285,7 +265,7 @@ def test_model():
 
     # run the test models
     for dir in dirs:
-        yield run_mf5to6, Simulation(dir)
+        yield run_mf5to6, Simulation(dir, mf6_regression=True)
 
     return
 
@@ -319,7 +299,7 @@ def main():
 
     # run the test models
     for dir in dirs:
-        sim = Simulation(dir)
+        sim = Simulation(dir, mf6_regression=True)
         run_mf5to6(sim)
 
     return

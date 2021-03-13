@@ -394,6 +394,52 @@ class Simulation(object):
                     self.success = False
                     msgall += msg + "\n"
 
+            # # compare concentrations
+            # if "mf6-regression" in self.action:
+            #     files = os.listdir(self.simpath)
+            #     ipos = 0
+            #     for file_name in files:
+            #         fpth0 = os.path.join(self.simpath, file_name)
+            #         if os.path.isfile(fpth0):
+            #             if file_name.lower().endswith(".ucn"):
+            #                 ext = "ucn"
+            #                 fpth1 = os.path.join(
+            #                     self.simpath, "mf6-regression", file_name
+            #                 )
+            #                 outfile = os.path.splitext(
+            #                     os.path.basename(file1)
+            #                 )[0]
+            #                 outfile = os.path.join(
+            #                     self.simpath, outfile + ".ucn.cmp.out"
+            #                 )
+            #                 success_tst = pymake.compare_heads(
+            #                     None,
+            #                     None,
+            #                     precision="double",
+            #                     text=extdict[ext],
+            #                     htol=self.htol,
+            #                     outfile=outfile,
+            #                     files1=fpth0,
+            #                     files2=fpth1,
+            #                     difftol=True,
+            #                     verbose=self.cmp_verbose,
+            #                 )
+            #                 msg = sfmt.format(
+            #                     "{} comparison {}".format(
+            #                         extdict[ext], ipos + 1
+            #                     ),
+            #                     self.name,
+            #                 )
+            #                 ipos += 1
+            #                 if success_tst:
+            #                     print(msg)
+            #                 else:
+            #                     print(msg)
+            #
+            #                 if not success_tst:
+            #                     msgall += msg + "\n"
+            #                     self.success = False
+
         assert self.success, msgall
         return
 
@@ -434,7 +480,12 @@ class Simulation(object):
                         lines = f.read().splitlines()
                     for line in lines:
                         if "outer_dvclose" in line.lower():
-                            dvclose = float(line.split()[1])
+                            v = float(line.split()[1])
+                            if dvclose is None:
+                                dvclose = v
+                            else:
+                                if v > dvclose:
+                                    dvclose = v
                             break
 
         return dvclose
