@@ -204,7 +204,22 @@ def get_htol(dir):
             "win32": 0.002,
         },
         "test059_mvlake_laksfr_tr": {
-            "all": 0.0005,
+            "all": 0.005,
+        },
+        "test045_lake4ss": {
+            "all": 0.01,
+        },
+        "test059_mvlake_lak_tr": {
+            "all": 1e-4,
+        },
+        "test019_VilhelmsenLGR_nr": {
+            "all": 0.0002,
+        },
+        "test029_lgrsfr_parentchild": {
+            "all": 1e-7,
+        },
+        "test029_lgrsfr_parentchild": {
+            "all": 0.01,
         },
         "test059_mvlake_lak_tr": {
             "all": 6e-5,
