@@ -2539,6 +2539,7 @@ contains
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: nn
+    integer(I4B) :: iuzid
     real(DP) :: obsdepth
     real(DP) :: dmax
     character(len=LENBOUNDNAME) :: bname
@@ -2612,7 +2613,8 @@ contains
           obsrv%dblPak1 = obsdepth
           !
           ! -- determine maximum cell depth
-          dmax = this%uzfobj%celtop(n) - this%uzfobj%celbot(n)
+          iuzid = obsrv%intPak1
+          dmax = this%uzfobj%celtop(iuzid) - this%uzfobj%celbot(iuzid)
           ! -- check that obs depth is valid; call store_error if not
           ! -- need to think about a way to put bounds on this depth
           if (obsdepth < DZERO .or. obsdepth > dmax) then
