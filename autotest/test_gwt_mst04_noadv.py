@@ -10,27 +10,29 @@ import numpy as np
 try:
     import pymake
 except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
+    msg = "Error. Pymake package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
     raise Exception(msg)
 
 try:
     import flopy
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['mst04_noadv',]
+ex = [
+    "mst04_noadv",
+]
 exdirs = []
 for s in ex:
-    exdirs.append(os.path.join('temp', s))
-ddir = 'data'
+    exdirs.append(os.path.join("temp", s))
+ddir = "data"
 
 
 def get_model(idx, dir):
@@ -38,14 +40,14 @@ def get_model(idx, dir):
     nper = 1
     perlen = [10.0]
     nstp = [10]
-    tsmult = [1.]
-    delr = 7.
-    delc = 6.
-    top = 2.
+    tsmult = [1.0]
+    delr = 7.0
+    delc = 6.0
+    top = 2.0
     botm = 0
 
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 1.
+    hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
     tdis_rc = []
     for i in range(nper):
@@ -55,58 +57,76 @@ def get_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name='mf6',
-                                 sim_ws=ws)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+    )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                 nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwt model
-    gwtname = 'gwt_' + name
-    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                            model_nam_file='{}.nam'.format(gwtname))
+    gwtname = "gwt_" + name
+    gwt = flopy.mf6.MFModel(
+        sim,
+        model_type="gwt6",
+        modelname=gwtname,
+        model_nam_file="{}.nam".format(gwtname),
+    )
     gwt.name_file.save_flows = True
 
     # create iterative model solution and register the gwt model with it
-    imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                  outer_dvclose=hclose,
-                                  outer_maximum=nouter,
-                                  under_relaxation='NONE',
-                                  inner_maximum=ninner,
-                                  inner_dvclose=hclose, rcloserecord=rclose,
-                                  linear_acceleration='BICGSTAB',
-                                  scaling_method='NONE',
-                                  reordering_method='NONE',
-                                  relaxation_factor=relax,
-                                  filename='{}.ims'.format(gwtname))
+    imsgwt = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwtname),
+    )
     sim.register_ims_package(imsgwt, [gwt.name])
 
-    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm,
-                                  idomain=1,
-                                  filename='{}.dis'.format(gwtname))
+    dis = flopy.mf6.ModflowGwtdis(
+        gwt,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=1,
+        filename="{}.dis".format(gwtname),
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
-                                filename='{}.ic'.format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # mass storage and transfer
-    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1, zero_order_decay=True,
-                                  decay=-1.)
+    mst = flopy.mf6.ModflowGwtmst(
+        gwt, porosity=0.1, zero_order_decay=True, decay=-1.0
+    )
 
     # output control
-    oc = flopy.mf6.ModflowGwtoc(gwt,
-                                budget_filerecord='{}.cbc'.format(gwtname),
-                                concentration_filerecord='{}.ucn'.format(gwtname),
-                                concentrationprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'LAST'),
-                                            ('BUDGET', 'LAST')],
-                                printrecord=[('CONCENTRATION', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+    oc = flopy.mf6.ModflowGwtoc(
+        gwt,
+        budget_filerecord="{}.cbc".format(gwtname),
+        concentration_filerecord="{}.ucn".format(gwtname),
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
+        saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+    )
     print(gwt.modelgrid.zcellcenters)
     return sim
 
@@ -119,23 +139,26 @@ def build_models():
 
 
 def eval_transport(sim):
-    print('evaluating transport...')
+    print("evaluating transport...")
 
     name = ex[sim.idxsim]
-    gwtname = 'gwt_' + name
+    gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, '{}.ucn'.format(gwtname))
+    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision='double',
-                                    text='CONCENTRATION')
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # The answer 1
-    cres = np.array([10.])
-    msg = ('simulated concentrations do not match with known '
-           'solution. {} {}'.format(conc, cres))
+    cres = np.array([10.0])
+    msg = (
+        "simulated concentrations do not match with known "
+        "solution. {} {}".format(conc, cres)
+    )
     assert np.allclose(cres, conc.flatten()), msg
 
     return
@@ -173,7 +196,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run main routine
     main()
