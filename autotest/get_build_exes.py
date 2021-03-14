@@ -74,6 +74,7 @@ def get_compiler_envvar(fc):
             fc = env_var
     return fc
 
+
 def build_mf6():
     pm = pymake.Pymake()
     pm.target = "mf6" + eext

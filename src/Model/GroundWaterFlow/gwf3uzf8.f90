@@ -354,6 +354,8 @@ contains
       this%rch0(i) = DZERO
       this%qsto(i) = DZERO
       this%deriv(i) = DZERO
+      ! -- integer variables
+      this%ja(i) = 0
       ! -- timeseries aware variables
       this%sinf(i) = DZERO
       this%pet(i) = DZERO
@@ -369,6 +371,9 @@ contains
           this%uauxvar(j, i) = DZERO
         end if
       end do
+    end do
+    do i = 1, this%dis%nodes+1
+      this%ia(i) = 0
     end do
     !
     ! -- allocate and initialize character array for budget text
@@ -2146,7 +2151,7 @@ contains
     call sparse%filliaja(this%ia,this%ja,ierr)
     !
     ! -- set imaxcellcnt
-    do i = 1, this%nodes
+    do i = 1, this%dis%nodes
       jcol = 0
       do j = this%ia(i), this%ia(i+1) - 1
         jcol = jcol + 1

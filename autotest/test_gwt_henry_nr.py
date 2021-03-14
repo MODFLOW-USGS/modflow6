@@ -12,18 +12,18 @@ import numpy as np
 try:
     import flopy
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['henrynr01']
+ex = ["henrynr01"]
 exdirs = []
 for s in ex:
-    exdirs.append(os.path.join('temp', s))
+    exdirs.append(os.path.join("temp", s))
 
 # global model variables
 nlay = 20
@@ -36,6 +36,7 @@ sealevel = 0.85
 amplitude = 0.14
 frequency = 4
 wellfact = 0.25
+
 
 def get_idomain(nlay, nrow, ncol, lx, lz, fx, fz):
     idomain = np.ones((nlay, nrow, ncol), dtype=int)
@@ -82,7 +83,7 @@ def get_model(idx, dir):
 
     nrow = 1
     delr = lx / ncol
-    delc = 1.
+    delc = 1.0
     top = lz
     delz = lz / nlay
     botm = list(top - np.arange(delz, nlay * delz + delz, delz))
@@ -90,7 +91,7 @@ def get_model(idx, dir):
     perlen = [0.25] + 1000 * [0.001]
     nper = len(perlen)
     nstp = [250] + 1000 * [1]
-    tsmult = 1.
+    tsmult = 1.0
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult))
@@ -99,62 +100,75 @@ def get_model(idx, dir):
     hclose, rclose, relax = 1e-7, 1e-5, 0.97
 
     # build MODFLOW 6 files
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name='mf6',
-                                 sim_ws=ws)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+    )
     sim.name_file.continue_ = False
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                 nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
-    gwfname = 'gwf_' + name
-    gwtname = 'gwt_' + name
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
 
     # --------------------  FLOW --------------------
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions=True)
 
-    imsgwf = flopy.mf6.ModflowIms(sim, print_option='summary',
-                                  csv_outer_output_filerecord=gwfname + '.ims.csv',
-                                  complexity='complex',
-                                  outer_dvclose=hclose,
-                                  outer_maximum=nouter,
-                                  inner_maximum=ninner,
-                                  inner_dvclose=hclose,
-                                  rcloserecord=rclose,
-                                  linear_acceleration='BICGSTAB',
-                                  scaling_method='NONE',
-                                  reordering_method='NONE',
-                                  relaxation_factor=relax,
-                                  filename='{}.ims'.format(gwfname),
-                                  no_ptcrecord=True)
+    imsgwf = flopy.mf6.ModflowIms(
+        sim,
+        print_option="summary",
+        csv_outer_output_filerecord=gwfname + ".ims.csv",
+        complexity="complex",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwfname),
+        no_ptcrecord=True,
+    )
     sim.register_ims_package(imsgwf, [gwfname])
 
     idomain = get_idomain(nlay, nrow, ncol, lx, lz, fx=fx, fz=fz)
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm,
-                                  idomain=idomain)
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=idomain,
+    )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=lz)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=False,
-                                  save_flows=True,
-                                  save_specific_discharge=True,
-                                  icelltype=1,
-                                  k=864.)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf,
+        xt3doptions=False,
+        save_flows=True,
+        save_specific_discharge=True,
+        icelltype=1,
+        k=864.0,
+    )
 
-    sto = flopy.mf6.ModflowGwfsto(gwf, sy=0.35, iconvert=1,
-                                  steady_state=[False],
-                                  transient=[True])
+    sto = flopy.mf6.ModflowGwfsto(
+        gwf, sy=0.35, iconvert=1, steady_state=[False], transient=[True]
+    )
 
-    pd = [(0, 0.7, 0., gwtname, 'none')]
-    buy = flopy.mf6.ModflowGwfbuy(gwf, hhformulation_rhs=False,
-                                  packagedata=pd)
+    pd = [(0, 0.7, 0.0, gwtname, "none")]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, hhformulation_rhs=False, packagedata=pd)
 
     # drn and ghb
     kidx, iidx, jidx = np.where(idomain > 1)
@@ -164,7 +178,8 @@ def get_model(idx, dir):
     dt = 0.001
     times = np.arange(dt, 1.0 + dt, dt)
     sealevelts = [sealevel] + list(
-        sinfunc(amplitude, frequency * 2 * np.pi, 0, sealevel, times))
+        sinfunc(amplitude, frequency * 2 * np.pi, 0, sealevel, times)
+    )
     ghbspd = {}
     drnspd = {}
     for kper in range(nper):
@@ -176,89 +191,107 @@ def get_model(idx, dir):
         drnlist = []
         for k, i, j in zip(kidx, iidx, jidx):
             zcell = zcellcenters[k, i, j]
-            cond = 864. * (delz * delc) / (0.5 * delr)
+            cond = 864.0 * (delz * delc) / (0.5 * delr)
             if zcell > sl:
-                drnlist.append([(k, i, j), zcell, 864., 0.])
+                drnlist.append([(k, i, j), zcell, 864.0, 0.0])
             else:
-                ghblist.append([(k, i, j), sl, 864., 35., 1024.5])
+                ghblist.append([(k, i, j), sl, 864.0, 35.0, 1024.5])
         if len(ghblist) > 0:
             ghbspd[kper] = ghblist
         if len(drnlist) > 0:
             drnspd[kper] = drnlist
 
     # drn
-    drn1 = flopy.mf6.ModflowGwfdrn(gwf,
-                                   stress_period_data=drnspd,
-                                   print_input=True,
-                                   print_flows=True,
-                                   save_flows=False,
-                                   pname='DRN-1',
-                                   auxiliary='CONCENTRATION')
+    drn1 = flopy.mf6.ModflowGwfdrn(
+        gwf,
+        stress_period_data=drnspd,
+        print_input=True,
+        print_flows=True,
+        save_flows=False,
+        pname="DRN-1",
+        auxiliary="CONCENTRATION",
+    )
 
     # ghb
-    ghb1 = flopy.mf6.ModflowGwfghb(gwf,
-                                   stress_period_data=ghbspd,
-                                   print_input=True,
-                                   print_flows=True,
-                                   save_flows=False,
-                                   pname='GHB-1',
-                                   auxiliary=['CONCENTRATION', 'DENSITY'])
+    ghb1 = flopy.mf6.ModflowGwfghb(
+        gwf,
+        stress_period_data=ghbspd,
+        print_input=True,
+        print_flows=True,
+        save_flows=False,
+        pname="GHB-1",
+        auxiliary=["CONCENTRATION", "DENSITY"],
+    )
 
     wellist1 = []
     qwell = 5.7024 * wellfact
     qwell = qwell / nlay
     for k in range(nlay):
-        wellist1.append([(k, 0, 0), qwell, 0.])
-    wel1 = flopy.mf6.ModflowGwfwel(gwf,
-                                   stress_period_data=wellist1,
-                                   print_input=True,
-                                   print_flows=True,
-                                   save_flows=False,
-                                   pname='WEL-1',
-                                   auxiliary='CONCENTRATION',
-                                   filename='{}.wel'.format(gwfname))
+        wellist1.append([(k, 0, 0), qwell, 0.0])
+    wel1 = flopy.mf6.ModflowGwfwel(
+        gwf,
+        stress_period_data=wellist1,
+        print_input=True,
+        print_flows=True,
+        save_flows=False,
+        pname="WEL-1",
+        auxiliary="CONCENTRATION",
+        filename="{}.wel".format(gwfname),
+    )
 
     # output control
-    oc = flopy.mf6.ModflowGwfoc(gwf,
-                                budget_filerecord='{}.cbc'.format(gwfname),
-                                head_filerecord='{}.hds'.format(gwfname),
-                                headprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL'),
-                                            ('BUDGET', 'ALL')],
-                                printrecord=[('HEAD', 'LAST'),
-                                             ('BUDGET', 'ALL')])
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        budget_filerecord="{}.cbc".format(gwfname),
+        head_filerecord="{}.hds".format(gwfname),
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
+    )
 
     # --------------------  TRANSPORT --------------------
 
     # create gwt model
-    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                            model_nam_file='{}.nam'.format(gwtname))
+    gwt = flopy.mf6.MFModel(
+        sim,
+        model_type="gwt6",
+        modelname=gwtname,
+        model_nam_file="{}.nam".format(gwtname),
+    )
 
-    imsgwt = flopy.mf6.ModflowIms(sim, print_option='all',
-                                  outer_dvclose=hclose,
-                                  outer_maximum=100,
-                                  inner_maximum=50,
-                                  inner_dvclose=hclose,
-                                  rcloserecord=rclose,
-                                  linear_acceleration='BICGSTAB',
-                                  scaling_method='NONE',
-                                  reordering_method='NONE',
-                                  relaxation_factor=relax,
-                                  filename='{}.ims'.format(gwtname))
+    imsgwt = flopy.mf6.ModflowIms(
+        sim,
+        print_option="all",
+        outer_dvclose=hclose,
+        outer_maximum=100,
+        inner_maximum=50,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwtname),
+    )
     sim.register_ims_package(imsgwt, [gwt.name])
 
-    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm,
-                                  idomain=idomain)
+    dis = flopy.mf6.ModflowGwtdis(
+        gwt,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=idomain,
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=35.)
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=35.0)
 
     # advection
-    scheme = 'UPSTREAM'
+    scheme = "UPSTREAM"
     # scheme = 'TVD'
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme)
 
@@ -266,25 +299,28 @@ def get_model(idx, dir):
     diffusion_only = True
     if diffusion_only:
         diffc = 0.57024
-        alh = 0.
-        ath = 0.
+        alh = 0.0
+        ath = 0.0
         xt3d = False
     else:
-        diffc = 0.
+        diffc = 0.0
         alh = 0.1
         ath = 0.01
         xt3d = True
     xt3d_off = not xt3d
-    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=xt3d_off, diffc=diffc,
-                                  alh=alh, ath1=ath)
+    dsp = flopy.mf6.ModflowGwtdsp(
+        gwt, xt3d_off=xt3d_off, diffc=diffc, alh=alh, ath1=ath
+    )
 
     # mass storage and transfer
     porosity = 0.35
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
 
     # sources
-    sourcerecarray = [('GHB-1', 'AUX', 'CONCENTRATION'),
-                      ('WEL-1', 'AUX', 'CONCENTRATION')]
+    sourcerecarray = [
+        ("GHB-1", "AUX", "CONCENTRATION"),
+        ("WEL-1", "AUX", "CONCENTRATION"),
+    ]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
     # fmi
@@ -295,23 +331,27 @@ def get_model(idx, dir):
     fmi = flopy.mf6.ModflowGwtfmi(gwt, flow_imbalance_correction=True)
 
     # output control
-    oc = flopy.mf6.ModflowGwtoc(gwt,
-                                budget_filerecord='{}.cbc'.format(gwtname),
-                                concentration_filerecord='{}.ucn'.format(
-                                    gwtname),
-                                concentrationprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'ALL')],
-                                printrecord=[('CONCENTRATION', 'LAST'),
-                                             ('BUDGET', 'ALL')])
+    oc = flopy.mf6.ModflowGwtoc(
+        gwt,
+        budget_filerecord="{}.cbc".format(gwtname),
+        concentration_filerecord="{}.ucn".format(gwtname),
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
+        saverecord=[("CONCENTRATION", "ALL")],
+        printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "ALL")],
+    )
 
     # --------------------  EXCHANGE --------------------
 
     # GWF GWT exchange
-    gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
-                                     exgmnamea=gwfname, exgmnameb=gwtname,
-                                     filename='{}.gwfgwt'.format(name))
+    gwfgwt = flopy.mf6.ModflowGwfgwt(
+        sim,
+        exgtype="GWF6-GWT6",
+        exgmnamea=gwfname,
+        exgmnameb=gwtname,
+        filename="{}.gwfgwt".format(name),
+    )
 
     return sim
 
@@ -323,10 +363,11 @@ def build_models():
     return
 
 
-def get_patch_collection(modelgrid, head, conc, cmap='jet', zorder=None):
+def get_patch_collection(modelgrid, head, conc, cmap="jet", zorder=None):
     # create patches for each cell
     import matplotlib.patches
     import matplotlib.collections
+
     xv, yv, zv = modelgrid.xyzvertices
     botm = modelgrid.botm
     patches = []
@@ -339,23 +380,25 @@ def get_patch_collection(modelgrid, head, conc, cmap='jet', zorder=None):
             z0 = max(z0, botm[k, 0, j])
             z1 = zv[k + 1, 0, j]
             poly = [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]]
-            patch = matplotlib.patches.Polygon(poly, closed=True,
-                                               edgecolor='k', facecolor='red')
+            patch = matplotlib.patches.Polygon(
+                poly, closed=True, edgecolor="k", facecolor="red"
+            )
             patches.append(patch)
-    pc = matplotlib.collections.PatchCollection(patches, cmap=cmap,
-                                                zorder=zorder)
+    pc = matplotlib.collections.PatchCollection(
+        patches, cmap=cmap, zorder=zorder
+    )
     pc.set_array(conc.flatten())
     return pc
 
 
 def make_plot(sim, headall, concall):
-    print('making plots...')
+    print("making plots...")
 
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
-    gwfname = 'gwf_' + name
-    gwtname = 'gwt_' + name
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
     gwf = sim.get_model(gwfname)
     gwt = sim.get_model(gwtname)
 
@@ -368,24 +411,25 @@ def make_plot(sim, headall, concall):
     dt = 0.001
     times = np.arange(dt, 1.0 + dt, dt)
     sealevelts = 250 * [sealevel] + list(
-        sinfunc(amplitude, frequency * 2 * np.pi, 0, sealevel, times))
+        sinfunc(amplitude, frequency * 2 * np.pi, 0, sealevel, times)
+    )
     simtime = np.linspace(dt, 1.25 + dt, 1250)
     plt.plot(simtime, sealevelts)
-    ax.set_xlabel('TIME, IN DAYS', fontsize=6)
-    ax.set_ylabel('SEAWATER LEVEL, IN METERS', fontsize=6)
-    fname = 'fig-sealevel.pdf'
+    ax.set_xlabel("TIME, IN DAYS", fontsize=6)
+    ax.set_ylabel("SEAWATER LEVEL, IN METERS", fontsize=6)
+    fname = "fig-sealevel.pdf"
     fname = os.path.join(ws, fname)
-    plt.savefig(fname, bbox_inches='tight')
+    plt.savefig(fname, bbox_inches="tight")
 
     # results plot
-    fig = plt.figure(figsize=(8.5, 11.), dpi=300)
+    fig = plt.figure(figsize=(8.5, 11.0), dpi=300)
     botm = gwf.modelgrid.botm
-    levels = [0.01, .1, .5, .9, .99]
+    levels = [0.01, 0.1, 0.5, 0.9, 0.99]
     times2plot = [249, np.argmax(sealevelts), np.argmin(sealevelts)]
     nplots = len(times2plot)
-    figtxt = ['(a)', '(b)', '(c)']
+    figtxt = ["(a)", "(b)", "(c)"]
     for ifig, itime in enumerate(times2plot):
-        ax = fig.add_subplot(nplots, 1, ifig + 1, aspect='equal')
+        ax = fig.add_subplot(nplots, 1, ifig + 1, aspect="equal")
         conc = concall[itime]
         head = headall[itime]
         conc = np.ma.masked_greater(conc, 1e20)
@@ -393,77 +437,109 @@ def make_plot(sim, headall, concall):
         sl = sealevelts[itime]
         # sea polygon
         seapoly = np.array([[lx * fx, sl], [lx, sl], [lx, 0]])
-        patch = matplotlib.patches.Polygon(seapoly, closed=True,
-                                           facecolor='darkred', zorder=0)
+        patch = matplotlib.patches.Polygon(
+            seapoly, closed=True, facecolor="darkred", zorder=0
+        )
         ax.add_patch(patch)
         # aquifer polygon
         aqpoly = np.array(
-            [[0, 0], [lx, 0], [lx, fz * lz], [lx * fx, lz], [0, lz]])
-        patch = matplotlib.patches.Polygon(aqpoly, closed=True, facecolor='.7',
-                                           zorder=1)
+            [[0, 0], [lx, 0], [lx, fz * lz], [lx * fx, lz], [0, lz]]
+        )
+        patch = matplotlib.patches.Polygon(
+            aqpoly, closed=True, facecolor=".7", zorder=1
+        )
         ax.add_patch(patch)
         # model cross section
-        xs = flopy.plot.PlotCrossSection(gwf, line={'row': 0}, ax=ax)
+        xs = flopy.plot.PlotCrossSection(gwf, line={"row": 0}, ax=ax)
         # color filled model cells
         pc = get_patch_collection(gwf.modelgrid, head, conc, zorder=2)
-        pc.set_clim(0, 35.)
+        pc.set_clim(0, 35.0)
         ax.add_collection(pc)
         # model grid
         xs.plot_grid(linewidths=0.5)
         # concentration contours
-        cs = plt.contour(np.flipud(conc[:, 0, :] / 35.), extent=[0, lx, 0, lz],
-                         levels=levels, colors='white', zorder=2)
-        ax.clabel(cs, fontsize=6, fmt='%1.2f')
+        cs = plt.contour(
+            np.flipud(conc[:, 0, :] / 35.0),
+            extent=[0, lx, 0, lz],
+            levels=levels,
+            colors="white",
+            zorder=2,
+        )
+        ax.clabel(cs, fontsize=6, fmt="%1.2f")
         # labels and title
         if ifig == nplots - 1:
-            ax.set_xlabel('DISTANCE, IN METERS', fontsize=6)
-        ax.set_ylabel('ELEVATION, IN METERS', fontsize=6)
-        ttl = 'TIME = {:.3f} days'.format(simtime[itime])
+            ax.set_xlabel("DISTANCE, IN METERS", fontsize=6)
+        ax.set_ylabel("ELEVATION, IN METERS", fontsize=6)
+        ttl = "TIME = {:.3f} days".format(simtime[itime])
         ax.set_title(ttl, fontsize=6)
         ax.text(1.9, 1.025, figtxt[ifig], fontsize=6)
 
-    fname = 'fig-concplots.pdf'
+    fname = "fig-concplots.pdf"
     fname = os.path.join(ws, fname)
-    plt.savefig(fname, bbox_inches='tight')
+    plt.savefig(fname, bbox_inches="tight")
 
     return
 
 
-
 def eval_transport(sim):
-    print('evaluating transport...')
+    print("evaluating transport...")
 
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
-    gwfname = 'gwf_' + name
-    gwtname = 'gwt_' + name
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
 
     # load heads
-    fname = os.path.join(ws, gwfname + '.hds')
+    fname = os.path.join(ws, gwfname + ".hds")
     assert os.path.isfile(fname)
-    headobj = flopy.utils.HeadFile(fname, precision='double')
+    headobj = flopy.utils.HeadFile(fname, precision="double")
     head = headobj.get_alldata()
 
     # load concs
-    fname = os.path.join(ws, gwtname + '.ucn')
+    fname = os.path.join(ws, gwtname + ".ucn")
     assert os.path.isfile(fname)
-    concobj = flopy.utils.HeadFile(fname, text='concentration',
-                                   precision='double')
+    concobj = flopy.utils.HeadFile(
+        fname, text="concentration", precision="double"
+    )
     conc = concobj.get_alldata()
 
     # extract 10 simulated heads and concs for cell (0, 0, 20)
     hsim = headobj.get_ts((0, 0, 20))[::125, 1]
     csim = concobj.get_ts((0, 0, 20))[::125, 1]
-    hans = np.array([0.8890905 , 0.85362754, 0.85710554, 0.85226616, 0.85692396,
-                     0.85245413, 0.85698664, 0.85247106, 0.85698471, 0.85246627])
-    cans = np.array([35., 15.25952065, 8.98272748, 9.12073523, 7.73799374,
-                     7.56138739, 7.37415009, 7.46278052, 7.34050542, 7.49958207])
+    hans = np.array(
+        [
+            0.8890905,
+            0.85362754,
+            0.85710554,
+            0.85226616,
+            0.85692396,
+            0.85245413,
+            0.85698664,
+            0.85247106,
+            0.85698471,
+            0.85246627,
+        ]
+    )
+    cans = np.array(
+        [
+            35.0,
+            15.25952065,
+            8.98272748,
+            9.12073523,
+            7.73799374,
+            7.56138739,
+            7.37415009,
+            7.46278052,
+            7.34050542,
+            7.49958207,
+        ]
+    )
 
-    errmsg = 'heads not right for cell (0, 0, 20):\n{}\n{}'.format(hsim, hans)
-    assert np.allclose(hsim, hans, atol=1.e-4), errmsg
+    errmsg = "heads not right for cell (0, 0, 20):\n{}\n{}".format(hsim, hans)
+    assert np.allclose(hsim, hans, atol=1.0e-4), errmsg
 
-    errmsg = 'concs not right for cell (0, 0, 20):\n{}\n{}'.format(csim, cans)
-    assert np.allclose(hsim, hans, atol=1.e-4), errmsg
+    errmsg = "concs not right for cell (0, 0, 20):\n{}\n{}".format(csim, cans)
+    assert np.allclose(hsim, hans, atol=1.0e-4), errmsg
 
     makeplot = False
     if makeplot:
@@ -505,7 +581,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run main routine
     main()

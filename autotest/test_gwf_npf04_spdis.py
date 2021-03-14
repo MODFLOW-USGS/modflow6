@@ -16,21 +16,21 @@ try:
     import flopy
     from flopy.utils.lgrutil import Lgr
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['npf04']
+ex = ["npf04"]
 exdirs = []
 for s in ex:
-    exdirs.append(os.path.join('temp', s))
+    exdirs.append(os.path.join("temp", s))
 
-namea = 'a'
-nameb = 'b'
+namea = "a"
+nameb = "b"
 
 
 def get_model(idx, dir):
@@ -39,14 +39,14 @@ def get_model(idx, dir):
     nlay = 3
     nrow = 6
     ncol = 6
-    delr = 100.
-    delc = 100.
-    top = 300.
-    botm = [200., 100., 0.]
+    delr = 100.0
+    delc = 100.0
+    top = 300.0
+    botm = [200.0, 100.0, 0.0]
 
     # hydraulic properties
-    hk = 1.
-    vk = 1.
+    hk = 1.0
+    vk = 1.0
 
     # Set the idomain of the parent model in order to
     # define where the child model will be located
@@ -55,57 +55,66 @@ def get_model(idx, dir):
 
     ncpp = 1
     ncppl = [1, 1, 1]
-    lgr = Lgr(nlay, nrow, ncol, delr, delc, top, botm,
-              idomain, ncpp, ncppl)
+    lgr = Lgr(nlay, nrow, ncol, delr, delc, top, botm, idomain, ncpp, ncppl)
 
     name = ex[idx]
 
     # build MODFLOW 6 files
     # create simulation
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name='mf6',
-                                 sim_ws=dir)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
+    )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, nper=2,
-                                 perioddata=[(1., 1, 1.), (1., 1, 1.)])
+    tdis = flopy.mf6.ModflowTdis(
+        sim, nper=2, perioddata=[(1.0, 1, 1.0), (1.0, 1, 1.0)]
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=namea, save_flows=True)
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, outer_dvclose=1e-9, inner_dvclose=1.e-9)
+    ims = flopy.mf6.ModflowIms(sim, outer_dvclose=1e-9, inner_dvclose=1.0e-9)
 
     # dis
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm, idomain=idomain)
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=idomain,
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, pname='ic', strt=top)
+    ic = flopy.mf6.ModflowGwfic(gwf, pname="ic", strt=top)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_specific_discharge=True,
-                                  icelltype=0, k=hk, k33=vk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_specific_discharge=True, icelltype=0, k=hk, k33=vk
+    )
 
     # chd
     chdspd = []
     for k in range(nlay):
         for i in range(nrow):
-            chdspd.append([(k, i, 0), 1.])
-            chdspd.append([(k, i, ncol - 1), 6.])
+            chdspd.append([(k, i, 0), 1.0])
+            chdspd.append([(k, i, ncol - 1), 6.0])
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdspd)
 
     # output control
-    oc = flopy.mf6.ModflowGwfoc(gwf, pname='oc',
-                                budget_filerecord='{}.cbc'.format(namea),
-                                head_filerecord='{}.hds'.format(namea),
-                                headprintrecord=[('COLUMNS', 10, 'WIDTH', 15,
-                                                  'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL'),
-                                            ('BUDGET', 'ALL')],
-                                printrecord=[('HEAD', 'ALL'),
-                                             ('BUDGET', 'ALL')])
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        pname="oc",
+        budget_filerecord="{}.cbc".format(namea),
+        head_filerecord="{}.hds".format(namea),
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+    )
 
     # create child gwf model
     cgwf = flopy.mf6.ModflowGwf(sim, modelname=nameb, save_flows=True)
@@ -114,31 +123,45 @@ def get_model(idx, dir):
     ctop, cbotm = lgr.get_top_botm()
     xorigin, yorigin = lgr.get_lower_left()
     cidomain = lgr.get_idomain()
-    cdis = flopy.mf6.ModflowGwfdis(cgwf, nlay=cnlay, nrow=cnrow, ncol=cncol,
-                                   delr=cdelr, delc=cdelc,
-                                   top=ctop, botm=cbotm, idomain=cidomain,
-                                   xorigin=xorigin, yorigin=yorigin)
-    cic = flopy.mf6.ModflowGwfic(cgwf, pname='ic', strt=top)
-    cnpf = flopy.mf6.ModflowGwfnpf(cgwf, save_specific_discharge=True,
-                                   icelltype=0, k=hk, k33=vk)
-    oc = flopy.mf6.ModflowGwfoc(cgwf, pname='oc',
-                                budget_filerecord='{}.cbc'.format(nameb),
-                                head_filerecord='{}.hds'.format(nameb),
-                                headprintrecord=[('COLUMNS', 10, 'WIDTH', 15,
-                                                  'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL'),
-                                            ('BUDGET', 'ALL')],
-                                printrecord=[('HEAD', 'ALL'),
-                                             ('BUDGET', 'ALL')])
+    cdis = flopy.mf6.ModflowGwfdis(
+        cgwf,
+        nlay=cnlay,
+        nrow=cnrow,
+        ncol=cncol,
+        delr=cdelr,
+        delc=cdelc,
+        top=ctop,
+        botm=cbotm,
+        idomain=cidomain,
+        xorigin=xorigin,
+        yorigin=yorigin,
+    )
+    cic = flopy.mf6.ModflowGwfic(cgwf, pname="ic", strt=top)
+    cnpf = flopy.mf6.ModflowGwfnpf(
+        cgwf, save_specific_discharge=True, icelltype=0, k=hk, k33=vk
+    )
+    oc = flopy.mf6.ModflowGwfoc(
+        cgwf,
+        pname="oc",
+        budget_filerecord="{}.cbc".format(nameb),
+        head_filerecord="{}.hds".format(nameb),
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+    )
 
     # exchange information
     exchangedata = lgr.get_exchange_data(angldegx=True, cdist=True)
     nexg = len(exchangedata)
-    gwfe = flopy.mf6.ModflowGwfgwf(sim, exgtype='gwf6-gwf6',
-                                   exgmnamea='a', exgmnameb='b',
-                                   nexg=nexg,
-                                   auxiliary=[('angldegx', 'cdist')],
-                                   exchangedata=exchangedata)
+    gwfe = flopy.mf6.ModflowGwfgwf(
+        sim,
+        exgtype="gwf6-gwf6",
+        exgmnamea="a",
+        exgmnameb="b",
+        nexg=nexg,
+        auxiliary=[("angldegx", "cdist")],
+        exchangedata=exchangedata,
+    )
 
     return sim
 
@@ -152,46 +175,46 @@ def build_models():
 
 def qxqyqz(fname, nlay, nrow, ncol):
     nodes = nlay * nrow * ncol
-    cbb = flopy.utils.CellBudgetFile(fname, precision='double')
-    spdis = cbb.get_data(text='DATA-SPDIS')[0]
-    qx = np.ones((nodes), dtype=float) * 1.e30
-    qy = np.ones((nodes), dtype=float) * 1.e30
-    qz = np.ones((nodes), dtype=float) * 1.e30
-    n0 = spdis['node'] - 1
-    qx[n0] = spdis['qx']
-    qy[n0] = spdis['qy']
-    qz[n0] = spdis['qz']
+    cbb = flopy.utils.CellBudgetFile(fname, precision="double")
+    spdis = cbb.get_data(text="DATA-SPDIS")[0]
+    qx = np.ones((nodes), dtype=float) * 1.0e30
+    qy = np.ones((nodes), dtype=float) * 1.0e30
+    qz = np.ones((nodes), dtype=float) * 1.0e30
+    n0 = spdis["node"] - 1
+    qx[n0] = spdis["qx"]
+    qy[n0] = spdis["qy"]
+    qz[n0] = spdis["qz"]
     qx = qx.reshape(nlay, nrow, ncol)
     qy = qy.reshape(nlay, nrow, ncol)
     qz = qz.reshape(nlay, nrow, ncol)
-    qx = np.ma.masked_equal(qx, 1.e30)
-    qy = np.ma.masked_equal(qy, 1.e30)
-    qz = np.ma.masked_equal(qz, 1.e30)
+    qx = np.ma.masked_equal(qx, 1.0e30)
+    qy = np.ma.masked_equal(qy, 1.0e30)
+    qz = np.ma.masked_equal(qz, 1.0e30)
     return qx, qy, qz
 
 
 def eval_mf6(sim):
-    print('evaluating head and qx in parent and child models...')
+    print("evaluating head and qx in parent and child models...")
 
     # make sure parent head is same as child head in same column
-    fname = os.path.join(sim.simpath, '{}.hds'.format(namea))
+    fname = os.path.join(sim.simpath, "{}.hds".format(namea))
     hdobj = flopy.utils.HeadFile(fname)
     ha = hdobj.get_data()
-    fname = os.path.join(sim.simpath, '{}.hds'.format(nameb))
+    fname = os.path.join(sim.simpath, "{}.hds".format(nameb))
     hdobj = flopy.utils.HeadFile(fname)
     hb = hdobj.get_data()
-    msg = 'Heads should be the same {} {}'.format(ha[0, 1, 2], hb[0, 0, 0])
+    msg = "Heads should be the same {} {}".format(ha[0, 1, 2], hb[0, 0, 0])
     assert np.allclose(ha[0, 1, 2], hb[0, 0, 0]), msg
 
     # make sure specific discharge is calculated correctly for child and
     # parent models (even though child model has same resolution as parent
-    fname = os.path.join(sim.simpath, '{}.cbc'.format(namea))
+    fname = os.path.join(sim.simpath, "{}.cbc".format(namea))
     nlaya, nrowa, ncola = ha.shape
     qxa, qya, qza = qxqyqz(fname, nlaya, nrowa, ncola)
-    fname = os.path.join(sim.simpath, '{}.cbc'.format(nameb))
+    fname = os.path.join(sim.simpath, "{}.cbc".format(nameb))
     nlayb, nrowb, ncolb = hb.shape
     qxb, qyb, qzb = qxqyqz(fname, nlayb, nrowb, ncolb)
-    msg = 'qx should be the same {} {}'.format(qxa[0, 2, 1], qxb[0, 0, 0])
+    msg = "qx should be the same {} {}".format(qxa[0, 2, 1], qxb[0, 0, 0])
     assert np.allclose(qxa[0, 2, 1], qxb[0, 0, 0]), msg
 
     return
@@ -227,10 +250,9 @@ def main():
     return
 
 
-
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run main routine
     main()

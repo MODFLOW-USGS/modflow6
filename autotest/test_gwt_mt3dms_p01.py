@@ -27,57 +27,75 @@ import numpy as np
 try:
     import pymake
 except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
+    msg = "Error. Pymake package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
     raise Exception(msg)
 
 try:
     import flopy
 except:
-    msg = 'Error. FloPy package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install flopy'
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
     raise Exception(msg)
 
 import targets
 
-exe_name_mf = targets.target_dict['mf2005s']
-exe_name_mt = targets.target_dict['mt3dms']
-exe_name_mf6 = targets.target_dict['mf6']
-testdir = './temp'
-testgroup = 'mt3dms_p01'
+exe_name_mf = targets.target_dict["mf2005s"]
+exe_name_mt = targets.target_dict["mt3dms"]
+exe_name_mf6 = targets.target_dict["mf6"]
+testdir = "./temp"
+testgroup = "mt3dms_p01"
 remove_files = True
 
 
-def p01mt3d(model_ws, al, retardation, rc1, mixelm,
-            zeta=None, prsity2=None, rc2=None, zero_order_decay=False):
+def p01mt3d(
+    model_ws,
+    al,
+    retardation,
+    rc1,
+    mixelm,
+    zeta=None,
+    prsity2=None,
+    rc2=None,
+    zero_order_decay=False,
+):
     nlay = 1
     nrow = 1
     ncol = 101
-    delr = 10.
-    delc = 1.
-    delv = 1.
-    top = 0.
+    delr = 10.0
+    delc = 1.0
+    delv = 1.0
+    top = 0.0
     botm = [top - delv]
     Lx = (ncol - 1) * delr
     v = 0.24
     prsity = 0.25
     q = v * prsity
 
-    perlen = 2000.
-    dt0 = perlen / 10.
-    hk = 1.
+    perlen = 2000.0
+    dt0 = perlen / 10.0
+    hk = 1.0
     laytyp = 1
     rhob = 0.25
-    kd = (retardation - 1.) * prsity / rhob
+    kd = (retardation - 1.0) * prsity / rhob
 
-    modelname_mf = 'p01_mf'
-    mf = flopy.modflow.Modflow(modelname=modelname_mf, model_ws=model_ws,
-                               exe_name=exe_name_mf)
-    dis = flopy.modflow.ModflowDis(mf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                   delr=delr, delc=delc, top=top, botm=botm,
-                                   perlen=perlen)
+    modelname_mf = "p01_mf"
+    mf = flopy.modflow.Modflow(
+        modelname=modelname_mf, model_ws=model_ws, exe_name=exe_name_mf
+    )
+    dis = flopy.modflow.ModflowDis(
+        mf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        perlen=perlen,
+    )
     ibound = np.ones((nlay, nrow, ncol), dtype=int)
     ibound[0, 0, 0] = -1
     ibound[0, 0, -1] = -1
@@ -91,17 +109,28 @@ def p01mt3d(model_ws, al, retardation, rc1, mixelm,
     mf.write_input()
     mf.run_model(silent=True)
 
-    modelname_mt = 'p01_mt'
-    mt = flopy.mt3d.Mt3dms(modelname=modelname_mt, model_ws=model_ws,
-                           exe_name=exe_name_mt, modflowmodel=mf)
-    c0 = 1.
+    modelname_mt = "p01_mt"
+    mt = flopy.mt3d.Mt3dms(
+        modelname=modelname_mt,
+        model_ws=model_ws,
+        exe_name=exe_name_mt,
+        modflowmodel=mf,
+    )
+    c0 = 1.0
     icbund = np.ones((nlay, nrow, ncol), dtype=int)
     icbund[0, 0, 0] = -1
     sconc = np.zeros((nlay, nrow, ncol), dtype=float)
     sconc[0, 0, 0] = c0
-    btn = flopy.mt3d.Mt3dBtn(mt, laycon=laytyp, icbund=icbund,
-                             prsity=prsity, sconc=sconc, dt0=dt0, ifmtcn=1)
-    dceps = 1.e-5
+    btn = flopy.mt3d.Mt3dBtn(
+        mt,
+        laycon=laytyp,
+        icbund=icbund,
+        prsity=prsity,
+        sconc=sconc,
+        dt0=dt0,
+        ifmtcn=1,
+    )
+    dceps = 1.0e-5
     nplane = 1
     npl = 0
     nph = 4
@@ -109,9 +138,19 @@ def p01mt3d(model_ws, al, retardation, rc1, mixelm,
     npmax = 8
     nlsink = nplane
     npsink = nph
-    adv = flopy.mt3d.Mt3dAdv(mt, mixelm=mixelm, dceps=dceps, nplane=nplane,
-                             npl=npl, nph=nph, npmin=npmin, npmax=npmax,
-                             nlsink=nlsink, npsink=npsink, percel=0.5)
+    adv = flopy.mt3d.Mt3dAdv(
+        mt,
+        mixelm=mixelm,
+        dceps=dceps,
+        nplane=nplane,
+        npl=npl,
+        nph=nph,
+        npmin=npmin,
+        npmax=npmax,
+        nlsink=nlsink,
+        npsink=npsink,
+        percel=0.5,
+    )
     dsp = flopy.mt3d.Mt3dDsp(mt, al=al)
     isothm = 1
     if zeta is not None:
@@ -121,55 +160,67 @@ def p01mt3d(model_ws, al, retardation, rc1, mixelm,
         ireact = 100
     if rc2 is None:
         rc2 = rc1
-    rct = flopy.mt3d.Mt3dRct(mt, isothm=isothm,
-                             ireact=ireact,
-                             igetsc=0,
-                             rhob=rhob,
-                             sp1=kd,
-                             sp2=zeta,
-                             prsity2=prsity2,
-                             rc1=rc1,
-                             rc2=rc2)
+    rct = flopy.mt3d.Mt3dRct(
+        mt,
+        isothm=isothm,
+        ireact=ireact,
+        igetsc=0,
+        rhob=rhob,
+        sp1=kd,
+        sp2=zeta,
+        prsity2=prsity2,
+        rc1=rc1,
+        rc2=rc2,
+    )
     ssm = flopy.mt3d.Mt3dSsm(mt)
     gcg = flopy.mt3d.Mt3dGcg(mt, mxiter=10)
     mt.write_input()
-    fname = os.path.join(model_ws, 'MT3D001.UCN')
+    fname = os.path.join(model_ws, "MT3D001.UCN")
     if os.path.isfile(fname):
         os.remove(fname)
     mt.run_model(silent=True)
 
-    fname = os.path.join(model_ws, 'MT3D001.UCN')
+    fname = os.path.join(model_ws, "MT3D001.UCN")
     ucnobj = flopy.utils.UcnFile(fname)
     times = ucnobj.get_times()
     conc = ucnobj.get_alldata()
 
-    fname = os.path.join(model_ws, 'MT3D001.OBS')
+    fname = os.path.join(model_ws, "MT3D001.OBS")
     if os.path.isfile(fname):
         cvt = mt.load_obs(fname)
     else:
         cvt = None
 
-    fname = os.path.join(model_ws, 'MT3D001.MAS')
+    fname = os.path.join(model_ws, "MT3D001.MAS")
     mvt = mt.load_mas(fname)
 
     return mf, mt, conc, cvt, mvt
 
 
-def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
-           prsity2=None, onelambda=False, zero_order_decay=False):
-    name = 'p01'
+def p01mf6(
+    model_ws,
+    al,
+    retardation,
+    decay_rate,
+    mixelm,
+    zeta=None,
+    prsity2=None,
+    onelambda=False,
+    zero_order_decay=False,
+):
+    name = "p01"
     nlay, nrow, ncol = 1, 1, 101
     nper = 1
-    perlen = [2000.]
+    perlen = [2000.0]
     nstp = [10]
-    tsmult = [1.]
+    tsmult = [1.0]
     steady = [True]
-    delr = 10.
-    delc = 1.
-    delv = 1.
-    top = 0.
+    delr = 10.0
+    delc = 1.0
+    delv = 1.0
+    top = 0.0
     botm = [top - delv]
-    strt = 1.
+    strt = 1.0
     hk = 1.0
     laytyp = 1
 
@@ -179,10 +230,10 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
     q = v * prsity
 
     rhob = 0.25
-    kd = (retardation - 1.) * prsity / rhob
+    kd = (retardation - 1.0) * prsity / rhob
 
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 1.
+    hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
     tdis_rc = []
     for i in range(nper):
@@ -190,115 +241,153 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
 
     ws = model_ws
     exe_name = os.path.abspath(exe_name_mf6)
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name=exe_name,
-                                 sim_ws=ws)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name=exe_name, sim_ws=ws
+    )
     from flopy.mf6.mfbase import VerbosityLevel
+
     sim.simulation_data.verbosity_level = VerbosityLevel.quiet
-    sim.name_file.memory_print_option = 'all'
+    sim.name_file.memory_print_option = "all"
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                 nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
-    gwfname = 'gwf_' + name
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True,
-                               model_nam_file='{}.nam'.format(gwfname))
+    gwfname = "gwf_" + name
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=gwfname,
+        save_flows=True,
+        model_nam_file="{}.nam".format(gwfname),
+    )
 
     # create iterative model solution and register the gwf model with it
-    imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                  outer_dvclose=hclose,
-                                  outer_maximum=nouter,
-                                  under_relaxation='NONE',
-                                  inner_maximum=ninner,
-                                  inner_dvclose=hclose, rcloserecord=rclose,
-                                  linear_acceleration='CG',
-                                  scaling_method='NONE',
-                                  reordering_method='NONE',
-                                  relaxation_factor=relax,
-                                  filename='{}.ims'.format(gwfname))
+    imsgwf = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="CG",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwfname),
+    )
     sim.register_ims_package(imsgwf, [gwf.name])
 
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm,
-                                  idomain=np.ones((nlay, nrow, ncol),
-                                                  dtype=int),
-                                  filename='{}.dis'.format(gwfname))
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename="{}.dis".format(gwfname),
+    )
 
     # initial conditions
     strt = np.zeros((nlay, nrow, ncol), dtype=float)
     h1 = q * Lx
     strt[0, 0, 0] = h1
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                filename='{}.ic'.format(gwfname))
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename="{}.ic".format(gwfname)
+    )
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                  icelltype=laytyp,
-                                  k=hk,
-                                  k33=hk, save_specific_discharge=True)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf,
+        save_flows=False,
+        icelltype=laytyp,
+        k=hk,
+        k33=hk,
+        save_specific_discharge=True,
+    )
 
     # chd files
     chdspd = [[(0, 0, 0), h1], [(0, 0, ncol - 1), 0.0]]
-    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                   maxbound=len(chdspd),
-                                                   stress_period_data=chdspd,
-                                                   save_flows=False,
-                                                   pname='CHD-1')
+    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
+        gwf,
+        maxbound=len(chdspd),
+        stress_period_data=chdspd,
+        save_flows=False,
+        pname="CHD-1",
+    )
 
     # output control
-    oc = flopy.mf6.ModflowGwfoc(gwf,
-                                budget_filerecord='{}.bud'.format(gwfname),
-                                head_filerecord='{}.hds'.format(gwfname),
-                                headprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'LAST'),
-                                            ('BUDGET', 'LAST')],
-                                printrecord=[('HEAD', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        budget_filerecord="{}.bud".format(gwfname),
+        head_filerecord="{}.hds".format(gwfname),
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+    )
 
     # create gwt model
-    gwtname = 'gwt_' + name
-    gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname, save_flows=True,
-                            model_nam_file='{}.nam'.format(gwtname))
+    gwtname = "gwt_" + name
+    gwt = flopy.mf6.ModflowGwt(
+        sim,
+        modelname=gwtname,
+        save_flows=True,
+        model_nam_file="{}.nam".format(gwtname),
+    )
     gwt.name_file.save_flows = True
 
     # create iterative model solution and register the gwt model with it
-    imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                  outer_dvclose=hclose,
-                                  outer_maximum=nouter,
-                                  under_relaxation='NONE',
-                                  inner_maximum=ninner,
-                                  inner_dvclose=hclose, rcloserecord=rclose,
-                                  linear_acceleration='BICGSTAB',
-                                  scaling_method='NONE',
-                                  reordering_method='NONE',
-                                  relaxation_factor=relax,
-                                  filename='{}.ims'.format(gwtname))
+    imsgwt = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwtname),
+    )
     sim.register_ims_package(imsgwt, [gwt.name])
 
-    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=top, botm=botm,
-                                  idomain=1,
-                                  filename='{}.dis'.format(gwtname))
+    dis = flopy.mf6.ModflowGwtdis(
+        gwt,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=1,
+        filename="{}.dis".format(gwtname),
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
-                                filename='{}.ic'.format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # advection
     if mixelm == 0:
-        scheme = 'UPSTREAM'
+        scheme = "UPSTREAM"
     elif mixelm == -1:
-        scheme = 'TVD'
+        scheme = "TVD"
     else:
         raise Exception()
-    adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme,
-                                  filename='{}.adv'.format(gwtname))
+    adv = flopy.mf6.ModflowGwtadv(
+        gwt, scheme=scheme, filename="{}.adv".format(gwtname)
+    )
 
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, alh=al, ath1=0.1)
@@ -313,58 +402,72 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
     first_order_decay = True
     if zero_order_decay:
         first_order_decay = False
-    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=prsity,
-                                  first_order_decay=first_order_decay,
-                                  zero_order_decay=zero_order_decay,
-                                  decay=decay_rate,
-                                  decay_sorbed=decay_rate_sorbed,
-                                  sorption='linear',
-                                  bulk_density=rhob,
-                                  distcoef=kd)
+    mst = flopy.mf6.ModflowGwtmst(
+        gwt,
+        porosity=prsity,
+        first_order_decay=first_order_decay,
+        zero_order_decay=zero_order_decay,
+        decay=decay_rate,
+        decay_sorbed=decay_rate_sorbed,
+        sorption="linear",
+        bulk_density=rhob,
+        distcoef=kd,
+    )
 
     # constant concentration
-    c0 = 1.
+    c0 = 1.0
     cncspd = [[(0, 0, 0), c0]]
-    cnc = flopy.mf6.ModflowGwtcnc(gwt, maxbound=len(cncspd),
-                                  stress_period_data=cncspd,
-                                  save_flows=False,
-                                  pname='CNC-1')
+    cnc = flopy.mf6.ModflowGwtcnc(
+        gwt,
+        maxbound=len(cncspd),
+        stress_period_data=cncspd,
+        save_flows=False,
+        pname="CNC-1",
+    )
 
-    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
-                                  filename='{}.ssm'.format(gwtname))
-
+    ssm = flopy.mf6.ModflowGwtssm(
+        gwt, sources=[[]], filename="{}.ssm".format(gwtname)
+    )
 
     if zeta is not None:
-        ist = flopy.mf6.ModflowGwtist(gwt, sorption=True,
-                                      first_order_decay=first_order_decay,
-                                      zero_order_decay=zero_order_decay,
-                                      bulk_density=rhob, distcoef=kd,
-                                      decay=decay_rate,
-                                      decay_sorbed=decay_rate_sorbed,
-                                      zetaim=zeta, thetaim=prsity2,
-                                      filename='{}.ist'.format(gwtname),
-                                      pname='IST-1')
+        ist = flopy.mf6.ModflowGwtist(
+            gwt,
+            sorption=True,
+            first_order_decay=first_order_decay,
+            zero_order_decay=zero_order_decay,
+            bulk_density=rhob,
+            distcoef=kd,
+            decay=decay_rate,
+            decay_sorbed=decay_rate_sorbed,
+            zetaim=zeta,
+            thetaim=prsity2,
+            filename="{}.ist".format(gwtname),
+            pname="IST-1",
+        )
 
     # output control
-    oc = flopy.mf6.ModflowGwtoc(gwt,
-                                budget_filerecord='{}.bud'.format(gwtname),
-                                concentration_filerecord='{}.ucn'.format(
-                                    gwtname),
-                                concentrationprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
-                                     'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'LAST'),
-                                            ('BUDGET', 'LAST')],
-                                printrecord=[('CONCENTRATION', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+    oc = flopy.mf6.ModflowGwtoc(
+        gwt,
+        budget_filerecord="{}.bud".format(gwtname),
+        concentration_filerecord="{}.ucn".format(gwtname),
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
+        saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+    )
 
     # GWF GWT exchange
-    gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
-                                     exgmnamea=gwfname, exgmnameb=gwtname,
-                                     filename='{}.gwfgwt'.format(name))
+    gwfgwt = flopy.mf6.ModflowGwfgwt(
+        sim,
+        exgtype="GWF6-GWT6",
+        exgmnamea=gwfname,
+        exgmnameb=gwtname,
+        filename="{}.gwfgwt".format(name),
+    )
 
     sim.write_simulation()
-    fname = os.path.join(model_ws, gwtname + '.ucn')
+    fname = os.path.join(model_ws, gwtname + ".ucn")
     if os.path.isfile(fname):
         os.remove(fname)
     success, buff = sim.run_simulation(silent=True, report=True)
@@ -372,9 +475,10 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
         print(buff)
 
     # load concentrations
-    fname = os.path.join(model_ws, gwtname + '.ucn')
-    ucnobj = flopy.utils.HeadFile(fname, precision='double',
-                                  text='CONCENTRATION')
+    fname = os.path.join(model_ws, gwtname + ".ucn")
+    ucnobj = flopy.utils.HeadFile(
+        fname, precision="double", text="CONCENTRATION"
+    )
     times = ucnobj.get_times()
     conc = ucnobj.get_alldata()
 
@@ -383,50 +487,62 @@ def p01mf6(model_ws, al, retardation, decay_rate, mixelm, zeta=None,
 
 def test_mt3dmsp01a():
 
-    longitudinal_dispersivity = 0.
+    longitudinal_dispersivity = 0.0
     retardation = 1.0
     decay_rate = 0.00
     mixelm = 0
     zeta = None
     prsity2 = None
 
-    mf6_ws = os.path.join(testdir, testgroup + 'a')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2)
+    mf6_ws = os.path.join(testdir, testgroup + "a")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
-    assert  np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
 
     # load transport budget
     # budget text:
     #     STORAGE-AQUEOUS, DECAY-AQUEOUS, STORAGE-SORBED,
     #     DECAY-SORBED, FLOW-JA-FACE, SOURCE-SINK MIX, CONSTANT CONC
-    gwtname = 'gwt_p01'
-    fname = os.path.join(mf6_ws, '{}.bud'.format(gwtname))
+    gwtname = "gwt_p01"
+    fname = os.path.join(mf6_ws, "{}.bud".format(gwtname))
     try:
-        bobj = flopy.utils.CellBudgetFile(fname, precision='double')
-        budra = bobj.get_data(kstpkper=(9, 0), text='DECAY-AQUEOUS')[0]
+        bobj = flopy.utils.CellBudgetFile(fname, precision="double")
+        budra = bobj.get_data(kstpkper=(9, 0), text="DECAY-AQUEOUS")[0]
     except:
         assert False, 'could not load data from "{}"'.format(fname)
 
     # ensure decay aqueous is zero
-    decay_aqueous = bobj.get_data(kstpkper=(9, 0), text='DECAY-AQUEOUS')[0]
-    assert np.allclose(0., decay_aqueous)
+    decay_aqueous = bobj.get_data(kstpkper=(9, 0), text="DECAY-AQUEOUS")[0]
+    assert np.allclose(0.0, decay_aqueous)
 
     # ensure decay sorbed is zero
-    decay_sorbed = bobj.get_data(kstpkper=(9, 0), text='DECAY-SORBED')[0]
-    assert np.allclose(0., decay_sorbed)
+    decay_sorbed = bobj.get_data(kstpkper=(9, 0), text="DECAY-SORBED")[0]
+    assert np.allclose(0.0, decay_sorbed)
 
     # ensure storage sorbed is zero
-    storage_sorbed = bobj.get_data(kstpkper=(9, 0), text='STORAGE-SORBED')[0]
+    storage_sorbed = bobj.get_data(kstpkper=(9, 0), text="STORAGE-SORBED")[0]
     bobj.file.close()
-    assert np.allclose(0., storage_sorbed), '{}'.format(storage_sorbed)
+    assert np.allclose(0.0, storage_sorbed), "{}".format(storage_sorbed)
 
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -435,24 +551,36 @@ def test_mt3dmsp01a():
 
 def test_mt3dmsp01b():
 
-    longitudinal_dispersivity = 10.
+    longitudinal_dispersivity = 10.0
     retardation = 1.0
     decay_rate = 0.00
     mixelm = 0
     zeta = None
     prsity2 = None
 
-    mf6_ws = os.path.join(testdir, testgroup + 'b')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2)
+    mf6_ws = os.path.join(testdir, testgroup + "b")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -461,24 +589,36 @@ def test_mt3dmsp01b():
 
 def test_mt3dmsp01c():
 
-    longitudinal_dispersivity = 10.
+    longitudinal_dispersivity = 10.0
     retardation = 1.5
     decay_rate = 0.00
     mixelm = 0
     zeta = None
     prsity2 = None
 
-    mf6_ws = os.path.join(testdir, testgroup + 'c')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2)
+    mf6_ws = os.path.join(testdir, testgroup + "c")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -487,24 +627,36 @@ def test_mt3dmsp01c():
 
 def test_mt3dmsp01d():
 
-    longitudinal_dispersivity = 10.
+    longitudinal_dispersivity = 10.0
     retardation = 1.5
     decay_rate = 0.002
     mixelm = 0
     zeta = None
     prsity2 = None
 
-    mf6_ws = os.path.join(testdir, testgroup + 'd')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2)
+    mf6_ws = os.path.join(testdir, testgroup + "d")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -513,24 +665,36 @@ def test_mt3dmsp01d():
 
 def test_mt3dmsp01e():
 
-    longitudinal_dispersivity = 10.
+    longitudinal_dispersivity = 10.0
     retardation = 1.5
     decay_rate = 0.002
     mixelm = 0
-    zeta = .1
+    zeta = 0.1
     prsity2 = 0.05
 
-    mf6_ws = os.path.join(testdir, testgroup + 'e')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2)
+    mf6_ws = os.path.join(testdir, testgroup + "e")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -539,24 +703,37 @@ def test_mt3dmsp01e():
 
 def test_mt3dmsp01f():
 
-    longitudinal_dispersivity = 10.
+    longitudinal_dispersivity = 10.0
     retardation = 1.5
     decay_rate = 0.002
     mixelm = 0
-    zeta = .1
+    zeta = 0.1
     prsity2 = 0.05
 
-    mf6_ws = os.path.join(testdir, testgroup + 'f')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2, onelambda=True)
+    mf6_ws = os.path.join(testdir, testgroup + "f")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+        onelambda=True,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -565,27 +742,40 @@ def test_mt3dmsp01f():
 
 def test_mt3dmsp01g():
 
-    longitudinal_dispersivity = 0.
+    longitudinal_dispersivity = 0.0
     retardation = 1.0
-    decay_rate = -1.
+    decay_rate = -1.0
     mixelm = 0
     zeta = None
     prsity2 = None
 
-    mf6_ws = os.path.join(testdir, testgroup + 'g')
-    sim, conc_mf6 = p01mf6(mf6_ws, longitudinal_dispersivity,
-                           retardation, decay_rate,
-                           mixelm, zeta, prsity2,
-                           zero_order_decay=True)
+    mf6_ws = os.path.join(testdir, testgroup + "g")
+    sim, conc_mf6 = p01mf6(
+        mf6_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+        zero_order_decay=True,
+    )
 
-    mt3d_ws = os.path.join(mf6_ws, 'mt3d')
-    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(mt3d_ws, longitudinal_dispersivity,
-                                          retardation, decay_rate,
-                                          mixelm, zeta, prsity2, rc2=0.,
-                                          zero_order_decay=True)
+    mt3d_ws = os.path.join(mf6_ws, "mt3d")
+    mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
+        mt3d_ws,
+        longitudinal_dispersivity,
+        retardation,
+        decay_rate,
+        mixelm,
+        zeta,
+        prsity2,
+        rc2=0.0,
+        zero_order_decay=True,
+    )
 
-    msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1.e-4), msg
+    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1.0e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
     return
@@ -593,7 +783,7 @@ def test_mt3dmsp01g():
 
 if __name__ == "__main__":
     # print message
-    print('standalone run of {}'.format(os.path.basename(__file__)))
+    print("standalone run of {}".format(os.path.basename(__file__)))
     test_mt3dmsp01a()
     test_mt3dmsp01b()
     test_mt3dmsp01c()
