@@ -197,55 +197,55 @@ def get_mf6_models():
 
 def get_htol(dir):
     htol = None
-    htol_dict = {
-        "test045_lake4ss_nr_dev": {
-            "linux": 0.002,
-            "darwin": 0.002,
-            "win32": 0.002,
-        },
-        "test059_mvlake_laksfr_tr": {
-            "all": 0.005,
-        },
-        "test045_lake4ss": {
-            "all": 0.01,
-        },
-        "test059_mvlake_lak_tr": {
-            "all": 1e-4,
-        },
-        "test019_VilhelmsenLGR_nr": {
-            "all": 0.0002,
-        },
-        "test029_lgrsfr_parentchild": {
-            "all": 1e-7,
-        },
-        "test029_lgr_parentchild": {
-            "all": 1e-7,
-        },
-        "test034_nwtp2": {
-            "all": 1e-8,
-        },
-        "test205_gwtbuy-henrytidal": {
-            "all": 0.003,
-        },
-        "test028_sfr_rewet": {
-            "all": 5e-6,
-        },
-    }
-    htol_keys = list(htol_dict.keys())
-    if dir in htol_keys:
-        dir_dict = htol_dict[dir]
-        os_keys = list(dir_dict.keys())
-        if "all" in os_keys:
-            htol = dir_dict["all"]
-        else:
-            os_key = sys.platform.lower()
-            if os_key in os_keys:
-                htol = dir_dict[os_key]
-    if htol is None:
-        if dir.endswith("_dev"):
-            htol = 0.001
-        else:
-            htol = 5e-9
+    # htol_dict = {
+    #     # "test045_lake4ss_nr_dev": {
+    #     #     "linux": 0.002,
+    #     #     "darwin": 0.002,
+    #     #     "win32": 0.002,
+    #     # },
+    #     "test059_mvlake_laksfr_tr": {
+    #         "all": 0.005,
+    #     },
+    #     "test045_lake4ss": {
+    #         "all": 0.01,
+    #     },
+    #     "test059_mvlake_lak_tr": {
+    #         "all": 1e-4,
+    #     },
+    #     "test019_VilhelmsenLGR_nr": {
+    #         "all": 0.0002,
+    #     },
+    #     "test029_lgrsfr_parentchild": {
+    #         "all": 1e-7,
+    #     },
+    #     "test029_lgr_parentchild": {
+    #         "all": 1e-7,
+    #     },
+    #     "test034_nwtp2": {
+    #         "all": 1e-8,
+    #     },
+    #     "test205_gwtbuy-henrytidal": {
+    #         "all": 0.003,
+    #     },
+    #     "test028_sfr_rewet": {
+    #         "all": 5e-6,
+    #     },
+    # }
+    # htol_keys = list(htol_dict.keys())
+    # if dir in htol_keys:
+    #     dir_dict = htol_dict[dir]
+    #     os_keys = list(dir_dict.keys())
+    #     if "all" in os_keys:
+    #         htol = dir_dict["all"]
+    #     else:
+    #         os_key = sys.platform.lower()
+    #         if os_key in os_keys:
+    #             htol = dir_dict[os_key]
+    # if htol is None:
+    #     if dir.endswith("_dev"):
+    #         htol = 0.001
+    #     else:
+    #         htol = 5e-9
     return htol
 
 

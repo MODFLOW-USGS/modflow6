@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import time
+import numpy as np
 
 try:
     import pymake
@@ -22,6 +23,13 @@ except:
 import targets
 
 sfmt = "{:25s} - {}"
+extdict = {
+    "hds": "head",
+    "hed": "head",
+    "bhd": "head",
+    "ucn": "concentration",
+    "cbc": "cell-by-cell",
+}
 
 
 class Simulation(object):
@@ -31,6 +39,7 @@ class Simulation(object):
         exfunc=None,
         exe_dict=None,
         htol=None,
+        pdtol=None,
         idxsim=None,
         cmp_verbose=True,
         require_failure=None,
@@ -89,6 +98,15 @@ class Simulation(object):
             print(msg)
 
         self.htol = htol
+
+        # set rtol for comparisons
+        if pdtol is None:
+            pdtol = 0.001
+        else:
+            msg = sfmt.format("User specified comparison pdtol", pdtol)
+            print(msg)
+
+        self.pdtol = pdtol
 
         # set index for multi-simulation comparisons
         self.idxsim = idxsim
@@ -157,7 +175,7 @@ class Simulation(object):
 
         # Copy comparison simulations if available
         if success:
-            if self.mf6_regression and not self.name.endswith("_dev"):
+            if self.mf6_regression:
                 action = "mf6-regression"
                 shutil.copytree(dst, os.path.join(dst, "mf6-regression"))
             else:
@@ -268,13 +286,6 @@ class Simulation(object):
         msg = sfmt.format("Comparison test", self.name)
         print(msg)
 
-        extdict = {
-            "hds": "head",
-            "hed": "head",
-            "bhd": "head",
-            "ucn": "concentration",
-        }
-
         success_tst = False
         if self.action is not None:
             cpth = os.path.join(self.simpath, self.action)
@@ -287,158 +298,139 @@ class Simulation(object):
             elif "mf6" in self.action:
                 fpth = os.path.join(cpth, "mfsim.nam")
                 cinp, self.coutp = pymake.get_mf6_files(fpth)
-            elif "mf6-regression" in self.action:
-                fpth = os.path.join(cpth, "mfsim.nam")
-                cinp, self.coutp = pymake.get_mf6_files(fpth)
 
-            files1 = []
-            files2 = []
-            exfiles = []
-            ipos = 0
-            for file1 in self.outp:
-                ext = os.path.splitext(file1)[1][1:]
-
-                if ext.lower() in ["hds", "hed", "bhd", "ahd"]:
-
-                    # simulation file
-                    pth = os.path.join(self.simpath, file1)
-                    files1.append(pth)
-
-                    # look for an exclusion file
-                    pth = os.path.join(self.simpath, file1 + ".ex")
-                    if os.path.isfile(pth):
-                        exfiles.append(pth)
-                    else:
-                        exfiles.append(None)
-
-                    # Check to see if there is a corresponding compare file
-                    if files_cmp is not None:
-
-                        if file1 + ".cmp" in files_cmp:
-                            # compare file
-                            idx = files_cmp.index(file1 + ".cmp")
-                            pth = os.path.join(cpth, files_cmp[idx])
-                            files2.append(pth)
-                            txt = sfmt.format(
-                                "Comparison file {}".format(ipos + 1),
-                                os.path.basename(pth),
-                            )
-                            print(txt)
-                    else:
-                        if self.coutp is not None:
-                            for file2 in self.coutp:
-                                ext = os.path.splitext(file2)[1][1:]
-
-                                if ext.lower() in ["hds", "hed", "bhd", "ahd"]:
-                                    # simulation file
-                                    pth = os.path.join(cpth, file2)
-                                    files2.append(pth)
-
-                        else:
-                            files2.append(None)
-
-            if self.nam_cmp is None:
-                pth = None
-            else:
-                pth = os.path.join(cpth, self.nam_cmp)
-
-            for ipos in range(len(files1)):
-                file1 = files1[ipos]
-                ext = os.path.splitext(file1)[1][1:].lower()
-                outfile = os.path.splitext(os.path.basename(file1))[0]
-                outfile = os.path.join(
-                    self.simpath, outfile + "." + ext + ".cmp.out"
+            head_extensions = (
+                "hds",
+                "hed",
+                "bhd",
+                "ahd",
+            )
+            if "mf6-regression" in self.action:
+                success, msgall = self._compare_heads(
+                    msgall,
+                    extensions=head_extensions,
                 )
-                if files2 is None:
-                    file2 = None
-                else:
-                    file2 = files2[ipos]
-
-                # set exfile
-                exfile = None
-                if file2 is None:
-                    if len(exfiles) > 0:
-                        exfile = exfiles[ipos]
-                        if exfile is not None:
-                            txt = sfmt.format(
-                                "Exclusion file {}".format(ipos + 1),
-                                os.path.basename(exfile),
-                            )
-                            print(txt)
-
-                # make comparison
-                success_tst = pymake.compare_heads(
-                    None,
-                    pth,
-                    precision="double",
-                    text=extdict[ext],
-                    outfile=outfile,
-                    files1=file1,
-                    files2=file2,
-                    htol=self.htol,
-                    difftol=True,
-                    # Change to true to have list of all nodes exceeding htol
-                    verbose=self.cmp_verbose,
-                    exfile=exfile,
-                )
-                msg = sfmt.format(
-                    "{} comparison {}".format(extdict[ext], ipos + 1),
-                    self.name,
-                )
-                if success_tst:
-                    print(msg)
-                else:
-                    print(msg)
-
-                if not success_tst:
+                if not success:
                     self.success = False
-                    msgall += msg + "\n"
+            # non-regression runs - for new features
+            else:
+                files1 = []
+                files2 = []
+                exfiles = []
+                ipos = 0
+                for file1 in self.outp:
+                    ext = os.path.splitext(file1)[1][1:]
 
-            # # compare concentrations
-            # if "mf6-regression" in self.action:
-            #     files = os.listdir(self.simpath)
-            #     ipos = 0
-            #     for file_name in files:
-            #         fpth0 = os.path.join(self.simpath, file_name)
-            #         if os.path.isfile(fpth0):
-            #             if file_name.lower().endswith(".ucn"):
-            #                 ext = "ucn"
-            #                 fpth1 = os.path.join(
-            #                     self.simpath, "mf6-regression", file_name
-            #                 )
-            #                 outfile = os.path.splitext(
-            #                     os.path.basename(file1)
-            #                 )[0]
-            #                 outfile = os.path.join(
-            #                     self.simpath, outfile + ".ucn.cmp.out"
-            #                 )
-            #                 success_tst = pymake.compare_heads(
-            #                     None,
-            #                     None,
-            #                     precision="double",
-            #                     text=extdict[ext],
-            #                     htol=self.htol,
-            #                     outfile=outfile,
-            #                     files1=fpth0,
-            #                     files2=fpth1,
-            #                     difftol=True,
-            #                     verbose=self.cmp_verbose,
-            #                 )
-            #                 msg = sfmt.format(
-            #                     "{} comparison {}".format(
-            #                         extdict[ext], ipos + 1
-            #                     ),
-            #                     self.name,
-            #                 )
-            #                 ipos += 1
-            #                 if success_tst:
-            #                     print(msg)
-            #                 else:
-            #                     print(msg)
-            #
-            #                 if not success_tst:
-            #                     msgall += msg + "\n"
-            #                     self.success = False
+                    if ext.lower() in head_extensions:
+
+                        # simulation file
+                        pth = os.path.join(self.simpath, file1)
+                        files1.append(pth)
+
+                        # look for an exclusion file
+                        pth = os.path.join(self.simpath, file1 + ".ex")
+                        if os.path.isfile(pth):
+                            exfiles.append(pth)
+                        else:
+                            exfiles.append(None)
+
+                        # Check to see if there is a corresponding compare file
+                        if files_cmp is not None:
+
+                            if file1 + ".cmp" in files_cmp:
+                                # compare file
+                                idx = files_cmp.index(file1 + ".cmp")
+                                pth = os.path.join(cpth, files_cmp[idx])
+                                files2.append(pth)
+                                txt = sfmt.format(
+                                    "Comparison file {}".format(ipos + 1),
+                                    os.path.basename(pth),
+                                )
+                                print(txt)
+                        else:
+                            if self.coutp is not None:
+                                for file2 in self.coutp:
+                                    ext = os.path.splitext(file2)[1][1:]
+
+                                    if ext.lower() in head_extensions:
+                                        # simulation file
+                                        pth = os.path.join(cpth, file2)
+                                        files2.append(pth)
+
+                            else:
+                                files2.append(None)
+
+                if self.nam_cmp is None:
+                    pth = None
+                else:
+                    pth = os.path.join(cpth, self.nam_cmp)
+
+                for ipos in range(len(files1)):
+                    file1 = files1[ipos]
+                    ext = os.path.splitext(file1)[1][1:].lower()
+                    outfile = os.path.splitext(os.path.basename(file1))[0]
+                    outfile = os.path.join(
+                        self.simpath, outfile + "." + ext + ".cmp.out"
+                    )
+                    if files2 is None:
+                        file2 = None
+                    else:
+                        file2 = files2[ipos]
+
+                    # set exfile
+                    exfile = None
+                    if file2 is None:
+                        if len(exfiles) > 0:
+                            exfile = exfiles[ipos]
+                            if exfile is not None:
+                                txt = sfmt.format(
+                                    "Exclusion file {}".format(ipos + 1),
+                                    os.path.basename(exfile),
+                                )
+                                print(txt)
+
+                    # make comparison
+                    success_tst = pymake.compare_heads(
+                        None,
+                        pth,
+                        precision="double",
+                        text=extdict[ext],
+                        outfile=outfile,
+                        files1=file1,
+                        files2=file2,
+                        htol=self.htol,
+                        difftol=True,
+                        # Change to true to have list of all nodes exceeding htol
+                        verbose=self.cmp_verbose,
+                        exfile=exfile,
+                    )
+                    msg = sfmt.format(
+                        "{} comparison {}".format(extdict[ext], ipos + 1),
+                        self.name,
+                    )
+                    print(msg)
+
+                    if not success_tst:
+                        self.success = False
+                        msgall += msg + " ... FAILED\n"
+
+            # compare concentrations
+            if "mf6-regression" in self.action:
+                success, msgall = self._compare_concentrations(msgall)
+                if not success:
+                    self.success = False
+
+            # compare cbc files
+            if "mf6-regression" in self.action:
+                cbc_extensions = (
+                    "cbc",
+                    "bud",
+                )
+                success, msgall = self._compare_budgets(
+                    msgall, extensions=cbc_extensions
+                )
+                if not success:
+                    self.success = False
 
         assert self.success, msgall
         return
@@ -489,6 +481,173 @@ class Simulation(object):
                             break
 
         return dvclose
+
+    def _regression_files(self, extensions):
+        if isinstance(extensions, str):
+            extensions = [extensions]
+        files = os.listdir(self.simpath)
+        files0 = []
+        files1 = []
+        for file_name in files:
+            fpth0 = os.path.join(self.simpath, file_name)
+            if os.path.isfile(fpth0):
+                for extension in extensions:
+                    if file_name.lower().endswith(extension):
+                        files0.append(fpth0)
+                        fpth1 = os.path.join(
+                            self.simpath, "mf6-regression", file_name
+                        )
+                        files1.append(fpth1)
+                        break
+        return files0, files1
+
+    def _compare_heads(self, msgall, extensions="hds"):
+        if isinstance(extensions, str):
+            extensions = [extensions]
+        success = True
+        files0, files1 = self._regression_files(extensions)
+        extension = "hds"
+        ipos = 0
+        for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
+            outfile = os.path.splitext(os.path.basename(fpth0))[0]
+            outfile = os.path.join(
+                self.simpath, outfile + ".{}.cmp.out".format(extension)
+            )
+            success_tst = pymake.compare_heads(
+                None,
+                None,
+                precision="double",
+                htol=self.htol,
+                text=extdict[extension],
+                outfile=outfile,
+                files1=fpth0,
+                files2=fpth1,
+                verbose=self.cmp_verbose,
+            )
+            msg = sfmt.format(
+                "{} comparison {}".format(extdict[extension], ipos + 1),
+                "{} ({})".format(self.name, os.path.basename(fpth0)),
+            )
+            ipos += 1
+            print(msg)
+
+            if not success_tst:
+                success = False
+                msgall += msg + " ... FAILED\n"
+
+        return success, msgall
+
+    def _compare_concentrations(self, msgall, extensions="ucn"):
+        if isinstance(extensions, str):
+            extensions = [extensions]
+        success = True
+        files0, files1 = self._regression_files(extensions)
+        extension = "ucn"
+        ipos = 0
+        for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
+            outfile = os.path.splitext(os.path.basename(fpth0))[0]
+            outfile = os.path.join(
+                self.simpath, outfile + ".{}.cmp.out".format(extension)
+            )
+            success_tst = pymake.compare_heads(
+                None,
+                None,
+                precision="double",
+                htol=self.htol,
+                text=extdict[extension],
+                outfile=outfile,
+                files1=fpth0,
+                files2=fpth1,
+                verbose=self.cmp_verbose,
+            )
+            msg = sfmt.format(
+                "{} comparison {}".format(extdict[extension], ipos + 1),
+                "{} ({})".format(self.name, os.path.basename(fpth0)),
+            )
+            ipos += 1
+            print(msg)
+
+            if not success_tst:
+                success = False
+                msgall += msg + " ... FAILED\n"
+
+        return success, msgall
+
+    def _compare_budgets(self, msgall, extensions="cbc"):
+        if isinstance(extensions, str):
+            extensions = [extensions]
+        success = True
+        files0, files1 = self._regression_files(extensions)
+        extension = "cbc"
+        ipos = 0
+        for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
+            outfile = os.path.splitext(os.path.basename(fpth0))[0]
+            outfile = os.path.join(
+                self.simpath, outfile + ".{}.cmp.out".format(extension)
+            )
+            fcmp = open(outfile, "w")
+
+            # open the files
+            cbc0 = flopy.utils.CellBudgetFile(fpth0, precision="double")
+            cbc1 = flopy.utils.CellBudgetFile(fpth1, precision="double")
+
+            # build list of cbc data to retrieve
+            avail = cbc0.get_unique_record_names()
+
+            # initialize list for storing totals for each budget term terms
+            cbc_keys = []
+            for t in avail:
+                if isinstance(t, bytes):
+                    t = t.decode()
+                t = t.strip()
+                if t.startswith("FLOW-JA-FACE"):
+                    continue
+                cbc_keys.append(t)
+
+            # get list of times and kstpkper
+            kk = cbc0.get_kstpkper()
+            times = cbc0.get_times()
+
+            # process data
+            success_tst = True
+            for key in cbc_keys:
+                for idx, (k, t) in enumerate(zip(kk, times)):
+                    v0 = cbc0.get_data(kstpkper=k, text=key)[0]
+                    v1 = cbc1.get_data(kstpkper=k, text=key)[0]
+                    if v0.dtype.names is not None:
+                        v0 = v0["q"]
+                        v1 = v1["q"]
+                    idx = v0 != 0.0
+                    diff = np.zeros(v0.shape, dtype=v0.dtype)
+                    diff[idx] = 100.0 * abs((v0[idx] - v1[idx]) / v0[idx])
+                    diffmax = diff.max()
+                    if diffmax > self.pdtol:
+                        success_tst = False
+                        msg = (
+                            "{} - ".format(os.path.basename(fpth0))
+                            + "{} ".format(key)
+                            + "at time {} maximum ".format(t)
+                            + "percent difference ({}) ".format(diffmax)
+                            + "> {}".format(self.pdtol)
+                        )
+                        fcmp.write("{}\n".format(msg))
+                        if self.cmp_verbose:
+                            print(msg)
+
+            msg = sfmt.format(
+                "{} comparison {}".format(extdict[extension], ipos + 1),
+                "{} ({})".format(self.name, os.path.basename(fpth0)),
+            )
+            ipos += 1
+            print(msg)
+
+            fcmp.close()
+
+            if not success_tst:
+                success = False
+                msgall += msg + " ... FAILED\n"
+
+        return success, msgall
 
 
 def bmi_return(success, model_ws):
