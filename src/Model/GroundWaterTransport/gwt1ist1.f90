@@ -49,7 +49,7 @@ module GwtIstModule
     procedure :: bnd_rp => ist_rp
     procedure :: bnd_fc => ist_fc
     procedure :: bnd_cq => ist_cq
-    procedure :: bnd_mb => ist_mb
+    procedure :: bnd_bd => ist_bd
     procedure :: bnd_ot_model_flows => ist_ot_model_flows
     procedure :: bnd_ot_dv => ist_ot_dv
     procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
@@ -382,7 +382,7 @@ module GwtIstModule
     return
   end subroutine ist_cq
 
-  subroutine ist_mb(this, model_budget)
+  subroutine ist_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -396,7 +396,7 @@ module GwtIstModule
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%packName)
     
-  end subroutine ist_mb
+  end subroutine ist_bd
 
   subroutine ist_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
 ! ******************************************************************************

@@ -221,7 +221,7 @@ module GwfCsubModule
     procedure :: csub_fn
     procedure :: csub_cc
     procedure :: csub_cq
-    procedure :: csub_mb
+    procedure :: csub_bd
     procedure :: csub_save_model_flows
     procedure :: csub_ot_dv
     procedure :: csub_fp
@@ -3513,7 +3513,7 @@ contains
   !!  @param[in,out]  model_budget  model budget object
   !!
   !<
-  subroutine csub_mb(this, isuppress_output, model_budget)
+  subroutine csub_bd(this, isuppress_output, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
@@ -3546,7 +3546,7 @@ contains
     call model_budget%addentry(rin, rout, delt, budtxt(4), &  
                                isuppress_output, '            CSUB')
     return
-  end subroutine csub_mb
+  end subroutine csub_bd
     
 !> @ brief Save model flows for package
 !!

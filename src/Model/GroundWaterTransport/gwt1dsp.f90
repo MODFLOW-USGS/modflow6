@@ -48,7 +48,7 @@ module GwtDspModule
     procedure :: dsp_ar
     procedure :: dsp_ad
     procedure :: dsp_fc
-    procedure :: dsp_flowja
+    procedure :: dsp_cq
     procedure :: dsp_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -314,9 +314,9 @@ module GwtDspModule
     return
   end subroutine dsp_fc
   
-  subroutine dsp_flowja(this, cnew, flowja)
+  subroutine dsp_cq(this, cnew, flowja)
 ! ******************************************************************************
-! dsp_flowja -- Calculate dispersion contribution to flowja
+! dsp_cq -- Calculate dispersion contribution to flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -349,7 +349,7 @@ module GwtDspModule
     !
     ! -- Return
     return
-  end subroutine dsp_flowja
+  end subroutine dsp_cq
   
   subroutine allocate_scalars(this)
 ! ******************************************************************************

@@ -92,7 +92,7 @@ module GwfNpfModule
     procedure                               :: npf_cf
     procedure                               :: npf_fc
     procedure                               :: npf_fn
-    procedure                               :: npf_flowja
+    procedure                               :: npf_cq
     procedure                               :: npf_save_model_flows
     procedure                               :: npf_nur
     procedure                               :: npf_print_model_flows
@@ -752,9 +752,9 @@ module GwfNpfModule
     return
   end subroutine npf_nur
 
-  subroutine npf_flowja(this, hnew, flowja)
+  subroutine npf_cq(this, hnew, flowja)
 ! ******************************************************************************
-! npf_flowja -- Calculate flowja
+! npf_cq -- Calculate flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -788,7 +788,7 @@ module GwfNpfModule
     !
     ! -- Return
     return
-  end subroutine npf_flowja
+  end subroutine npf_cq
 
   subroutine sgwf_npf_thksat(this, n, hn, thksat)
 ! ******************************************************************************

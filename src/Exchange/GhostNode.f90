@@ -38,9 +38,9 @@ module GhostNodeModule
     procedure, private :: gnc_fmsav
     procedure          :: gnc_fc
     procedure          :: gnc_fn
+    procedure          :: gnc_cq
     procedure          :: gnc_ot
     procedure          :: gnc_da
-    procedure          :: flowja => gncflowja
     procedure          :: deltaQgnc
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
@@ -568,9 +568,9 @@ module GhostNodeModule
     return
   end subroutine gnc_ot
 
-  subroutine gncflowja(this, flowja)
+  subroutine gnc_cq(this, flowja)
 ! ******************************************************************************
-! gncflowja -- Add GNC to flowja
+! gnc_cq -- Add GNC to flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -604,7 +604,7 @@ module GhostNodeModule
     !
     ! -- return
     return
-  end subroutine gncflowja
+  end subroutine gnc_cq
 
   function deltaQgnc(this, ignc)
 ! ******************************************************************************

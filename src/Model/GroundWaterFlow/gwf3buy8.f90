@@ -58,7 +58,7 @@ module GwfBuyModule
     procedure :: buy_cf_bnd
     procedure :: buy_fc
     procedure :: buy_ot_dv
-    procedure :: buy_flowja
+    procedure :: buy_cq
     procedure :: buy_da
     procedure, private :: read_dimensions
     procedure, private :: read_packagedata
@@ -1016,9 +1016,9 @@ module GwfBuyModule
     return
   end subroutine buy_ot_dv
 
-  subroutine buy_flowja(this, hnew, flowja)
+  subroutine buy_cq(this, hnew, flowja)
 ! ******************************************************************************
-! buy_flowja -- Add buy term to flowja
+! buy_cq -- Add buy term to flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1054,7 +1054,7 @@ module GwfBuyModule
     !
     ! -- Return
     return
-  end subroutine buy_flowja
+  end subroutine buy_cq
  
   subroutine buy_da(this)
 ! ******************************************************************************

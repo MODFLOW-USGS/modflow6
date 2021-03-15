@@ -148,7 +148,7 @@ module UzfModule
     procedure :: bnd_cf => uzf_cf
     procedure :: bnd_cc => uzf_cc
     procedure :: bnd_cq => uzf_cq
-    procedure :: bnd_mb => uzf_mb
+    procedure :: bnd_bd => uzf_bd
     procedure :: bnd_ot_model_flows => uzf_ot_model_flows
     procedure :: bnd_ot_package_flows => uzf_ot_package_flows
     procedure :: bnd_ot_dv => uzf_ot_dv
@@ -1587,7 +1587,7 @@ contains
     return
   end subroutine uzf_cq
 
-  subroutine uzf_mb(this, model_budget)
+  subroutine uzf_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -1623,7 +1623,7 @@ contains
     end if
     
     return
-  end subroutine uzf_mb  
+  end subroutine uzf_bd  
   
   subroutine uzf_ot_model_flows(this,  icbcfl, ibudfl, icbcun, imap)
 ! ******************************************************************************
