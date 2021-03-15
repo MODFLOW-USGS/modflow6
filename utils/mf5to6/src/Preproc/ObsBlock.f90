@@ -2,7 +2,7 @@ module ObsBlockModule
   
   use BlockParserModule,         only: BlockParserType
   use ConstantsModule,           only: DONE, DZERO, &
-                                       LINELENGTH, MAXCHARLEN 
+                                       LINELENGTH, MAXCHARLEN, LENOBSNAME
   use GenericUtilitiesModule,    only: IS_SAME
   use ConstantsPHMFModule,       only: CONTINUOUS, SINGLE, LENOBSNAMENEW
   use DnmDis3dModule,            only: Dis3dType
@@ -156,7 +156,7 @@ contains
         !
         ! Construct an ObserveType object for this observation.
         call ConstructObservation(newobs, this%isorc, time, layer, 0, fmtd)
-        newobs%Name = word
+        newobs%Name = word(1:LENOBSNAME)
         !
         ! Determine row and column indices based on X and Y coordinates.
         call dis3d%get_cell(xcoord, ycoord, irow, jcol, gridX, gridY)

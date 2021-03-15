@@ -23,7 +23,7 @@ module ConstantsModule
   integer(I4B), parameter :: LENOBSNAME = 40
   integer(I4B), parameter :: LENOBSTYPE = 30
   integer(I4B), parameter :: LENTIMESERIESNAME = LENOBSNAME
-  integer(I4B), parameter :: LENTIMESERIESTEXT = 12
+  integer(I4B), parameter :: LENTIMESERIESTEXT = 16
   integer(I4B), parameter :: LENDATETIME = 30
   integer(I4B), parameter :: LINELENGTH = 300
   integer(I4B), parameter :: LENLISTLABEL = 500
