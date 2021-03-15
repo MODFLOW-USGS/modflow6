@@ -651,9 +651,8 @@ module GwtModule
     do i = 1, this%nja
       this%flowja(i) = DZERO
     enddo
-    ! todo: rename _flowja() methods to _cq()
-    if(this%inadv > 0) call this%adv%adv_flowja(this%x, this%flowja)
-    if(this%indsp > 0) call this%dsp%dsp_flowja(this%x, this%flowja)
+    if(this%inadv > 0) call this%adv%adv_cq(this%x, this%flowja)
+    if(this%indsp > 0) call this%dsp%dsp_cq(this%x, this%flowja)
     if(this%inmst > 0) call this%mst%mst_cq(this%dis%nodes, this%x, this%xold, &
                                             this%flowja)
     if(this%inssm > 0) call this%ssm%ssm_cq(this%flowja)
@@ -704,16 +703,13 @@ module GwtModule
     !    should be added here to this%budget.  In a subsequent exchange call,
     !    exchange flows might also be added.
     call this%budget%reset()
-    !
     if(this%inmst > 0) call this%mst%mst_bd(isuppress_output, this%budget)
     if(this%inssm > 0) call this%ssm%ssm_bd(isuppress_output, this%budget)
     if(this%infmi > 0) call this%fmi%fmi_bd(isuppress_output, this%budget)
     if(this%inmvt > 0) call this%mvt%mvt_bd(this%x)
-
     do ip = 1, this%bndlist%Count()
-      ! -- todo: rename bnd_mb to bnd_bd
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_mb(this%budget)
+      call packobj%bnd_bd(this%budget)
     enddo
 
     !
@@ -756,7 +752,7 @@ module GwtModule
     if(this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
     !
-    ! -- Override ibudfl and idvsave flags for nonconvergence
+    ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
     idvprint = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
@@ -766,13 +762,6 @@ module GwtModule
     !    
     !   Save and print flows
     call this%gwt_ot_flow(icbcfl, ibudfl, icbcun)
-    !
-    ! -- Write non-convergence message
-    ! -- todo: write budgets if not simcontinue and icnvg == 0
-    this%budget%budperc = 1.e30
-    if(this%icnvg == 0) then
-      write(this%iout, fmtnocnvg) kstp, kper
-    endif
     !    
     !   Save and print dependent variables
     call this%gwt_ot_dv(idvsave, idvprint, ipflag)
@@ -780,8 +769,14 @@ module GwtModule
     !   Print budget summaries
     call this%gwt_ot_bdsummary(ibudfl, ipflag)
     !
-    ! -- Timing Output
+    ! -- Timing Output; if any dependendent variables or budgets
+    !    are printed, then ipflag is set to 1.
     if(ipflag == 1) call tdis_ot(this%iout)
+    !
+    ! -- Write non-convergence message
+    if(this%icnvg == 0) then
+      write(this%iout, fmtnocnvg) kstp, kper
+    endif
     !
     ! -- Return
     return

@@ -159,7 +159,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 	        \item --  
-	        \item --
+	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
 	\end{itemize}
 	
 	\underline{EXAMPLES}
@@ -174,8 +174,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-	        \item -- The UZF water-content observation was inappropriately erroring-out owing to a check that was using the wrong index to retrieve the cell top and bottom elevations for the requested uzf observation.  With the properindex now applied, the output works as expected.
-	        \item --
+	        \item The convergence failure message message written to GWF and GWT listing files (FAILED TO MEET SOLVER CONVERGENCE CRITERIA) is now written after the budget summary tables.  In previous releases this convergence failure message was written prior to printing heads and concentrations, which often resulted in this message being unnoticed by users.
+	        \item The order of output written to the GWF and GWT listing files for a time step was reorganized in a consistent manner with model and package flows coming first, followed by dependent variables, and then concluding with budget summary tables.
 	\end{itemize}
 
 %	\underline{STRESS PACKAGES}
@@ -187,7 +187,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item --
+	        \item The UZF water-content observation was giving an error, because a check was using the wrong index to retrieve the cell top and bottom elevations for the requested observation.  The program was modified to use the correct index, and the output is now as expected.
 	        \item --
 	\end{itemize}
 

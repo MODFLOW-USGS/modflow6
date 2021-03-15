@@ -105,7 +105,7 @@ module BndModule
     procedure :: bnd_nur
     procedure :: bnd_cc
     procedure :: bnd_cq
-    procedure :: bnd_mb
+    procedure :: bnd_bd
     procedure :: bnd_ot
     procedure :: bnd_ot_flow
     procedure :: bnd_ot_model_flows
@@ -717,7 +717,7 @@ module BndModule
     return
   end subroutine bnd_cq_simtomvr
   
-  subroutine bnd_mb(this, model_budget)
+  subroutine bnd_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -739,7 +739,7 @@ module BndModule
                                  isuppress_output, this%packName)
     end if
     
-  end subroutine bnd_mb
+  end subroutine bnd_bd
 
   subroutine bnd_ot_package_flows(this, icbcfl, ibudfl)
     class(BndType) :: this

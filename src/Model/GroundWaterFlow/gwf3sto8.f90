@@ -34,7 +34,7 @@ module GwfStoModule
     procedure :: sto_fc
     procedure :: sto_fn
     procedure :: sto_cq
-    procedure :: sto_mb
+    procedure :: sto_bd
     procedure :: sto_save_model_flows
     procedure :: sto_da
     procedure          :: allocate_scalars
@@ -528,9 +528,9 @@ module GwfStoModule
     return
   end subroutine sto_cq
 
-  subroutine sto_mb(this, isuppress_output, model_budget)
+  subroutine sto_bd(this, isuppress_output, model_budget)
 ! ******************************************************************************
-! sto_mb -- Calculate budget terms
+! sto_bd -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -561,7 +561,7 @@ module GwfStoModule
     !
     ! -- Return
     return
-  end subroutine sto_mb
+  end subroutine sto_bd
   
   subroutine sto_save_model_flows(this, icbcfl, icbcun)
 ! ******************************************************************************
