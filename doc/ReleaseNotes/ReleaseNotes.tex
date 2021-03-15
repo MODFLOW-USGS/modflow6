@@ -174,7 +174,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-	        \item --
+	        \item -- The UZF water-content observation was inappropriately erroring-out owing to a check that was using the wrong index to retrieve the cell top and bottom elevations for the requested uzf observation.  With the properindex now applied, the output works as expected.
 	        \item --
 	\end{itemize}
 
