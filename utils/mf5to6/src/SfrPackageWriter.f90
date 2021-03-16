@@ -120,13 +120,19 @@ contains
     !
     res => null()
     n = AllSfrPkgWriters%Count()
+    print *, 'getsfrpackagewriter looking for grid ', igrid
     do i=1,n
       spw => GetSfrPackageWriter(i)
+      print *, 'checking ', spw%igrid, igrid
       if (spw%Igrid == igrid) then
+        print *, 'found spw'
         res => spw
         exit
       endif
     enddo
+    if (.not. associated(res))then
+      print *, 'could not find spw for igrid ', igrid
+    end if
     !
     return
   end function GetSfrPackageWriterByIgrid
