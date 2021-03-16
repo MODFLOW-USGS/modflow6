@@ -103,7 +103,9 @@ class Simulation(object):
         if pdtol is None:
             pdtol = 0.001
         else:
-            msg = sfmt.format("User specified comparison pdtol", pdtol)
+            msg = sfmt.format(
+                "User specified percent difference comparison pdtol", pdtol
+            )
             print(msg)
 
         self.pdtol = pdtol
@@ -172,6 +174,14 @@ class Simulation(object):
             dvclose *= 5.0
             if self.htol < dvclose:
                 self.htol = dvclose
+
+        # get rclose to use with budget comparisons
+        rclose = self._get_rclose(dst)
+        if rclose is None:
+            rclose = 0.5
+        else:
+            rclose *= 5.0
+        self.rclose = rclose
 
         # Copy comparison simulations if available
         if success:
@@ -482,6 +492,28 @@ class Simulation(object):
 
         return dvclose
 
+    def _get_rclose(self, dir_pth):
+        """Get inner_rclose value from MODFLOW 6 ims file"""
+        rclose = None
+        files = os.listdir(dir_pth)
+        for file_name in files:
+            pth = os.path.join(dir_pth, file_name)
+            if os.path.isfile(pth):
+                if file_name.lower().endswith(".ims"):
+                    with open(pth) as f:
+                        lines = f.read().splitlines()
+                    for line in lines:
+                        if "inner_rclose" in line.lower():
+                            v = float(line.split()[1])
+                            if rclose is None:
+                                rclose = v
+                            else:
+                                if v > rclose:
+                                    rclose = v
+                            break
+
+        return rclose
+
     def _regression_files(self, extensions):
         if isinstance(extensions, str):
             extensions = [extensions]
@@ -581,6 +613,8 @@ class Simulation(object):
         extension = "cbc"
         ipos = 0
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
+            if os.stat(fpth0).st_size * os.stat(fpth0).st_size == 0:
+                continue
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
             outfile = os.path.join(
                 self.simpath, outfile + ".{}.cmp.out".format(extension)
@@ -588,8 +622,12 @@ class Simulation(object):
             fcmp = open(outfile, "w")
 
             # open the files
-            cbc0 = flopy.utils.CellBudgetFile(fpth0, precision="double")
-            cbc1 = flopy.utils.CellBudgetFile(fpth1, precision="double")
+            cbc0 = flopy.utils.CellBudgetFile(
+                fpth0, precision="double", verbose=self.cmp_verbose
+            )
+            cbc1 = flopy.utils.CellBudgetFile(
+                fpth1, precision="double", verbose=self.cmp_verbose
+            )
 
             # build list of cbc data to retrieve
             avail = cbc0.get_unique_record_names()
@@ -600,7 +638,8 @@ class Simulation(object):
                 if isinstance(t, bytes):
                     t = t.decode()
                 t = t.strip()
-                if t.startswith("FLOW-JA-FACE"):
+                # remove these checks once v6.2.2 is released
+                if t.startswith("FLOW-JA-FACE") or t.startswith("UZF-GWRCH"):
                     continue
                 cbc_keys.append(t)
 
@@ -617,9 +656,12 @@ class Simulation(object):
                     if v0.dtype.names is not None:
                         v0 = v0["q"]
                         v1 = v1["q"]
-                    idx = v0 != 0.0
+                    # skip empty vectors
+                    if v0.size < 1:
+                        continue
+                    idx = (abs(v0) > self.rclose) & (abs(v1) > self.rclose)
                     diff = np.zeros(v0.shape, dtype=v0.dtype)
-                    diff[idx] = 100.0 * abs((v0[idx] - v1[idx]) / v0[idx])
+                    diff[idx] = abs(v0[idx] - v1[idx]) / abs(v0[idx])
                     diffmax = diff.max()
                     if diffmax > self.pdtol:
                         success_tst = False
@@ -627,7 +669,9 @@ class Simulation(object):
                             "{} - ".format(os.path.basename(fpth0))
                             + "{} ".format(key)
                             + "at time {} maximum ".format(t)
-                            + "percent difference ({}) ".format(diffmax)
+                            + "maximum percent difference ({}) ".format(
+                                diffmax
+                            )
                             + "> {}".format(self.pdtol)
                         )
                         fcmp.write("{}\n".format(msg))

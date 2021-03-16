@@ -40,7 +40,8 @@ mfexe_pth = "temp/mfexes"
 # add -Werror for compilation to terminate if errors are found
 strict_flags = (
     "-Wtabs -Wline-truncation -Wunused-label "
-    "-Wunused-variable -pedantic -std=f2008"
+    "-Wunused-variable -pedantic -std=f2008 "
+    "-Wcharacter-truncation"
 )
 
 

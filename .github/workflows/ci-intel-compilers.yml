@@ -15,6 +15,8 @@ on:
   pull_request:
     branches:
       - develop
+  schedule:
+    - cron: '0 1 * * *' # run at 1 AM UTC every day
 
 env:
   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
@@ -110,6 +112,11 @@ jobs:
       - name: Get regression test files
         run: |
           .github/common/get-regression-files.sh
+
+      - name: Get large regression test files
+        if: github.event.schedule=='0 1 * * *'
+        run: |
+          .github/common/get-large-regression-files.sh
 
       - name: Check out the correct regression test branch
         run: |

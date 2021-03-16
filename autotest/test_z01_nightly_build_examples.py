@@ -21,6 +21,8 @@ except:
 
 from simulation import Simulation
 
+from common_regression import get_select_dirs, get_select_packages
+
 
 def get_example_directory(base, fdir, subdir="mf6"):
     exdir = None
@@ -152,39 +154,14 @@ def get_mf6_models():
 
     # determine if the selection of model is in the test models to evaluate
     if select_dirs is not None:
-        found_dirs = []
-        for d in select_dirs:
-            if d.endswith("*"):
-                for test_dir in dirs:
-                    if test_dir.startswith(d.replace("*", "")):
-                        found_dirs.append(test_dir)
-            else:
-                if d in dirs:
-                    found_dirs.append(d)
-
-        dirs = found_dirs
+        dirs = get_select_dirs(select_dirs, dirs)
         if len(dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
 
     # determine if the specified package(s) is in the test models to evaluate
     if select_packages is not None:
-        found_dirs = []
-        for d in dirs:
-            pth = os.path.join(exdir, d)
-            namefiles = pymake.get_namefiles(pth)
-            ftypes = []
-            for namefile in namefiles:
-                ftype = pymake.get_mf6_ftypes(namefile, select_packages)
-                if ftype not in ftypes:
-                    ftypes += ftype
-            if len(ftypes) > 0:
-                ftypes = [item.upper() for item in ftypes]
-                for pak in select_packages:
-                    if pak in ftypes:
-                        found_dirs.append(d)
-                        break
-        dirs = found_dirs
+        dirs = get_select_packages(select_packages, exdir, dirs)
         if len(dirs) < 1:
             msg = "Selected packages not available ["
             for pak in select_packages:
@@ -280,6 +257,7 @@ def test_mf6model():
             dir,
             htol=get_htol(dir),
             mf6_regression=True,
+            cmp_verbose=False,
         )
 
     return
@@ -315,6 +293,7 @@ def main():
             dir,
             htol=get_htol(dir),
             mf6_regression=True,
+            cmp_verbose=False,
         )
         run_mf6(sim)
 

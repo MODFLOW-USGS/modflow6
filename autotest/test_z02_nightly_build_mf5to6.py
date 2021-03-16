@@ -24,6 +24,7 @@ except:
 from simulation import Simulation
 
 from targets import target_dict as target_dict
+from common_regression import get_select_packages, get_select_dirs
 
 
 def get_example_directory(base, fdir, subdir="mf6"):
@@ -104,38 +105,14 @@ def get_mf5to6_models():
 
     # determine if the selection of model is in the test models to evaluate
     if select_dirs is not None:
-        found_dirs = []
-        for d in select_dirs:
-            if d in dirs:
-                found_dirs.append(d)
-        dirs = found_dirs
+        dirs = get_select_dirs(select_dirs, dirs)
         if len(dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
 
     # determine if the specified package(s) is in the test models to evaluate
     if select_packages is not None:
-        found_dirs = []
-        for d in dirs:
-            pth = os.path.join(exdir, d)
-            namefiles = pymake.get_namefiles(pth)
-            ftypes = []
-            for namefile in namefiles:
-                for pak in select_packages:
-                    ftype = pymake.get_entries_from_namefile(
-                        namefile, ftype=pak
-                    )
-                    for t in ftype:
-                        if t[1] is not None:
-                            if t[1] not in ftypes:
-                                ftypes.append(t[1].upper())
-            if len(ftypes) > 0:
-                ftypes = [item.upper() for item in ftypes]
-                for pak in select_packages:
-                    if pak in ftypes:
-                        found_dirs.append(d)
-                        break
-        dirs = found_dirs
+        dirs = get_select_packages(select_packages, exdir, dirs)
         if len(dirs) < 1:
             msg = "Selected packages not available ["
             for idx, pak in enumerate(select_packages):
