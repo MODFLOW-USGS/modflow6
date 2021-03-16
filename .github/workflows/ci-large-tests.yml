@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: MODFLOW 6 CI with ifort
+name: MODFLOW 6 large tests
 
 on:
   push:
@@ -95,10 +95,17 @@ jobs:
         run: |
           .github/common/update-flopy.sh
 
+      - name: Build example scripts
+        if: runner.test_script == 'examples'
+        run: |
+          cd ../modflow6-examples/etc/
+          python python ci_build_files.py
+          cd ../../modflow6
+
       - name: activate ifort and build applications
         if: runner.FC == 'ifort'
         run: |
-          .github/intel-scripts/${{ matrix.build_script }}
+          .github/intel-scripts/ifortvars_linux.sh
 
       - name: Build gfortran applications
         if: runner.FC == 'gfortran'
