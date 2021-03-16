@@ -7,8 +7,6 @@ on:
   pull_request:
     branches:
       - develop
-  schedule:
-    - cron: '0 1 * * *' # run at 1 AM UTC every day
 
 jobs:
   test:
@@ -71,11 +69,6 @@ jobs:
     - name: Get regression test files
       run: |
         .github/common/get-regression-files.sh
-
-    - name: Get large regression test files
-      if: github.event.schedule=='0 1 * * *'
-      run: |
-        .github/common/get-large-regression-files.sh
 
     - name: Check out the correct regression test branch
       run: |

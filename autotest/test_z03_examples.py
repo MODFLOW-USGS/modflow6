@@ -20,14 +20,14 @@ except:
 from simulation import Simulation
 from common_regression import get_select_dirs, get_select_packages
 
-# find path to modflow6-largetestmodels directory
+# find path to modflow6-examples directory
 home = os.path.expanduser("~")
-fdir = "modflow6-largetestmodels"
+fdir = "modflow6-examples"
 exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
         if d == fdir or d == fdir + ".git":
-            exdir = os.path.abspath(os.path.join(root, d))
+            exdir = os.path.abspath(os.path.join(root, d, "examples"))
             break
     if exdir is not None:
         break
@@ -58,7 +58,7 @@ def get_mf6_models():
     # build list of directories with valid example files
     if exdir is not None:
         dirs = [
-            d for d in os.listdir(exdir) if "test" in d and d not in exclude
+            d for d in os.listdir(exdir) if "ex-" in d and d not in exclude
         ]
         # sort in numerical order for case sensitive os
         dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
@@ -82,9 +82,6 @@ def get_mf6_models():
     # determine if the selection of model is in the test models to evaluate
     if select_dirs is not None:
         dirs = get_select_dirs(select_dirs, dirs)
-        if len(dirs) < 1:
-            msg = "Selected models not available in test"
-            print(msg)
         if len(dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
@@ -128,7 +125,7 @@ def test_mf6model():
 
     # run the test models
     for dir in dirs:
-        yield run_mf6, Simulation(dir, mf6_regression=True)
+        yield run_mf6, Simulation(dir, mf6_regression=True, cmp_verbose=False)
 
     return
 
@@ -140,8 +137,6 @@ def dir_avail():
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print("no need to run {}".format(os.path.basename(__file__)))
-    if "TRAVIS" in os.environ or "CI" in os.environ:
-        avail = False
     return avail
 
 
@@ -161,7 +156,7 @@ def main():
 
     # run the test models
     for dir in dirs:
-        sim = Simulation(dir, mf6_regression=True)
+        sim = Simulation(dir, mf6_regression=True, cmp_verbose=False)
         run_mf6(sim)
 
     return

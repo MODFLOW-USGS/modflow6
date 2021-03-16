@@ -23,21 +23,15 @@ env:
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
   LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
-  FC: ifort
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            build_script: ifortvars_linux.sh
-          - os: macos-latest
-            build_script: ifortvars_macos.sh
-          - os: windows-latest
-            build_script: ifortvars_windows.bat
+        FC: [ ifort, gfortran ]
+        test_script: [ largetests, examples ]
     defaults:
       run:
         shell: bash
@@ -51,8 +45,13 @@ jobs:
         with:
           update-conda: true
 
+      - name: set FC=ifort environmental variable
+        if: runner.FC == 'ifort'
+        run: |
+          echo "FC=ifort" >> $GITHUB_ENV
+
       - name: cache install ifort on linux
-        if: runner.os == 'Linux'
+        if: runner.FC == 'ifort'
         id: cache-install-linux
         uses: actions/cache@v2
         with:
@@ -61,35 +60,16 @@ jobs:
           key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
 
       - name: install ifort on linux
-        if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
+        if: runner.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
         run: |
           .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB
 
-      - name: cache install ifort on macos
-        if: runner.os == 'macOS'
-        id: cache-install-macos
-        uses: actions/cache@v2
-        with:
-          path: /opt/intel/oneapi
-          key: install-${{ env.MACOS_HPCKIT_URL }}-${{ env.MACOS_FORTRAN_COMPONENTS }}
-
-      - name: install ifort on macos
-        if: runner.os == 'macOS' && steps.cache-install-macos.outputs.cache-hit != 'true'
+      - name: Setup symbolic links on Linux
+        if: runner.FC == 'gfortran'
         run: |
-          .github/intel-scripts/install_macos.sh $MACOS_HPCKIT_URL $MACOS_FORTRAN_COMPONENTS
-
-      - name: cache install ifort on windows
-        if: runner.os == 'Windows'
-        id: cache-install-windows
-        uses: actions/cache@v2
-        with:
-          path: C:\Program Files (x86)\Intel\oneAPI\compiler
-          key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_windows.sh') }}
-
-      - name: install ifort on windows
-        if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
+          sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
+          sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
+          sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
 
       - name: Install python packages
         run: |
@@ -107,33 +87,29 @@ jobs:
         run: |
           .github/common/git-branch-export.sh
 
-      - name: Get regression test files
+      - name: Get the appropriate large regression test files
         run: |
-          .github/common/get-regression-files.sh
-
-      - name: Check out the correct regression test branch
-        run: |
-          .github/common/checkout-regression-branch.sh
+          .github/common/get-${{ matrix.test_script }}-regression-files.sh
 
       - name: Update flopy MODFLOW 6 classes
         run: |
           .github/common/update-flopy.sh
 
       - name: activate ifort and build applications
+        if: runner.FC == 'ifort'
         run: |
           .github/intel-scripts/${{ matrix.build_script }}
 
+      - name: Build gfortran applications
+        if: runner.FC == 'gfortran'
+        run: |
+          nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
+
       - name: Test applications
         run: |
-          nosetests -v --with-id --with-timer -w ./autotest
+          nosetests -v --with-id --with-timer -w ./autotest test_z03_${{ matrix.test_script }}.py
 
       - name: exclude unused files from cache on linux
-        if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
+        if: runner.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
         run: |
           .github/intel-scripts/cache_exclude_linux.sh
-
-      - name: exclude unused files from cache on windows
-        if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          .github/intel-scripts/cache_exclude_windows.sh
