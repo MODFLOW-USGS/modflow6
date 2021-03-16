@@ -177,10 +177,16 @@ program mf5to6
     ! contains trash.  By setting igrid to 0, it should never be
     ! accessed again.
     nsfrpw = AllSfrPkgWriters%Count()
+    print *, 'Number of sfr package writers: ', nsfrpw
     do ispw = 1, nsfrpw
+      SfrWriter => GetSfrPackageWriter(ispw)
+      print *, 'sfr package writer ', ispw
       if (ispw == 1) then
-        SfrWriter => GetSfrPackageWriter(ispw)
+        print *, 'Setting sfr package writer 1 igrid to zero'
         SfrWriter%Igrid = 0
+      end if
+      if (.not. associated(SfrWriter)) then
+        print *, 'package writer is not associated ', ispw
       end if
     end do
     !
