@@ -75,6 +75,10 @@ jobs:
         run: |
           .github/common/install-python.sh
 
+      - name: Install additional python packages
+        run: |
+          pip install jupyter jupytext
+
       - name: Print conda version
         run: |
           conda --version
