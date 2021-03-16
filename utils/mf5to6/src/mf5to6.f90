@@ -171,34 +171,17 @@ program mf5to6
     write(*,30)trim(msg)
     call parentConverter%ConvertModel(WriteDisFile)
     !
-    ! Reset igrid for first SfrPackageWriter to zero so it is never
-    ! used again.  The first SfrPackageWriter was deallocated as part
-    ! of parentConverter%model%PackageWriters%Clear above so the memory
-    ! contains trash.  By setting igrid to 0, it should never be
-    ! accessed again.
-    
-    call AllSfrPkgWriters%RemoveNode(1, .false.)
-    
-    
+    ! Remove the first sfr writer if the parent SFR package was 
+    ! recreated.  This was added 3/16/2021 to fix intermittent
+    ! memory issues with the lgrex1.lgr test problem.
     nsfrpw = AllSfrPkgWriters%Count()
-    print *, 'Number of sfr package writers: ', nsfrpw
-    do ispw = 1, nsfrpw
-      SfrWriter => GetSfrPackageWriter(ispw)
-      print *, 'sfr package writer ', ispw
-      if (ispw == 1) then
-        print *, 'Setting sfr package writer 1 igrid to zero'
-        !SfrWriter%Igrid = 0
-      end if
-      if (.not. associated(SfrWriter)) then
-        print *, 'package writer is not associated ', ispw
-      end if
-    end do
+    if (nsfrpw >= 3) then
+      call AllSfrPkgWriters%RemoveNode(1, .false.)
+    end if
     !
     ! Build SFR-SFR movers
     nsfrpw = AllSfrPkgWriters%Count()
     do ispw=1,nsfrpw
-      ! Skip the first parent SFR package writer
-      !if (ispw==1) cycle
       SfrWriter => GetSfrPackageWriter(ispw)
       if (associated(SfrWriter)) then
         if (verbose) then
