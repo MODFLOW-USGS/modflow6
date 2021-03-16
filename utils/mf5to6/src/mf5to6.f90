@@ -171,6 +171,19 @@ program mf5to6
     write(*,30)trim(msg)
     call parentConverter%ConvertModel(WriteDisFile)
     !
+    ! Reset igrid for first SfrPackageWriter to zero so it is never
+    ! used again.  The first SfrPackageWriter was deallocated as part
+    ! of parentConverter%model%PackageWriters%Clear above so the memory
+    ! contains trash.  By setting igrid to 0, it should never be
+    ! accessed again.
+    nsfrpw = AllSfrPkgWriters%Count()
+    do ispw = 1, nsfrpw
+      if (ispw == 1) then
+        SfrWriter => GetSfrPackageWriter(ispw)
+        SfrWriter%Igrid = 0
+      end if
+    end do
+    !
     ! Build SFR-SFR movers
     nsfrpw = AllSfrPkgWriters%Count()
     do ispw=1,nsfrpw
