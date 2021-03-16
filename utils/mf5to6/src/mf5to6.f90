@@ -176,6 +176,10 @@ program mf5to6
     ! of parentConverter%model%PackageWriters%Clear above so the memory
     ! contains trash.  By setting igrid to 0, it should never be
     ! accessed again.
+    
+    call AllSfrPkgWriters%RemoveNode(1, .false.)
+    
+    
     nsfrpw = AllSfrPkgWriters%Count()
     print *, 'Number of sfr package writers: ', nsfrpw
     do ispw = 1, nsfrpw
@@ -183,7 +187,7 @@ program mf5to6
       print *, 'sfr package writer ', ispw
       if (ispw == 1) then
         print *, 'Setting sfr package writer 1 igrid to zero'
-        SfrWriter%Igrid = 0
+        !SfrWriter%Igrid = 0
       end if
       if (.not. associated(SfrWriter)) then
         print *, 'package writer is not associated ', ispw
@@ -194,7 +198,7 @@ program mf5to6
     nsfrpw = AllSfrPkgWriters%Count()
     do ispw=1,nsfrpw
       ! Skip the first parent SFR package writer
-      if (ispw==1) cycle
+      !if (ispw==1) cycle
       SfrWriter => GetSfrPackageWriter(ispw)
       if (associated(SfrWriter)) then
         if (verbose) then
