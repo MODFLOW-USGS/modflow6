@@ -99,7 +99,8 @@ jobs:
         if: matrix.test_script == 'examples'
         run: |
           cd ../modflow6-examples/etc/
-          python python ci_build_files.py
+          python ci_build_files.py
+          ls -lh ../examples/
           cd ../../modflow6
 
       - name: activate ifort and build applications
