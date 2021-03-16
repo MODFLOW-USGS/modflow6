@@ -46,12 +46,12 @@ jobs:
           update-conda: true
 
       - name: set FC=ifort environmental variable
-        if: runner.FC == 'ifort'
+        if: matrix.FC == 'ifort'
         run: |
           echo "FC=ifort" >> $GITHUB_ENV
 
       - name: cache install ifort on linux
-        if: runner.FC == 'ifort'
+        if: matrix.FC == 'ifort'
         id: cache-install-linux
         uses: actions/cache@v2
         with:
@@ -60,12 +60,12 @@ jobs:
           key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
 
       - name: install ifort on linux
-        if: runner.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
+        if: matrix.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
         run: |
           .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB
 
       - name: Setup symbolic links on Linux
-        if: runner.FC == 'gfortran'
+        if: matrix.FC == 'gfortran'
         run: |
           sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
           sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
@@ -95,20 +95,20 @@ jobs:
         run: |
           .github/common/update-flopy.sh
 
-      - name: Build example scripts
-        if: runner.test_script == 'examples'
+      - name: Run script to build example scripts
+        if: matrix.test_script == 'examples'
         run: |
           cd ../modflow6-examples/etc/
           python python ci_build_files.py
           cd ../../modflow6
 
       - name: activate ifort and build applications
-        if: runner.FC == 'ifort'
+        if: matrix.FC == 'ifort'
         run: |
           .github/intel-scripts/ifortvars_linux.sh
 
       - name: Build gfortran applications
-        if: runner.FC == 'gfortran'
+        if: matrix.FC == 'gfortran'
         run: |
           nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
 
@@ -117,6 +117,6 @@ jobs:
           nosetests -v --with-id --with-timer -w ./autotest test_z03_${{ matrix.test_script }}.py
 
       - name: exclude unused files from cache on linux
-        if: runner.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
+        if: matrix.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
         run: |
           .github/intel-scripts/cache_exclude_linux.sh
