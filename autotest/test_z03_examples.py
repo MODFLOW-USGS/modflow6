@@ -42,7 +42,7 @@ def get_mf6_models():
     is_github_action = "CI" in os.environ
 
     # tuple of example files to exclude
-    exclude = (None,)
+    exclude = ("ex-gwf-csub-p02c",)
 
     # update exclude
     if is_travis or is_github_action:
