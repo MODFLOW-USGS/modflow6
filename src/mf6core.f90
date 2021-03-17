@@ -87,7 +87,7 @@ contains
     use TimerModule,            only: elapsed_time   
     use SimVariablesModule,     only: iout
     use SimulationCreateModule, only: simulation_da  
-    use TdisModule,             only: tdis_tu, tdis_da
+    use TdisModule,             only: tdis_da
     use SimModule,              only: final_message
     ! -- dummy
     ! -- local
@@ -238,7 +238,8 @@ contains
   subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
     use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
-    use TdisModule,             only: tdis_pu, tdis_tu, kstp, kper
+    use TdisModule,             only: tdis_set_counters, tdis_set_delt, &
+                                      kstp, kper
     use ListsModule,            only: basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
@@ -260,7 +261,7 @@ contains
     fmt = "(/,a,/)"
     !
     ! -- period update
-    call tdis_pu()
+    call tdis_set_counters()
     !
     ! -- set base line
     write(line, '(a,i0,a,i0,a)')                                                 &
@@ -293,23 +294,23 @@ contains
     ! -- time update for each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_tu()
+      call mp%model_calculate_delt()
     enddo
     !
     ! -- time update for each exchange
     do ic = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_tu()
+      call ep%exg_calculate_delt()
     enddo
     !
     ! -- time update for each solution
     do is=1,basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_tu()
+      call sp%sln_calculate_delt()
     enddo
     !
     ! -- time update
-    call tdis_tu()
+    call tdis_set_delt()
     
   end subroutine Mf6PrepareTimestep
   

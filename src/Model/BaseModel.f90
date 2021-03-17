@@ -28,7 +28,7 @@ module BaseModelModule
     procedure :: model_df
     procedure :: model_ar
     procedure :: model_rp
-    procedure :: model_tu
+    procedure :: model_calculate_delt
     procedure :: model_ot
     procedure :: model_fp
     procedure :: model_da
@@ -80,9 +80,9 @@ module BaseModelModule
     return
   end subroutine model_rp
   
-  subroutine model_tu(this)
+  subroutine model_calculate_delt(this)
 ! ******************************************************************************
-! model_tu -- Time update
+! model_calculate_delt -- Calculate time step length
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -92,7 +92,7 @@ module BaseModelModule
     !
     ! -- return
     return
-  end subroutine model_tu
+  end subroutine model_calculate_delt
       
   subroutine model_ot(this)
 ! ******************************************************************************

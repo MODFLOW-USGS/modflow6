@@ -13,8 +13,8 @@
   !
   private
   public :: tdis_cr
-  public :: tdis_pu
-  public :: tdis_tu
+  public :: tdis_set_counters
+  public :: tdis_set_delt
   public :: tdis_ot
   public :: tdis_da
   !
@@ -95,9 +95,9 @@
     return
   end subroutine tdis_cr
 
-  subroutine tdis_pu()
+  subroutine tdis_set_counters()
 ! ******************************************************************************
-! tdis_pu -- Period Update.
+! tdis_set_counters -- Set kstp and kper
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -153,11 +153,11 @@
     !
     ! -- return
     return
-  end subroutine tdis_pu
+  end subroutine tdis_set_counters
 
-  subroutine tdis_tu()
+  subroutine tdis_set_delt()
 ! ******************************************************************************
-! tdis_tu -- Time Update.
+! tdis_set_delt -- Set time step length
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -167,13 +167,13 @@
 ! ------------------------------------------------------------------------------
     !
     ! -- Call standard time update or ats time update
-    call tdis_tu_std()
+    call tdis_set_delt_std()
     !
     ! -- return
     return
-  end subroutine tdis_tu
+  end subroutine tdis_set_delt
 
-  subroutine tdis_tu_std()
+  subroutine tdis_set_delt_std()
 ! ******************************************************************************
 ! tdis_tu_std -- Standard non-adaptive time update
 ! ******************************************************************************
@@ -231,7 +231,7 @@
     !
     ! -- return
     return
-  end subroutine tdis_tu_std
+  end subroutine tdis_set_delt_std
 
   subroutine tdis_ot(iout)
 ! ******************************************************************************
