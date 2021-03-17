@@ -209,7 +209,7 @@ contains
     !
     ! Find CBC file - identified by I**CB option in one or more packages.
     ! E.g. ILPFCB for LPF package.
-    this%BdSvFil = cbcfilename
+    this%BdSvFil = cbcfilename(1:LINELENGTH)
     !
 !    ! Ensure that HdSvFil and DdSvFil are not the same file.
 !    if (this%HdSvFil /= '') then
