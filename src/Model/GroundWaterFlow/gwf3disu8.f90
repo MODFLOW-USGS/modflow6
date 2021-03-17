@@ -1457,8 +1457,8 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Terminate with error if requesting unit vector components for problems
-    !    without vertex data
-    if (this%nvert < 1) then
+    !    without cell data
+    if (size(this%cellxy,2) < 1) then
       write(errmsg, '(a)') &
         'Cannot calculate unit vector components for DISU grid if VERTEX ' //    &
         'data are not specified'

@@ -75,7 +75,7 @@ contains
     ! continue as in gwf_cr...
     
     ! set XT3D when the owning model has XT3D enabled
-    this%npf%ixt3d = 0!this%owner%npf%ixt3d
+    this%npf%ixt3d = this%owner%npf%ixt3d
     
   end subroutine createModel
   
@@ -166,6 +166,18 @@ contains
       disu%cellxy(1,icell) = x + model%dis%xorigin
       disu%cellxy(2,icell) = y + model%dis%yorigin
     end do
+
+    ! TODO_MJR:
+    ! create or copy vertices, can we avoid it somehow???
+    ! if not, it will look like this:
+    !
+    ! 1. determine nr. of verts?
+    ! 2. allocate vertices list
+    ! 3. create sparse
+    ! 4. get vertex per cell
+    ! 5. add vertex (x,y) to list
+    ! 6. add connectivity to sparse
+    ! 7. generate ia/ja from sparse
     
   end subroutine buildDiscretization
   
