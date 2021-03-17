@@ -131,6 +131,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
+    procedure :: sln_calculate_delt
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -998,6 +999,24 @@ contains
     return
   end subroutine sln_ar
 
+   subroutine sln_calculate_delt(this)
+! ******************************************************************************
+! sln_calculate_delt -- Calculate time step length
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(NumericalSolutionType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- increase or decrease delt based on kiter fraction
+    !
+    return
+  end subroutine sln_calculate_delt
+  
    subroutine sln_ad(this)
 ! ******************************************************************************
 ! sln_ad -- Advance solution
