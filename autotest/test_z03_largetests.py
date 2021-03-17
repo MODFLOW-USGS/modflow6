@@ -18,34 +18,33 @@ except:
     raise Exception(msg)
 
 from simulation import Simulation
-from common_regression import get_select_dirs, get_select_packages
+from common_regression import (
+    get_home_dir,
+    get_example_basedir,
+    is_directory_available,
+    get_example_dirs,
+    get_select_dirs,
+    get_select_packages,
+)
 
-# find path to modflow6-largetestmodels directory
-home = os.path.expanduser("~")
-fdir = "modflow6-largetestmodels"
-exdir = None
-for root, dirs, files in os.walk(home):
-    for d in dirs:
-        if d == fdir or d == fdir + ".git":
-            exdir = os.path.abspath(os.path.join(root, d))
-            break
-    if exdir is not None:
-        break
+home = get_home_dir()
+
+find_dir = "modflow6-largetestmodels"
+example_basedir = get_example_basedir(home, find_dir)
 
 
 def get_mf6_models():
     """
     Get a list of test models
     """
-    # determine if running on travis
-    is_travis = "TRAVIS" in os.environ
-    is_github_action = "CI" in os.environ
+    # determine if running on CI
+    is_CI = "CI" in os.environ
 
     # tuple of example files to exclude
     exclude = (None,)
 
     # update exclude
-    if is_travis or is_github_action:
+    if is_CI:
         exclude_CI = (None,)
         exclude = exclude + exclude_CI
     exclude = list(exclude)
@@ -56,14 +55,12 @@ def get_mf6_models():
         print("    {}: {}".format(idx + 1, ex))
 
     # build list of directories with valid example files
-    if exdir is not None:
-        dirs = [
-            d for d in os.listdir(exdir) if "test" in d and d not in exclude
-        ]
-        # sort in numerical order for case sensitive os
-        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if example_basedir is not None:
+        example_dirs = get_example_dirs(
+            example_basedir, exclude, prefix="test"
+        )
     else:
-        dirs = []
+        example_dirs = []
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -81,22 +78,24 @@ def get_mf6_models():
 
     # determine if the selection of model is in the test models to evaluate
     if select_dirs is not None:
-        dirs = get_select_dirs(select_dirs, dirs)
-        if len(dirs) < 1:
+        example_dirs = get_select_dirs(select_dirs, example_dirs)
+        if len(example_dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
 
     # determine if the specified package(s) is in the test models to evaluate
     if select_packages is not None:
-        dirs = get_select_packages(select_packages, exdir, dirs)
-        if len(dirs) < 1:
+        example_dirs = get_select_packages(
+            select_packages, example_basedir, example_dirs
+        )
+        if len(example_dirs) < 1:
             msg = "Selected packages not available ["
             for pak in select_packages:
                 msg += " {}".format(pak)
             msg += "]"
             print(msg)
 
-    return dirs
+    return example_dirs
 
 
 def run_mf6(sim):
@@ -106,7 +105,7 @@ def run_mf6(sim):
 
     """
     print(os.getcwd())
-    src = os.path.join(exdir, sim.name)
+    src = os.path.join(example_basedir, sim.name)
     dst = os.path.join("temp", sim.name)
     sim.setup(src, dst)
     sim.run()
@@ -116,28 +115,20 @@ def run_mf6(sim):
 
 def test_mf6model():
     # determine if largetest directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf6_models()
+    example_dirs = get_mf6_models()
 
     # run the test models
-    for dir in dirs:
-        yield run_mf6, Simulation(dir, mf6_regression=True, cmp_verbose=False)
+    for on_dir in example_dirs:
+        yield run_mf6, Simulation(
+            on_dir, mf6_regression=True, cmp_verbose=False
+        )
 
     return
-
-
-def dir_avail():
-    avail = False
-    if exdir is not None:
-        avail = os.path.isdir(exdir)
-    if not avail:
-        print('"{}" does not exist'.format(exdir))
-        print("no need to run {}".format(os.path.basename(__file__)))
-    return avail
 
 
 def main():
@@ -147,16 +138,16 @@ def main():
     print(msg)
 
     # determine if largetest directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf6_models()
+    example_dirs = get_mf6_models()
 
     # run the test models
-    for dir in dirs:
-        sim = Simulation(dir, mf6_regression=True, cmp_verbose=False)
+    for on_dir in example_dirs:
+        sim = Simulation(on_dir, mf6_regression=True, cmp_verbose=False)
         run_mf6(sim)
 
     return

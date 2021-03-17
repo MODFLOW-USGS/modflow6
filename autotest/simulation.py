@@ -669,9 +669,7 @@ class Simulation(object):
                             "{} - ".format(os.path.basename(fpth0))
                             + "{} ".format(key)
                             + "at time {} maximum ".format(t)
-                            + "maximum percent difference ({}) ".format(
-                                diffmax
-                            )
+                            + "percent difference ({}) ".format(diffmax)
                             + "> {}".format(self.pdtol)
                         )
                         fcmp.write("{}\n".format(msg))

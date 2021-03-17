@@ -1,7 +1,6 @@
 import os
 import sys
 import subprocess
-import pathlib
 
 try:
     import pymake
@@ -21,35 +20,24 @@ except:
 
 from simulation import Simulation
 
-from common_regression import get_select_dirs, get_select_packages
+from common_regression import (
+    get_home_dir,
+    get_example_basedir,
+    is_directory_available,
+    get_example_dirs,
+    get_select_dirs,
+    get_select_packages,
+)
 
 
-def get_example_directory(base, fdir, subdir="mf6"):
-    exdir = None
-    for root, dirs, files in os.walk(base):
-        for d in dirs:
-            if d.startswith(fdir):
-                exdir = os.path.abspath(os.path.join(root, d, subdir))
-                break
-        if exdir is not None:
-            break
-    return exdir
+# find path to examples directory
+home = get_home_dir()
 
+find_dir = "modflow6-testmodels"
+example_basedir = get_example_basedir(home, find_dir, subdir="mf6")
 
-# find path to modflow6-testmodels or modflow6-testmodels.git directory
-home = os.path.expanduser("~")
-print("$HOME={}".format(home))
-
-fdir = "modflow6-testmodels"
-exdir = get_example_directory(home, fdir, subdir="mf6")
-if exdir is None:
-    p = pathlib.Path(os.getcwd())
-    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
-    print("$HOME={}".format(home))
-    exdir = get_example_directory(home, fdir, subdir="mf6")
-
-if exdir is not None:
-    assert os.path.isdir(exdir)
+if example_basedir is not None:
+    assert os.path.isdir(example_basedir)
 
 
 def get_branch():
@@ -76,16 +64,10 @@ def get_mf6_models():
     Get a list of test models
     """
     # determine if running on travis
-    is_travis = "TRAVIS" in os.environ
-    is_github_action = "CI" in os.environ
+    is_CI = "CI" in os.environ
 
     # get current branch
-    is_CI = False
-    if is_travis:
-        is_CI = True
-        branch = os.environ["BRANCH"]
-    elif is_github_action:
-        is_CI = True
+    if is_CI:
         branch = os.path.basename(os.environ["GITHUB_REF"])
     else:
         branch = get_branch()
@@ -96,14 +78,7 @@ def get_mf6_models():
 
     # update exclude
     if is_CI:
-        exclude_CI = (
-            "test022_MNW2_Fig28",
-            "test007_751x751",
-            "test007_751x751_confined",
-            "test206_gwtbuy-goswami",
-            "test207_gwtbuy-elderRa60",
-            "test208_gwtbuy-elderRa400",
-        )
+        exclude_CI = (None,)
         exclude = exclude + exclude_CI
     exclude = list(exclude)
 
@@ -113,33 +88,29 @@ def get_mf6_models():
         print("    {}: {}".format(idx + 1, ex))
 
     # build list of directories with valid example files
-    if exdir is not None:
-        dirs = [
-            d for d in os.listdir(exdir) if "test" in d and d not in exclude
-        ]
+    if example_basedir is not None:
+        example_dirs = get_example_dirs(
+            example_basedir, exclude, prefix="test"
+        )
     else:
-        dirs = []
+        example_dirs = []
 
     # exclude dev examples on master or release branches
     if "master" in branch.lower() or "release" in branch.lower():
         drmv = []
-        for d in dirs:
+        for d in example_dirs:
             if "_dev" in d.lower():
                 drmv.append(d)
         for d in drmv:
-            dirs.remove(d)
-
-    # sort in numerical order for case sensitive os
-    if len(dirs) > 0:
-        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+            example_dirs.remove(d)
 
     # determine if only a selection of models should be run
-    select_dirs = None
+    select_example_dirs = None
     select_packages = None
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == "--sim":
             if len(sys.argv) > idx + 1:
-                select_dirs = sys.argv[idx + 1 :]
+                select_example_dirs = sys.argv[idx + 1 :]
                 break
         elif arg.lower() == "--pak":
             if len(sys.argv) > idx + 1:
@@ -149,81 +120,29 @@ def get_mf6_models():
         elif arg.lower() == "--match":
             if len(sys.argv) > idx + 1:
                 like = sys.argv[idx + 1]
-                dirs = [item for item in dirs if like in item]
+                example_dirs = [item for item in example_dirs if like in item]
                 break
 
     # determine if the selection of model is in the test models to evaluate
-    if select_dirs is not None:
-        dirs = get_select_dirs(select_dirs, dirs)
-        if len(dirs) < 1:
+    if select_example_dirs is not None:
+        example_dirs = get_select_dirs(select_example_dirs, example_dirs)
+        if len(example_dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
 
     # determine if the specified package(s) is in the test models to evaluate
     if select_packages is not None:
-        dirs = get_select_packages(select_packages, exdir, dirs)
-        if len(dirs) < 1:
+        example_dirs = get_select_packages(
+            select_packages, example_basedir, example_dirs
+        )
+        if len(example_dirs) < 1:
             msg = "Selected packages not available ["
             for pak in select_packages:
                 msg += " {}".format(pak)
             msg += "]"
             print(msg)
 
-    return dirs
-
-
-def get_htol(dir):
-    htol = None
-    # htol_dict = {
-    #     # "test045_lake4ss_nr_dev": {
-    #     #     "linux": 0.002,
-    #     #     "darwin": 0.002,
-    #     #     "win32": 0.002,
-    #     # },
-    #     "test059_mvlake_laksfr_tr": {
-    #         "all": 0.005,
-    #     },
-    #     "test045_lake4ss": {
-    #         "all": 0.01,
-    #     },
-    #     "test059_mvlake_lak_tr": {
-    #         "all": 1e-4,
-    #     },
-    #     "test019_VilhelmsenLGR_nr": {
-    #         "all": 0.0002,
-    #     },
-    #     "test029_lgrsfr_parentchild": {
-    #         "all": 1e-7,
-    #     },
-    #     "test029_lgr_parentchild": {
-    #         "all": 1e-7,
-    #     },
-    #     "test034_nwtp2": {
-    #         "all": 1e-8,
-    #     },
-    #     "test205_gwtbuy-henrytidal": {
-    #         "all": 0.003,
-    #     },
-    #     "test028_sfr_rewet": {
-    #         "all": 5e-6,
-    #     },
-    # }
-    # htol_keys = list(htol_dict.keys())
-    # if dir in htol_keys:
-    #     dir_dict = htol_dict[dir]
-    #     os_keys = list(dir_dict.keys())
-    #     if "all" in os_keys:
-    #         htol = dir_dict["all"]
-    #     else:
-    #         os_key = sys.platform.lower()
-    #         if os_key in os_keys:
-    #             htol = dir_dict[os_key]
-    # if htol is None:
-    #     if dir.endswith("_dev"):
-    #         htol = 0.001
-    #     else:
-    #         htol = 5e-9
-    return htol
+    return example_dirs
 
 
 def run_mf6(sim):
@@ -234,7 +153,7 @@ def run_mf6(sim):
 
     """
     print("Current working directory: ".format(os.getcwd()))
-    src = os.path.join(exdir, sim.name)
+    src = os.path.join(example_basedir, sim.name)
     dst = os.path.join("temp", sim.name)
     sim.setup(src, dst)
     sim.run()
@@ -244,33 +163,22 @@ def run_mf6(sim):
 
 def test_mf6model():
     # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_avail = is_directory_available(example_basedir)
+    if not dir_avail:
         return
 
     # get a list of test models to run
-    dirs = get_mf6_models()
+    example_dirs = get_mf6_models()
 
     # run the test models
-    for dir in dirs:
+    for on_dir in example_dirs:
         yield run_mf6, Simulation(
-            dir,
-            htol=get_htol(dir),
+            on_dir,
             mf6_regression=True,
             cmp_verbose=False,
         )
 
     return
-
-
-def dir_avail():
-    avail = False
-    if exdir is not None:
-        avail = os.path.isdir(exdir)
-    if not avail:
-        print('"{}" does not exist'.format(exdir))
-        print("no need to run {}".format(os.path.basename(__file__)))
-    return avail
 
 
 def main():
@@ -280,18 +188,17 @@ def main():
     print(msg)
 
     # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf6_models()
+    example_dirs = get_mf6_models()
 
     # run the test models
-    for dir in dirs:
+    for on_dir in example_dirs:
         sim = Simulation(
-            dir,
-            htol=get_htol(dir),
+            on_dir,
             mf6_regression=True,
             cmp_verbose=False,
         )

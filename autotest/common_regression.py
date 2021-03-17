@@ -17,6 +17,94 @@ except:
     raise Exception(msg)
 
 
+def get_home_dir():
+    # determine if CI run
+    is_CI = "CI" in os.environ
+
+    home = os.path.expanduser("~")
+
+    if not is_CI:
+        cwd_pth = os.getcwd()
+
+        # convert current working directory to a list
+        cwd_list = cwd_pth.split(sep=os.path.sep)
+
+        # add leading path separator back into list
+        for idx, pth in enumerate(cwd_list):
+            if len(pth) < 1:
+                cwd_list[idx] = os.path.sep
+
+        ipos = 0
+        for idx, s in enumerate(cwd_list):
+            if s.lower().startswith("modflow6"):
+                ipos = idx
+                break
+
+        home = os.path.join(*cwd_list[:ipos])
+
+    print("HOME: {}".format(home))
+
+    return home
+
+
+def is_directory_available(example_basedir):
+    available = False
+    if example_basedir is not None:
+        available = os.path.isdir(example_basedir)
+    if not available:
+        print('"{}" does not exist'.format(example_basedir))
+        print("no need to run {}".format(os.path.basename(__file__)))
+    return available
+
+
+def get_example_basedir(home, find_dir, subdir=None):
+    example_basedir = None
+    for root, dirs, files in os.walk(home):
+        for d in dirs:
+            if d == find_dir or d == find_dir + ".git":
+                example_basedir = os.path.join(root, d)
+                if subdir is not None:
+                    example_basedir = os.path.join(example_basedir, subdir)
+                break
+        if example_basedir is not None:
+            break
+    return os.path.abspath(example_basedir)
+
+
+def get_example_dirs(example_basedir, exclude, prefix="test"):
+    example_dirs = [
+        d
+        for d in os.listdir(example_basedir)
+        if prefix in d and d not in exclude
+    ]
+
+    # make sure mfsim.nam is present in each directory
+    remove_dirs = []
+    # add_dirs = []
+    for temp_dir in example_dirs:
+        epth = os.path.join(example_basedir, temp_dir)
+        fpth = os.path.join(epth, "mfsim.nam")
+        if not os.path.isfile(fpth):
+            remove_dirs.append(temp_dir)
+        # for sub_dir in ("mf6gwf", "mf6gwt"):
+        #     tpth = os.path.join(epth, sub_dir)
+        #     fpth = os.path.join(tpth, "mfsim.nam")
+        #     if os.path.isfile(fpth):
+        #         add_dirs.append(os.path.join(temp_dir, sub_dir))
+
+    for remove_dir in remove_dirs:
+        example_dirs.remove(remove_dir)
+
+    # example_dirs += add_dirs
+
+    # sort in numerical order for case sensitive os
+    example_dirs = sorted(
+        example_dirs, key=lambda v: (v.upper(), v[0].islower())
+    )
+
+    return example_dirs
+
+
 def get_select_dirs(select_dirs, dirs):
     found_dirs = []
     for d in select_dirs:

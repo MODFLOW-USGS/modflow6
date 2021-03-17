@@ -24,35 +24,24 @@ except:
 from simulation import Simulation
 
 from targets import target_dict as target_dict
-from common_regression import get_select_packages, get_select_dirs
+from common_regression import (
+    get_home_dir,
+    get_example_basedir,
+    is_directory_available,
+    get_example_dirs,
+    get_select_dirs,
+    get_select_packages,
+)
 
 
-def get_example_directory(base, fdir, subdir="mf6"):
-    exdir = None
-    for root, dirs, files in os.walk(base):
-        for d in dirs:
-            if d.startswith(fdir):
-                exdir = os.path.abspath(os.path.join(root, d, subdir))
-                break
-        if exdir is not None:
-            break
-    return exdir
+# find path to examples directory
+home = get_home_dir()
 
+find_dir = "modflow6-testmodels"
+example_basedir = get_example_basedir(home, find_dir, subdir="mf5to6")
 
-# find path to modflow6-testmodels or modflow6-testmodels.git directory
-home = os.path.expanduser("~")
-print("$HOME={}".format(home))
-
-fdir = "modflow6-testmodels"
-exdir = get_example_directory(home, fdir, subdir="mf5to6")
-if exdir is None:
-    p = pathlib.Path(os.getcwd())
-    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
-    print("$HOME={}".format(home))
-    exdir = get_example_directory(home, fdir, subdir="mf5to6")
-
-if exdir is not None:
-    assert os.path.isdir(exdir)
+if example_basedir is not None:
+    assert os.path.isdir(example_basedir)
 
 sfmt = "{:25s} - {}"
 
@@ -80,14 +69,12 @@ def get_mf5to6_models():
         print("    {}: {}".format(idx + 1, ex))
 
     # build list of directories with valid example files
-    if exdir is not None:
-        dirs = [
-            d for d in os.listdir(exdir) if "test" in d and d not in exclude
-        ]
-        # sort in numerical order for case sensitive os
-        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if example_basedir is not None:
+        example_dirs = get_example_dirs(
+            example_basedir, exclude, prefix="test"
+        )
     else:
-        dirs = []
+        example_dirs = []
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -105,15 +92,17 @@ def get_mf5to6_models():
 
     # determine if the selection of model is in the test models to evaluate
     if select_dirs is not None:
-        dirs = get_select_dirs(select_dirs, dirs)
-        if len(dirs) < 1:
+        example_dirs = get_select_dirs(select_dirs, example_dirs)
+        if len(example_dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
 
     # determine if the specified package(s) is in the test models to evaluate
     if select_packages is not None:
-        dirs = get_select_packages(select_packages, exdir, dirs)
-        if len(dirs) < 1:
+        example_dirs = get_select_packages(
+            select_packages, example_basedir, example_dirs
+        )
+        if len(example_dirs) < 1:
             msg = "Selected packages not available ["
             for idx, pak in enumerate(select_packages):
                 msg += "{}".format(pak)
@@ -122,7 +111,7 @@ def get_mf5to6_models():
             msg += "]"
             print(msg)
 
-    return dirs
+    return example_dirs
 
 
 def run_mf5to6(sim):
@@ -131,7 +120,7 @@ def run_mf5to6(sim):
     appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
 
     """
-    src = os.path.join(exdir, sim.name)
+    src = os.path.join(example_basedir, sim.name)
     dst = os.path.join("temp", "working")
 
     # set default version
@@ -233,28 +222,18 @@ def run_mf5to6(sim):
 
 def test_model():
     # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf5to6_models()
+    example_dirs = get_mf5to6_models()
 
     # run the test models
-    for dir in dirs:
-        yield run_mf5to6, Simulation(dir, mf6_regression=True)
+    for on_dir in example_dirs:
+        yield run_mf5to6, Simulation(on_dir, mf6_regression=True)
 
     return
-
-
-def dir_avail():
-    avail = False
-    if exdir is not None:
-        avail = os.path.isdir(exdir)
-    if not avail:
-        print('"{}" does not exist'.format(exdir))
-        print("no need to run {}".format(os.path.basename(__file__)))
-    return avail
 
 
 def main():
@@ -267,16 +246,16 @@ def main():
     module_name = sys.modules[__name__].__file__
 
     # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf5to6_models()
+    example_dirs = get_mf5to6_models()
 
     # run the test models
-    for dir in dirs:
-        sim = Simulation(dir, mf6_regression=True)
+    for on_dir in example_dirs:
+        sim = Simulation(on_dir, mf6_regression=True)
         run_mf5to6(sim)
 
     return
