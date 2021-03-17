@@ -67,11 +67,12 @@ def get_example_basedir(home, find_dir, subdir=None):
                     example_basedir = os.path.join(example_basedir, subdir)
                 break
         if example_basedir is not None:
+            print("Example base directory: {}".format(example_basedir))
             break
     return os.path.abspath(example_basedir)
 
 
-def get_example_dirs(example_basedir, exclude, prefix="test"):
+def get_example_dirs(example_basedir, exclude, prefix="test", find_sim=True):
     example_dirs = [
         d
         for d in os.listdir(example_basedir)
@@ -79,23 +80,24 @@ def get_example_dirs(example_basedir, exclude, prefix="test"):
     ]
 
     # make sure mfsim.nam is present in each directory
-    remove_dirs = []
-    # add_dirs = []
-    for temp_dir in example_dirs:
-        epth = os.path.join(example_basedir, temp_dir)
-        fpth = os.path.join(epth, "mfsim.nam")
-        if not os.path.isfile(fpth):
-            remove_dirs.append(temp_dir)
-        # for sub_dir in ("mf6gwf", "mf6gwt"):
-        #     tpth = os.path.join(epth, sub_dir)
-        #     fpth = os.path.join(tpth, "mfsim.nam")
-        #     if os.path.isfile(fpth):
-        #         add_dirs.append(os.path.join(temp_dir, sub_dir))
+    if find_sim:
+        remove_dirs = []
+        # add_dirs = []
+        for temp_dir in example_dirs:
+            epth = os.path.join(example_basedir, temp_dir)
+            fpth = os.path.join(epth, "mfsim.nam")
+            if not os.path.isfile(fpth):
+                remove_dirs.append(temp_dir)
+            # for sub_dir in ("mf6gwf", "mf6gwt"):
+            #     tpth = os.path.join(epth, sub_dir)
+            #     fpth = os.path.join(tpth, "mfsim.nam")
+            #     if os.path.isfile(fpth):
+            #         add_dirs.append(os.path.join(temp_dir, sub_dir))
 
-    for remove_dir in remove_dirs:
-        example_dirs.remove(remove_dir)
+        for remove_dir in remove_dirs:
+            example_dirs.remove(remove_dir)
 
-    # example_dirs += add_dirs
+        # example_dirs += add_dirs
 
     # sort in numerical order for case sensitive os
     example_dirs = sorted(

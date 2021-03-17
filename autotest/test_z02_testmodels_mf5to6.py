@@ -71,7 +71,10 @@ def get_mf5to6_models():
     # build list of directories with valid example files
     if example_basedir is not None:
         example_dirs = get_example_dirs(
-            example_basedir, exclude, prefix="test"
+            example_basedir,
+            exclude,
+            prefix="test",
+            find_sim=False,
         )
     else:
         example_dirs = []
@@ -123,8 +126,7 @@ def run_mf5to6(sim):
     src = os.path.join(example_basedir, sim.name)
     dst = os.path.join("temp", "working")
 
-    # set default version
-    version = "mf2005"
+    # set lgrpth to None
     lgrpth = None
 
     # determine if compare directory exists in directory or if mflgr control
@@ -135,22 +137,15 @@ def run_mf5to6(sim):
         if os.path.isfile(fpth):
             ext = os.path.splitext(fpth)[1]
             if ".lgr" in ext.lower():
-                version = "mflgr"
                 lgrpth = fpth
-        elif os.path.isdir(fpth):
-            if "compare" in value.lower() or "cmp" in value.lower():
-                compare = True
-                cpth = value
 
-    msg = "Copying {} files to working directory".format(version)
+    print("Copying files to working directory")
     # copy lgr files to working directory
     if lgrpth is not None:
-        print(msg)
         npth = lgrpth
         pymake.setup(lgrpth, dst)
-    # copy modflow 2005, NWT, or USG files to working directory
+    # copy MODFLOW-2005, MODFLOW-NWT, or MODFLOW-USG files to working directory
     else:
-        print(msg)
         npths = pymake.get_namefiles(src)
         if len(npths) < 1:
             msg = "No name files in {}".format(src)
@@ -159,25 +154,9 @@ def run_mf5to6(sim):
         npth = npths[0]
         pymake.setup(npth, dst)
 
-    # read ftype from name file to set modflow version
-    if version != "mflgr":
-        lines = [line.rstrip("\n") for line in open(npth)]
-        for line in lines:
-            if len(line) < 1:
-                continue
-            t = line.split()
-            ftype = t[0].upper()
-            if ftype == "NWT" or ftype == "UPW":
-                version = "mfnwt"
-                break
-            elif ftype == "SMS" or ftype == "DISU":
-                version = "mfusg"
-                break
-
-    # run converter
+    # run the mf5to6 converter
     exe = os.path.abspath(target_dict["mf5to6"])
-    msg = sfmt.format("using executable", exe)
-    print(msg)
+    print(sfmt.format("using executable", exe))
     nmsg = "Program terminated normally"
     try:
         nam = os.path.basename(npth)
@@ -231,7 +210,9 @@ def test_model():
 
     # run the test models
     for on_dir in example_dirs:
-        yield run_mf5to6, Simulation(on_dir, mf6_regression=True)
+        yield run_mf5to6, Simulation(
+            on_dir, mf6_regression=True, cmp_verbose=False
+        )
 
     return
 
@@ -255,7 +236,7 @@ def main():
 
     # run the test models
     for on_dir in example_dirs:
-        sim = Simulation(on_dir, mf6_regression=True)
+        sim = Simulation(on_dir, mf6_regression=True, cmp_verbose=False)
         run_mf5to6(sim)
 
     return
