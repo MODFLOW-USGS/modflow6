@@ -13,7 +13,7 @@ module GlobalVariablesModule
             msgc
 
   character(len=60) :: prognamconv, prognamlong
-  character(len=40) :: mfvnam
+  character(len=48) :: mfvnam
   parameter (prognamconv='Mf5to6')
   parameter (prognamlong=trim(prognamconv)//' - Converter for MODFLOW (2005, NWT, LGR) to MODFLOW 6')
   parameter (mfvnam='Version ' // VERSION)

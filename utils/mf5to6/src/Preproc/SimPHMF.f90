@@ -580,7 +580,7 @@ subroutine ustop(stopmess,ioutlocal)
 !  character(len=*), parameter :: msgc = 'Conversion successful!'
   character(len=*), parameter :: msgw = &
       'Program terminated normally, but see warning(s) above.'
-  character(len=300) :: msg
+  character(len=MAXCHARLEN) :: msg
   logical :: warnings_found
   logical :: errorfound
   logical :: success

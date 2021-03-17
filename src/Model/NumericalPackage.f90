@@ -235,6 +235,7 @@ module NumericalPackageModule
     logical :: endOfBlock
     integer(I4B) :: nsize
     integer(I4B) :: j
+    character(len=24)         :: tmpvar
     character(len=LENVARNAME) :: varname
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=:), allocatable :: line
@@ -256,10 +257,11 @@ module NumericalPackageModule
           lkeyword = .true.
           lfound(j) = .true.
           if (present(varinames)) then
-            varname = adjustl(varinames(j))
+            tmpvar = adjustl(varinames(j))
           else
-            varname = adjustl(tags(j))
+            tmpvar = adjustl(tags(j))
           end if
+          varname = tmpvar(1:LENVARNAME)
           if (keyword(1:1) == 'I') then
             call mem_setptr(aint, trim(varname), trim(this%memoryPath))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &

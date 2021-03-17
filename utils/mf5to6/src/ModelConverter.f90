@@ -7,7 +7,7 @@ module ModelConverterModule
   ! own ModelConverterType object.
 
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, LENBIGLINE, &
-                             LENMODELNAME, LENPACKAGENAME
+                             LENMODELNAME, LENPACKAGENAME, LENFTYPE
   use DrnObsWriterModule, only: createDrnObsWriter, DrnObsWriterType
   use FileTypeModule, only: FileType
   use GLOBAL, only: IFREFM, IUNIT, MXITER, iout, cbcfilename
@@ -94,7 +94,7 @@ contains
     character(len=maxcharlen) :: msg
     character(len=MAXCHARLEN) :: fname, fname15
     character(len=12)         :: filtyp15
-    character(len=4)          :: filtype
+    character(len=LENFTYPE)   :: filtype
     logical                   :: lex, lop
     class(PackageWriterType), pointer :: pkgWriPtr => null()
     type(FileType),           pointer :: cbcfil => null(), filptr => null()
