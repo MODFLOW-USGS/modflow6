@@ -6,9 +6,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: MODFLOW 6 large tests
+name: Large tests
 
 on:
+  schedule:
+    - cron: '0 6 * * *' # run at 6 AM UTC every day
   push:
     branches:
       - develop

@@ -1,4 +1,4 @@
-name: MODFLOW 6 CI with previous gcc versions
+name: Latest gfortran version
 
 on:
   push:
@@ -14,8 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
-        GCC_V: [5, 6, 7, 8]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
     defaults:
       run:
         shell: bash
@@ -28,22 +27,28 @@ jobs:
     - name: setup-conda
       uses: s-weigand/setup-conda@v1.0.5
       with:
-        auto-update-conda: true
+        update-conda: true
 
-    - name: Set up gfortran ${{ matrix.GCC_V }}
+    - name: Setup symbolic links on Linux
+      if: runner.os == 'Linux'
       run: |
-        sudo apt-get install -y --no-install-recommends gcc-${{ matrix.GCC_V }} g++-${{ matrix.GCC_V }} gfortran-${{ matrix.GCC_V }}
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.GCC_V }} 100 \
-        --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.GCC_V }} \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.GCC_V }} \
-        --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.GCC_V }}
+        sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
+        sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
+        sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
+
+    - name: Setup symbolic link to gfortran on macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        sudo ln -fs /usr/local/bin/gfortran-10 /usr/local/bin/gfortran
+        sudo ln -fs /usr/local/bin/gcc-10 /usr/local/bin/gcc
+        sudo ln -fs /usr/local/bin/g++-10 /usr/local/bin/g++
 
     - name: Print GNU compiler versions
       run: |
-        gcc --version
         gfortran --version
+        gcc --version
         g++ --version
-        gcov --version
 
     - name: Install python packages
       run: |

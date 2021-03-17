@@ -51,17 +51,7 @@ def get_mf5to6_models():
     Get a list of test models
     """
     # list of example files to exclude
-    exclude = [
-        "test1ss_ic1",
-        "test9.5-3layer",
-        "testmm2",
-        "testmm3",
-        "testmmSimple",
-        "testps3a",
-        "testTwri",
-        "testTwrip",
-        "test028_sfr_simple",
-    ]
+    exclude = (None,)
 
     # write a summary of the files to exclude
     print("list of tests to exclude:")
