@@ -131,6 +131,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
+    procedure :: sln_tu
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -998,6 +999,24 @@ contains
     return
   end subroutine sln_ar
 
+   subroutine sln_tu(this)
+! ******************************************************************************
+! sln_tu -- Time update
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(NumericalSolutionType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- increase or decrease delt based on kiter fraction
+    !
+    return
+  end subroutine sln_tu
+  
    subroutine sln_ad(this)
 ! ******************************************************************************
 ! sln_ad -- Advance solution

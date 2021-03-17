@@ -28,6 +28,7 @@ module BaseModelModule
     procedure :: model_df
     procedure :: model_ar
     procedure :: model_rp
+    procedure :: model_tu
     procedure :: model_ot
     procedure :: model_fp
     procedure :: model_da
@@ -79,6 +80,20 @@ module BaseModelModule
     return
   end subroutine model_rp
   
+  subroutine model_tu(this)
+! ******************************************************************************
+! model_tu -- Time update
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(BaseModelType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- return
+    return
+  end subroutine model_tu
+      
   subroutine model_ot(this)
 ! ******************************************************************************
 ! model_ot -- output results

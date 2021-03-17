@@ -238,7 +238,7 @@ contains
   subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
     use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
-    use TdisModule,             only: tdis_tu, kstp, kper
+    use TdisModule,             only: tdis_pu, tdis_tu, kstp, kper
     use ListsModule,            only: basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
@@ -249,16 +249,18 @@ contains
     ! -- local
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
+    class(BaseSolutionType), pointer :: sp => null()
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: fmt
     integer(I4B) :: im
     integer(I4B) :: ic
+    integer(I4B) :: is
     !
     ! -- initialize fmt
     fmt = "(/,a,/)"
     !
-    ! -- time update
-    call tdis_tu()
+    ! -- period update
+    call tdis_pu()
     !
     ! -- set base line
     write(line, '(a,i0,a,i0,a)')                                                 &
@@ -287,6 +289,27 @@ contains
     !
     ! -- reset simulation convergence flag
     call converge_reset()
+    !
+    ! -- time update for each model
+    do im = 1, basemodellist%Count()
+      mp => GetBaseModelFromList(basemodellist, im)
+      call mp%model_tu()
+    enddo
+    !
+    ! -- time update for each exchange
+    do ic = 1, baseexchangelist%Count()
+      ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      call ep%exg_tu()
+    enddo
+    !
+    ! -- time update for each solution
+    do is=1,basesolutionlist%Count()
+      sp => GetBaseSolutionFromList(basesolutionlist, is)
+      call sp%sln_tu()
+    enddo
+    !
+    ! -- time update
+    call tdis_tu()
     
   end subroutine Mf6PrepareTimestep
   
