@@ -45,7 +45,7 @@ contains
     character(len=*), intent(in) :: provPkgType, recPkgType
     double precision, optional, intent(in):: valu
     ! local
-    character(len=10) :: mvrTypeCaps
+    character(len=9) :: mvrTypeCaps
     character(len=MAXCHARLEN) :: ermsg
     !
     allocate(newMover)
