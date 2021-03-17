@@ -171,11 +171,17 @@ program mf5to6
     write(*,30)trim(msg)
     call parentConverter%ConvertModel(WriteDisFile)
     !
+    ! Remove the first sfr writer if the parent SFR package was 
+    ! recreated.  This was added 3/16/2021 to fix intermittent
+    ! memory issues with the lgrex1.lgr test problem.
+    nsfrpw = AllSfrPkgWriters%Count()
+    if (nsfrpw >= 3) then
+      call AllSfrPkgWriters%RemoveNode(1, .false.)
+    end if
+    !
     ! Build SFR-SFR movers
     nsfrpw = AllSfrPkgWriters%Count()
     do ispw=1,nsfrpw
-      ! Skip the first parent SFR package writer
-      if (ispw==1) cycle
       SfrWriter => GetSfrPackageWriter(ispw)
       if (associated(SfrWriter)) then
         if (verbose) then

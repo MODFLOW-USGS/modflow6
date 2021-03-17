@@ -27,7 +27,7 @@ module ChdModule
       procedure :: bnd_ck => chd_ck
       procedure :: bnd_fc => chd_fc
       procedure :: bnd_cq => chd_cq
-      procedure :: bnd_mb => chd_mb
+      procedure :: bnd_bd => chd_bd
       procedure :: bnd_da => chd_da
       procedure :: allocate_arrays => chd_allocate_arrays
       procedure :: define_listlabel
@@ -344,7 +344,7 @@ contains
     return
   end subroutine chd_cq
 
-  subroutine chd_mb(this, model_budget)
+  subroutine chd_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -359,7 +359,7 @@ contains
     call rate_accumulator(this%ratechdout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%packName)
-  end subroutine chd_mb
+  end subroutine chd_bd
 
   subroutine chd_da(this)
 ! ******************************************************************************

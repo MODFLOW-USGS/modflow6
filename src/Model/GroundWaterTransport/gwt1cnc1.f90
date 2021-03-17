@@ -26,7 +26,7 @@ module GwtCncModule
     procedure :: bnd_ck => cnc_ck
     procedure :: bnd_fc => cnc_fc
     procedure :: bnd_cq => cnc_cq
-    procedure :: bnd_mb => cnc_mb
+    procedure :: bnd_bd => cnc_bd
     procedure :: bnd_da => cnc_da
     procedure :: allocate_arrays => cnc_allocate_arrays
     procedure :: define_listlabel
@@ -336,7 +336,7 @@ contains
     return
   end subroutine cnc_cq
 
-  subroutine cnc_mb(this, model_budget)
+  subroutine cnc_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -351,7 +351,7 @@ contains
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%packName)
-  end subroutine cnc_mb
+  end subroutine cnc_bd
 
   subroutine cnc_da(this)
 ! ******************************************************************************

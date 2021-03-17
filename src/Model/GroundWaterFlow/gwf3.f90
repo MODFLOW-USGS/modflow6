@@ -938,11 +938,10 @@ module GwfModule
     do i = 1, this%nja
       this%flowja(i) = DZERO
     enddo
-    ! todo: rename _flowja() methods to _cq()
-    if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
-    if(this%inbuy > 0) call this%buy%buy_flowja(this%x, this%flowja)
-    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%x, this%flowja)
-    if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
+    if(this%innpf > 0) call this%npf%npf_cq(this%x, this%flowja)
+    if(this%inbuy > 0) call this%buy%buy_cq(this%x, this%flowja)
+    if(this%inhfb > 0) call this%hfb%hfb_cq(this%x, this%flowja)
+    if(this%ingnc > 0) call this%gnc%gnc_cq(this%flowja)
     if(this%insto > 0) call this%sto%sto_cq(this%flowja, this%x, this%xold)
     if(this%incsub > 0) call this%csub%csub_cq(this%dis%nodes, this%x,         &
                                                 this%xold, isuppress_output,   &
@@ -993,15 +992,12 @@ module GwfModule
     !    should be added here to this%budget.  In a subsequent exchange call,
     !    exchange flows might also be added.
     call this%budget%reset()
-    
-    ! -- todo: rename to _bd()
-    if(this%insto > 0) call this%sto%sto_mb(isuppress_output, this%budget)
-    if(this%incsub > 0) call this%csub%csub_mb(isuppress_output, this%budget)
+    if(this%insto > 0) call this%sto%sto_bd(isuppress_output, this%budget)
+    if(this%incsub > 0) call this%csub%csub_bd(isuppress_output, this%budget)
     if(this%inmvr > 0) call this%mvr%mvr_bd()
-
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_mb(this%budget)
+      call packobj%bnd_bd(this%budget)
     enddo
     !
     ! -- npf velocities have to be calculated here, after gwf-gwf exchanges
@@ -1051,7 +1047,7 @@ module GwfModule
     if(this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
     !
-    ! -- Override ibudfl and idvsave flags for nonconvergence
+    ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
     idvprint = this%oc%set_print_flag('HEAD', this%icnvg, endofperiod)
@@ -1061,13 +1057,6 @@ module GwfModule
     !    
     !   Save and print flows
     call this%gwf_ot_flow(icbcfl, ibudfl, icbcun)
-    !
-    ! -- Write non-convergence message
-    ! -- todo: write budgets if not simcontinue and icnvg == 0
-    this%budget%budperc = 1.e30
-    if(this%icnvg == 0) then
-      write(this%iout, fmtnocnvg) kstp, kper
-    endif
     !    
     !   Save and print dependent variables
     call this%gwf_ot_dv(idvsave, idvprint, ipflag)
@@ -1075,8 +1064,14 @@ module GwfModule
     !   Print budget summaries
     call this%gwf_ot_bdsummary(ibudfl, ipflag)
     !
-    ! -- Timing Output
+    ! -- Timing Output; if any dependendent variables or budgets
+    !    are printed, then ipflag is set to 1.
     if(ipflag == 1) call tdis_ot(this%iout)
+    !
+    ! -- Write non-convergence message
+    if(this%icnvg == 0) then
+      write(this%iout, fmtnocnvg) kstp, kper
+    endif
     !
     ! -- Return
     return
@@ -1091,7 +1086,7 @@ module GwfModule
     call this%obs%obs_bd()
     call this%obs%obs_ot()
     
-    ! -- TODO: Calculate and save csub observations
+    ! -- Calculate and save csub observations
     if (this%incsub > 0) then
       call this%csub%csub_bd_obs()
       call this%csub%obs%obs_ot()
