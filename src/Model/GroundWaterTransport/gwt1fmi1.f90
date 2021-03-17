@@ -913,7 +913,7 @@ module GwtFmiModule
             !
             ! -- Open the budget file and start filling it
             iapt = iapt + 1
-            pname = keyword
+            pname = keyword(1:LENPACKAGENAME)
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
               call store_error('PACKAGE NAME MUST BE FOLLOWED BY ' //     &

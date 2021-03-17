@@ -1,6 +1,6 @@
 module FileListModule
 
-  use ConstantsModule,     only: LENBIGLINE, MAXCHARLEN
+  use ConstantsModule,     only: LINELENGTH, MAXCHARLEN
   use ConstantsPHMFModule, only: FCUNKNOWN, FCINPUT, FCDATAIN, FCDATABIN, &
                                  FCDATAOUT, FCOUTPUT, FCDATABOUT
   use FileTypeModule,      only: FileType, ConstructFileType, CastAsFileType
@@ -51,7 +51,7 @@ contains
     implicit none
     ! dummy arguments
     class(FileListType), intent(inout) :: this
-    character(len=*),    intent(in) :: fname
+    character(len=LINELENGTH), intent(in) :: fname
     character(len=*),    intent(in) :: ftype
     integer,             intent(in) :: iu
     integer,             intent(in) :: FCode
@@ -293,7 +293,7 @@ contains
     implicit none
     ! dummy
     character(len=*), intent(in) :: fnamein
-    character(len=LENBIGLINE)    :: fnameout
+    character(len=LINELENGTH)    :: fnameout
     ! local
     integer :: i, j, leng
     !logical :: relative
