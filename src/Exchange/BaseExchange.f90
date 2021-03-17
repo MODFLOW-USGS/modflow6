@@ -20,6 +20,7 @@ module BaseExchangeModule
     procedure(exg_df), deferred :: exg_df
     procedure(exg_ar), deferred :: exg_ar
     procedure :: exg_rp
+    procedure :: exg_calculate_delt
     procedure :: exg_ot
     procedure :: exg_fp
     procedure :: exg_da
@@ -63,6 +64,24 @@ module BaseExchangeModule
     return
   end subroutine exg_rp
   
+  subroutine exg_calculate_delt(this)
+! ******************************************************************************
+! exg_calculate_delt -- Calculate time step length
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BaseExchangeType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- Nothing to do for TU
+    !
+    ! -- Return
+    return
+  end subroutine exg_calculate_delt
+      
   subroutine exg_ot(this)
 ! ******************************************************************************
 ! exg_ot -- Output
