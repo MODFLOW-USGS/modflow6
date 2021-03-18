@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: MODFLOW 6 CI with ifort
+name: Intel compiler
 
 on:
   push:

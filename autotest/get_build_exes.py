@@ -40,7 +40,8 @@ mfexe_pth = "temp/mfexes"
 # add -Werror for compilation to terminate if errors are found
 strict_flags = (
     "-Wtabs -Wline-truncation -Wunused-label "
-    "-Wunused-variable -pedantic -std=f2008"
+    "-Wunused-variable -pedantic -std=f2008 "
+    "-Wcharacter-truncation"
 )
 
 
@@ -73,6 +74,45 @@ def get_compiler_envvar(fc):
         if env_var != fc:
             fc = env_var
     return fc
+
+
+def rebuild_mf6_release():
+    pm = pymake.Pymake(verbose=True)
+    pm.target = "mf6"
+    pm.appdir = ebindir
+    download_pth = os.path.join("temp")
+    target_dict = pymake.usgs_program_data.get_target(pm.target)
+
+    pm.download_target(pm.target, download_path=download_pth)
+
+    # Set MODFLOW 6 to compile develop version of the release
+    srcpth = os.path.join(
+        download_pth, target_dict["dirname"], target_dict["srcdir"]
+    )
+    fpth = os.path.join(srcpth, "Utilities", "version.f90")
+    with open(fpth) as f:
+        lines = f.read().splitlines()
+
+    assert len(lines) > 0, "could not update {}".format(srcpth)
+
+    f = open(fpth, "w")
+    for line in lines:
+        tag = "IDEVELOPMODE = 0"
+        if tag in line:
+            line = line.replace(tag, "IDEVELOPMODE = 1")
+        f.write("{}\n".format(line))
+    f.close()
+
+    # build the release version of MODFLOW 6
+    pm.build()
+
+    msg = "{} does not exist.".format(pm.target)
+    assert pm.returncode == 0, msg
+
+    # finalize the build
+    pm.finalize()
+
+    return
 
 
 def build_mf6():
@@ -208,6 +248,10 @@ def test_getmfexes(verify=True):
     return
 
 
+def test_rebuild_mf6_release():
+    rebuild_mf6_release()
+
+
 def test_build_modflow6():
     build_mf6()
 
@@ -227,6 +271,7 @@ def test_build_zbud6():
 if __name__ == "__main__":
     test_create_dirs()
     test_getmfexes(verify=False)
+    test_rebuild_mf6_release()
     test_build_modflow6()
     test_build_modflow6_so()
     test_build_mf5to6()
