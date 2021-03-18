@@ -1,4 +1,4 @@
-name: Previous gfortran versions
+name: gfortran - previous versions
 
 on:
   push:

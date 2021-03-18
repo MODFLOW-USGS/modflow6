@@ -67,9 +67,10 @@ def get_example_basedir(home, find_dir, subdir=None):
                     example_basedir = os.path.join(example_basedir, subdir)
                 break
         if example_basedir is not None:
+            example_basedir = os.path.abspath(example_basedir)
             print("Example base directory: {}".format(example_basedir))
             break
-    return os.path.abspath(example_basedir)
+    return example_basedir
 
 
 def get_example_dirs(example_basedir, exclude, prefix="test", find_sim=True):

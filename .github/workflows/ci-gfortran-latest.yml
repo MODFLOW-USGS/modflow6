@@ -1,4 +1,4 @@
-name: Latest gfortran version
+name: gfortran - latest version
 
 on:
   push:
