@@ -24,34 +24,24 @@ except:
 from simulation import Simulation
 
 from targets import target_dict as target_dict
+from common_regression import (
+    get_home_dir,
+    get_example_basedir,
+    is_directory_available,
+    get_example_dirs,
+    get_select_dirs,
+    get_select_packages,
+)
 
 
-def get_example_directory(base, fdir, subdir="mf6"):
-    exdir = None
-    for root, dirs, files in os.walk(base):
-        for d in dirs:
-            if d.startswith(fdir):
-                exdir = os.path.abspath(os.path.join(root, d, subdir))
-                break
-        if exdir is not None:
-            break
-    return exdir
+# find path to examples directory
+home = get_home_dir()
 
+find_dir = "modflow6-testmodels"
+example_basedir = get_example_basedir(home, find_dir, subdir="mf5to6")
 
-# find path to modflow6-testmodels or modflow6-testmodels.git directory
-home = os.path.expanduser("~")
-print("$HOME={}".format(home))
-
-fdir = "modflow6-testmodels"
-exdir = get_example_directory(home, fdir, subdir="mf5to6")
-if exdir is None:
-    p = pathlib.Path(os.getcwd())
-    home = os.path.abspath(pathlib.Path(*p.parts[:2]))
-    print("$HOME={}".format(home))
-    exdir = get_example_directory(home, fdir, subdir="mf5to6")
-
-if exdir is not None:
-    assert os.path.isdir(exdir)
+if example_basedir is not None:
+    assert os.path.isdir(example_basedir)
 
 sfmt = "{:25s} - {}"
 
@@ -61,17 +51,7 @@ def get_mf5to6_models():
     Get a list of test models
     """
     # list of example files to exclude
-    exclude = [
-        "test1ss_ic1",
-        "test9.5-3layer",
-        "testmm2",
-        "testmm3",
-        "testmmSimple",
-        "testps3a",
-        "testTwri",
-        "testTwrip",
-        "test028_sfr_simple",
-    ]
+    exclude = (None,)
 
     # write a summary of the files to exclude
     print("list of tests to exclude:")
@@ -79,14 +59,15 @@ def get_mf5to6_models():
         print("    {}: {}".format(idx + 1, ex))
 
     # build list of directories with valid example files
-    if exdir is not None:
-        dirs = [
-            d for d in os.listdir(exdir) if "test" in d and d not in exclude
-        ]
-        # sort in numerical order for case sensitive os
-        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    if example_basedir is not None:
+        example_dirs = get_example_dirs(
+            example_basedir,
+            exclude,
+            prefix="test",
+            find_sim=False,
+        )
     else:
-        dirs = []
+        example_dirs = []
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -104,39 +85,17 @@ def get_mf5to6_models():
 
     # determine if the selection of model is in the test models to evaluate
     if select_dirs is not None:
-        found_dirs = []
-        for d in select_dirs:
-            if d in dirs:
-                found_dirs.append(d)
-        dirs = found_dirs
-        if len(dirs) < 1:
+        example_dirs = get_select_dirs(select_dirs, example_dirs)
+        if len(example_dirs) < 1:
             msg = "Selected models not available in test"
             print(msg)
 
     # determine if the specified package(s) is in the test models to evaluate
     if select_packages is not None:
-        found_dirs = []
-        for d in dirs:
-            pth = os.path.join(exdir, d)
-            namefiles = pymake.get_namefiles(pth)
-            ftypes = []
-            for namefile in namefiles:
-                for pak in select_packages:
-                    ftype = pymake.get_entries_from_namefile(
-                        namefile, ftype=pak
-                    )
-                    for t in ftype:
-                        if t[1] is not None:
-                            if t[1] not in ftypes:
-                                ftypes.append(t[1].upper())
-            if len(ftypes) > 0:
-                ftypes = [item.upper() for item in ftypes]
-                for pak in select_packages:
-                    if pak in ftypes:
-                        found_dirs.append(d)
-                        break
-        dirs = found_dirs
-        if len(dirs) < 1:
+        example_dirs = get_select_packages(
+            select_packages, example_basedir, example_dirs
+        )
+        if len(example_dirs) < 1:
             msg = "Selected packages not available ["
             for idx, pak in enumerate(select_packages):
                 msg += "{}".format(pak)
@@ -145,7 +104,7 @@ def get_mf5to6_models():
             msg += "]"
             print(msg)
 
-    return dirs
+    return example_dirs
 
 
 def run_mf5to6(sim):
@@ -154,11 +113,10 @@ def run_mf5to6(sim):
     appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
 
     """
-    src = os.path.join(exdir, sim.name)
+    src = os.path.join(example_basedir, sim.name)
     dst = os.path.join("temp", "working")
 
-    # set default version
-    version = "mf2005"
+    # set lgrpth to None
     lgrpth = None
 
     # determine if compare directory exists in directory or if mflgr control
@@ -169,22 +127,15 @@ def run_mf5to6(sim):
         if os.path.isfile(fpth):
             ext = os.path.splitext(fpth)[1]
             if ".lgr" in ext.lower():
-                version = "mflgr"
                 lgrpth = fpth
-        elif os.path.isdir(fpth):
-            if "compare" in value.lower() or "cmp" in value.lower():
-                compare = True
-                cpth = value
 
-    msg = "Copying {} files to working directory".format(version)
+    print("Copying files to working directory")
     # copy lgr files to working directory
     if lgrpth is not None:
-        print(msg)
         npth = lgrpth
         pymake.setup(lgrpth, dst)
-    # copy modflow 2005, NWT, or USG files to working directory
+    # copy MODFLOW-2005, MODFLOW-NWT, or MODFLOW-USG files to working directory
     else:
-        print(msg)
         npths = pymake.get_namefiles(src)
         if len(npths) < 1:
             msg = "No name files in {}".format(src)
@@ -193,25 +144,9 @@ def run_mf5to6(sim):
         npth = npths[0]
         pymake.setup(npth, dst)
 
-    # read ftype from name file to set modflow version
-    if version != "mflgr":
-        lines = [line.rstrip("\n") for line in open(npth)]
-        for line in lines:
-            if len(line) < 1:
-                continue
-            t = line.split()
-            ftype = t[0].upper()
-            if ftype == "NWT" or ftype == "UPW":
-                version = "mfnwt"
-                break
-            elif ftype == "SMS" or ftype == "DISU":
-                version = "mfusg"
-                break
-
-    # run converter
+    # run the mf5to6 converter
     exe = os.path.abspath(target_dict["mf5to6"])
-    msg = sfmt.format("using executable", exe)
-    print(msg)
+    print(sfmt.format("using executable", exe))
     nmsg = "Program terminated normally"
     try:
         nam = os.path.basename(npth)
@@ -256,28 +191,20 @@ def run_mf5to6(sim):
 
 def test_model():
     # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf5to6_models()
+    example_dirs = get_mf5to6_models()
 
     # run the test models
-    for dir in dirs:
-        yield run_mf5to6, Simulation(dir, mf6_regression=True)
+    for on_dir in example_dirs:
+        yield run_mf5to6, Simulation(
+            on_dir, mf6_regression=True, cmp_verbose=False
+        )
 
     return
-
-
-def dir_avail():
-    avail = False
-    if exdir is not None:
-        avail = os.path.isdir(exdir)
-    if not avail:
-        print('"{}" does not exist'.format(exdir))
-        print("no need to run {}".format(os.path.basename(__file__)))
-    return avail
 
 
 def main():
@@ -290,16 +217,16 @@ def main():
     module_name = sys.modules[__name__].__file__
 
     # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
         return
 
     # get a list of test models to run
-    dirs = get_mf5to6_models()
+    example_dirs = get_mf5to6_models()
 
     # run the test models
-    for dir in dirs:
-        sim = Simulation(dir, mf6_regression=True)
+    for on_dir in example_dirs:
+        sim = Simulation(on_dir, mf6_regression=True, cmp_verbose=False)
         run_mf5to6(sim)
 
     return
