@@ -74,8 +74,9 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: res_in  => NULL()
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
-    integer(I4B), pointer                                :: itertot_timestep => NULL()   !< total nr. of linear solves per call to sln_ca
-    integer(I4B), pointer                                :: itertot_sim => NULL()        !< total nr. of inner iterations for simulation
+    integer(I4B), pointer                                :: itertot_timestep => NULL()     !< total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                                :: iouttot_timestep => NULL()     !< total nr. of outer iterations per call to sln_ca
+    integer(I4B), pointer                                :: itertot_sim => NULL()          !< total nr. of inner iterations for simulation
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -258,6 +259,7 @@ contains
     call mem_allocate(this%ibcount, 'IBCOUNT', this%memoryPath)
     call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
     call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memoryPath)
+    call mem_allocate(this%iouttot_timestep, 'IOUTTOT_TIMESTEP', this%memoryPath)
     call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
     call mem_allocate(this%mxiter, 'MXITER', this%memoryPath)
     call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
@@ -304,6 +306,7 @@ contains
     this%ibcount = 0
     this%icnvg = 0
     this%itertot_timestep = 0
+    this%iouttot_timestep = 0
     this%itertot_sim = 0
     this%mxiter = 0
     this%linmeth = 1
@@ -1042,6 +1045,7 @@ contains
     ! reset convergence flag and inner solve counter
     this%icnvg = 0
     this%itertot_timestep = 0   
+    this%iouttot_timestep = 0   
     
     return
   end subroutine sln_ad
@@ -1173,6 +1177,7 @@ contains
     call mem_deallocate(this%ibcount)
     call mem_deallocate(this%icnvg)
     call mem_deallocate(this%itertot_timestep)
+    call mem_deallocate(this%iouttot_timestep)
     call mem_deallocate(this%itertot_sim)
     call mem_deallocate(this%mxiter)
     call mem_deallocate(this%linmeth)
@@ -1369,7 +1374,7 @@ contains
       call mp%model_ad()
     enddo
     
-    ! advance models and exchanges
+    ! advance solution
     call this%sln_ad()
     
   end subroutine prepareSolve
@@ -1453,7 +1458,7 @@ contains
         end if
         !
         ! -- initialize table and define columns
-        title = 'OUTER ITERATION SUMMARY'
+        title = trim(this%memoryPath) // ' OUTER ITERATION SUMMARY'
         call table_cr(this%outertab, this%name, title)
         call this%outertab%table_df(ntabrows, ntabcols, iout,        &
                                     finalize=.FALSE.)
@@ -1544,9 +1549,11 @@ contains
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
     !
-    ! -- increment counters storing the total number of linear iterations
-    !    for this timestep and all timesteps
+    ! -- increment counters storing the total number of linear and 
+    !    non-linear iterations for this timestep and the total 
+    !    number of linear iterations for all timesteps
     this%itertot_timestep = this%itertot_timestep + iter
+    this%iouttot_timestep = this%iouttot_timestep + 1
     this%itertot_sim = this%itertot_sim + iter
     !
     ! -- save matrix to a file
@@ -1912,7 +1919,7 @@ contains
       ntabcols = 7
       !
       ! -- initialize table and define columns
-      title = 'INNER ITERATION SUMMARY'
+      title = trim(this%memoryPath) // ' INNER ITERATION SUMMARY'
       call table_cr(this%innertab, this%name, title)
       call this%innertab%table_df(ntabrows, ntabcols, iu)
       tag = 'TOTAL ITERATION'
