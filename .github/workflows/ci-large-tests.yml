@@ -6,17 +6,19 @@
 #
 # SPDX-License-Identifier: MIT
 
+
+# # add this back in to on: if there is a need to debug the large tests
+#
+#  pull_request:
+#    branches:
+#      - develop
+
+
 name: Large tests
 
 on:
   schedule:
     - cron: '0 6 * * *' # run at 6 AM UTC every day
-  push:
-    branches:
-      - develop
-  pull_request:
-    branches:
-      - develop
 
 env:
   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
