@@ -2327,7 +2327,6 @@ contains
     integer(I4B) :: iseed_size
     integer(I4B), pointer, dimension(:) :: iseed => null()
     real(DP) :: rand_val
-    real(DP) :: adiag
     real(DP) :: ax
     real(DP) :: diagval
     real(DP) :: l2norm
@@ -2358,43 +2357,12 @@ contains
           this%amat(i) = DZERO
         end do
       !
-      ! -- take care of case where all the sum of the product of the 
-      !    coefficient matrix and associated x values for a cell
-      !    are zero and the rhs for the cell is non-zero at the start 
-      !    of the simulation to prevent divide by zero errors in the 
-      !    linear solver.
-      !else if (kiter*kstp*kper == 1 .and. this%rhs(n) /= DZERO .and.            &
-      !         this%active(n) > 0) then
-      !  i1 = this%ia(n) + 1
-      !  i2 = this%ia(n + 1) - 1
-      !  ax = this%amat(this%ia(n)) * this%xtemp(n)
-      !  do i = i1, i2
-      !    jcol = this%ja(i)
-      !    ax = ax + this%amat(i) * this%xtemp(jcol)
-      !  end do
-      !  !
-      !  ! -- adjust the initial x-value
-      !  if (ax == DZERO) then
-      !    if (irandom_value == 0) then
-      !      call random_seed(size=iseed_size)
-      !      allocate(iseed(iseed_size))
-      !      do i = 1, iseed_size
-      !        iseed(i) = 1234567890
-      !      end do
-      !      CALL random_seed(PUT=iseed)
-      !    end if
-      !    call random_number(rand_val)
-      !    this%x(n) = this%xtemp(n) + rand_val * DHUNDRED * DPREC
-      !    irandom_value = irandom_value + 1
-      !  end if
-      !
       ! -- take care of the case where there is a zero on the row diagonal
       else
-        diagval = DONE
-        adiag = abs(this%amat(this%ia(n)))
-        if(adiag.lt.DEM15)then
-          this%amat(this%ia(n)) = diagval
-          this%rhs(n) = this%rhs(n) + this%x(n) * diagval
+        diagval = this%amat(this%ia(n))
+        if(diagval == DZERO)then
+          this%amat(this%ia(n)) = DONE
+          this%rhs(n) = this%rhs(n) + this%x(n) * DONE
         endif
       endif
     end do
