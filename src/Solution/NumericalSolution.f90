@@ -1013,12 +1013,33 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: kstp, kper, delt
+    use AdaptiveTimeStepModule, only: ats_submit_delt
+    use ConstantsModule, only: DTWO, DTHREE
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
+    integer(I4B) :: idir
+    real(DP) :: delt_temp
+    real(DP) :: fact   ! should probably come from user input
 ! ------------------------------------------------------------------------------
     !
     ! -- increase or decrease delt based on kiter fraction
+    delt_temp = delt
+    fact = this%mxiter / DTHREE
+    if (this%iouttot_timestep < int(fact)) then
+      ! -- increase delt according to tsfactats
+      idir = 1 
+    else if (this%iouttot_timestep > int(DTWO * fact)) then
+      ! -- decrease delt according to tsfactats
+      idir = -1 
+    else
+      ! -- do not change delt
+      idir = 0  
+    end if
+    !
+    ! -- submit stable dt for upcoming step
+    call ats_submit_delt(kstp, kper, delt_temp, this%memoryPath, idir=idir)
     !
     return
   end subroutine sln_calculate_delt

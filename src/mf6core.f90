@@ -238,7 +238,7 @@ contains
   subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
     use ConstantsModule,        only: LINELENGTH, MNORMAL, MVALIDATE
-    use TdisModule,             only: tdis_set_counters, tdis_set_delt, &
+    use TdisModule,             only: tdis_set_counters, tdis_set_timestep, &
                                       kstp, kper
     use ListsModule,            only: basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
@@ -309,24 +309,69 @@ contains
       call sp%sln_calculate_delt()
     enddo
     !
-    ! -- time update
-    call tdis_set_delt()
+    ! -- set time step
+    call tdis_set_timestep()
     
   end subroutine Mf6PrepareTimestep
   
   subroutine Mf6DoTimestep()
     use KindModule,           only: I4B
     use ListsModule,          only: solutiongrouplist
+    use SimVariablesModule,   only: iFailedStepRetry
     use SolutionGroupModule,  only: SolutionGroupType, GetSolutionGroupFromList
     class(SolutionGroupType), pointer :: sgp => null()
     integer(I4B) :: isg
+
+    logical :: finishedTrying
     
-    do isg = 1, solutiongrouplist%Count()
-      sgp => GetSolutionGroupFromList(solutiongrouplist, isg)
-      call sgp%sgp_ca()
-    enddo
+    ! -- By default, the solution groups will be solved once, and
+    !    may fail.  But if adaptive stepping is active, then
+    !    the solution groups may be solved over and over with 
+    !    progressively smaller time steps to see if convergence
+    !    can be obtained.
+    iFailedStepRetry = 0
+    retryloop: do
+      
+      do isg = 1, solutiongrouplist%Count()
+        sgp => GetSolutionGroupFromList(solutiongrouplist, isg)
+        call sgp%sgp_ca()
+      enddo
+      
+      call sim_step_retry(finishedTrying)
+      if (finishedTrying) exit retryloop
+      iFailedStepRetry = iFailedStepRetry + 1
+      
+    end do retryloop
       
   end subroutine Mf6DoTimestep
+  
+  subroutine sim_step_retry(finishedTrying)
+    ! -- modules
+    use KindModule, only: DP
+    use SimVariablesModule, only: lastStepFailed
+    use SimModule, only: converge_reset
+    use TdisModule, only: kstp, kper, delt, tdis_delt_reset
+    use AdaptiveTimeStepModule, only: isAdaptivePeriod, ats_reset_delt
+    ! -- dummy
+    logical, intent(out) :: finishedTrying
+    ! -- local
+    !
+    ! -- Check with ats to reset delt and keep trying
+    finishedTrying = .true.
+    call ats_reset_delt(kstp, kper, lastStepFailed, delt, finishedTrying)
+    !
+    if (.not. finishedTrying) then
+      !
+      ! -- Reset delt, which requires updating pertim, totim
+      !    and end of period and simulation indicators        
+      call tdis_delt_reset(delt)
+      !
+      ! -- Reset state of the simulation convergence flag
+      call converge_reset()
+      
+    end if
+    return
+  end subroutine sim_step_retry
   
   function Mf6FinalizeTimestep() result(hasConverged)
     use KindModule,             only: I4B

@@ -1,0 +1,84 @@
+# --------------------- sim ats options ---------------------
+
+
+# --------------------- sim ats dimensions ---------------------
+
+block dimensions
+name maxats
+type integer
+reader urword
+optional false
+longname number of ATS periods
+description is the number of records in the subsequent perioddata block that will be used for adaptive time stepping.
+default_value 1
+
+# --------------------- sim ats perioddata ---------------------
+
+block perioddata
+name perioddata
+type recarray iperats dt0 dtmin dtmax dtadj dtfailadj
+reader urword
+optional false
+longname stress period ats time information
+description
+
+block perioddata
+name iperats
+type integer
+in_record true
+tagged false
+reader urword
+optional false
+longname stress period indicator
+description is the period number to designate for adaptive time stepping.  The remaining ATS values on this line will apply to period iperats.
+numeric_index true
+
+block perioddata
+name dt0
+type double precision
+in_record true
+tagged false
+reader urword
+optional false
+longname initial time step length
+description is the initial time step length for period iperats.  If the value is zero, then the final step from the previous stress period will be used as the initial time step.
+
+block perioddata
+name dtmin
+type double precision
+in_record true
+tagged false
+reader urword
+optional false
+longname minimum time step length
+description is the minimum time step length for this period.  This value must be less than or equal to tsmax and less than or equal to dt0.
+
+block perioddata
+name dtmax
+type double precision
+in_record true
+tagged false
+reader urword
+optional false
+longname maximum time step length
+description is the maximum time step length for this period.  This value must be greater than or equal to tsmin and greater than or equal to dt0.
+
+block perioddata
+name dtadj
+type double precision
+in_record true
+tagged false
+reader urword
+optional false
+longname time step multiplier factor
+description is the time step multiplier factor for this period.  If the number of outer solver iterations are less than one third of OUTER_MAXIMUM, then the time step length is multipled by dtadj.  If the number of outer solver iterations are greater than one third of OUTER_MAXIMUM, then the time step length is divided by dtadj.  dtadj must be zero, one, or greater than one.  If dtadj is zero or one, then it has no affect on the simulation.
+
+block perioddata
+name dtfailadj
+type double precision
+in_record true
+tagged false
+reader urword
+optional false
+longname time step multiplier factor
+description is the time step failure multiplier factor for this period.  If there is solver failure, then the time step will be tried again with a shorter time step length calculated as the previous time step length divided by tsfailfact.  dtfailadj must be zero, one, or greater than one.  If dtfailadj is zero or one, then time steps will not be retried with shorter lengths.
