@@ -2,8 +2,11 @@
 !   state advance/restore gwt
 !   state advance/restore gwf packages
 !   check ats input and echo
+!   check ats not active for steady state?
 !   code comments
-!   endofperiod/simulation check
+!   store iboundold for rewetting case
+!   recalculate time series variables for time step retry
+!   add ATS options to solutions, packages, and models?
 module AdaptiveTimeStepModule
  
   use KindModule, only: DP, I4B, LGP
@@ -16,6 +19,7 @@ module AdaptiveTimeStepModule
   private
   public :: isAdaptivePeriod
   public :: ats_set_delt
+  public :: ats_period_message
   public :: ats_set_endofperiod
   public :: ats_submit_delt
   public :: ats_reset_delt
@@ -57,16 +61,17 @@ module AdaptiveTimeStepModule
     integer(I4B) :: n
     real(DP) :: tsfact
     real(DP) :: dt_temp
-    character(len=*), parameter :: fmtdtsubmit =                                 &
+    character(len=*), parameter :: fmtdtsubmit =                               &
       &"(1x, 'ATS: ', A,' submitted a preferred time step size of ', G15.7)"
     
     if (isAdaptivePeriod(kper)) then
-      !
-      ! -- if idir is present, then dt is delt, and it should be
-      !    multiplied or divided by dtadj
       n = kperats(kper)
       tsfact = dtadj(n)
       if (tsfact > DONE) then
+        !
+        ! -- if idir is present, then dt is a length that should be adjusted
+        !    (divided by or multiplied by) by dtadj.  If idir is not present
+        !    then dt is the submitted time step.
         if (present(idir)) then
           dt_temp = DZERO
           if (idir == -1) then
@@ -431,6 +436,22 @@ module AdaptiveTimeStepModule
     return
   end subroutine ats_read_timing
   
+  subroutine ats_period_message(kper)
+    integer(I4B), intent(in) :: kper
+    integer(I4B) :: n
+    character(len=*),parameter :: fmtspts =                                    &
+    "(28X,'ATS IS OVERRIDING TIME STEPPING FOR THIS PERIOD',/                  &
+      &28X,'INITIAL TIME STEP SIZE                 (DT0) = ',G15.7,/           &
+      &28X,'MINIMUM TIME STEP SIZE               (DTMIN) = ',G15.7,/           &
+      &28X,'MAXIMUM TIME STEP SIZE               (DTMAX) = ',G15.7,/           &
+      &28X,'MULTIPLIER/DIVIDER FOR TIME STEP     (DTADJ) = ',G15.7,/           &
+      &28X,'DIVIDER FOR FAILED TIME STEP     (DTFAILADJ) = ',G15.7,/           &
+      &)"
+    n = kperats(kper)
+    write(iout, fmtspts) dt0(n), dtmin(n), dtmax(n), dtadj(n), dtfailadj(n)
+      
+  end subroutine ats_period_message
+  
   subroutine ats_set_delt(kstp, kper, pertim, perlencurrent, delt)
     ! -- modules
     ! -- dummy
@@ -479,20 +500,24 @@ module AdaptiveTimeStepModule
     end if
     !
     ! -- Cut timestep down to meet end of period
-    if (tstart + delt > perlencurrent) then
+    if (tstart + delt > perlencurrent - dtmin(n)) then
       delt = perlencurrent - tstart
     end if
     return
  end subroutine ats_set_delt
                           
- subroutine ats_set_endofperiod(pertim, perlencurrent, endofperiod)
+ subroutine ats_set_endofperiod(kper, pertim, perlencurrent, endofperiod)
+    integer(I4B), intent(in) :: kper
     real(DP), intent(inout) :: pertim
     real(DP), intent(in) :: perlencurrent
     logical(LGP), intent(inout) :: endofperiod
+    ! -- local
+    integer(I4B) :: n
     !
     ! -- End of stress period and/or simulation?  
     !    todo: need more reliable check
-    if (abs(pertim - perlencurrent) < 1.d-5) then
+    n = kperats(kper)
+    if (abs(pertim - perlencurrent) < dtmin(n)) then
       endofperiod = .true.
     end if
  

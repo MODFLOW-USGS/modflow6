@@ -113,7 +113,8 @@
     use ConstantsModule, only: DONE, DZERO, MNORMAL, MVALIDATE, DNODATA
     use SimVariablesModule, only: isim_mode
     use GenericUtilitiesModule, only: sim_message
-    use AdaptiveTimeStepModule, only: dtstable
+    use AdaptiveTimeStepModule, only: isAdaptivePeriod, dtstable,              &
+                                      ats_period_message
     ! -- local
     character(len=LINELENGTH) :: line
     character(len=4) :: cpref
@@ -125,8 +126,9 @@
       "(' Validating:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
     character(len=*),parameter :: fmtspi =                                     &
       "('1',/28X,'STRESS PERIOD NO. ',I0,', LENGTH =',G15.7,/                  &
-       &28X,47('-'),/                                                          &
-       &28X,'NUMBER OF TIME STEPS = ',I0,/                                     &
+       &28X,47('-'))"
+    character(len=*),parameter :: fmtspits =                                   &
+      "(28X,'NUMBER OF TIME STEPS = ',I0,/                                     &
        &28X,'MULTIPLIER FOR DELT =',F10.3)"
 ! ------------------------------------------------------------------------------
     !
@@ -157,13 +159,18 @@
     !
     ! -- Write message if first time step
     if (kstp == 1) then
-      write(iout, fmtspi) kper, perlen(kper), nstp(kper), tsmult(kper)
+      write(iout, fmtspi) kper, perlen(kper)
+      if (isAdaptivePeriod(kper)) then
+        call ats_period_message(kper)
+      else
+        write(iout, fmtspits) nstp(kper), tsmult(kper)
+      end if
     end if
     !
     ! -- return
     return
   end subroutine tdis_set_counters
-
+  
   subroutine tdis_set_timestep()
 ! ******************************************************************************
 ! tdis_set_timestep -- Set time step length
@@ -185,23 +192,21 @@
     !
     ! -- Initialize
     adaptivePeriod = isAdaptivePeriod(kper)
+    if (kstp == 1) then
+      pertim = DZERO
+    end if
     !
     ! -- Set delt
     if (adaptivePeriod) then
       call ats_set_delt(kstp, kper, pertim, perlen(kper), delt)
     else
       call tdis_set_delt()
-    end if
-    !
-    ! -- Write message about delt
-    if (kstp == 1) then
-      write(iout, fmttsi) delt
+      if (kstp == 1) then
+        write(iout, fmttsi) delt
+      end if
     end if
     !
     ! -- Advance timers and update totim and pertim based on delt
-    if (kstp == 1) then
-      pertim = DZERO
-    end if
     totimsav = totim
     pertimsav = pertim
     totimc = totimsav
@@ -211,7 +216,7 @@
     ! -- Set end of period indicator
     endofperiod = .false.
     if (adaptivePeriod) then
-      call ats_set_endofperiod(pertim, perlen(kper), endofperiod)
+      call ats_set_endofperiod(kper, pertim, perlen(kper), endofperiod)
     else
       if (kstp == nstp(kper)) then
         endofperiod = .true.
@@ -230,7 +235,9 @@
 
   subroutine tdis_delt_reset(deltnew)
 ! ******************************************************************************
-! tdis_delt_reset -- reset delt and update timing variables and indicators
+! tdis_delt_reset -- reset delt and update timing variables and indicators.
+!   This routine is called when a timestep fails to converge, and so it is
+!   retried using a smaller time step (deltnew).  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -255,7 +262,7 @@
     ! -- Set end of period indicator
     endofperiod = .false.
     if (adaptivePeriod) then
-      call ats_set_endofperiod(pertim, perlen(kper), endofperiod)
+      call ats_set_endofperiod(kper, pertim, perlen(kper), endofperiod)
     else
       if (kstp == nstp(kper)) then
         endofperiod = .true.

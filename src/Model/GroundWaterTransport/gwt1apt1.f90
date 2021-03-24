@@ -685,6 +685,8 @@ module GwtAptModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
@@ -707,14 +709,23 @@ module GwtAptModule
       end do
     end if
     !
-    ! -- copy xnew into xold and set xnewpak to stage%value for
+    ! -- copy xnew into xold and set xnewpak to specified concentration for
     !    constant concentration features
-    do n = 1, this%ncv
-      this%xoldpak(n) = this%xnewpak(n)
-      if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%concfeat(n)
-      end if
-    end do
+    if (iFailedStepRetry == 0) then
+      do n = 1, this%ncv
+        this%xoldpak(n) = this%xnewpak(n)
+        if (this%iboundpak(n) < 0) then
+          this%xnewpak(n) = this%concfeat(n)
+        end if
+      end do
+    else
+      do n = 1, this%ncv
+        this%xnewpak(n) = this%xoldpak(n)
+        if (this%iboundpak(n) < 0) then
+          this%xnewpak(n) = this%concfeat(n)
+        end if
+      end do
+    end if
     !
     ! -- pakmvrobj ad
     !if (this%imover == 1) then

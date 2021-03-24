@@ -321,7 +321,6 @@ contains
     use SolutionGroupModule,  only: SolutionGroupType, GetSolutionGroupFromList
     class(SolutionGroupType), pointer :: sgp => null()
     integer(I4B) :: isg
-
     logical :: finishedTrying
     
     ! -- By default, the solution groups will be solved once, and
@@ -351,7 +350,7 @@ contains
     use SimVariablesModule, only: lastStepFailed
     use SimModule, only: converge_reset
     use TdisModule, only: kstp, kper, delt, tdis_delt_reset
-    use AdaptiveTimeStepModule, only: isAdaptivePeriod, ats_reset_delt
+    use AdaptiveTimeStepModule, only: ats_reset_delt
     ! -- dummy
     logical, intent(out) :: finishedTrying
     ! -- local

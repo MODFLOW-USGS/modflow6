@@ -520,14 +520,14 @@ module GwfModule
     if (iFailedStepRetry == 0) then
       !
       ! -- copy x into xold
-      do n=1,this%dis%nodes
-        this%xold(n)=this%x(n)
+      do n = 1, this%dis%nodes
+        this%xold(n) = this%x(n)
       enddo
     else
       !
       ! -- copy xold into x if this time step is a redo
-      do n=1,this%dis%nodes
-        this%x(n)=this%xold(n)
+      do n = 1, this%dis%nodes
+        this%x(n) = this%xold(n)
       enddo
     end if
     !
