@@ -2357,13 +2357,25 @@ contains
           this%amat(i) = DZERO
         end do
       !
-      ! -- take care of the case where there is a zero on the row diagonal
+      ! -- take care of the case where the row diagonal
+      !    is small to zero
       else
         diagval = this%amat(this%ia(n))
-        if(diagval == DZERO)then
-          this%amat(this%ia(n)) = DONE
-          this%rhs(n) = this%rhs(n) + this%x(n) * DONE
-        endif
+        if (diagval == DZERO) then
+          diagval = -DONE
+          this%amat(this%ia(n)) = diagval
+          this%rhs(n) = this%rhs(n) + diagval * this%x(n)
+        end if
+        !diagval = abs(this%amat(this%ia(n)))
+        !if(diagval < DEM15) then
+        !  if (diagval == DZERO) then
+        !    diagval = -DONE
+        !  else
+        !    diagval = SIGN(DONE, this%amat(this%ia(n)))
+        !  end if
+        !  this%amat(this%ia(n)) = diagval
+        !  this%rhs(n) = this%rhs(n) + diagval * this%x(n)
+        !endif
       endif
     end do
     !

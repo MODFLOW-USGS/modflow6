@@ -8,6 +8,7 @@ module GwfStoModule
   use BaseDisModule,          only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
+  use GwfStorageModule,       only: SsCapacity, SyCapacity
 
   implicit none
   public :: GwfStoType, sto_cr
@@ -21,8 +22,8 @@ module GwfStoModule
     integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
     integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
-    real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !< primary storage capacity (when cell is fully saturated)
-    real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !< secondary storage capacity (when cell is partially saturated)
+    real(DP),dimension(:), pointer, contiguous       :: ss => null()             !< specfic storage or storage coefficient
+    real(DP),dimension(:), pointer, contiguous       :: sy => null()             !< specific yield
     real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !< vector of specific storage rates
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
@@ -39,10 +40,10 @@ module GwfStoModule
     procedure :: sto_da
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
-    procedure, private :: register_handlers
+    !procedure, private :: register_handlers
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: convert_sc1, convert_sc2
+    !procedure, private :: convert_sc1, convert_sc2
   endtype
 
   contains
@@ -114,9 +115,9 @@ module GwfStoModule
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
-    !
-    ! -- Register side effect handlers
-    call this%register_handlers()
+    !!
+    !! -- Register side effect handlers
+    !call this%register_handlers()
     !
     ! -- Read storage options
     call this%read_options()
@@ -263,11 +264,22 @@ module GwfStoModule
     integer(I4B), intent(in),dimension(:) :: idxglo
     real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
-    integer(I4B) :: n, idiag
-    real(DP) :: tled, rho1, rho2
-    real(DP) :: tp, bt, tthk
-    real(DP) :: snold, snnew
-    real(DP) :: ss0, ss1, ssh0, ssh1
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: tled
+    real(DP) :: sc1
+    real(DP) :: sc2
+    real(DP) :: rho1
+    real(DP) :: rho2
+    real(DP) :: tp
+    real(DP) :: bt
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: ss0
+    real(DP) :: ss1
+    real(DP) :: ssh0 
+    real(DP) :: ssh1
     real(DP) :: rhsterm
     character(len=LINELENGTH) :: errmsg
     ! -- formats
@@ -316,8 +328,10 @@ module GwfStoModule
         end if
       end if
       ! -- storage coefficients
-      rho1 = this%sc1(n) * tled
-      rho2 = this%sc2(n) * tled
+      sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+      sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+      rho1 = sc1 * tled
+      rho2 = sc2 * tled
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
@@ -329,6 +343,13 @@ module GwfStoModule
       end if
       ! -- specific yield
       if (this%iconvert(n) /= 0) then
+        !amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
+        !rhsterm = rho2 * tthk * snold + rho2 * bt
+        !if (snnew > DONE) then
+        !  rhsterm = rhsterm + rho2 * (hnew(n) - tp)
+        !else if (snnew < DZERO) then
+        !  rhsterm = rhsterm + rho2 * (bt - hnew(n))
+        !end if
         rhsterm = DZERO
         ! -- add specific yield terms to amat at rhs
         if (snnew < DONE) then
@@ -369,12 +390,24 @@ module GwfStoModule
     integer(I4B), intent(in),dimension(:) :: idxglo
     real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
-    integer(I4B) :: n, idiag
-    real(DP) :: tled, rho1, rho2
-    real(DP) :: tp, bt, tthk
-    real(DP) :: snold, snnew
-    real(DP) :: ss0, ss1
-    real(DP) :: derv, rterm, drterm
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: tled
+    real(DP) :: sc1
+    real(DP) :: sc2
+    real(DP) :: rho1
+    real(DP) :: rho2
+    real(DP) :: tp
+    real(DP) :: bt
+    real(DP) :: tthk
+    real(DP) :: h
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: ss0
+    real(DP) :: ss1
+    real(DP) :: derv
+    real(DP) :: rterm
+    real(DP) :: drterm
 ! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
@@ -391,9 +424,10 @@ module GwfStoModule
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
       tthk = tp - bt
+      h = hnew(n)
       ! -- aquifer saturation
       snold = sQuadraticSaturation(tp, bt, hold(n))
-      snnew = sQuadraticSaturation(tp, bt, hnew(n))
+      snnew = sQuadraticSaturation(tp, bt, h)
       ! -- set saturation used for ss
       ss0 = snold
       ss1 = snnew
@@ -402,30 +436,45 @@ module GwfStoModule
         if (ss1 < DONE) ss1 = DZERO
       end if
       ! -- storage coefficients
-      rho1 = this%sc1(n) * tled
-      rho2 = this%sc2(n) * tled
-      ! -- calculate storage coefficients for amat and rhs
-      ! -- specific storage
+      sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+      sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+      rho1 = sc1 * tled
+      rho2 = sc2 * tled
+      !
+      ! -- calculate newton terms for specific storage 
+      !    and specific yield
       if (this%iconvert(n) /= 0) then
-        rterm = - rho1 * ss1 * hnew(n)
-        derv = sQuadraticSaturationDerivative(tp, bt, hnew(n))
-        if (this%isseg /= 0) derv = DZERO
-        drterm = -(rho1 * derv * hnew(n))
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
-        rhs(n) = rhs(n) + drterm * hnew(n)
-      end if
-      ! -- specific yield
-      if (this%iconvert(n) /= 0) then
+        !
+        ! -- calculate saturation derivative
+        derv = sQuadraticSaturationDerivative(tp, bt, h)
+        !
+        ! -- newton terms for specific stoage
+        if (this%isseg == 0) then
+          drterm = -(rho1 * derv * h)
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
+          rhs(n) = rhs(n) + drterm * h
+        end if
+        !!
+        !! -- newton terms for specific yield
+        !drterm = -rho2 * tthk * derv
+        !amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
+        !if (snnew < DZERO .or. snnew > DONE) then
+        !  drterm = drterm + rho2
+        !else
+        !  amat(idxglo(idiag)) = amat(idxglo(idiag)) + rho2
+        !end if
+        !rterm = -rho2 * h
+        !rhs(n) = rhs(n) - rterm + drterm * h
         ! -- newton terms for specific yield only apply if
         !    current saturation is less than one
         if (snnew < DONE) then
           ! -- calculate newton terms for specific yield
           if (snnew > DZERO) then
             rterm = - rho2 * tthk * snnew
-            derv = sQuadraticSaturationDerivative(tp, bt, hnew(n))
+            !derv = sQuadraticSaturationDerivative(tp, bt, h)
             drterm = -rho2 * tthk * derv
             amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
-            rhs(n) = rhs(n) - rterm + drterm * hnew(n) + rho2 * bt
+            rhs(n) = rhs(n) - rterm + drterm * h + rho2 * bt
           end if
         end if
       end if
@@ -453,10 +502,20 @@ module GwfStoModule
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: rate
-    real(DP) :: tled, rho1, rho2
-    real(DP) :: tp, bt, tthk
-    real(DP) :: snold, snnew
-    real(DP) :: ss0, ss1, ssh0, ssh1
+    real(DP) :: tled
+    real(DP) :: sc1
+    real(DP) :: sc2
+    real(DP) :: rho1
+    real(DP) :: rho2
+    real(DP) :: tp
+    real(DP) :: bt
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: ss0
+    real(DP) :: ss1
+    real(DP) :: ssh0
+    real(DP) :: ssh1
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize strg arrays
@@ -496,8 +555,10 @@ module GwfStoModule
           end if
         end if
         ! -- storage coefficients
-        rho1 = this%sc1(n) * tled
-        rho2 = this%sc2(n) * tled
+        sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+        sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+        rho1 = sc1 * tled
+        rho2 = sc2 * tled
         !
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
@@ -629,8 +690,8 @@ module GwfStoModule
     ! -- Deallocate arrays if package is active
     if(this%inunit > 0) then
       call mem_deallocate(this%iconvert)
-      call mem_deallocate(this%sc1)
-      call mem_deallocate(this%sc2)
+      call mem_deallocate(this%ss)
+      call mem_deallocate(this%sy)
       call mem_deallocate(this%strgss)
       call mem_deallocate(this%strgsy)
     endif
@@ -701,8 +762,8 @@ module GwfStoModule
     ! -- Allocate
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
-    call mem_allocate(this%sc1, nodes, 'SC1', this%memoryPath)    
-    call mem_allocate(this%sc2, nodes, 'SC2', this%memoryPath)
+    call mem_allocate(this%ss, nodes, 'SS', this%memoryPath)    
+    call mem_allocate(this%sy, nodes, 'SY', this%memoryPath)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
     !
@@ -710,8 +771,8 @@ module GwfStoModule
     this%iss = 0
     do n = 1, nodes
       this%iconvert(n) = 1
-      this%sc1(n) = DZERO
-      this%sc2(n) = DZERO
+      this%ss(n) = DZERO
+      this%sy(n) = DZERO
       this%strgss(n) = DZERO
       this%strgsy(n) = DZERO
     enddo
@@ -720,68 +781,68 @@ module GwfStoModule
     return
   end subroutine allocate_arrays
 
-  !> @brief Registers the side effect handlers
-  !! 
-  !! When memory is set externally, these handlers can be called to
-  !! deal with any side effects.
-  !!
-  !! @todo: when this functionality is accepted, we probably want to
-  !! get rid of the iupdatescx flags...
-  !<
-  subroutine register_handlers(this)
-    use MemorySetHandlerModule, only: mem_register_handler, set_handler_iface
-    class(GwfStoType), intent(in), target :: this !< the storage package
-    ! local
-    procedure(set_handler_iface), pointer :: handler_ptr
-    class(GwfStoType), pointer :: this_ptr
-    class(*), pointer :: context  
-    
-    this_ptr => this
-    context => this_ptr
-    handler_ptr => sc1_handler
-    call mem_register_handler('SC1', this%memoryPath, handler_ptr, context)
-    handler_ptr => sc2_handler
-    call mem_register_handler('SC2', this%memoryPath, handler_ptr, context)
-
-  end subroutine register_handlers
-
-  !> @brief Side effect handler for when sc1 is set externally
-  !<
-  subroutine sc1_handler(sto_ptr, status)
-    class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
-    integer, intent(out) :: status       !< result of reset, 0 for success, -1 for failure
-    ! local
-    class(GwfStoType), pointer :: storage
-
-    storage => null()
-    select type(sto_ptr)
-    class is (GwfStoType)
-      storage => sto_ptr
-    end select
-    
-    status = 0
-    call storage%convert_sc1()
-
-  end subroutine sc1_handler
-
-  !> @brief Side effect handler for when sc2 is set externally
-  !<
-  subroutine sc2_handler(sto_ptr, status)
-    class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
-    integer(I4B), intent(out) :: status       !< result of reset, 0 for success, -1 for failure
-    ! local
-    class(GwfStoType), pointer :: storage
-
-    storage => null()
-    select type(sto_ptr)
-    class is (GwfStoType)
-      storage => sto_ptr
-    end select
-
-    status = 0
-    call storage%convert_sc2()
-
-  end subroutine sc2_handler
+  !!> @brief Registers the side effect handlers
+  !!! 
+  !!! When memory is set externally, these handlers can be called to
+  !!! deal with any side effects.
+  !!!
+  !!! @todo: when this functionality is accepted, we probably want to
+  !!! get rid of the iupdatescx flags...
+  !!<
+  !subroutine register_handlers(this)
+  !  use MemorySetHandlerModule, only: mem_register_handler, set_handler_iface
+  !  class(GwfStoType), intent(in), target :: this !< the storage package
+  !  ! local
+  !  procedure(set_handler_iface), pointer :: handler_ptr
+  !  class(GwfStoType), pointer :: this_ptr
+  !  class(*), pointer :: context  
+  !  
+  !  this_ptr => this
+  !  context => this_ptr
+  !  handler_ptr => sc1_handler
+  !  call mem_register_handler('SC1', this%memoryPath, handler_ptr, context)
+  !  handler_ptr => sc2_handler
+  !  call mem_register_handler('SC2', this%memoryPath, handler_ptr, context)
+  !
+  !end subroutine register_handlers
+  !
+  !!> @brief Side effect handler for when sc1 is set externally
+  !!<
+  !subroutine sc1_handler(sto_ptr, status)
+  !  class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
+  !  integer, intent(out) :: status       !< result of reset, 0 for success, -1 for failure
+  !  ! local
+  !  class(GwfStoType), pointer :: storage
+  !
+  !  storage => null()
+  !  select type(sto_ptr)
+  !  class is (GwfStoType)
+  !    storage => sto_ptr
+  !  end select
+  !  
+  !  status = 0
+  !  call storage%convert_sc1()
+  !
+  !end subroutine sc1_handler
+  !
+  !!> @brief Side effect handler for when sc2 is set externally
+  !!<
+  !subroutine sc2_handler(sto_ptr, status)
+  !  class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
+  !  integer(I4B), intent(out) :: status       !< result of reset, 0 for success, -1 for failure
+  !  ! local
+  !  class(GwfStoType), pointer :: storage
+  !
+  !  storage => null()
+  !  select type(sto_ptr)
+  !  class is (GwfStoType)
+  !    storage => sto_ptr
+  !  end select
+  !
+  !  status = 0
+  !  call storage%convert_sc2()
+  !
+  !end subroutine sc2_handler
 
   subroutine read_options(this)
 ! ******************************************************************************
@@ -920,12 +981,12 @@ module GwfStoModule
             readiconv = .true.
           case ('SS')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%sc1, &
+                                         this%parser%iuactive, this%ss, &
                                          aname(2))
             readss = .true.
           case ('SY')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%sc2, &
+                                         this%parser%iuactive, this%sy, &
                                          aname(3))
             readsy = .true.
           case default
@@ -981,68 +1042,67 @@ module GwfStoModule
     !
     ! -- Check SS and SY for negative values
     do n = 1, this%dis%nodes
-      if (this%sc1(n) < DZERO) then
+      if (this%ss(n) < DZERO) then
         call this%dis%noder_to_string(n, cellstr)
         write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                                 &
           'Error in SS DATA: SS value in cell', trim(adjustl(cellstr)),         &
-          'is less than zero (', this%sc1(n), ').'
+          'is less than zero (', this%ss(n), ').'
         call store_error(errmsg)
       end if
       if (readsy) then
-        if (this%sc2(n) < DZERO) then
+        if (this%sy(n) < DZERO) then
           call this%dis%noder_to_string(n, cellstr)
           write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                               &
             'Error in SY DATA: SY value in cell', trim(adjustl(cellstr)),       &
-            'is less than zero (', this%sc2(n), ').'
+            'is less than zero (', this%sy(n), ').'
           call store_error(errmsg)
         end if
       end if
     end do
-    
-    !
-    ! -- calculate sc1
-    if (readss) then
-      call this%convert_sc1()
-    endif
-    !
-    ! -- calculate sc2
-    if(readsy) then
-      call this%convert_sc2()
-    endif
+    !!
+    !! -- calculate sc1
+    !if (readss) then
+    !  call this%convert_sc1()
+    !endif
+    !!
+    !! -- calculate sc2
+    !if(readsy) then
+    !  call this%convert_sc2()
+    !endif
     !
     ! -- Return
     return
   end subroutine read_data
 
-  ! -- converts the primary storage into sc1*area
-  subroutine convert_sc1(this)
-    class(GwfStotype) :: this
-    ! -- local
-    integer(I4B) :: n
-    real(DP) :: thick
-    
-    if(this%isfac == 0) then
-        do n = 1, this%dis%nodes
-          thick = this%dis%top(n) - this%dis%bot(n)
-          this%sc1(n) = this%sc1(n) * thick * this%dis%area(n)
-        end do
-      else
-        do n = 1, this%dis%nodes
-          this%sc1(n) = this%sc1(n) * this%dis%area(n)
-        enddo
-      endif    
-  end subroutine convert_sc1
+  !! -- converts the primary storage into sc1*area
+  !subroutine convert_sc1(this)
+  !  class(GwfStotype) :: this
+  !  ! -- local
+  !  integer(I4B) :: n
+  !  real(DP) :: thick
+  !  
+  !  if(this%isfac == 0) then
+  !      do n = 1, this%dis%nodes
+  !        thick = this%dis%top(n) - this%dis%bot(n)
+  !        this%sc1(n) = this%sc1(n) * thick * this%dis%area(n)
+  !      end do
+  !    else
+  !      do n = 1, this%dis%nodes
+  !        this%sc1(n) = this%sc1(n) * this%dis%area(n)
+  !      enddo
+  !    endif    
+  !end subroutine convert_sc1
   
-  ! -- converts the secondary storage into sc2*area
-  subroutine convert_sc2(this)
-    class(GwfStotype) :: this
-    ! -- local
-    integer(I4B) :: n
-    
-    do n=1, this%dis%nodes
-      this%sc2(n) = this%sc2(n) * this%dis%area(n)
-    enddo
-    
-  end subroutine convert_sc2
+  !! -- converts the secondary storage into sc2*area
+  !subroutine convert_sc2(this)
+  !  class(GwfStotype) :: this
+  !  ! -- local
+  !  integer(I4B) :: n
+  !  
+  !  do n=1, this%dis%nodes
+  !    this%sc2(n) = this%sc2(n) * this%dis%area(n)
+  !  enddo
+  !  
+  !end subroutine convert_sc2
     
 end module GwfStoModule

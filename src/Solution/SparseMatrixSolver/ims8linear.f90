@@ -1602,8 +1602,6 @@
               P(n) = Z(n) 
             END DO 
           ELSE
-            !denom = rho0 + SIGN(DPREC,rho0)
-            !beta = rho / denom
             beta = rho / rho0 
             DO n = 1, NEQ 
               P(n) = Z(n) + beta * P(n) 
@@ -1613,7 +1611,9 @@
 !           UPDATE Q                                                   
           CALL IMSLINEARSUB_MV(NJA, NEQ, A0, P, Q, IA0, JA0) 
           denom =  IMSLINEARSUB_DP(NEQ, P, Q)
-          denom = denom + SIGN(DPREC, denom) 
+          IF (denom == DZERO) THEN
+            EXIT INNER
+          END IF
           alpha = rho / denom
 !-----------UPDATE X AND RESIDUAL                                       
           deltax = DZERO 
@@ -1701,6 +1701,12 @@
               CALL IMSLINEARSUB_AXPY(NEQ, B, -DONE, D, D)
             END IF
           END IF
+!
+!-----------TRAP IF rho EQUALS ZERO CONDITION
+          IF (rho == DZERO) THEN
+            EXIT INNER
+          END IF
+!          
 !-----------SAVE CURRENT INNER ITERATES                                 
           rho0 = rho 
         END DO INNER 
@@ -1842,7 +1848,9 @@
           CALL IMSLINEARSUB_MV(NJA, NEQ, A0, PHAT, V, IA0, JA0) 
 !           UPDATE alpha WITH DHAT AND V                                
           denom = IMSLINEARSUB_DP(NEQ, DHAT, V) 
-          denom = denom + SIGN(DPREC, denom) 
+          IF (denom == DZERO) THEN
+            EXIT INNER
+          END IF
           alpha = rho / denom 
 !-----------UPDATE Q                                                    
           DO n = 1, NEQ 
@@ -1885,7 +1893,9 @@
 !-----------UPDATE omega                                                
           numer = IMSLINEARSUB_DP(NEQ, T, Q) 
           denom = IMSLINEARSUB_DP(NEQ, T, T)
-          denom = denom + SIGN(DPREC,denom) 
+          IF (denom == DZERO) THEN
+            EXIT INNER
+          END IF
           omega = numer / denom 
 !-----------UPDATE X AND RESIDUAL                                       
           deltax = DZERO 
@@ -1986,11 +1996,12 @@
             IF (LORTH) THEN
               CALL IMSLINEARSUB_MV(NJA, NEQ, A0,X , D, IA0, JA0)
               CALL IMSLINEARSUB_AXPY(NEQ, B, -DONE, D, D)
-              !DO n = 1, NEQ
-              !  tv   = D(n)
-              !  D(n) = B(n) - tv
-              !END DO
             END IF
+          END IF
+!
+!-----------TRAP IF rho OR omega EQUAL ZERO                                 
+          IF (rho*omega == DZERO) THEN
+            EXIT INNER
           END IF
 !-----------SAVE CURRENT INNER ITERATES                                 
           rho0   = rho

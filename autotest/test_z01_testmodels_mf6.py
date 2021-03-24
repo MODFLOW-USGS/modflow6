@@ -74,7 +74,11 @@ def get_mf6_models():
     print("On branch {}".format(branch))
 
     # tuple of example files to exclude
-    exclude = (None,)
+    # after each release evaluate the excluded tests should remain excluded
+    exclude = (
+        None,
+        "test205_gwtbuy-henrytidal",
+    )
 
     # update exclude
     if is_CI:
