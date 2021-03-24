@@ -370,10 +370,15 @@ def eval_transport(sim):
 
     tsreslist = [tsresab, tsresab, tsrescd, tsrescd, None, None, None, None]
     tsres = tsreslist[sim.idxsim]
+    atol = 5e-6
     if tsres is not None:
-        assert np.allclose(
-            tsres, tssim
-        ), "simulated concentrations do not match with known solution."
+        diffmax = abs(tsres.flatten() - tssim.flatten()).max()
+        err_msg = (
+            "simulated concentrations ({}) ".format(sim.idxsim + 1)
+            + "do not match with known solution to within {}.".format(atol)
+            + " Maximum difference = {}".format(diffmax)
+        )
+        assert np.allclose(tsres, tssim, atol=atol), err_msg
 
     return
 

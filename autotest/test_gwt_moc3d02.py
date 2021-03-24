@@ -336,9 +336,14 @@ def eval_transport(sim):
 
     csim = csim[:, 2, 12]
     # rtol is set larger here because convergence is looser
-    assert np.allclose(
-        cres, csim, rtol=1.0e-4
-    ), "simulated concentrations do not match with known solution."
+    atol = 0.0003
+    diffmax = abs(cres.flatten() - csim.flatten()).max()
+    err_msg = (
+            "simulated concentrations "
+            + "do not match with known solution to within {}.".format(atol)
+            + " Maximum difference = {}".format(diffmax)
+    )
+    assert np.allclose(cres, csim, atol=atol), err_msg
 
     return
 

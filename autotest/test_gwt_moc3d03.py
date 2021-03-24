@@ -317,9 +317,13 @@ def eval_transport(sim):
         ]
     )
 
-    assert np.allclose(
-        cres, csim.diagonal().ravel()
-    ), "simulated concentrations do not match with known solution."
+    diffmax = abs(cres - csim.diagonal().ravel()).max()
+    err_msg = (
+            "simulated concentrations "
+            + "do not match with known solution."
+            + " Maximum difference = {}".format(diffmax)
+    )
+    assert np.allclose(cres, csim.diagonal().ravel()), err_msg
 
     return
 

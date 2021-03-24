@@ -43,7 +43,6 @@ module GwfStoModule
     !procedure, private :: register_handlers
     procedure, private :: read_options
     procedure, private :: read_data
-    !procedure, private :: convert_sc1, convert_sc2
   endtype
 
   contains
@@ -799,16 +798,16 @@ module GwfStoModule
   !  
   !  this_ptr => this
   !  context => this_ptr
-  !  handler_ptr => sc1_handler
-  !  call mem_register_handler('SC1', this%memoryPath, handler_ptr, context)
-  !  handler_ptr => sc2_handler
-  !  call mem_register_handler('SC2', this%memoryPath, handler_ptr, context)
+  !  handler_ptr => ss_handler
+  !  call mem_register_handler('SS', this%memoryPath, handler_ptr, context)
+  !  handler_ptr => sy_handler
+  !  call mem_register_handler('SY', this%memoryPath, handler_ptr, context)
   !
   !end subroutine register_handlers
   !
-  !!> @brief Side effect handler for when sc1 is set externally
+  !!> @brief Side effect handler for when ss is set externally
   !!<
-  !subroutine sc1_handler(sto_ptr, status)
+  !subroutine ss_handler(sto_ptr, status)
   !  class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
   !  integer, intent(out) :: status       !< result of reset, 0 for success, -1 for failure
   !  ! local
@@ -823,11 +822,11 @@ module GwfStoModule
   !  status = 0
   !  call storage%convert_sc1()
   !
-  !end subroutine sc1_handler
+  !end subroutine ss_handler
   !
-  !!> @brief Side effect handler for when sc2 is set externally
+  !!> @brief Side effect handler for when sy is set externally
   !!<
-  !subroutine sc2_handler(sto_ptr, status)
+  !subroutine sy_handler(sto_ptr, status)
   !  class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
   !  integer(I4B), intent(out) :: status       !< result of reset, 0 for success, -1 for failure
   !  ! local
@@ -842,7 +841,7 @@ module GwfStoModule
   !  status = 0
   !  call storage%convert_sc2()
   !
-  !end subroutine sc2_handler
+  !end subroutine sy_handler
 
   subroutine read_options(this)
 ! ******************************************************************************
@@ -1059,50 +1058,9 @@ module GwfStoModule
         end if
       end if
     end do
-    !!
-    !! -- calculate sc1
-    !if (readss) then
-    !  call this%convert_sc1()
-    !endif
-    !!
-    !! -- calculate sc2
-    !if(readsy) then
-    !  call this%convert_sc2()
-    !endif
     !
     ! -- Return
     return
   end subroutine read_data
-
-  !! -- converts the primary storage into sc1*area
-  !subroutine convert_sc1(this)
-  !  class(GwfStotype) :: this
-  !  ! -- local
-  !  integer(I4B) :: n
-  !  real(DP) :: thick
-  !  
-  !  if(this%isfac == 0) then
-  !      do n = 1, this%dis%nodes
-  !        thick = this%dis%top(n) - this%dis%bot(n)
-  !        this%sc1(n) = this%sc1(n) * thick * this%dis%area(n)
-  !      end do
-  !    else
-  !      do n = 1, this%dis%nodes
-  !        this%sc1(n) = this%sc1(n) * this%dis%area(n)
-  !      enddo
-  !    endif    
-  !end subroutine convert_sc1
-  
-  !! -- converts the secondary storage into sc2*area
-  !subroutine convert_sc2(this)
-  !  class(GwfStotype) :: this
-  !  ! -- local
-  !  integer(I4B) :: n
-  !  
-  !  do n=1, this%dis%nodes
-  !    this%sc2(n) = this%sc2(n) * this%dis%area(n)
-  !  enddo
-  !  
-  !end subroutine convert_sc2
     
 end module GwfStoModule

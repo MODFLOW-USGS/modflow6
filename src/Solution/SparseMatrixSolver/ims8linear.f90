@@ -1611,9 +1611,9 @@
 !           UPDATE Q                                                   
           CALL IMSLINEARSUB_MV(NJA, NEQ, A0, P, Q, IA0, JA0) 
           denom =  IMSLINEARSUB_DP(NEQ, P, Q)
-          IF (denom == DZERO) THEN
-            EXIT INNER
-          END IF
+          if (denom == DZERO) then
+            denom = SIGN(DPREC,denom) 
+          end if
           alpha = rho / denom
 !-----------UPDATE X AND RESIDUAL                                       
           deltax = DZERO 
@@ -1702,13 +1702,13 @@
             END IF
           END IF
 !
-!-----------TRAP IF rho EQUALS ZERO CONDITION
-          IF (rho == DZERO) THEN
-            EXIT INNER
-          END IF
-!          
-!-----------SAVE CURRENT INNER ITERATES                                 
+!-----------SAVE CURRENT INNER ITERATES 
           rho0 = rho 
+!
+!-----------TRAP DIVIDE BY ZERO ERROR
+          if (rho0 == DZERO) then
+            rho0 = SIGN(DPREC,rho) 
+          end if
         END DO INNER 
 !---------RESET ICNVG        
         IF (ICNVG < 0) ICNVG = 0
@@ -1848,9 +1848,9 @@
           CALL IMSLINEARSUB_MV(NJA, NEQ, A0, PHAT, V, IA0, JA0) 
 !           UPDATE alpha WITH DHAT AND V                                
           denom = IMSLINEARSUB_DP(NEQ, DHAT, V) 
-          IF (denom == DZERO) THEN
-            EXIT INNER
-          END IF
+          if (denom == DZERO) then
+            denom = SIGN(DPREC,denom) 
+          end if
           alpha = rho / denom 
 !-----------UPDATE Q                                                    
           DO n = 1, NEQ 
@@ -1893,9 +1893,9 @@
 !-----------UPDATE omega                                                
           numer = IMSLINEARSUB_DP(NEQ, T, Q) 
           denom = IMSLINEARSUB_DP(NEQ, T, T)
-          IF (denom == DZERO) THEN
-            EXIT INNER
-          END IF
+          if (denom == DZERO) then
+            denom = SIGN(DPREC,denom) 
+          end if
           omega = numer / denom 
 !-----------UPDATE X AND RESIDUAL                                       
           deltax = DZERO 
@@ -1998,15 +1998,18 @@
               CALL IMSLINEARSUB_AXPY(NEQ, B, -DONE, D, D)
             END IF
           END IF
-!
-!-----------TRAP IF rho OR omega EQUAL ZERO                                 
-          IF (rho*omega == DZERO) THEN
-            EXIT INNER
-          END IF
 !-----------SAVE CURRENT INNER ITERATES                                 
           rho0   = rho
           alpha0 = alpha
           omega0 = omega
+!
+!-----------TRAP DIVIDE BY ZERO ERRORS
+          if (rho0 == DZERO) then
+            rho0 = SIGN(DPREC,rho) 
+          end if
+          if (omega0 == DZERO) then
+            omega0 = SIGN(DPREC,omega) 
+          end if
         END DO INNER
 !---------RESET ICNVG        
         IF (ICNVG < 0) ICNVG = 0

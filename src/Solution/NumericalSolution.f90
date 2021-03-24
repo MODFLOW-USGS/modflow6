@@ -2329,6 +2329,7 @@ contains
     real(DP) :: rand_val
     real(DP) :: ax
     real(DP) :: diagval
+    !real(DP) :: diagmax
     real(DP) :: l2norm
     real(DP) :: ptcval
     real(DP) :: diagmin
@@ -2340,6 +2341,16 @@ contains
     !
     ! -- set random seed flag
     irandom_value = 0
+    !!
+    !! -- get maximum diagonal value
+    !diagmax = DZERO
+    !do n = 1, this%neq
+    !  diagval = this%amat(this%ia(n))
+    !  if (abs(diagval) > abs(diagmax)) then
+    !    diagmax = diagval
+    !  end if
+    !end do
+    !diagval = diagmax
     !
     ! -- take care of loose ends for all nodes before call to solver
     do n = 1, this%neq
@@ -2360,7 +2371,7 @@ contains
       ! -- take care of the case where the row diagonal
       !    is small to zero
       else
-        diagval = this%amat(this%ia(n))
+        diagval = abs(this%amat(this%ia(n)))
         if (diagval == DZERO) then
           diagval = -DONE
           this%amat(this%ia(n)) = diagval

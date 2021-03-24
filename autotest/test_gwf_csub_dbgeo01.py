@@ -171,8 +171,8 @@ ss = 0.0
 sy = 0.2
 
 # solver data
-nouter, ninner = 50, 100
-hclose, rclose, relax = 1e-6, 1e-6, 0.97
+nouter, ninner = 100, 200
+hclose, rclose, relax = 1e-9, 1e-6, 0.97
 
 # sub data
 cc = 100.0
@@ -237,8 +237,8 @@ def get_model(idx, dir):
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
         sim,
-        print_option="SUMMARY",
-        outer_dvclose=hclose,
+        print_option="ALL",
+        outer_dvclose=hclose * 10.0,
         outer_maximum=nouter,
         under_relaxation="NONE",
         inner_maximum=ninner,
