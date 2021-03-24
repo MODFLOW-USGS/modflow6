@@ -28,6 +28,7 @@ module GwfGwfConnectionModule
     integer(I4B), pointer :: iDewatCV => null() ! == 1: vertical conductance accounts for dewatered portion of underlying cell
     real(DP), pointer     :: satOmega => null() !
     integer(I4B), pointer :: iCellAvg => null() ! TODO_MJR: discuss this, iCellAvg same value per connection, user can now specify per exchange?
+    integer(I4B), pointer :: iXT3D => null()    ! run XT3D on the interface, 0 = don't, 1 = matrix, 2 = rhs
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -80,6 +81,7 @@ contains
     this%satOmega = DZERO  
     this%iCellAvg = 0
     this%iNewton = this%gwfModel%inewton
+    this%iXT3D = 0
     
     allocate(this%interfaceModel)
   
@@ -89,23 +91,29 @@ contains
     class(GwfGwfConnectionType), intent(inout) :: this    
     ! local
     type(sparsematrix) :: sparse
-    
-    if (this%gwfModel%npf%ixt3d > 0) then
-      this%stencilDepth = 2
-    end if    
-    
+        
     this%satOmega = this%gwfModel%npf%satomega
-    
-    
+
+    ! for now, we enable xt3d when the base model has it,
+    ! not sure yet how to deal with this, XT3D and the interface
+    ! model is like GPL...
+    if (this%gwfModel%npf%ixt3d > 0) then
+      this%iXT3D = this%gwfModel%npf%ixt3d
+    end if
+    if (this%iXT3D > 0) then
+      this%stencilDepth = 2
+    end if
+
     ! now call base class, this sets up the GridConnection
-    call this%spatialcon_df()    
+    call this%spatialcon_df()
     
     ! grid conn is defined, so we first create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
     call this%interfaceModel%construct(this%name)
     call this%interfaceModel%createModel(this%gridConnection)
-    
+    this%interfaceModel%npf%ixt3d = this%iXT3D
+
     ! define, from here
     call this%interfaceModel%defineModel(this%satOmega)
      
@@ -205,7 +213,8 @@ contains
     call mem_allocate(this%iDewatCV, 'IDEWATCV', this%memoryPath)
     call mem_allocate(this%satOmega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryPath)
-    
+    call mem_allocate(this%iXT3D, 'IXT3D', this%memoryPath)
+
   end subroutine allocateScalars
   
   ! We can only call this after the *_df is finished, e.g. it is not until
@@ -348,6 +357,7 @@ contains
     call mem_deallocate(this%iDewatCV)
     call mem_deallocate(this%satOmega)
     call mem_deallocate(this%iCellAvg)
+    call mem_deallocate(this%iXT3D)
 
     call mem_deallocate(this%ia)
     call mem_deallocate(this%ja)

@@ -74,9 +74,6 @@ contains
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
     ! continue as in gwf_cr...
     
-    ! set XT3D when the owning model has XT3D enabled
-    this%npf%ixt3d = this%owner%npf%ixt3d
-    
   end subroutine createModel
   
   subroutine defineModel(this, satomega)
@@ -171,13 +168,12 @@ contains
     ! create or copy vertices, can we avoid it somehow???
     ! if not, it will look like this:
     !
-    ! 1. determine nr. of verts?
+    ! 1. determine total nr. of verts
     ! 2. allocate vertices list
     ! 3. create sparse
-    ! 4. get vertex per cell
-    ! 5. add vertex (x,y) to list
-    ! 6. add connectivity to sparse
-    ! 7. generate ia/ja from sparse
+    ! 4. get vertex data per cell, add functions to base
+    ! 5. add vertex (x,y) to list and connectivity to sparse
+    ! 6. generate ia/ja from sparse
     
   end subroutine buildDiscretization
   
