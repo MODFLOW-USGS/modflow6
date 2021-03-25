@@ -8,7 +8,7 @@ module GwfStoModule
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
-  use GwfStorageModule, only: SsCapacity, SyCapacity
+  use GwfStorageUtilsModule, only: SsCapacity, SyCapacity
 
   implicit none
   public :: GwfStoType, sto_cr
@@ -761,67 +761,6 @@ contains
     ! -- return
     return
   end subroutine allocate_arrays
-
-  !!> @brief Registers the side effect handlers
-  !!!
-  !!! When memory is set externally, these handlers can be called to
-  !!! deal with any side effects.
-  !!!
-  !!<
-  !subroutine register_handlers(this)
-  !  use MemorySetHandlerModule, only: mem_register_handler, set_handler_iface
-  !  class(GwfStoType), intent(in), target :: this !< the storage package
-  !  ! local
-  !  procedure(set_handler_iface), pointer :: handler_ptr
-  !  class(GwfStoType), pointer :: this_ptr
-  !  class(*), pointer :: context
-  !
-  !  this_ptr => this
-  !  context => this_ptr
-  !  handler_ptr => ss_handler
-  !  call mem_register_handler('SS', this%memoryPath, handler_ptr, context)
-  !  handler_ptr => sy_handler
-  !  call mem_register_handler('SY', this%memoryPath, handler_ptr, context)
-  !
-  !end subroutine register_handlers
-  !
-  !!> @brief Side effect handler for when ss is set externally
-  !!<
-  !subroutine ss_handler(sto_ptr, status)
-  !  class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
-  !  integer, intent(out) :: status       !< result of reset, 0 for success, -1 for failure
-  !  ! local
-  !  class(GwfStoType), pointer :: storage
-  !
-  !  storage => null()
-  !  select type(sto_ptr)
-  !  class is (GwfStoType)
-  !    storage => sto_ptr
-  !  end select
-  !
-  !  status = 0
-  !  call storage%convert_sc1()
-  !
-  !end subroutine ss_handler
-  !
-  !!> @brief Side effect handler for when sy is set externally
-  !!<
-  !subroutine sy_handler(sto_ptr, status)
-  !  class(*), intent(inout), pointer :: sto_ptr !< unlimited polymorphic pointer to the storage packacke
-  !  integer(I4B), intent(out) :: status       !< result of reset, 0 for success, -1 for failure
-  !  ! local
-  !  class(GwfStoType), pointer :: storage
-  !
-  !  storage => null()
-  !  select type(sto_ptr)
-  !  class is (GwfStoType)
-  !    storage => sto_ptr
-  !  end select
-  !
-  !  status = 0
-  !  call storage%convert_sc2()
-  !
-  !end subroutine sy_handler
 
   !> @ brief Read options for package
   !!

@@ -1,4 +1,4 @@
-module GwfStorageModule
+module GwfStorageUtilsModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE
@@ -17,7 +17,7 @@ contains
   !!
   !! @return      sc1               specific storage capacity
   !<
-  function SsCapacity(isfac, top, bot, area, ss) result(sc1)
+  pure function SsCapacity(isfac, top, bot, area, ss) result(sc1)
     ! -- dummy variables
     integer(I4B), intent(in) :: isfac  !< flag indicating if ss is the storage coefficient
     real(DP), intent(in) :: top        !< top of cell
@@ -46,7 +46,7 @@ contains
   !!
   !! @return      sc2               specific yield capacity
   !<
-  function SyCapacity(area, sy) result(sc2)
+  pure function SyCapacity(area, sy) result(sc2)
     ! -- dummy variables
     real(DP), intent(in) :: area       !< horizontal cell area
     real(DP), intent(in) :: sy         !< specific yield
@@ -59,4 +59,4 @@ contains
     return
   end function SyCapacity
 
-end module GwfStorageModule
+end module GwfStorageUtilsModule
