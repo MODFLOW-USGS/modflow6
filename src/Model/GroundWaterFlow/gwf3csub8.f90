@@ -107,7 +107,7 @@ module GwfCsubModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: stoiconv => null()        !< pointer to iconvert in storage
     ! -- real arrays
-    real(DP), dimension(:), pointer, contiguous :: stosc1 => null()              !< pointer to sc1 in storage
+    real(DP), dimension(:), pointer, contiguous :: stoss => null()               !< pointer to ss in storage
     real(DP), dimension(:), pointer, contiguous :: buff => null()                !< buff array
     real(DP), dimension(:), pointer, contiguous :: buffusr => null()             !< buffusr array
     integer, dimension(:), pointer, contiguous :: nodelist => null()             !< reduced node that the interbed is attached to
@@ -497,7 +497,7 @@ contains
       end if
       !
       ! -- storage (STO) package error condition
-      if (this%stosc1(node) /= DZERO) then
+      if (this%stoss(node) /= DZERO) then
         istoerr = 1
       end if
       !
@@ -1346,7 +1346,7 @@ contains
     !
     ! -- set pointers to variables in the storage package
     call mem_setptr(this%stoiconv, 'ICONVERT', this%stoMemPath)
-    call mem_setptr(this%stosc1, 'SS', this%stoMemPath)
+    call mem_setptr(this%stoss, 'SS', this%stoMemPath)
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
@@ -2375,7 +2375,7 @@ contains
       !
       ! -- pointers to storage variables
       nullify (this%stoiconv)
-      nullify (this%stosc1)
+      nullify (this%stoss)
       !
       ! -- input table
       if (this%iprpak > 0) then
