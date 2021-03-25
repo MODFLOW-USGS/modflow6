@@ -1346,7 +1346,7 @@ contains
     !
     ! -- set pointers to variables in the storage package
     call mem_setptr(this%stoiconv, 'ICONVERT', this%stoMemPath)
-    call mem_setptr(this%stosc1, 'SC1', this%stoMemPath)
+    call mem_setptr(this%stosc1, 'SS', this%stoMemPath)
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
