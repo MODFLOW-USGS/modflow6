@@ -103,6 +103,13 @@ def rebuild_mf6_release():
         f.write("{}\n".format(line))
     f.close()
 
+    # reset compiler based on environmental variable, if defined
+    pm.fc = get_compiler_envvar(pm.fc)
+
+    # add strict flags if gfortran is being used
+    if pm.fc == "gfortran":
+        pm.fflags = strict_flags
+
     # build the release version of MODFLOW 6
     pm.build()
 
