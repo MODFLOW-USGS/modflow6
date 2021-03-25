@@ -1,7 +1,7 @@
 """
 MODFLOW 6 Autotest
-Test the bmi set_value function, which is used update 
-the Sy=0 value with same Sy used to calculate SC2 in 
+Test the bmi set_value function, which is used update
+the Sy=0 value with same Sy used to calculate SC2 in
 the non-bmi simulation.
 """
 
@@ -203,12 +203,12 @@ def bmifunc(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # reset sc2 with bmi set_value
-    sc2_tag = mf6.get_var_address("SC2", name, "STO")
-    new_sc2 = mf6.get_value(sc2_tag)
-    new_sc2.fill(sy_val)
+    # reset sy with bmi set_value
+    sy_tag = mf6.get_var_address("SY", name, "STO")
+    new_sy = mf6.get_value(sy_tag)
+    new_sy.fill(sy_val)
 
-    mf6.set_value(sc2_tag, new_sc2)
+    mf6.set_value(sy_tag, new_sy)
 
     # model time loop
     idx = 0
