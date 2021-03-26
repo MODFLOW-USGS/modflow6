@@ -40,6 +40,7 @@ class Simulation(object):
         exe_dict=None,
         htol=None,
         pdtol=None,
+        rclose=None,
         idxsim=None,
         cmp_verbose=True,
         require_failure=None,
@@ -89,6 +90,7 @@ class Simulation(object):
         self.coutp = None
         self.bmifunc = bmifunc
         self.mf6_regression = mf6_regression
+        self.action = None
 
         # set htol for comparisons
         if htol is None:
@@ -99,7 +101,7 @@ class Simulation(object):
 
         self.htol = htol
 
-        # set rtol for comparisons
+        # set pdtol for comparisons
         if pdtol is None:
             pdtol = 0.001
         else:
@@ -109,6 +111,17 @@ class Simulation(object):
             print(msg)
 
         self.pdtol = pdtol
+
+        # set rclose for comparisons
+        if rclose is None:
+            rclose = 0.001
+        else:
+            msg = sfmt.format(
+                "User specified percent difference comparison rclose", rclose
+            )
+            print(msg)
+
+        self.rclose = rclose
 
         # set index for multi-simulation comparisons
         self.idxsim = idxsim
@@ -126,7 +139,7 @@ class Simulation(object):
     def __repr__(self):
         return self.name
 
-    def set_model(self, pth):
+    def set_model(self, pth, testModel=True):
         """
         Set paths to MODFLOW 6 model and associated comparison test
         """
@@ -142,7 +155,11 @@ class Simulation(object):
         self.outp = mf6outp
 
         # determine comparison model
-        self.action = pymake.get_mf6_comparison(pth)
+        self.setup_comparison(pth, pth, testModel=testModel)
+        # if self.mf6_regression:
+        #     self.action = "mf6-regression"
+        # else:
+        #     self.action = pymake.get_mf6_comparison(pth)
         if self.action is not None:
             if "mf6" in self.action or "mf6-regression" in self.action:
                 cinp, self.coutp = pymake.get_mf6_files(fpth)
@@ -168,6 +185,13 @@ class Simulation(object):
             print("destination: {}".format(dst))
         assert success, "did not run pymake.setup_mf6"
 
+        if success:
+            self.setup_comparison(src, dst)
+
+        return
+
+    def setup_comparison(self, src, dst, testModel=True):
+
         # adjust htol if it is smaller than IMS outer_dvclose
         dvclose = self._get_dvclose(dst)
         if dvclose is not None:
@@ -184,16 +208,21 @@ class Simulation(object):
         self.rclose = rclose
 
         # Copy comparison simulations if available
-        if success:
-            if self.mf6_regression:
-                action = "mf6-regression"
-                shutil.copytree(dst, os.path.join(dst, "mf6-regression"))
-            else:
-                action = pymake.setup_mf6_comparison(
-                    src, dst, remove_existing=self.delFiles
-                )
+        if self.mf6_regression:
+            action = "mf6-regression"
+            pth = os.path.join(dst, action)
+            if os.path.isdir(pth):
+                shutil.rmtree(pth)
+            shutil.copytree(dst, pth)
+        elif testModel:
+            action = pymake.setup_mf6_comparison(
+                src, dst, remove_existing=self.delFiles
+            )
+        else:
+            action = pymake.get_mf6_comparison(dst)
 
-            self.action = action
+        self.action = action
+
         return
 
     def run(self):
@@ -314,6 +343,7 @@ class Simulation(object):
                 "hed",
                 "bhd",
                 "ahd",
+                "bin",
             )
             if "mf6-regression" in self.action:
                 success, msgall = self._compare_heads(

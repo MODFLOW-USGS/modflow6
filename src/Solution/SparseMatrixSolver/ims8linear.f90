@@ -15,72 +15,72 @@
   
   TYPE, PUBLIC :: ImsLinearDataType
     character(len=LENMEMPATH) :: memoryPath                !< the path for storing variables in the memory manager
-    integer(I4B), POINTER :: iout => NULL()
-    integer(I4B), POINTER :: IPRIMS => NULL()
-    integer(I4B), POINTER :: ILINMETH => NULL()
-    integer(I4B), POINTER :: ITER1 => NULL()
-    integer(I4B), POINTER :: IPC => NULL()
-    integer(I4B), POINTER :: ISCL => NULL()
-    integer(I4B), POINTER :: IORD => NULL()
-    integer(I4B), POINTER :: NORTH => NULL()
-    integer(I4B), POINTER :: ICNVGOPT => NULL()
-    integer(I4B), POINTER :: IACPC => NULL()
-    integer(I4B), POINTER :: NITERC => NULL()
-    integer(I4B), POINTER :: NIABCGS => NULL()
-    integer(I4B), POINTER :: NIAPC => NULL()
-    integer(I4B), POINTER :: NJAPC => NULL()
-    real(DP), POINTER :: DVCLOSE => NULL()
-    real(DP), POINTER :: RCLOSE => NULL()
-    real(DP), POINTER :: RELAX => NULL()
-    real(DP), POINTER :: EPFACT => NULL()
-    real(DP), POINTER :: L2NORM0 => NULL()
+    integer(I4B), POINTER :: iout => NULL()                !< simulation listing file unit
+    integer(I4B), POINTER :: IPRIMS => NULL()              !< print flag
+    integer(I4B), POINTER :: ILINMETH => NULL()            !< linear accelerator (1) cg, (2) bicgstab
+    integer(I4B), POINTER :: ITER1 => NULL()               !< maximum inner iterations
+    integer(I4B), POINTER :: IPC => NULL()                 !< preconditioner flag
+    integer(I4B), POINTER :: ISCL => NULL()                !< scaling flag
+    integer(I4B), POINTER :: IORD => NULL()                !< reordering flag
+    integer(I4B), POINTER :: NORTH => NULL()               !< orthogonalization interval
+    integer(I4B), POINTER :: ICNVGOPT => NULL()            !< rclose convergence option flag
+    integer(I4B), POINTER :: IACPC => NULL()               !< ia for the preconditioner
+    integer(I4B), POINTER :: NITERC => NULL()              !< 
+    integer(I4B), POINTER :: NIABCGS => NULL()             !<
+    integer(I4B), POINTER :: NIAPC => NULL()               !<
+    integer(I4B), POINTER :: NJAPC => NULL()               !<
+    real(DP), POINTER :: DVCLOSE => NULL()                 !< dependent variable convergence criteria
+    real(DP), POINTER :: RCLOSE => NULL()                  !< flow convergence criteria
+    real(DP), POINTER :: RELAX => NULL()                   !< preconditioner relaxation factor
+    real(DP), POINTER :: EPFACT => NULL()                  !<
+    real(DP), POINTER :: L2NORM0 => NULL()                 !< initial L2 norm
     ! ILUT VARIABLES
-    integer(I4B), POINTER :: LEVEL => NULL()
-    real(DP), POINTER :: DROPTOL => NULL()
-    integer(I4B), POINTER :: NJLU => NULL()
-    integer(I4B), POINTER :: NJW => NULL()
-    integer(I4B), POINTER :: NWLU => NULL()
+    integer(I4B), POINTER :: LEVEL => NULL()               !< number of levels
+    real(DP), POINTER :: DROPTOL => NULL()                 !< drop tolerance
+    integer(I4B), POINTER :: NJLU => NULL()                !< 
+    integer(I4B), POINTER :: NJW => NULL()                 !<
+    integer(I4B), POINTER :: NWLU => NULL()                !<
     ! POINTERS TO SOLUTION VARIABLES
-    integer(I4B), POINTER :: NEQ => NULL()
-    integer(I4B), POINTER :: NJA => NULL()
-    integer(I4B), dimension(:), pointer, contiguous :: IA => NULL()
-    integer(I4B), dimension(:), pointer, contiguous :: JA => NULL()
-    real(DP), dimension(:), pointer, contiguous :: AMAT => NULL()
-    real(DP), dimension(:), pointer, contiguous :: RHS => NULL()
-    real(DP), dimension(:), pointer, contiguous :: X => NULL()
+    integer(I4B), POINTER :: NEQ => NULL()                 !< number of equations (rows in matrix)
+    integer(I4B), POINTER :: NJA => NULL()                 !< number of non-zero values in amat
+    integer(I4B), dimension(:), pointer, contiguous :: IA => NULL()   !< position of start of each row
+    integer(I4B), dimension(:), pointer, contiguous :: JA => NULL()   !< column pointer
+    real(DP), dimension(:), pointer, contiguous :: AMAT => NULL()     !< coefficient matrix
+    real(DP), dimension(:), pointer, contiguous :: RHS => NULL()      !< right-hand side of equation
+    real(DP), dimension(:), pointer, contiguous :: X => NULL()        !< dependent variable
     ! VECTORS
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: DSCALE => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: DSCALE2 => NULL()
-    integer(I4B), POINTER,DIMENSION(:),CONTIGUOUS :: IAPC => NULL()
-    integer(I4B), POINTER,DIMENSION(:),CONTIGUOUS :: JAPC => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: APC => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: LORDER => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IORDER => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IARO => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JARO => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: ARO => NULL()
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: DSCALE => NULL()   !< scaling factor
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: DSCALE2 => NULL()  !< unscaling factor
+    integer(I4B), POINTER,DIMENSION(:),CONTIGUOUS :: IAPC => NULL()   !< position of start of each row in preconditioner matrix
+    integer(I4B), POINTER,DIMENSION(:),CONTIGUOUS :: JAPC => NULL()   !< preconditioner matrix column pointer
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: APC => NULL()      !< preconditioner coefficient matrix
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: LORDER => NULL()  !< reordering mapping
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IORDER => NULL()  !< mapping to restore reordered matrix
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IARO => NULL()    !< position of start of each row in reordered matrix
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JARO => NULL()    !< reordered matrix column pointer
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: ARO => NULL()         !< reordered coefficient matrix
     ! WORKING ARRAYS
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IW => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: W => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: ID => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: D => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: P => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: Q => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: Z => NULL()
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IW => NULL()      !< integer working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: W => NULL()           !< real working array
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: ID => NULL()      !< integer working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: D => NULL()           !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: P => NULL()           !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: Q => NULL()           !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: Z => NULL()           !< real working array
     ! BICGSTAB WORKING ARRAYS
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: T => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: V => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: DHAT => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: PHAT => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: QHAT => NULL()
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: T => NULL()           !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: V => NULL()           !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: DHAT => NULL()        !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: PHAT => NULL()        !< real working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: QHAT => NULL()        !< real working array
     ! POINTERS FOR USE WITH BOTH ORIGINAL AND RCM ORDERINGS
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IA0 => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JA0 => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: A0 => NULL()
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: IA0 => NULL()     !< pointer to current ia array
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JA0 => NULL()     !< pointer to current ja array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: A0 => NULL()          !< pointer to current coefficient matrix
     ! ILUT WORKING ARRAYS
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JLU => NULL()
-    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JW => NULL()
-    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: WLU => NULL()
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JLU => NULL()     !< ilut integer working array 
+    integer(I4B), POINTER, DIMENSION(:), CONTIGUOUS :: JW => NULL()      !< ilut integer working array
+    real(DP), POINTER, DIMENSION(:), CONTIGUOUS :: WLU => NULL()         !< ilut real working array
     
     ! PROCEDURES (METHODS)
     CONTAINS
@@ -97,39 +97,39 @@
 
   
   CONTAINS
-    SUBROUTINE IMSLINEAR_AR(THIS, NAME, IN, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                            IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X,     &
+  
+    !> @ brief Allocate storage and read data
+    !!
+    !!  Allocate storage for linear accelerators and read data
+    !!
+    !<
+    SUBROUTINE IMSLINEAR_AR(THIS, NAME, INIU, IOUT, IPRIMS, MXITER, IFDPARAM, &
+                            IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X,       &
                             NINNER, LFINDBLOCK)
-!     ******************************************************************
-!     ALLOCATE STORAGE FOR PCG ARRAYS AND READ IMSLINEAR DATA
-!     ******************************************************************
-!
-!        SPECIFICATIONS:
-!     ------------------------------------------------------------------
+      ! -- modules
       use MemoryManagerModule, only: mem_allocate
       use MemoryHelperModule,  only: create_mem_path
       use SimModule, only: ustop, store_error, count_errors,            &
                            deprecation_warning
-      !IMPLICIT NONE
-!     + + + DUMMY VARIABLES + + +
+      ! -- dummy variables
       CLASS(ImsLinearDataType), INTENT(INOUT) :: THIS
-      CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME
-      integer(I4B), INTENT(IN) :: IN
-      integer(I4B), INTENT(IN) :: IOUT
-      integer(I4B), TARGET, INTENT(IN) :: IPRIMS
-      integer(I4B), INTENT(IN) :: MXITER
-      integer(I4B), INTENT(IN) :: IFDPARAM
-      integer(I4B), INTENT(INOUT) :: IMSLINEARM
-      integer(I4B), TARGET, INTENT(IN) :: NEQ
-      integer(I4B), TARGET, INTENT(IN) :: NJA
-      integer(I4B), DIMENSION(NEQ+1), TARGET, INTENT(IN) :: IA
-      integer(I4B), DIMENSION(NJA), TARGET, INTENT(IN) :: JA
-      real(DP), DIMENSION(NJA), TARGET, INTENT(IN) :: AMAT
-      real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS
-      real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X
-      integer(I4B), TARGET, INTENT(INOUT) :: NINNER
-      integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK
-!     + + + LOCAL VARIABLES + + +
+      CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME        !< solution name
+      integer(I4B), INTENT(IN) :: INIU                           !< IMS input file unit
+      integer(I4B), INTENT(IN) :: IOUT                           !< simulation listing file unit
+      integer(I4B), TARGET, INTENT(IN) :: IPRIMS                 !< print option
+      integer(I4B), INTENT(IN) :: MXITER                         !< maximum outer iterations
+      integer(I4B), INTENT(IN) :: IFDPARAM                       !< 
+      integer(I4B), INTENT(INOUT) :: IMSLINEARM                  !<
+      integer(I4B), TARGET, INTENT(IN) :: NEQ                    !< number of equations
+      integer(I4B), TARGET, INTENT(IN) :: NJA                    !< number of non-zero entries in the coefficient matrix
+      integer(I4B), DIMENSION(NEQ+1), TARGET, INTENT(IN) :: IA   !< pointer to the start of a row in the coefficient matrix
+      integer(I4B), DIMENSION(NJA), TARGET, INTENT(IN) :: JA     !< column pointer
+      real(DP), DIMENSION(NJA), TARGET, INTENT(IN) :: AMAT       !< coefficient matrix
+      real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS     !< right-hand side
+      real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X       !< dependent variables
+      integer(I4B), TARGET, INTENT(INOUT) :: NINNER              !< maximum number of inner iterations
+      integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK           !<
+      ! -- local variables
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg
       character(len=LINELENGTH) :: warnmsg
@@ -144,9 +144,6 @@
       integer(I4B) :: ijw
       integer(I4B) :: iwlu
       integer(I4B) :: iwk
-!     + + + PARAMETERS + + +
-!     + + + OUTPUT FORMATS + + +
-!------------------------------------------------------------------
 !
 !-------SET LREADDATA
       IF (PRESENT(LFINDBLOCK)) THEN
@@ -208,7 +205,7 @@
       NINNER = this%iter1
 !
 !-------Initialize block parser
-      call parser%Initialize(in, iout)
+      call parser%Initialize(iniu, iout)
 !
 ! -- get IMSLINEAR block
       if (lreaddata) then
@@ -535,8 +532,10 @@
     END SUBROUTINE IMSLINEAR_AR
 
     subroutine imslinear_summary(this, mxiter)
+      ! -- dummy variables
       class(ImsLinearDataType), intent(inout) :: this
       integer(I4B), intent(in) :: mxiter
+      ! -- local variables
 !     + + + LOCAL VARIABLES + + +
       CHARACTER (LEN= 10) :: clin(0:2)
       CHARACTER (LEN= 31) :: clintit(0:2)
@@ -1705,7 +1704,6 @@
             exit inner
           end if
 !-----------SAVE CURRENT INNER ITERATES                                 
-          !rho0 = ims_iszero(rho) 
           rho0 = rho
         END DO INNER 
 !---------RESET ICNVG        
@@ -2002,10 +2000,8 @@
             exit inner
           end if
 !-----------SAVE CURRENT INNER ITERATES                                 
-          !rho0   = ims_iszero(rho)
           rho0   = rho
           alpha0 = alpha
-          !omega0 = ims_iszero(omega)
           omega0 = omega
         END DO INNER
 !---------RESET ICNVG        
@@ -2280,19 +2276,22 @@
         RETURN
       END SUBROUTINE IMSLINEARSUB_AXPY
 
-      
+    !> @brief Calculate the void ratio
+    !!
+    !! Function to calculate the void ratio from the porosity.
+    !!
+    !! @return      c                dot product of two vectors
+    !<
     FUNCTION IMSLINEARSUB_DP(neq, a, b) RESULT(c)
       ! -- return variable
-      real(DP) :: c
-!     + + + dummy arguments + + +
-      integer(I4B), intent(in) :: neq
-      real(DP), dimension(neq),  intent(in) :: a
-      real(DP), dimension(neq),  intent(in) :: b
-!     + + + local definitions + + +
+      real(DP) :: c                               !< dot product of a and b
+      ! -- dummy variables
+      integer(I4B), intent(in) :: neq             !< size of a and b
+      real(DP), dimension(neq),  intent(in) :: a  !< vector a
+      real(DP), dimension(neq),  intent(in) :: b  !< vector b
+      ! -- local variables
       integer(I4B) :: n
-!     + + + parameters + + +
-!     + + + functions + + +
-!     + + + code + + +
+      ! -- code
       c = DZERO
       do n = 1, neq
         c = c + a(n) * b(n)
@@ -2341,21 +2340,6 @@
       !---------return
       return
     END FUNCTION IMSLINEARSUB_RNRM2
-    
-    pure function ims_iszero(vin) result(vout)
-      ! -- return variable
-      real(DP) :: vout
-      ! -- dummy arguments
-      real(DP), intent(in) :: vin
-      ! -- code
-      if (vin == DZERO) then
-        vout = DPREC
-      else
-        vout = vin
-      end if
-      ! -- return
-      return
-    end function ims_iszero
 
 !
 !    
