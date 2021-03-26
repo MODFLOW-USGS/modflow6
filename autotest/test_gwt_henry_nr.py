@@ -507,16 +507,16 @@ def eval_transport(sim):
     csim = concobj.get_ts((0, 0, 20))[::125, 1]
     hans = np.array(
         [
-            0.8890905,
-            0.85362754,
-            0.85710554,
-            0.85226616,
-            0.85692396,
-            0.85245413,
-            0.85698664,
-            0.85247106,
-            0.85698471,
-            0.85246627,
+            0.88909027,
+            0.85382205,
+            0.85710524,
+            0.85227865,
+            0.85692375,
+            0.85245585,
+            0.85698074,
+            0.8524655,
+            0.85698465,
+            0.85246506,
         ]
     )
     cans = np.array(
@@ -535,10 +535,10 @@ def eval_transport(sim):
     )
 
     errmsg = "heads not right for cell (0, 0, 20):\n{}\n{}".format(hsim, hans)
-    assert np.allclose(hsim, hans, atol=1.0e-4), errmsg
+    assert np.allclose(hsim, hans, atol=1.0e-3), errmsg
 
     errmsg = "concs not right for cell (0, 0, 20):\n{}\n{}".format(csim, cans)
-    assert np.allclose(hsim, hans, atol=1.0e-4), errmsg
+    assert np.allclose(hsim, hans, atol=1.0e-3), errmsg
 
     makeplot = False
     if makeplot:
