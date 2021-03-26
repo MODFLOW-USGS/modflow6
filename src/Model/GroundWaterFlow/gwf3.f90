@@ -513,11 +513,14 @@ module GwfModule
     class(GwfModelType) :: this
     class(BndType), pointer :: packobj
     ! -- local
+    integer(I4B) :: irestore
     integer(I4B) :: ip, n
 ! ------------------------------------------------------------------------------
     !
     ! -- Reset state variable
-    if (iFailedStepRetry == 0) then
+    irestore = 0
+    if (iFailedStepRetry > 0) irestore = 1
+    if (irestore == 0) then
       !
       ! -- copy x into xold
       do n = 1, this%dis%nodes
@@ -532,7 +535,8 @@ module GwfModule
     end if
     !
     ! -- Advance
-    if(this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold)
+    if(this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold,         &
+                                            this%x, irestore)
     if(this%insto > 0) call this%sto%sto_ad()
     if(this%incsub > 0)  call this%csub%csub_ad(this%dis%nodes, this%x)
     if(this%inbuy > 0)  call this%buy%buy_ad()

@@ -475,11 +475,14 @@ module GwtModule
     class(GwtModelType) :: this
     class(BndType), pointer :: packobj
     ! -- local
+    integer(I4B) :: irestore
     integer(I4B) :: ip, n
 ! ------------------------------------------------------------------------------
     !
     ! -- Reset state variable
-    if (iFailedStepRetry == 0) then
+    irestore = 0
+    if (iFailedStepRetry > 0) irestore = 1
+    if (irestore == 0) then
       !
       ! -- copy x into xold
       do n = 1, this%dis%nodes
