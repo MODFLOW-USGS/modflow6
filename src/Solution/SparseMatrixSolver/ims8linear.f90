@@ -1602,8 +1602,6 @@
               P(n) = Z(n) 
             END DO 
           ELSE
-            !denom = rho0 + SIGN(DPREC,rho0)
-            !beta = rho / denom
             beta = rho / rho0 
             DO n = 1, NEQ 
               P(n) = Z(n) + beta * P(n) 
@@ -1612,8 +1610,8 @@
 !-----------COMPUTE ITERATES                                            
 !           UPDATE Q                                                   
           CALL IMSLINEARSUB_MV(NJA, NEQ, A0, P, Q, IA0, JA0) 
-          denom =  IMSLINEARSUB_DP(NEQ, P, Q)
-          denom = denom + SIGN(DPREC, denom) 
+          denom = IMSLINEARSUB_DP(NEQ, P, Q)
+          denom = denom + SIGN(DPREC,denom)
           alpha = rho / denom
 !-----------UPDATE X AND RESIDUAL                                       
           deltax = DZERO 
@@ -1701,8 +1699,14 @@
               CALL IMSLINEARSUB_AXPY(NEQ, B, -DONE, D, D)
             END IF
           END IF
+          !
+          ! -- exit inner if rho is zero
+          if (rho == DZERO) then
+            exit inner
+          end if
 !-----------SAVE CURRENT INNER ITERATES                                 
-          rho0 = rho 
+          !rho0 = ims_iszero(rho) 
+          rho0 = rho
         END DO INNER 
 !---------RESET ICNVG        
         IF (ICNVG < 0) ICNVG = 0
@@ -1842,7 +1846,7 @@
           CALL IMSLINEARSUB_MV(NJA, NEQ, A0, PHAT, V, IA0, JA0) 
 !           UPDATE alpha WITH DHAT AND V                                
           denom = IMSLINEARSUB_DP(NEQ, DHAT, V) 
-          denom = denom + SIGN(DPREC, denom) 
+          denom = denom + SIGN(DPREC,denom)
           alpha = rho / denom 
 !-----------UPDATE Q                                                    
           DO n = 1, NEQ 
@@ -1885,7 +1889,7 @@
 !-----------UPDATE omega                                                
           numer = IMSLINEARSUB_DP(NEQ, T, Q) 
           denom = IMSLINEARSUB_DP(NEQ, T, T)
-          denom = denom + SIGN(DPREC,denom) 
+          denom = denom + SIGN(DPREC,denom)
           omega = numer / denom 
 !-----------UPDATE X AND RESIDUAL                                       
           deltax = DZERO 
@@ -1992,9 +1996,16 @@
               !END DO
             END IF
           END IF
+          !
+          ! -- exit inner if rho or omega are zero
+          if (rho*omega == DZERO) then
+            exit inner
+          end if
 !-----------SAVE CURRENT INNER ITERATES                                 
+          !rho0   = ims_iszero(rho)
           rho0   = rho
           alpha0 = alpha
+          !omega0 = ims_iszero(omega)
           omega0 = omega
         END DO INNER
 !---------RESET ICNVG        
@@ -2330,6 +2341,22 @@
       !---------return
       return
     END FUNCTION IMSLINEARSUB_RNRM2
+    
+    pure function ims_iszero(vin) result(vout)
+      ! -- return variable
+      real(DP) :: vout
+      ! -- dummy arguments
+      real(DP), intent(in) :: vin
+      ! -- code
+      if (vin == DZERO) then
+        vout = DPREC
+      else
+        vout = vin
+      end if
+      ! -- return
+      return
+    end function ims_iszero
+
 !
 !    
 !-------BEGINNING OF SUBROUTINES FROM OTHER LIBRARIES                   

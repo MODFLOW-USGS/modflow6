@@ -660,16 +660,18 @@ class Simulation(object):
                     if v0.size < 1:
                         continue
                     idx = (abs(v0) > self.rclose) & (abs(v1) > self.rclose)
-                    diff = np.zeros(v0.shape, dtype=v0.dtype)
-                    diff[idx] = abs(v0[idx] - v1[idx]) / abs(v0[idx])
-                    diffmax = diff.max()
-                    if diffmax > self.pdtol:
+                    percent_diff = np.zeros(v0.shape, dtype=v0.dtype)
+                    percent_diff[idx] = (
+                        100.0 * abs(v0[idx] - v1[idx]) / abs(v0[idx])
+                    )
+                    percent_diffmax = percent_diff.max()
+                    if percent_diffmax > self.pdtol:
                         success_tst = False
                         msg = (
                             "{} - ".format(os.path.basename(fpth0))
                             + "{} ".format(key)
-                            + "at time {} maximum ".format(t)
-                            + "percent difference ({}) ".format(diffmax)
+                            + "at time {} maximum percent ".format(t)
+                            + "difference ({}) ".format(percent_diffmax)
                             + "> {}".format(self.pdtol)
                         )
                         fcmp.write("{}\n".format(msg))
