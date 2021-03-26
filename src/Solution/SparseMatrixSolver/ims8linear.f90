@@ -2169,79 +2169,96 @@
         RETURN
       END SUBROUTINE IMSLINEARSUB_SETX
                                                                         
-!       COPY ONE real(DP) VECTOR TO ANOTHER                      
+      !> @brief Copy one real vector to another
+      !!
+      !! Subroutine to copy one real vector to another.
+      !!
+      !! @param[in,out]  R  resultant vector
+      !<
       SUBROUTINE IMSLINEARSUB_DCOPY(NR, V, R)                                 
         IMPLICIT NONE                                                   
-!       + + + DUMMY ARGUMENTS + + +                                       
-        integer(I4B), INTENT(IN) :: NR                                       
-        real(DP), DIMENSION(NR), INTENT(IN)    :: V              
-        real(DP), DIMENSION(NR), INTENT(INOUT) :: R              
-!       + + + LOCAL DEFINITIONS + + +                                     
-        integer(I4B) :: n                                                    
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- dummy variables
+        integer(I4B), INTENT(IN) :: NR               !< number of rows in vector V
+        real(DP), DIMENSION(NR), INTENT(IN)    :: V  !< input real vector
+        real(DP), DIMENSION(NR), INTENT(INOUT) :: R  !< resultant real vector
+        ! -- local variables
+        integer(I4B) :: n
+        ! -- code
         DO n = 1, NR                                                    
           R(n) = V(n)                                                   
         END DO                                                          
-!---------RETURN                                                        
+        !
+        ! -- return
         RETURN                                                          
       END SUBROUTINE IMSLINEARSUB_DCOPY                                       
                                                                         
-!       COPY ONE INTEGER VECTOR TO ANOTHER                              
+      !> @brief Copy one integer vector to another
+      !!
+      !! Subroutine to copy one integer vector to another.
+      !!
+      !! @param[in,out]  R  resultant vector
+      !<
       SUBROUTINE IMSLINEARSUB_ICOPY(NR, V, R)                                 
-        IMPLICIT NONE                                                   
-!       + + + DUMMY ARGUMENTS + + +                                       
-        integer(I4B), INTENT(IN) :: NR                                       
-        integer(I4B), DIMENSION(NR), INTENT(IN)    :: V                      
-        integer(I4B), DIMENSION(NR), INTENT(INOUT) :: R                      
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- dummy variables
+        integer(I4B), INTENT(IN) :: NR                   !< number of rows in vector V                                
+        integer(I4B), DIMENSION(NR), INTENT(IN)    :: V  !< input integer vector                    
+        integer(I4B), DIMENSION(NR), INTENT(INOUT) :: R  !< resultant integer vector
+        ! -- local variables
         integer(I4B) :: n                                                    
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- code
         DO n = 1, NR                                                    
           R(n) = V(n)                                                   
         END DO                                                          
-!---------RETURN                                                        
+        !
+        ! -- return
         RETURN                                                          
       END SUBROUTINE IMSLINEARSUB_ICOPY                                       
-!      
-!-------SCALE A REAL VECTOR WITH A CONSTANT      
+
+      !> @brief Scale a real vector with a constant
+      !!
+      !! Subroutine to multiply a vector times a constant.
+      !!
+      !! @param[in,out]  D1  resultant vector
+      !<
       SUBROUTINE IMSLINEARSUB_RSCAL(NR, C, D1)
-        IMPLICIT NONE
-!     + + + DUMMY ARGUMENTS + + +
-        INTEGER, INTENT(IN) :: NR
-        real(DP), INTENT(IN) :: C
-        real(DP), DIMENSION(NR),  INTENT(INOUT) :: D1
-!     + + + LOCAL DEFINITIONS + + +
+        ! -- dummy variables
+        INTEGER, INTENT(IN) :: NR                      !< number of rows in vector D1
+        real(DP), INTENT(IN) :: C                      !< constant
+        real(DP), DIMENSION(NR),  INTENT(INOUT) :: D1  !< real vector
+        ! -- local variables
         INTEGER :: n
-!     + + + FUNCTIONS + + +
-!     + + + CODE + + +
+        ! -- code
         DO n = 1, NR
           D1(n) = C * D1(n)
         END DO
-!---------RETURN
+        !
+        ! -- return
         RETURN
       END SUBROUTINE IMSLINEARSUB_RSCAL
 
       
+      !> @brief Calculate matrix vector product
+      !!
+      !! Subroutine to calculate the matrix vector product of
+      !! A and D1.
+      !!
+      !! @param[in,out]  D2  resultant vector
+      !<
       SUBROUTINE IMSLINEARSUB_MV(NJA, NEQ, A, D1, D2, IA, JA)                        
-        IMPLICIT NONE                                                   
-!       + + + DUMMY ARGUMENTS + + +                                       
-        integer(I4B), INTENT(IN) :: NJA                                      
-        integer(I4B), INTENT(IN) :: NEQ                                      
-        real(DP), DIMENSION(NJA),  INTENT(IN)    :: A            
-        real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1           
-        real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2           
-        integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA                     
-        integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JA                     
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- dummy variables
+        integer(I4B), INTENT(IN) :: NJA                   !< number of non-zero values in A                   
+        integer(I4B), INTENT(IN) :: NEQ                   !< number of equations (rows in A)
+        real(DP), DIMENSION(NJA),  INTENT(IN)    :: A     !< coefficient matrix
+        real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1    !< input vector
+        real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2    !< resultant vector
+        integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA  !< pointer to start of a row in A
+        integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JA  !< column pointers
+        ! -- local variables
         integer(I4B) :: ic0, ic1                                             
         integer(I4B) :: icol                                                 
         integer(I4B) :: m, n                                                 
         real(DP) :: tv                                           
-!       + + + PARAMETERS + + +                                            
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- code
         DO n = 1, NEQ                                                   
 !           ADD DIAGONAL AND OFF-DIAGONAL TERMS                         
           tv     = DZERO                                                
@@ -2257,28 +2274,34 @@
         RETURN                                                          
       END SUBROUTINE IMSLINEARSUB_MV  
       
+      !> @brief Calculate axpy
+      !!
+      !! Subroutine to add two vectors after multiplying the second
+      !! vector by a constant.
+      !!
+      !! @param[in,out]  DR  resultant vector
+      !<
       SUBROUTINE IMSLINEARSUB_AXPY(NEQ, D1, DC, D2, DR)
-        IMPLICIT NONE
-!     + + + DUMMY ARGUMENTS + + +
-        integer(I4B), INTENT(IN) :: NEQ
-        real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1
-        real(DP), INTENT(IN) :: DC
-        real(DP), DIMENSION(NEQ), INTENT(IN)    :: D2
-        real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DR
-!     + + + LOCAL DEFINITIONS + + +
+        ! -- dummy variables
+        integer(I4B), INTENT(IN) :: NEQ                !< length of vectors
+        real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1  !< first vector
+        real(DP), INTENT(IN) :: DC                     !< constant multiplied by the second vector
+        real(DP), DIMENSION(NEQ), INTENT(IN)    :: D2  !< second vector
+        real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DR  !< resultant vector
+        ! -- local variables
         integer(I4B) :: n
-!     + + + FUNCTIONS + + +
-!     + + + CODE + + +
+        ! -- code
          DO n = 1, NEQ
           DR(n) = D1(n) + DC * D2(n)
          END DO
-!---------RETURN
+         !
+         ! -- return
         RETURN
       END SUBROUTINE IMSLINEARSUB_AXPY
 
-    !> @brief Calculate the void ratio
+    !> @brief Calculate the dot product
     !!
-    !! Function to calculate the void ratio from the porosity.
+    !! Function to calculate the dot product of two vectors.
     !!
     !! @return      c                dot product of two vectors
     !<

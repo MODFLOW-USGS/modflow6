@@ -689,20 +689,28 @@ class Simulation(object):
                     # skip empty vectors
                     if v0.size < 1:
                         continue
-                    idx = (abs(v0) > self.rclose) & (abs(v1) > self.rclose)
+                    vmin = self.rclose
+                    if vmin < 1e-6:
+                        vmin = 1e-6
+                    idx = (abs(v0) > vmin) & (abs(v1) > vmin)
                     percent_diff = np.zeros(v0.shape, dtype=v0.dtype)
                     percent_diff[idx] = (
                         100.0 * abs(v0[idx] - v1[idx]) / abs(v0[idx])
                     )
                     percent_diffmax = percent_diff.max()
+                    indices = np.where(
+                        percent_diff == percent_diffmax
+                    )[0]
                     if percent_diffmax > self.pdtol:
                         success_tst = False
                         msg = (
                             "{} - ".format(os.path.basename(fpth0))
-                            + "{} ".format(key)
+                            + "{:16s} ".format(key)
+                            + "difference ({:10.4g}) ".format(percent_diffmax)
+                            + "> {:10.4g} ".format(self.pdtol)
+                            + "at {} nodes ".format(indices.size)
+                            + " [first location ({})] ".format(indices[0] + 1)
                             + "at time {} maximum percent ".format(t)
-                            + "difference ({}) ".format(percent_diffmax)
-                            + "> {}".format(self.pdtol)
                         )
                         fcmp.write("{}\n".format(msg))
                         if self.cmp_verbose:

@@ -114,7 +114,6 @@ def get_model(idx, dir):
         sim,
         print_option="summary",
         csv_outer_output_filerecord=name + ".ims.csv",
-        complexity="complex",
         outer_dvclose=hclose * 10.0,
         outer_maximum=nouter,
         inner_maximum=ninner,
