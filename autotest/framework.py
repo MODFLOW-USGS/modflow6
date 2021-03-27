@@ -32,7 +32,7 @@ class testing_framework(object):
 
         """
         print(os.getcwd())
-        sim.set_model(sim.name)
+        sim.set_model(sim.name, testModel=False)
         sim.run()
         sim.compare()
         if sim.exfunc is not None:
