@@ -141,6 +141,9 @@ subroutine get_filename(iunit, fname)
   integer(I4B) :: ilen
 ! ------------------------------------------------------------------------------
   !
+  ! -- initialize variable returned by index; zero means substring not found
+  ipos = 0
+  !
   ! -- get file name from unit number
   inquire(unit=iunit, name=fname)
   !
@@ -155,10 +158,8 @@ subroutine get_filename(iunit, fname)
   !
   ! -- check for backslash on windows or undefined os and 
   !    forward slashes were not found
-  if (ios == OSWIN .or. ios == OSUNDEF) then
-    if (ipos < 1) then
-      ipos = index(fname, '\', back=.TRUE.)
-    end if
+  if (ipos < 1) then
+    ipos = index(fname, '\', back=.TRUE.)
   end if
   !
   ! -- exclude the path from the file name
