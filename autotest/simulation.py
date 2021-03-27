@@ -698,9 +698,7 @@ class Simulation(object):
                         100.0 * abs(v0[idx] - v1[idx]) / abs(v0[idx])
                     )
                     percent_diffmax = percent_diff.max()
-                    indices = np.where(
-                        percent_diff == percent_diffmax
-                    )[0]
+                    indices = np.where(percent_diff == percent_diffmax)[0]
                     if percent_diffmax > self.pdtol:
                         success_tst = False
                         msg = (
