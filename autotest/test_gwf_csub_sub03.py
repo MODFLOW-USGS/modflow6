@@ -334,7 +334,7 @@ def get_model(idx, dir):
     opth = "{}.csub.obs".format(name)
     ibcsv = "{}.ib.strain.csv".format(name)
     skcsv = "{}.sk.strain.csv".format(name)
-    copth = "{}.compaction.bin".format(name)
+    copth = "{}.compaction.gridbin".format(name)
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         print_input=True,

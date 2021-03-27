@@ -293,8 +293,8 @@ def get_model(idx, dir):
     opth = "{}.csub.obs".format(name)
     ibcsv = "{}.ib.strain.csv".format(name)
     skcsv = "{}.sk.strain.csv".format(name)
-    copth = "{}.compaction.bin".format(name)
-    zopth = "{}.zdisplacement.bin".format(name)
+    copth = "{}.compaction.gridbin".format(name)
+    zopth = "{}.zdisplacement.gridbin".format(name)
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         boundnames=True,
@@ -553,7 +553,8 @@ def eval_zdisplacement(sim):
 
     # compare z-displacement data
     fpth1 = os.path.join(
-        sim.simpath, "{}.zdisplacement.bin".format(os.path.basename(sim.name))
+        sim.simpath,
+        "{}.zdisplacement.gridbin".format(os.path.basename(sim.name)),
     )
     fpth2 = os.path.join(sim.simpath, cmppth, "csub_zdisp01.vert_disp.hds")
     text1 = "CSUB-ZDISPLACE"
