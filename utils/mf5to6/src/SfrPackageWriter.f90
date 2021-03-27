@@ -747,13 +747,21 @@ contains
     class(SfrPackageWriterType) :: this
     ! local
     !
-    integer :: idiv, iprior, ndiv, nrch, &
+    integer :: i, idiv, iprior, ndiv, nrch, &
                rchnumDs, rchnumUs, segnumDs, segnumUs
     type(SfrReachType), pointer :: rchDs => null()
     type(SfrReachType), pointer :: rchUs => null()
+    type(SfrReachType), pointer :: rchtmp => null()
     type(SfrDiversionType), pointer :: div => null()
     type(SfrSegmentType), pointer :: segDs => null()
     type(SfrSegmentType), pointer :: segUs => null()
+    
+    !cdl -- clear all diversion lists
+    nrch = this%Reaches%Count()
+    do i=1,nrch
+      rchtmp => this%GetReach(i)
+      call rchtmp%Diversions%clear()
+    end do
     !
     ! Iterate through all diversions defined for package
     ndiv = this%Diversions%Count()

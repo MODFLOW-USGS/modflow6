@@ -1080,6 +1080,7 @@ C         SEGMENTS. Moved NSEGCK below ELSE IF 6/9/2005 dep
         IF ( Kkper.GT.1 ) THEN
           ! Clear list of segments so it can be repopulated.
           call Segments%Clear(.true.)
+          call Diversions%Clear(.true.)
           DO kss = 1, NSS
             NSEGCK(kss) = 0
           END DO
