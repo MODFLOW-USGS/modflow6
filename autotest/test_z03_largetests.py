@@ -25,6 +25,7 @@ from common_regression import (
     get_example_dirs,
     get_select_dirs,
     get_select_packages,
+    set_mf6_regression,
 )
 
 home = get_home_dir()
@@ -125,7 +126,7 @@ def test_mf6model():
     # run the test models
     for on_dir in example_dirs:
         yield run_mf6, Simulation(
-            on_dir, mf6_regression=True, cmp_verbose=False
+            on_dir, mf6_regression=set_mf6_regression(), cmp_verbose=False
         )
 
     return
@@ -147,7 +148,9 @@ def main():
 
     # run the test models
     for on_dir in example_dirs:
-        sim = Simulation(on_dir, mf6_regression=True, cmp_verbose=False)
+        sim = Simulation(
+            on_dir, mf6_regression=set_mf6_regression(), cmp_verbose=False
+        )
         run_mf6(sim)
 
     return
