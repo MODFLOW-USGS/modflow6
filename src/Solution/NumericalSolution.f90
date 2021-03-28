@@ -2320,15 +2320,9 @@ contains
     integer(I4B) :: i
     integer(I4B) :: i1
     integer(I4B) :: i2
-    integer(I4B) :: jcol
     integer(I4B) :: iptct
     integer(I4B) :: iallowptc
-    integer(I4B) :: irandom_value
-    integer(I4B) :: iseed_size
-    integer(I4B), pointer, dimension(:) :: iseed => null()
-    real(DP) :: rand_val
     real(DP) :: adiag
-    real(DP) :: ax
     real(DP) :: diagval
     real(DP) :: l2norm
     real(DP) :: ptcval
@@ -2338,9 +2332,6 @@ contains
     character(len=*), parameter :: fmtfname = "('mf6mat_', i0, '_', i0, &
       &'_', i0, '_', i0, '.txt')"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- set random seed flag
-    irandom_value = 0
     !
     ! -- take care of loose ends for all nodes before call to solver
     do n = 1, this%neq
@@ -2463,47 +2454,6 @@ contains
           ptcval, diagmin, bnorm/l2norm, ptcval / diagmin
       end if
       this%l2norm0 = l2norm
-    end if
-    !
-    !
-    ! -- take care of case where all the sum of the product of the 
-    !    coefficient matrix and associated x values for a cell
-    !    are zero and the rhs for the cell is non-zero at the start 
-    !    of the simulation to prevent divide by zero errors in the 
-    !    linear solver. Only applied at the start of the simulation.
-    !    Closes issue #655
-    if (kiter*kstp*kper == 1) then
-      do n = 1, this%neq
-        if (this%active(n) > 0 .and. this%rhs(n) /= DZERO) then
-          i1 = this%ia(n) + 1
-          i2 = this%ia(n + 1) - 1
-          ax = this%amat(this%ia(n)) * this%xtemp(n)
-          do i = i1, i2
-            jcol = this%ja(i)
-            ax = ax + this%amat(i) * this%xtemp(jcol)
-          end do
-          !
-          ! -- adjust the initial x-value
-          if (ax == DZERO) then
-            if (irandom_value == 0) then
-              call random_seed(size=iseed_size)
-              allocate(iseed(iseed_size))
-              do i = 1, iseed_size
-                iseed(i) = 1234567890
-              end do
-              CALL random_seed(PUT=iseed)
-            end if
-            call random_number(rand_val)
-            this%x(n) = this%xtemp(n) + rand_val * DEP3 * DPREC
-            irandom_value = irandom_value + 1
-          end if
-        end if
-      end do
-      !
-      ! -- clean up variables used to generate random numbers
-      if (irandom_value > 0) then
-        deallocate(iseed)
-      end if
     end if
     !
     ! -- save rhs, amat to a file

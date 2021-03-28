@@ -1,4 +1,5 @@
 import os
+import sys
 
 try:
     import pymake
@@ -45,6 +46,15 @@ def get_home_dir():
     print("HOME: {}".format(home))
 
     return home
+
+
+def set_mf6_regression():
+    mf6_regression = True
+    for arg in sys.argv:
+        if arg.lower() in ("--original_regression", "-oreg"):
+            mf6_regression = False
+            break
+    return mf6_regression
 
 
 def is_directory_available(example_basedir):

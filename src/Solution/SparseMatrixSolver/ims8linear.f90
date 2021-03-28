@@ -531,12 +531,16 @@
       RETURN
     END SUBROUTINE IMSLINEAR_AR
 
+    !> @ brief Write summary of settings
+    !!
+    !!  Write summary of linear accelerator settings.
+    !!
+    !<
     subroutine imslinear_summary(this, mxiter)
       ! -- dummy variables
       class(ImsLinearDataType), intent(inout) :: this
-      integer(I4B), intent(in) :: mxiter
+      integer(I4B), intent(in) :: mxiter               !< maximum number of outer iterations
       ! -- local variables
-!     + + + LOCAL VARIABLES + + +
       CHARACTER (LEN= 10) :: clin(0:2)
       CHARACTER (LEN= 31) :: clintit(0:2)
       CHARACTER (LEN= 20) :: cipc(0:4)
@@ -545,9 +549,9 @@
       CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
       CHARACTER (LEN= 15) :: clevel
       CHARACTER (LEN= 15) :: cdroptol 
-      integer(I4B) :: i, j
-!     + + + PARAMETERS + + +
-!       DATA
+      integer(I4B) :: i
+      integer(I4B) :: j
+      ! -- data
       DATA clin  /'UNKNOWN   ', &
                   'CG        ', &
      &            'BCGS      '/
@@ -570,7 +574,7 @@
      &                'L2 NORM         ', &
      &                'RELATIVE L2NORM ', &
                       'L2 NORM W. REL. '/
-!       OUTPUT FORMATS
+      ! -- formats
 02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
      &        /,1X,66('-'),/, &
      &        ' MAXIMUM OF ',I0,' CALLS OF SOLUTION ROUTINE',/, &
@@ -636,14 +640,21 @@
       end if
       !
       ! -- return
-    return
+      return
     end subroutine imslinear_summary 
     
+    !> @ brief Allocate and initialize scalars
+    !!
+    !!  Allocate and inititialize linear accelerator scalars
+    !!
+    !<
     subroutine allocate_scalars(this)
+      ! -- modules
       use MemoryManagerModule, only: mem_allocate
+      ! -- dummy variables
       class(ImsLinearDataType), intent(inout) :: this
       !
-      ! -- scalars
+      ! -- allocate scalars
       call mem_allocate(this%iout, 'IOUT', this%memoryPath)
       call mem_allocate(this%ilinmeth, 'ILINMETH', this%memoryPath)
       call mem_allocate(this%iter1, 'ITER1', this%memoryPath)
@@ -668,7 +679,7 @@
       call mem_allocate(this%njw, 'NJW', this%memoryPath)
       call mem_allocate(this%nwlu, 'NWLU', this%memoryPath)
       !
-      ! -- initialize
+      ! -- initialize scalars
       this%iout = 0
       this%ilinmeth = 0
       this%iter1 = 0
@@ -693,12 +704,19 @@
       this%njw = 0
       this%nwlu = 0
       !
-      ! --Return
+      ! -- return
       return
     end subroutine allocate_scalars
     
+    !> @ brief Deallocate memory
+    !!
+    !!  Deallocate linear accelerator memory.
+    !!
+    !<
     subroutine IMSLINEAR_DA(this)
+      ! -- modules
       use MemoryManagerModule, only: mem_deallocate
+      ! -- dummy variables
       class(ImsLinearDataType), intent(inout) :: this
       !
       ! -- arrays
@@ -763,20 +781,20 @@
       nullify(this%rhs)
       nullify(this%x)
       !
-      ! --Return
+      ! -- return
       return
     end subroutine IMSLINEAR_DA
     
+    !> @ brief Set default settings
+    !!
+    !!  Set default linear accelerator settings.
+    !!
+    !<
     SUBROUTINE SET_IMSLINEAR_INPUT(THIS, IFDPARAM)
-      IMPLICIT NONE
-!     + + + DUMMY ARGUMENTS + + +
+      ! -- dummy variables
       CLASS(ImsLinearDataType), INTENT(INOUT) :: THIS
-      integer(I4B), INTENT(IN) :: IFDPARAM
-!     + + + LOCAL DEFINITIONS + + +
-!     + + + PARAMETERS + + +
-!     + + + FUNCTIONS + + +
-!
-!     + + + CODE + + +
+      integer(I4B), INTENT(IN) :: IFDPARAM  !< complexity option
+      ! -- code
       SELECT CASE ( IFDPARAM )
         ! Simple option
         CASE(1)
@@ -821,54 +839,49 @@
       RETURN
     END SUBROUTINE SET_IMSLINEAR_INPUT
 
+      !> @ brief Base linear accelerator subroutine
+      !!
+      !!  Base linear accelerator subroutine that scales and reorders
+      !!  the system of equations, if necessary, updates the preconditioner,
+      !!  and calls the appropriate linear accelerator.
+      !!
+      !<
       SUBROUTINE IMSLINEAR_AP(THIS,ICNVG,KSTP,KITER,IN_ITER,                  &
                               NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR,    &
                               CACCEL, ITINNER, CONVLOCDV, CONVLOCDR,          &
                               DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
-!
-!     ******************************************************************
-!     SOLUTION BY THE CONJUGATE GRADIENT METHOD -
-!                                          UP TO ITER1 ITERATIONS
-!     ******************************************************************
-!
-!        SPECIFICATIONS:
-!     ------------------------------------------------------------------
+      ! -- modules
       USE SimModule
-      IMPLICIT NONE
-!     + + + DUMMY ARGUMENTS + + +
+      ! -- dummy variables
       CLASS(ImsLinearDataType), INTENT(INOUT) :: THIS
-      integer(I4B), INTENT(INOUT)                          :: ICNVG
-      integer(I4B), INTENT(IN)                             :: KSTP
-      integer(I4B), INTENT(IN)                             :: KITER
-      integer(I4B), INTENT(INOUT)                          :: IN_ITER
+      integer(I4B), INTENT(INOUT)                          :: ICNVG           !<
+      integer(I4B), INTENT(IN)                             :: KSTP            !<
+      integer(I4B), INTENT(IN)                             :: KITER           !<
+      integer(I4B), INTENT(INOUT)                          :: IN_ITER         !<
       ! CONVERGENCE INFORMATION
-      integer(I4B), INTENT(IN) :: NCONV
-      integer(I4B), INTENT(IN) :: CONVNMOD
-      integer(I4B), DIMENSION(CONVNMOD+1), INTENT(INOUT) ::CONVMODSTART
-      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV
-      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR
-      character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL
-      integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER
-      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV
-      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR
-      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX
-      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX
-      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX
-      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
-      
-!     + + + LOCAL DEFINITIONS + + +
+      integer(I4B), INTENT(IN) :: NCONV                                       !<
+      integer(I4B), INTENT(IN) :: CONVNMOD                                    !<
+      integer(I4B), DIMENSION(CONVNMOD+1), INTENT(INOUT) ::CONVMODSTART       !<
+      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV               !<
+      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR               !<
+      character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL            !<
+      integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER                !<
+      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV    !<
+      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR    !<
+      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                   !<
+      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                   !<
+      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX        !<
+      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX        !<
+      ! -- local variables
       integer(I4B) :: n
       integer(I4B) :: innerit
       integer(I4B) :: irc
       integer(I4B) :: itmax
       real(DP) :: tv
       real(DP) :: rmax
-!     + + + PARAMETERS + + +
-!     + + + FUNCTIONS + + +
-!
-!     + + + CODE + + +
-!
-!-------SET EPFACT BASED ON MFUSG TIMESTEP
+      ! -- code
+      !
+      ! -- set epfact based on timestep
       IF (THIS%ICNVGOPT ==  2) THEN
         IF (KSTP ==  1) THEN
           THIS%EPFACT = 0.01
@@ -1000,9 +1013,9 @@
 !-------ROUTINE TO CALCULATE LORDER AND IORDER FOR REORDERING           
       SUBROUTINE IMSLINEARSUB_CALC_ORDER(IOUT, IPRIMS, IORD, NEQ, NJA, IA, JA,  &
      &                                   LORDER, IORDER)                     
-      use SimModule, only: ustop, store_error, count_errors
-      IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- modules
+        use SimModule, only: ustop, store_error, count_errors
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: IOUT 
         integer(I4B), INTENT(IN) :: IPRIMS 
         integer(I4B), INTENT(IN) :: IORD 
@@ -1012,16 +1025,14 @@
         integer(I4B), DIMENSION(NJA),   INTENT(IN)  :: JA 
         integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: LORDER 
         integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: IORDER 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         character (len=LINELENGTH) :: errmsg 
         integer(I4B) :: n 
         integer(I4B) :: nsp 
-        integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork0, iwork1 
+        integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork0
+        integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork1 
         integer(I4B) :: iflag 
-!       + + + PARAMETERS + + +                                            
-!       + + + FUNCTIONS + + +                                             
-!       + + + FORMATS + + +                                               
-!       + + + CODE + + +                                                  
+        ! -- code
         DO n = 1, NEQ 
           LORDER(n) = IZERO 
           IORDER(n) = IZERO 
@@ -1067,8 +1078,7 @@
 !       THE RHS (B), AND THE ESTIMATE OF X (X)                          
       SUBROUTINE IMSLINEARSUB_SCALE(IOPT, ISCL, NEQ, NJA, IA, JA, AMAT, X, B,   &
      &                              DSCALE, DSCALE2)                            
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: IOPT 
         integer(I4B), INTENT(IN) :: ISCL 
         integer(I4B), INTENT(IN) :: NEQ 
@@ -1200,8 +1210,9 @@
       SUBROUTINE IMSLINEARSUB_PCU(IOUT, NJA, NEQ, NIAPC, NJAPC, IPC, RELAX,     &
                                   AMAT, IA, JA, APC, IAPC, JAPC, IW, W,         &
                                   LEVEL, DROPTOL, NJLU, NJW, NWLU, JLU, JW, WLU)               
-      use SimModule, only: ustop, store_error, count_errors
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- modules
+        use SimModule, only: ustop, store_error, count_errors
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: IOUT 
         integer(I4B), INTENT(IN) :: NJA 
         integer(I4B), INTENT(IN) :: NEQ 
@@ -1226,14 +1237,13 @@
         integer(I4B), DIMENSION(NJLU), INTENT(INOUT) :: JLU
         integer(I4B), DIMENSION(NJW),  INTENT(INOUT) :: JW
         real(DP), DIMENSION(NWLU),  INTENT(INOUT) :: WLU
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         character(len=LINELENGTH) :: errmsg
         character(len=80), dimension(3) :: cerr
         integer(I4B) :: izero 
         integer(I4B) :: ierr
         real(DP) :: delta 
-!       + + + FUNCTIONS + + +  
-!       + + + DATA + + +
+        ! -- data
         DATA cerr  /'INCOMPREHENSIBLE ERROR - MATRIX MUST BE WRONG.              ', &
                     'INSUFFICIENT STORAGE IN ARRAYS ALU, JLU TO STORE FACTORS.   ', &
                     'ZERO ROW ENCOUNTERED.                                       '/
@@ -1285,21 +1295,19 @@
 !                                                                       
 !-------JACOBI PRECONDITIONER - INVERSE OF DIAGONAL                     
       SUBROUTINE IMSLINEARSUB_PCJ(NJA, NEQ, AMAT, APC, IA, JA) 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: NJA 
         integer(I4B), INTENT(IN) :: NEQ 
         real(DP), DIMENSION(NJA),  INTENT(IN)      :: AMAT 
         real(DP), DIMENSION(NEQ),  INTENT(INOUT)   :: APC 
         integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA 
         integer(I4B), DIMENSION(NJA),   INTENT(IN) :: JA 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         integer(I4B) :: i, n 
         integer(I4B) :: ic0, ic1 
         integer(I4B) :: id 
         real(DP) :: tv 
-!       + + + PARAMETERS + + +                                            
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- code
         DO n = 1, NEQ 
             ic0 = IA(n) 
             ic1 = IA(n+1) - 1 
@@ -1319,13 +1327,12 @@
       END SUBROUTINE IMSLINEARSUB_PCJ 
                                                                         
       SUBROUTINE IMSLINEARSUB_JACA(NEQ, A, D1, D2) 
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: NEQ 
         real(DP), DIMENSION(NEQ),  INTENT(IN)    :: A 
         real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1 
         real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        !  -- local variables
         integer(I4B) :: n 
         real(DP) :: tv 
 !       + + + PARAMETERS + + +                                            
@@ -1342,8 +1349,7 @@
       SUBROUTINE IMSLINEARSUB_PCILU0(NJA, NEQ, AMAT, IA, JA,                    &
                                      APC, IAPC, JAPC, IW, W,                    &
                                      RELAX, IZERO, DELTA)                        
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: NJA 
         integer(I4B), INTENT(IN) :: NEQ 
         real(DP), DIMENSION(NJA),  INTENT(IN)     :: AMAT 
@@ -1357,7 +1363,7 @@
         real(DP), INTENT(IN) :: RELAX 
         integer(I4B), INTENT(INOUT) :: IZERO 
         real(DP), INTENT(IN) :: DELTA 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         integer(I4B) :: ic0, ic1 
         integer(I4B) :: iic0, iic1 
         integer(I4B) :: iu, iiu 
@@ -1370,9 +1376,7 @@
         real(DP) :: tl 
         real(DP) :: rs 
         real(DP) :: d 
-!       + + + PARAMETERS + + +                                            
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- code
         drelax = RELAX 
         DO n = 1, NEQ 
           IW(n)  = 0 
@@ -1454,8 +1458,7 @@
       END SUBROUTINE IMSLINEARSUB_PCILU0 
                                                                         
       SUBROUTINE IMSLINEARSUB_ILU0A(NJA, NEQ, APC, IAPC, JAPC, R, D) 
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: NJA 
         integer(I4B), INTENT(IN) :: NEQ 
         real(DP), DIMENSION(NJA),  INTENT(IN)  :: APC 
@@ -1463,15 +1466,15 @@
         integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JAPC 
         real(DP), DIMENSION(NEQ),  INTENT(IN)     :: R 
         real(DP), DIMENSION(NEQ),  INTENT(INOUT)  :: D 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         integer(I4B) :: ic0, ic1 
         integer(I4B) :: iu 
         integer(I4B) :: jcol 
         integer(I4B) :: j, n 
         real(DP) :: tv 
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
-!         FORWARD SOLVE - APC * D = R                                   
+        ! -- code
+        !
+        ! -- FORWARD SOLVE - APC * D = R                                   
         FORWARD: DO n = 1, NEQ 
           tv   = R(n) 
           ic0 = IAPC(n) 
@@ -1510,8 +1513,7 @@
                                  NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR,   &
                                  CACCEL, ITINNER, CONVLOCDV, CONVLOCDR,         &
                                  DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)                                        
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(INOUT) :: ICNVG 
         integer(I4B), INTENT(IN)    :: ITMAX 
         integer(I4B), INTENT(INOUT) :: INNERIT 
@@ -1557,7 +1559,7 @@
         real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
-!       + + + LOCAL DEFINITIONS + + + 
+        ! -- local variables
         LOGICAL :: LORTH
         logical :: lsame 
         character(len=31) :: cval
@@ -1573,10 +1575,7 @@
         real(DP) :: denom
         real(DP) :: alpha, beta 
         real(DP) :: rho, rho0 
-!       + + + PARAMETERS + + +                                            
-!       + + + FUNCTIONS + + +                                         
-!                                                                       
-!         + + + CODE + + +                                              
+        ! -- code
         rho0 = DZERO 
         rho = DZERO 
         INNERIT  = 0 
@@ -1723,8 +1722,7 @@
                                    NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
                                    CACCEL, ITINNER, CONVLOCDV, CONVLOCDR,       &
                                    DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)                                
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(INOUT) :: ICNVG 
         integer(I4B), INTENT(IN)    :: ITMAX 
         integer(I4B), INTENT(INOUT) :: INNERIT 
@@ -1776,7 +1774,7 @@
         real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
-!       + + + LOCAL DEFINITIONS + + +  
+        ! -- local variables
         LOGICAL :: LORTH
         logical :: lsame 
         character(len=15) :: cval1, cval2
@@ -1794,10 +1792,7 @@
         real(DP) :: rho, rho0 
         real(DP) :: omega, omega0 
         real(DP) :: numer, denom
-!       + + + PARAMETERS + + +                                            
-!       + + + FUNCTIONS + + +                                         
-!                                                                       
-!         + + + CODE + + +                                              
+        ! -- code
         INNERIT  = 0 
                                                                         
         alpha  = DZERO
@@ -2014,8 +2009,7 @@
         SUBROUTINE IMSLINEARSUB_TESTCNVG(Icnvgopt, Icnvg, Iiter,                &
                                          Hmax, Rmax,                            &
                                          Rmax0, Epfact, Dvclose, Rclose )         
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN)         :: Icnvgopt 
         integer(I4B), INTENT(INOUT)      :: Icnvg 
         integer(I4B), INTENT(IN)         :: Iiter
@@ -2024,10 +2018,8 @@
         real(DP), INTENT(IN) :: Rmax0 
         real(DP), INTENT(IN) :: Epfact 
         real(DP), INTENT(IN) :: Dvclose 
-        real(DP), INTENT(IN) :: Rclose 
-!       + + + LOCAL DEFINITIONS + + +                                     
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        real(DP), INTENT(IN) :: Rclose
+        ! -- code
         IF (Icnvgopt ==  0) THEN 
           IF (ABS(Hmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN 
             Icnvg = 1 
@@ -2070,23 +2062,21 @@
 !         APC(NEQ+1:NJA) PRECONDITIONED ENTRIES FOR OFF DIAGONALS       
         SUBROUTINE IMSLINEARSUB_PCCRS(NEQ, NJA, IA, JA,                         &
                                       IAPC,JAPC)                               
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B), INTENT(IN)         :: NEQ 
         integer(I4B), INTENT(IN)         :: NJA 
         integer(I4B), DIMENSION(NEQ+1), INTENT(IN)    :: IA 
         integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA 
         integer(I4B), DIMENSION(NEQ+1), INTENT(INOUT) :: IAPC 
         integer(I4B), DIMENSION(NJA), INTENT(INOUT)   :: JAPC 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         integer(I4B) :: n, j 
         integer(I4B) :: i0, i1 
         integer(I4B) :: nlen 
         integer(I4B) :: ic,ip 
         integer(I4B) :: jcol 
         integer(I4B), DIMENSION(:), ALLOCATABLE :: iarr 
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- code
         ip = NEQ + 1 
         DO n = 1, NEQ 
           i0 = IA(n) 
@@ -2129,14 +2119,12 @@
 !                                                                       
 !-------SIMPLE IN-PLACE SORTING ROUTINE FOR AN INTEGER ARRAY             
       SUBROUTINE IMSLINEARSUB_ISORT(NVAL, IARRAY) 
-        IMPLICIT NONE 
-!       + + + DUMMY ARGUMENTS + + +                                       
+        ! -- dummy variables
         integer(I4B),INTENT(IN) :: NVAL 
         integer(I4B),DIMENSION(NVAL),INTENT(INOUT) :: IARRAY 
-!       + + + LOCAL DEFINITIONS + + +                                     
+        ! -- local variables
         integer(I4B) :: i, j, itemp 
-!       + + + FUNCTIONS + + +                                             
-!       + + + CODE + + +                                                  
+        ! -- code
         DO i = 1, NVAL-1 
             DO j = i+1, NVAL 
                 if(IARRAY(i) > IARRAY(j)) then 
@@ -2152,16 +2140,13 @@
 !      
 !-------INITIALIZE REAL VECTOR      
       SUBROUTINE IMSLINEARSUB_SETX(NR, D1, C)
-        IMPLICIT NONE
-!     + + + DUMMY ARGUMENTS + + +
+        ! -- dummy variables
         integer(I4B), INTENT(IN) :: NR
         real(DP), DIMENSION(NR),  INTENT(INOUT) :: D1
         real(DP),  INTENT(IN)                   :: C
-!     + + + LOCAL DEFINITIONS + + +
+        ! -- local variables
         INTEGER :: n
-!     + + + FUNCTIONS + + +
-!     + + + CODE + + +
-!
+        ! -- code
         DO n = 1, NR
           D1(n) = C
         END DO
@@ -2176,7 +2161,6 @@
       !! @param[in,out]  R  resultant vector
       !<
       SUBROUTINE IMSLINEARSUB_DCOPY(NR, V, R)                                 
-        IMPLICIT NONE                                                   
         ! -- dummy variables
         integer(I4B), INTENT(IN) :: NR               !< number of rows in vector V
         real(DP), DIMENSION(NR), INTENT(IN)    :: V  !< input real vector
