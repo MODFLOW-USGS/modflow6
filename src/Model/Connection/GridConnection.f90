@@ -495,7 +495,7 @@ module GridConnectionModule
   subroutine buildConnections(this)
     class(GridConnectionType), intent(inout) :: this 
     ! local
-    integer(I4B) :: icell        
+    integer(I4B) :: icell, iconn
     integer(I4B), dimension(:), allocatable :: nnz
     type(SparseMatrix), pointer :: sparse     
     integer(I4B) :: ierror    
@@ -543,7 +543,10 @@ module GridConnectionModule
     conn%nja = sparse%nnz
     conn%njas = (conn%nja -  conn%nodes) / 2
     call conn%allocate_arrays()
-    
+    do iconn = 1, conn%njas
+      conn%anglex(iconn) = -999.
+    end do
+
     call sparse%filliaja(conn%ia, conn%ja, ierror)  
     if (ierror /= 0) then
       write(*,*) 'Error filling ia/ja connections in GridConnection: terminating...'
@@ -688,7 +691,7 @@ module GridConnectionModule
   
   ! fill connection data for all exchanges, using symmetry
   subroutine fillConnectionDataFromExchanges(this)
-    use ConstantsModule, only: DPI, DTWOPI        
+    use ConstantsModule, only: DPI, DTWOPI, DPIO180
     use ArrayHandlersModule, only: ifind    
     class(GridConnectionType), intent(inout)  :: this
     ! local
@@ -707,8 +710,6 @@ module GridConnectionModule
       if (numEx%naux > 0) then
         ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
         if (ivalAngldegx > 0) then
-          ! TODO_MJR: this means that angledegx is present for the num. ex.
-          ! but is it the case for angledegx in the interior?
           conn%ianglex = 1
         end if
       end if
@@ -739,17 +740,17 @@ module GridConnectionModule
           conn%cl1(isym) = numEx%cl1(iexg)
           conn%cl2(isym) = numEx%cl2(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
+            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg) * DPIO180
           end if
         else
           conn%cl1(isym) = numEx%cl2(iexg)
           conn%cl2(isym) = numEx%cl1(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = mod(numEx%auxvar(ivalAngldegx,iexg) + DPI, DTWOPI)
+            conn%anglex(isym) = mod(numEx%auxvar(ivalAngldegx,iexg) + 180.0, 360.0) * DPIO180
           end if
-        end if          
+        end if
         conn%hwva(isym) = numEx%hwva(iexg)
-        conn%ihc(isym) = numEx%ihc(iexg) 
+        conn%ihc(isym) = numEx%ihc(iexg)
                          
       end do        
     end do
