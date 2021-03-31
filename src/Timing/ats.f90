@@ -369,7 +369,7 @@ module AdaptiveTimeStepModule
     use TableModule, only: TableType, table_cr
     integer(I4B) :: n
     character(len=LINELENGTH) :: tag
-    type(TableType), pointer :: inputtab
+    type(TableType), pointer :: inputtab => null()
     !
     ! -- setup table
     call table_cr(inputtab, 'ATS', 'ATS PERIOD DATA')
