@@ -7,6 +7,7 @@ module GwfNpfModule
   use SmoothingModule,            only: sQuadraticSaturation,                   &
                                         sQuadraticSaturationDerivative
   use NumericalPackageModule,     only: NumericalPackageType
+  use GwfNpfInputDataModule,      only: GwfNpfInputDataType
   use BaseDisModule,              only: DisBaseType
   use GwfIcModule,                only: GwfIcType
   use Xt3dModule,                 only: Xt3dType
@@ -106,7 +107,8 @@ module GwfNpfModule
     procedure, private                      :: read_options
     procedure, private                      :: rewet_options
     procedure, private                      :: check_options
-    procedure, private                      :: read_data
+    procedure, private                      :: read_grid_data
+    procedure, private                      :: set_grid_data
     procedure, private                      :: prepcheck
     procedure, public                       :: rewet_check
     procedure, public                       :: hy_eff
@@ -328,7 +330,7 @@ module GwfNpfModule
     return
   end subroutine npf_init_mem
 
-  subroutine npf_ar(this, ic, ibound, hnew)
+  subroutine npf_ar(this, ic, ibound, hnew, npf_data)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -340,6 +342,7 @@ module GwfNpfModule
     type(GwfIcType), pointer, intent(in) :: ic
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
+    type(GwfNpfInputDataType), optional, intent(in) :: npf_data
     ! -- local
     ! -- formats
     ! -- data
@@ -350,14 +353,15 @@ module GwfNpfModule
     this%ibound  => ibound
     this%hnew    => hnew
     !
-    ! -- read data from files
-    if (this%inunit /= 0)  then
-      !
-      ! -- allocate arrays
-      call this%allocate_arrays(this%dis%nodes, this%dis%njas)
-      !
+    ! -- allocate arrays
+    call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+    !
+    if (.not. present(npf_data)) then
       ! -- read the data block
-      call this%read_data()
+      call this%read_grid_data()
+    else
+      ! -- set the data block
+      call this%set_grid_data(npf_data)
     end if
     !
     ! -- Initialize and check data
@@ -1613,9 +1617,9 @@ module GwfNpfModule
     return
   end subroutine check_options
 
-  subroutine read_data(this)
+  subroutine read_grid_data(this)
 ! ******************************************************************************
-! read_data -- read the npf data block
+! read_grid_data -- read the npf data block
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1756,7 +1760,64 @@ module GwfNpfModule
     !
     ! -- Return
     return
-  end subroutine read_data
+  end subroutine read_grid_data
+
+  subroutine set_grid_data(this, npf_data)
+    class(GwfNpfType), intent(inout) :: this
+    type(GwfNpfInputDataType), intent(in) :: npf_data
+
+    ! fill grid arrays
+    call this%dis%fill_grid_array(npf_data%icelltype, this%icelltype)
+    call this%dis%fill_grid_array(npf_data%k11, this%k11)
+
+    if (npf_data%ik22 == 1) then
+      this%ik22 = 1
+      call this%dis%fill_grid_array(npf_data%k22, this%k22)
+    else
+      this%ik22 = 0
+      ! TODO_MJR: reassign
+    end if
+
+    if (npf_data%ik33 == 1) then
+      this%ik33 = 1
+      call this%dis%fill_grid_array(npf_data%k33, this%k33)
+    else
+      this%ik33 = 0
+      ! TODO_MJR: reassign
+    end if    
+
+    if (npf_data%iwetdry == 1) then
+      call this%dis%fill_grid_array(npf_data%wetdry, this%wetdry)
+    else
+      this%iwetdry = 0
+      ! TODO_MJR: compress    
+    end if
+
+    if (npf_data%iangle1 == 1) then
+      this%iangle1 = 1
+      call this%dis%fill_grid_array(npf_data%angle1, this%angle1)
+    else
+      this%iangle1 = 0
+      ! TODO_MJR: compress
+    end if
+
+    if (npf_data%iangle2 == 1) then
+      this%iangle2 = 1
+      call this%dis%fill_grid_array(npf_data%angle2, this%angle2)
+    else
+      this%iangle2 = 0
+      ! TODO_MJR: compress
+    end if
+
+    if (npf_data%iangle3 == 1) then
+      this%iangle3 = 1
+      call this%dis%fill_grid_array(npf_data%angle3, this%angle3)
+    else
+      this%iangle3 = 0
+      ! TODO_MJR: compress
+    end if
+
+  end subroutine set_grid_data
 
   subroutine prepcheck(this)
 ! ******************************************************************************
