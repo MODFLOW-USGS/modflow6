@@ -746,7 +746,7 @@ module GridConnectionModule
           conn%cl1(isym) = numEx%cl2(iexg)
           conn%cl2(isym) = numEx%cl1(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = mod(numEx%auxvar(ivalAngldegx,iexg) + 180.0, 360.0) * DPIO180
+            conn%anglex(isym) = mod(numEx%auxvar(ivalAngldegx,iexg) + 180.0_DP, 360.0_DP) * DPIO180
           end if
         end if
         conn%hwva(isym) = numEx%hwva(iexg)
