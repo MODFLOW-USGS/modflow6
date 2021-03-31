@@ -21,6 +21,8 @@
 
 \item \texttt{no\_ptc\_option}---is an optional keyword that is used to define options for disabling pseudo-transient continuation (PTC). FIRST is an optional keyword to disable PTC for the first stress period, if steady-state and one or more model is using the Newton-Raphson formulation. ALL is an optional keyword to disable PTC for all steady-state stress periods for models using the Newton-Raphson formulation. If NO\_PTC\_OPTION is not specified, the NO\_PTC ALL option is used.
 
+\item \texttt{ats\_outer\_maximum\_fraction}---real value defining the fraction of the maximum allowable outer iterations used with the Adaptive Time Step (ATS) capability if it is active.  If this value is set to zero by the user, then this solution will have no effect on ATS behavior.  This value must be greater than or equal to zero and less than or equal to 0.5 or the program will terminate with an error.  If it not specified by the user, then it is assigned a default value of one third.  When the number of outer iterations for this solution is less than the product of this value and the maximum allowable outer iterations, then ATS will increase the time step length by a factor of DTADJ in the ATS input file.  When the number of outer iterations for this solution is greater than the maximum allowable outer iterations minus the product of this value and the maximum allowable outer iterations, then the ATS (if active) will decrease the time step length by a factor of 1 / DTADJ.
+
 \end{description}
 \item \textbf{Block: NONLINEAR}
 

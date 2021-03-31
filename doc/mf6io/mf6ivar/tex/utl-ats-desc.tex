@@ -1,0 +1,25 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: DIMENSIONS}
+
+\begin{description}
+\item \texttt{maxats}---is the number of records in the subsequent perioddata block that will be used for adaptive time stepping.
+
+\end{description}
+\item \textbf{Block: PERIODDATA}
+
+\begin{description}
+\item \texttt{iperats}---is the period number to designate for adaptive time stepping.  The remaining ATS values on this line will apply to period iperats.  iperats must be greater than zero.  A warning is printed if iperats is greater than nper.
+
+\item \texttt{dt0}---is the initial time step length for period iperats.  If dt0 is zero, then the final step from the previous stress period will be used as the initial time step.  The program will terminate with an error message if dt0 is negative.
+
+\item \texttt{dtmin}---is the minimum time step length for this period.  This value must be greater than zero and less than dtmax.  dt0 must be a small value in order to ensure that simulation times end at the end of stress periods and the end of the simulation.  A small value, such as 1.e-5, is recommended.
+
+\item \texttt{dtmax}---is the maximum time step length for this period.  This value must be greater than dtmin.
+
+\item \texttt{dtadj}---is the time step multiplier factor for this period.  If the number of outer solver iterations are less than one third of OUTER\_MAXIMUM, then the time step length is multipled by dtadj.  If the number of outer solver iterations are greater than one third of OUTER\_MAXIMUM, then the time step length is divided by dtadj.  dtadj must be zero, one, or greater than one.  If dtadj is zero or one, then it has no affect on the simulation.
+
+\item \texttt{dtfailadj}---is the time step failure multiplier factor for this period.  If there is solver failure, then the time step will be tried again with a shorter time step length calculated as the previous time step length divided by tsfailfact.  dtfailadj must be zero, one, or greater than one.  If dtfailadj is zero or one, then time steps will not be retried with shorter lengths.
+
+\end{description}
+

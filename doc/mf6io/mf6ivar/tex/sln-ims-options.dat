@@ -4,4 +4,5 @@ BEGIN OPTIONS
   [CSV_OUTER_OUTPUT FILEOUT <outer_csvfile>]
   [CSV_INNER_OUTPUT FILEOUT <inner_csvfile>]
   [NO_PTC [<no_ptc_option>]]
+  [ATS_OUTER_MAXIMUM_FRACTION <ats_outer_maximum_fraction>]
 END OPTIONS

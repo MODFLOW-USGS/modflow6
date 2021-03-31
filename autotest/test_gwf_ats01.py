@@ -34,9 +34,9 @@ nlay, nrow, ncol = 1, 1, 2
 
 # set dt0, dtmin, dtmax, dtadj, dtfailadj
 dt0 = 5
-dtmin = 1.e-5
+dtmin = 1.001e-5
 dtmax = 10.
-dtadj = 2.
+dtadj = 2.0
 dtfailadj = 5.
 
 
@@ -73,7 +73,8 @@ def build_models():
         # create tdis package
         ats_filerecord = None
         if True:
-            atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),]
+            atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+                         (7, dt0, dtmin, dtmax, dtadj, dtfailadj)]
             ats = flopy.mf6.ModflowUtlats(sim,
                                           maxats=len(atsperiod),
                                           perioddata=atsperiod)

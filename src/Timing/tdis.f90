@@ -222,6 +222,9 @@
         endofperiod = .true.
       end if
     end if
+    if (endofperiod) then
+      pertim = perlen(kper)
+    end if
     !
     ! -- Set end of simulation indicator
     if (endofperiod .and. kper==nper) then
