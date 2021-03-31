@@ -83,7 +83,7 @@ module AdaptiveTimeStepModule
           dt_temp = dt
         end if
         if (kstp > 1 .and. dt_temp > DZERO) then
-          write(iout, fmtdtsubmit) trim(adjustl(sloc)), dt
+          write(iout, fmtdtsubmit) trim(adjustl(sloc)), dt_temp
         end if
         if (dt_temp > DZERO .and. dt_temp < dtstable) then
           ! -- Reset dtstable to a smaller value
@@ -464,6 +464,9 @@ module AdaptiveTimeStepModule
     integer(I4B) :: n
     real(DP) :: tstart
     ! -- formats
+    character(len=*), parameter :: fmtdt =                               &
+      &"(1x, 'ATS: time step set to ', G15.7, ' for step ', i0,          &
+      &' and period ', i0)"
     !
     ! -- initialize the record position (n) for this stress period
     n = kperats(kper)
@@ -503,6 +506,10 @@ module AdaptiveTimeStepModule
     if (tstart + delt > perlencurrent - dtmin(n)) then
       delt = perlencurrent - tstart
     end if
+    !
+    ! -- Write time step size information
+    write(iout, fmtdt) delt, kstp, kper
+    !
     return
  end subroutine ats_set_delt
                           
