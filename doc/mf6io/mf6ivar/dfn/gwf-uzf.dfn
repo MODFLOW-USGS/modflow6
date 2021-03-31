@@ -52,6 +52,39 @@ longname save well flows to budget file
 description REPLACE save_flows {'{#1}': 'UZF'}
 
 block options
+name wc_filerecord
+type record wc fileout wcfile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name wc
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname watercontent keyword
+description keyword to specify that record corresponds to unsaturated zone water contents.
+
+block options
+name wcfile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write water content information.
+
+block options
 name budget_filerecord
 type record budget fileout budgetfile
 shape
