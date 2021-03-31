@@ -1,12 +1,12 @@
 ! todo:
-!   state advance/restore gwt
-!   state advance/restore gwf packages
+!   state advance/restore sfr
+!   state advance/restore uzf
 !   check ats input and echo
 !   check ats not active for steady state?
 !   code comments
-!   store iboundold for rewetting case
 !   recalculate time series variables for time step retry
-!   add ATS options to solutions, packages, and models?
+!   add ATS options to solutions
+!   add courant constraint to gwt model
 module AdaptiveTimeStepModule
  
   use KindModule, only: DP, I4B, LGP

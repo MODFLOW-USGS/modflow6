@@ -19,7 +19,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_lak_01a"]
+ex = ["gwf_ats_lak_01a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -82,6 +82,7 @@ def get_model(idx, dir):
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,
+        ats_outer_maximum_fraction=1./3,
         print_option="SUMMARY",
         outer_dvclose=hclose,
         outer_maximum=nouter,

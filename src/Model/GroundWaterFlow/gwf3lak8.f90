@@ -3727,8 +3727,8 @@ contains
       end do
     else
       !
-      ! -- copy xnew into xold and set xnewpak to stage for
-      !    constant stage lakes
+      ! -- copy xold back into xnew as this is a 
+      !    retry of this time step
       do n = 1, this%nlakes
         this%xnewpak(n) = this%xoldpak(n)
         this%stageiter(n) = this%xnewpak(n)

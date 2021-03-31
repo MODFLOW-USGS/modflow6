@@ -5,7 +5,7 @@ module NumericalSolutionModule
   use TimerModule,             only: code_timer
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC,   &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
-                                     DEM4, DEM3, DEM2, DEM1, DHALF,            &
+                                     DEM4, DEM3, DEM2, DEM1, DHALF, DONETHIRD, &
                                      DONE, DTHREE, DEP3, DEP6, DEP20, DNODATA, &
                                      TABLEFT, TABRIGHT,                        &
                                      MNORMAL, MVALIDATE,                       &
@@ -119,6 +119,9 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: ptcexp => NULL()
     real(DP), pointer                                    :: ptcthresh => NULL()
     real(DP), pointer                                    :: ptcrat => NULL()
+    !
+    ! -- adaptive time step
+    real(DP), pointer                                    :: atsfrac => NULL()
     !
     ! -- linear accelerator storage
     type(ImsLinearDataType), POINTER                        :: imslinear => NULL()
@@ -291,6 +294,7 @@ contains
     call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
     call mem_allocate(this%ptcthresh, 'PTCTHRESH', this%memoryPath)
     call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
+    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
     !
     ! -- initialize
     this%id = 0
@@ -338,6 +342,7 @@ contains
     this%ptcexp = done
     this%ptcthresh = DEM3
     this%ptcrat = DZERO
+    this%atsfrac = DONETHIRD
     !
     ! -- return
     return
@@ -599,6 +604,17 @@ contains
           this%iallowptc = ival
           write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED FOR' // &
             ' ' // trim(adjustl(msg)) // ' STRESS-PERIOD(S)'
+        case('ATS_OUTER_MAXIMUM_FRACTION')
+          rval = this%parser%GetDouble()
+          if (rval < DZERO .or. rval > DHALF) then
+            write(errmsg,'(a,G0)') 'VALUE FOR ATS_OUTER_MAXIMUM_FRAC MUST BE &
+              &BETWEEN 0 AND 0.5.  FOUND ', rval
+            call store_error(errmsg)
+          end if
+          this%atsfrac = rval
+          write(IOUT,'(1x,A,G0)') 'ADAPTIVE TIME STEP SETTING FOUND.  FRACTION &
+            &OF OUTER MAXIMUM USED TO INCREASE OR DECREASE TIME STEP SIZE IS ',&
+            &this%atsfrac
         !
         ! -- DEPRECATED OPTIONS
         case ('CSV_OUTPUT')
@@ -1021,25 +1037,32 @@ contains
     ! -- local
     integer(I4B) :: idir
     real(DP) :: delt_temp
-    real(DP) :: fact   ! should probably come from user input
+    real(DP) :: fact_lower
+    real(DP) :: fact_upper
 ! ------------------------------------------------------------------------------
     !
-    ! -- increase or decrease delt based on kiter fraction
-    delt_temp = delt
-    fact = this%mxiter / DTHREE
-    if (this%iouttot_timestep < int(fact)) then
-      ! -- increase delt according to tsfactats
-      idir = 1 
-    else if (this%iouttot_timestep > int(DTWO * fact)) then
-      ! -- decrease delt according to tsfactats
-      idir = -1 
-    else
-      ! -- do not change delt
-      idir = 0  
+    ! -- increase or decrease delt based on kiter fraction.  atsfrac should be
+    !    a value of about 1/3.  If the number of outer iterations is less than
+    !    1/3 of mxiter, then increase step size.  If the number of outer
+    !    iterations is greater than 2/3 of mxiter, then decrease step size.
+    if (this%atsfrac > DZERO) then
+      delt_temp = delt
+      fact_lower = this%mxiter * this%atsfrac
+      fact_upper = this%mxiter - fact_lower
+      if (this%iouttot_timestep < int(fact_lower)) then
+        ! -- increase delt according to tsfactats
+        idir = 1 
+      else if (this%iouttot_timestep > int(fact_upper)) then
+        ! -- decrease delt according to tsfactats
+        idir = -1 
+      else
+        ! -- do not change delt
+        idir = 0  
+      end if
+      !
+      ! -- submit stable dt for upcoming step
+      call ats_submit_delt(kstp, kper, delt_temp, this%memoryPath, idir=idir)
     end if
-    !
-    ! -- submit stable dt for upcoming step
-    call ats_submit_delt(kstp, kper, delt_temp, this%memoryPath, idir=idir)
     !
     return
   end subroutine sln_calculate_delt
@@ -1232,6 +1255,7 @@ contains
     call mem_deallocate(this%ptcexp)
     call mem_deallocate(this%ptcthresh)
     call mem_deallocate(this%ptcrat)
+    call mem_deallocate(this%atsfrac)
     !
     ! -- return
     return
