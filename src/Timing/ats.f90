@@ -1,10 +1,10 @@
 ! todo:
-!   state advance/restore csub
-!   state advance/restore sfr
 !   state advance/restore uzf
+!   state advance/restore csub
 !   check ats not active for steady state?
 !   recalculate time series variables for time step retry
 !   add courant constraint to gwt model
+!   complete writeup in mf6io.pdf
 module AdaptiveTimeStepModule
  
   use KindModule, only: DP, I4B, LGP
@@ -318,8 +318,8 @@ module AdaptiveTimeStepModule
         dt0(n) = parser%GetDouble()
         dtmin(n) = parser%GetDouble()
         dtmax(n) = parser%GetDouble()
-        dtadj(n) = parser%GetDouble()   !todo: ensure value is 0, 1, or greater than 1
-        dtfailadj(n) = parser%GetDouble()  !todo: ensure value is 0, 1, or greater than 1
+        dtadj(n) = parser%GetDouble()
+        dtfailadj(n) = parser%GetDouble()
       enddo
       !
       ! -- Close the block
