@@ -2,7 +2,6 @@
 !   state advance/restore uzf
 !   state advance/restore csub
 !   check ats not active for steady state?
-!   recalculate time series variables for time step retry
 !   add courant constraint to gwt model
 !   complete writeup in mf6io.pdf
 module AdaptiveTimeStepModule
