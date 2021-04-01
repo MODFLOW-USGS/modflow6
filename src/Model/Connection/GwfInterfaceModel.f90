@@ -7,6 +7,8 @@ module GwfInterfaceModelModule
   use BaseDisModule
   use GwfDisuModule
   use GwfNpfModule
+  use GwfNpfOptionsModule
+  use GwfNpfGridDataModule
   use GwfOcModule
   implicit none
   private
@@ -27,6 +29,8 @@ module GwfInterfaceModelModule
     procedure :: model_da => deallocateModel
     ! private stuff
     procedure, private, pass(this) :: buildDiscretization
+    procedure, private, pass(this) :: setNpfOptions
+    procedure, private, pass(this) :: setNpfGridData
   end type
  
 contains
@@ -79,17 +83,18 @@ contains
   subroutine defineModel(this, satomega)
     class(GwfInterfaceModelType), intent(inout) :: this
     real(DP) :: satomega
-    
+    ! local
+    type(GwfNpfOptionsType) :: npfOptions
+
     this%moffset = 0
     this%npf%satomega = satomega
+
+    ! define NPF package
+    call npfOptions%construct()
+    call this%setNpfOptions(npfOptions)
+    call this%npf%npf_df(this%dis, this%xt3d, 0, npfOptions)
+    call npfOptions%destroy()
     
-    ! dis%dis_df, npf%npf_d ... we cannot call these yet, 
-    ! the following comes from npf_df:
-    this%npf%dis => this%dis
-    this%npf%xt3d => this%xt3d    
-    this%npf%xt3d%ixt3d = this%npf%ixt3d
-    call this%npf%xt3d%xt3d_df(this%dis)
-     
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
     this%ia  => this%dis%con%ia
@@ -101,10 +106,13 @@ contains
   
   subroutine allocateAndReadModel(this)
     class(GwfInterfaceModelType), target, intent(inout) :: this
+    ! local
+    type(GwfNpfGridDataType) :: npfGridData
     
-    this%npf%set_data_func => setNpfData  
-    this%npf%func_caller => this
-    call this%npf%npf_ar(this%ic, this%ibound, this%x)
+    call npfGridData%construct(this%dis%nodes)
+    call this%setNpfGridData(npfGridData)
+    call this%npf%npf_ar(this%ic, this%ibound, this%x, npfGridData)
+    call npfGridData%destroy()
     
   end subroutine allocateAndReadModel
   
@@ -179,7 +187,7 @@ contains
   
   subroutine deallocateModel(this)
   use MemoryManagerModule, only: mem_deallocate
-    class(GwfInterfaceModelType) :: this  
+    class(GwfInterfaceModelType) :: this
     
     ! -- Internal flow packages deallocate
     call this%dis%dis_da()
@@ -210,78 +218,62 @@ contains
     
   end subroutine
   
-  subroutine setNpfData(ifaceModelObj, npf)
-    use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: DPIO180
-    class(GwfNpftype) :: npf
-    class(*), pointer :: ifaceModelObj
+  subroutine setNpfOptions(this, npfOptions)
+    class(GwfInterfaceModelType) :: this
+    type(GwfNpfOptionsType) :: npfOptions
+
+    ! for now, assuming full homogeneity, so just take
+    ! the options from the owning model's npf package
+    npfOptions%icellavg = this%owner%npf%icellavg
+    npfOptions%ithickstrt = this%owner%npf%ithickstrt
+    npfOptions%iperched = this%owner%npf%iperched
+    npfOptions%ivarcv = this%owner%npf%ivarcv
+    npfOptions%idewatcv = this%owner%npf%idewatcv
+    npfOptions%irewet = this%owner%npf%irewet
+    npfOptions%wetfct = this%owner%npf%wetfct
+    npfOptions%iwetit = this%owner%npf%iwetit
+    npfOptions%ihdwet = this%owner%npf%ihdwet
+    npfOptions%ixt3d = this%owner%npf%ixt3d
+
+  end subroutine setNpfOptions
+
+  !> @brief Loop over the interface grid and fill the structure 
+  !! with NPF grid data, copied from the models that participate 
+  !! in this interface
+  !<
+  subroutine setNpfGridData(this, npfGridData)
+    class(GwfInterfaceModelType) :: this    !< the interface model
+    type(GwfNpfGridDataType) :: npfGridData !< grid data to be set
     ! local
-    type(GwfInterfaceModelType), pointer :: ifModel
-    integer :: icell, idx, nrOfCells
+    integer(I4B) :: icell, idx
     class(*), pointer :: objPtr
     class(GwfModelType), pointer :: gwfModel
-    
-    ! cast to interface model here, should never fail
-    ifModel => CastAsGwfInterfaceModelClass(ifaceModelObj)
 
-    ! the properties from the owning model are leading,
-    ! we have to talk about inhomogeneity later on...
-    npf%ik22 = ifModel%owner%npf%ik22
-    npf%ik33 = ifModel%owner%npf%ik33
-    npf%iangle1 = ifModel%owner%npf%iangle1
-    npf%iangle2 = ifModel%owner%npf%iangle2
-    npf%iangle3 = ifModel%owner%npf%iangle3
-    npf%icellavg = ifModel%owner%npf%icellavg
+    ! TODO_MJR: deal with inhomogeneity, for now, we assume
+    ! that we can just take the owning model's settings...
+    npfGridData%ik22 = gwfModel%npf%ik22
+    npfGridData%ik33 =  gwfModel%npf%ik33
+    npfGridData%iangle1 = gwfModel%npf%iangle1
+    npfGridData%iangle2 = gwfModel%npf%iangle2
+    npfGridData%iangle3 = gwfModel%npf%iangle3
 
-    npf%icalcspdis = ifModel%owner%npf%icalcspdis
-
-    npf%irewet = ifModel%owner%npf%irewet
-    npf%ihdwet = ifModel%owner%npf%ihdwet
-    npf%wetfct = ifModel%owner%npf%wetfct
-    npf%hdry = ifModel%owner%npf%hdry
-    npf%iwetdry = ifModel%owner%npf%iwetdry
-
-    ! set the data in the npf package
-    nrOfCells = ifModel%gridConnection%nrOfCells
-    do icell=1, nrOfCells
-      idx = ifModel%gridConnection%idxToGlobal(icell)%index
-      objPtr => ifModel%gridConnection%idxToGlobal(icell)%model
+    do icell = 1, this%gridConnection%nrOfCells
+      idx = this%gridConnection%idxToGlobal(icell)%index
+      objPtr => this%gridConnection%idxToGlobal(icell)%model
       gwfModel => CastAsGwfModelClass(objPtr)
-      
-      npf%icelltype(icell) = gwfModel%npf%icelltype(idx)
-      npf%k11(icell) = gwfModel%npf%k11(idx)      
-      if (npf%ik22 > 0) npf%k22(icell) = gwfModel%npf%k22(idx)
-      if (npf%ik33 > 0) npf%k33(icell) = gwfModel%npf%k33(idx)
 
-      ! rewetting
-      if (npf%iwetdry > 0) npf%wetdry(icell) = gwfModel%npf%wetdry(idx)
-      
-      ! angles, zero when not present in one of the models
-      if (npf%iangle1 > 0) then
-        if (gwfModel%npf%iangle1 > 0) then
-          npf%angle1(icell) = gwfModel%npf%angle1(idx)/DPIO180
-        else
-          npf%angle1(icell) = DZERO
-        end if        
-      end if
-      if (npf%iangle2 > 0) then
-        if (gwfModel%npf%iangle2 > 0) then
-          npf%angle2(icell) = gwfModel%npf%angle2(idx)/DPIO180
-        else
-          npf%angle2(icell) = DZERO
-        end if        
-      end if
-      if (npf%iangle3 > 0) then
-        if (gwfModel%npf%iangle3 > 0) then
-          npf%angle3(icell) = gwfModel%npf%angle3(idx)/DPIO180
-        else
-          npf%angle3(icell) = DZERO
-        end if        
-      end if
-      
+      npfGridData%icelltype(icell) = gwfModel%npf%icelltype(idx)
+      npfGridData%k11(icell) = gwfModel%npf%k11(idx)
+      npfGridData%k22(icell) = gwfModel%npf%k22(idx)
+      npfGridData%k33(icell) = gwfModel%npf%k33(idx)
+      npfGridData%wetdry(icell) = gwfModel%npf%wetdry(idx)
+      npfGridData%angle1(icell) = gwfModel%npf%angle1(idx)
+      npfGridData%angle2(icell) = gwfModel%npf%angle2(idx)
+      npfGridData%angle3(icell) = gwfModel%npf%angle3(idx)
+
     end do
-    
-  end subroutine setNpfData
+
+  end subroutine setNpfGridData
   
   function CastAsGwfModelClass(obj) result (res)
     implicit none
