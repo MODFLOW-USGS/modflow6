@@ -89,7 +89,6 @@ module GwfNpfModule
     procedure                               :: npf_ac
     procedure                               :: npf_mc
     procedure                               :: npf_ar
-    procedure                               :: npf_init_mem
     procedure                               :: npf_ad
     procedure                               :: npf_cf
     procedure                               :: npf_fc
@@ -112,6 +111,7 @@ module GwfNpfModule
     procedure, private                      :: read_grid_data
     procedure, private                      :: set_grid_data
     procedure, private                      :: prepcheck
+    procedure, private                      :: preprocess_input
     procedure, public                       :: rewet_check
     procedure, public                       :: hy_eff
     procedure, public                       :: calc_spdis
@@ -120,8 +120,6 @@ module GwfNpfModule
     procedure, public                       :: increase_edge_count
     procedure, public                       :: set_edge_properties
   endtype
-
-  contains
 
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
@@ -259,83 +257,6 @@ module GwfNpfModule
     return
   end subroutine npf_mc
   
-  subroutine npf_init_mem(this, dis, ixt3d, icelltype, k11, k22, k33, wetdry,    &
-                          angle1, angle2, angle3)
-! ******************************************************************************
-! npf_cr -- Create a new NPF object from memory
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GwfNpftype) :: this
-    class(DisBaseType), pointer, intent(inout) :: dis
-    integer(I4B), pointer, intent(in) :: ixt3d
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: icelltype
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: k11
-    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k22
-    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k33
-    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: wetdry
-    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle1
-    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle2
-    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle3
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- Store pointers to arguments that were passed in
-    this%dis => dis
-    !
-    ! -- set ixt3d (1 - HCOF and RHS; 2 - RHS only)
-    this%ixt3d = ixt3d
-    !
-    ! -- allocate arrays
-    call this%allocate_arrays(dis%nodes, dis%njas)
-    !
-    ! -- fill icelltype
-    call dis%fill_grid_array(icelltype, this%icelltype)
-    !
-    ! -- fill k data
-    ! -- k11
-    call dis%fill_grid_array(k11, this%k11)
-    ! -- k22
-    if (present(k22)) then
-      this%ik22 = 1
-      call dis%fill_grid_array(k22, this%k22)
-    end if
-    ! -- k33
-    if (present(k33)) then
-      this%ik33 = 1
-      call dis%fill_grid_array(k33, this%k33)
-    end if
-    !
-    ! -- fill angle data
-    ! -- angle1
-    if (present(angle1)) then
-      this%iangle1 = 1
-      call dis%fill_grid_array(angle1, this%angle1)
-    end if
-    ! -- angle2
-    if (present(angle2)) then
-      this%iangle2 = 1
-      call dis%fill_grid_array(angle2, this%angle2)
-    end if
-    ! -- angle3
-    if (present(angle3)) then
-      this%iangle3 = 1
-      call dis%fill_grid_array(angle3, this%angle3)
-    end if
-    !
-    ! -- fill wetdry data
-    if (present(wetdry)) then
-      this%iwetdry = 1
-      this%irewet = 1
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine npf_init_mem
-
   subroutine npf_ar(this, ic, ibound, hnew, grid_data)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
@@ -363,15 +284,16 @@ module GwfNpfModule
     call this%allocate_arrays(this%dis%nodes, this%dis%njas)
     !
     if (.not. present(grid_data)) then
-      ! -- read the data block
+      ! -- read from file, set, and convert/check the input
       call this%read_grid_data()
+      call this%prepcheck()
     else
       ! -- set the data block
       call this%set_grid_data(grid_data)
     end if
     !
-    ! -- Initialize and check data
-    call this%prepcheck()
+    ! -- preprocess data
+    call this%preprocess_input()    
     !
     ! -- xt3d
     if (this%ixt3d /= 0) then
@@ -1858,39 +1780,19 @@ module GwfNpfModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
-    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
+    use ConstantsModule,   only: LINELENGTH, DPIO180    
     use SimModule, only: store_error, ustop, count_errors
     ! -- dummy
     class(GwfNpfType) :: this
     ! -- local
-    logical :: finished
     character(len=24), dimension(:), pointer :: aname
     character(len=LINELENGTH) :: cellstr, errmsg
-    integer(I4B) :: nerr
-    real(DP) :: csat
-    real(DP) :: satn, topn, topm, botn
-    real(DP) :: fawidth
-    real(DP) :: hn, hm
-    real(DP) :: hyn, hym
-    integer(I4B) :: n, m, ii, nn, ihc
-    integer(I4B) :: nextn
-    real(DP) :: minbot, botm
-    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
+    integer(I4B) :: nerr, n
     ! -- format
     character(len=*), parameter :: fmtkerr =                                   &
       "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
     character(len=*), parameter :: fmtkerr2 =                                  &
       "(1x, '... ', i0,' additional errors not shown for ',a)"
-    character(len=*),parameter :: fmtcnv = &
-    "(1X,'CELL ', A, &
-     &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
-    character(len=*),parameter :: fmtnct = &
-    "(1X,'Negative cell thickness at cell ', A)"
-    character(len=*),parameter :: fmtihbe = &
-    "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
-    character(len=*),parameter :: fmttebe = &
-    "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -2027,6 +1929,44 @@ module GwfNpfModule
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
+    
+    return
+  end subroutine prepcheck
+
+  !> @brief preprocess the NPF input data
+  !!
+  !! This routine consists of the following steps:
+  !!  
+  !! 1. convert cells to noflow when all transmissive parameters equal zero
+  !! 2. ...
+  !<
+  subroutine preprocess_input(this)
+  use ConstantsModule, only: LINELENGTH
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
+  use SimModule, only: store_error, ustop, count_errors
+    class(GwfNpfType) :: this
+    ! local        
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
+    integer(I4B) :: n, m, ii, nn, ihc    
+    real(DP) :: hyn, hym
+    real(DP) :: csat    
+    real(DP) :: fawidth 
+    real(DP) :: satn, topn, topm, botn    
+    real(DP) :: hn, hm
+    integer(I4B) :: nextn
+    real(DP) :: minbot, botm    
+    logical :: finished
+    character(len=LINELENGTH) :: cellstr, errmsg
+    ! format strings
+    character(len=*),parameter :: fmtcnv = &
+    "(1X,'CELL ', A, &
+     &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"    
+    character(len=*),parameter :: fmtnct = &
+    "(1X,'Negative cell thickness at cell ', A)"
+    character(len=*),parameter :: fmtihbe = &
+    "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
+    character(len=*),parameter :: fmttebe = &
+    "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
     !
     ! -- allocate temporary storage to handle thickstart option
     allocate(ithickstartflag(this%dis%nodes))
@@ -2250,7 +2190,8 @@ module GwfNpfModule
     !
     ! -- Return
     return
-  end subroutine prepcheck
+
+  end subroutine preprocess_input
 
   subroutine sgwf_npf_wetdry(this, kiter, hnew)
 ! ******************************************************************************
