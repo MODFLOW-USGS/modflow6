@@ -29,6 +29,7 @@ module MessageModule
     procedure :: set_max_message
     procedure :: store_message
     procedure :: print_message
+    procedure :: deallocate_message
 
   end type MessageType
   
@@ -348,5 +349,17 @@ module MessageModule
     ! -- return
     return
   end subroutine write_message
+    
+  !> @ brief Deallocate message
+  !!
+  !! Deallocate the array of strings if it was allocated 
+  !!
+  !<
+  subroutine deallocate_message(this)
+    class(MessageType) :: this
+    if (allocated(this%message)) then
+      deallocate(this%message)
+    end if
+  end subroutine deallocate_message
 
 end module MessageModule
