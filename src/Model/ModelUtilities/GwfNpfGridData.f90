@@ -1,25 +1,12 @@
-module GwfNpfInputDataModule
+module GwfNpfGridDataModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DONE
   implicit none
-  private
+  private 
 
-  !> Data structure and helper methods for passing NPF options and grid data 
-  !! into npf_df and npf_ar, as an alternative to reading those from file
+  !> Data structure and helper methods for passing NPF grid data
+  !! into npf_ar, as an alternative to reading those from file
   !<
-  type, public :: GwfNpfInputDataType
-    ! options:  
-    integer(I4B) :: icellavg
-    integer(I4B) :: ithickstrt
-    integer(I4B) :: iperched
-    integer(I4B) :: ivarcv
-    integer(I4B) :: idewatcv
-    integer(I4B) :: irewet
-    real(DP) :: wetfct
-    integer(I4B) :: iwetit
-    integer(I4B) :: ihdwet
-    integer(I4B) :: ixt3d
-
+  type, public :: GwfNpfGridDataType    
     ! grid data
     integer(I4B) :: ik22    !< flag equals 1 when present
     integer(I4B) :: ik33    !< flag equals 1 when present
@@ -38,7 +25,7 @@ module GwfNpfInputDataModule
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: destroy
-  end type GwfNpfInputDataType
+  end type GwfNpfGridDataType
 
 contains
 
@@ -47,22 +34,9 @@ contains
 !! at their defaults
 !<
 subroutine construct(this, nodes)
-  class(GwfNpfInputDataType), intent(inout) :: this  !< the NPF input data structure
+  class(GwfNpfGridDataType), intent(inout) :: this  !< the NPF grid data, as in the input GRIDDATA block
   integer(I4B) :: nodes                             !< the number of nodes in the solution
   
-  ! options
-  this%icellavg = 0
-  this%ithickstrt = 0
-  this%iperched = 0
-  this%ivarcv = 0
-  this%idewatcv = 0
-  this%irewet = 0
-  this%wetfct = DONE
-  this%iwetit = 1
-  this%ihdwet = 0
-  this%ixt3d = 0
-
-  ! grid data
   this%ik22 = 0
   this%ik33 = 0
   this%iwetdry = 0
@@ -83,7 +57,7 @@ end subroutine construct
 !> @brief clean up, deallocate, etc.
 !<
 subroutine destroy(this)
-  class(GwfNpfInputDataType), intent(inout) :: this  !< the data structure
+  class(GwfNpfGridDataType), intent(inout) :: this  !< the data structure
 
   deallocate(this%icelltype)
   deallocate(this%k11)
@@ -96,5 +70,4 @@ subroutine destroy(this)
 
 end subroutine destroy
 
-
-end module GwfNpfInputDataModule
+end module GwfNpfGridDataModule

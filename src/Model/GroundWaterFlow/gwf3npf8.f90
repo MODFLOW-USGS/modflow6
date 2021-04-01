@@ -7,7 +7,8 @@ module GwfNpfModule
   use SmoothingModule,            only: sQuadraticSaturation,                   &
                                         sQuadraticSaturationDerivative
   use NumericalPackageModule,     only: NumericalPackageType
-  use GwfNpfInputDataModule,      only: GwfNpfInputDataType
+  use GwfNpfGridDataModule,       only: GwfNpfGridDataType
+  use GwfNpfOptionsModule,        only: GwfNpfOptionsType
   use BaseDisModule,              only: DisBaseType
   use GwfIcModule,                only: GwfIcType
   use Xt3dModule,                 only: Xt3dType
@@ -26,62 +27,62 @@ module GwfNpfModule
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
-    type(GwfIcType), pointer                        :: ic           => null()    ! initial conditions object
-    type(Xt3dType), pointer                         :: xt3d         => null()    ! xt3d pointer
-    integer(I4B), pointer                           :: iname        => null()    ! length of variable names
-    character(len=24), dimension(:), pointer        :: aname        => null()    ! variable names
-    integer(I4B), dimension(:), pointer, contiguous :: ibound       => null()    ! pointer to model ibound
-    real(DP), dimension(:), pointer, contiguous     :: hnew         => null()    ! pointer to model xnew
-    integer(I4B), pointer                           :: ixt3d        => null()    ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
-    integer(I4B), pointer                           :: iperched     => null()    ! vertical flow corrections if 1
-    integer(I4B), pointer                           :: ivarcv       => null()    ! CV is function of water table
-    integer(I4B), pointer                           :: idewatcv     => null()    ! CV may be a discontinuous function of water table
-    integer(I4B), pointer                           :: ithickstrt   => null()    ! thickstrt option flag
-    integer(I4B), pointer                           :: igwfnewtonur => null()    ! newton head dampening using node bottom option flag
-    integer(I4B), pointer                           :: iusgnrhc     => null()    ! MODFLOW-USG saturation calculation option flag
-    integer(I4B), pointer                           :: inwtupw      => null()    ! MODFLOW-NWT upstream weighting option flag
-    integer(I4B), pointer                           :: icalcspdis   => null()    ! Calculate specific discharge at cell centers
-    integer(I4B), pointer                           :: isavspdis    => null()    ! Save specific discharge at cell centers
-    integer(I4B), pointer                           :: isavsat      => null()    ! Save sat to budget file
-    real(DP), pointer                               :: hnoflo       => null()    ! default is 1.e30
-    real(DP), pointer                               :: satomega     => null()    ! newton-raphson saturation omega
-    integer(I4B),pointer                            :: irewet       => null()    ! rewetting (0:off, 1:on)
-    integer(I4B),pointer                            :: iwetit       => null()    ! wetting interval (default is 1)
-    integer(I4B),pointer                            :: ihdwet       => null()    ! (0 or not 0)
-    integer(I4B), pointer                           :: icellavg     => null()    ! harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
-    real(DP), pointer                               :: wetfct       => null()    ! wetting factor
-    real(DP), pointer                               :: hdry         => null()    ! default is -1.d30
-    integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    ! confined (0) or convertible (1)
+    type(GwfIcType), pointer                        :: ic           => null()    !< initial conditions object
+    type(Xt3dType), pointer                         :: xt3d         => null()    !< xt3d pointer
+    integer(I4B), pointer                           :: iname        => null()    !< length of variable names
+    character(len=24), dimension(:), pointer        :: aname        => null()    !< variable names
+    integer(I4B), dimension(:), pointer, contiguous :: ibound       => null()    !< pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous     :: hnew         => null()    !< pointer to model xnew
+    integer(I4B), pointer                           :: ixt3d        => null()    !< xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer                           :: iperched     => null()    !< vertical flow corrections if 1
+    integer(I4B), pointer                           :: ivarcv       => null()    !< CV is function of water table
+    integer(I4B), pointer                           :: idewatcv     => null()    !< CV may be a discontinuous function of water table
+    integer(I4B), pointer                           :: ithickstrt   => null()    !< thickstrt option flag
+    integer(I4B), pointer                           :: igwfnewtonur => null()    !< newton head dampening using node bottom option flag
+    integer(I4B), pointer                           :: iusgnrhc     => null()    !< MODFLOW-USG saturation calculation option flag
+    integer(I4B), pointer                           :: inwtupw      => null()    !< MODFLOW-NWT upstream weighting option flag
+    integer(I4B), pointer                           :: icalcspdis   => null()    !< Calculate specific discharge at cell centers
+    integer(I4B), pointer                           :: isavspdis    => null()    !< Save specific discharge at cell centers
+    integer(I4B), pointer                           :: isavsat      => null()    !< Save sat to budget file
+    real(DP), pointer                               :: hnoflo       => null()    !< default is 1.e30
+    real(DP), pointer                               :: satomega     => null()    !< newton-raphson saturation omega
+    integer(I4B),pointer                            :: irewet       => null()    !< rewetting (0:off, 1:on)
+    integer(I4B),pointer                            :: iwetit       => null()    !< wetting interval (default is 1)
+    integer(I4B),pointer                            :: ihdwet       => null()    !< (0 or not 0)
+    integer(I4B), pointer                           :: icellavg     => null()    !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
+    real(DP), pointer                               :: wetfct       => null()    !< wetting factor
+    real(DP), pointer                               :: hdry         => null()    !< default is -1.d30
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    !< confined (0) or convertible (1)
     !
     ! K properties
-    real(DP), dimension(:), pointer, contiguous     :: k11          => null()    ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer, contiguous     :: k22          => null()    ! hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer, contiguous     :: k33          => null()    ! hydraulic conductivity; if specified then this is Kz prior to rotation
-    integer(I4B), pointer                           :: iavgkeff     => null()    ! effective conductivity averaging (0: harmonic, 1: arithmetic)
-    integer(I4B), pointer                           :: ik22         => null()    ! flag that k22 is specified
-    integer(I4B), pointer                           :: ik33         => null()    ! flag that k33 is specified
-    integer(I4B), pointer                           :: ik22overk    => null()    ! flag that k22 is specified as anisotropy ratio
-    integer(I4B), pointer                           :: ik33overk    => null()    ! flag that k33 is specified as anisotropy ratio
-    integer(I4B), pointer                           :: iangle1      => null()    ! flag to indicate angle1 was read
-    integer(I4B), pointer                           :: iangle2      => null()    ! flag to indicate angle2 was read
-    integer(I4B), pointer                           :: iangle3      => null()    ! flag to indicate angle3 was read
-    real(DP), dimension(:), pointer, contiguous     :: angle1       => null()    ! k ellipse rotation in xy plane around z axis (yaw)
-    real(DP), dimension(:), pointer, contiguous     :: angle2       => null()    ! k ellipse rotation up from xy plane around y axis (pitch)
-    real(DP), dimension(:), pointer, contiguous     :: angle3       => null()    ! k tensor rotation around x axis (roll)
+    real(DP), dimension(:), pointer, contiguous     :: k11          => null()    !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous     :: k22          => null()    !< hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous     :: k33          => null()    !< hydraulic conductivity; if specified then this is Kz prior to rotation
+    integer(I4B), pointer                           :: iavgkeff     => null()    !< effective conductivity averaging (0: harmonic, 1: arithmetic)
+    integer(I4B), pointer                           :: ik22         => null()    !< flag that k22 is specified
+    integer(I4B), pointer                           :: ik33         => null()    !< flag that k33 is specified
+    integer(I4B), pointer                           :: ik22overk    => null()    !< flag that k22 is specified as anisotropy ratio
+    integer(I4B), pointer                           :: ik33overk    => null()    !< flag that k33 is specified as anisotropy ratio
+    integer(I4B), pointer                           :: iangle1      => null()    !< flag to indicate angle1 was read
+    integer(I4B), pointer                           :: iangle2      => null()    !< flag to indicate angle2 was read
+    integer(I4B), pointer                           :: iangle3      => null()    !< flag to indicate angle3 was read
+    real(DP), dimension(:), pointer, contiguous     :: angle1       => null()    !< k ellipse rotation in xy plane around z axis (yaw)
+    real(DP), dimension(:), pointer, contiguous     :: angle2       => null()    !< k ellipse rotation up from xy plane around y axis (pitch)
+    real(DP), dimension(:), pointer, contiguous     :: angle3       => null()    !< k tensor rotation around x axis (roll)
     !
-    integer(I4B), pointer                           :: iwetdry      => null()    ! flag to indicate angle1 was read
-    real(DP), dimension(:), pointer, contiguous     :: wetdry       => null()    ! wetdry array
-    real(DP), dimension(:), pointer, contiguous     :: sat          => null()    ! saturation (0. to 1.) for each cell
-    real(DP), dimension(:), pointer, contiguous     :: condsat      => null()    ! saturated conductance (symmetric array)
-    real(DP), pointer                               :: satmin       => null()    ! minimum saturated thickness
-    integer(I4B), dimension(:), pointer, contiguous :: ibotnode     => null()    ! bottom node used if igwfnewtonur /= 0
+    integer(I4B), pointer                           :: iwetdry      => null()    !< flag to indicate angle1 was read
+    real(DP), dimension(:), pointer, contiguous     :: wetdry       => null()    !< wetdry array
+    real(DP), dimension(:), pointer, contiguous     :: sat          => null()    !< saturation (0. to 1.) for each cell
+    real(DP), dimension(:), pointer, contiguous     :: condsat      => null()    !< saturated conductance (symmetric array)
+    real(DP), pointer                               :: satmin       => null()    !< minimum saturated thickness
+    integer(I4B), dimension(:), pointer, contiguous :: ibotnode     => null()    !< bottom node used if igwfnewtonur /= 0
     !
-    real(DP), dimension(:, :), pointer, contiguous  :: spdis        => null()    ! specific discharge : qx, qy, qz (nodes, 3) 
-    integer(I4B), pointer                           :: nedges       => null()    ! number of cell edges
-    integer(I4B), pointer                           :: lastedge     => null()    ! last edge number
-    integer(I4B), dimension(:), pointer, contiguous :: nodedge      => null()    ! array of node numbers that have edges
-    integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    ! edge type (horizontal or vertical)
-    real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    ! edge properties (Q, area, nx, ny, distance) 
+    real(DP), dimension(:, :), pointer, contiguous  :: spdis        => null()    !< specific discharge : qx, qy, qz (nodes, 3) 
+    integer(I4B), pointer                           :: nedges       => null()    !< number of cell edges
+    integer(I4B), pointer                           :: lastedge     => null()    !< last edge number
+    integer(I4B), dimension(:), pointer, contiguous :: nodedge      => null()    !< array of node numbers that have edges
+    integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    !< edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    !< edge properties (Q, area, nx, ny, distance) 
     !
   contains
     procedure                               :: npf_df
@@ -105,6 +106,7 @@ module GwfNpfModule
     procedure                               :: allocate_scalars
     procedure, private                      :: allocate_arrays
     procedure, private                      :: read_options
+    procedure, private                      :: set_options
     procedure, private                      :: rewet_options
     procedure, private                      :: check_options
     procedure, private                      :: read_grid_data
@@ -154,7 +156,7 @@ module GwfNpfModule
     return
   end subroutine npf_cr
 
-  subroutine npf_df(this, dis, xt3d, ingnc)
+  subroutine npf_df(this, dis, xt3d, ingnc, npf_options)
 ! ******************************************************************************
 ! npf_df -- Define
 ! ******************************************************************************
@@ -169,6 +171,7 @@ module GwfNpfModule
     class(DisBaseType), pointer, intent(inout) :: dis
     type(Xt3dType), pointer :: xt3d
     integer(I4B), intent(in) :: ingnc
+    type(GwfNpfOptionsType), optional, intent(in) :: npf_options
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -177,17 +180,20 @@ module GwfNpfModule
     ! -- data
 ! ------------------------------------------------------------------------------
     !
-    ! -- Print a message identifying the node property flow package.
-    write(this%iout, fmtheader) this%inunit
-    !
     ! -- Set a pointer to dis
     this%dis => dis
     !
-    ! -- Initialize block parser
-    call this%parser%Initialize(this%inunit, this%iout)
-    !
-    ! -- set, read, and check options
-    call this%read_options()
+    if (.not. present(npf_options)) then
+      ! -- Print a message identifying the node property flow package.
+      write(this%iout, fmtheader) this%inunit    
+      !
+      ! -- Initialize block parser and read options
+      call this%parser%Initialize(this%inunit, this%iout)
+      call this%read_options()
+    else
+      call this%set_options(npf_options)
+    end if
+    
     call this%check_options()
     !
     ! -- Save pointer to xt3d object
@@ -330,7 +336,7 @@ module GwfNpfModule
     return
   end subroutine npf_init_mem
 
-  subroutine npf_ar(this, ic, ibound, hnew, npf_data)
+  subroutine npf_ar(this, ic, ibound, hnew, grid_data)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -342,7 +348,7 @@ module GwfNpfModule
     type(GwfIcType), pointer, intent(in) :: ic
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
-    type(GwfNpfInputDataType), optional, intent(in) :: npf_data
+    type(GwfNpfGridDataType), optional, intent(in) :: grid_data
     ! -- local
     ! -- formats
     ! -- data
@@ -356,12 +362,12 @@ module GwfNpfModule
     ! -- allocate arrays
     call this%allocate_arrays(this%dis%nodes, this%dis%njas)
     !
-    if (.not. present(npf_data)) then
+    if (.not. present(grid_data)) then
       ! -- read the data block
       call this%read_grid_data()
     else
       ! -- set the data block
-      call this%set_grid_data(npf_data)
+      call this%set_grid_data(grid_data)
     end if
     !
     ! -- Initialize and check data
@@ -1453,6 +1459,23 @@ module GwfNpfModule
     return
   end subroutine read_options
 
+  subroutine set_options(this, options)
+    class(GwfNpftype) :: this
+    type(GwfNpfOptionsType), intent(in) :: options
+
+      this%icellavg = options%icellavg
+      this%ithickstrt = options%ithickstrt
+      this%iperched = options%iperched
+      this%ivarcv = options%ivarcv
+      this%idewatcv = options%idewatcv
+      this%irewet = options%irewet
+      this%wetfct = options%wetfct
+      this%iwetit = options%iwetit
+      this%ihdwet = options%ihdwet
+      this%ixt3d = options%ixt3d
+
+  end subroutine set_options
+
   subroutine rewet_options(this)
 ! ******************************************************************************
 ! rewet_options -- Set rewet options
@@ -1763,8 +1786,9 @@ module GwfNpfModule
   end subroutine read_grid_data
 
   subroutine set_grid_data(this, npf_data)
+    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     class(GwfNpfType), intent(inout) :: this
-    type(GwfNpfInputDataType), intent(in) :: npf_data
+    type(GwfNpfGridDataType), intent(in) :: npf_data
 
     ! fill grid arrays
     call this%dis%fill_grid_array(npf_data%icelltype, this%icelltype)
@@ -1774,47 +1798,55 @@ module GwfNpfModule
       this%ik22 = 1
       call this%dis%fill_grid_array(npf_data%k22, this%k22)
     else
+      ! if not present, then K22 = K11
       this%ik22 = 0
-      ! TODO_MJR: reassign
+      call mem_reassignptr(this%k22, 'K22', trim(this%memoryPath),             &
+                                     'K11', trim(this%memoryPath))
     end if
 
     if (npf_data%ik33 == 1) then
       this%ik33 = 1
       call this%dis%fill_grid_array(npf_data%k33, this%k33)
     else
+      ! if not present, then K33 = K11
       this%ik33 = 0
-      ! TODO_MJR: reassign
-    end if    
+      call mem_reassignptr(this%k33, 'K33', trim(this%memoryPath),             &
+                                     'K11', trim(this%memoryPath))
+    end if
 
     if (npf_data%iwetdry == 1) then
       call this%dis%fill_grid_array(npf_data%wetdry, this%wetdry)
     else
+      ! if not present, then compress array
       this%iwetdry = 0
-      ! TODO_MJR: compress    
+      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%memoryPath))
     end if
 
     if (npf_data%iangle1 == 1) then
       this%iangle1 = 1
       call this%dis%fill_grid_array(npf_data%angle1, this%angle1)
     else
+      ! if not present, then compress array
       this%iangle1 = 0
-      ! TODO_MJR: compress
+      call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
     end if
 
     if (npf_data%iangle2 == 1) then
       this%iangle2 = 1
       call this%dis%fill_grid_array(npf_data%angle2, this%angle2)
     else
+      ! if not present, then compress array
       this%iangle2 = 0
-      ! TODO_MJR: compress
+      call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
     end if
 
     if (npf_data%iangle3 == 1) then
       this%iangle3 = 1
       call this%dis%fill_grid_array(npf_data%angle3, this%angle3)
     else
+      ! if not present, then compress array
       this%iangle3 = 0
-      ! TODO_MJR: compress
+      call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
     end if
 
   end subroutine set_grid_data
