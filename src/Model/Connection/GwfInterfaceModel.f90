@@ -251,12 +251,13 @@ contains
 
     ! TODO_MJR: deal with inhomogeneity, for now, we assume
     ! that we can just take the owning model's settings...
-    npfGridData%ik22 = gwfModel%npf%ik22
-    npfGridData%ik33 =  gwfModel%npf%ik33
-    npfGridData%iangle1 = gwfModel%npf%iangle1
-    npfGridData%iangle2 = gwfModel%npf%iangle2
-    npfGridData%iangle3 = gwfModel%npf%iangle3
-
+    npfGridData%ik22 = this%owner%npf%ik22
+    npfGridData%ik33 =  this%owner%npf%ik33
+    npfGridData%iwetdry = this%owner%npf%iwetdry
+    npfGridData%iangle1 = this%owner%npf%iangle1
+    npfGridData%iangle2 = this%owner%npf%iangle2
+    npfGridData%iangle3 = this%owner%npf%iangle3
+    
     do icell = 1, this%gridConnection%nrOfCells
       idx = this%gridConnection%idxToGlobal(icell)%index
       objPtr => this%gridConnection%idxToGlobal(icell)%model
@@ -264,12 +265,12 @@ contains
 
       npfGridData%icelltype(icell) = gwfModel%npf%icelltype(idx)
       npfGridData%k11(icell) = gwfModel%npf%k11(idx)
-      npfGridData%k22(icell) = gwfModel%npf%k22(idx)
-      npfGridData%k33(icell) = gwfModel%npf%k33(idx)
-      npfGridData%wetdry(icell) = gwfModel%npf%wetdry(idx)
-      npfGridData%angle1(icell) = gwfModel%npf%angle1(idx)
-      npfGridData%angle2(icell) = gwfModel%npf%angle2(idx)
-      npfGridData%angle3(icell) = gwfModel%npf%angle3(idx)
+      if (npfGridData%ik22 == 1) npfGridData%k22(icell) = gwfModel%npf%k22(idx)
+      if (npfGridData%ik33 == 1) npfGridData%k33(icell) = gwfModel%npf%k33(idx)
+      if (npfGridData%iwetdry == 1) npfGridData%wetdry(icell) = gwfModel%npf%wetdry(idx)
+      if (npfGridData%iangle1 == 1) npfGridData%angle1(icell) = gwfModel%npf%angle1(idx)
+      if (npfGridData%iangle2 == 1) npfGridData%angle2(icell) = gwfModel%npf%angle2(idx)
+      if (npfGridData%iangle3 == 1) npfGridData%angle3(icell) = gwfModel%npf%angle3(idx)
 
     end do
 
