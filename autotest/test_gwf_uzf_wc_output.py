@@ -308,7 +308,7 @@ def get_mf6_model(idx, dir):
          ('uzf17_dpth=1.0', 'water-content', 'uzf17', 1.0)]}
     uzf = flopy.mf6.ModflowGwfuzf(gwf, print_flows=True,
                                   save_flows=True,
-                                  wc_filerecord="wc.bud",
+                                  wc_filerecord=name + ".uzfwc.bin",
                                   simulate_et=True,
                                   simulate_gwseep=True,
                                   linear_gwet=True,
@@ -423,8 +423,8 @@ def eval_model(sim, mfnwt):
     hds = hobj.get_alldata()
     
     # Get the MF6 water contents
-    wcpth = os.path.join(ws, 'wc.bud')
-    mf6_wc_obj = bf.HeadFile(wcpth, text='    watercontent')
+    wcpth = os.path.join(ws, ex[0] + '.uzfwc.bin')
+    mf6_wc_obj = bf.HeadFile(wcpth, text='   water-content')
     
     ckstpkper_wc = mf6_wc_obj.get_kstpkper()
 

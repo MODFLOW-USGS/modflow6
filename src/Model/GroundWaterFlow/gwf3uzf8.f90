@@ -466,14 +466,14 @@ contains
       !  write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
       !    ' WATERCONTENT WILL BE PRINTED TO LISTING FILE.'
       !  found = .true.
-      case('WC')
+      case('WATER_CONTENT')
         call this%parser%GetStringCaps(keyword)
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%iwcontout = getunit()
           call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)',  &
                        form, access, 'REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtuzfbin) 'WATERCONTENT', fname, this%iwcontout
+          write(this%iout,fmtuzfbin) 'WATER-CONTENT', fname, this%iwcontout
           found = .true.
         else
           call store_error('OPTIONAL WATER_CONTENT KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -1774,7 +1774,7 @@ contains
         wc =  uzwatvol / v
         this%dbuff(n) = wc
       end do
-      call ulasav(this%dbuff, '    WATERCONTENT', kstp, kper, pertim, totim,   &
+      call ulasav(this%dbuff, '   WATER-CONTENT', kstp, kper, pertim, totim,   &
                   this%nodes, 1, 1, ibinun)
     end if
     !

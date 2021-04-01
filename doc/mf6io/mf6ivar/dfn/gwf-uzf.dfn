@@ -53,7 +53,7 @@ description REPLACE save_flows {'{#1}': 'UZF'}
 
 block options
 name wc_filerecord
-type record wc fileout wcfile
+type record water_content fileout wcfile
 shape
 reader urword
 tagged true
@@ -62,14 +62,14 @@ longname
 description
 
 block options
-name wc
+name water_content
 type keyword
 shape
 in_record true
 reader urword
 tagged true
 optional false
-longname watercontent keyword
+longname water_content keyword
 description keyword to specify that record corresponds to unsaturated zone water contents.
 
 block options
