@@ -159,7 +159,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 	        \item --  
-	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example 'water-content.uzf.bin'.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  A new test, located in the autotest directory and titled est_gwf_uzf_wc_output.py demonstrates how to read the new binary water content output file.
+	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example ``water-content.uzf.bin''.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  A new test, located in the autotest directory and titled test_gwf_uzf_wc_output.py demonstrates how to read the new binary water content output file.
 	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
 	\end{itemize}
 	
