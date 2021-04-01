@@ -121,6 +121,8 @@ module GwfNpfModule
     procedure, public                       :: set_edge_properties
   endtype
 
+  contains
+
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
