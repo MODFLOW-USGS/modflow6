@@ -69,22 +69,7 @@ def get_model(idx, dir):
     )
 
     # create tdis package
-    ats_filerecord = None
-    # set dt0, dtmin, dtmax, dtadj, dtfailadj
-    dt0 = 10.
-    dtmin = 1.e-5
-    dtmax = 100.
-    dtadj = 2.
-    dtfailadj = 2.
-    if False:
-        atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),]
-        ats = flopy.mf6.ModflowUtlats(sim,
-                                      maxats=len(atsperiod),
-                                      perioddata=atsperiod)
-        ats_filerecord = name + ".ats"
-
     tdis = flopy.mf6.ModflowTdis(sim,
-                                 ats_filerecord=ats_filerecord,
                                  time_units='DAYS',
                                  nper=nper,
                                  perioddata=tdis_rc)
