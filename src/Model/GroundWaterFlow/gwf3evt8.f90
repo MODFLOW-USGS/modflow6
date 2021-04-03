@@ -541,8 +541,8 @@ module EvtModule
       this%rhs(i) = DZERO
       this%hcof(i) = DZERO
       !
-      ! -- if ibound is positive, then add terms
-      if (this%ibound(node) > 0) then
+      ! -- if ibound is positive and not overlain by a lake, then add terms
+      if (this%ibound(node) > 0 .and. this%ibound(node) /= 10000) then
         !
         c = this%bound(2,i) ! RATE -- max. ET rate
         s = this%bound(1,i) ! SURFACE -- ET surface elevation

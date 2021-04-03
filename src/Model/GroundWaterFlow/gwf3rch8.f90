@@ -674,11 +674,15 @@ module RchModule
       !
       ! -- Set rhs and hcof
       this%hcof(i) = DZERO
+      this%rhs(i) = -this%bound(1,i)
       if(this%ibound(node) <= 0) then
         this%rhs(i) = DZERO
         cycle
       endif
-      this%rhs(i) = -this%bound(1,i)
+      if(this%ibound(node) == 10000) then
+        this%rhs(i) = DZERO
+        cycle
+      endif
     enddo
     !
     ! -- return
