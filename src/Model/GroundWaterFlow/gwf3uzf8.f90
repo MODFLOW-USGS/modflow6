@@ -1,4 +1,6 @@
 ! -- Uzf module
+! -- TODO:
+!      Update flowja in cq routine
 module UzfModule
 
   use KindModule, only: DP, I4B
@@ -44,10 +46,10 @@ module UzfModule
     integer(I4B), pointer :: ipakcsv => null()
     !
     type(BudgetObjectType), pointer                    :: budobj      => null()
-    integer(I4B), pointer                              :: bditems     => null()  !number of budget items
-    integer(I4B), pointer                              :: nbdtxt      => null()  !number of budget text items
+    integer(I4B), pointer                              :: bditems     => null()  !< number of budget items
+    integer(I4B), pointer                              :: nbdtxt      => null()  !< number of budget text items
     character(len=LENBUDTXT), dimension(:), pointer,                            &
-                              contiguous               :: bdtxt       => null()  !budget items written to cbc file
+                              contiguous               :: bdtxt       => null()  !< budget items written to cbc file
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: uzfname => null()
     !
@@ -59,41 +61,41 @@ module UzfModule
     type(UzfCellGroupType)                             :: uzfobjwork
     !
     ! -- pointer to gwf variables
-    integer(I4B), pointer                                  :: gwfiss      => null()
-    real(DP), dimension(:), pointer, contiguous            :: gwftop      => null()
-    real(DP), dimension(:), pointer, contiguous            :: gwfbot      => null()
-    real(DP), dimension(:), pointer, contiguous            :: gwfarea     => null()
-    real(DP), dimension(:), pointer, contiguous            :: gwfhcond    => null()
+    integer(I4B), pointer                              :: gwfiss      => null()
+    real(DP), dimension(:), pointer, contiguous        :: gwftop      => null()
+    real(DP), dimension(:), pointer, contiguous        :: gwfbot      => null()
+    real(DP), dimension(:), pointer, contiguous        :: gwfarea     => null()
+    real(DP), dimension(:), pointer, contiguous        :: gwfhcond    => null()
     !
     ! -- uzf data
-    integer(I4B), pointer                                   :: ntrail       => null()
-    integer(I4B), pointer                                   :: nsets        => null()
-    integer(I4B), pointer                                   :: nwav         => null()
-    integer(I4B), pointer                                   :: nodes        => null()
-    integer(I4B), pointer                                   :: nper         => null()
-    integer(I4B), pointer                                   :: nstp         => null()
-    integer(I4B), pointer                                   :: readflag     => null()
-    integer(I4B), pointer                                   :: outunitbud   => null()
-    integer(I4B), pointer                                   :: ietflag      => null()
-    integer(I4B), pointer                                   :: igwetflag    => null()
-    integer(I4B), pointer                                   :: iseepflag    => null()
-    integer(I4B), pointer                                   :: imaxcellcnt  => null()
-    integer(I4B), dimension(:), pointer, contiguous         :: igwfnode     => null()
-    real(DP), dimension(:), pointer, contiguous             :: appliedinf   => null()
-    real(DP), dimension(:), pointer, contiguous             :: rejinf       => null()
-    real(DP), dimension(:), pointer, contiguous             :: rejinf0      => null()
-    real(DP), dimension(:), pointer, contiguous             :: rejinftomvr  => null()
-    real(DP), dimension(:), pointer, contiguous             :: infiltration => null()
-    real(DP), dimension(:), pointer, contiguous             :: recharge     => null()
-    real(DP), dimension(:), pointer, contiguous             :: gwet         => null()
-    real(DP), dimension(:), pointer, contiguous             :: uzet         => null()
-    real(DP), dimension(:), pointer, contiguous             :: gwd          => null()
-    real(DP), dimension(:), pointer, contiguous             :: gwd0         => null()
-    real(DP), dimension(:), pointer, contiguous             :: gwdtomvr     => null()
-    real(DP), dimension(:), pointer, contiguous             :: rch          => null()
-    real(DP), dimension(:), pointer, contiguous             :: rch0         => null()
-    real(DP), dimension(:), pointer, contiguous             :: qsto         => null()
-    integer(I4B), pointer                                   :: iuzf2uzf     => null()
+    integer(I4B), pointer                               :: ntrail       => null()
+    integer(I4B), pointer                               :: nsets        => null()
+    integer(I4B), pointer                               :: nwav         => null()
+    integer(I4B), pointer                               :: nodes        => null()
+    integer(I4B), pointer                               :: nper         => null()
+    integer(I4B), pointer                               :: nstp         => null()
+    integer(I4B), pointer                               :: readflag     => null()
+    integer(I4B), pointer                               :: outunitbud   => null()
+    integer(I4B), pointer                               :: ietflag      => null()  !< et flag, 0 is off, 1 or 2 are different types
+    integer(I4B), pointer                               :: igwetflag    => null()
+    integer(I4B), pointer                               :: iseepflag    => null()
+    integer(I4B), pointer                               :: imaxcellcnt  => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: igwfnode     => null()
+    real(DP), dimension(:), pointer, contiguous         :: appliedinf   => null()
+    real(DP), dimension(:), pointer, contiguous         :: rejinf       => null()
+    real(DP), dimension(:), pointer, contiguous         :: rejinf0      => null()
+    real(DP), dimension(:), pointer, contiguous         :: rejinftomvr  => null()
+    real(DP), dimension(:), pointer, contiguous         :: infiltration => null()
+    real(DP), dimension(:), pointer, contiguous         :: recharge     => null()
+    real(DP), dimension(:), pointer, contiguous         :: gwet         => null()
+    real(DP), dimension(:), pointer, contiguous         :: uzet         => null()
+    real(DP), dimension(:), pointer, contiguous         :: gwd          => null()
+    real(DP), dimension(:), pointer, contiguous         :: gwd0         => null()
+    real(DP), dimension(:), pointer, contiguous         :: gwdtomvr     => null()
+    real(DP), dimension(:), pointer, contiguous         :: rch          => null()
+    real(DP), dimension(:), pointer, contiguous         :: rch0         => null()
+    real(DP), dimension(:), pointer, contiguous         :: qsto         => null()
+    integer(I4B), pointer                               :: iuzf2uzf     => null()
     !
     ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous :: ia => null()
@@ -1371,7 +1373,7 @@ contains
     integer(I4B) :: n, m, ivertflag, ierr
     real(DP) :: rfinf
     real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
-    real(DP) :: hgwf,hgwflm1,rrech
+    real(DP) :: hgwf, rrech
     real(DP) :: trhsgwet,thcofgwet,derivgwet
     real(DP) :: qfrommvr, qformvr, qgwformvr
     real(DP) :: qfinf
@@ -1386,7 +1388,6 @@ contains
     real(DP) :: qseep
     real(DP) :: qseeptomvr
     real(DP) :: qgwet
-    real(DP) :: cvv
     integer(I4B) :: numobs
     ! -- for observations
     integer(I4B) :: j
@@ -1437,13 +1438,7 @@ contains
       endif
       !
       hgwf = this%xnew(n)
-      !
       m = n
-      hgwflm1 = hgwf
-      !
-      ! -- for now set cvv = DZERO
-      ! cvv = this%gwfhcond(m)
-      cvv = DZERO
       !
       ! -- Get obs information, check if there is obs in uzf cell
       numobs = 0
@@ -1462,7 +1457,7 @@ contains
       call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
                               rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
                               this%ietflag,this%iseepflag,this%issflag,hgwf,   &
-                              hgwflm1,cvv,numobs,this%obs_num,                 &
+                              numobs,this%obs_num,                             &
                               this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
                               qgwformvr,ierr)
       if ( ierr > 0 ) then
@@ -1652,7 +1647,7 @@ contains
     title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
             ') FLOW RATES'
     call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-    this%outputtab, this%nbound, this%nodelist, -this%rch, &
+    this%outputtab, this%nbound, this%nodelist, this%rch, &
     this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
     this%name_model, this%name_model, this%name_model, this%packName, &
     this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
@@ -1790,7 +1785,7 @@ contains
     integer(I4B) :: i, ivertflag
     integer(I4B) :: n, m, ierr
     real(DP) :: trhs1, thcof1, trhs2, thcof2
-    real(DP) :: hgwf, hgwflm1, cvv, uzderiv, derivgwet
+    real(DP) :: hgwf, uzderiv, derivgwet
     real(DP) :: qfrommvr, qformvr
 ! ------------------------------------------------------------------------------
     !
@@ -1825,15 +1820,13 @@ contains
         hgwf = this%xnew(n)
         !
         m = n
-        hgwflm1 = hgwf
-        cvv = DZERO
         !
         ! -- solve for current uzf cell
         call this%uzfobj%formulate(this%uzfobjwork, ivertflag, i,              &
                                     this%totfluxtot, this%ietflag,             &
                                     this%issflag,this%iseepflag,               &
-                                    trhs1,thcof1,hgwf,hgwflm1,cvv,uzderiv,     &
-                                    qfrommvr,qformvr,ierr,ivertflag)
+                                    trhs1,thcof1,hgwf,uzderiv,                 &
+                                    qfrommvr,qformvr,ierr)
         !
         ! -- terminate if an error condition has occurred
         if (ierr > 0) then

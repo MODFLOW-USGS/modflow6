@@ -31,7 +31,6 @@ module UzfCellGroupModule
     real(DP), pointer, dimension(:), contiguous :: uzstor => null()
     real(DP), pointer, dimension(:), contiguous :: delstor => null()
     real(DP), pointer, dimension(:), contiguous :: totflux => null()
-    real(DP), pointer, dimension(:), contiguous :: vflow => null()
     integer(I4B), pointer, dimension(:), contiguous :: nwav => null()
     integer(I4B), pointer, dimension(:), contiguous :: ntrail => null()
     real(DP), pointer, dimension(:), contiguous :: sinf => null()
@@ -84,7 +83,7 @@ module UzfCellGroupModule
       procedure :: rate_et_z
       procedure :: uzet
       procedure :: uz_rise
-      procedure :: vertcellflow
+      ! -- not implemented yet procedure :: vertcellflow
       procedure :: rejfinf
       procedure :: gwseep
       procedure :: setbelowpet
@@ -137,7 +136,6 @@ module UzfCellGroupModule
       call mem_allocate(this%uzstor, ncells, 'UZSTOR', memory_path)
       call mem_allocate(this%delstor, ncells, 'DELSTOR', memory_path)
       call mem_allocate(this%totflux, ncells, 'TOTFLUX', memory_path)
-      call mem_allocate(this%vflow, ncells, 'VFLOW', memory_path)
       call mem_allocate(this%sinf, ncells, 'SINF', memory_path)
       call mem_allocate(this%finf, ncells, 'FINF', memory_path)
       call mem_allocate(this%finf_rej, ncells, 'FINF_REJ', memory_path)
@@ -184,7 +182,6 @@ module UzfCellGroupModule
       allocate(this%uzstor(ncells))
       allocate(this%delstor(ncells))
       allocate(this%totflux(ncells))
-      allocate(this%vflow(ncells))
       allocate(this%sinf(ncells))
       allocate(this%finf(ncells))
       allocate(this%finf_rej(ncells))
@@ -231,7 +228,6 @@ module UzfCellGroupModule
       this%uzstor(icell) = DZERO
       this%delstor(icell) = DZERO
       this%totflux(icell) = DZERO
-      this%vflow(icell) = DZERO
       this%sinf(icell) = DZERO
       this%finf(icell) = DZERO
       this%finf_rej(icell) = DZERO
@@ -298,7 +294,6 @@ module UzfCellGroupModule
       deallocate(this%uzstor)
       deallocate(this%delstor)
       deallocate(this%totflux)
-      deallocate(this%vflow)
       deallocate(this%sinf)
       deallocate(this%finf)
       deallocate(this%finf_rej)
@@ -344,7 +339,6 @@ module UzfCellGroupModule
       call mem_deallocate(this%uzstor)
       call mem_deallocate(this%delstor)
       call mem_deallocate(this%totflux)
-      call mem_deallocate(this%vflow)
       call mem_deallocate(this%sinf)
       call mem_deallocate(this%finf)
       call mem_deallocate(this%finf_rej)
@@ -680,8 +674,8 @@ module UzfCellGroupModule
   end subroutine advance
 
   subroutine formulate(this, thiswork, jbelow, icell, totfluxtot, ietflag,    &
-                       issflag, iseepflag, trhs, thcof, hgwf, hgwfml1,        &
-                       cvv, deriv, qfrommvr, qformvr, ierr, ivertflag)
+                       issflag, iseepflag, trhs, thcof, hgwf,                 &
+                       deriv, qfrommvr, qformvr, ierr)
 ! ******************************************************************************
 ! formulate -- formulate the unsaturated flow object, calculate terms for 
 !              gwf equation            
@@ -693,23 +687,20 @@ module UzfCellGroupModule
     use TdisModule, only: delt
     ! -- dummy
     class(UzfCellGroupType) :: this
-    type(UzfCellGroupType) :: thiswork
-    integer(I4B), intent(in) :: jbelow
-    integer(I4B), intent(in) :: icell
-    integer(I4B), intent(in) :: ietflag
-    integer(I4B), intent(in) :: iseepflag
-    integer(I4B), intent(in) :: issflag
-    integer(I4B), intent(in) :: ivertflag
-    integer(I4B), intent(inout) :: ierr
-    real(DP), intent(in) :: hgwf
-    real(DP), intent(in) :: hgwfml1
-    real(DP), intent(in) :: cvv
-    real(DP), intent(in) :: qfrommvr
-    real(DP), intent(inout) :: trhs
-    real(DP), intent(inout) :: thcof
-    real(DP), intent(inout) :: qformvr
-    real(DP), intent(inout) :: totfluxtot
-    real(DP), intent(inout) :: deriv
+    type(UzfCellGroupType) :: thiswork        !< work object for resetting wave state
+    integer(I4B), intent(in) :: jbelow        !< number of underlying uzf object or 0 if none
+    integer(I4B), intent(in) :: icell         !< number of this uzf object
+    integer(I4B), intent(in) :: ietflag       !< et is off (0) or based one water content (1) or pressure (2)
+    integer(I4B), intent(in) :: iseepflag     !< discharge to land is active (1) or not (0)
+    integer(I4B), intent(in) :: issflag       !< steady state flag
+    integer(I4B), intent(inout) :: ierr       !< flag indicating not enough waves
+    real(DP), intent(in) :: hgwf              !< head for cell icell
+    real(DP), intent(in) :: qfrommvr          !< water inflow from mover
+    real(DP), intent(inout) :: trhs           !< total uzf rhs contribution to GWF model
+    real(DP), intent(inout) :: thcof          !< total uzf hcof contribution to GWF model
+    real(DP), intent(inout) :: qformvr        !< uzf water available for mover
+    real(DP), intent(inout) :: totfluxtot     !< 
+    real(DP), intent(inout) :: deriv          !< 
     ! -- local
     real(DP) :: test, scale, seep, finfact, derivfinf
     real(DP) :: trhsfinf, thcoffinf, trhsseep, thcofseep, deriv1, deriv2
@@ -721,29 +712,27 @@ module UzfCellGroupModule
     thcofseep = DZERO
     this%finf_rej(icell) = DZERO
     this%surflux(icell) = this%finf(icell) + qfrommvr / this%uzfarea(icell) 
+    this%watab(icell) = hgwf
     this%surfseep(icell) = DZERO
     seep = DZERO
     finfact = DZERO
-    deriv1 = DZERO
-    deriv2 = DZERO
-    derivfinf = DZERO
-    this%watab(icell) = hgwf
     this%etact(icell) = DZERO
     this%surfluxbelow(icell) = DZERO
-    if(ivertflag > 0) then
-      this%finf(jbelow) = DZERO
-    end if
-    !
-    ! -- save wave states for resetting after iteration.
-    this%watab(icell) = hgwf
-    call thiswork%wave_shift(this, 1, icell, 0, 1, this%nwavst(icell), 1)
-    if (this%watab(icell) > this%celtop(icell)) &
-      this%watab(icell) = this%celtop(icell)
-    !
     if (this%ivertcon(icell) > 0) then
+      this%finf(jbelow) = DZERO
       if (this%watab(icell) < this%celbot(icell)) &
         this%watab(icell) = this%celbot(icell)
     end if
+    !
+    ! -- initialize derivative variables
+    deriv1 = DZERO
+    deriv2 = DZERO
+    derivfinf = DZERO
+    !
+    ! -- save wave states for resetting after iteration.
+    call thiswork%wave_shift(this, 1, icell, 0, 1, this%nwavst(icell), 1)
+    if (this%watab(icell) > this%celtop(icell)) &
+      this%watab(icell) = this%celtop(icell)
     !
     ! -- add water from mover to applied infiltration.
     if (this%surflux(icell) > this%vks(icell)) then
@@ -759,15 +748,14 @@ module UzfCellGroupModule
     ! -- calculate rejected infiltration
     this%finf_rej(icell) =  this%finf(icell) + &
       (qfrommvr / this%uzfarea(icell)) - this%surflux(icell)
+    !
+    ! -- calculate groundwater discharge
     if (iseepflag > 0 .and. this%landflag(icell) == 1) then
-      !
-      ! -- calculate groundwater discharge
       call this%gwseep(icell, deriv2, scale, hgwf, trhsseep, thcofseep, seep)
       this%surfseep(icell) = seep        
     end if
     !
     ! -- route water through unsat zone, calc. storage change and recharge
-    !
     test = this%watab(icell)
     if (this%watabold(icell) - test < -DEM15) test = this%watabold(icell)
     if (this%celtop(icell) - test > DEM15) then
@@ -777,7 +765,8 @@ module UzfCellGroupModule
         call this%uz_rise(icell, totfluxtot)
         this%totflux(icell) = totfluxtot
         if (this%ivertcon(icell) > 0) then
-          call this%addrech(icell, jbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
+          call this%addrech(icell, jbelow, hgwf, trhsfinf, thcoffinf, &
+            derivfinf, delt)
         end if
       else
         this%totflux(icell) = this%surflux(icell) * delt
@@ -803,7 +792,7 @@ module UzfCellGroupModule
 
   subroutine budget(this, jbelow, icell, totfluxtot, rfinf, rin, rout,         &
                     rsto, ret, retgw, rgwseep, rvflux, ietflag, iseepflag,     &
-                    issflag, hgwf, hgwfml1, cvv, numobs, obs_num,              &
+                    issflag, hgwf, numobs, obs_num,                            &
                     obs_depth, obs_theta, qfrommvr, qformvr, qgwformvr,        &
                     ierr)
 ! ******************************************************************************
@@ -828,8 +817,6 @@ module UzfCellGroupModule
     real(DP),dimension(:),intent(in) :: obs_depth
     real(DP),dimension(:),intent(inout) :: obs_theta
     real(DP), intent(in) :: hgwf
-    real(DP), intent(in) :: hgwfml1
-    real(DP), intent(in) :: cvv
     real(DP), intent(in) :: qfrommvr
     real(DP), intent(inout) :: rfinf
     real(DP), intent(inout) :: rin
@@ -858,30 +845,28 @@ module UzfCellGroupModule
     this%finf_rej = DZERO
     this%surflux(icell) = this%finf(icell) + qfrommvr / this%uzfarea(icell)
     this%watab(icell) = hgwf
-    this%vflow(icell) = DZERO
     this%surfseep(icell) = DZERO
     seep = DZERO
     finfact = DZERO
     this%etact(icell) = DZERO
     this%surfluxbelow(icell) = DZERO
     if (this%ivertcon(icell) > 0) then
-      this%finf(jbelow) = dzero
+      this%finf(jbelow) = DZERO
       if (this%watab(icell) < this%celbot(icell)) &
         this%watab(icell) = this%celbot(icell)
     end if
     if (this%watab(icell) > this%celtop(icell)) &
       this%watab(icell) = this%celtop(icell)
+    !
+    ! -- add water from mover to applied infiltration
     if (this%surflux(icell) > this%vks(icell)) then
       this%surflux(icell) = this%vks(icell)
     end if
     !
-    ! -- infiltration excess -- rejected infiltration 
+    ! -- saturation excess rejected infiltration 
     if (this%landflag(icell) == 1) then
       call rejfinf(this, icell, deriv, hgwf, trhsfinf, thcoffinf, finfact)
       this%surflux(icell) = finfact
-      if (finfact < this%finf(icell)) then
-          this%surflux(icell) = finfact
-      end if
     end if
     !
     ! -- calculate rejected infiltration
@@ -895,13 +880,7 @@ module UzfCellGroupModule
       rgwseep = rgwseep + this%surfseep(icell)
     end if
     !
-    ! sat. to unsat. zone exchange.
-    !if (this%landflag == 0 .and. issflag == 0) then
-    !  call this%vertcellflow(ipos,ttrhs,hgwf,hgwfml1,cvv)
-    !end if
-    !rvflux = rvflux + this%vflow
-    !
-    ! -- route unsaturated flow, calc. storage change and recharge
+    ! -- route water through unsat zone, calc. storage change and recharge
     test = this%watab(icell)
     if (this%watabold(icell) - test < -DEM15) test = this%watabold(icell)
     if (this%celtop(icell) - test > DEM15) then
@@ -912,13 +891,13 @@ module UzfCellGroupModule
         this%totflux(icell) = totfluxtot  
         if (this%ivertcon(icell) > 0) then
           call this%addrech(icell, jbelow, hgwf, trhsfinf, thcoffinf, &
-            deriv, delt, 1)
+            deriv, delt)
         end if
       else 
         this%totflux(icell) = this%surflux(icell) * delt
         totfluxtot = this%surflux(icell) * delt  
       end if
-      thcoffinf = dzero
+      thcoffinf = DZERO
       trhsfinf = this%totflux(icell) * this%uzfarea(icell) / delt
       call this%update_wav(icell, delt, rout, rsto, ret, ietflag, issflag, 0)
     else
@@ -956,53 +935,7 @@ module UzfCellGroupModule
     return
   end subroutine budget
                       
-  subroutine vertcellflow(this, icell, trhs, hgwf, hgwfml1, cvv)
-! ******************************************************************************
-! vertcellflow -- calculate exchange from sat. to unsat. zones
-!                 subroutine not used until sat to unsat flow is supported
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------      
-    ! -- modules
-    ! -- dummy
-    class(UzfCellGroupType) :: this
-    integer(I4B), intent(in) :: icell
-    real(DP), intent(in) :: hgwf
-    real(DP), intent(in) :: hgwfml1
-    real(DP), intent(in) :: cvv
-    real(DP), intent(inout) :: trhs
-    ! -- dummy
-    real(DP) :: Qv, maxvflow, h1, h2, test
-! ------------------------------------------------------------------------------
-    this%vflow(icell) = DZERO
-    this%finf(icell) = DZERO
-    trhs = DZERO
-    h1 = hgwfml1
-    h2 = hgwf
-    test = this%watab(icell)
-    if (this%watabold(icell) - test < -DEM30) test = this%watabold(icell)
-    if (this%celtop(icell) - test > DEM30) then
-      !
-      ! calc. downward flow using GWF heads and conductance
-      Qv = cvv * (h1 - h2)
-      if (Qv > DEM30) then
-        this%vflow(icell) = Qv
-        this%surflux(icell) = this%vflow(icell) / this%uzfarea(icell)
-        maxvflow = this%vks(icell) * this%uzfarea(icell)
-        if (this%vflow(icell) - maxvflow > DEM9) then
-          this%surflux(icell) = this%vks(icell)
-          trhs = this%vflow(icell) - maxvflow
-          this%vflow(icell) = maxvflow
-        end if
-      end if  
-    end if
-    !
-    ! -- return
-    return
-  end subroutine vertcellflow
-    
-  subroutine addrech(this, icell, jbelow, hgwf, trhs, thcof, deriv, delt, it)
+  subroutine addrech(this, icell, jbelow, hgwf, trhs, thcof, deriv, delt)
 ! ******************************************************************************
 ! addrech -- add recharge or infiltration to cells
 ! ******************************************************************************
@@ -1014,7 +947,6 @@ module UzfCellGroupModule
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
-    integer(I4B), intent(in) :: it
     real(DP), intent(inout) :: trhs
     real(DP), intent(inout) :: thcof
     real(DP), intent(inout) :: deriv
