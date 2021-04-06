@@ -1,7 +1,8 @@
 ! -- Uzf module
 ! -- TODO:
 !      Update flowja in cq routine
-!      Remove old accumulators, which are not used anymore
+!      Water content observations have a problem if landflag == 1 and surfdep > 0; 
+!        depths must be greater than surfdep but there is no check for this 
 module UzfModule
 
   use KindModule, only: DP, I4B
@@ -120,11 +121,6 @@ module UzfModule
     !
     ! budget variables
     real(DP), pointer                          :: totfluxtot  => null()
-    real(DP), pointer                          :: infilsum    => null()
-    real(DP), pointer                          :: rechsum     => null()
-    real(DP), pointer                          :: delstorsum  => null()
-    real(DP), pointer                          :: uzetsum     => null()
-    real(DP), pointer                          :: vfluxsum    => null()
     integer(I4B), pointer                      :: issflag     => null()
     integer(I4B), pointer                      :: issflagold  => null()
     integer(I4B), pointer                      :: istocb      => null()
@@ -133,11 +129,6 @@ module UzfModule
     integer(I4B), pointer :: cbcauxitems => NULL()
     character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
-    !
-    ! -- observations
-    real(DP), dimension(:), pointer, contiguous            :: obs_theta   => null()
-    real(DP), dimension(:), pointer, contiguous            :: obs_depth   => null()
-    integer(I4B), dimension(:), pointer, contiguous        :: obs_num     => null()
 
   contains
 
@@ -273,14 +264,6 @@ contains
       call this%uzfobj%sethead(i, hgwf)
     end do
     !
-    ! allocate space to store moisture content observations
-    n = this%obs%npakobs
-    if ( n > 0 ) then
-      call mem_reallocate(this%obs_theta, n, 'OBS_THETA', this%memoryPath)
-      call mem_reallocate(this%obs_depth, n, 'OBS_DEPTH', this%memoryPath)
-      call mem_reallocate(this%obs_num, n, 'OBS_NUM', this%memoryPath)
-    end if
-    !
     ! -- setup pakmvrobj
     if (this%imover /= 0) then
       allocate(this%pakmvrobj)
@@ -396,11 +379,6 @@ contains
     do i = 1, this%cbcauxitems
       this%qauxcbc(i) = DZERO
     end do
-    !
-    ! -- Allocate obs members
-    call mem_allocate(this%obs_theta, 0, 'OBS_THETA', this%memoryPath)
-    call mem_allocate(this%obs_depth, 0, 'OBS_DEPTH', this%memoryPath)
-    call mem_allocate(this%obs_num, 0, 'OBS_NUM', this%memoryPath)
     !
     ! -- return
     return
@@ -1369,29 +1347,16 @@ contains
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    class(ObserveType),   pointer :: obsrv => null()
     integer(I4B) :: i
     integer(I4B) :: n, m, ivertflag, ierr
-    real(DP) :: rfinf
-    real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
-    real(DP) :: hgwf, rrech
+    real(DP) :: hgwf
     real(DP) :: trhsgwet,thcofgwet,derivgwet
-    real(DP) :: qfrommvr, qformvr, qgwformvr
-    real(DP) :: qfinf
-    real(DP) :: qrejinf
-    real(DP) :: qrejinftomvr
+    real(DP) :: qfrommvr
     real(DP) :: qout
     real(DP) :: qfact
     real(DP) :: qtomvr
-    real(DP) :: sqtomvr
     real(DP) :: q
-    real(DP) :: rfrommvr
-    real(DP) :: qseep
-    real(DP) :: qseeptomvr
-    real(DP) :: qgwet
-    integer(I4B) :: numobs
     ! -- for observations
-    integer(I4B) :: j
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
@@ -1399,25 +1364,6 @@ contains
     !
     ! -- initialize accumulators
     ierr = 0
-    rfinf = DZERO
-    rin = DZERO
-    rout = DZERO
-    rrech = DZERO
-    rsto = DZERO
-    ret = DZERO
-    retgw = DZERO
-    rgwseep = DZERO
-    rvflux = DZERO
-    qfinf = DZERO
-    qfrommvr = DZERO
-    qtomvr = DZERO
-    qrejinf = DZERO
-    qrejinftomvr = DZERO
-    sqtomvr = DZERO
-    rfrommvr = DZERO
-    qseep = DZERO
-    qseeptomvr = DZERO
-    qgwet = DZERO
     this%uzfobj%pet = this%uzfobj%petmax
     !
     ! -- Go through and process each UZF cell
@@ -1432,42 +1378,19 @@ contains
       !
       ! -- Water mover added to infiltration
       qfrommvr = DZERO
-      qformvr = DZERO
       if(this%imover == 1) then
         qfrommvr = this%pakmvrobj%get_qfrommvr(i)
-        rfrommvr = rfrommvr + qfrommvr
       endif
       !
       hgwf = this%xnew(n)
       m = n
       !
-      ! -- Get obs information, check if there is obs in uzf cell
-      numobs = 0
-      do j = 1, this%obs%npakobs
-        obsrv => this%obs%pakobs(j)%obsrv
-        if ( obsrv%intPak1 == i ) then
-          numobs = numobs + 1
-          this%obs_num(numobs) = j
-          this%obs_depth(j) = obsrv%dblPak1
-        end if
-      end do
-      !
-      ! -- Call budget routine of the uzf kinematic object
-      ! todo: this will require additional work for ATS because waves are moved forward
-      !       without a way to restore the state
-      call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                  &
-                             this%totfluxtot, this%ietflag,                  &
-                             this%issflag, this%iseepflag, hgwf,             &
-                             qfrommvr, ierr,         &
+      ! -- Call solve routine of the uzf kinematic object
+      call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                    &
+                             this%totfluxtot, this%ietflag,                    &
+                             this%issflag, this%iseepflag, hgwf,               &
+                             qfrommvr, ierr,                                   &
                              reset_state=.false.)
-        
-      ! -- TODO: finishing replacing budget call with solve and budget calc of rfin, rin, rout, rsto, ret, retgw, ...
-      !call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
-      !                        rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
-      !                        this%ietflag,this%iseepflag,this%issflag,hgwf,   &
-      !                        numobs,this%obs_num,                             &
-      !                        this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
-      !                        qgwformvr,ierr)
       if ( ierr > 0 ) then
         if ( ierr == 1 ) &
           errmsg = 'UZF variable NWAVESETS needs to be increased.'
@@ -1482,7 +1405,6 @@ contains
         derivgwet = DZERO
         call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
                                  derivgwet)
-        retgw = retgw + this%uzfobj%gwet(i)
       end if
       !
       ! -- distribute PET to deeper cells
@@ -1512,7 +1434,6 @@ contains
       qtomvr = DZERO
       if (this%imover == 1) then
         qtomvr = this%pakmvrobj%get_qtomvr(i)
-        sqtomvr = sqtomvr + qtomvr
       end if
 
       qfact = DZERO
@@ -1550,19 +1471,9 @@ contains
       end if
       this%gwd(i) = q
 
-      qfinf = qfinf + this%appliedinf(i)
-      qrejinf = qrejinf + this%rejinf(i)
-      qrejinftomvr = qrejinftomvr + this%rejinftomvr(i)
-
-      qseep = qseep + this%gwd(i)
-      qseeptomvr = qseeptomvr + this%gwdtomvr(i)
-
       this%gwet(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       this%qsto(i) = this%uzfobj%delstor(i) / delt
-
-      ! -- accumulate groundwater et
-      qgwet = qgwet + this%gwet(i)
       
       !todo: need to accumulate into flowja
 
@@ -1570,16 +1481,6 @@ contains
       ! -- End of UZF cell loop
       !
     end do
-    !
-    ! add cumulative flows to UZF budget
-    this%infilsum = rin * delt
-    this%rechsum = rout * delt
-    rrech = rout
-    this%delstorsum = rsto * delt
-    this%uzetsum = ret * delt
-    this%vfluxsum = rvflux
-    !
-    !
     !
     ! -- fill the budget object
     call this%uzf_fill_budobj()
@@ -1828,11 +1729,6 @@ contains
         m = n
         !
         ! -- solve for current uzf cell
-        !cdlcall this%uzfobj%formulate(this%uzfobjwork, ivertflag, i,              &
-        !cdl                            this%totfluxtot, this%ietflag,             &
-        !cdl                            this%issflag,this%iseepflag,               &
-        !cdl                            trhs1,thcof1,hgwf,uzderiv,                 &
-        !cdl                            qfrommvr,qformvr,ierr)
         call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                  &
                                this%totfluxtot, this%ietflag,                  &
                                this%issflag,this%iseepflag, hgwf,              &
@@ -2521,7 +2417,7 @@ contains
             case ('NET-INFILTRATION')
               v = this%infiltration(n)
             case ('WATER-CONTENT')
-              v = this%obs_theta(i)  ! more than one obs per node
+              v = this%uzfobj%get_water_content_at_depth(n, obsrv%obsDepth)
             case default
               errmsg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
               call store_error(errmsg)
@@ -2609,12 +2505,13 @@ contains
         !    by a boundname that is assigned to more than one element
         if (obsrv%ObsTypeId == 'WATER-CONTENT') then
           n = obsrv%indxbnds_count
-          if (n > 1) then
+          if (n /= 1) then
             write (errmsg, '(a,3(1x,a))')                                        &
               trim(adjustl(obsrv%ObsTypeId)), 'for observation',                 &
               trim(adjustl(obsrv%Name)),                                         &
               'must be assigned to a UZF cell with a unique boundname.'
             call store_error(errmsg)
+            call ustop()
           end if
           !
           ! -- check WATER-CONTENT depth
@@ -2624,6 +2521,8 @@ contains
           obsrv%dblPak1 = obsdepth
           !
           ! -- determine maximum cell depth
+          ! -- This is presently complicated for landflag = 1 cells and surfdep
+          !    greater than zero.  In this case, celtop is gwftop - surfdep.
           iuzid = obsrv%intPak1
           dmax = this%uzfobj%celtop(iuzid) - this%uzfobj%celbot(iuzid)
           ! -- check that obs depth is valid; call store_error if not
@@ -2738,11 +2637,6 @@ contains
     call mem_allocate(this%nwav, 'NWAV', this%memoryPath)
     call mem_allocate(this%outunitbud, 'OUTUNITBUD', this%memoryPath)
     call mem_allocate(this%totfluxtot, 'TOTFLUXTOT', this%memoryPath)
-    call mem_allocate(this%infilsum, 'INFILSUM', this%memoryPath)
-    call mem_allocate(this%uzetsum, 'UZETSUM', this%memoryPath)
-    call mem_allocate(this%rechsum, 'RECHSUM', this%memoryPath)
-    call mem_allocate(this%vfluxsum, 'VFLUXSUM', this%memoryPath)
-    call mem_allocate(this%delstorsum, 'DELSTORSUM', this%memoryPath)
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%nbdtxt, 'NBDTXT', this%memoryPath)
     call mem_allocate(this%issflag, 'ISSFLAG', this%memoryPath)
@@ -2762,11 +2656,6 @@ contains
     this%iwcontout = 0
     this%ibudgetout = 0
     this%ipakcsv = 0
-    this%infilsum = DZERO
-    this%uzetsum = DZERO
-    this%rechsum = DZERO
-    this%delstorsum = DZERO
-    this%vfluxsum = DZERO
     this%istocb = 0
     this%bditems = 7
     this%nbdtxt = 5
@@ -2834,11 +2723,6 @@ contains
     call mem_deallocate(this%nwav)
     call mem_deallocate(this%outunitbud)
     call mem_deallocate(this%totfluxtot)
-    call mem_deallocate(this%infilsum)
-    call mem_deallocate(this%uzetsum)
-    call mem_deallocate(this%rechsum)
-    call mem_deallocate(this%vfluxsum)
-    call mem_deallocate(this%delstorsum)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%nbdtxt)
     call mem_deallocate(this%issflag)
@@ -2886,11 +2770,6 @@ contains
     call mem_deallocate(this%hroot)
     call mem_deallocate(this%rootact)
     call mem_deallocate(this%uauxvar)
-    !
-    ! -- deallocate obs variables
-    call mem_deallocate(this%obs_theta)
-    call mem_deallocate(this%obs_depth)
-    call mem_deallocate(this%obs_num)
     !
     ! -- Parent object
     call this%BndType%bnd_da()

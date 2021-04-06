@@ -142,6 +142,16 @@ def build_models():
             save_flows=False,
         )
 
+        # note: for specifying lake number, use fortran indexing!
+        uzf_obs = {
+            name + ".uzf.obs.csv": [
+                ("wc2", "water-content", 2, 0.5),
+                ("wc50", "water-content", 50, 0.5),
+                ("wcbn2", "water-content", "uzf02", 0.5),
+                ("wcbn50", "water-content", "UZF050", 0.5),
+            ]
+        }
+
         sd = 0.1
         vks = hk
         thtr = 0.05
@@ -168,6 +178,7 @@ def build_models():
             packagedata=uzf_pkdat,
             perioddata=uzf_spd,
             budget_filerecord="{}.uzf.bud".format(name),
+            observations=uzf_obs,
             filename="{}.uzf".format(name),
         )
 
@@ -205,17 +216,13 @@ def eval_flow(sim):
 
     bpth = os.path.join(ws, name + ".uzf.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    print(bobj.get_unique_record_names())
     gwf_recharge = bobj.get_data(text='GWF')
 
     bpth = os.path.join(ws, name + ".bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    #print(bobj.get_unique_record_names())
     uzf_recharge = bobj.get_data(text='UZF-GWRCH')
     errmsg = "uzf rch is not equal to negative gwf rch"
     for gwr, uzr in zip(gwf_recharge, uzf_recharge):
-        print(uzr["q"].min(), uzr["q"].max())
-        print(gwr["q"].min(), gwr["q"].max())
         assert np.allclose(gwr["q"], -uzr["q"]), errmsg
 
     return
