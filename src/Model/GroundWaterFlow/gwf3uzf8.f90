@@ -1,6 +1,7 @@
 ! -- Uzf module
 ! -- TODO:
 !      Update flowja in cq routine
+!      Remove old accumulators, which are not used anymore
 module UzfModule
 
   use KindModule, only: DP, I4B
@@ -1454,12 +1455,19 @@ contains
       ! -- Call budget routine of the uzf kinematic object
       ! todo: this will require additional work for ATS because waves are moved forward
       !       without a way to restore the state
-      call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
-                              rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
-                              this%ietflag,this%iseepflag,this%issflag,hgwf,   &
-                              numobs,this%obs_num,                             &
-                              this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
-                              qgwformvr,ierr)
+      call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                  &
+                             this%totfluxtot, this%ietflag,                  &
+                             this%issflag, this%iseepflag, hgwf,             &
+                             qfrommvr, ierr,         &
+                             reset_state=.false.)
+        
+      ! -- TODO: finishing replacing budget call with solve and budget calc of rfin, rin, rout, rsto, ret, retgw, ...
+      !call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
+      !                        rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
+      !                        this%ietflag,this%iseepflag,this%issflag,hgwf,   &
+      !                        numobs,this%obs_num,                             &
+      !                        this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
+      !                        qgwformvr,ierr)
       if ( ierr > 0 ) then
         if ( ierr == 1 ) &
           errmsg = 'UZF variable NWAVESETS needs to be increased.'
@@ -1496,10 +1504,8 @@ contains
       end if
 
       this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
-
       this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
       this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
-
       this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
 
       qout = this%rejinf(i) + this%uzfobj%surfseep(i)
@@ -1786,7 +1792,8 @@ contains
     integer(I4B) :: n, m, ierr
     real(DP) :: trhs1, thcof1, trhs2, thcof2
     real(DP) :: hgwf, uzderiv, derivgwet
-    real(DP) :: qfrommvr, qformvr
+    real(DP) :: qfrommvr
+    real(DP) :: qformvr
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1818,15 +1825,20 @@ contains
         this%rhs(i) = DZERO
         !
         hgwf = this%xnew(n)
-        !
         m = n
         !
         ! -- solve for current uzf cell
-        call this%uzfobj%formulate(this%uzfobjwork, ivertflag, i,              &
-                                    this%totfluxtot, this%ietflag,             &
-                                    this%issflag,this%iseepflag,               &
-                                    trhs1,thcof1,hgwf,uzderiv,                 &
-                                    qfrommvr,qformvr,ierr)
+        !cdlcall this%uzfobj%formulate(this%uzfobjwork, ivertflag, i,              &
+        !cdl                            this%totfluxtot, this%ietflag,             &
+        !cdl                            this%issflag,this%iseepflag,               &
+        !cdl                            trhs1,thcof1,hgwf,uzderiv,                 &
+        !cdl                            qfrommvr,qformvr,ierr)
+        call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                  &
+                               this%totfluxtot, this%ietflag,                  &
+                               this%issflag,this%iseepflag, hgwf,              &
+                               qfrommvr, ierr,                                 &
+                               reset_state=.true.,                             &
+                               trhs=trhs1, thcof=thcof1, deriv=uzderiv)
         !
         ! -- terminate if an error condition has occurred
         if (ierr > 0) then
@@ -1863,6 +1875,7 @@ contains
         !
         ! -- add spring discharge and rejected infiltration to mover
         if(this%imover == 1) then
+          qformvr = this%gwd(i) + this%rejinf(i)
           call this%pakmvrobj%accumulate_qformvr(i, qformvr)
         endif
       !

@@ -203,13 +203,20 @@ def eval_flow(sim):
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
 
+    bpth = os.path.join(ws, name + ".uzf.bud")
+    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
+    print(bobj.get_unique_record_names())
+    gwf_recharge = bobj.get_data(text='GWF')
+
     bpth = os.path.join(ws, name + ".bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     #print(bobj.get_unique_record_names())
-    ra = bobj.get_data(text='UZF-GWRCH')
-    for r in ra:
-        q = r['q']
-        assert q.min() >= 0, "UZF-GWRCH must be greater than or equal to zero"
+    uzf_recharge = bobj.get_data(text='UZF-GWRCH')
+    errmsg = "uzf rch is not equal to negative gwf rch"
+    for gwr, uzr in zip(gwf_recharge, uzf_recharge):
+        print(uzr["q"].min(), uzr["q"].max())
+        print(gwr["q"].min(), gwr["q"].max())
+        assert np.allclose(gwr["q"], -uzr["q"]), errmsg
 
     return
 
