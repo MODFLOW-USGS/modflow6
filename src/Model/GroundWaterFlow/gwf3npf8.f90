@@ -156,6 +156,13 @@ module GwfNpfModule
     return
   end subroutine npf_cr
 
+  !> @brief define the NPF package instance
+  !! 
+  !! This is a hybrid routine: it either reads the options for this package
+  !! from the input file, or the optional argument @param npf_options
+  !! should be passed. A consistency check is performed, and finally 
+  !! xt3d_df is called, when enabled.
+  !<
   subroutine npf_df(this, dis, xt3d, ingnc, npf_options)
 ! ******************************************************************************
 ! npf_df -- Define
@@ -167,11 +174,11 @@ module GwfNpfModule
     use SimModule, only: ustop, store_error
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
-    class(GwfNpftype) :: this
-    class(DisBaseType), pointer, intent(inout) :: dis
-    type(Xt3dType), pointer :: xt3d
-    integer(I4B), intent(in) :: ingnc
-    type(GwfNpfOptionsType), optional, intent(in) :: npf_options
+    class(GwfNpftype) :: this                                     !< instance of the NPF package
+    class(DisBaseType), pointer, intent(inout) :: dis             !< the pointer to the discretization
+    type(Xt3dType), pointer :: xt3d                               !< the pointer to the XT3D 'package'
+    integer(I4B), intent(in) :: ingnc                             !< ghostnodes enabled? (>0 means yes)
+    type(GwfNpfOptionsType), optional, intent(in) :: npf_options  !< the optional options, for when not constructing from file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -259,6 +266,12 @@ module GwfNpfModule
     return
   end subroutine npf_mc
   
+  !> @brief allocate and read this NPF instance
+  !!
+  !! Allocate package arrays, read the grid data either from file or
+  !! from the input argument (when the optional @param grid_data is passed),
+  !! preprocess the input data and call *_ar on xt3d, when active.
+  !<
   subroutine npf_ar(this, ic, ibound, hnew, grid_data)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
@@ -267,11 +280,11 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfNpftype) :: this
-    type(GwfIcType), pointer, intent(in) :: ic
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
-    type(GwfNpfGridDataType), optional, intent(in) :: grid_data
+    class(GwfNpftype) :: this                                                 !< instance of the NPF package
+    type(GwfIcType), pointer, intent(in) :: ic                                !< initial conditions
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound  !< model ibound array
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew        !< pointer to model head array
+    type(GwfNpfGridDataType), optional, intent(in) :: grid_data               !< (optional) data structure with NPF grid data
     ! -- local
     ! -- formats
     ! -- data
@@ -1940,13 +1953,16 @@ module GwfNpfModule
   !! This routine consists of the following steps:
   !!  
   !! 1. convert cells to noflow when all transmissive parameters equal zero
-  !! 2. ...
+  !! 2. perform initial wetting and drying
+  !! 3. initialize cell saturation
+  !! 4. calculate saturated conductance (when not xt3d)
+  !! 5. If NEWTON under-relaxation, determine lower most node
   !<
   subroutine preprocess_input(this)
   use ConstantsModule, only: LINELENGTH
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
   use SimModule, only: store_error, ustop, count_errors
-    class(GwfNpfType) :: this
+    class(GwfNpfType) :: this !< the instance of the NPF package
     ! local        
     integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
     integer(I4B) :: n, m, ii, nn, ihc    
@@ -2081,7 +2097,7 @@ module GwfNpfModule
       call ustop()
     endif
     !
-    ! -- Calculate condsatu, but only if xt3d is not active.  If xt3d is
+    ! -- Calculate condsat, but only if xt3d is not active.  If xt3d is
     !    active, then condsat is allocated to size of zero.
     if (this%ixt3d == 0) then
     !
@@ -2165,8 +2181,7 @@ module GwfNpfModule
             m = this%dis%con%ja(ii)
             botm = this%dis%bot(m)
             !
-            ! -- Calculate conductance depending on whether connection is
-            !    vertical (0), horizontal (1), or staggered horizontal (2)
+            ! -- select vertical connections: ihc == 0
             if(this%dis%con%ihc(this%dis%con%jas(ii)) == 0) then
               if (m > nn .and. botm < minbot) then
                 nextn = m
