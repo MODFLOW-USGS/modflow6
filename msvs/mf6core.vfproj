@@ -79,7 +79,6 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvbase8.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvk8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
