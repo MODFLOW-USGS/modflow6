@@ -156,10 +156,6 @@ module MawModule
     integer(I4B), pointer :: idense
     real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
     !
-    integer(I4B), pointer :: kchangeper => null()                                !NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), pointer :: kchangestp => null()                                !NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null()     !NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
-    !
     ! -- type bound procedures
     contains
     procedure :: maw_allocate_scalars
@@ -1242,9 +1238,6 @@ contains
     call mem_setptr(this%gwfk22, 'K22', create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%gwfik22, 'IK22', create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%gwfsat, 'SAT', create_mem_path(this%name_model, 'NPF'))
-    call mem_setptr(this%kchangeper, 'KCHANGEPER', create_mem_path(this%name_model, 'NPF'))
-    call mem_setptr(this%kchangestp, 'KCHANGESTP', create_mem_path(this%name_model, 'NPF'))
-    call mem_setptr(this%nodekchange, 'NODEKCHANGE', create_mem_path(this%name_model, 'NPF'))
     !
     ! -- qa data
     call this%maw_check_attributes()
@@ -1372,6 +1365,12 @@ contains
         end do
       end do
     end if
+    !
+    ! -- finished with pointer to gwf hydraulic conductivity
+    this%gwfk11 => null()
+    this%gwfk22 => null()
+    this%gwfik22 => null()
+    this%gwfsat => null()
     !
     ! -- check for any error conditions
     if (count_errors() > 0) then
@@ -2207,7 +2206,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: ibnd
-    integer(I4B) :: inode
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
@@ -2252,23 +2250,6 @@ contains
     !
     ! -- reset ishutoffcnt (equivalent to kiter) to zero
     this%ishutoffcnt = 0
-    !
-    ! -- Recalculate saturated conductances for any K values that have changed
-    if (this%kchangeper == kper .and. this%kchangestp == kstp) then
-      do n = 1, this%nmawwells
-        !
-        ! -- calculate saturated conductance only if CONDUCTANCE was not
-        !    specified for each maw-gwf connection (CONDUCTANCE keyword).
-        do j = 1, this%ngwfnodes(n)
-          if (this%ieqn(n) /= 0) then
-            inode = this%get_gwfnode(n, j)
-            if(this%nodekchange(inode) /= 0) then
-              call this%maw_calculate_satcond(n, j, inode)
-            end if
-          end if
-        end do
-      end do
-    end if
     !
     ! -- pakmvrobj ad
     if(this%imover == 1) then
@@ -3082,15 +3063,6 @@ contains
     !
     ! -- pointers to gwf variables
     nullify(this%gwfiss)
-    !
-    ! -- pointers to npf hydraulic conductivity
-    nullify(this%gwfk11)
-    nullify(this%gwfk22)
-    nullify(this%gwfik22)
-    nullify(this%gwfsat)
-    nullify(this%kchangeper)
-    nullify(this%kchangestp)
-    nullify(this%nodekchange)
     !
     ! -- call standard BndType deallocate
     call this%BndType%bnd_da()

@@ -189,10 +189,6 @@ module LakModule
     integer(I4B), pointer :: idense
     real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
     !
-    integer(I4B), pointer                           :: kchangeper   => null()    !NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), pointer                           :: kchangestp   => null()    !NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), dimension(:), pointer, contiguous :: nodekchange  => null()    !NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
-    !
     ! -- type bound procedures
     contains
     procedure :: lak_allocate_scalars
@@ -222,7 +218,6 @@ module LakModule
     procedure, public :: bnd_rp_obs => lak_rp_obs
     procedure, public :: bnd_bd_obs => lak_bd_obs
     ! -- private procedures
-    procedure, private :: lak_calc_condsat
     procedure, private :: lak_read_lakes
     procedure, private :: lak_read_lake_connections
     procedure, private :: lak_read_outlets
@@ -1733,8 +1728,11 @@ contains
     integer(I4B) :: j, jj, n
     integer(I4B) :: nn
     integer(I4B) :: idx
+    real(DP) :: top
+    real(DP) :: bot
     real(DP) :: k
     real(DP) :: area
+    real(DP) :: length
     real(DP) :: s
     real(DP) :: dx
     real(DP) :: c
@@ -1744,8 +1742,7 @@ contains
     real(DP) :: fact
     real(DP) :: c1
     real(DP) :: c2
-    real(DP), allocatable, dimension(:), target :: clb, caq
-    real(DP), dimension(:), pointer :: clbp, caqp
+    real(DP), allocatable, dimension(:) :: clb, caq
     character (len=14) :: cbedleak
     character (len=14) :: cbedcond
     character (len=10), dimension(0:3) :: ctype
@@ -1796,9 +1793,6 @@ contains
     call mem_setptr(this%gwfk33, 'K33', create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%gwfik33, 'IK33', create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%gwfsat, 'SAT', create_mem_path(this%name_model, 'NPF'))
-    call mem_setptr(this%kchangeper, 'KCHANGEPER', create_mem_path(this%name_model, 'NPF'))
-    call mem_setptr(this%kchangestp, 'KCHANGESTP', create_mem_path(this%name_model, 'NPF'))
-    call mem_setptr(this%nodekchange, 'NODEKCHANGE', create_mem_path(this%name_model, 'NPF'))
     !
     ! -- allocate temporary storage
     allocate(clb(this%MAXBOUND))
@@ -1807,9 +1801,76 @@ contains
     ! -- calculate saturated conductance for each connection
     do n = 1, this%nlakes
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-        clbp => clb
-        caqp => caq
-        call this%lak_calc_condsat(n, j, clbp, caqp)
+        nn = this%cellid(j)
+        top = this%dis%top(nn)
+        bot = this%dis%bot(nn)
+        ! vertical connection
+        if (this%ictype(j) == 0) then
+          area = this%dis%area(nn)
+          this%sarea(j) = area
+          this%warea(j) = area
+          this%sareamax(n) = this%sareamax(n) + area
+          if (this%gwfik33 == 0) then
+            k = this%gwfk11(nn)
+          else
+            k = this%gwfk33(nn)
+          endif
+          length = DHALF * (top - bot)
+        ! horizontal connection
+        else if (this%ictype(j) == 1) then
+          area = (this%telev(j) - this%belev(j)) * this%connwidth(j)
+          ! -- recalculate area if connected cell is confined and lake
+          !    connection top and bot are equal to the cell top and bot
+          if (top == this%telev(j) .and. bot == this%belev(j)) then
+            if (this%icelltype(nn) == 0) then
+              area = this%gwfsat(nn) * (top - bot) * this%connwidth(j)
+            end if
+          end if
+          this%sarea(j) = DZERO
+          this%warea(j) = area
+          this%sareamax(n) = this%sareamax(n) + DZERO
+          k = this%gwfk11(nn)
+          length = this%connlength(j)
+        ! embedded horizontal connection
+        else if (this%ictype(j) == 2) then
+          area = DONE
+          this%sarea(j) = DZERO
+          this%warea(j) = area
+          this%sareamax(n) = this%sareamax(n) + DZERO
+          k = this%gwfk11(nn)
+          length = this%connlength(j)
+        ! embedded vertical connection
+        else if (this%ictype(j) == 3) then
+          area = DONE
+          this%sarea(j) = DZERO
+          this%warea(j) = area
+          this%sareamax(n) = this%sareamax(n) + DZERO
+          if (this%gwfik33 == 0) then
+            k = this%gwfk11(nn)
+          else
+            k = this%gwfk33(nn)
+          endif
+          length = this%connlength(j)
+        end if
+        if (this%bedleak(j) < DZERO) then
+          clb(j) = -DONE
+        else if (this%bedleak(j) > DZERO) then
+          clb(j) = done / this%bedleak(j)
+        else
+          clb(j) = DZERO
+        end if
+        if (k > DZERO) then
+          caq(j) = length / k
+        else
+          caq(j) = DZERO
+        end if
+        if (this%bedleak(j) < DZERO) then
+          this%satcond(j) = area / caq(j)
+        else if (clb(j)*caq(j) > DZERO) then
+          this%satcond(j) = area / (clb(j) + caq(j))
+        else
+          this%satcond(j) = DZERO
+        end if
       end do
     end do
     !
@@ -1901,6 +1962,12 @@ contains
       end do
     end if
     !
+    ! -- finished with pointer to gwf hydraulic conductivity
+    this%gwfk11 => null()
+    this%gwfk33 => null()
+    this%gwfsat => null()
+    this%gwfik33 => null()
+    !
     ! -- deallocate temporary storage
     deallocate(clb)
     deallocate(caq)
@@ -1908,126 +1975,6 @@ contains
     ! -- return
     return
   end subroutine lak_read_initial_attr
-
-  subroutine lak_calc_condsat(this, n, j, clb, caq, setLakeAreas)
-! ******************************************************************************
-! lak_calc_condsat -- Calculate saturated conductance for lake n, lake conn j
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(LakType),intent(inout) :: this
-    integer(I4B), intent(in) :: n
-    integer(I4B), intent(in) :: j
-    real(DP), dimension(:), pointer, intent(in) :: clb
-    real(DP), dimension(:), pointer, intent(in) :: caq
-    logical, intent(in), optional :: setLakeAreas       ! Set to .true. (default) to also set sarea, warea and sareamax values, or .false. to leave them untouched
-    ! -- local
-    integer(I4B) :: nn
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: k
-    real(DP) :: area
-    real(DP) :: length
-    real(DP) :: clbj, caqj
-    logical :: setAreas
-! ------------------------------------------------------------------------------
-    !
-    if (present(setLakeAreas)) then
-      setAreas = setLakeAreas
-    else
-      setAreas = .true.
-    endif
-    !
-    nn = this%cellid(j)
-    top = this%dis%top(nn)
-    bot = this%dis%bot(nn)
-    ! vertical connection
-    if (this%ictype(j) == 0) then
-      area = this%dis%area(nn)
-      if (setAreas) then
-        this%sarea(j) = area
-        this%warea(j) = area
-        this%sareamax(n) = this%sareamax(n) + area
-      endif
-      if (this%gwfik33 == 0) then
-        k = this%gwfk11(nn)
-      else
-        k = this%gwfk33(nn)
-      endif
-      length = DHALF * (top - bot)
-    ! horizontal connection
-    else if (this%ictype(j) == 1) then
-      area = (this%telev(j) - this%belev(j)) * this%connwidth(j)
-      ! -- recalculate area if connected cell is confined and lake
-      !    connection top and bot are equal to the cell top and bot
-      if (top == this%telev(j) .and. bot == this%belev(j)) then
-        if (this%icelltype(nn) == 0) then
-          area = this%gwfsat(nn) * (top - bot) * this%connwidth(j)
-        end if
-      end if
-      if (setAreas) then
-        this%sarea(j) = DZERO
-        this%warea(j) = area
-        this%sareamax(n) = this%sareamax(n) + DZERO
-      endif
-      k = this%gwfk11(nn)
-      length = this%connlength(j)
-    ! embedded horizontal connection
-    else if (this%ictype(j) == 2) then
-      area = DONE
-      if (setAreas) then
-        this%sarea(j) = DZERO
-        this%warea(j) = area
-        this%sareamax(n) = this%sareamax(n) + DZERO
-      endif
-      k = this%gwfk11(nn)
-      length = this%connlength(j)
-    ! embedded vertical connection
-    else if (this%ictype(j) == 3) then
-      area = DONE
-      if (setAreas) then
-        this%sarea(j) = DZERO
-        this%warea(j) = area
-        this%sareamax(n) = this%sareamax(n) + DZERO
-      endif
-      if (this%gwfik33 == 0) then
-        k = this%gwfk11(nn)
-      else
-        k = this%gwfk33(nn)
-      endif
-      length = this%connlength(j)
-    end if
-    if (this%bedleak(j) < DZERO) then
-      clbj = -DONE
-    else if (this%bedleak(j) > DZERO) then
-      clbj = done / this%bedleak(j)
-    else
-      clbj = DZERO
-    end if
-    if (k > DZERO) then
-      caqj = length / k
-    else
-      caqj = DZERO
-    end if
-    if (this%bedleak(j) < DZERO) then
-      this%satcond(j) = area / caqj
-    else if (clbj*caqj > DZERO) then
-      this%satcond(j) = area / (clbj + caqj)
-    else
-      this%satcond(j) = DZERO
-    end if
-    !
-    if(associated(clb)) then
-      clb(j) = clbj
-    endif
-    if(associated(caq)) then
-      caq(j) = caqj
-    endif
-    !
-    return
-  end subroutine lak_calc_condsat
 
 ! -- simple subroutine for linear interpolation of two vectors
 !       function assumes x data is sorted in ascending order
@@ -3739,12 +3686,10 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(LakType) :: this
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: nn
     integer(I4B) :: j
     integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
@@ -3776,18 +3721,6 @@ contains
       end if
       this%seep0(n) = DZERO
     end do
-    !
-    ! -- Update saturated conductances when any K values change
-    if (this%kchangeper == kper .and. this%kchangestp == kstp) then
-      do n = 1, this%nlakes
-        do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
-          nn = this%cellid(j)
-          if (this%nodekchange(nn) /= 0) then
-            call this%lak_calc_condsat(n, j, null(), null(), .false.)
-          end if
-        end do
-      enddo
-    endif
     !
     ! -- pakmvrobj ad
     if (this%imover == 1) then
@@ -4666,15 +4599,6 @@ contains
     !
     ! -- pointers to gwf variables
     nullify(this%gwfiss)
-    !
-    ! -- pointers to npf hydraulic conductivity
-    nullify(this%gwfk11)
-    nullify(this%gwfk33)
-    nullify(this%gwfik33)
-    nullify(this%gwfsat)
-    nullify(this%kchangeper)
-    nullify(this%kchangestp)
-    nullify(this%nodekchange)
     !
     ! -- Parent object
     call this%BndType%bnd_da()
