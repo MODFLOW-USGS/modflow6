@@ -123,21 +123,22 @@ extwc = 0.05
 pet0 = 0.0
 pet1 = 0.001
 pet2 = 0.011
+finf0 = 0.125
 finf1 = 0.001
 finf2 = 0.05
 finf3 = 0.01
 zero = 0.
-uzf1_finf = {0: finf1, 1: finf1, 2: finf2, 3:finf3, 4:finf1, 5:finf1}
+uzf1_finf = {0: finf0, 1: finf1, 2: finf2, 3:finf3, 4:finf1, 5:finf1}
 uzf1_pet = {0: pet0, 1: pet1, 2: pet1, 3: pet1, 4: pet2, 5: pet2}
 uzf_spd = {
-    0:[[ 0, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 1, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 2, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 3, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 4, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 5, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 6, finf1, pet0, extdp, extwc, zero, zero, zero],
-       [ 7, finf1, pet0, extdp, extwc, zero, zero, zero],
+    0:[[ 0, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 1, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 2, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 3, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 4, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 5, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 6, finf0, pet0, extdp, extwc, zero, zero, zero],
+       [ 7, finf0, pet0, extdp, extwc, zero, zero, zero],
        [ 8, zero,  zero,  zero, extwc, zero, zero, zero],
        [ 9, zero,  zero,  zero, extwc, zero, zero, zero],
        [10, zero,  zero,  zero, extwc, zero, zero, zero],
@@ -399,18 +400,25 @@ def get_mfnwt_model(idx, dir):
     return mf
 
  
-def build_models():
+def build_models(include_NWT = False):
     for idx, dir in enumerate(exdirs):
         # Start by building the MF6 model
         sim = get_mf6_model(idx, dir)
         # Construct MF-NWT model for comparing water contents
-        mfnwt = get_mfnwt_model(idx, dir)
+        # (Commented out to avoid NWT dependency, but left behind
+        #  for local testing if needed in the future)
+        if include_NWT:
+            mfnwt = get_mfnwt_model(idx, dir)
         
         sim.write_simulation()
-        mfnwt.write_input()
-    return sim, mfnwt
+        if include_NWT:
+            mfnwt.write_input()
+    if include_NWT:
+        return sim, mfnwt
+    else:
+        return sim, None
 
-def eval_model(sim, mfnwt):
+def eval_model(sim, mfnwt, include_NWT=False):
     print('evaluating model...')
     
     name = ex[0]
@@ -443,31 +451,54 @@ def eval_model(sim, mfnwt):
     mf6_wc = np.array(mf6_wc)
     
     # Retrieve MF-NWT water contents from formatted linker file
-    mfnwt_wc = []
-    nwtwc = os.path.join(ws, 'mfnwt', 'mt3d_link.ftl')
-    with open(nwtwc, 'r') as f:
-        for line in f:
-            if  'WATER CONTENT   '.lower() in line.lower():
-                line = next(f)
-                wc_tmp = []
-                while not '          10           1           3' in line:
-                    m_arr = line.strip().split()
-                    for i, val in enumerate(m_arr):
-                        wc_tmp.append(float(val))
-                    
+    if include_NWT:
+        mfnwt_wc = []
+        nwtwc = os.path.join(ws, 'mfnwt', 'mt3d_link.ftl')
+        with open(nwtwc, 'r') as f:
+            for line in f:
+                if  'WATER CONTENT   '.lower() in line.lower():
                     line = next(f)
-                
-                wc_tmp = np.array(wc_tmp)
-                wc_tmp = wc_tmp.reshape((nlay, nrow, ncol))
-                mfnwt_wc.append(wc_tmp)
+                    wc_tmp = []
+                    while not '          10           1           3' in line:
+                        m_arr = line.strip().split()
+                        for i, val in enumerate(m_arr):
+                            wc_tmp.append(float(val))
+                        
+                        line = next(f)
+                    
+                    wc_tmp = np.array(wc_tmp)
+                    wc_tmp = wc_tmp.reshape((nlay, nrow, ncol))
+                    mfnwt_wc.append(wc_tmp)
+        
+        mfnwt_wc = np.array(mfnwt_wc)
+    else:
+        # The following values "burned in" to script and originally calculated
+        # by NWT.
+        check_vals = [8.7777637E-02,
+                      0.1155553,    
+                      0.1433329,    
+                      0.1711106,    
+                      0.1988882,    
+                      0.2266658,    
+                      0.2544435,    
+                      0.2621320,    
+                      0.2621320,    
+                      0.2621320,    
+                      0.1421950,    
+                      0.2180280,    
+                      0.1622016,    
+                      0.1203337,    
+                      8.9378804E-02]
+        mfnwt_wc = np.array(check_vals)
     
-    mfnwt_wc = np.array(mfnwt_wc)
-
-    # Compare MF6 results with NWT
-    # layer 1
-    assert np.allclose(mf6_wc[:, 0, 0, :], mfnwt_wc[:, 0, 0, :], atol=0.01), 'mf6 water contents different than NWT'
-    # layer 2 (has a mixed condition later in the simulation
-    assert np.allclose(mf6_wc[:, 1, 0, :], mfnwt_wc[:, 1, 0, :], atol=0.01), 'mf6 water contents different than NWT'
+    if include_NWT:
+        # Compare MF6 results with NWT
+        # layer 1
+        assert np.allclose(mf6_wc[:, 0, 0, :], mfnwt_wc[:, 0, 0, :], atol=0.01), 'mf6 water contents different than NWT'
+        # layer 2 (has a mixed condition later in the simulation
+        assert np.allclose(mf6_wc[:, 1, 0, :], mfnwt_wc[:, 1, 0, :], atol=0.01), 'mf6 water contents different than NWT'
+    else:
+        assert np.allclose(mf6_wc[:, 0, 0, 1], mfnwt_wc, atol=0.01), 'mf6 water contents different than established solution'
 
     print('Finished running checks')
 
@@ -488,18 +519,23 @@ def test_mf6model():
 
 
 def main():
+    include_NWT = False
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    mf6, mfnwt = build_models()
+    mf6, mfnwt = build_models(include_NWT=include_NWT)
 
     # run the test models
     mf6.run_simulation()
-    mfnwt.run_model()
+    if include_NWT:
+        mfnwt.run_model()
 
     # compare water contents
-    eval_model(mf6, mfnwt)
+    if include_NWT:
+        eval_model(mf6, mfnwt)
+    else:
+        eval_model(mf6, None, include_NWT=include_NWT)
 
     return
 
