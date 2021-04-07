@@ -13,11 +13,12 @@ module SimulationCreateModule
   use BaseSolutionModule,     only: BaseSolutionType, AddBaseSolutionToList,     &
                                     GetBaseSolutionFromList
   use SolutionGroupModule,    only: SolutionGroupType, AddSolutionGroupToList
-  use BaseExchangeModule,     only: BaseExchangeType
+  use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
   use ListsModule,            only: basesolutionlist, basemodellist,             &
-                                    solutiongrouplist
+                                    solutiongrouplist, baseexchangelist
   use BaseModelModule,        only: GetBaseModelFromList
   use BlockParserModule,      only: BlockParserType
+  use ListModule,             only: ListType
 
   implicit none
   private
@@ -96,7 +97,9 @@ module SimulationCreateModule
     character(len=LINELENGTH) :: errmsg
     class(BaseSolutionType), pointer :: sp
     class(BaseModelType), pointer :: mp
-    integer(I4B) :: is, im
+    class(BaseExchangeType), pointer :: ep
+    type(ListType), pointer :: models
+    integer(I4B) :: is, im, ie
 ! ------------------------------------------------------------------------------
     !
     ! -- Open simulation name file
@@ -146,7 +149,22 @@ module SimulationCreateModule
     ! -- Go through each solution and assign exchanges accordingly
     do is = 1, basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%slnassignexchanges()
+      !
+      ! -- loop over models in sol
+      models => sp%get_models()
+      do im = 1, models%Count()
+        mp => GetBaseModelFromList(models, im)
+        ! 
+        ! -- now loop over exchanges and check if it affects the model
+        do ie = 1, baseexchangelist%Count()
+          ep => GetBaseExchangeFromList(baseexchangelist, ie)
+          if (ep%connects_model(mp)) then
+            ! 
+            ! -- add to solution
+            call sp%add_exchange(ep)
+          end if
+        end do
+      end do
     enddo
     !
     ! -- Return
@@ -570,7 +588,7 @@ module SimulationCreateModule
               mp => GetBaseModelFromList(basemodellist, mid)
               !
               ! -- Add the model to the solution
-              call sp%addmodel(mp)
+              call sp%add_model(mp)
               mp%idsoln = isoln
               !
             enddo

@@ -4,6 +4,7 @@ module BaseSolutionModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENSOLUTIONNAME
   use BaseModelModule, only: BaseModelType
+  use BaseExchangeModule, only: BaseExchangeType
   use ListModule,      only: ListType
   implicit none
 
@@ -23,8 +24,9 @@ module BaseSolutionModule
     procedure (sln_fp), deferred :: sln_fp
     procedure (sln_da), deferred :: sln_da
     procedure (slnsave), deferred :: save
-    procedure (slnaddmodel), deferred :: addmodel
-    procedure (slnassignexchanges), deferred :: slnassignexchanges
+    procedure (slnaddmodel), deferred :: add_model
+    procedure (slnaddexchange), deferred :: add_exchange
+    procedure (slngetmodels), deferred :: get_models
   end type BaseSolutionType
 
   abstract interface
@@ -34,9 +36,11 @@ module BaseSolutionModule
       class(BaseSolutionType) :: this
     end subroutine
 
-    subroutine slnassignexchanges(this)
+    subroutine slnaddexchange(this, exchange)
       import BaseSolutionType
+      import BaseExchangeType
       class(BaseSolutionType) :: this
+      class(BaseExchangeType), pointer, intent(in) :: exchange
     end subroutine
 
     subroutine sln_ar(this)
@@ -84,6 +88,13 @@ module BaseSolutionModule
       class(BaseSolutionType) :: this
       class(BaseModelType),pointer,intent(in) :: mp
     end subroutine
+
+    function slngetmodels(this) result(models)
+      import BaseSolutionType
+      import ListType
+      class(BaseSolutionType) :: this
+      type(ListType), pointer :: models
+    end function
 
     subroutine sln_fp(this)
       import BaseSolutionType

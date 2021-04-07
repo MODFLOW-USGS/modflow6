@@ -1,11 +1,11 @@
 module GwfGwfExchangeModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
-  use BaseModelModule,         only: GetBaseModelFromList
+  use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
-                                     TABCENTER, TABLEFT
+                                     TABCENTER, TABLEFT, LENAUXNAME
   use ListsModule,             only: basemodellist
   use NumericalExchangeModule, only: NumericalExchangeType
   use NumericalModelModule,    only: NumericalModelType
@@ -25,34 +25,60 @@ module GwfGwfExchangeModule
   public :: gwfexchange_create
 
   type, extends(NumericalExchangeType) :: GwfExchangeType
-    type(GwfModelType), pointer                      :: gwfmodel1   => null()    ! pointer to GWF Model 1
-    type(GwfModelType), pointer                      :: gwfmodel2   => null()    ! pointer to GWF Model 2
-    integer(I4B), pointer                            :: inewton     => null()    ! newton flag (1 newton is on)
-    integer(I4B), pointer                            :: icellavg    => null()    ! cell averaging
-    integer(I4B), pointer                            :: ivarcv      => null()    ! variable cv
-    integer(I4B), pointer                            :: idewatcv    => null()    ! dewatered cv
-    integer(I4B), pointer                            :: ianglex     => null()    ! flag indicating anglex was read, if read, ianglex is index in auxvar
-    integer(I4B), pointer                            :: icdist      => null()    ! flag indicating cdist was read, if read, icdist is index in auxvar
-    integer(I4B), pointer                            :: inamedbound => null()    ! flag to read boundnames
-    real(DP), pointer                                :: satomega    => null()    ! saturation smoothing
-    integer(I4B), dimension(:), pointer, contiguous  :: ihc         => null()    ! horizontal connection indicator array
-    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    ! simulated flow rate for each exchange
-    real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    ! saturated conductance
-    real(DP), dimension(:), pointer, contiguous      :: cl1         => null()    ! connection length 1
-    real(DP), dimension(:), pointer, contiguous      :: cl2         => null()    ! connection length 2
-    real(DP), dimension(:), pointer, contiguous      :: hwva        => null()    ! horizontal widths, vertical flow areas
-    integer(I4B), pointer                            :: ingnc       => null()    ! unit number for gnc (0 if off)
-    type(GhostNodeType), pointer                     :: gnc         => null()    ! gnc object
-    integer(I4B), pointer                            :: inmvr       => null()    ! unit number for mover (0 if off)
-    type(GwfMvrType), pointer                        :: mvr         => null()    ! water mover object
-    integer(I4B), pointer                            :: inobs       => null()    ! unit number for GWF-GWF observations
-    type(ObsType), pointer                           :: obs         => null()    ! observation object
-    character(len=LENBOUNDNAME), dimension(:),                                  &
-                                 pointer, contiguous :: boundname   => null()    ! boundnames
+    character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
+    type(BlockParserType)                            :: parser                   !< block parser for input file
+    character(len=7), pointer                        :: typename    => null()    !< name of the type (e.g., 'NM-NM')
+    type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
+    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2
+  
+    ! GWF specific option block:
+    integer(I4B), pointer                            :: iprpak      => null()    !< print input flag
+    integer(I4B), pointer                            :: iprflow     => null()    !< print flag for cell by cell flows
+    integer(I4B), pointer                            :: ipakcb      => null()    !< save flag for cell by cell flows
+    integer(I4B), pointer                            :: inewton     => null()    !< newton flag (1 newton is on)
+    integer(I4B), pointer                            :: icellavg    => null()    !< cell averaging
+    integer(I4B), pointer                            :: ivarcv      => null()    !< variable cv
+    integer(I4B), pointer                            :: idewatcv    => null()    !< dewatered cv
+    integer(I4B), pointer                            :: ingnc       => null()    !< unit number for gnc (0 if off)
+    type(GhostNodeType), pointer                     :: gnc         => null()    !< gnc object
+    integer(I4B), pointer                            :: inmvr       => null()    !< unit number for mover (0 if off)
+    type(GwfMvrType), pointer                        :: mvr         => null()    !< water mover object
+    integer(I4B), pointer                            :: inobs       => null()    !< unit number for GWF-GWF observations
+    type(ObsType), pointer                           :: obs         => null()    !< observation object
+
+    ! exchange data block
+    integer(I4B), pointer                            :: nexg        => null()    !< number of exchanges
+    integer(I4B), dimension(:), pointer, contiguous  :: nodem1      => null()    !< node numbers in model 1
+    integer(I4B), dimension(:), pointer, contiguous  :: nodem2      => null()    !< node numbers in model 2
+    integer(I4B), dimension(:), pointer, contiguous  :: ihc         => null()    !< horizontal connection indicator array
+    real(DP), dimension(:), pointer, contiguous      :: cl1         => null()    !< connection length 1
+    real(DP), dimension(:), pointer, contiguous      :: cl2         => null()    !< connection length 2
+    real(DP), dimension(:), pointer, contiguous      :: hwva        => null()    !< horizontal widths, vertical flow areas
+    integer(I4B), pointer                            :: naux        => null()    !< number of auxiliary variables
+    character(len=LENAUXNAME), dimension(:),                                     &
+                                pointer, contiguous  :: auxname     => null()    !< vector of auxname
+    real(DP), dimension(:, :), pointer, contiguous   :: auxvar      => null()    !< array of auxiliary variable values
+    integer(I4B), pointer                            :: ianglex     => null()    !< flag indicating anglex was read, if read, ianglex is index in auxvar
+    integer(I4B), pointer                            :: icdist      => null()    !< flag indicating cdist was read, if read, icdist is index in auxvar
+
+    
+    real(DP), dimension(:), pointer, contiguous      :: cond        => null()    !< conductance
+    real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    !< saturated conductance
+    integer(I4B), dimension(:), pointer, contiguous  :: idxglo      => null()    !< mapping to global (solution) amat
+    integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
+
+    integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
+    real(DP), pointer                                :: satomega    => null()    !< saturation smoothing    
+    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
+    
+    
+    
+    character(len=LENBOUNDNAME), dimension(:),                                   &
+                                 pointer, contiguous :: boundname   => null()    !< boundnames
     !
     ! -- table objects
     type(TableType), pointer :: outputtab1 => null()
-    type(TableType), pointer :: outputtab2 => null()
+    type(TableType), pointer :: outputtab2 => null()    
 
   contains
 
@@ -126,21 +152,6 @@ contains
     call exchange%allocate_scalars()
     exchange%filename = filename
     exchange%typename = 'GWF-GWF'
-    exchange%implicit = .true.
-    !
-    ! -- set exchange%m1
-    mb => GetBaseModelFromList(basemodellist, m1id)
-    select type (mb)
-    class is (NumericalModelType)
-      exchange%m1=>mb
-    end select
-    !
-    ! -- set exchange%m2
-    mb => GetBaseModelFromList(basemodellist, m2id)
-    select type (mb)
-    class is (NumericalModelType)
-      exchange%m2=>mb
-    end select
     !
     ! -- set gwfmodel1
     mb => GetBaseModelFromList(basemodellist, m1id)
@@ -249,10 +260,16 @@ contains
     class(GwfExchangeType) :: this
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
+    integer(I4B) :: n, iglo, jglo
 ! ------------------------------------------------------------------------------
     !
-    ! -- call parent model to add exchange connections
-    call this%NumericalExchangeType%exg_ac(sparse)
+    ! -- add exchange connections
+    do n = 1, this%nexg
+      iglo = this%nodem1(n) + this%gwfmodel1%moffset
+      jglo = this%nodem2(n) + this%gwfmodel2%moffset
+      call sparse%addconnection(iglo, jglo, 1)
+      call sparse%addconnection(jglo, iglo, 1)
+    enddo
     !
     ! -- add gnc connections
     if(this%ingnc > 0) then
@@ -277,10 +294,28 @@ contains
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
+    integer(I4B) :: n, iglo, jglo, ipos
 ! ------------------------------------------------------------------------------
     !
-    ! -- call parent model to map exchange connections
-    call this%NumericalExchangeType%exg_mc(iasln, jasln)
+    ! -- map exchange connections
+    do n = 1, this%nexg
+      iglo = this%nodem1(n)+this%gwfmodel1%moffset
+      jglo = this%nodem2(n)+this%gwfmodel2%moffset
+      ! -- find jglobal value in row iglo and store in idxglo
+      do ipos = iasln(iglo), iasln(iglo + 1) - 1
+        if(jglo == jasln(ipos)) then
+          this%idxglo(n) = ipos
+          exit
+        endif
+      enddo
+      ! -- find and store symmetric location
+      do ipos = iasln(jglo), iasln(jglo + 1) - 1
+        if(iglo == jasln(ipos)) then
+          this%idxsymglo(n) = ipos
+          exit
+        endif
+      enddo
+    enddo
     !
     ! -- map gnc connections
     if(this%ingnc > 0) then
@@ -522,6 +557,7 @@ contains
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
+    integer(I4B) :: i, nodem1sln, nodem2sln, idiagsln
     integer(I4B) :: njasln
 ! ------------------------------------------------------------------------------
     !
@@ -536,8 +572,17 @@ contains
       enddo
     endif
     !
-    ! -- Call fill method of parent to put this%cond into amatsln
-    call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln)
+    ! -- Put this%cond into amatsln
+    do i = 1, this%nexg
+      amatsln(this%idxglo(i)) = this%cond(i)
+      amatsln(this%idxsymglo(i)) = this%cond(i)
+      nodem1sln = this%nodem1(i) + this%gwfmodel1%moffset
+      nodem2sln = this%nodem2(i) + this%gwfmodel2%moffset
+      idiagsln = iasln(nodem1sln)
+      amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+      idiagsln = iasln(nodem2sln)
+      amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+    enddo
     !
     ! -- Fill the gnc terms in the solution matrix
     if(this%ingnc > 0) then
@@ -606,8 +651,8 @@ contains
     do iexg = 1, this%nexg
       n = this%nodem1(iexg)
       m = this%nodem2(iexg)
-      nodensln = this%nodem1(iexg) + this%m1%moffset
-      nodemsln = this%nodem2(iexg) + this%m2%moffset
+      nodensln = this%nodem1(iexg) + this%gwfmodel1%moffset
+      nodemsln = this%nodem2(iexg) + this%gwfmodel2%moffset
       ibdn = this%gwfmodel1%ibound(n)
       ibdm = this%gwfmodel2%ibound(m)
       topn = this%gwfmodel1%dis%top(n)
@@ -868,12 +913,12 @@ contains
     ! -- Add the budget terms to model 1
     budterm(1, 1) = ratin
     budterm(2, 1) = ratout
-    call this%m1%model_bdentry(budterm, budtxt, this%name)
+    call this%gwfmodel1%model_bdentry(budterm, budtxt, this%name)
     !
     ! -- Add the budget terms to model 2
     budterm(1, 1) = ratout
     budterm(2, 1) = ratin
-    call this%m2%model_bdentry(budterm, budtxt, this%name)
+    call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
     !
     ! -- Call mvr bd routine
     if(this%inmvr > 0) call this%mvr%mvr_bd()
@@ -972,8 +1017,8 @@ contains
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun1 /= 0) then
       call this%gwfmodel1%dis%record_srcdst_list_header(budtxt(1),             &
-                                       this%m1%name, this%name,                &
-                                       this%m2%name, this%name,                &
+                                       this%gwfmodel1%name, this%name,                &
+                                       this%gwfmodel2%name, this%name,                &
                                        this%naux, this%auxname,                &
                                        ibinun1, this%nexg, this%gwfmodel1%iout)
     endif
@@ -1049,8 +1094,8 @@ contains
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun2 /= 0) then
       call this%gwfmodel2%dis%record_srcdst_list_header(budtxt(1),             &
-                                       this%m2%name, this%name,                &
-                                       this%m1%name, this%name,                &
+                                       this%gwfmodel2%name, this%name,                &
+                                       this%gwfmodel1%name, this%name,                &
                                        this%naux, this%auxname,                &
                                        ibinun2, this%nexg, this%gwfmodel2%iout)
     endif
@@ -1170,19 +1215,19 @@ contains
       do iexg = 1, this%nexg
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
-        flow = this%cond(iexg) * (this%m2%x(n2) - this%m1%x(n1))
-        call this%m1%dis%noder_to_string(n1, node1str)
-        call this%m2%dis%noder_to_string(n2, node2str)
+        flow = this%cond(iexg) * (this%gwfmodel2%x(n2) - this%gwfmodel1%x(n1))
+        call this%gwfmodel1%dis%noder_to_string(n1, node1str)
+        call this%gwfmodel2%dis%noder_to_string(n2, node2str)
         if(this%ingnc > 0) then
           deltaqgnc = this%gnc%deltaqgnc(iexg)
           write(iout, fmtdata) trim(adjustl(node1str)),                        &
                                trim(adjustl(node2str)),                        &
-                               this%cond(iexg), this%m1%x(n1), this%m2%x(n2),  &
+                               this%cond(iexg), this%gwfmodel1%x(n1), this%gwfmodel2%x(n2),  &
                                deltaqgnc, flow + deltaqgnc
         else
           write(iout, fmtdata) trim(adjustl(node1str)),                        &
                                trim(adjustl(node2str)),                        &
-                               this%cond(iexg), this%m1%x(n1), this%m2%x(n2),  &
+                               this%cond(iexg), this%gwfmodel1%x(n1), this%gwfmodel2%x(n2),  &
                                flow
         endif
       enddo
@@ -1436,14 +1481,14 @@ contains
         lloc = 1
         !
         ! -- Read and check node 1
-        call this%parser%GetCellid(this%m1%dis%ndim, cellid, flag_string=.true.)
-        nodem1 = this%m1%dis%noder_from_cellid(cellid, this%parser%iuactive,   &
+        call this%parser%GetCellid(this%gwfmodel1%dis%ndim, cellid, flag_string=.true.)
+        nodem1 = this%gwfmodel1%dis%noder_from_cellid(cellid, this%parser%iuactive,   &
                                                iout, flag_string=.true.)
         this%nodem1(iexg) = nodem1
         !
         ! -- Read and check node 2
-        call this%parser%GetCellid(this%m2%dis%ndim, cellid, flag_string=.true.)
-        nodem2 = this%m2%dis%noder_from_cellid(cellid, this%parser%iuactive,   &
+        call this%parser%GetCellid(this%gwfmodel2%dis%ndim, cellid, flag_string=.true.)
+        nodem2 = this%gwfmodel2%dis%noder_from_cellid(cellid, this%parser%iuactive,   &
                                                iout, flag_string=.true.)
         this%nodem2(iexg) = nodem2
         !
@@ -1461,10 +1506,10 @@ contains
         !
         ! -- Write the data to listing file if requested
         if(this%iprpak /= 0) then
-          nodeum1 = this%m1%dis%get_nodeuser(nodem1)
-          call this%m1%dis%nodeu_to_string(nodeum1, node1str)
-          nodeum2 = this%m2%dis%get_nodeuser(nodem2)
-          call this%m2%dis%nodeu_to_string(nodeum2, node2str)
+          nodeum1 = this%gwfmodel1%dis%get_nodeuser(nodem1)
+          call this%gwfmodel1%dis%nodeu_to_string(nodeum1, node1str)
+          nodeum2 = this%gwfmodel2%dis%get_nodeuser(nodem2)
+          call this%gwfmodel2%dis%nodeu_to_string(nodeum2, node2str)
           if (this%inamedbound == 0) then
             write(iout, fmtexgdata) trim(node1str), trim(node2str),            &
                         this%ihc(iexg), this%cl1(iexg), this%cl2(iexg),        &
@@ -1542,7 +1587,7 @@ contains
     !
     ! -- If exchange has ghost nodes, then initialize ghost node object
     !    This will read the ghost node blocks from the gnc input file.
-    call this%gnc%gnc_df(this%m1, m2=this%m2)
+    call this%gnc%gnc_df(this%gwfmodel1, m2=this%gwfmodel2)
     !
     ! -- Verify gnc is implicit if exchange has Newton Terms
     if(.not. this%gnc%implicit .and. this%inewton /= 0) then
@@ -1780,9 +1825,22 @@ contains
     class(GwfExchangeType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
+    !    
+    allocate(this%filename)
+    allocate(this%typename)    
+    this%filename = ''
+    this%typename = ''
     !
-    ! -- Call parent type allocate_scalars
-    call this%NumericalExchangeType%allocate_scalars()
+    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
+    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
+    call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
+    call mem_allocate(this%naux, 'NAUX', this%memoryPath)
+    this%iprpak = 0
+    this%iprflow = 0
+    this%ipakcb = 0
+    this%nexg = 0
+    this%naux = 0
     !
     call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
     call mem_allocate(this%ivarcv, 'IVARCV', this%memoryPath)
@@ -1825,9 +1883,6 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Call parent type allocate_scalars
-    call this%NumericalExchangeType%exg_da()
-    !
     ! -- objects
     if(this%ingnc > 0) then
       call this%gnc%gnc_da()
@@ -1841,6 +1896,13 @@ contains
     deallocate(this%obs)
     !
     ! -- arrays
+    call mem_deallocate(this%nodem1)
+    call mem_deallocate(this%nodem2)
+    call mem_deallocate(this%cond)
+    call mem_deallocate(this%idxglo)
+    call mem_deallocate(this%idxsymglo)
+    call mem_deallocate(this%auxvar)
+    !
     call mem_deallocate(this%ihc)
     call mem_deallocate(this%cl1)
     call mem_deallocate(this%cl2)
@@ -1861,7 +1923,16 @@ contains
       nullify(this%outputtab2)
     end if
     !
-    ! -- scalars
+    ! -- scalars    
+    deallocate(this%filename)
+    deallocate(this%typename)
+    call mem_deallocate(this%iprpak)
+    call mem_deallocate(this%iprflow)
+    call mem_deallocate(this%ipakcb)
+    call mem_deallocate(this%nexg)
+    call mem_deallocate(this%naux)
+    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%memoryPath))
+    !
     call mem_deallocate(this%icellavg)
     call mem_deallocate(this%ivarcv)
     call mem_deallocate(this%idewatcv)
@@ -1894,8 +1965,13 @@ contains
     integer(I4B) :: ntabcol
 ! ------------------------------------------------------------------------------
     !
-    ! -- Call parent type allocate_scalars
-    call this%NumericalExchangeType%allocate_arrays()
+    !   
+    call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
+    call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
+    call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
+    call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
+    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)
+    call mem_allocate(this%auxvar, this%naux, this%nexg, 'AUXVAR', this%memoryPath)
     !
     call mem_allocate(this%ihc, this%nexg, 'IHC', this%memoryPath)
     call mem_allocate(this%cl1, this%nexg, 'CL1', this%memoryPath)
@@ -2086,7 +2162,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate flow between nodes in the two models
-    qcalc = this%cond(iexg) * (this%m2%x(n2) - this%m1%x(n1))
+    qcalc = this%cond(iexg) * (this%gwfmodel2%x(n2) - this%gwfmodel1%x(n1))
     !
     ! -- return
     return
@@ -2120,6 +2196,24 @@ contains
     ! -- return
     return
   end function gwf_gwf_get_iasym
+
+  function gwf_gwf_connects_model(this, model) result(is_connected)
+    class(GwfExchangeType) :: this                      !< the instance of the GWF-GWF exchange
+    class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
+    logical(LGP) :: is_connected                        !< true, when connected
+
+    is_connected = .false.
+    ! only connected when model is GwfModelType of course
+    select type(model)
+    class is (GwfModelType)    
+    if (associated(this%gwfmodel1, model)) then
+      is_connected = .true.
+    else if (associated(this%gwfmodel2, model)) then
+      is_connected = .true.
+    end if    
+    end select
+
+  end function gwf_gwf_connects_model
 
   subroutine gwf_gwf_save_simvals(this)
 ! ******************************************************************************
@@ -2158,7 +2252,7 @@ contains
           case ('FLOW-JA-FACE')
             n1 = this%nodem1(iexg)
             n2 = this%nodem2(iexg)
-            v = this%cond(iexg) * (this%m2%x(n2) - this%m1%x(n1))
+            v = this%cond(iexg) * (this%gwfmodel2%x(n2) - this%gwfmodel1%x(n1))
             if(this%ingnc > 0) then
               v = v + this%gnc%deltaqgnc(iexg)
             endif
