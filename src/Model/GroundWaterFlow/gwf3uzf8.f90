@@ -299,7 +299,6 @@ contains
     call mem_allocate(this%rejinf0, this%nodes, 'REJINF0', this%memoryPath)
     call mem_allocate(this%rejinftomvr, this%nodes, 'REJINFTOMVR', this%memoryPath)
     call mem_allocate(this%infiltration, this%nodes, 'INFILTRATION', this%memoryPath)
-    call mem_allocate(this%recharge, this%nodes, 'RECHARGE', this%memoryPath)
     call mem_allocate(this%gwet, this%nodes, 'GWET', this%memoryPath)
     call mem_allocate(this%uzet, this%nodes, 'UZET', this%memoryPath)
     call mem_allocate(this%gwd, this%nodes, 'GWD', this%memoryPath)
@@ -327,7 +326,6 @@ contains
     ! -- initialize
     do i = 1, this%nodes
       this%appliedinf(i) = DZERO
-      this%recharge(i) = DZERO
       this%rejinf(i) = DZERO
       this%rejinf0(i) = DZERO
       this%rejinftomvr(i) = DZERO
@@ -1331,7 +1329,6 @@ contains
   subroutine uzf_cq(this, x, flowja, iadv)
 ! **************************************************************************
 ! uzf_cq -- Calculate flows
-  ! -- todo: this is not finished yet.  Need to unweave bd into cq and bdsav!
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1397,12 +1394,10 @@ contains
         call store_error(errmsg)
         call ustop()
       end if 
-
       !
       ! -- Calculate gwet
       if (this%igwetflag > 0) then
         call this%uzfobj%setgwpet(i)
-        derivgwet = DZERO
         call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
                                  derivgwet)
       end if
@@ -1413,17 +1408,6 @@ contains
             call this%uzfobj%setbelowpet(i, ivertflag)
           end if
         end if
-      !
-      ! -- Calculate flows for cbc output and observations
-      if (hgwf > this%uzfobj%celbot(i)) then
-        this%recharge(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
-      else
-        if (ivertflag == 0) then
-          this%recharge(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
-        else
-          this%recharge(i) = this%uzfobj%surflux(ivertflag) * this%uzfobj%uzfarea(i)
-        end if
-      end if
 
       this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
       this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
@@ -1475,7 +1459,7 @@ contains
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       this%qsto(i) = this%uzfobj%delstor(i) / delt
       
-      !todo: need to accumulate into flowja
+      !todo: need to accumulate into flowja -- maybe this can be done with bnd_cq()
 
       !
       ! -- End of UZF cell loop
@@ -1743,7 +1727,8 @@ contains
             call store_error(errmsg)
             call ustop()
         end if
-        
+        !
+        ! -- Calculate gwet
         if ( this%igwetflag > 0 ) then
           call this%uzfobj%setgwpet(i)
           call this%uzfobj%simgwet(this%igwetflag,i,hgwf,trhs2,thcof2,         &
@@ -2745,7 +2730,6 @@ contains
     call mem_deallocate(this%rejinf0)
     call mem_deallocate(this%rejinftomvr)
     call mem_deallocate(this%infiltration)
-    call mem_deallocate(this%recharge)
     call mem_deallocate(this%gwet)
     call mem_deallocate(this%uzet)
     call mem_deallocate(this%gwd)

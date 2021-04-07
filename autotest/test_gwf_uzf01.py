@@ -77,6 +77,7 @@ def build_models():
             sim,
             modelname=gwfname,
             newtonoptions=newtonoptions,
+            save_flows=True,
         )
 
         # create iterative model solution and register the gwf model with it
@@ -214,16 +215,29 @@ def eval_flow(sim):
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
 
+    # check binary grid file
+    fname = os.path.join(ws, name + ".dis.grb")
+    grbobj = flopy.utils.MfGrdFile(fname)
+    ia = grbobj._datadict["IA"] - 1
+    ja = grbobj._datadict["JA"] - 1
+
     bpth = os.path.join(ws, name + ".uzf.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     gwf_recharge = bobj.get_data(text='GWF')
 
     bpth = os.path.join(ws, name + ".bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
+    flow_ja_face = bobj.get_data(text='FLOW-JA-FACE')
     uzf_recharge = bobj.get_data(text='UZF-GWRCH')
     errmsg = "uzf rch is not equal to negative gwf rch"
     for gwr, uzr in zip(gwf_recharge, uzf_recharge):
         assert np.allclose(gwr["q"], -uzr["q"]), errmsg
+
+    # todo: finish check on flow-face-residual
+    for fjf in flow_ja_face:
+        fjf = fjf.flatten()
+        #assert np.allclose(fjf, 0.)
+        #print(fjf[ia[:-1]])
 
     return
 
