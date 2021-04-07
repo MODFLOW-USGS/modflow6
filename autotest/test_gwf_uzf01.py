@@ -81,7 +81,7 @@ def build_models():
         )
 
         # create iterative model solution and register the gwf model with it
-        nouter, ninner = 20, 10
+        nouter, ninner = 100, 10
         hclose, rclose, relax = 1.5e-6, 1e-6, 0.97
         imsgwf = flopy.mf6.ModflowIms(
             sim,
@@ -165,7 +165,7 @@ def build_models():
             for k in range(1, nlay - 1)]
         )
         uzf_pkdat[-1][3] = -1
-        infiltration = 0.01
+        infiltration = 2.01
         uzf_spd = {0: [[0, infiltration, 0., 0., 0., 0., 0., 0.],]}
         uzf = flopy.mf6.ModflowGwfuzf(
             gwf,
