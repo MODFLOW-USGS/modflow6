@@ -87,9 +87,6 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    !< edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    !< edge properties (Q, area, nx, ny, distance) 
     !
-    class(*), pointer                               :: func_caller => null()
-    procedure(set_data_iface), pointer, nopass      :: set_data_func => null()
-    !
     integer(I4B), pointer                           :: intvk        => null()    ! TVK (time-varying K) unit number (0 if unused)
     type(TvkType), pointer                          :: tvk          => null()    ! TVK object
     integer(I4B), pointer                           :: kchangeper   => null()    ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
@@ -136,16 +133,8 @@ module GwfNpfModule
     procedure, public                       :: set_edge_properties
   endtype
 
-  abstract interface     
-    subroutine set_data_iface(callingObject, npf)
-      import GwfNpftype
-      class(*), pointer :: callingObject
-      class(GwfNpftype) :: npf
-    end subroutine
-  end interface
+  contains
 
-contains  
-  
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
@@ -328,8 +317,6 @@ contains
     else
       ! -- set the data block
       call this%set_grid_data(grid_data)
-      ! -- check data
-      call this%prepcheck()
     end if
     !
     ! -- preprocess data
@@ -352,7 +339,7 @@ contains
     ! -- Return
     return
   end subroutine npf_ar
-  
+
   !> @brief Read and prepare method for package
   !!
   !! Read and prepare NPF stress period data.
@@ -1912,18 +1899,11 @@ contains
     character(len=24), dimension(:), pointer :: aname
     character(len=LINELENGTH) :: cellstr, errmsg
     integer(I4B) :: nerr, n
-    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
     ! -- format
     character(len=*), parameter :: fmtkerr =                                   &
       "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
     character(len=*), parameter :: fmtkerr2 =                                  &
       "(1x, '... ', i0,' additional errors not shown for ',a)"
-    character(len=*),parameter :: fmtnct = &
-    "(1X,'Negative cell thickness at cell ', A)"
-    character(len=*),parameter :: fmtihbe = &
-    "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
-    character(len=*),parameter :: fmttebe = &
-    "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -2161,7 +2141,7 @@ contains
         end do
       end if
     end if
-    !    
+    !
     ! -- Initialize sat to zero for ibound=0 cells, unless the cell can
     !    rewet.  Initialize sat to the saturated fraction based on strt
     !    if icelltype is negative and the THCKSTRT option is in effect.
