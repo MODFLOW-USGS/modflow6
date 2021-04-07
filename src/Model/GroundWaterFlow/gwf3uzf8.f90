@@ -2089,7 +2089,7 @@ contains
         !
         ! -- surfdep
         surfdep =  this%parser%GetDouble()
-        if (surfdep <= DZERO) then   !need to check for cell thickness
+        if (surfdep <= DZERO .and. landflag > 0) then   !need to check for cell thickness
           write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
             'SURFDEP for uzf cell', i,                                           &
             'must be greater than 0 (specified value is', surfdep, ').'
