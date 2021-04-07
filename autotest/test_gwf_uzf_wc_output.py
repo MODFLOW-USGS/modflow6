@@ -505,18 +505,25 @@ def eval_model(sim, mfnwt, include_NWT=False):
 
 # - No need to change any code below
 def test_mf6model():
+    include_NWT = False
     # initialize testing framework
     test = testing_framework()
 
     # build and write the model input
-    mf6, mfnwt = build_models()
+    mf6, mfnwt = build_models(include_NWT=include_NWT)
 
     # run the test models
     mf6.run_simulation()
-    mfnwt.run_model()
+    if include_NWT:
+        mfnwt.run_model()
+    
+    # compare water contents
+    if include_NWT:
+        eval_model(mf6, mfnwt)
+    else:
+        eval_model(mf6, None, include_NWT=include_NWT)
 
     return
-
 
 def main():
     include_NWT = False
