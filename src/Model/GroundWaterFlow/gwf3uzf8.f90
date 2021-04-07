@@ -88,7 +88,6 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous         :: rejinf0      => null()
     real(DP), dimension(:), pointer, contiguous         :: rejinftomvr  => null()
     real(DP), dimension(:), pointer, contiguous         :: infiltration => null()
-    real(DP), dimension(:), pointer, contiguous         :: recharge     => null()
     real(DP), dimension(:), pointer, contiguous         :: gwet         => null()
     real(DP), dimension(:), pointer, contiguous         :: uzet         => null()
     real(DP), dimension(:), pointer, contiguous         :: gwd          => null()
@@ -1087,8 +1086,9 @@ contains
       call this%pakmvrobj%fc()
     endif
     !
-    ! -- Solve UZF
-    call this%uzf_solve()
+    ! -- Solve UZF; set reset_state to true so that waves are reset back to
+    !    initial position for each outer iteration
+    call this%uzf_solve(reset_state=.true.)
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nodes
@@ -1345,10 +1345,7 @@ contains
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: i
-    integer(I4B) :: n, m, ivertflag, ierr
-    real(DP) :: hgwf
-    real(DP) :: trhsgwet,thcofgwet,derivgwet
-    real(DP) :: qfrommvr
+    integer(I4B) :: n
     real(DP) :: qout
     real(DP) :: qfact
     real(DP) :: qtomvr
@@ -1359,67 +1356,34 @@ contains
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize accumulators
-    ierr = 0
-    this%uzfobj%pet = this%uzfobj%petmax
+    ! -- Make uzf solution using final solution
+    call this%uzf_solve(reset_state=.false.)
+    !
+    ! -- call base functionality in bnd_cq.  This will calculate uzf-gwf flows
+    !    and put them into this%simvals and this%simvtomvr
+    call this%BndType%bnd_cq(x, flowja, iadv=1)
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes
       !
       ! -- Initialize variables
       n = this%nodelist(i)
-      ivertflag = this%uzfobj%ivertcon(i)
       !
       ! -- Skip if cell is not active
       if (this%ibound(n) < 1) cycle
       !
-      ! -- Water mover added to infiltration
-      qfrommvr = DZERO
-      if(this%imover == 1) then
-        qfrommvr = this%pakmvrobj%get_qfrommvr(i)
-      endif
-      !
-      hgwf = this%xnew(n)
-      m = n
-      !
-      ! -- Call solve routine of the uzf kinematic object
-      call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                    &
-                             this%totfluxtot, this%ietflag,                    &
-                             this%issflag, this%iseepflag, hgwf,               &
-                             qfrommvr, ierr,                                   &
-                             reset_state=.false.)
-      if ( ierr > 0 ) then
-        if ( ierr == 1 ) &
-          errmsg = 'UZF variable NWAVESETS needs to be increased.'
-        call store_error(errmsg)
-        call ustop()
-      end if 
-      !
-      ! -- Calculate gwet
-      if (this%igwetflag > 0) then
-        call this%uzfobj%setgwpet(i)
-        call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
-                                 derivgwet)
-      end if
-      !
-      ! -- distribute PET to deeper cells
-        if (this%ietflag > 0) then
-          if (this%uzfobj%ivertcon(i) > 0) then
-            call this%uzfobj%setbelowpet(i, ivertflag)
-          end if
-        end if
-
-      this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
+      ! -- infiltration terms
       this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
       this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
-      this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
-
+      !
+      ! -- qtomvr
       qout = this%rejinf(i) + this%uzfobj%surfseep(i)
       qtomvr = DZERO
       if (this%imover == 1) then
         qtomvr = this%pakmvrobj%get_qtomvr(i)
       end if
-
+      !
+      ! -- rejected infiltration
       qfact = DZERO
       if (qout > DZERO) then
         qfact = this%rejinf(i) / qout
@@ -1436,7 +1400,8 @@ contains
         q = DZERO
       end if
       this%rejinf(i) = q
-
+      !
+      ! -- calculate groundwater discharge and what goes to mover
       this%gwd(i) = this%uzfobj%surfseep(i)
       qfact = DZERO
       if (qout > DZERO) then
@@ -1454,7 +1419,8 @@ contains
         q = DZERO
       end if
       this%gwd(i) = q
-
+      !
+      ! -- calculate and store remaining budget terms
       this%gwet(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       this%qsto(i) = this%uzfobj%delstor(i) / delt
@@ -1472,6 +1438,153 @@ contains
     ! -- return
     return
   end subroutine uzf_cq
+
+!  subroutine uzf_cq2(this, x, flowja, iadv)
+!! **************************************************************************
+!! uzf_cq -- Calculate flows
+!! **************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! --------------------------------------------------------------------------
+!    ! -- modules
+!    use TdisModule, only: delt
+!    use ConstantsModule, only: LENBOUNDNAME, DZERO, DHNOFLO, DHDRY
+!    use BudgetModule, only: BudgetType
+!    use InputOutputModule, only: ulasav, ubdsv06
+!    ! -- dummy
+!    class(UzfType), intent(inout) :: this
+!    real(DP), dimension(:), intent(in) :: x
+!    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+!    integer(I4B), optional, intent(in) :: iadv
+!    ! -- local
+!    integer(I4B) :: i
+!    integer(I4B) :: n, m, ivertflag, ierr
+!    real(DP) :: hgwf
+!    real(DP) :: trhsgwet,thcofgwet,derivgwet
+!    real(DP) :: qfrommvr
+!    real(DP) :: qout
+!    real(DP) :: qfact
+!    real(DP) :: qtomvr
+!    real(DP) :: q
+!    ! -- for observations
+!    ! -- formats
+!    character(len=*), parameter :: fmttkk = &
+!      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- initialize
+!    ierr = 0
+!    this%uzfobj%pet = this%uzfobj%petmax
+!    !
+!    ! -- Go through and process each UZF cell
+!    do i = 1, this%nodes
+!      !
+!      ! -- Initialize variables
+!      n = this%nodelist(i)
+!      ivertflag = this%uzfobj%ivertcon(i)
+!      !
+!      ! -- Skip if cell is not active
+!      if (this%ibound(n) < 1) cycle
+!      !
+!      ! -- Water mover added to infiltration
+!      qfrommvr = DZERO
+!      if(this%imover == 1) then
+!        qfrommvr = this%pakmvrobj%get_qfrommvr(i)
+!      endif
+!      !
+!      hgwf = this%xnew(n)
+!      m = n
+!      !
+!      ! -- Call solve routine of the uzf kinematic object
+!      call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                    &
+!                             this%totfluxtot, this%ietflag,                    &
+!                             this%issflag, this%iseepflag, hgwf,               &
+!                             qfrommvr, ierr,                                   &
+!                             reset_state=.false.)
+!      if ( ierr > 0 ) then
+!        if ( ierr == 1 ) &
+!          errmsg = 'UZF variable NWAVESETS needs to be increased.'
+!        call store_error(errmsg)
+!        call ustop()
+!      end if 
+!      !
+!      ! -- Calculate gwet
+!      if (this%igwetflag > 0) then
+!        call this%uzfobj%setgwpet(i)
+!        call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
+!                                 derivgwet)
+!      end if
+!      !
+!      ! -- distribute PET to deeper cells
+!        if (this%ietflag > 0) then
+!          if (this%uzfobj%ivertcon(i) > 0) then
+!            call this%uzfobj%setbelowpet(i, ivertflag)
+!          end if
+!        end if
+!
+!      this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
+!      this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
+!      this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
+!      this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
+!
+!      qout = this%rejinf(i) + this%uzfobj%surfseep(i)
+!      qtomvr = DZERO
+!      if (this%imover == 1) then
+!        qtomvr = this%pakmvrobj%get_qtomvr(i)
+!      end if
+!
+!      qfact = DZERO
+!      if (qout > DZERO) then
+!        qfact = this%rejinf(i) / qout
+!      end if
+!      q = this%rejinf(i)
+!      this%rejinftomvr(i) = qfact * qtomvr
+!      !
+!      ! -- set rejected infiltration to the remainder
+!      q = q - this%rejinftomvr(i)
+!      !
+!      ! -- values less than zero represent a volumetric error resulting
+!      !    from qtomvr being greater than water available to the mover
+!      if (q < DZERO) then
+!        q = DZERO
+!      end if
+!      this%rejinf(i) = q
+!
+!      this%gwd(i) = this%uzfobj%surfseep(i)
+!      qfact = DZERO
+!      if (qout > DZERO) then
+!        qfact = this%gwd(i) / qout
+!      end if
+!      q = this%gwd(i)
+!      this%gwdtomvr(i) = qfact * qtomvr
+!      !
+!      ! -- set groundwater discharge to the remainder
+!      q = q - this%gwdtomvr(i)
+!      !
+!      ! -- values less than zero represent a volumetric error resulting
+!      !    from qtomvr being greater than water available to the mover
+!      if (q < DZERO) then
+!        q = DZERO
+!      end if
+!      this%gwd(i) = q
+!
+!      this%gwet(i) = this%uzfobj%gwet(i)
+!      this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
+!      this%qsto(i) = this%uzfobj%delstor(i) / delt
+!      
+!      !todo: need to accumulate into flowja -- maybe this can be done with bnd_cq()
+!
+!      !
+!      ! -- End of UZF cell loop
+!      !
+!    end do
+!    !
+!    ! -- fill the budget object
+!    call this%uzf_fill_budobj()
+!    !
+!    ! -- return
+!    return
+!  end subroutine uzf_cq2
 
   subroutine uzf_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
@@ -1661,7 +1774,7 @@ contains
     return
   end subroutine uzf_ot
 
-  subroutine uzf_solve(this)
+  subroutine uzf_solve(this, reset_state)
 ! ******************************************************************************
 ! uzf_solve -- Formulate the HCOF and RHS terms
 ! ******************************************************************************
@@ -1670,6 +1783,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only : delt
+    logical, intent(in) :: reset_state         !< flag indicating that waves should be reset after solution
     ! -- dummy
     class(UzfType) :: this
     ! -- locals
@@ -1687,15 +1801,21 @@ contains
     !
     ! -- Calculate hcof and rhs for each UZF entry
     do i = 1, this%nodes
+      !
+      ! -- Initialize hcof/rhs terms
+      this%hcof(i) = DZERO
+      this%rhs(i) = DZERO
       thcof1 = DZERO
       thcof2 = DZERO
       trhs1 = DZERO
       trhs2 = DZERO
       uzderiv = DZERO
       derivgwet = DZERO
+      !
+      ! -- Initialize variables
+      n = this%nodelist(i)
       ivertflag = this%uzfobj%ivertcon(i)
       !
-      n = this%nodelist(i)
       if ( this%ibound(n) > 0 ) then
         !
         ! -- Water mover added to infiltration
@@ -1705,10 +1825,6 @@ contains
           qfrommvr = this%pakmvrobj%get_qfrommvr(i)
         endif
         !
-        ! -- zero out hcof and rhs
-        this%hcof(i) = DZERO
-        this%rhs(i) = DZERO
-        !
         hgwf = this%xnew(n)
         m = n
         !
@@ -1717,7 +1833,7 @@ contains
                                this%totfluxtot, this%ietflag,                  &
                                this%issflag,this%iseepflag, hgwf,              &
                                qfrommvr, ierr,                                 &
-                               reset_state=.true.,                             &
+                               reset_state=reset_state,                        &
                                trhs=trhs1, thcof=thcof1, deriv=uzderiv)
         !
         ! -- terminate if an error condition has occurred
@@ -1741,7 +1857,8 @@ contains
             call this%uzfobj%setbelowpet(i, ivertflag)
           end if
         end if
-        
+        !
+        ! -- store derivative for Newton addition to equations in _fn()
         this%deriv(i) = uzderiv + derivgwet
         !
         ! -- save current rejected infiltration, groundwater recharge, and

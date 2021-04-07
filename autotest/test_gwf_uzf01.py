@@ -233,11 +233,14 @@ def eval_flow(sim):
     for gwr, uzr in zip(gwf_recharge, uzf_recharge):
         assert np.allclose(gwr["q"], -uzr["q"]), errmsg
 
-    # todo: finish check on flow-face-residual
+    # Check on residual, which is stored in diagonal position of
+    # flow-ja-face.  Residual should be less than convergence tolerance,
+    # or this means the residual term is not added correctly.
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
-        #assert np.allclose(fjf, 0.)
-        #print(fjf[ia[:-1]])
+        res = fjf[ia[:-1]]
+        errmsg = 'min or max residual too large {} {}'.format(res.min(), res.max())
+        assert np.allclose(res, 0., atol=1.e-6), errmsg
 
     return
 
