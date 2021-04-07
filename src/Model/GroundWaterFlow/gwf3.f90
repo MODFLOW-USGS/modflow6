@@ -1092,7 +1092,7 @@ module GwfModule
       call this%csub%obs%obs_ot()
     end if
 
-    ! -- Calculate and save package obserations
+    ! -- Calculate and save package observations
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd_obs()
