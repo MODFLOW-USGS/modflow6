@@ -132,9 +132,6 @@ module BaseExchangeModule
 
   !> @brief should return true when the exchange should be
   !! added to the solution where the model resides
-  !!
-  !! TODO_MJR: this is more or less a feature of NumericalSolution
-  !! and should probably be cleaned up... 
   !<
   function connects_model(this, model) result(is_connected)
     class(BaseExchangeType) :: this                     !< the instance of the exchange

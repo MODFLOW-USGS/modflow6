@@ -1,11 +1,9 @@
 module NumericalExchangeModule
 
-  use KindModule,            only: DP, I4B, LGP
-  use SimVariablesModule,    only: errmsg
+  use KindModule,            only: DP, I4B
   use BaseModelModule,       only: BaseModelType  
   use BaseExchangeModule,    only: BaseExchangeType, AddBaseExchangeToList  
   use NumericalModelModule,  only: NumericalModelType
-  use ConstantsModule,       only: LINELENGTH
   use ListModule,            only: ListType
 
   implicit none
@@ -30,8 +28,6 @@ module NumericalExchangeModule
     procedure :: exg_bd
     procedure :: exg_ot
     procedure :: exg_da
-    procedure :: read_options
-    procedure :: read_dimensions
     procedure :: get_iasym
   end type NumericalExchangeType
 
@@ -274,38 +270,6 @@ contains
     ! -- return
     return
   end subroutine exg_da
-
-  subroutine read_options(this, iout)
-! ******************************************************************************
-! read_options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalExchangeType) :: this
-    integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine read_options
-
-  subroutine read_dimensions(this, iout)
-! ******************************************************************************
-! read_dimensions
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalExchangeType) :: this
-    integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine read_dimensions
 
   function get_iasym(this) result (iasym)
     class(NumericalExchangeType) :: this

@@ -29,24 +29,25 @@ module GwfGwfExchangeModule
     type(BlockParserType)                            :: parser                   !< block parser for input file
     character(len=7), pointer                        :: typename    => null()    !< name of the type (e.g., 'NM-NM')
     type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
-    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2
-  
-    ! GWF specific option block:
+    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2  
+    ! 
+    ! -- GWF specific option block:
     integer(I4B), pointer                            :: iprpak      => null()    !< print input flag
     integer(I4B), pointer                            :: iprflow     => null()    !< print flag for cell by cell flows
     integer(I4B), pointer                            :: ipakcb      => null()    !< save flag for cell by cell flows
     integer(I4B), pointer                            :: inewton     => null()    !< newton flag (1 newton is on)
     integer(I4B), pointer                            :: icellavg    => null()    !< cell averaging
     integer(I4B), pointer                            :: ivarcv      => null()    !< variable cv
-    integer(I4B), pointer                            :: idewatcv    => null()    !< dewatered cv
+    integer(I4B), pointer                            :: idewatcv    => null()    !< dewatered cv    
+    integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
     integer(I4B), pointer                            :: ingnc       => null()    !< unit number for gnc (0 if off)
     type(GhostNodeType), pointer                     :: gnc         => null()    !< gnc object
     integer(I4B), pointer                            :: inmvr       => null()    !< unit number for mover (0 if off)
     type(GwfMvrType), pointer                        :: mvr         => null()    !< water mover object
     integer(I4B), pointer                            :: inobs       => null()    !< unit number for GWF-GWF observations
     type(ObsType), pointer                           :: obs         => null()    !< observation object
-
-    ! exchange data block
+    ! 
+    ! -- Exchange data block
     integer(I4B), pointer                            :: nexg        => null()    !< number of exchanges
     integer(I4B), dimension(:), pointer, contiguous  :: nodem1      => null()    !< node numbers in model 1
     integer(I4B), dimension(:), pointer, contiguous  :: nodem2      => null()    !< node numbers in model 2
@@ -60,21 +61,16 @@ module GwfGwfExchangeModule
     real(DP), dimension(:, :), pointer, contiguous   :: auxvar      => null()    !< array of auxiliary variable values
     integer(I4B), pointer                            :: ianglex     => null()    !< flag indicating anglex was read, if read, ianglex is index in auxvar
     integer(I4B), pointer                            :: icdist      => null()    !< flag indicating cdist was read, if read, icdist is index in auxvar
-
-    
+    character(len=LENBOUNDNAME), dimension(:),                                   &
+                                 pointer, contiguous :: boundname   => null()    !< boundnames
+    ! 
+    ! -- internal data
     real(DP), dimension(:), pointer, contiguous      :: cond        => null()    !< conductance
     real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    !< saturated conductance
     integer(I4B), dimension(:), pointer, contiguous  :: idxglo      => null()    !< mapping to global (solution) amat
     integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
-
-    integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
     real(DP), pointer                                :: satomega    => null()    !< saturation smoothing    
     real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
-    
-    
-    
-    character(len=LENBOUNDNAME), dimension(:),                                   &
-                                 pointer, contiguous :: boundname   => null()    !< boundnames
     !
     ! -- table objects
     type(TableType), pointer :: outputtab1 => null()
@@ -97,9 +93,11 @@ module GwfGwfExchangeModule
     procedure          :: exg_da      => gwf_gwf_da
     procedure          :: exg_fp      => gwf_gwf_fp
     procedure          :: get_iasym   => gwf_gwf_get_iasym
+    procedure          :: connects_model => gwf_gwf_connects_model
     procedure          :: allocate_scalars
     procedure          :: allocate_arrays
     procedure          :: read_options
+    procedure          :: read_dimensions
     procedure          :: read_data
     procedure          :: read_gnc
     procedure          :: read_mvr
@@ -1426,6 +1424,59 @@ contains
     return
   end subroutine read_options
 
+  subroutine read_dimensions(this, iout)
+! ******************************************************************************
+! read_dimensions -- Read Dimensions
+! Subroutine: (1) read dimensions (size of exchange list) from input file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error, ustop
+    implicit none
+    ! -- dummy
+    class(GwfExchangeType) :: this
+    integer(I4B), intent(in) :: iout
+    ! -- local
+    character(len=LINELENGTH) :: keyword
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+! ------------------------------------------------------------------------------
+    !
+    ! -- get options block
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr,                     &
+      supportOpenClose=.true.)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(iout,'(1x,a)') 'PROCESSING EXCHANGE DIMENSIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          case ('NEXG')
+            this%nexg = this%parser%GetInteger()
+            write(iout,'(4x,a,i0)') 'NEXG = ', this%nexg
+          case default
+            errmsg = "Unknown dimension '" // trim(keyword) // "'."
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(iout,'(1x,a)') 'END OF EXCHANGE DIMENSIONS'
+    else
+      call store_error('Required dimensions block not found.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_dimensions
+
   subroutine read_data(this, iout)
 ! ******************************************************************************
 ! read_data -- Read EXGDATA block
@@ -2197,6 +2248,9 @@ contains
     return
   end function gwf_gwf_get_iasym
 
+  !> @brief Return true when this exchange provides matrix 
+  !! coefficients for solving @param model
+  !<
   function gwf_gwf_connects_model(this, model) result(is_connected)
     class(GwfExchangeType) :: this                      !< the instance of the GWF-GWF exchange
     class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
