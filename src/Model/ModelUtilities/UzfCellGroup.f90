@@ -2255,7 +2255,7 @@ module UzfCellGroupModule
     end if
     return
   end function get_water_content_at_depth
-  
+
   function get_water_content(this, icell) result(watercontent)
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell  !< uzf cell containing depth

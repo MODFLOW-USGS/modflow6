@@ -488,6 +488,12 @@ subroutine converge_reset()
       call print_final_message('Normal termination of simulation.', iout)
     endif
     !
+    ! -- destroy messages
+    call sim_errors%deallocate_message()
+    call sim_uniterrors%deallocate_message()
+    call sim_warnings%deallocate_message()
+    call sim_notes%deallocate_message()
+    !
     ! -- Return or halt
     if (iforcestop == 1) then
       call stop_with_error(ireturnerr)

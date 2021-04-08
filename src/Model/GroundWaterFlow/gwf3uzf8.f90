@@ -79,10 +79,12 @@ module UzfModule
     integer(I4B), pointer                               :: iseepflag    => null()
     integer(I4B), pointer                               :: imaxcellcnt  => null()
     integer(I4B), pointer                               :: iuzf2uzf     => null()
+    !
     ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous     :: igwfnode     => null()
     integer(I4B), dimension(:), pointer, contiguous     :: ia => null()
     integer(I4B), dimension(:), pointer, contiguous     :: ja => null()
+    !   
     ! -- double precision output vectors
     real(DP), dimension(:), pointer, contiguous         :: appliedinf   => null()
     real(DP), dimension(:), pointer, contiguous         :: rejinf       => null()
