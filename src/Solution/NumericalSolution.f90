@@ -15,6 +15,7 @@ module NumericalSolutionModule
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
+  use BaseExchangeModule,      only: BaseExchangeType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
   use ListModule,              only: ListType
   use ListsModule,             only: basesolutionlist
@@ -39,8 +40,8 @@ module NumericalSolutionModule
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LENMEMPATH)                            :: memoryPath !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH)                            :: fname
-    type(ListType)                                       :: modellist
-    type(ListType)                                       :: exchangelist
+    type(ListType), pointer                              :: modellist
+    type(ListType), pointer                              :: exchangelist
     integer(I4B), pointer                                :: id
     integer(I4B), pointer                                :: iu
     real(DP), pointer                                    :: ttform
@@ -138,9 +139,9 @@ module NumericalSolutionModule
     procedure :: sln_ca
     procedure :: sln_fp
     procedure :: sln_da
-    procedure :: addmodel
-    procedure :: addexchange
-    procedure :: slnassignexchanges
+    procedure :: add_model
+    procedure :: add_exchange
+    procedure :: get_models
     procedure :: save
 
     procedure, private :: sln_connect
@@ -203,6 +204,8 @@ contains
     !
     solution%name = solutionname
     solution%memoryPath = create_mem_path(solutionname)
+    allocate(solution%modellist)
+    allocate(solution%exchangelist)
     !
     call solution%allocate_scalars()
     !
@@ -1116,6 +1119,8 @@ contains
     ! -- lists
     call this%modellist%Clear()
     call this%exchangelist%Clear()
+    deallocate(this%modellist)
+    deallocate(this%exchangelist)
     !
     ! -- character arrays
     deallocate(this%caccel)
@@ -2121,7 +2126,7 @@ contains
     return
   end subroutine save
 
-  subroutine addmodel(this, mp)
+  subroutine add_model(this, mp)
 ! ******************************************************************************
 ! addmodel -- Add Model
 ! Subroutine: (1) add a model to this%modellist
@@ -2144,9 +2149,19 @@ contains
     !
     ! -- return
     return
-  end subroutine addmodel
+  end subroutine add_model
 
-  subroutine addexchange(this, exchange)
+  !> @brief Returns a pointer to the list of models in this solution
+  !<
+  function get_models(this) result(models)
+    class(NumericalSolutionType) :: this !< instance of the numerical solution
+    type(ListType), pointer :: models    !< pointer to the model list
+
+    models => this%modellist
+
+  end function get_models
+
+  subroutine add_exchange(this, exchange)
 ! ******************************************************************************
 ! addexchange -- Add exchange
 ! Subroutine: (1) add an exchange to this%exchangelist
@@ -2156,58 +2171,20 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(NumericalSolutionType) :: this
-    class(NumericalExchangeType), pointer, intent(in) :: exchange
-! ------------------------------------------------------------------------------
-    !
-    call AddNumericalExchangeToList(this%exchangelist, exchange)
-    !
-    ! -- return
-    return
-  end subroutine addexchange
-
-  subroutine slnassignexchanges(this)
-! ******************************************************************************
-! slnassignexchanges -- Assign exchanges to this solution
-! Subroutine: (1) assign the appropriate exchanges to this%exchangelist
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
-    use ListsModule, only: baseexchangelist
-    ! -- dummy
-    class(NumericalSolutionType) :: this
+    class(BaseExchangeType), pointer, intent(in) :: exchange
     ! -- local
-    class(BaseExchangeType), pointer :: cb
-    class(NumericalExchangeType), pointer :: c
-    integer(I4B) :: ic
+    class(NumericalExchangeType), pointer :: num_ex
 ! ------------------------------------------------------------------------------
     !
-    ! -- Go through the list of exchange objects and if either model1 or model2
-    !    are part of this solution, then include the exchange object as part of
-    !    this solution.
-    c => null()
-    do ic=1,baseexchangelist%Count()
-      cb => GetBaseExchangeFromList(baseexchangelist, ic)
-      select type (cb)
-      class is (NumericalExchangeType)
-        c=>cb
-      end select
-      if(associated(c)) then
-        if(c%m1%idsoln==this%id) then
-          call this%addexchange(c)
-          cycle
-        elseif(c%m2%idsoln==this%id) then
-          call this%addexchange(c)
-          cycle
-        endif
-      endif
-    enddo
+    select type(exchange)
+    class is (NumericalExchangeType)
+      num_ex => exchange
+      call AddNumericalExchangeToList(this%exchangelist, num_ex)
+    end select
     !
     ! -- return
     return
-  end subroutine slnassignexchanges
+  end subroutine add_exchange
 
   subroutine sln_connect(this)
 ! ******************************************************************************
