@@ -88,6 +88,7 @@ module UzfCellGroupModule
       procedure :: setgwpet
       procedure :: dealloc
       procedure :: get_water_content_at_depth
+      procedure :: get_water_content
     end type UzfCellGroupType
 !  
     contains
@@ -2254,5 +2255,39 @@ module UzfCellGroupModule
     end if
     return
   end function get_water_content_at_depth
+  
+  function get_water_content(this, icell) result(watercontent)
+    class(UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell  !< uzf cell containing depth
+    !
+    real(DP) :: watercontent
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: carea
+    real(DP) :: wc
+    real(DP) :: uzwatvol
+    real(DP) :: theta_r
+    real(DP) :: thk
+    real(DP) :: v
+    real(DP) :: hgwf
+    !
+    ! -- calculate mean uzf moisture-content for the UZF object 
+    !i = this%nodelist(icell)
+    hgwf = this%watab(icell)  ! this%xnew(i)
+    top = this%celtop(icell) 
+    bot = this%celbot(icell)
+    carea = this%uzfarea(icell)
+    if ( hgwf > bot ) bot = hgwf
+    thk = top - bot
+    v = thk * carea
+    theta_r = this%THTR(icell)
+    uzwatvol = (this%uzstor(icell) + theta_r * thk) * carea
+    if (hgwf < top) then
+      watercontent = uzwatvol / v
+    else
+      watercontent = DZERO
+    endif
+    return
+  end function get_water_content
                       
 end module UzfCellGroupModule

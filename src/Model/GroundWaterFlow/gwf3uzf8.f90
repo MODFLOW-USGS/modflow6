@@ -78,7 +78,12 @@ module UzfModule
     integer(I4B), pointer                               :: igwetflag    => null()
     integer(I4B), pointer                               :: iseepflag    => null()
     integer(I4B), pointer                               :: imaxcellcnt  => null()
+    integer(I4B), pointer                               :: iuzf2uzf     => null()
+    ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous     :: igwfnode     => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()
+    ! -- double precision output vectors
     real(DP), dimension(:), pointer, contiguous         :: appliedinf   => null()
     real(DP), dimension(:), pointer, contiguous         :: rejinf       => null()
     real(DP), dimension(:), pointer, contiguous         :: rejinf0      => null()
@@ -92,11 +97,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous         :: rch          => null()
     real(DP), dimension(:), pointer, contiguous         :: rch0         => null()
     real(DP), dimension(:), pointer, contiguous         :: qsto         => null()
-    integer(I4B), pointer                               :: iuzf2uzf     => null()
-    !
-    ! -- integer vectors
-    integer(I4B), dimension(:), pointer, contiguous :: ia => null()
-    integer(I4B), dimension(:), pointer, contiguous :: ja => null()
+    real(DP), dimension(:), pointer, contiguous         :: watercontent => null()
     !
     ! -- timeseries aware variables
     real(DP), dimension(:), pointer, contiguous :: sinf => null()
@@ -363,6 +364,16 @@ contains
     this%bdtxt(4) = '        UZF-GWET'
     this%bdtxt(5) = '  UZF-GWD TO-MVR'
     !
+    ! -- allocate and initialize watercontent array
+    if (this%iwcontout > 0) then
+      call mem_allocate(this%watercontent, this%nodes, 'WATERCONTENT', this%memoryPath)
+      do i = 1, this%nodes
+        this%watercontent(i) = DZERO
+      end do
+    else
+      call mem_allocate(this%watercontent, 0, 'WATERCONTENT', this%memoryPath)
+    end if   
+    !
     ! -- allocate character array for aux budget text
     allocate(this%cauxcbc(this%cbcauxitems))
     allocate(this%uzfname(this%nodes))
@@ -430,18 +441,18 @@ contains
       !  write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
       !    ' WATERCONTENT WILL BE PRINTED TO LISTING FILE.'
       !  found = .true.
-      !case('WATER-CONTENT')
-      !  call this%parser%GetStringCaps(keyword)
-      !  if (keyword == 'FILEOUT') then
-      !    call this%parser%GetString(fname)
-      !    this%iwcontout = getunit()
-      !    call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)',  &
-      !                 form, access, 'REPLACE', mode_opt=MNORMAL)
-      !    write(this%iout,fmtuzfbin) 'WATERCONTENT', fname, this%iwcontout
-      !    found = .true.
-      !  else
-      !    call store_error('OPTIONAL WATER-CONTENT KEYWORD MUST BE FOLLOWED BY FILEOUT')
-      !  end if
+      case('WATER_CONTENT')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%iwcontout = getunit()
+          call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)',  &
+                       form, access, 'REPLACE', mode_opt=MNORMAL)
+          write(this%iout,fmtuzfbin) 'WATER-CONTENT', fname, this%iwcontout
+          found = .true.
+        else
+          call store_error('OPTIONAL WATER_CONTENT KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
       case('BUDGET')
         call this%parser%GetStringCaps(keyword)
         if (keyword == 'FILEOUT') then
@@ -1416,6 +1427,10 @@ contains
       end if
       this%gwd(i) = q
       !
+      ! -- set mean water contents for cells
+      !    analogous to what NWT writes to the linker file for MT3D
+      this%watercontent(i) = this%uzfobj%get_water_content(i)
+      !
       ! -- calculate and store remaining budget terms
       this%gwet(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
@@ -1568,11 +1583,25 @@ contains
   end subroutine uzf_ot_package_flows
 
   subroutine uzf_ot_dv(this, idvsave, idvprint)
+    use TdisModule, only: kstp, kper, pertim, totim
+    use InputOutputModule, only: ulasav
     class(UzfType) :: this
     integer(I4B), intent(in) :: idvsave
     integer(I4B), intent(in) :: idvprint
+    integer(I4B) :: ibinun
     !
-    ! -- todo: put saving and printing of water content here
+    ! -- set unit number for binary dependent variable output
+    ibinun = 0
+    if(this%iwcontout /= 0) then
+      ibinun = this%iwcontout
+    end if
+    if(idvsave == 0) ibinun = 0
+    !
+    ! -- write uzf binary moisture-content output
+    if (ibinun > 0) then
+      call ulasav(this%watercontent, '   WATER-CONTENT', kstp, kper, pertim, &
+                  totim, this%nodes, 1, 1, ibinun)
+    end if 
   end subroutine uzf_ot_dv
   
   subroutine uzf_ot_bdsummary(this, kstp, kper, iout)
@@ -1889,7 +1918,7 @@ contains
         !
         ! -- surfdep
         surfdep =  this%parser%GetDouble()
-        if (surfdep <= DZERO) then   !need to check for cell thickness
+        if (surfdep <= DZERO .and. landflag > 0) then   !need to check for cell thickness
           write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
             'SURFDEP for uzf cell', i,                                           &
             'must be greater than 0 (specified value is', surfdep, ').'
@@ -2703,6 +2732,7 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%deriv)
     call mem_deallocate(this%qauxcbc)
+    call mem_deallocate(this%watercontent)
     !
     ! -- deallocate integer arrays
     call mem_deallocate(this%ia)
