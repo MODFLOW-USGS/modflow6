@@ -13,11 +13,12 @@ module SimulationCreateModule
   use BaseSolutionModule,     only: BaseSolutionType, AddBaseSolutionToList,     &
                                     GetBaseSolutionFromList
   use SolutionGroupModule,    only: SolutionGroupType, AddSolutionGroupToList
-  use BaseExchangeModule,     only: BaseExchangeType
+  use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
   use ListsModule,            only: basesolutionlist, basemodellist,             &
-                                    solutiongrouplist
+                                    solutiongrouplist, baseexchangelist
   use BaseModelModule,        only: GetBaseModelFromList
   use BlockParserModule,      only: BlockParserType
+  use ListModule,             only: ListType
 
   implicit none
   private
@@ -80,7 +81,7 @@ module SimulationCreateModule
     return
   end subroutine simulation_da
 
-  subroutine read_simulation_namefile(simfile)
+  subroutine read_simulation_namefile(namfile)
 ! ******************************************************************************
 ! Read the simulation name file and initialize the models, exchanges,
 ! solutions, solutions groups.  Then add the exchanges to the appropriate
@@ -90,64 +91,46 @@ module SimulationCreateModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    character(len=*),intent(in) :: simfile
+    character(len=*),intent(in) :: namfile
     ! -- local
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
-    class(BaseSolutionType), pointer :: sp
-    class(BaseModelType), pointer :: mp
-    integer(I4B) :: is, im
 ! ------------------------------------------------------------------------------
     !
     ! -- Open simulation name file
     inunit = getunit()
-    call openfile(inunit, iout, simfile, 'NAM')
+    call openfile(inunit, iout, namfile, 'NAM')
     !
-    ! -- write simfile name to stdout
-    write(line,'(2(1x,a))') 'Using Simulation name file:', simfile
+    ! -- write name of namfile to stdout
+    write(line,'(2(1x,a))') 'Using Simulation name file:', namfile
     call sim_message(line, skipafter=1)
     !
     ! -- Initialize block parser
     call parser%Initialize(inunit, iout)
     !
-    ! -- Process OPTIONS block in simfile
+    ! -- Process OPTIONS block in namfile
     call options_create()
     !
-    ! -- Process TIMING block in simfile
+    ! -- Process TIMING block in namfile
     call timing_create()
     !
-    ! -- Process MODELS block in simfile
+    ! -- Process MODELS block in namfile
     call models_create()
     !
-    ! -- Process EXCHANGES block in simfile
+    ! -- Process EXCHANGES block in namfile
     call exchanges_create()
     !
-    ! -- Process SOLUTION_GROUPS blocks in simfile
+    ! -- Process SOLUTION_GROUPS blocks in namfile
     call solution_groups_create()
     !
     ! -- Go through each model and make sure that it has been assigned to
     !    a solution.
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      if (mp%idsoln == 0) then
-        write(errmsg, '(a,a)') &
-           '****ERROR.  Model was not assigned to a solution: ', mp%name
-        call store_error(errmsg)
-      endif
-    enddo
-    if (count_errors() > 0) then
-      call store_error_unit(inunit)
-      call ustop()
-    endif
+    call check_model_assignment()
     !
     ! -- Close the input file
     close(inunit)
     !
     ! -- Go through each solution and assign exchanges accordingly
-    do is = 1, basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%slnassignexchanges()
-    enddo
+    call assign_exchanges()    
     !
     ! -- Return
     return
@@ -570,7 +553,7 @@ module SimulationCreateModule
               mp => GetBaseModelFromList(basemodellist, mid)
               !
               ! -- Add the model to the solution
-              call sp%addmodel(mp)
+              call sp%add_model(mp)
               mp%idsoln = isoln
               !
             enddo
@@ -618,6 +601,66 @@ module SimulationCreateModule
     ! -- return
     return
   end subroutine solution_groups_create
+
+  !> @brief Check for dangling models, and break with 
+  !! error when found
+  !<
+  subroutine check_model_assignment()    
+    character(len=LINELENGTH) :: errmsg
+    class(BaseModelType), pointer :: mp
+    integer(I4B) :: im
+  
+    do im = 1, basemodellist%Count()
+      mp => GetBaseModelFromList(basemodellist, im)
+      if (mp%idsoln == 0) then
+        write(errmsg, '(a,a)') &
+          '****ERROR.  Model was not assigned to a solution: ', mp%name
+        call store_error(errmsg)
+      endif
+    enddo
+    if (count_errors() > 0) then
+      call store_error_unit(inunit)
+      call ustop()
+    endif
+
+  end subroutine check_model_assignment
+
+  !> @brief Assign exchanges to solutions
+  !! 
+  !! This assigns NumericalExchanges to NumericalSolutions, 
+  !! based on the link between the models in the solution and
+  !! those exchanges. The BaseExchange%connects_model() function 
+  !! should be overridden to indicate if such a link exists.
+  !<
+  subroutine assign_exchanges()
+    ! -- local
+    class(BaseSolutionType), pointer :: sp    
+    class(BaseExchangeType), pointer :: ep
+    class(BaseModelType), pointer :: mp    
+    type(ListType), pointer :: models_in_solution
+    integer(I4B) :: is, ie, im
+
+    do is = 1, basesolutionlist%Count()
+      sp => GetBaseSolutionFromList(basesolutionlist, is)
+      ! 
+      ! -- now loop over exchanges
+      do ie = 1, baseexchangelist%Count()
+        ep => GetBaseExchangeFromList(baseexchangelist, ie)
+        !
+        ! -- and add when it affects (any model in) the solution matrix
+        models_in_solution => sp%get_models()
+        do im = 1, models_in_solution%Count()
+          mp => GetBaseModelFromList(models_in_solution, im)
+          if (ep%connects_model(mp)) then
+            ! 
+            ! -- add to solution (and only once)
+            call sp%add_exchange(ep)
+            exit
+          end if
+        end do
+      end do
+    enddo
+end subroutine assign_exchanges
 
   subroutine add_model(im, mtype, mname)
 ! ******************************************************************************
