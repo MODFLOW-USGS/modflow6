@@ -189,7 +189,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
 	        \item The UZF water-content observation by depth was giving an error, because a check was using the wrong index to retrieve the cell top and bottom elevations for the requested observation.  The program was modified to use the correct index, and the output is now as expected.  Note that this bug is not related to the new WC keyword in the OPTIONS block, but rather is related to OBS6 output option.
-	        \item --
+	        \item Amend surfdep error check with landflag.  Deep cells (non-land surface cells) should not require surfdep > 0
 	\end{itemize}
 
 %	\underline{SOLUTION}
