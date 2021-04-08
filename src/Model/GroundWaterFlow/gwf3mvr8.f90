@@ -1155,6 +1155,11 @@ module GwfMvrModule
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%memoryPath)
     !
+    ! -- initialize ientries
+    do i = 1, this%maxcomb
+      this%ientries(i) = 0
+    end do
+    !
     ! -- setup the output table
     call this%mvr_setup_outputtab()
     !
