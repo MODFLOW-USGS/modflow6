@@ -1241,6 +1241,7 @@
         character(len=LINELENGTH) :: errmsg
         character(len=80), dimension(3) :: cerr
         integer(I4B) :: izero 
+        integer(I4B) :: icount
         integer(I4B) :: ierr
         real(DP) :: delta 
         ! -- data
@@ -1250,9 +1251,11 @@
         
 !       + + + FORMATS + + +                                               
  2000   FORMAT (/,' MATRIX IS SEVERELY NON-DIAGONALLY DOMINANT.',               &
-     &          /,' ADDING SMALL VALUE TO PIVOT (IMSLINEARSUB_PCU)')           
+     &          /,' ADDED SMALL VALUE TO PIVOT ', i0, ' TIMES IN',              &
+     &            ' IMSLINEARSUB_PCU.')           
 !       + + + CODE + + +                                                  
         izero = 0 
+        icount = 0
         delta = DZERO 
         PCSCALE: DO
           SELECT CASE(IPC) 
@@ -1284,12 +1287,23 @@
           delta = 1.5D0 * delta + 0.001 
           izero = 0 
           IF (delta > DHALF) THEN 
-            WRITE(IOUT,2000) 
             delta = DHALF 
             izero = 2 
           END IF
+          icount = icount + 1
+          !
+          ! -- terminate pcscale loop if not making progress
+          if (icount > 10) then
+            exit PCSCALE
+          end if
         END DO PCSCALE
-!---------RETURN                                                        
+        !
+        ! -- write error message if small value added to pivot
+        if (icount > 0) then
+          write(IOUT, 2000) icount
+        end if
+        !
+        ! -- return
         RETURN 
       END SUBROUTINE IMSLINEARSUB_PCU 
 !                                                                       
