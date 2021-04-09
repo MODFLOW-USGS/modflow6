@@ -27,7 +27,6 @@ module UzfCellGroupModule
     real(DP), dimension(:, :), pointer, contiguous :: uzflst => null()
     real(DP), dimension(:, :), pointer, contiguous :: uzdpst => null()
     integer(I4B), pointer, dimension(:), contiguous :: nwavst => null()
-    real(DP), pointer, dimension(:), contiguous :: uzolsflx => null()
     real(DP), pointer, dimension(:), contiguous :: uzstor => null()
     real(DP), pointer, dimension(:), contiguous :: delstor => null()
     real(DP), pointer, dimension(:), contiguous :: totflux => null()
@@ -46,7 +45,6 @@ module UzfCellGroupModule
     real(DP), pointer, dimension(:), contiguous :: celtop => null()
     real(DP), pointer, dimension(:), contiguous :: celbot => null()
     real(DP), pointer, dimension(:), contiguous :: landtop => null()
-    real(DP), pointer, dimension(:), contiguous :: cvlm1 => null()
     real(DP), pointer, dimension(:), contiguous :: watab => null()
     real(DP), pointer, dimension(:), contiguous :: watabold => null()
     real(DP), pointer, dimension(:), contiguous :: vks => null()
@@ -120,7 +118,6 @@ module UzfCellGroupModule
       call mem_allocate(this%uzflst, nwav, ncells, 'UZFLST', memory_path)
       call mem_allocate(this%uzspst, nwav, ncells, 'UZSPST', memory_path)
       call mem_allocate(this%nwavst, ncells, 'NWAVST', memory_path)
-      call mem_allocate(this%uzolsflx, ncells, 'UZOLSFLX', memory_path)
       call mem_allocate(this%thtr, ncells, 'THTR', memory_path)
       call mem_allocate(this%thts, ncells, 'THTS', memory_path)
       call mem_allocate(this%thti, ncells, 'THTI', memory_path)
@@ -144,7 +141,6 @@ module UzfCellGroupModule
       call mem_allocate(this%celtop, ncells, 'CELTOP', memory_path)
       call mem_allocate(this%celbot, ncells, 'CELBOT', memory_path)
       call mem_allocate(this%landtop, ncells, 'LANDTOP', memory_path)
-      call mem_allocate(this%cvlm1, ncells, 'CVLM1', memory_path)
       call mem_allocate(this%watab, ncells, 'WATAB', memory_path)
       call mem_allocate(this%watabold, ncells, 'WATABOLD', memory_path)
       call mem_allocate(this%surfdep, ncells, 'SURFDEP', memory_path)
@@ -166,7 +162,6 @@ module UzfCellGroupModule
       allocate(this%uzflst(nwav, ncells))
       allocate(this%uzspst(nwav, ncells))
       allocate(this%nwavst(ncells))
-      allocate(this%uzolsflx(ncells))
       allocate(this%thtr(ncells))
       allocate(this%thts(ncells))
       allocate(this%thti(ncells))
@@ -190,7 +185,6 @@ module UzfCellGroupModule
       allocate(this%celtop(ncells))
       allocate(this%celbot(ncells))
       allocate(this%landtop(ncells))
-      allocate(this%cvlm1(ncells))
       allocate(this%watab(ncells))
       allocate(this%watabold(ncells))
       allocate(this%surfdep(ncells))
@@ -212,7 +206,6 @@ module UzfCellGroupModule
       this%uzflst(:, icell) = DZERO
       this%uzspst(:, icell) = DZERO
       this%nwavst(icell) = 1
-      this%uzolsflx(icell) = DZERO
       this%thtr(icell) = DZERO
       this%thts(icell) = DZERO
       this%thti(icell) = DZERO
@@ -236,7 +229,6 @@ module UzfCellGroupModule
       this%celtop(icell) = DZERO
       this%celbot(icell) = DZERO
       this%landtop(icell) = DZERO
-      this%cvlm1(icell) = DZERO
       this%watab(icell) = DZERO
       this%watabold(icell) = DZERO
       this%surfdep(icell) = DZERO
@@ -278,7 +270,6 @@ module UzfCellGroupModule
       deallocate(this%uzflst)
       deallocate(this%uzspst)
       deallocate(this%nwavst)
-      deallocate(this%uzolsflx)
       deallocate(this%thtr)
       deallocate(this%thts)
       deallocate(this%thti)
@@ -302,7 +293,6 @@ module UzfCellGroupModule
       deallocate(this%celtop)
       deallocate(this%celbot)
       deallocate(this%landtop)
-      deallocate(this%cvlm1)
       deallocate(this%watab)
       deallocate(this%watabold)
       deallocate(this%surfdep)
@@ -323,7 +313,6 @@ module UzfCellGroupModule
       call mem_deallocate(this%uzflst)
       call mem_deallocate(this%uzspst)
       call mem_deallocate(this%nwavst)
-      call mem_deallocate(this%uzolsflx)
       call mem_deallocate(this%thtr)
       call mem_deallocate(this%thts)
       call mem_deallocate(this%thti)
@@ -347,7 +336,6 @@ module UzfCellGroupModule
       call mem_deallocate(this%celtop)
       call mem_deallocate(this%celbot)
       call mem_deallocate(this%landtop)
-      call mem_deallocate(this%cvlm1)
       call mem_deallocate(this%watab)
       call mem_deallocate(this%watabold)
       call mem_deallocate(this%surfdep)
@@ -1162,12 +1150,10 @@ module UzfCellGroupModule
       if (top > DZERO) then
         this%uzstor(icell) = this%uzdpst(1, icell) * top * this%uzfarea(icell)
         this%uzspst(1, icell) = DZERO
-        this%uzolsflx(icell) = this%uzflst(1, icell)
       else
         this%uzstor(icell) = DZERO
         this%uzflst(1, icell) = DZERO
         this%uzspst(1, icell) = DZERO
-        this%uzolsflx(icell) = DZERO
       end if
       !
       ! no unsaturated zone
@@ -1177,7 +1163,6 @@ module UzfCellGroupModule
       this%uzspst(1, icell) = DZERO
       this%uzthst(1, icell) = this%thtr(icell)
       this%uzstor(icell) = DZERO   
-      this%uzolsflx(icell) = this%finf(icell)
     end if
     !
     ! -- return
@@ -1897,16 +1882,38 @@ module UzfCellGroupModule
     integer(I4B), intent(inout) :: ierr
     ! -- local
     type(UzfCellGroupType) :: uzfktemp
-    real(DP) :: diff,thetaout,fm,st
-    real(DP) :: thtsrinv,epsfksthts,fmp
-    real(DP) :: fktho,theta1,theta2,flux1,flux2
-    real(DP) :: hcap,ha,factor,tho,depth
-    real(DP) :: extwc1,petsub
-    integer(I4B) :: i,j,jhold,jk,kj,kk,numadd,k,nwv,itest
+    real(DP) :: diff
+    real(DP) :: thetaout
+    real(DP) :: fm
+    real(DP) :: st
+    real(DP) :: thtsrinv
+    real(DP) :: epsfksthts
+    real(DP) :: fmp
+    real(DP) :: fktho
+    real(DP) :: theta1
+    real(DP) :: theta2
+    real(DP) :: flux1
+    real(DP) :: flux2
+    real(DP) :: hcap
+    real(DP) :: factor
+    real(DP) :: tho
+    real(DP) :: depth
+    real(DP) :: extwc1
+    real(DP) :: petsub
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: jhold
+    integer(I4B) :: jk
+    integer(I4B) :: kj
+    integer(I4B) :: kk
+    integer(I4B) :: numadd
+    integer(I4B) :: k
+    integer(I4B) :: nwv
+    integer(I4B) :: itest
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
-    this%etact = DZERO
+    this%etact(icell) = DZERO
     if (this%extdpuz(icell) < DEM7) return
     petsub = this%rootact(icell) * this%pet(icell) * this%extdpuz(icell) / this%extdp(icell)
     thetaout = delt * petsub / this%extdp(icell)
@@ -1917,7 +1924,6 @@ module UzfCellGroupModule
     if (st < DEM4) return
     !
     ! -- allocate temporary wave storage.
-    ha = this%ha(icell)
     nwv = this%nwavst(icell)
     itest = 0
     call uzfktemp%init(1, nwv)
@@ -1925,7 +1931,7 @@ module UzfCellGroupModule
     ! store original wave characteristics
     call uzfktemp%wave_shift(this, 1, icell, 0, 1, nwv, 1)
     factor = DONE
-    this%etact = DZERO
+    this%etact(icell) = DZERO
     if (this%thts(icell) - this%thtr(icell) < DEM7) then
       thtsrinv = 1.0 / DEM7
     else
@@ -2159,7 +2165,7 @@ module UzfCellGroupModule
         ! -- aet greater than pet, reset and try again
         call this%wave_shift(uzfktemp, icell, 1, 0, 1, nwv, 1)
         this%nwavst(icell) = nwv
-        this%etact = DZERO
+        this%etact(icell) = DZERO
       else
         itest = 1
       end if
