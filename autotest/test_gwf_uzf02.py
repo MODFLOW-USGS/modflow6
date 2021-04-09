@@ -278,7 +278,6 @@ def eval_flow(sim):
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     uzet = bobj.get_data(text='UZET')
     uz_answer = [-0.00431989] + 14 * [0.]
-    uz_anwer = np.array(uz_answer)
     for uz in uzet:
         assert np.allclose(uz['q'], uz_answer), 'unsat ET is not correct'
 
