@@ -32,6 +32,7 @@ for s in ex:
 ddir = "data"
 nlay, nrow, ncol = 15, 1, 1
 
+
 def build_models():
 
     perlen = [17.7]
@@ -45,12 +46,12 @@ def build_models():
     botm = [top - (k + 1) * delv for k in range(nlay)]
     strt = -22.0
     laytyp = 1
-    ss = 0.
+    ss = 0.0
     sy = 0.1
 
     # unsat props
-    seconds_to_days = 86400.
-    hk = 4.e-6 * seconds_to_days
+    seconds_to_days = 86400.0
+    hk = 4.0e-6 * seconds_to_days
     thts = 0.4
     thtr = 0.2
     thti = thtr
@@ -72,12 +73,10 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
-
         # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim,
-                                     time_units='DAYS',
-                                     nper=nper,
-                                     perioddata=tdis_rc)
+        tdis = flopy.mf6.ModflowTdis(
+            sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+        )
 
         # create gwf model
         gwfname = name
@@ -142,7 +141,7 @@ def build_models():
 
         # ghb
         ghbspdict = {
-            0: [[(nlay - 1, 0, 0), strt, hk / (.5 * delv)]],
+            0: [[(nlay - 1, 0, 0), strt, hk / (0.5 * delv)]],
         }
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
@@ -154,22 +153,60 @@ def build_models():
 
         # note: for specifying lake number, use fortran indexing!
         uzf_obs = {
-            name + ".uzf.obs.csv": [
-                ("wc{}".format(k + 1), "water-content", k + 1, .5 * delv)
+            name
+            + ".uzf.obs.csv": [
+                ("wc{}".format(k + 1), "water-content", k + 1, 0.5 * delv)
                 for k in range(nlay)
             ]
         }
 
         surfdep = 0.0001
         eps = 4
-        uzf_pkdat = (
-            [[0, (0, 0, 0), 1, 1, surfdep, hk, thtr, thts, thti, brooks_corey_epsilon, "uzf01"]] +
-            [[k, (k, 0, 0), 0, k + 1, surfdep, hk, thtr, thts, thti, brooks_corey_epsilon, "uzf0{}".format(k+1)]
-            for k in range(1, nlay)]
-        )
+        uzf_pkdat = [
+            [
+                0,
+                (0, 0, 0),
+                1,
+                1,
+                surfdep,
+                hk,
+                thtr,
+                thts,
+                thti,
+                brooks_corey_epsilon,
+                "uzf01",
+            ]
+        ] + [
+            [
+                k,
+                (k, 0, 0),
+                0,
+                k + 1,
+                surfdep,
+                hk,
+                thtr,
+                thts,
+                thti,
+                brooks_corey_epsilon,
+                "uzf0{}".format(k + 1),
+            ]
+            for k in range(1, nlay)
+        ]
         uzf_pkdat[-1][3] = -1
-        uzf_spd = {0: [[0, infiltration_rate, evapotranspiration_rate,
-                        evt_extinction_depth, 0., 0., 0., 0.],]}
+        uzf_spd = {
+            0: [
+                [
+                    0,
+                    infiltration_rate,
+                    evapotranspiration_rate,
+                    evt_extinction_depth,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                ],
+            ]
+        }
         uzf = flopy.mf6.ModflowGwfuzf(
             gwf,
             print_input=True,
@@ -201,8 +238,8 @@ def build_models():
         )
 
         obs_lst = []
-        obs_lst.append(['obs1', "head", (0, 0, 0)])
-        obs_lst.append(['obs2', "head", (1, 0, 0)])
+        obs_lst.append(["obs1", "head", (0, 0, 0)])
+        obs_lst.append(["obs2", "head", (1, 0, 0)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -224,13 +261,14 @@ def make_plot(sim, obsvals):
     obsvals = np.array(obsvals)
 
     import matplotlib.pyplot as plt
+
     fig = plt.figure(figsize=(4, 6))
     ax = fig.add_subplot(1, 1, 1)
-    depth = np.arange(1, 31, 2.)
+    depth = np.arange(1, 31, 2.0)
     for row in obsvals:
-        label = 'time {}'.format(row[0])
+        label = "time {}".format(row[0])
         ax.plot(row[1:], depth, label=label)
-    ax.set_ylim(0., 20.)
+    ax.set_ylim(0.0, 20.0)
     ax.invert_yaxis()
     plt.legend()
 
@@ -255,12 +293,12 @@ def eval_flow(sim):
 
     bpth = os.path.join(ws, name + ".uzf.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    gwf_recharge = bobj.get_data(text='GWF')
+    gwf_recharge = bobj.get_data(text="GWF")
 
     bpth = os.path.join(ws, name + ".bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    flow_ja_face = bobj.get_data(text='FLOW-JA-FACE')
-    uzf_recharge = bobj.get_data(text='UZF-GWRCH')
+    flow_ja_face = bobj.get_data(text="FLOW-JA-FACE")
+    uzf_recharge = bobj.get_data(text="UZF-GWRCH")
     errmsg = "uzf rch is not equal to negative gwf rch"
     for gwr, uzr in zip(gwf_recharge, uzf_recharge):
         assert np.allclose(gwr["q"], -uzr["q"]), errmsg
@@ -271,15 +309,17 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = 'min or max residual too large {} {}'.format(res.min(), res.max())
-        assert np.allclose(res, 0., atol=1.e-6), errmsg
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
+        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     bpth = os.path.join(ws, name + ".uzf.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    uzet = bobj.get_data(text='UZET')
-    uz_answer = [-0.00431989] + 14 * [0.]
+    uzet = bobj.get_data(text="UZET")
+    uz_answer = [-0.00431989] + 14 * [0.0]
     for uz in uzet:
-        assert np.allclose(uz['q'], uz_answer), 'unsat ET is not correct'
+        assert np.allclose(uz["q"], uz_answer), "unsat ET is not correct"
 
     # Make plot of obs
     fpth = os.path.join(sim.simpath, name + ".uzf.obs.csv")
