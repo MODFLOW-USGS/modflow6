@@ -24,7 +24,10 @@ def get_home_dir():
 
     home = os.path.expanduser("~")
 
-    if not is_CI:
+    if is_CI:
+        if sys.platform.lower() == "win32":
+            home = os.path.abspath(os.path.join(".."))
+    else:
         cwd_pth = os.getcwd()
 
         # convert current working directory to a list
