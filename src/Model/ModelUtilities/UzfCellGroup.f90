@@ -1906,7 +1906,7 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
-    this%etact = DZERO
+    this%etact(icell) = DZERO
     if (this%extdpuz(icell) < DEM7) return
     petsub = this%rootact(icell) * this%pet(icell) * this%extdpuz(icell) / this%extdp(icell)
     thetaout = delt * petsub / this%extdp(icell)
@@ -1925,7 +1925,7 @@ module UzfCellGroupModule
     ! store original wave characteristics
     call uzfktemp%wave_shift(this, 1, icell, 0, 1, nwv, 1)
     factor = DONE
-    this%etact = DZERO
+    this%etact(icell) = DZERO
     if (this%thts(icell) - this%thtr(icell) < DEM7) then
       thtsrinv = 1.0 / DEM7
     else
