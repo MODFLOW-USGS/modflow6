@@ -84,4 +84,5 @@ jobs:
 
     - name: Test applications
       run: |
+        pwd
         nosetests -v --with-id --with-timer -w ./autotest
