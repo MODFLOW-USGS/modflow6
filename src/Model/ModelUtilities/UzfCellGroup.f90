@@ -2264,7 +2264,6 @@ module UzfCellGroupModule
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: carea
-    real(DP) :: wc
     real(DP) :: uzwatvol
     real(DP) :: theta_r
     real(DP) :: thk
