@@ -1429,7 +1429,9 @@ contains
       !
       ! -- set mean water contents for cells
       !    analogous to what NWT writes to the linker file for MT3D
-      this%watercontent(i) = this%uzfobj%get_water_content(i)
+      if (this%iwcontout) then
+        this%watercontent(i) = this%uzfobj%get_water_content(i)
+      end if
       !
       ! -- calculate and store remaining budget terms
       this%gwet(i) = this%uzfobj%gwet(i)
