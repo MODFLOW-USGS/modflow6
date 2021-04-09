@@ -209,7 +209,7 @@ def build_models():
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
             saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-            printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+            printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
         )
 
         obs_lst = []
