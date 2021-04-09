@@ -26,7 +26,7 @@ def get_home_dir():
 
     if is_CI:
         if sys.platform.lower() == "win32":
-            home = os.path.abspath(os.path.join("..", ".."))
+            home = os.path.normpath(os.path.join(os.getcwd(), "..", ".."))
     else:
         cwd_pth = os.getcwd()
 
