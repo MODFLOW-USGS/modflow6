@@ -2475,11 +2475,14 @@ contains
           dmax = this%uzfobj%celtop(iuzid) - this%uzfobj%celbot(iuzid)
           ! -- check that obs depth is valid; call store_error if not
           ! -- need to think about a way to put bounds on this depth
-          if (obsdepth < DZERO .or. obsdepth > dmax) then
+          ! -- Also, an observation depth of 0.0, whether a landflag == 1 object
+          ! -- or a subsurface object, is not legit since this would be at a
+          ! -- a layer interface and therefore a discontinuity.  
+          if (obsdepth <= DZERO .or. obsdepth > dmax) then
             write (errmsg, '(a,3(1x,a),1x,g0,1x,a,1x,g0,a)')                       &
               trim(adjustl(obsrv%ObsTypeId)), 'for observation',                   &
               trim(adjustl(obsrv%Name)), 'specified depth (', obsdepth,            &
-              ') must be between 0.0 and ', dmax, '.'
+              ') must be greater than 0.0 and less than ', dmax, '.'
             call store_error(errmsg)
           endif
         else
