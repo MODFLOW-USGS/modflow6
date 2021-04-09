@@ -1429,7 +1429,7 @@ contains
       !
       ! -- set mean water contents for cells
       !    analogous to what NWT writes to the linker file for MT3D
-      if (this%iwcontout) then
+      if (this%iwcontout /= 0) then
         this%watercontent(i) = this%uzfobj%get_water_content(i)
       end if
       !
