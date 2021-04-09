@@ -346,6 +346,13 @@ def eval_results(sim):
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
 
+    stage_answer = [
+        0.69657598, 1.10039253, 1.36349007, 1.56985213, 1.74565051,
+        1.90449531, 2.0406385,  2.15064501, 2.25102511, 2.34427579,
+    ]
+    errmsg = 'lake stage does not match known answer'
+    assert np.allclose(stage_answer, stage.flatten()), errmsg
+
     if False:
         make_plot(sim, times, head, stage)
         make_plot_xsect(sim, head, stage)
