@@ -33,9 +33,10 @@ for s in ex:
 ddir = "data"
 nlay, nrow, ncol = 100, 1, 1
 
+
 def build_models():
 
-    perlen = [500.]
+    perlen = [500.0]
     nper = len(perlen)
     nstp = [10]
     tsmult = nper * [1.0]
@@ -47,7 +48,7 @@ def build_models():
     strt = 0.5
     hk = 1.0
     laytyp = 1
-    ss = 0.
+    ss = 0.0
     sy = 0.1
 
     tdis_rc = []
@@ -63,12 +64,10 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
-
         # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim,
-                                     time_units='DAYS',
-                                     nper=nper,
-                                     perioddata=tdis_rc)
+        tdis = flopy.mf6.ModflowTdis(
+            sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+        )
 
         # create gwf model
         gwfname = name
@@ -145,7 +144,8 @@ def build_models():
 
         # note: for specifying lake number, use fortran indexing!
         uzf_obs = {
-            name + ".uzf.obs.csv": [
+            name
+            + ".uzf.obs.csv": [
                 ("wc2", "water-content", 2, 0.5),
                 ("wc50", "water-content", 50, 0.5),
                 ("wcbn2", "water-content", "uzf02", 0.5),
@@ -159,14 +159,31 @@ def build_models():
         thti = thtr
         thts = sy
         eps = 4
-        uzf_pkdat = (
-            [[0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]] +
-            [[k, (k, 0, 0), 0, k + 1, sd, vks, thtr, thts, thti, eps, "uzf0{}".format(k+1)]
-            for k in range(1, nlay - 1)]
-        )
+        uzf_pkdat = [
+            [0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]
+        ] + [
+            [
+                k,
+                (k, 0, 0),
+                0,
+                k + 1,
+                sd,
+                vks,
+                thtr,
+                thts,
+                thti,
+                eps,
+                "uzf0{}".format(k + 1),
+            ]
+            for k in range(1, nlay - 1)
+        ]
         uzf_pkdat[-1][3] = -1
         infiltration = 2.01
-        uzf_spd = {0: [[0, infiltration, 0., 0., 0., 0., 0., 0.],]}
+        uzf_spd = {
+            0: [
+                [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ]
+        }
         uzf = flopy.mf6.ModflowGwfuzf(
             gwf,
             print_input=True,
@@ -196,8 +213,8 @@ def build_models():
         )
 
         obs_lst = []
-        obs_lst.append(['obs1', "head", (0, 0, 0)])
-        obs_lst.append(['obs2', "head", (1, 0, 0)])
+        obs_lst.append(["obs1", "head", (0, 0, 0)])
+        obs_lst.append(["obs2", "head", (1, 0, 0)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -223,12 +240,12 @@ def eval_flow(sim):
 
     bpth = os.path.join(ws, name + ".uzf.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    gwf_recharge = bobj.get_data(text='GWF')
+    gwf_recharge = bobj.get_data(text="GWF")
 
     bpth = os.path.join(ws, name + ".bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    flow_ja_face = bobj.get_data(text='FLOW-JA-FACE')
-    uzf_recharge = bobj.get_data(text='UZF-GWRCH')
+    flow_ja_face = bobj.get_data(text="FLOW-JA-FACE")
+    uzf_recharge = bobj.get_data(text="UZF-GWRCH")
     errmsg = "uzf rch is not equal to negative gwf rch"
     for gwr, uzr in zip(gwf_recharge, uzf_recharge):
         assert np.allclose(gwr["q"], -uzr["q"]), errmsg
@@ -239,8 +256,10 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = 'min or max residual too large {} {}'.format(res.min(), res.max())
-        assert np.allclose(res, 0., atol=1.e-6), errmsg
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
+        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
 
