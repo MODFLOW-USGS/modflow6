@@ -34,6 +34,8 @@ def get_home_dir():
         for idx, pth in enumerate(cwd_list):
             if len(pth) < 1:
                 cwd_list[idx] = os.path.sep
+            if pth.endswith(":") and sys.platform.lower() == "win32":
+                cwd_list[idx] += os.path.sep
 
         ipos = 0
         for idx, s in enumerate(cwd_list):
