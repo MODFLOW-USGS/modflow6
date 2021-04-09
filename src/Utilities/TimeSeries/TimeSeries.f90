@@ -646,7 +646,7 @@ contains
     ! -- local
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, t01, t1, &
                         timediff, value, value0, value1, valuediff, currVal, nextVal
-    logical :: ldone
+    logical :: ldone, lprocess
     character(len=LINELENGTH) :: errmsg
     type(ListNodeType), pointer :: tslNodePreceding => null()
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
@@ -684,21 +684,22 @@ contains
           endif
           !
           currVal = currRecord%tsrValue
+          lprocess = .false.
           if (associated(currNode%nextNode)) then
             nextNode => currNode%nextNode
             nextObj => nextNode%GetItem()
             nextRecord => CastAsTimeSeriesRecordType(nextObj)
             nextTime = nextRecord%tsrTime
             nextVal = nextRecord%tsrValue
+            lprocess = .true.
           elseif (extendToEndOfSimulation) then
             ! -- Last time series value extends forever, so integrate the final value over all simulation time after the end of the series
             nextTime = time1
             nextVal = currVal
-          else
-            ldone = .true.
+            lprocess = .true.
           endif
           !
-          if (.not. ldone) then
+          if (lprocess) then
             ! -- determine lower and upper limits of time span of interest
             !    within current interval
             if (currTime > time0 .or. IS_SAME(currTime, time0)) then
