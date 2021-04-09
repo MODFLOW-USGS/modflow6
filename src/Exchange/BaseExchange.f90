@@ -1,10 +1,10 @@
 module BaseExchangeModule
   
-  use KindModule,         only: DP, I4B
+  use KindModule,         only: DP, I4B, LGP
   use ConstantsModule,    only: LENEXCHANGENAME, LENMEMPATH
-  use BaseSolutionModule, only: BaseSolutionType
-  use ListModule,         only: ListType
-  
+  use ListModule,         only: ListType  
+  use BaseModelModule,    only: BaseModelType
+
   implicit none
   
   private
@@ -14,7 +14,6 @@ module BaseExchangeModule
   type, abstract :: BaseExchangeType
     character(len=LENEXCHANGENAME)   :: name                !< the name of this exchange
     character(len=LENMEMPATH)        :: memoryPath          !< the location in the memory manager where the variables are stored
-    class(BaseSolutionType), pointer :: solution => null()
     integer(I4B)                     :: id
   contains
     procedure(exg_df), deferred :: exg_df
@@ -24,6 +23,7 @@ module BaseExchangeModule
     procedure :: exg_ot
     procedure :: exg_fp
     procedure :: exg_da
+    procedure :: connects_model
   end type BaseExchangeType
 
   abstract interface
@@ -129,6 +129,18 @@ module BaseExchangeModule
     ! -- Return
     return
   end subroutine exg_da
+
+  !> @brief should return true when the exchange should be
+  !! added to the solution where the model resides
+  !<
+  function connects_model(this, model) result(is_connected)
+    class(BaseExchangeType) :: this                     !< the instance of the exchange
+    class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
+    logical(LGP) :: is_connected                        !< true, when connected
+
+    is_connected = .false.
+
+  end function
 
   function CastAsBaseExchangeClass(obj) result (res)
 ! ******************************************************************************
