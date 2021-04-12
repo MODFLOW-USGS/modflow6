@@ -143,7 +143,6 @@ module UzfModule
     procedure :: bnd_ot_package_flows => uzf_ot_package_flows
     procedure :: bnd_ot_dv => uzf_ot_dv
     procedure :: bnd_ot_bdsummary => uzf_ot_bdsummary
-    procedure :: bnd_ot => uzf_ot
     procedure :: bnd_fc => uzf_fc
     procedure :: bnd_fn => uzf_fn
     procedure :: bnd_da => uzf_da
@@ -1608,43 +1607,6 @@ contains
     call this%budobj%write_budtable(kstp, kper, iout)
   end subroutine uzf_ot_bdsummary
   
-  subroutine uzf_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-! ******************************************************************************
-! uzf_ot -- UZF package budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(UzfType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    integer(I4B),intent(in) :: ihedfl
-    integer(I4B),intent(in) :: ibudfl
-    ! -- local
-    ! -- format
- 2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
-! ------------------------------------------------------------------------------
-    !
-    ! -- write uzf moisture content
-    if (ihedfl /= 0 .and. this%iprwcont /= 0) then
-      write (iout, 2000) 'UZF (', trim(this%packName), ') WATER-CONTENT', kper, kstp
-      ! add code to write moisture content
-    end if
-    !
-    ! -- Output uzf flow table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
-    end if
-    !
-    ! -- Output uzf budget
-    call this%budobj%write_budtable(kstp, kper, iout)
-    !
-    ! -- return
-    return
-  end subroutine uzf_ot
-
   subroutine uzf_solve(this, reset_state)
 ! ******************************************************************************
 ! uzf_solve -- Formulate the HCOF and RHS terms
