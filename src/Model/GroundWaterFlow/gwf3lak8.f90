@@ -205,7 +205,6 @@ module LakModule
     procedure :: bnd_fn => lak_fn
     procedure :: bnd_cc => lak_cc
     procedure :: bnd_cq => lak_cq
-    procedure :: bnd_ot => lak_ot
     procedure :: bnd_ot_model_flows => lak_ot_model_flows
     procedure :: bnd_ot_package_flows => lak_ot_package_flows
     procedure :: bnd_ot_dv => lak_ot_dv
@@ -4387,59 +4386,6 @@ contains
     call this%budobj%write_budtable(kstp, kper, iout)
   end subroutine lak_ot_bdsummary
   
-  subroutine lak_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-    ! **************************************************************************
-    ! lak_ot -- Output package budget
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    ! -- dummy
-    class(LakType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    integer(I4B),intent(in) :: ihedfl
-    integer(I4B),intent(in) :: ibudfl
-    ! -- locals
-    integer(I4B) :: n
-    real(DP) :: stage
-    real(DP) :: sa
-    real(DP) :: wa
-    real(DP) :: v
-    ! -- format
-    ! --------------------------------------------------------------------------
-    !
-    ! -- Output lake stage table
-    if (ihedfl /= 0 .and. this%iprhed /= 0) then
-      !
-      ! -- set table kstp and kper
-      call this%stagetab%set_kstpkper(kstp, kper)
-      !
-      ! -- write data
-      do n = 1, this%nlakes
-        stage = this%xnewpak(n)
-        call this%lak_calculate_sarea(n, stage, sa)
-        call this%lak_calculate_warea(n, stage, wa)
-        call this%lak_calculate_vol(n, stage, v)
-        if(this%inamedbound==1) then
-          call this%stagetab%add_term(this%lakename(n))
-        end if
-        call this%stagetab%add_term(n)
-        call this%stagetab%add_term(stage)
-        call this%stagetab%add_term(sa)
-        call this%stagetab%add_term(wa)
-        call this%stagetab%add_term(v)
-      end do
-    end if
-    !
-    ! -- Output lake budget summary table
-    call this%budobj%write_budtable(kstp, kper, iout)
-    !
-    ! -- return
-    return
-  end subroutine lak_ot
-
   subroutine lak_da(this)
     ! **************************************************************************
     ! lak_da -- Deallocate objects

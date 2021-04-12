@@ -53,7 +53,6 @@ module GwtIstModule
     procedure :: bnd_ot_model_flows => ist_ot_model_flows
     procedure :: bnd_ot_dv => ist_ot_dv
     procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
-    procedure :: bnd_ot => ist_ot
     procedure :: bnd_da => ist_da
     procedure :: allocate_scalars
     procedure :: read_dimensions => ist_read_dimensions
@@ -509,43 +508,6 @@ module GwtIstModule
     
   end subroutine ist_ot_bdsummary
   
-  subroutine ist_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-! ******************************************************************************
-! ist_ot -- Output package budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: nstp
-    ! -- dummy
-    class(GwtIstType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: ihedfl
-    integer(I4B), intent(in) :: ibudfl
-    ! -- local
-    integer(I4B) :: ipflg
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize
-    ipflg = 0
-    !
-    ! -- Print immobile domain concetrations to listing file
-    if (ihedfl /= 0) then
-      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), iout,                      &
-                           iprint_opt=ihedfl, isav_opt=0)
-    endif
-    !
-    ! -- Write budget to list file
-    call this%budget%budget_ot(kstp, kper, iout)
-    !
-    ! -- return
-    return
-  end subroutine ist_ot
-
   subroutine ist_da(this)
 ! ******************************************************************************
 ! mst_da -- Deallocate variables
