@@ -179,7 +179,6 @@ module MawModule
     procedure :: bnd_ot_package_flows => maw_ot_package_flows
     procedure :: bnd_ot_dv => maw_ot_dv
     procedure :: bnd_ot_bdsummary => maw_ot_bdsummary
-    procedure :: bnd_ot => maw_ot
     procedure :: bnd_da => maw_da
     procedure :: define_listlabel
     ! -- methods for observations
@@ -2901,54 +2900,6 @@ contains
     call this%budobj%write_budtable(kstp, kper, iout)
   end subroutine maw_ot_bdsummary
   
-  subroutine maw_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-    ! **************************************************************************
-    ! maw_ot -- Output package budget
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    !
-    ! -- dummy
-    class(MawType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    integer(I4B),intent(in) :: ihedfl
-    integer(I4B),intent(in) :: ibudfl
-    ! -- locals
-    integer(I4B) :: n
-    ! format
-    ! --------------------------------------------------------------------------
-     !
-     ! -- write maw head table
-     if (ihedfl /= 0 .and. this%iprhed /= 0) then
-      !
-      ! -- set table kstp and kper
-      call this%headtab%set_kstpkper(kstp, kper)
-      !
-      ! -- fill stage data
-      do n = 1, this%nmawwells
-        if(this%inamedbound==1) then
-          call this%headtab%add_term(this%cmawname(n))
-        end if
-        call this%headtab%add_term(n)
-        call this%headtab%add_term(this%xnewpak(n))
-      end do
-     end if
-    !
-    ! -- Output maw flow table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
-    end if
-    !
-    ! -- Output maw budget
-    call this%budobj%write_budtable(kstp, kper, iout)
-    !
-    ! -- return
-    return
-  end subroutine maw_ot
-
   subroutine maw_da(this)
 ! ******************************************************************************
 ! maw_da -- deallocate
