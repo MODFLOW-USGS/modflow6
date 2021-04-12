@@ -145,7 +145,6 @@ module SfrModule
     procedure :: bnd_ot_package_flows => sfr_ot_package_flows
     procedure :: bnd_ot_dv => sfr_ot_dv
     procedure :: bnd_ot_bdsummary => sfr_ot_bdsummary
-    procedure :: bnd_ot => sfr_ot
     procedure :: bnd_da => sfr_da
     procedure :: define_listlabel
     ! -- methods for observations
@@ -2025,6 +2024,9 @@ contains
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B) :: ibinun
+    character (len=20), dimension(:), allocatable :: cellidstr
+    integer(I4B) :: n
+    integer(I4B) :: node
     !
     ! -- write the flows from the budobj
     ibinun = 0
@@ -2039,7 +2041,26 @@ contains
     !
     ! -- Print lake flows table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
+      !
+      ! -- If there are any 'none' gwf connections then need to calculate
+      !    a vector of cellids and pass that in to the budget flow table because
+      !    the table assumes that there are maxbound gwf entries, which is not
+      !    the case if any 'none's are specified.
+      if (this%ianynone > 0) then
+        allocate(cellidstr(this%maxbound))
+        do n = 1, this%maxbound
+          node = this%igwfnode(n)
+          if (node > 0) then
+            call this%dis%noder_to_string(node, cellidstr(n))
+          else
+            cellidstr(n) = 'NONE'
+          end if
+        end do
+        call this%budobj%write_flowtable(this%dis, kstp, kper, cellidstr)
+        deallocate(cellidstr)
+      else
+        call this%budobj%write_flowtable(this%dis, kstp, kper)
+      end if
     end if
     
   end subroutine sfr_ot_package_flows
@@ -2144,109 +2165,6 @@ contains
     call this%budobj%write_budtable(kstp, kper, iout)
   end subroutine sfr_ot_bdsummary
   
-  subroutine sfr_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-! ******************************************************************************
-! sfr_ot -- Output package budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(SfrType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    integer(I4B),intent(in) :: ihedfl
-    integer(I4B),intent(in) :: ibudfl
-    ! -- locals
-    character (len=20) :: cellid
-    character (len=20), dimension(:), allocatable :: cellidstr
-    integer(I4B) :: n
-    integer(I4B) :: node
-    real(DP) :: hgwf
-    real(DP) :: sbot
-    real(DP) :: depth, stage
-    real(DP) :: w, cond, grad
-    ! -- format
-! ------------------------------------------------------------------------------
-     !
-     ! -- write sfr stage and depth table
-     if (ihedfl /= 0 .and. this%iprhed /= 0) then
-      !
-      ! -- set table kstp and kper
-      call this%stagetab%set_kstpkper(kstp, kper)
-      !
-      ! -- fill stage data
-      do n = 1, this%maxbound
-        node = this%igwfnode(n)
-        if (node > 0) then
-          call this%dis%noder_to_string(node, cellid)
-          hgwf = this%xnew(node)
-        else
-          cellid = 'NONE'
-        end if
-        if(this%inamedbound==1) then
-          call this%stagetab%add_term(this%boundname(n))
-        end if
-        call this%stagetab%add_term(n)
-        call this%stagetab%add_term(cellid)
-        depth = this%depth(n)
-        stage = this%stage(n)
-        w = this%top_width_wet(n, depth)
-        call this%stagetab%add_term(stage)
-        call this%stagetab%add_term(depth)
-        call this%stagetab%add_term(w)
-        call this%sfr_calc_cond(n, cond)
-        if (node > 0) then
-          sbot = this%strtop(n) - this%bthick(n)
-          if (hgwf < sbot) then
-            grad = stage - sbot
-          else
-            grad = stage - hgwf
-          end if
-          grad = grad / this%bthick(n)
-          call this%stagetab%add_term(hgwf)
-          call this%stagetab%add_term(cond)
-          call this%stagetab%add_term(grad)
-        else
-          call this%stagetab%add_term('--')
-          call this%stagetab%add_term('--')
-          call this%stagetab%add_term('--')
-        end if
-      end do
-     end if
-    !
-    ! -- Output sfr flow table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      !
-      ! -- If there are any 'none' gwf connections then need to calculate
-      !    a vector of cellids and pass that in to the budget flow table because
-      !    the table assumes that there are maxbound gwf entries, which is not
-      !    the case if any 'none's are specified.
-      if (this%ianynone > 0) then
-        allocate(cellidstr(this%maxbound))
-        do n = 1, this%maxbound
-          node = this%igwfnode(n)
-          if (node > 0) then
-            call this%dis%noder_to_string(node, cellidstr(n))
-          else
-            cellidstr(n) = 'NONE'
-          end if
-        end do
-        call this%budobj%write_flowtable(this%dis, kstp, kper, cellidstr)
-        deallocate(cellidstr)
-      else
-        call this%budobj%write_flowtable(this%dis, kstp, kper)
-      end if
-    end if
-    !
-    ! -- Output sfr budget
-    call this%budobj%write_budtable(kstp, kper, iout)
-    !
-    ! -- return
-    return
-  end subroutine sfr_ot
-
   subroutine sfr_da(this)
 ! ******************************************************************************
 ! sfr_da -- deallocate

@@ -1,5 +1,6 @@
 """
-# Test uzf for the vs2d comparison problem in the uzf documentation
+# Test uzf for the vs2d comparison problem in the uzf documentation except in
+# this case there are 15 gwf and uzf cells, rather than just one cell.
 
 """
 
@@ -25,12 +26,12 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_uzf02a"]
+ex = ["gwf_uzf03a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
-nlay, nrow, ncol = 1, 1, 1
+nlay, nrow, ncol = 15, 1, 1
 
 
 def build_models():
@@ -41,7 +42,7 @@ def build_models():
     tsmult = nper * [1.0]
     delr = 1.0
     delc = 1.0
-    delv = 30.0
+    delv = 2.0
     top = 0.0
     botm = [top - (k + 1) * delv for k in range(nlay)]
     strt = -22.0
@@ -155,8 +156,8 @@ def build_models():
         uzf_obs = {
             name
             + ".uzf.obs.csv": [
-                ("wc{}".format(k + 1), "water-content", 1, depth)
-                for k, depth in enumerate(np.linspace(1, 20, 15))
+                ("wc{}".format(k + 1), "water-content", k + 1, 0.5 * delv)
+                for k in range(nlay)
             ]
         }
 
@@ -238,6 +239,7 @@ def build_models():
 
         obs_lst = []
         obs_lst.append(["obs1", "head", (0, 0, 0)])
+        obs_lst.append(["obs2", "head", (1, 0, 0)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -267,8 +269,7 @@ def make_plot(sim, obsvals):
 
     fig = plt.figure(figsize=(6, 3))
     ax = fig.add_subplot(1, 1, 1)
-    depth = np.arange(1, 20, 2.0)
-    depth = np.linspace(1, 20, 15)
+    depth = np.arange(1, 31, 2.0)
     for row in obsvals:
         label = "time {}".format(row[0])
         ax.plot(row[1:], depth, label=label, marker='o')
@@ -324,8 +325,8 @@ def eval_flow(sim):
     bpth = os.path.join(ws, name + ".uzf.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     uzet = bobj.get_data(text="UZET")
-    uz_answer = [-0.00432]
-    for uz in uzet[20:]:  #start at 20 when et can be met
+    uz_answer = [-0.00432] + 14 * [0.0]
+    for uz in uzet[20:]:
         assert np.allclose(uz["q"], uz_answer), "unsat ET is not correct"
 
     # Make plot of obs

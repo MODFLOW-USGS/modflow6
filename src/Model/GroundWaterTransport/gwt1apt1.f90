@@ -129,7 +129,6 @@ module GwtAptModule
     procedure :: pak_set_stressperiod
     procedure :: apt_accumulate_ccterm
     procedure :: bnd_cq => apt_cq
-    procedure :: bnd_ot => apt_ot
     procedure :: bnd_ot_package_flows => apt_ot_package_flows
     procedure :: bnd_ot_dv => apt_ot_dv
     procedure :: bnd_ot_bdsummary => apt_ot_bdsummary
@@ -1099,92 +1098,6 @@ module GwtAptModule
     call this%budobj%write_budtable(kstp, kper, iout)
   end subroutine apt_ot_bdsummary
   
-  subroutine apt_ot(this, kstp, kper, iout, ihedfl, ibudfl)
-! ******************************************************************************
-! apt_ot
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use InputOutputModule, only: UWWORD
-    ! -- dummy
-    class(GwtAptType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    integer(I4B),intent(in) :: ihedfl
-    integer(I4B),intent(in) :: ibudfl
-    ! -- local
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
-    integer(I4B) :: n
-    integer(I4B) :: iloc
-    real(DP) :: q
-    ! -- format
-    character(len=*),parameter :: fmthdr = &
-      "( 1X, ///1X, A, A, A, ' PERIOD ', I0, ' STEP ', I0)"
-! ------------------------------------------------------------------------------
-    !
-    ! -- write feature concentration
-    if (ihedfl /= 0 .and. this%iprconc /= 0) then
-      write (iout, fmthdr) 'FEATURE (', trim(this%packName), ') CONCENTRATION', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'feature', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'feature', n, q, ALIGNMENT=TABCENTER, SEP=' ')
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'feature', n, q, ALIGNMENT=TABCENTER)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'name', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'conc', n, q, ALIGNMENT=TABCENTER)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
-      ! -- write data
-      do n = 1, this%ncv
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      this%featname(n), n, q, ALIGNMENT=TABLEFT)
-        end if
-        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
-        call UWWORD(line, iloc, 11, TABREAL, text, n, this %xnewpak(n))
-        write(iout, '(1X,A)') line(1:iloc)
-      end do
-    end if
-    !
-    ! -- Output flow table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis, kstp, kper)
-    end if
-    !
-    !
-    ! -- Output budget
-    call this%budobj%write_budtable(kstp, kper, iout)
-    !
-    ! -- Return
-    return
-  end subroutine apt_ot
-
   subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars
