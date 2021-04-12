@@ -84,18 +84,11 @@ def get_model(idx, dir):
         ats_filerecord = name + ".ats"
 
     # create tdis package
-<<<<<<< HEAD
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
-=======
     tdis = flopy.mf6.ModflowTdis(sim,
                                  ats_filerecord=ats_filerecord,
                                  time_units='DAYS',
                                  nper=nper,
                                  perioddata=tdis_rc)
->>>>>>> feat(ats): adaptive time stepping
-
 
     # create gwf model
     gwfname = name
@@ -383,20 +376,6 @@ def eval_results(sim):
     head = hobj.get_alldata()
 
     stage_answer = [
-<<<<<<< HEAD
-        0.69657598,
-        1.10039253,
-        1.36349007,
-        1.56985213,
-        1.74565051,
-        1.90449531,
-        2.0406385,
-        2.15064501,
-        2.25102511,
-        2.34427579,
-    ]
-    errmsg = "lake stage does not match known answer"
-=======
          0.18656752, 0.26698475, 0.41029603, 0.5401282 , 0.65826109, 0.76623049,
          0.86559848, 0.9575622 , 1.03621155, 1.10294338, 1.16476142, 1.22239145,
          1.27639471, 1.32723404, 1.37526871, 1.42080773, 1.4641106 , 1.50539963,
@@ -408,7 +387,6 @@ def eval_results(sim):
          2.325628  , 2.34362223, 2.36140993
     ]
     errmsg = 'lake stage does not match known answer'
->>>>>>> feat(ats): adaptive time stepping
     assert np.allclose(stage_answer, stage.flatten()), errmsg
 
     if False:
