@@ -365,14 +365,10 @@ contains
     this%bdtxt(5) = '  UZF-GWD TO-MVR'
     !
     ! -- allocate and initialize watercontent array
-    if (this%iwcontout > 0) then
-      call mem_allocate(this%watercontent, this%nodes, 'WATERCONTENT', this%memoryPath)
-      do i = 1, this%nodes
-        this%watercontent(i) = DZERO
-      end do
-    else
-      call mem_allocate(this%watercontent, 0, 'WATERCONTENT', this%memoryPath)
-    end if   
+    call mem_allocate(this%watercontent, this%nodes, 'WATERCONTENT', this%memoryPath)
+    do i = 1, this%nodes
+      this%watercontent(i) = DZERO
+    end do  
     !
     ! -- allocate character array for aux budget text
     allocate(this%cauxcbc(this%cbcauxitems))
@@ -1429,9 +1425,7 @@ contains
       !
       ! -- set mean water contents for cells
       !    analogous to what NWT writes to the linker file for MT3D
-      if (this%iwcontout /= 0) then
-        this%watercontent(i) = this%uzfobj%get_water_content(i)
-      end if
+      this%watercontent(i) = this%uzfobj%get_water_content(i)
       !
       ! -- calculate and store remaining budget terms
       this%gwet(i) = this%uzfobj%gwet(i)
