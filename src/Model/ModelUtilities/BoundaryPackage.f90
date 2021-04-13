@@ -772,7 +772,6 @@ module BndModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kper
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     ! -- dummy
     class(BndType) :: this
