@@ -27,15 +27,17 @@ for s in ex:
 # store global gwf for subsequent plotting
 gwf = None
 
+
 def get_idomain(nlay, nrow, ncol, lakend):
     idomain = np.ones((nlay, nrow, ncol), dtype=int)
     for k, j in enumerate(lakend):
         idomain[k, 0, 0:j] = 0
     return idomain
 
+
 def get_model(idx, dir):
-    lx = 300.
-    lz = 45.
+    lx = 300.0
+    lz = 45.0
     nlay = 45
     nrow = 1
     ncol = 30
@@ -48,7 +50,7 @@ def get_model(idx, dir):
 
     perlen = [200.0]
     nstp = [10]
-    tsmult = [1.]
+    tsmult = [1.0]
 
     Kh = 1.0
     Kv = 1.0
@@ -69,10 +71,9 @@ def get_model(idx, dir):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim,
-                                 time_units='DAYS',
-                                 nper=nper,
-                                 perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = name
@@ -128,17 +129,17 @@ def get_model(idx, dir):
 
     sy = 0.3
     ss = np.zeros((nlay, nrow, ncol), dtype=float)
-    #ss[0, :, :] = sy
+    # ss[0, :, :] = sy
     idx = np.where(idomain == 0)
     for k, i, j in zip(*idx):
-        ss[k + 1, i, j] = 0. #sy
+        ss[k + 1, i, j] = 0.0  # sy
     sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, iconvert=1)
 
     irch = np.zeros((nrow, ncol), dtype=int)
     lake_vconnect = []
     idx = np.where(idomain == 0)
     for k, i, j in zip(*idx):
-        if(idomain[k + 1, i, j] == 1):
+        if idomain[k + 1, i, j] == 1:
             lake_vconnect.append((k + 1, i, j))
             irch[i, j] = k + 1
     nlakeconn = len(lake_vconnect)
@@ -147,12 +148,12 @@ def get_model(idx, dir):
     initial_stage = 0.1
     pak_data = [(0, initial_stage, nlakeconn)]
 
-    bedleak = 100. #"None"
-    belev = 0.
+    bedleak = 100.0  # "None"
+    belev = 0.0
     con_data = [
         (0, i, idx, "VERTICAL", bedleak, belev, -99, -99, -99)
         for i, idx in enumerate(lake_vconnect)
-        ]
+    ]
 
     # period data
     p_data = [
@@ -188,14 +189,14 @@ def get_model(idx, dir):
         observations=lak_obs,
     )
 
-    chdspd = [((0, 0, ncol - 1), 5.)]
+    chdspd = [((0, 0, ncol - 1), 5.0)]
     chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=chdspd)
 
     rech = 0.0001 * np.ones((nrow, ncol), dtype=float)
-    #rech[:, 0:20] = 0.
-    rch = flopy.mf6.modflow.ModflowGwfrcha(gwf, print_flows=True,
-                                           save_flows=True,
-                                           recharge=rech, irch=irch)
+    # rech[:, 0:20] = 0.
+    rch = flopy.mf6.modflow.ModflowGwfrcha(
+        gwf, print_flows=True, save_flows=True, recharge=rech, irch=irch
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -233,23 +234,29 @@ def make_plot_xsect(sim, headall, stageall):
     fig = plt.figure(figsize=(8, 4))
 
     for ifig, itime in enumerate(itimes):
-        print('processing {} of {}'.format(ifig + 1, nplots))
+        print("processing {} of {}".format(ifig + 1, nplots))
         ax = fig.add_subplot(nplots, 1, ifig + 1, aspect="equal")
         stage = stageall[itime].flatten()
         xmin = 0
-        xmax = 99.
-        ymin = 0.
+        xmax = 99.0
+        ymin = 0.0
         ymax = stage
-        rect = patches.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
-                                 linewidth=1, edgecolor='r', facecolor='k')
+        rect = patches.Rectangle(
+            (xmin, ymin),
+            xmax - xmin,
+            ymax - ymin,
+            linewidth=1,
+            edgecolor="r",
+            facecolor="k",
+        )
         coll = PatchCollection([rect], zorder=1)
         ax.add_collection(coll)
 
         xs = flopy.plot.PlotCrossSection(gwf, line={"row": 0}, ax=ax)
         head = headall[itime]
-        xs.plot_array(head, head=head, cmap='jet', masked_values=[1e30])
-        #ax.set_xlim(0, 100)
-        #ax.set_ylim(-10, 5)
+        xs.plot_array(head, head=head, cmap="jet", masked_values=[1e30])
+        # ax.set_xlim(0, 100)
+        # ax.set_ylim(-10, 5)
 
     fname = "fig-xsect.pdf"
     fname = os.path.join(ws, fname)
@@ -265,12 +272,13 @@ def make_plot(sim, times, headall, stageall):
     ws = exdirs[sim.idxsim]
 
     import matplotlib.pyplot as plt
+
     fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(times, stageall.flatten(), 'ro-', label='stage')
+    ax.plot(times, stageall.flatten(), "ro-", label="stage")
     h = np.ma.masked_where(headall == 1e30, headall)
     h = [hstep.flatten().max() for hstep in h]
-    ax.plot(times, h, 'bo-', label='max head')
+    ax.plot(times, h, "bo-", label="max head")
 
     fname = "fig-timeseries.pdf"
     fname = os.path.join(ws, fname)
@@ -287,6 +295,7 @@ def get_kij_from_node(node, nrow, ncol):
     i = int(ij / ncol)
     j = ij - i * ncol
     return k, i, j
+
 
 def eval_results(sim):
     print("evaluating results...")
@@ -311,40 +320,60 @@ def eval_results(sim):
     all_passed = True
     for itime, t in enumerate(times):
 
-        print('processing totim {}'.format(t))
+        print("processing totim {}".format(t))
         stage_current = stage[itime].flatten()
-        print('lake stage = {}'.format(stage_current))
+        print("lake stage = {}".format(stage_current))
 
         qlakleak = np.zeros(idomain.shape, dtype=float).flatten()
         ilak = np.zeros(idomain.shape, dtype=int).flatten()
         records = bobj.get_data(text="lak", totim=t)[0]
-        #print(records)
+        # print(records)
         for i, r in enumerate(records):
             node, node2, q = r
             qlakleak[node - 1] = q
             ilak[node - 1] = 1
 
         records = bobj.get_data(text="rch", totim=t)[0]
-        #print(records)
+        # print(records)
         for i, r in enumerate(records):
             node, node2, q = r
             n0 = node - 1
             if ilak[n0] == 1:
-                kk, ii, jj = get_kij_from_node(n0, botm.shape[1], botm.shape[2])
+                kk, ii, jj = get_kij_from_node(
+                    n0, botm.shape[1], botm.shape[2]
+                )
                 tp = botm[kk - 1, ii, jj]
-                if stage_current > tp and q != 0.:
+                if stage_current > tp and q != 0.0:
                     all_passed = False
-                    msg = ('recharge must be zero if overlying lake is '
-                          'active. node {} qlak {} qrch {} time {}'.format(n0,
-                                                                   qlakleak[n0], q, t))
+                    msg = (
+                        "recharge must be zero if overlying lake is "
+                        "active. node {} qlak {} qrch {} time {}".format(
+                            n0, qlakleak[n0], q, t
+                        )
+                    )
                     print(msg)
-    assert all_passed, 'found recharge applied to cell beneath active lake'
+    assert all_passed, "found recharge applied to cell beneath active lake"
 
     fname = gwfname + ".hds"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
+
+    stage_answer = [
+        0.69657598,
+        1.10039253,
+        1.36349007,
+        1.56985213,
+        1.74565051,
+        1.90449531,
+        2.0406385,
+        2.15064501,
+        2.25102511,
+        2.34427579,
+    ]
+    errmsg = "lake stage does not match known answer"
+    assert np.allclose(stage_answer, stage.flatten()), errmsg
 
     if False:
         make_plot(sim, times, head, stage)

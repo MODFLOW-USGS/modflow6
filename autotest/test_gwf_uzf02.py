@@ -1,6 +1,5 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
+# Test uzf for the vs2d comparison problem in the uzf documentation
 
 """
 
@@ -26,30 +25,40 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_uzf01a"]
+ex = ["gwf_uzf02a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
-nlay, nrow, ncol = 100, 1, 1
+nlay, nrow, ncol = 1, 1, 1
 
 
 def build_models():
 
-    perlen = [500.0]
+    perlen = [17.7]
     nper = len(perlen)
-    nstp = [10]
+    nstp = [177]
     tsmult = nper * [1.0]
     delr = 1.0
     delc = 1.0
-    delv = 1.0
-    top = 100.0
+    delv = 30.0
+    top = 0.0
     botm = [top - (k + 1) * delv for k in range(nlay)]
-    strt = 0.5
-    hk = 1.0
+    strt = -22.0
     laytyp = 1
     ss = 0.0
-    sy = 0.1
+    sy = 0.4
+
+    # unsat props
+    seconds_to_days = 60. * 60. * 24.
+    hk = 4.0e-6 * seconds_to_days  # saturated vertical conductivity
+    thts = 0.4  # saturated water content
+    thtr = 0.2  # residual water content
+    thti = thtr  # initial water content
+    infiltration_rate = 0.5 * hk
+    evapotranspiration_rate = 5e-8 * seconds_to_days
+    evt_extinction_depth = 2.0
+    brooks_corey_epsilon = 3.5  # brooks corey exponent
 
     tdis_rc = []
     for idx in range(nper):
@@ -132,7 +141,7 @@ def build_models():
 
         # ghb
         ghbspdict = {
-            0: [[(nlay - 1, 0, 0), 1.5, 1.0]],
+            0: [[(nlay - 1, 0, 0), strt, hk / (0.5 * delv)]],
         }
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
@@ -146,42 +155,55 @@ def build_models():
         uzf_obs = {
             name
             + ".uzf.obs.csv": [
-                ("wc2", "water-content", 2, 0.5),
-                ("wc50", "water-content", 50, 0.5),
-                ("wcbn2", "water-content", "uzf02", 0.5),
-                ("wcbn50", "water-content", "UZF050", 0.5),
+                ("wc{}".format(k + 1), "water-content", 1, depth)
+                for k, depth in enumerate(np.linspace(1, 20, 15))
             ]
         }
 
-        sd = 0.1
-        vks = hk
-        thtr = 0.05
-        thti = thtr
-        thts = sy
-        eps = 4
+        surfdep = 1.e-5
         uzf_pkdat = [
-            [0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]
+            [
+                0,
+                (0, 0, 0),
+                1,
+                1,
+                surfdep,
+                hk,
+                thtr,
+                thts,
+                thti,
+                brooks_corey_epsilon,
+                "uzf01",
+            ]
         ] + [
             [
                 k,
                 (k, 0, 0),
                 0,
                 k + 1,
-                sd,
-                vks,
+                surfdep,
+                hk,
                 thtr,
                 thts,
                 thti,
-                eps,
+                brooks_corey_epsilon,
                 "uzf0{}".format(k + 1),
             ]
-            for k in range(1, nlay - 1)
+            for k in range(1, nlay)
         ]
         uzf_pkdat[-1][3] = -1
-        infiltration = 2.01
         uzf_spd = {
             0: [
-                [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [
+                    0,
+                    infiltration_rate,
+                    evapotranspiration_rate,
+                    evt_extinction_depth,
+                    thtr,
+                    0.0,
+                    0.0,
+                    0.0,
+                ],
             ]
         }
         uzf = flopy.mf6.ModflowGwfuzf(
@@ -190,6 +212,8 @@ def build_models():
             print_flows=True,
             save_flows=True,
             boundnames=True,
+            simulate_et=True,
+            unsat_etwc=True,
             ntrailwaves=15,
             nwavesets=40,
             nuzfcells=len(uzf_pkdat),
@@ -209,12 +233,11 @@ def build_models():
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
             saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-            printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+            printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
         )
 
         obs_lst = []
         obs_lst.append(["obs1", "head", (0, 0, 0)])
-        obs_lst.append(["obs2", "head", (1, 0, 0)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -222,6 +245,43 @@ def build_models():
 
         # write MODFLOW 6 files
         sim.write_simulation()
+
+    return
+
+
+def make_plot(sim, obsvals):
+    print("making plots...")
+
+    name = ex[sim.idxsim]
+    ws = exdirs[sim.idxsim]
+
+    # shows curves for times 2.5, 7.5, 12.6, 17.7
+    # which are indices 24, 74, 125, and -1
+    idx = [24, 74, 125, -1]
+
+    obsvals = [list(row) for row in obsvals]
+    obsvals = [obsvals[i] for i in idx]
+    obsvals = np.array(obsvals)
+
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure(figsize=(6, 3))
+    ax = fig.add_subplot(1, 1, 1)
+    depth = np.arange(1, 20, 2.0)
+    depth = np.linspace(1, 20, 15)
+    for row in obsvals:
+        label = "time {}".format(row[0])
+        ax.plot(row[1:], depth, label=label, marker='o')
+    ax.set_ylim(0.0, 20.0)
+    ax.set_xlim(0.15, 0.4)
+    ax.invert_yaxis()
+    ax.set_xlabel("Water Content")
+    ax.set_ylabel("Depth, in meters")
+    plt.legend()
+
+    fname = "fig-xsect.pdf"
+    fname = os.path.join(ws, fname)
+    plt.savefig(fname, bbox_inches="tight")
 
     return
 
@@ -261,6 +321,21 @@ def eval_flow(sim):
         )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
+    bpth = os.path.join(ws, name + ".uzf.bud")
+    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
+    uzet = bobj.get_data(text="UZET")
+    uz_answer = [-0.00432]
+    for uz in uzet[20:]:  #start at 20 when et can be met
+        assert np.allclose(uz["q"], uz_answer), "unsat ET is not correct"
+
+    # Make plot of obs
+    fpth = os.path.join(sim.simpath, name + ".uzf.obs.csv")
+    try:
+        obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+    if False:
+        make_plot(sim, obsvals)
     return
 
 
