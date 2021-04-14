@@ -4,7 +4,9 @@ module GwfNpfGridDataModule
   private 
 
   !> Data structure and helper methods for passing NPF grid data
-  !! into npf_ar, as an alternative to reading those from file
+  !! into npf_ar, as an alternative to reading those from file.
+  !! As this is a temporary object, the variables are not
+  !! allocated inside the memory manager.
   !<
   type, public :: GwfNpfGridDataType    
     ! grid data

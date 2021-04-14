@@ -7,8 +7,7 @@ module GwfGwfExchangeModule
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                                      TABCENTER, TABLEFT, LENAUXNAME
   use ListsModule,             only: basemodellist
-  use NumericalExchangeModule, only: NumericalExchangeType
-  use NumericalModelModule,    only: NumericalModelType
+  use DisConnExchangeModule,   only: DisConnExchangeType
   use GwfModule,               only: GwfModelType
   use GhostNodeModule,         only: GhostNodeType
   use GwfMvrModule,            only: GwfMvrType
@@ -24,7 +23,7 @@ module GwfGwfExchangeModule
   private
   public :: gwfexchange_create
 
-  type, extends(NumericalExchangeType) :: GwfExchangeType
+  type, extends(DisConnExchangeType) :: GwfExchangeType
     character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
     type(BlockParserType)                            :: parser                   !< block parser for input file
     character(len=7), pointer                        :: typename    => null()    !< name of the type (e.g., 'NM-NM')
@@ -46,31 +45,16 @@ module GwfGwfExchangeModule
     type(GwfMvrType), pointer                        :: mvr         => null()    !< water mover object
     integer(I4B), pointer                            :: inobs       => null()    !< unit number for GWF-GWF observations
     type(ObsType), pointer                           :: obs         => null()    !< observation object
-    ! 
-    ! -- Exchange data block
-    integer(I4B), pointer                            :: nexg        => null()    !< number of exchanges
-    integer(I4B), dimension(:), pointer, contiguous  :: nodem1      => null()    !< node numbers in model 1
-    integer(I4B), dimension(:), pointer, contiguous  :: nodem2      => null()    !< node numbers in model 2
-    integer(I4B), dimension(:), pointer, contiguous  :: ihc         => null()    !< horizontal connection indicator array
-    real(DP), dimension(:), pointer, contiguous      :: cl1         => null()    !< connection length 1
-    real(DP), dimension(:), pointer, contiguous      :: cl2         => null()    !< connection length 2
-    real(DP), dimension(:), pointer, contiguous      :: hwva        => null()    !< horizontal widths, vertical flow areas
-    integer(I4B), pointer                            :: naux        => null()    !< number of auxiliary variables
-    character(len=LENAUXNAME), dimension(:),                                     &
-                                pointer, contiguous  :: auxname     => null()    !< vector of auxname
-    real(DP), dimension(:, :), pointer, contiguous   :: auxvar      => null()    !< array of auxiliary variable values
-    integer(I4B), pointer                            :: ianglex     => null()    !< flag indicating anglex was read, if read, ianglex is index in auxvar
-    integer(I4B), pointer                            :: icdist      => null()    !< flag indicating cdist was read, if read, icdist is index in auxvar
-    character(len=LENBOUNDNAME), dimension(:),                                   &
-                                 pointer, contiguous :: boundname   => null()    !< boundnames
-    ! 
+    !
     ! -- internal data
     real(DP), dimension(:), pointer, contiguous      :: cond        => null()    !< conductance
     real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    !< saturated conductance
     integer(I4B), dimension(:), pointer, contiguous  :: idxglo      => null()    !< mapping to global (solution) amat
     integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
     real(DP), pointer                                :: satomega    => null()    !< saturation smoothing    
-    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
+    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange    
+    character(len=LENBOUNDNAME), dimension(:),                                   &
+                                 pointer, contiguous :: boundname   => null()    !< boundnames
     !
     ! -- table objects
     type(TableType), pointer :: outputtab1 => null()
@@ -152,9 +136,10 @@ contains
     exchange%typename = 'GWF-GWF'
     !
     ! -- set gwfmodel1
-    mb => GetBaseModelFromList(basemodellist, m1id)
+    mb => GetBaseModelFromList(basemodellist, m1id)    
     select type (mb)
     type is (GwfModelType)
+      exchange%model1 => mb
       exchange%gwfmodel1 => mb
     end select
     !
@@ -162,6 +147,7 @@ contains
     mb => GetBaseModelFromList(basemodellist, m2id)
     select type (mb)
     type is (GwfModelType)
+      exchange%model2 => mb
       exchange%gwfmodel2 => mb
     end select
     !
@@ -1882,23 +1868,19 @@ contains
     this%filename = ''
     this%typename = ''
     !
+    call this%DisConnExchangeType%allocate_scalars()
+    !
     call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
     call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
     call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
-    call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
-    call mem_allocate(this%naux, 'NAUX', this%memoryPath)
     this%iprpak = 0
     this%iprflow = 0
     this%ipakcb = 0
-    this%nexg = 0
-    this%naux = 0
     !
     call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
     call mem_allocate(this%ivarcv, 'IVARCV', this%memoryPath)
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%memoryPath)
-    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
-    call mem_allocate(this%ianglex, 'IANGLEX', this%memoryPath)
-    call mem_allocate(this%icdist, 'ICDIST', this%memoryPath)
+    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)    
     call mem_allocate(this%ingnc, 'INGNC', this%memoryPath)
     call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
@@ -1907,9 +1889,7 @@ contains
     this%icellavg = 0
     this%ivarcv = 0
     this%idewatcv = 0
-    this%inewton = 0
-    this%ianglex = 0
-    this%icdist = 0
+    this%inewton = 0    
     this%ingnc = 0
     this%inmvr = 0
     this%inobs = 0
@@ -1947,18 +1927,10 @@ contains
     deallocate(this%obs)
     !
     ! -- arrays
-    call mem_deallocate(this%nodem1)
-    call mem_deallocate(this%nodem2)
-    call mem_deallocate(this%cond)
+    call mem_deallocate(this%cond)    
+    call mem_deallocate(this%condsat)
     call mem_deallocate(this%idxglo)
     call mem_deallocate(this%idxsymglo)
-    call mem_deallocate(this%auxvar)
-    !
-    call mem_deallocate(this%ihc)
-    call mem_deallocate(this%cl1)
-    call mem_deallocate(this%cl2)
-    call mem_deallocate(this%hwva)
-    call mem_deallocate(this%condsat)
     call mem_deallocate(this%simvals)
     deallocate(this%boundname)
     !
@@ -1980,21 +1952,19 @@ contains
     call mem_deallocate(this%iprpak)
     call mem_deallocate(this%iprflow)
     call mem_deallocate(this%ipakcb)
-    call mem_deallocate(this%nexg)
-    call mem_deallocate(this%naux)
-    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%memoryPath))
     !
     call mem_deallocate(this%icellavg)
     call mem_deallocate(this%ivarcv)
     call mem_deallocate(this%idewatcv)
     call mem_deallocate(this%inewton)
-    call mem_deallocate(this%ianglex)
-    call mem_deallocate(this%icdist)
     call mem_deallocate(this%ingnc)
     call mem_deallocate(this%inmvr)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%inamedbound)
     call mem_deallocate(this%satomega)
+    !
+    ! -- deallocate base
+    call this%DisConnExchangeType%disconnex_da()
     !
     ! -- return
     return
@@ -2016,18 +1986,11 @@ contains
     integer(I4B) :: ntabcol
 ! ------------------------------------------------------------------------------
     !
+    call this%DisConnExchangeType%allocate_arrays()
     !   
-    call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
-    call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
     call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
     call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
-    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)
-    call mem_allocate(this%auxvar, this%naux, this%nexg, 'AUXVAR', this%memoryPath)
-    !
-    call mem_allocate(this%ihc, this%nexg, 'IHC', this%memoryPath)
-    call mem_allocate(this%cl1, this%nexg, 'CL1', this%memoryPath)
-    call mem_allocate(this%cl2, this%nexg, 'CL2', this%memoryPath)
-    call mem_allocate(this%hwva, this%nexg, 'HWVA', this%memoryPath)
+    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)    !
     call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
     call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
     !
