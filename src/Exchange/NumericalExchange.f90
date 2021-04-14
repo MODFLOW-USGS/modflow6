@@ -12,7 +12,8 @@ module NumericalExchangeModule
   public :: NumericalExchangeType,                                             &
             AddNumericalExchangeToList, GetNumericalExchangeFromList
 
-  type, extends(BaseExchangeType) :: NumericalExchangeType
+  type, extends(BaseExchangeType) :: NumericalExchangeType    
+    character(len=7) :: typename !< name of the type (e.g., 'GWF-GWF')
   contains
     procedure :: exg_df
     procedure :: exg_ac
@@ -28,7 +29,7 @@ module NumericalExchangeModule
     procedure :: exg_bd
     procedure :: exg_ot
     procedure :: exg_da
-    procedure :: get_iasym
+    procedure :: get_iasym   
   end type NumericalExchangeType
 
 contains
@@ -265,9 +266,8 @@ contains
     ! -- dummy
     class(NumericalExchangeType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
+! ------------------
+
     return
   end subroutine exg_da
 

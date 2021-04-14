@@ -26,7 +26,6 @@ module GwfGwfExchangeModule
   type, extends(DisConnExchangeType) :: GwfExchangeType
     character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
     type(BlockParserType)                            :: parser                   !< block parser for input file
-    character(len=7), pointer                        :: typename    => null()    !< name of the type (e.g., 'NM-NM')
     type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
     type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2  
     ! 
@@ -1864,9 +1863,7 @@ contains
 ! ------------------------------------------------------------------------------
     !    
     allocate(this%filename)
-    allocate(this%typename)    
     this%filename = ''
-    this%typename = ''
     !
     call this%DisConnExchangeType%allocate_scalars()
     !
@@ -1948,7 +1945,6 @@ contains
     !
     ! -- scalars    
     deallocate(this%filename)
-    deallocate(this%typename)
     call mem_deallocate(this%iprpak)
     call mem_deallocate(this%iprflow)
     call mem_deallocate(this%ipakcb)
