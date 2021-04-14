@@ -1,12 +1,15 @@
 module DisConnExchangeModule
 use KindModule, only: I4B, DP
 use ConstantsModule, only: LENAUXNAME, LENBOUNDNAME
+use ListModule, only: ListType
 use NumericalModelModule, only: NumericalModelType
 use NumericalExchangeModule, only: NumericalExchangeType
 implicit none
 
 private
 public :: DisConnExchangeType
+public :: CastAsDisConnExchangeClass, AddDisConnExchangeToList,                &
+          GetDisConnExchangeFromList
 
 !> Exchange based on connection between discretizations of DisBaseType.
 !! The data specifies the connections, similar to the information stored
@@ -100,5 +103,49 @@ subroutine disconnex_da(this)
   call mem_deallocate(this%icdist)
 
 end subroutine disconnex_da
+
+function CastAsDisConnExchangeClass(obj) result (res)
+  implicit none
+  class(*), pointer, intent(inout) :: obj
+  class(DisConnExchangeType), pointer :: res
+  !
+  res => null()
+  if (.not. associated(obj)) return
+  !
+  select type (obj)
+  class is (DisConnExchangeType)
+    res => obj
+  end select
+  return
+end function CastAsDisConnExchangeClass
+
+subroutine AddDisConnExchangeToList(list, exchange)
+  implicit none
+  ! -- dummy
+  type(ListType),       intent(inout) :: list
+  class(DisConnExchangeType), pointer, intent(in) :: exchange
+  ! -- local
+  class(*), pointer :: obj
+  !
+  obj => exchange
+  call list%Add(obj)
+  !
+  return
+end subroutine AddDisConnExchangeToList
+
+function GetDisConnExchangeFromList(list, idx) result (res)
+  implicit none
+  ! -- dummy
+  type(ListType),            intent(inout) :: list
+  integer(I4B),                   intent(in)    :: idx
+  class(DisConnExchangeType), pointer    :: res
+  ! -- local
+  class(*), pointer :: obj
+  !
+  obj => list%GetItem(idx)
+  res => CastAsDisConnExchangeClass(obj)
+  !
+  return
+end function GetDisConnExchangeFromList
 
 end module DisConnExchangeModule
