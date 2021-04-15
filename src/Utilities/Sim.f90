@@ -8,7 +8,8 @@ module SimModule
                                     VSUMMARY, VALL, VDEBUG,                      &
                                     OSWIN, OSUNDEF
   use SimVariablesModule,     only: istdout, iout, isim_level, ireturnerr,       &
-                                    iforcestop, iunext
+                                    iforcestop, iunext,                          &
+                                    warnmsg
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   use MessageModule,          only: MessageType
 
@@ -101,7 +102,7 @@ subroutine MaxErrors(imax)
   return
 end subroutine MaxErrors
 
-subroutine store_error(errmsg)
+subroutine store_error(msg)
 ! ******************************************************************************
 ! Store an error message for printing at end of simulation
 ! ******************************************************************************
@@ -111,12 +112,12 @@ subroutine store_error(errmsg)
   ! -- modules
   use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
-  character(len=*), intent(in) :: errmsg
+  character(len=*), intent(in) :: msg
   ! -- local
 ! ------------------------------------------------------------------------------
   !
   ! -- store error
-  call sim_errors%store_message(errmsg)
+  call sim_errors%store_message(msg)
   !
   ! -- return
   return
@@ -219,7 +220,7 @@ subroutine store_error_filename(filename)
   return
 end subroutine store_error_filename
 
-subroutine store_warning(warnmsg, substring)
+subroutine store_warning(msg, substring)
 ! ******************************************************************************
 ! Store a warning message for printing at end of simulation
 ! ******************************************************************************
@@ -228,15 +229,15 @@ subroutine store_warning(warnmsg, substring)
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- dummy
-  character(len=*), intent(in) :: warnmsg
+  character(len=*), intent(in) :: msg
   character(len=*), intent(in), optional :: substring
 ! ------------------------------------------------------------------------------
   !
   ! -- store warning
   if (present(substring)) then
-    call sim_warnings%store_message(warnmsg, substring)
+    call sim_warnings%store_message(msg, substring)
   else
-    call sim_warnings%store_message(warnmsg)
+    call sim_warnings%store_message(msg)
   end if
   !
   ! -- return
@@ -465,22 +466,19 @@ subroutine converge_reset()
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    ! -- dummy
     use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr
-    ! -- local
-    character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1x, 'Simulation convergence failure occurred ', i0, ' time(s).')"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Write message if any nonconvergence
+    ! -- Write message if nonconvergence occured in at least one timestep
     if(numnoconverge > 0) then
-      write(line, fmtnocnvg) numnoconverge
-      call sim_message(line, iunit=iout)
-      call sim_message(line)
+      write(warnmsg, fmtnocnvg) numnoconverge
+      call sim_warnings%store_message(warnmsg)
     endif
     !
+    ! -- write final message
     if(isimcnvg == 0) then
       ireturnerr = 1
       call print_final_message('Premature termination of simulation.', iout)
