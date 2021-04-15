@@ -12,7 +12,8 @@ module NumericalExchangeModule
   public :: NumericalExchangeType,                                             &
             AddNumericalExchangeToList, GetNumericalExchangeFromList
 
-  type, extends(BaseExchangeType) :: NumericalExchangeType
+  type, extends(BaseExchangeType) :: NumericalExchangeType    
+    character(len=7) :: typename !< name of the type (e.g., 'GWF-GWF')
   contains
     procedure :: exg_df
     procedure :: exg_ac
@@ -28,7 +29,7 @@ module NumericalExchangeModule
     procedure :: exg_bd
     procedure :: exg_ot
     procedure :: exg_da
-    procedure :: get_iasym
+    procedure :: get_iasym   
   end type NumericalExchangeType
 
 contains
@@ -139,7 +140,7 @@ contains
     return
   end subroutine exg_cf
 
-  subroutine exg_fc(this, kiter, iasln, amatsln, inwtflag)
+  subroutine exg_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
 ! ******************************************************************************
 ! exg_fc -- Fill the matrix
 ! ******************************************************************************
@@ -151,6 +152,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    real(DP), dimension(:), intent(inout) :: rhssln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -265,9 +267,8 @@ contains
     ! -- dummy
     class(NumericalExchangeType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
+! ------------------
+
     return
   end subroutine exg_da
 
