@@ -1,6 +1,6 @@
 module ConnectionBuilderModule
   use KindModule, only: I4B
-  use NumericalExchangeModule,  only: NumericalExchangeType
+  use DisConnExchangeModule,  only: DisConnExchangeType
   use NumericalModelModule,     only: NumericalModelType
   use ModelConnectionModule
   
@@ -21,17 +21,17 @@ module ConnectionBuilderModule
     use ListsModule, only: baseconnectionlist
   
     class(ConnectionBuilderType) :: this
-    class(NumericalExchangeType), pointer :: exchange
+    class(DisConnExchangeType), pointer :: exchange
     
     ! local variables
     class(ModelConnectionType), pointer :: modelConnection
     class(*), pointer                   :: newConnection 
     
     ! fetch connection for model 1:
-    modelConnection => lookupConnection(exchange%m1, exchange%typename)
+    modelConnection => lookupConnection(exchange%model1, exchange%typename)
     if (.not. associated(modelConnection)) then
       ! create new model connection
-      newConnection => createModelConnection(exchange%m1, exchange%typename)      
+      newConnection => createModelConnection(exchange%model1, exchange%typename)      
       ! add to global list
       call baseconnectionlist%Add(newConnection)
       modelConnection => CastAsModelConnectionClass(newConnection)
@@ -41,10 +41,10 @@ module ConnectionBuilderModule
     call modelConnection%addExchange(exchange)
     
     ! and fetch for model 2
-    modelConnection => lookupConnection(exchange%m2, exchange%typename)
+    modelConnection => lookupConnection(exchange%model2, exchange%typename)
     if (.not. associated(modelConnection)) then
       ! create new model connection
-      newConnection => createModelConnection(exchange%m2, exchange%typename)
+      newConnection => createModelConnection(exchange%model2, exchange%typename)
       call baseconnectionlist%Add(newConnection)
       modelConnection => CastAsModelConnectionClass(newConnection)
     end if

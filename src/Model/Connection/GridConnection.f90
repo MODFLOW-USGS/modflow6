@@ -6,7 +6,7 @@ module GridConnectionModule
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
-  use NumericalExchangeModule
+  use DisConnExchangeModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   implicit none
@@ -187,24 +187,24 @@ module GridConnectionModule
   ! exchange, need this for global topology
   ! NOTE: assumption here is only 1 exchange exists between any two models,
   ! can we do that??
-  subroutine addModelLink(this, numEx)
+  subroutine addModelLink(this, connEx)
     class(GridConnectionType), intent(inout)  :: this
-    class(NumericalExchangeType), pointer     :: numEx
+    class(DisConnExchangeType), pointer     :: connEx
     ! local
         
-    call this%connectModels(this%modelWithNbrs, numEx, this%stencilDepth)
+    call this%connectModels(this%modelWithNbrs, connEx, this%stencilDepth)
     
   end subroutine addModelLink
   
-  recursive subroutine connectModels(this, modelNbrs, numEx, depth)
+  recursive subroutine connectModels(this, modelNbrs, connEx, depth)
     class(GridConnectionType), intent(inout)   :: this
     class(ModelWithNbrsType), intent(inout) :: modelNbrs
-    class(NumericalExchangeType), pointer     :: numEx
+    class(DisConnExchangeType), pointer     :: connEx
     integer(I4B)                            :: depth
     ! local
     integer(I4B) :: inbr, newDepth
     class(NumericalModelType), pointer      :: neighborModel
-    class(*), pointer :: numExObj
+    class(*), pointer :: exObjPtr
     procedure(isEqualIface), pointer :: areEqualMethod
     
     if (depth < 1) then
@@ -214,16 +214,16 @@ module GridConnectionModule
     neighborModel => null()    
     
     ! is it a direct neighbor:
-    if (associated(modelNbrs%model, numEx%m1)) then
-      neighborModel => numEx%m2
-    else if (associated(modelNbrs%model, numEx%m2)) then
-      neighborModel => numEx%m1
+    if (associated(modelNbrs%model, connEx%model1)) then
+      neighborModel => connEx%model2
+    else if (associated(modelNbrs%model, connEx%model2)) then
+      neighborModel => connEx%model1
     end if
     
     ! and/or maybe its connected to one of the neighbors:
     newDepth = depth - 1
     do inbr = 1, modelNbrs%nrOfNbrs
-      call this%connectModels(modelNbrs%neighbors(inbr), numEx, newDepth)
+      call this%connectModels(modelNbrs%neighbors(inbr), connEx, newDepth)
     end do
     
     ! do not add until here, after the recursion, to prevent 
@@ -240,10 +240,10 @@ module GridConnectionModule
       call this%addToRegionalModels(neighborModel)
       
       ! add to list of exchanges
-      numExObj => numEx
+      exObjPtr => connEx
       areEqualMethod => arePointersEqual
-      if (.not. this%exchanges%Contains(numExObj, areEqualMethod)) then
-        call AddNumericalExchangeToList(this%exchanges, numEx)
+      if (.not. this%exchanges%Contains(exObjPtr, areEqualMethod)) then
+        call AddDisConnExchangeToList(this%exchanges, connEx)
       end if
     end if
     
@@ -376,36 +376,36 @@ module GridConnectionModule
     type(GlobalCellType), optional                :: mask
     ! local
     integer(I4B) :: inbr, iexg
-    type(NumericalExchangeType), pointer :: numEx
+    type(DisConnExchangeType), pointer :: connEx
     
     do inbr = 1, modelWithNbrs%nrOfNbrs
-      numEx => this%getExchangeData(cellNbrs%cell%model, modelWithNbrs%neighbors(inbr)%model)
-      if (.not. associated(numEx)) then
+      connEx => this%getExchangeData(cellNbrs%cell%model, modelWithNbrs%neighbors(inbr)%model)
+      if (.not. associated(connEx)) then
         write(*,*) 'Error finding exchange data for models, should never happen: terminating...'
         call ustop()  
       end if
       
       ! loop over n-m links in the exchange
-      if (associated(cellNbrs%cell%model, numEx%m1)) then
+      if (associated(cellNbrs%cell%model, connEx%model1)) then
         ! we were outside, no need to go back into this%model: 
         ! those cells will be added anyhow
-        if (associated(numEx%m2, this%model)) cycle 
-        do iexg = 1, numEx%nexg
-          if (numEx%nodem1(iexg) == cellNbrs%cell%index) then
+        if (associated(connEx%model2, this%model)) cycle 
+        do iexg = 1, connEx%nexg
+          if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, numEx%nodem2(iexg), numEx%m2, mask)
+            call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), connEx%model2, mask)
           end if
         end do
       end if
       ! and the reverse
-      if (associated(cellNbrs%cell%model, numEx%m2)) then
+      if (associated(cellNbrs%cell%model, connEx%model2)) then
         ! we were outside, no need to go back into this%model: 
         ! those cells will be added anyhow
-        if (associated(numEx%m1, this%model)) cycle
-        do iexg = 1, numEx%nexg
-          if (numEx%nodem2(iexg) == cellNbrs%cell%index) then
+        if (associated(connEx%model1, this%model)) cycle
+        do iexg = 1, connEx%nexg
+          if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, numEx%nodem1(iexg), numEx%m1, mask)
+            call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), connEx%model1, mask)
           end if
         end do
       end if
@@ -415,24 +415,24 @@ module GridConnectionModule
   end subroutine addRemoteNeighbors
   
   ! returns the numerical exchange data for the pair of models
-  function getExchangeData(this, model1, model2) result(numEx)
+  function getExchangeData(this, model1, model2) result(connEx)
     class(GridConnectionType), intent(inout)        :: this
     class(NumericalModelType), pointer, intent(in)  :: model1, model2
-    type(NumericalExchangeType), pointer            :: numEx
+    type(DisConnExchangeType), pointer            :: connEx
     ! local
-    type(NumericalExchangeType), pointer            :: numExLocal    
+    type(DisConnExchangeType), pointer            :: connExLocal    
     integer(I4B) :: i
     
-    numEx => null()
+    connEx => null()
         
     do i = 1, this%exchanges%Count()
-      numExLocal => GetNumericalExchangeFromList(this%exchanges, i)
-      if (associated(model1, numExLocal%m1) .and. associated(model2, numExLocal%m2)) then
-        numEx => numExLocal
+      connExLocal => GetDisConnExchangeFromList(this%exchanges, i)
+      if (associated(model1, connExLocal%model1) .and. associated(model2, connExLocal%model2)) then
+        connEx => connExLocal
         exit
       end if
-      if (associated(model1, numExLocal%m2) .and. associated(model2, numExLocal%m1)) then
-        numEx => numExLocal
+      if (associated(model1, connExLocal%model2) .and. associated(model2, connExLocal%model1)) then
+        connEx => connExLocal
         exit
       end if
     end do
@@ -698,27 +698,27 @@ module GridConnectionModule
     integer(I4B) :: inx, iexg, ivalAngldegx
     integer(I4B) :: ipos, isym
     integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
-    class(NumericalExchangeType), pointer :: numEx
+    class(DisConnExchangeType), pointer :: connEx
     type(ConnectionsType), pointer :: conn
     
     conn => this%connections
     
     do inx = 1, this%exchanges%Count()
-      numEx => GetNumericalExchangeFromList(this%exchanges, inx) 
+      connEx => GetDisConnExchangeFromList(this%exchanges, inx) 
        
       ivalAngldegx = -1
-      if (numEx%naux > 0) then
-        ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
+      if (connEx%naux > 0) then
+        ivalAngldegx = ifind(connEx%auxname, 'ANGLDEGX')
         if (ivalAngldegx > 0) then
           conn%ianglex = 1
         end if
       end if
       
-      nOffset = this%getRegionalModelOffset(numEx%m1)
-      mOffset = this%getRegionalModelOffset(numEx%m2)
-      do iexg = 1, numEx%nexg
-        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + numEx%nodem1(iexg))
-        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + numEx%nodem2(iexg))
+      nOffset = this%getRegionalModelOffset(connEx%model1)
+      mOffset = this%getRegionalModelOffset(connEx%model2)
+      do iexg = 1, connEx%nexg
+        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + connEx%nodem1(iexg))
+        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + connEx%nodem2(iexg))
         ! not all nodes from the exchanges are part of the interface grid 
         ! (think of exchanges between neigboring models, and their neighbors)
         if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
@@ -737,20 +737,20 @@ module GridConnectionModule
         ! note: cl1 equals L_nm: the length from cell n to the shared
         ! face with cell m (and cl2 analogously for L_mn)
         if (nIfaceIdx < mIfaceIdx) then
-          conn%cl1(isym) = numEx%cl1(iexg)
-          conn%cl2(isym) = numEx%cl2(iexg)
+          conn%cl1(isym) = connEx%cl1(iexg)
+          conn%cl2(isym) = connEx%cl2(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg) * DPIO180
+            conn%anglex(isym) = connEx%auxvar(ivalAngldegx,iexg) * DPIO180
           end if
         else
-          conn%cl1(isym) = numEx%cl2(iexg)
-          conn%cl2(isym) = numEx%cl1(iexg)
+          conn%cl1(isym) = connEx%cl2(iexg)
+          conn%cl2(isym) = connEx%cl1(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = mod(numEx%auxvar(ivalAngldegx,iexg) + 180.0_DP, 360.0_DP) * DPIO180
+            conn%anglex(isym) = mod(connEx%auxvar(ivalAngldegx,iexg) + 180.0_DP, 360.0_DP) * DPIO180
           end if
         end if
-        conn%hwva(isym) = numEx%hwva(iexg)
-        conn%ihc(isym) = numEx%ihc(iexg)
+        conn%hwva(isym) = connEx%hwva(iexg)
+        conn%ihc(isym) = connEx%ihc(iexg)
                          
       end do        
     end do

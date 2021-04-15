@@ -3,7 +3,7 @@ module SpatialModelConnectionModule
   use KindModule, only: I4B, DP
   use ModelConnectionModule
   use NumericalModelModule, only: NumericalModelType
-  use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
+  use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
   use MemoryManagerModule, only: mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType, GlobalCellType
@@ -89,10 +89,10 @@ contains ! module procedures
   
   subroutine addExchangeToSpatialConnection(this, exchange)
     class(SpatialModelConnectionType), intent(inout) :: this
-    class(NumericalExchangeType), pointer, intent(in) :: exchange
+    class(DisConnExchangeType), pointer, intent(in) :: exchange
     ! local
     class(*), pointer :: exg
-    
+
     exg => exchange
     call this%exchangeList%Add(exg)
     
@@ -216,13 +216,13 @@ contains ! module procedures
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local
     integer(I4B) :: iex, iconn
-    type(NumericalExchangeType), pointer :: numEx
+    type(DisConnExchangeType), pointer :: connEx
     
     ! set boundary cells
     do iex=1, this%exchangeList%Count()
-      numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
-      do iconn=1, numEx%nexg          
-        call this%gridConnection%connectCell(numEx%nodem1(iconn), numEx%m1, numEx%nodem2(iconn), numEx%m2)
+      connEx => GetDisConnExchangeFromList(this%exchangeList, iex)
+      do iconn=1, connEx%nexg          
+        call this%gridConnection%connectCell(connEx%nodem1(iconn), connEx%model1, connEx%nodem2(iconn), connEx%model2)
       end do
     end do
     
@@ -234,13 +234,13 @@ contains ! module procedures
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local   
     integer(I4B) :: i
-    class(NumericalExchangeType), pointer :: numEx
+    class(DisConnExchangeType), pointer :: connEx
       
     ! loop over all exchanges in solution with same conn. type
     do i=1, this%globalExchanges%Count()
-        numEx => GetNumericalExchangeFromList(this%globalExchanges, i)
+        connEx => GetDisConnExchangeFromList(this%globalExchanges, i)
         ! (possibly) add connection between models
-        call this%gridConnection%addModelLink(numEx)
+        call this%gridConnection%addModelLink(connEx)
     end do
       
   end subroutine findModelNeighbors
@@ -280,12 +280,12 @@ contains ! module procedures
     integer(I4B) :: nrConns    
     !local
     integer(I4B) :: iex
-    type(NumericalExchangeType), pointer :: numEx
+    type(DisConnExchangeType), pointer :: connEx
     
     nrConns = 0
     do iex = 1, this%exchangeList%Count()
-      numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
-      nrConns = nrConns + numEx%nexg
+      connEx => GetDisConnExchangeFromList(this%exchangeList, iex)
+      nrConns = nrConns + connEx%nexg
     end do
     
   end function getNrOfConnections 

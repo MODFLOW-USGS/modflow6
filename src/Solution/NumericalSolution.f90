@@ -2268,6 +2268,8 @@ subroutine solution_create(filename, id)
     
   end subroutine
   
+  ! TODO_MJR: why is this here? We want solution to be agnostic
+  ! to connections/exchanges...
   subroutine setExchangesToConnections(this)
     use ListsModule, only: baseconnectionlist
     class(NumericalSolutionType) :: this
@@ -2392,7 +2394,7 @@ subroutine solution_create(filename, id)
       numEx => GetNumericalExchangeFromList(this%exchangelist, ic)
       if (connectionType == numEx%typename) then
         exPtr => numEx
-        call exchanges%Add(exPtr)  
+        call exchanges%Add(exPtr)
       end if
     enddo
     

@@ -5,7 +5,7 @@ module ModelConnectionModule
   use SparseModule, only:sparsematrix
   use ListModule
   use NumericalModelModule, only: NumericalModelType
-  use NumericalExchangeModule, only: NumericalExchangeType 
+  use DisConnExchangeModule, only: DisConnExchangeType 
   
   implicit none
   private
@@ -16,7 +16,7 @@ module ModelConnectionModule
 	! Abstract base class for a model's connection with other models. It will enable e.g.
 	! the interfacing between a GWFModel and its GWF-neigbours, similarly for a
 	! GWTModel, and also the (heterogeneous) interfacing between models of type
-	! GWT and GWF. It is built from NumericalExchangeType objects.
+	! GWT and GWF. It is built from DisConnExchangeType objects.
   type, abstract, public :: ModelConnectionType
     class(NumericalModelType), pointer  :: owner => null()  ! the model whose connection this is  
     character(len=7)                    :: connectionType
@@ -91,10 +91,10 @@ module ModelConnectionModule
     end subroutine deallocateIFace
      
     subroutine addExchangeIFace(this, exchange)
-      import :: ModelConnectionType, NumericalExchangeType
+      import :: ModelConnectionType, DisConnExchangeType
       class(ModelConnectionType), intent(inout) :: this
-      class(NumericalExchangeType), pointer, intent(in) :: exchange      
-    end subroutine addExchangeIFace   
+      class(DisConnExchangeType), pointer, intent(in) :: exchange
+    end subroutine addExchangeIFace
     
   end interface
 
