@@ -1,7 +1,8 @@
-# Test the ability of a lake incised into multiple layers to slowly rise and
-# expand as the surrounding groundwater flows into the lake.  Recharge is
-# on for this problem and the test makes sure that recharge is not added
-# to cells with an active lake above them.
+# Test for checking lak observation input.  The following observation types:
+# 'lak', 'wetted-area', and 'conductance,' require that ID2 be provided when
+# ID is an integer corresponding to a lake number and not BOUNDNAME.
+# See table in LAK Package section of mf6io.pdf for an explanation of ID, 
+# ID2, and Observation Type.
 
 
 import os
