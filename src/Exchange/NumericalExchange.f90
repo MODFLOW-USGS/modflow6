@@ -140,7 +140,7 @@ contains
     return
   end subroutine exg_cf
 
-  subroutine exg_fc(this, kiter, iasln, amatsln, inwtflag)
+  subroutine exg_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
 ! ******************************************************************************
 ! exg_fc -- Fill the matrix
 ! ******************************************************************************
@@ -152,6 +152,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    real(DP), dimension(:), intent(inout) :: rhssln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
 ! ------------------------------------------------------------------------------

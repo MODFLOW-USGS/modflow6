@@ -522,7 +522,7 @@ contains
     return
   end subroutine gwf_gwf_cf
 
-  subroutine gwf_gwf_fc(this, kiter, iasln, amatsln, inwtflag)
+  subroutine gwf_gwf_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
 ! ******************************************************************************
 ! gwf_gwf_fc -- Fill the matrix
 ! ******************************************************************************
@@ -537,6 +537,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    real(DP), dimension(:), intent(inout) ::rhssln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
