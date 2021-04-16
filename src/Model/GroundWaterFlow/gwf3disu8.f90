@@ -2,7 +2,7 @@ module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LINELENGTH
+  use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
@@ -22,6 +22,7 @@ module GwfDisuModule
   type, extends(DisBaseType) :: GwfDisuType
     integer(I4B), pointer :: njausr => null()                                    ! user-specified nja size
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
+    real(DP), pointer :: voffsettol => null()                                    ! vertical offset tolerance
     real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
     real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
     real(DP), dimension(:), pointer, contiguous :: top1d => null()               ! (size:nodesuser) cell top elevation
@@ -279,7 +280,6 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: ustop, count_errors, store_error
-    use ConstantsModule,   only: LINELENGTH, DZERO
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisuType) :: this
@@ -385,7 +385,6 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
@@ -415,17 +414,30 @@ module GwfDisuModule
     enddo
     !
     ! -- Check for zero and negative thickness and zero or negative areas
+    !    for cells with idomain == 1
     do n = 1, this%nodesuser
-      dz = this%top1d(n) - this%bot1d(n)
-      if (dz <= DZERO) then
-        write(errmsg, fmt=fmtdz) n, this%top1d(n), this%bot1d(n)
-        call store_error(errmsg)
-      endif
-      if (this%area1d(n) <= DZERO) then
-        write(errmsg, fmt=fmtarea) n, this%area1d(n)
-        call store_error(errmsg)
-      endif
+      if (this%idomain(n) == 1) then
+        dz = this%top1d(n) - this%bot1d(n)
+        if (dz <= DZERO) then
+          write(errmsg, fmt=fmtdz) n, this%top1d(n), this%bot1d(n)
+          call store_error(errmsg)
+        endif
+        if (this%area1d(n) <= DZERO) then
+          write(errmsg, fmt=fmtarea) n, this%area1d(n)
+          call store_error(errmsg)
+        endif
+      end if
     enddo
+    !
+    ! -- check to make sure voffsettol is >= 0
+    if (this%voffsettol < DZERO) then
+      write(errmsg, '(a, 1pg15.6)') &
+        'Vertical offset tolerance must be greater than zero. Found ', &
+        this%voffsettol
+      call store_error(errmsg)
+      if (this%inunit > 0) call store_error_unit(this%inunit)
+      call ustop()
+    end if
     !
     ! -- For cell n, ensure that underlying cells have tops less than
     !    or equal to the bottom of cell n
@@ -434,7 +446,8 @@ module GwfDisuModule
         m = this%jainp(ipos)
         ihc = this%ihcinp(ipos)
         if (ihc == 0 .and. m > n) then
-          if (this%top1d(m) > this%bot1d(n)) then
+          dz = this%top1d(m) - this%bot1d(n) 
+          if (dz > this%voffsettol) then
             write(errmsg, fmterrmsg) this%top1d(m), m, this%bot1d(n), n, m, n
             call store_error(errmsg)
           end if
@@ -468,6 +481,7 @@ module GwfDisuModule
     ! -- scalars
     call mem_deallocate(this%njausr)
     call mem_deallocate(this%nvert)
+    call mem_deallocate(this%voffsettol)
     !
     ! -- arrays
     call mem_deallocate(this%top1d)
@@ -615,6 +629,10 @@ module GwfDisuModule
             this%angrot = this%parser%GetDouble()
             write(this%iout,'(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ',         &
               this%angrot
+          case('VERTICAL_OFFSET_TOLERANCE')
+            this%voffsettol = this%parser%GetDouble()
+            write(this%iout,'(4x,a,1pg24.15)') &
+              'VERTICAL OFFSET TOLERANCE SPECIFIED AS ', this%voffsettol
           case default
             write(errmsg,'(a)')'Unknown DISU option: ' // trim(keyword)
             call store_error(errmsg)
@@ -934,7 +952,6 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: ustop, count_errors, store_error
-    use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B) :: i
@@ -1019,7 +1036,6 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: ustop, count_errors, store_error
-    use ConstantsModule,   only: LINELENGTH, DZERO
     use InputOutputModule, only: urword
     use SparseModule, only: sparsematrix
     ! -- dummy
@@ -1156,7 +1172,6 @@ module GwfDisuModule
     ! -- modules
     use InputOutputModule, only: getunit, openfile
     use OpenSpecModule, only: access, form
-    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), dimension(:), intent(in) :: icelltype
@@ -1326,7 +1341,6 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DONE, DZERO
     use SimModule, only: ustop, store_error
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1384,7 +1398,7 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO, DONE, DHALF
+    use ConstantsModule, only: DHALF
     use SimModule, only: ustop, store_error
     use DisvGeom, only: line_unit_vector
     ! -- dummy
@@ -1498,11 +1512,13 @@ module GwfDisuModule
     ! -- Allocate variables for DISU
     call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
     call mem_allocate(this%nvert, 'NVERT', this%memoryPath)
+    call mem_allocate(this%voffsettol, 'VOFFSETTOL', this%memoryPath)
     !
     ! -- Set values
     this%ndim = 1
     this%njausr = 0
     this%nvert = 0
+    this%voffsettol = DZERO
     !
     ! -- Return
     return

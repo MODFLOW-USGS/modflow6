@@ -1516,7 +1516,7 @@ contains
     ! -- Add exchange coefficients to the solution
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, 1)
+      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, 1)
     enddo
     !
     ! -- Add model coefficients to the solution
@@ -2584,7 +2584,7 @@ contains
     ! -- Fill coefficients (FC) for each exchange
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, 0)
+      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, 0)
     end do
     !
     ! -- Fill coefficients (FC) for each model
@@ -2642,7 +2642,7 @@ contains
           ! -- Fill coefficients (FC) for each exchange
           do ic=1,this%exchangelist%Count()
             cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-            call cp%exg_fc(kiter, this%ia, this%amat, 0)
+            call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, 0)
           end do
           !
           ! -- Fill coefficients (FC) for each model

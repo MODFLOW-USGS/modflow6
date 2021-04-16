@@ -159,8 +159,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 	        \item --  
-	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example ``water-content.uzf.bin''.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  A new test, located in the autotest directory and titled test_gwf_uzf_wc_output.py demonstrates how to read the new binary water content output file. Also, this same test compares MODFLOW~6 water contents saved with the new WATER_CONTENT keyword in the OPTIONS block of UZF to water contents calculated by MF-NWT and written to the flow and transport linker file by the LMT package.  
-	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
+	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER\_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example ``water-content.uzf.bin''.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  
+	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array, which is marked with the text description ``FLOW-JA-FACE''.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
 	\end{itemize}
 	
 	\underline{EXAMPLES}
@@ -177,6 +177,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 	        \item The convergence failure message message written to GWF and GWT listing files (FAILED TO MEET SOLVER CONVERGENCE CRITERIA) is now written after the budget summary tables.  In previous releases this convergence failure message was written prior to printing heads and concentrations, which often resulted in this message being unnoticed by users.
 	        \item The order of output written to the GWF and GWT listing files for a time step was reorganized in a consistent manner with model and package flows coming first, followed by dependent variables, and then concluding with budget summary tables.
+	        \item The DISU Package checks to make sure that the top of a cell is not higher than the bottom of an overlying cell.  A new option was added to the DISU Package to allow the user to specify the vertical offset tolerance used in this check.
 	\end{itemize}
 
 %	\underline{STRESS PACKAGES}
@@ -190,6 +191,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 	        \item The UZF water-content observation by depth was giving an error, because a check was using the wrong index to retrieve the cell top and bottom elevations for the requested observation.  The program was modified to use the correct index, and the output is now as expected.  Note that this bug is not related to the new WC keyword in the OPTIONS block, but rather is related to OBS6 output option.
 	        \item Amend surfdep error check with landflag.  Deep cells (non-land surface cells) should not require surfdep > 0
+	        \item In the LAK observation package, users can specify ``lak'' to get a summary of lake-groundwater exchange.  Users could specify a lake number without specifying a specific connection number (variable ``iconn'').  Code will now stop if lake number is provided without a matching connection number.  Code will still provide a summary of total lake-groundwater exchange when BOUNDNAME is entered for the variable ID.  This also will fix a similar issue for the observation types ``wetted-area'' and ``conductance'', since both require ID2 when ID is an integer corresponding to a lake number.
 	\end{itemize}
 
 %	\underline{SOLUTION}
