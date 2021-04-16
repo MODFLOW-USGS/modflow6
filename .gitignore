@@ -111,6 +111,9 @@ latex/
 html/
 xml/
 
+# Intel Fortran Visual Studio intermediate files
+msvs/*.fdz
+
 # Visual Studio Code
 modflow6.code-workspace
 .vscode/settings.json

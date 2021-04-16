@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2024
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6", "mf6.vfproj", "{369C1E2E-A513-4E83-A076-923534E30304}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -24,12 +24,12 @@ Global
 		{369C1E2E-A513-4E83-A076-923534E30304}.Debug|Win32.Build.0 = Debug|Win32
 		{369C1E2E-A513-4E83-A076-923534E30304}.Debug|x64.ActiveCfg = Debug|x64
 		{369C1E2E-A513-4E83-A076-923534E30304}.Debug|x64.Build.0 = Debug|x64
-		{369C1E2E-A513-4E83-A076-923534E30304}.Profile|Win32.ActiveCfg = Profile|x64
-		{369C1E2E-A513-4E83-A076-923534E30304}.Profile|Win32.Build.0 = Profile|x64
+		{369C1E2E-A513-4E83-A076-923534E30304}.Profile|Win32.ActiveCfg = Profile|Win32
+		{369C1E2E-A513-4E83-A076-923534E30304}.Profile|Win32.Build.0 = Profile|Win32
 		{369C1E2E-A513-4E83-A076-923534E30304}.Profile|x64.ActiveCfg = Profile|x64
 		{369C1E2E-A513-4E83-A076-923534E30304}.Profile|x64.Build.0 = Profile|x64
-		{369C1E2E-A513-4E83-A076-923534E30304}.Release|Win32.ActiveCfg = Release|x64
-		{369C1E2E-A513-4E83-A076-923534E30304}.Release|Win32.Build.0 = Release|x64
+		{369C1E2E-A513-4E83-A076-923534E30304}.Release|Win32.ActiveCfg = Release|Win32
+		{369C1E2E-A513-4E83-A076-923534E30304}.Release|Win32.Build.0 = Release|Win32
 		{369C1E2E-A513-4E83-A076-923534E30304}.Release|x64.ActiveCfg = Release|x64
 		{369C1E2E-A513-4E83-A076-923534E30304}.Release|x64.Build.0 = Release|x64
 		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Debug|Win32.ActiveCfg = Debug|Win32
