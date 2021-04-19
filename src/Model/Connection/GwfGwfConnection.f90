@@ -34,13 +34,13 @@ module GwfGwfConnectionModule
     procedure, pass(this) :: gwfGwfConnection_ctor
     generic, public :: construct => gwfGwfConnection_ctor
     
-    ! implement (abstract) virtual
-    procedure, pass(this) :: mc_ar => gwfgwfcon_ar
-    procedure, pass(this) :: mc_df => gwfgwfcon_df 
-    procedure, pass(this) :: mc_ac => gwfgwfcon_ac
-    procedure, pass(this) :: mc_cf => gwfgwfcon_cf
-    procedure, pass(this) :: mc_fc => gwfgwfcon_fc
-    procedure, pass(this) :: mc_da => gwfgwfcon_da
+    ! overriding NumericalExchangeType
+    procedure, pass(this) :: exg_ar => gwfgwfcon_ar
+    procedure, pass(this) :: exg_df => gwfgwfcon_df 
+    procedure, pass(this) :: exg_ac => gwfgwfcon_ac
+    procedure, pass(this) :: exg_cf => gwfgwfcon_cf
+    procedure, pass(this) :: exg_fc => gwfgwfcon_fc
+    procedure, pass(this) :: exg_da => gwfgwfcon_da
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
@@ -54,8 +54,8 @@ contains
   
    subroutine gwfGwfConnection_ctor(this, model)
     use NumericalModelModule, only: NumericalModelType
-    class(GwfGwfConnectionType), intent(inout)  :: this
-    class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
+    class(GwfGwfConnectionType) :: this
+    class(NumericalModelType), pointer :: model ! note: this must be a GwfModelType
     ! local
     character(len=LENCOMPONENTNAME) :: name
     integer(I4B), save :: iconn = 1 ! static counter to ensure unique name
@@ -75,7 +75,7 @@ contains
     
     call this%allocateScalars()
     
-    this%connectionType = 'GWF-GWF'
+    this%typename = 'GWF-GWF'
     this%iVarCV = 0
     this%iDewatCV = 0
     this%satOmega = DZERO  
@@ -88,7 +88,7 @@ contains
   end subroutine gwfGwfConnection_ctor
       
   subroutine gwfgwfcon_df(this)
-    class(GwfGwfConnectionType), intent(inout) :: this    
+    class(GwfGwfConnectionType) :: this    
     ! local
     type(sparsematrix) :: sparse
         
@@ -143,7 +143,7 @@ contains
   
   subroutine createCoefficientMatrix(this, sparse)
     use SimModule, only: ustop
-    class(GwfGwfConnectionType), intent(inout) :: this
+    class(GwfGwfConnectionType) :: this
     type(sparsematrix) :: sparse
     ! local
     integer(I4B) :: ierror
@@ -164,7 +164,7 @@ contains
   subroutine maskConnections(this)
     use SimModule, only: ustop
     use CsrUtilsModule, only: getCSRIndex
-    class(GwfGwfConnectionType), intent(inout) :: this
+    class(GwfGwfConnectionType) :: this
     ! local
     integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx
     type(ConnectionsType), pointer :: conn
@@ -206,7 +206,7 @@ contains
   
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
-    class(GwfGwfConnectionType), intent(inout)  :: this
+    class(GwfGwfConnectionType) :: this
     ! local
 
     call mem_allocate(this%iVarCV, 'IVARCV', this%memoryPath)
@@ -222,7 +222,7 @@ contains
   ! So, in this routine, we have to do create, define, and allocate&read 
   subroutine gwfgwfcon_ar(this)
   use GridConnectionModule, only: GridConnectionType
-    class(GwfGwfConnectionType), intent(inout)  :: this
+    class(GwfGwfConnectionType) :: this
     ! local    
     integer(I4B) :: icell, idx, localIdx
     class(NumericalModelType), pointer :: model
@@ -255,7 +255,7 @@ contains
   end subroutine gwfgwfcon_ar
      
   subroutine gwfgwfcon_ac(this, sparse)        
-    class(GwfGwfConnectionType), intent(inout) :: this
+    class(GwfGwfConnectionType) :: this
     type(sparsematrix), intent(inout) :: sparse 
     ! local
     integer(I4B) :: n, m, ipos
@@ -280,7 +280,7 @@ contains
   ! calculate or adjust matrix coefficients which are affected
   ! by the connection of GWF models
   subroutine gwfgwfcon_cf(this, kiter)
-    class(GwfGwfConnectionType), intent(inout)  :: this
+    class(GwfGwfConnectionType) :: this
     integer(I4B), intent(in) :: kiter
     ! local
     integer(I4B) :: i
@@ -302,7 +302,7 @@ contains
   end subroutine gwfgwfcon_cf
   
   subroutine syncInterfaceModel(this)
-    class(GwfGwfConnectionType), intent(inout) :: this
+    class(GwfGwfConnectionType) :: this
     integer(I4B) :: icell, idx
     class(NumericalModelType), pointer :: model
     
@@ -317,13 +317,13 @@ contains
   end subroutine syncInterfaceModel
   
   ! write the calculated conductances into the global system matrix
-  subroutine gwfgwfcon_fc(this, kiter, amatsln, njasln, rhssln, inwtflag)    
-    class(GwfGwfConnectionType), intent(inout) :: this
+  subroutine gwfgwfcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+    class(GwfGwfConnectionType) :: this
     integer(I4B), intent(in) :: kiter
+    integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
-    integer(I4B),intent(in) :: njasln
     real(DP), dimension(:), intent(inout) ::rhssln
-    integer(I4B), intent(in) :: inwtflag
+    integer(I4B), optional, intent(in) :: inwtflag
     ! local
     integer(I4B) :: n, ipos, nglo
     
@@ -351,7 +351,7 @@ contains
 
   ! deallocate resources
   subroutine gwfgwfcon_da(this)    
-    class(GwfGwfConnectionType), intent(inout) :: this
+    class(GwfGwfConnectionType) :: this
 
     call mem_deallocate(this%iVarCV)
     call mem_deallocate(this%iDewatCV)

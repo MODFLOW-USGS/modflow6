@@ -27,6 +27,8 @@ module BaseSolutionModule
     procedure (slnaddmodel), deferred :: add_model
     procedure (slnaddexchange), deferred :: add_exchange
     procedure (slngetmodels), deferred :: get_models
+    procedure (slngetexchanges), deferred :: get_exchanges
+    ! TODO_MJR: this will go again:
     procedure (assignConnectionsIFace), deferred :: assignModelConnections
     procedure (setExchangesIFace), deferred :: setExchangesToConnections
   end type BaseSolutionType
@@ -102,6 +104,13 @@ module BaseSolutionModule
     end subroutine
 
     function slngetmodels(this) result(models)
+      import BaseSolutionType
+      import ListType
+      class(BaseSolutionType) :: this
+      type(ListType), pointer :: models
+    end function
+
+    function slngetexchanges(this) result(models)
       import BaseSolutionType
       import ListType
       class(BaseSolutionType) :: this

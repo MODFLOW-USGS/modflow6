@@ -1,8 +1,11 @@
 module ConnectionBuilderModule
   use KindModule, only: I4B
-  use DisConnExchangeModule,  only: DisConnExchangeType
-  use NumericalModelModule,     only: NumericalModelType
-  use ModelConnectionModule
+  use BaseExchangeModule, only: BaseExchangeType
+  use DisConnExchangeModule, only: DisConnExchangeType
+  use NumericalModelModule, only: NumericalModelType
+  use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
+                                CastAsSpatialModelConnectionClass,    &
+                                GetSpatialModelConnectionFromList
   
   implicit none  
   private
@@ -18,39 +21,46 @@ module ConnectionBuilderModule
   contains
 
   subroutine processExchangeImpl(this, exchange)
-    use ListsModule, only: baseconnectionlist
-  
+    use ListsModule, only: baseconnectionlist  
     class(ConnectionBuilderType) :: this
-    class(DisConnExchangeType), pointer :: exchange
-    
-    ! local variables
-    class(ModelConnectionType), pointer :: modelConnection
-    class(*), pointer                   :: newConnection 
+    class(BaseExchangeType), pointer :: exchange
+    ! local
+    class(DisConnExchangeType), pointer :: conEx
+    class(SpatialModelConnectionType), pointer :: modelConnection
+    class(*), pointer                   :: newConnection     
+
+    select type(exchange)
+      class is(DisConnExchangeType)
+        conEx => exchange
+      class default
+      ! don't do anything here for now...
+      return
+    end select
     
     ! fetch connection for model 1:
-    modelConnection => lookupConnection(exchange%model1, exchange%typename)
+    modelConnection => lookupConnection(conEx%model1, conEx%typename)
     if (.not. associated(modelConnection)) then
       ! create new model connection
-      newConnection => createModelConnection(exchange%model1, exchange%typename)      
+      newConnection => createModelConnection(conEx%model1, conEx%typename)      
       ! add to global list
       call baseconnectionlist%Add(newConnection)
-      modelConnection => CastAsModelConnectionClass(newConnection)
+      modelConnection => CastAsSpatialModelConnectionClass(newConnection)
     end if
       
     ! add exchange to connection
-    call modelConnection%addExchange(exchange)
+    call modelConnection%addExchange(conEx)
     
     ! and fetch for model 2
-    modelConnection => lookupConnection(exchange%model2, exchange%typename)
+    modelConnection => lookupConnection(conEx%model2, conEx%typename)
     if (.not. associated(modelConnection)) then
       ! create new model connection
-      newConnection => createModelConnection(exchange%model2, exchange%typename)
+      newConnection => createModelConnection(conEx%model2, conEx%typename)
       call baseconnectionlist%Add(newConnection)
-      modelConnection => CastAsModelConnectionClass(newConnection)
+      modelConnection => CastAsSpatialModelConnectionClass(newConnection)
     end if
       
     ! add exchange to connection
-    call modelConnection%addExchange(exchange)
+    call modelConnection%addExchange(conEx)
           
   end subroutine processExchangeImpl
   
@@ -61,7 +71,7 @@ module ConnectionBuilderModule
     
     class(NumericalModelType), pointer , intent(in) :: model
     character(len=*), intent(in)                    :: connectionType
-    class(ModelConnectionType), pointer :: connection
+    class(SpatialModelConnectionType), pointer :: connection
     
     ! different concrete connection types:
     class(GwfGwfConnectionType), pointer :: gwfConnection => null()
@@ -93,18 +103,18 @@ module ConnectionBuilderModule
     
     class(NumericalModelType), pointer  :: model
     character(len=*)                    :: exchangeType
-    class(ModelConnectionType), pointer :: connection    
+    class(SpatialModelConnectionType), pointer :: connection    
     
     ! locals
     integer(I4B) :: i
-    class(ModelConnectionType), pointer :: candidate
+    class(SpatialModelConnectionType), pointer :: candidate
     
     connection => null()
     
     call baseconnectionlist%Reset()
     do i = 1, baseconnectionlist%Count()      
-      candidate => GetConnectionFromList(baseconnectionlist,i)      
-      if (candidate%connectionType == exchangeType) then
+      candidate => GetSpatialModelConnectionFromList(baseconnectionlist,i)      
+      if (candidate%typename == exchangeType) then
         if (associated(candidate%owner, model)) then
           connection => candidate
           return

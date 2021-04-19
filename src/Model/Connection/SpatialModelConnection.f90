@@ -1,8 +1,8 @@
 ! Module holding the definition of the SpatialModelConnectionType
 module SpatialModelConnectionModule
   use KindModule, only: I4B, DP
-  use ModelConnectionModule
   use NumericalModelModule, only: NumericalModelType
+  use NumericalExchangeModule, only: NumericalExchangeType
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
   use MemoryManagerModule, only: mem_deallocate
   use MemoryHelperModule, only: create_mem_path
@@ -11,16 +11,20 @@ module SpatialModelConnectionModule
   
   implicit none
   private
+  public :: CastAsSpatialModelConnectionClass
+  public :: GetSpatialModelConnectionFromList
 
   ! Class to manage spatial connection of a model to one or more models of the same type.
   ! Spatial connection here means that the model domains (spatial discretization) are adjacent
   ! and connected via NumericalExchangeType object(s).
-  type, public, extends(ModelConnectionType) :: SpatialModelConnectionType
+  type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
-    ! aggregation, all exchanges which directly connect with our model
-    type(ListType), pointer :: exchangeList => null()    
-    integer(I4B), pointer :: stencilDepth => null() ! default = 1, xt3d = 2, ...
-        
+    class(NumericalModelType), pointer  :: owner => null()          !< the model whose connection this is    
+    type(ListType), pointer             :: localExchanges => null() !< aggregation, all exchanges which directly connect with our model
+    type(ListType)                      :: globalExchanges          !< all exchanges in the same solution
+    integer(I4B), pointer               :: stencilDepth => null()   !< default = 1, xt3d = 2, ...
+    integer(I4B)                        :: iNewton                  !< newton-raphson = 1, = 0 otherwise
+    
     ! the interface system doesn't live in a solution, so we need these
     integer(I4B), pointer                               :: neq => null()
     integer(I4B), pointer                               :: nja => null()
@@ -37,23 +41,22 @@ module SpatialModelConnectionModule
     integer(I4B), dimension(:), pointer :: mapIdxToSln => null() ! maps local matrix (amat) to the global solution matrix
     
   contains
+  
     procedure, pass(this) :: spatialConnection_ctor
     generic, public :: construct => spatialConnection_ctor
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
-    procedure, pass(this) :: mc_df => spatialcon_df 
-    procedure, pass(this) :: mc_ar => spatialcon_ar
-    procedure, pass(this) :: mc_ac => spatialcon_ac
-    procedure, pass(this) :: mc_cf => spatialcon_cf    
-    procedure, pass(this) :: mc_mc => spatialcon_mc
-    procedure, pass(this) :: mc_fc => spatialcon_fc
-    procedure, pass(this) :: mc_da => spatialcon_da
+
+    ! partly overriding NumericalExchangeType:
+    procedure, pass(this) :: exg_df => spatialcon_df
+    procedure, pass(this) :: exg_ac => spatialcon_ac  
+    procedure, pass(this) :: exg_mc => spatialcon_mc
+    procedure, pass(this) :: exg_da => spatialcon_da
+
     procedure, pass(this) :: spatialcon_df 
-    procedure, pass(this) :: spatialcon_ar
-    procedure, pass(this) :: spatialcon_ac
-    procedure, pass(this) :: spatialcon_cf    
+    procedure, pass(this) :: spatialcon_ac  
     procedure, pass(this) :: spatialcon_mc
-    procedure, pass(this) :: spatialcon_fc
     procedure, pass(this) :: spatialcon_da
+
     ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: setExchangeConnections
@@ -67,7 +70,7 @@ module SpatialModelConnectionModule
 contains ! module procedures
   
   subroutine spatialConnection_ctor(this, model, name)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     class(NumericalModelType), intent(in), pointer :: model
     character(len=*), intent(in) :: name
     
@@ -79,7 +82,7 @@ contains ! module procedures
     
     this%nrOfConnections = 0
     
-    allocate(this%exchangeList)
+    allocate(this%localExchanges)
     allocate(this%gridConnection)
     call this%allocateScalars()
 
@@ -88,18 +91,18 @@ contains ! module procedures
   end subroutine spatialConnection_ctor
   
   subroutine addExchangeToSpatialConnection(this, exchange)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     class(DisConnExchangeType), pointer, intent(in) :: exchange
     ! local
     class(*), pointer :: exg
 
     exg => exchange
-    call this%exchangeList%Add(exg)
+    call this%localExchanges%Add(exg)
     
   end subroutine addExchangeToSpatialConnection
   
   subroutine spatialcon_df(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
@@ -110,22 +113,13 @@ contains ! module procedures
     call this%allocateArrays()
     
   end subroutine spatialcon_df
-  
-  subroutine spatialcon_ar(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
-  end subroutine spatialcon_ar
-
-  subroutine spatialcon_cf(this, kiter)
-    class(SpatialModelConnectionType), intent(inout) :: this
-    integer(I4B), intent(in) :: kiter
-  end subroutine spatialcon_cf
 
   ! create the mapping from local system matrix to global
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
     use CsrUtilsModule, only: getCSRIndex
     use GridConnectionModule
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! local
@@ -150,23 +144,14 @@ contains ! module procedures
     end do
     
   end subroutine spatialcon_mc
-
-  subroutine spatialcon_fc(this, kiter, amatsln, njasln, rhssln, inwtflag)
-    class(SpatialModelConnectionType), intent(inout) :: this
-    integer(I4B), intent(in) :: kiter
-    real(DP), dimension(:), intent(inout) :: amatsln
-    integer(I4B),intent(in) :: njasln
-    real(DP), dimension(:), intent(inout) :: rhssln
-    integer(I4B), intent(in) :: inwtflag
-  end subroutine spatialcon_fc
   
   ! add connections to global matrix, c.f. exg_ac in NumericalExchange, 
   ! but now for all exchanges with this model and skipping over the 
   ! transposed elements
   subroutine spatialcon_ac(this, sparse)
     use SparseModule, only:sparsematrix    
-    class(SpatialModelConnectionType), intent(inout) :: this
-    type(sparsematrix), intent(inout) :: sparse 
+    class(SpatialModelConnectionType) :: this
+    type(sparsematrix), intent(inout) :: sparse
     ! local
     integer(I4B) :: icell, iglo, jglo
     type(GlobalCellType), pointer :: ncell, mcell
@@ -182,7 +167,7 @@ contains ! module procedures
   end subroutine spatialcon_ac
   
   subroutine spatialcon_da(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
   
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
@@ -197,7 +182,7 @@ contains ! module procedures
   end subroutine spatialcon_da
   
   subroutine setupGridConnection(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     ! local
     
     ! set boundary cells
@@ -213,14 +198,14 @@ contains ! module procedures
   
   ! set the primary links
   subroutine setExchangeConnections(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     ! local
     integer(I4B) :: iex, iconn
     type(DisConnExchangeType), pointer :: connEx
     
     ! set boundary cells
-    do iex=1, this%exchangeList%Count()
-      connEx => GetDisConnExchangeFromList(this%exchangeList, iex)
+    do iex=1, this%localExchanges%Count()
+      connEx => GetDisConnExchangeFromList(this%localExchanges, iex)
       do iconn=1, connEx%nexg          
         call this%gridConnection%connectCell(connEx%nodem1(iconn), connEx%model1, connEx%nodem2(iconn), connEx%model2)
       end do
@@ -231,7 +216,7 @@ contains ! module procedures
   ! extends model topology to deal with cases where
   ! the stencil covers more than 2 models
   subroutine findModelNeighbors(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     ! local   
     integer(I4B) :: i
     class(DisConnExchangeType), pointer :: connEx
@@ -247,7 +232,7 @@ contains ! module procedures
   
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
@@ -258,7 +243,7 @@ contains ! module procedures
   subroutine allocateArrays(this)
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     ! local
     integer(I4B) :: i
     
@@ -276,19 +261,47 @@ contains ! module procedures
   
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)
-    class(SpatialModelConnectionType), intent(inout) :: this
+    class(SpatialModelConnectionType) :: this
     integer(I4B) :: nrConns    
     !local
     integer(I4B) :: iex
     type(DisConnExchangeType), pointer :: connEx
     
     nrConns = 0
-    do iex = 1, this%exchangeList%Count()
-      connEx => GetDisConnExchangeFromList(this%exchangeList, iex)
+    do iex = 1, this%localExchanges%Count()
+      connEx => GetDisConnExchangeFromList(this%localExchanges, iex)
       nrConns = nrConns + connEx%nexg
     end do
     
-  end function getNrOfConnections 
+  end function getNrOfConnections
+
+  function CastAsSpatialModelConnectionClass(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(SpatialModelConnectionType), pointer :: res
+    !
+    res => null()
+    if (.not. associated(obj)) return
+    !
+    select type (obj)
+    class is (SpatialModelConnectionType)
+      res => obj
+    end select
+    return
+  end function CastAsSpatialModelConnectionClass
+
+  function GetSpatialModelConnectionFromList(list, idx) result(res)
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(SpatialModelConnectionType), pointer :: res
+    
+    ! local
+    class(*), pointer :: obj
+    obj => list%GetItem(idx)
+    res => CastAsSpatialModelConnectionClass(obj)
+    !
+    return
+  end function GetSpatialModelConnectionFromList  
   
 end module SpatialModelConnectionModule
 

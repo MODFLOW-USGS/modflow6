@@ -25,7 +25,8 @@ module NumericalSolutionModule
   use NumericalExchangeModule, only: NumericalExchangeType,                    &
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
-  use ModelConnectionModule,   only: ModelConnectionType, GetConnectionFromList
+  use SpatialModelConnectionModule, only: SpatialModelConnectionType,          &
+                                          GetSpatialModelConnectionFromList
   use SparseModule,            only: sparsematrix
   use SimVariablesModule,      only: iout, isim_mode
   use BlockParserModule,       only: BlockParserType
@@ -143,6 +144,7 @@ module NumericalSolutionModule
     procedure :: add_model
     procedure :: add_exchange
     procedure :: get_models
+    procedure :: get_exchanges
     procedure :: assignModelConnections
     procedure :: setExchangesToConnections
     procedure :: save
@@ -1887,7 +1889,7 @@ subroutine solution_create(filename, id)
     integer(I4B) :: im, ic
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
-    class(ModelConnectionType), pointer :: mc
+    class(SpatialModelConnectionType), pointer :: mc
     !
     ! -- Set amat and rhs to zero
     call this%sln_reset()
@@ -1901,8 +1903,8 @@ subroutine solution_create(filename, id)
     !
     ! -- Calculate the matrix terms for each connection
     do ic=1,this%connectionlist%Count()
-      mc => GetConnectionFromList(this%connectionlist, ic)
-      call mc%mc_cf(kiter)
+      mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
+      call mc%exg_cf(kiter)
     enddo
     !
     ! -- Calculate the matrix terms for each model
@@ -1915,13 +1917,13 @@ subroutine solution_create(filename, id)
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       ! TODO_MJR: delete this when done
-      !call cp%exg_fc(kiter, this%ia, this%amat, inewton)
+      !call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
     enddo
     !
     ! -- Add connection coefficients to the solution
     do ic=1,this%connectionlist%Count()
-      mc => GetConnectionFromList(this%connectionlist, ic)
-      call mc%mc_fc(kiter, this%amat, this%nja, this%rhs, inewton)
+      mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
+      call mc%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
     enddo
     !
     ! -- Add model coefficients to the solution
@@ -2240,19 +2242,28 @@ subroutine solution_create(filename, id)
     return
   end subroutine add_exchange
 
+  !> @brief Returns a pointer to the list of exchanges in this solution
+  !<
+  function get_exchanges(this) result(exchanges)
+    class(NumericalSolutionType) :: this !< instance of the numerical solution
+    type(ListType), pointer :: exchanges    !< pointer to the exchange list
+
+    exchanges => this%exchangelist
+
+  end function get_exchanges
+
   subroutine assignModelConnections(this)
     use ListsModule, only: baseconnectionlist
-    use ModelConnectionModule, only: ModelConnectionType, GetConnectionFromList
     class(NumericalSolutionType) :: this
     ! local    
-    class(ModelConnectionType), pointer :: connection
+    class(SpatialModelConnectionType), pointer :: connection
     class(*), pointer :: objPtr
     class(NumericalModelType), pointer :: model
     integer(I4B) :: ic, im
     
     ! search thru connections
     do ic=1,baseconnectionlist%Count()
-      connection => GetConnectionFromList(baseconnectionlist, ic)    
+      connection => GetSpatialModelConnectionFromList(baseconnectionlist, ic)    
       ! check if connection's model matches this solution, if so, 
       ! add pointer to internal list
       do im = 1, this%modellist%Count()
@@ -2274,14 +2285,14 @@ subroutine solution_create(filename, id)
     use ListsModule, only: baseconnectionlist
     class(NumericalSolutionType) :: this
     ! local    
-    class(ModelConnectionType), pointer :: connection
+    class(SpatialModelConnectionType), pointer :: connection
     class(NumericalModelType), pointer :: model
     class(NumericalExchangeType), pointer :: numEx
     integer(I4B) :: ic, im, ie
     
     ! search thru connections
     do ic = 1, baseconnectionlist%Count()
-      connection => GetConnectionFromList(baseconnectionlist, ic)    
+      connection => GetSpatialModelConnectionFromList(baseconnectionlist, ic)    
       
       ! check if connection's model matches this solution, if so, 
       ! fill its list with exchanges of same type
@@ -2291,7 +2302,7 @@ subroutine solution_create(filename, id)
           ! match, now add all exchanges
           do ie = 1, this%exchangelist%Count()
             numEx => GetNumericalExchangeFromList(this%exchangelist, ie)
-            if (connection%connectionType == numEx%typename) then
+            if (connection%typename == numEx%typename) then
               call AddNumericalExchangeToList(connection%globalExchanges, numEx)
             end if
           end do 
@@ -2341,8 +2352,8 @@ subroutine solution_create(filename, id)
     ! -- Add terms from model connections to sparse
     do ic=1, this%connectionlist%Count()
         ! TODO_MJR: probably we should never have the abstract base in the NumericalSolutionType??
-        mc => GetConnectionFromList(this%connectionlist, ic)
-        call mc%mc_ac(this%sparse)
+        mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
+        call mc%exg_ac(this%sparse)
     end do
     
     ! -- The number of non-zero array values are now known so
@@ -2371,8 +2382,8 @@ subroutine solution_create(filename, id)
     !
     ! -- Create mapping arrays to global solution for model connections
     do ic=1, this%connectionlist%Count()
-        mc => GetConnectionFromList(this%connectionlist, ic)
-        call mc%mc_mc(this%ia, this%ja)
+        mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
+        call mc%exg_mc(this%ia, this%ja)
     end do
     !
     ! -- return

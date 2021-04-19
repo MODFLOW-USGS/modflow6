@@ -12,7 +12,8 @@ module Mf6CoreModule
                                     baseconnectionlist
   use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
-  use ModelConnectionModule,  only: ModelConnectionType, GetConnectionFromList
+  use SpatialModelConnectionModule, only: SpatialModelConnectionType,            &
+                                          GetSpatialModelConnectionFromList
   use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule,    only: SolutionGroupType, GetSolutionGroupFromList
   implicit none  
@@ -129,7 +130,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
-      class(ModelConnectionType), pointer :: mc => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       !
       ! -- FINAL PROCESSING (FP)
       ! -- Final processing for each model
@@ -170,7 +171,7 @@ module Mf6CoreModule
       !
       ! -- Deallocate for each connection
       do ic = 1, baseconnectionlist%Count()
-        mc => GetConnectionFromList(baseconnectionlist, ic)
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
         call mc%mc_da()
         deallocate(mc)
       enddo
@@ -231,7 +232,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
-      class(ModelConnectionType), pointer :: mc => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       
       ! -- Define each model
       do im = 1, basemodellist%Count()
@@ -247,7 +248,7 @@ module Mf6CoreModule
       !
       ! -- Define each connection
       do ic = 1, baseconnectionlist%Count()
-        mc => GetConnectionFromList(baseconnectionlist, ic)
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
         call mc%mc_df()
       enddo
       !
@@ -258,7 +259,7 @@ module Mf6CoreModule
       enddo
     
     end subroutine simulation_df
-    class(ModelConnectionType), pointer :: mc => null()
+    class(SpatialModelConnectionType), pointer :: mc => null()
     
     !> @brief Simulation allocate and read
     !!
@@ -277,7 +278,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
-      class(ModelConnectionType), pointer :: mc => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       
       ! -- Allocate and read each model
       do im = 1, basemodellist%Count()
@@ -293,7 +294,7 @@ module Mf6CoreModule
       !
       ! -- Allocate and read all model connections
       do ic = 1, baseconnectionlist%Count()
-        mc => GetConnectionFromList(baseconnectionlist, ic)
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
         call mc%mc_ar()
       enddo
       !
@@ -304,7 +305,7 @@ module Mf6CoreModule
       enddo
       !
     end subroutine simulation_ar
-    class(ModelConnectionType), pointer :: mc => null()
+    class(SpatialModelConnectionType), pointer :: mc => null()
     
     !> @brief Read and prepare time step
     !!

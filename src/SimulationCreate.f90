@@ -60,51 +60,46 @@ module SimulationCreateModule
     return
   end subroutine simulation_cr
 
+  !> @brief Create the model connections from the exchanges
+  !!
+  !! This will upgrade the numerical exchanges in the solution,
+  !! whenever the configuration requires this, to Connection 
+  !! objects. Currently we anticipate:
+  !!
+  !!   GWF-GWF => GwfGwfConnection
+  !!   GWT-GWT => GwtGwtConecction
+  !<
   subroutine connections_cr()
-  ! ******************************************************************************
-  ! Create the Model Connections from the exchanges:
-  ! 
-  ! - GWF-GWF => GwfGwfConnection
-  ! - GWT-GWT => GwtGwtConecction
-  ! - ...etc...
-  !
-  ! ******************************************************************************
-    use ListsModule,            only: baseexchangelist
-    use BaseExchangeModule,     only: GetBaseExchangeFromList
-    use DisConnExchangeModule,  only: DisConnExchangeType
-    use ConnectionBuilderModule
-    
-    integer(I4B) :: ic
-    
+  use DisConnExchangeModule,  only: DisConnExchangeType
+  use ConnectionBuilderModule
+    integer(I4B) :: isol, iex 
     type(ConnectionBuilderType) :: connectionBuilder
-    
-    class(BaseExchangeType), pointer :: ep => null()    
-    class(DisConnExchangeType), pointer :: connExchange => null()
+    class(BaseSolutionType), pointer :: sol => null()
+    type(ListType), pointer :: exchanges => null()
+    class(BaseExchangeType), pointer :: ex => null()
+
+    ! TODO_MJR: refactor this, as follows:
+    ! 1. loop over all numerical solutions
+    ! 2. per solution, loop over exchanges and create, or add to existing model connection
+    ! 3. if created, replace exchange with model connection, if added only remove the exchange
+    ! 4. when done, loop over created connections and add all (same-type) exchanges
+    !    from the solution to the global exchanges in the connection
     
     if (baseexchangelist%Count() == 0) then
       ! very possible, silently return
       return
     end if
-        
+
     write(iout,'(/1x,a)') 'Create model connections from exchanges'
-    
-    do ic = 1, baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      
-      ! we assume that we have model-based exchanges, otherwise a model
-      ! connection doesn't make sense. Hence we need NumericalExchanges
-      ! and derived classes
-      select type (ep)
-        class is (DisConnExchangeType)
-          ! now create connections for this exchange, or extend existing connection
-          connExchange => ep
-          call connectionBuilder%processExchange(connExchange)
-        class default
-          ! unsupported exchange, do nothing here
-          write(*,'(4x,a)') 'Error (which should never happen): unsupported exchangetype for creating model connection'
-      end select
-      
-    enddo
+
+    do isol = 1, basesolutionlist%Count()
+      sol => GetBaseSolutionFromList(basesolutionlist, isol)
+      exchanges => sol%get_exchanges()
+      do iex = 1, exchanges%Count()
+        ex => GetBaseExchangeFromList(exchanges, iex)
+        call connectionBuilder%processExchange(ex)
+      end do
+    end do
     
     ! TODO_MJR: this should not be here, but analogous to models for now...
     call assignConnectionsToSolution()
