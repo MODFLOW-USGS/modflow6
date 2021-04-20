@@ -86,7 +86,7 @@ module UzfCellGroupModule
       procedure :: setgwpet
       procedure :: dealloc
       procedure :: get_water_content_at_depth
-      procedure :: get_water_content
+      procedure :: get_wcnew
     end type UzfCellGroupType
 !  
     contains
@@ -663,7 +663,7 @@ module UzfCellGroupModule
 
   subroutine solve(this, thiswork, jbelow, icell, totfluxtot, ietflag,         &
                    issflag, iseepflag, hgwf, qfrommvr, ierr,                   &
-                   reset_state, trhs, thcof, deriv)
+                   reset_state, trhs, thcof, deriv, watercontent)
 ! ******************************************************************************
 ! formulate -- formulate the unsaturated flow object, calculate terms for 
 !              gwf equation            
@@ -689,6 +689,7 @@ module UzfCellGroupModule
     real(DP), intent(inout), optional :: trhs  !< total uzf rhs contribution to GWF model
     real(DP), intent(inout), optional :: thcof !< total uzf hcof contribution to GWF model
     real(DP), intent(inout), optional :: deriv !< derivate term for contribution to GWF model
+    real(DP), intent(inout), optional :: watercontent !< calculated water content
     ! -- local
     real(DP) :: test
     real(DP) :: scale
@@ -791,6 +792,11 @@ module UzfCellGroupModule
     if (present(deriv)) deriv =  deriv1 + deriv2 + derivfinf
     if (present(trhs))  trhs = trhsfinf + trhsseep
     if (present(thcof))  thcof = thcoffinf + thcofseep
+    !
+    ! -- Assign water content prior to resetting waves
+    if (present(watercontent)) then
+      watercontent = this%get_wcnew(icell)
+    end if
     !
     ! -- reset waves to previous state for next iteration  
     if (reset_state) then
@@ -2262,37 +2268,33 @@ module UzfCellGroupModule
     return
   end function get_water_content_at_depth
   
-  function get_water_content(this, icell) result(watercontent)
+  function get_wcnew(this, icell) result(watercontent)
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell  !< uzf cell containing depth
     !
     real(DP) :: watercontent
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: carea
-    real(DP) :: uzwatvol
     real(DP) :: theta_r
     real(DP) :: thk
-    real(DP) :: v
     real(DP) :: hgwf
+    real(DP) :: fm
+    real(DP) :: d
     !
-    ! -- calculate mean uzf moisture-content for the UZF object 
-    !i = this%nodelist(icell)
-    hgwf = this%watab(icell)  ! this%xnew(i)
+    hgwf = this%watab(icell)
     top = this%celtop(icell) 
     bot = this%celbot(icell)
-    carea = this%uzfarea(icell)
-    if ( hgwf > bot ) bot = hgwf
-    thk = top - bot
-    v = thk * carea
-    theta_r = this%THTR(icell)
-    uzwatvol = (this%uzstor(icell) + theta_r * thk) * carea
-    if (hgwf < top) then
-      watercontent = uzwatvol / v
+    thk = top - max(bot, hgwf)
+    if (thk > DZERO) then
+      theta_r = this%thtr(icell)
+      d = thk
+      fm = this%unsat_stor(icell, d)
+      watercontent = fm / thk
+      watercontent = watercontent + theta_r
     else
       watercontent = DZERO
-    endif
+    end if
     return
-  end function get_water_content
+  end function get_wcnew
                       
 end module UzfCellGroupModule

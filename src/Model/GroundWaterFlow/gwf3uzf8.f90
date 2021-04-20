@@ -96,8 +96,9 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous         :: gwdtomvr     => null()
     real(DP), dimension(:), pointer, contiguous         :: rch          => null()
     real(DP), dimension(:), pointer, contiguous         :: rch0         => null()
-    real(DP), dimension(:), pointer, contiguous         :: qsto         => null()
-    real(DP), dimension(:), pointer, contiguous         :: watercontent => null()
+    real(DP), dimension(:), pointer, contiguous         :: qsto         => null()  !< change in stored mobile water per time for this time step
+    real(DP), dimension(:), pointer, contiguous         :: wcnew        => null()  !< water content for this time step
+    real(DP), dimension(:), pointer, contiguous         :: wcold        => null()  !< water content for previous time step
     !
     ! -- timeseries aware variables
     real(DP), dimension(:), pointer, contiguous :: sinf => null()
@@ -363,10 +364,12 @@ contains
     this%bdtxt(4) = '        UZF-GWET'
     this%bdtxt(5) = '  UZF-GWD TO-MVR'
     !
-    ! -- allocate and initialize watercontent array
-    call mem_allocate(this%watercontent, this%nodes, 'WATERCONTENT', this%memoryPath)
+    ! -- allocate and initialize watercontent arrays
+    call mem_allocate(this%wcnew, this%nodes, 'WCNEW', this%memoryPath)
+    call mem_allocate(this%wcold, this%nodes, 'WCOLD', this%memoryPath)
     do i = 1, this%nodes
-      this%watercontent(i) = DZERO
+      this%wcnew(i) = DZERO
+      this%wcold(i) = DZERO
     end do  
     !
     ! -- allocate character array for aux budget text
@@ -919,7 +922,7 @@ contains
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
-    !write summary of uzf stress period error messages
+    ! -- write summary of uzf stress period error messages
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
@@ -933,6 +936,15 @@ contains
         call this%uzfobj%setwaves(i)
       end do
     end if
+    !
+    ! -- Initialize the water content
+    if (kper == 1) then
+      do i = 1, this%nodes
+        this%wcnew(i) = this%uzfobj%get_wcnew(i)
+      end do
+    end if
+    !
+    ! -- Save old ss flag
     this%issflagold = this%issflag
     !
     ! -- return
@@ -971,6 +983,12 @@ contains
       end do
     end if
     !
+    ! -- reset old water content to new water content
+    do i = 1, this%nodes
+      this%wcold(i) = this%wcnew(i)
+    end do
+    !
+    ! -- advance each uzf obj
     do i = 1, this%nodes
         call this%uzfobj%advance(i)
     end do
@@ -1422,14 +1440,9 @@ contains
       end if
       this%gwd(i) = q
       !
-      ! -- set mean water contents for cells
-      !    analogous to what NWT writes to the linker file for MT3D
-      this%watercontent(i) = this%uzfobj%get_water_content(i)
-      !
       ! -- calculate and store remaining budget terms
       this%gwet(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
-      this%qsto(i) = this%uzfobj%delstor(i) / delt
       !
       ! -- End of UZF cell loop
       !
@@ -1441,6 +1454,38 @@ contains
     ! -- return
     return
   end subroutine uzf_cq
+  
+  function get_storage_change(top, bot, carea, hold, hnew, wcold, wcnew, &
+                              thtr, delt, iss) result(qsto)
+    real(DP), intent(in) :: top
+    real(DP), intent(in) :: bot
+    real(DP), intent(in) :: hold
+    real(DP), intent(in) :: hnew
+    real(DP), intent(in) :: wcold
+    real(DP), intent(in) :: wcnew
+    real(DP), intent(in) :: thtr
+    real(DP), intent(in) :: carea
+    real(DP), intent(in) :: delt
+    integer(I4B) :: iss
+    real(DP) :: qsto
+    real(DP) :: thknew
+    real(DP) :: thkold
+    if (iss == 0) then
+      thknew = top - max(bot, hnew)
+      thkold = top - max(bot, hold)
+      qsto = DZERO
+      if (thknew > DZERO) then
+        qsto = qsto + thknew * (wcnew - thtr)
+      end if
+      if (thkold > DZERO) then
+        qsto = qsto - thkold * (wcold - thtr)
+      end if
+      qsto = qsto * carea / delt
+    else
+      qsto = DZERO
+    end if
+    return
+  end function get_storage_change
 
   subroutine uzf_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
@@ -1594,7 +1639,7 @@ contains
     !
     ! -- write uzf binary moisture-content output
     if (ibinun > 0) then
-      call ulasav(this%watercontent, '   WATER-CONTENT', kstp, kper, pertim, &
+      call ulasav(this%wcnew, '   WATER-CONTENT', kstp, kper, pertim, &
                   totim, this%nodes, 1, 1, ibinun)
     end if 
   end subroutine uzf_ot_dv
@@ -1626,6 +1671,8 @@ contains
     real(DP) :: hgwf, uzderiv, derivgwet
     real(DP) :: qfrommvr
     real(DP) :: qformvr
+    real(DP) :: wc
+    real(DP) :: watabold
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1648,6 +1695,7 @@ contains
       ! -- Initialize variables
       n = this%nodelist(i)
       ivertflag = this%uzfobj%ivertcon(i)
+      watabold = this%uzfobj%watabold(i)
       !
       if ( this%ibound(n) > 0 ) then
         !
@@ -1667,7 +1715,8 @@ contains
                                this%issflag,this%iseepflag, hgwf,              &
                                qfrommvr, ierr,                                 &
                                reset_state=reset_state,                        &
-                               trhs=trhs1, thcof=thcof1, deriv=uzderiv)
+                               trhs=trhs1, thcof=thcof1, deriv=uzderiv,        &
+                               watercontent=wc)
         !
         ! -- terminate if an error condition has occurred
         if (ierr > 0) then
@@ -1709,6 +1758,18 @@ contains
           qformvr = this%gwd(i) + this%rejinf(i)
           call this%pakmvrobj%accumulate_qformvr(i, qformvr)
         endif
+        !
+        ! -- Store water content
+        this%wcnew(i) = wc
+        !
+        ! -- Calculate change in mobile storage
+        this%qsto(i) = get_storage_change(this%uzfobj%celtop(i),  &
+                                          this%uzfobj%celbot(i),  &
+                                          this%uzfobj%uzfarea(i),  &
+                                          watabold,  &
+                                          this%uzfobj%watab(i),  &
+                                          this%wcold(i), this%wcnew(i), &
+                                          this%uzfobj%thtr(i), delt, this%issflag)
       !
       end if
     end do
@@ -2693,7 +2754,8 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%deriv)
     call mem_deallocate(this%qauxcbc)
-    call mem_deallocate(this%watercontent)
+    call mem_deallocate(this%wcnew)
+    call mem_deallocate(this%wcold)
     !
     ! -- deallocate integer arrays
     call mem_deallocate(this%ia)
@@ -3034,11 +3096,12 @@ contains
       bot = this%uzfobj%watab(n)
       thick = top - bot
       if (thick > DZERO) then
-        fm = this%uzfobj%unsat_stor(n, thick)
+        fm = thick * (this%wcnew(n) - this%uzfobj%thtr(n))
         v = fm * this%uzfobj%uzfarea(n)
       else
         v = DZERO
       end if
+      ! -- save mobile water volume into aux variable
       this%qauxcbc(1) = v
       call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
     end do
