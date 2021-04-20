@@ -145,8 +145,6 @@ module NumericalSolutionModule
     procedure :: add_exchange
     procedure :: get_models
     procedure :: get_exchanges
-    procedure :: assignModelConnections
-    procedure :: setExchangesToConnections
     procedure :: save
 
     procedure, private :: sln_connect
@@ -2251,70 +2249,7 @@ subroutine solution_create(filename, id)
     exchanges => this%exchangelist
 
   end function get_exchanges
-
-  subroutine assignModelConnections(this)
-    use ListsModule, only: baseconnectionlist
-    class(NumericalSolutionType) :: this
-    ! local    
-    class(SpatialModelConnectionType), pointer :: connection
-    class(*), pointer :: objPtr
-    class(NumericalModelType), pointer :: model
-    integer(I4B) :: ic, im
     
-    ! search thru connections
-    do ic=1,baseconnectionlist%Count()
-      connection => GetSpatialModelConnectionFromList(baseconnectionlist, ic)    
-      ! check if connection's model matches this solution, if so, 
-      ! add pointer to internal list
-      do im = 1, this%modellist%Count()
-        model => GetNumericalModelFromList(this%modellist, im)
-        if (associated(model,connection%owner)) then
-          ! match
-          objPtr => connection
-          call this%connectionlist%Add(objPtr)
-        end if
-      end do
-      
-    end do
-    
-  end subroutine
-  
-  ! TODO_MJR: why is this here? We want solution to be agnostic
-  ! to connections/exchanges...
-  subroutine setExchangesToConnections(this)
-    use ListsModule, only: baseconnectionlist
-    class(NumericalSolutionType) :: this
-    ! local    
-    class(SpatialModelConnectionType), pointer :: connection
-    class(NumericalModelType), pointer :: model
-    class(NumericalExchangeType), pointer :: numEx
-    integer(I4B) :: ic, im, ie
-    
-    ! search thru connections
-    do ic = 1, baseconnectionlist%Count()
-      connection => GetSpatialModelConnectionFromList(baseconnectionlist, ic)    
-      
-      ! check if connection's model matches this solution, if so, 
-      ! fill its list with exchanges of same type
-      do im = 1, this%modellist%Count()
-        model => GetNumericalModelFromList(this%modellist, im)
-        if (associated(model,connection%owner)) then          
-          ! match, now add all exchanges
-          do ie = 1, this%exchangelist%Count()
-            numEx => GetNumericalExchangeFromList(this%exchangelist, ie)
-            if (connection%typename == numEx%typename) then
-              call AddNumericalExchangeToList(connection%globalExchanges, numEx)
-            end if
-          end do 
-          
-          exit ! go to next connection
-        end if
-      end do
-      
-    end do
-    
-  end subroutine setExchangesToConnections
-  
   !> @ brief Assign solution connections
   !!
   !!  Assign solution connections. This is the main workhorse method for a 

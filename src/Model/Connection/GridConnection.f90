@@ -4,7 +4,7 @@ module GridConnectionModule
   use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
-  use ListModule, only: ListType, isEqualIface
+  use ListModule, only: ListType, isEqualIface, arePointersEqual
   use NumericalModelModule
   use DisConnExchangeModule
   use ConnectionsModule
@@ -248,12 +248,6 @@ module GridConnectionModule
     end if
     
   end subroutine connectModels
-  
-  function arePointersEqual(obj1, obj2) result(areIdentical)
-    class(*), pointer :: obj1, obj2
-    logical :: areIdentical
-    areIdentical = associated(obj1, obj2) 
-  end function arePointersEqual
   
   subroutine addToRegionalModels(this, modelToAdd)
     class(GridConnectionType), intent(inout) :: this  

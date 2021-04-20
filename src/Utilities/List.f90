@@ -4,7 +4,7 @@ module ListModule
   use ConstantsModule, only: LINELENGTH
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
-  public :: ListType, ListNodeType, isEqualIface
+  public :: ListType, ListNodeType, isEqualIface, arePointersEqual
 
   type :: ListType
     ! -- Public members
@@ -175,7 +175,13 @@ contains
     
     ! this means there is no match
     return
-  end function
+  end function  
+  
+  function arePointersEqual(obj1, obj2) result(areIdentical)
+    class(*), pointer :: obj1, obj2
+    logical :: areIdentical
+    areIdentical = associated(obj1, obj2) 
+  end function arePointersEqual
   
   subroutine DeallocateBackward(this, fromNode)
     ! **************************************************************************

@@ -12,6 +12,7 @@ module SpatialModelConnectionModule
   implicit none
   private
   public :: CastAsSpatialModelConnectionClass
+  public :: AddSpatialModelConnectionToList
   public :: GetSpatialModelConnectionFromList
 
   ! Class to manage spatial connection of a model to one or more models of the same type.
@@ -289,6 +290,20 @@ contains ! module procedures
     end select
     return
   end function CastAsSpatialModelConnectionClass
+
+  subroutine AddSpatialModelConnectionToList(list, conn)
+    implicit none
+    ! -- dummy
+    type(ListType),       intent(inout) :: list
+    class(SpatialModelConnectionType), pointer, intent(in) :: conn
+    ! -- local
+    class(*), pointer :: obj
+    !
+    obj => conn
+    call list%Add(obj)
+    !
+    return
+  end subroutine AddSpatialModelConnectionToList
 
   function GetSpatialModelConnectionFromList(list, idx) result(res)
     type(ListType), intent(inout) :: list

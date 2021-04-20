@@ -72,18 +72,9 @@ module SimulationCreateModule
   subroutine connections_cr()
   use DisConnExchangeModule,  only: DisConnExchangeType
   use ConnectionBuilderModule
-    integer(I4B) :: isol, iex 
+    integer(I4B) :: isol
     type(ConnectionBuilderType) :: connectionBuilder
     class(BaseSolutionType), pointer :: sol => null()
-    type(ListType), pointer :: exchanges => null()
-    class(BaseExchangeType), pointer :: ex => null()
-
-    ! TODO_MJR: refactor this, as follows:
-    ! 1. loop over all numerical solutions
-    ! 2. per solution, loop over exchanges and create, or add to existing model connection
-    ! 3. if created, replace exchange with model connection, if added only remove the exchange
-    ! 4. when done, loop over created connections and add all (same-type) exchanges
-    !    from the solution to the global exchanges in the connection
     
     if (baseexchangelist%Count() == 0) then
       ! very possible, silently return
@@ -94,16 +85,11 @@ module SimulationCreateModule
 
     do isol = 1, basesolutionlist%Count()
       sol => GetBaseSolutionFromList(basesolutionlist, isol)
-      exchanges => sol%get_exchanges()
-      do iex = 1, exchanges%Count()
-        ex => GetBaseExchangeFromList(exchanges, iex)
-        call connectionBuilder%processExchange(ex)
-      end do
+      call connectionBuilder%processSolution(sol)
     end do
     
     ! TODO_MJR: this should not be here, but analogous to models for now...
     call assignConnectionsToSolution()
-    call assignExchangesToConnections()
     
   end subroutine connections_cr
   
@@ -120,21 +106,7 @@ module SimulationCreateModule
     enddo
     
   end subroutine assignConnectionsToSolution
-  
-  subroutine assignExchangesToConnections()
-     use ListsModule, only: basesolutionlist
-    use BaseSolutionModule, only: GetBaseSolutionFromList
-    ! local
-    class(BaseSolutionType), pointer :: sol => null()
-    integer(I4B) :: isol
-    
-    do isol = 1, basesolutionlist%Count()
-      sol => GetBaseSolutionFromList(basesolutionlist, isol)
-      call sol%setExchangesToConnections()
-    enddo
-    
-  end subroutine assignExchangesToConnections
-  
+   
   !> @brief Deallocate simulation variables
   !<
   subroutine simulation_da()
