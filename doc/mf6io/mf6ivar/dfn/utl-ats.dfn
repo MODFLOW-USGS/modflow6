@@ -80,5 +80,5 @@ in_record true
 tagged false
 reader urword
 optional false
-longname time step multiplier factor
-description is the time step failure multiplier factor for this period.  If there is solver failure, then the time step will be tried again with a shorter time step length calculated as the previous time step length divided by tsfailfact.  dtfailadj must be zero, one, or greater than one.  If dtfailadj is zero or one, then time steps will not be retried with shorter lengths.
+longname divisor for failed time steps
+description is the divisor of the time step length when a time step fails to converge.  If there is solver failure, then the time step will be tried again with a shorter time step length calculated as the previous time step length divided by dtfailadj.  dtfailadj must be zero, one, or greater than one.  If dtfailadj is zero or one, then time steps will not be retried with shorter lengths.  In this case, the program will terminate with an error, or it will continue of the CONTINUE option is set in the simulation name file.

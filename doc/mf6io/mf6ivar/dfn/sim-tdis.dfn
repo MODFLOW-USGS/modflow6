@@ -35,7 +35,7 @@ reader urword
 tagged true
 optional false
 longname ats keyword
-description keyword to specify that record corresponds to an adaptive time stepping file.
+description keyword to specify that record corresponds to an adaptive time step (ATS) input file.  The behavior of ATS and a description of the input file is provided separately.
 
 block options
 name filein

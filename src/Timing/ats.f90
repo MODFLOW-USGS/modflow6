@@ -1,9 +1,7 @@
-! todo:
-!   state advance/restore uzf
-!   state advance/restore csub
-!   check ats not active for steady state?
-!   add courant constraint to gwt model
-!   complete writeup in mf6io.pdf
+! Outstanding issues for future work:
+!   CSUB state advance/restore
+!   Ensure ATS not specified for steady state period
+!   Add courant time step constraint and other stability controls for GWT model
 module AdaptiveTimeStepModule
  
   use KindModule, only: DP, I4B, LGP
