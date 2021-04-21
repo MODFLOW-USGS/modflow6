@@ -3487,6 +3487,14 @@ contains
       if (obsrv%ObsTypeId=='MAW' .or. &
           obsrv%ObsTypeId=='CONDUCTANCE') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        if (len_trim(bndName) < 1 .and. nn2 < 0) then
+          write(errmsg, '(a,1x,a,a,1x,a,1x,a)')                              &
+                'For observation type', trim(adjustl(obsrv%ObsTypeId)),      &
+                ', ID given as an integer and not as boundname,',            &
+                'but ID2 (icon) is missing.  Either change ID to valid',     &
+                'boundname or supply valid entry for ID2.'
+          call store_error(errmsg)
+        end if
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname
           ! -- reset nn1
