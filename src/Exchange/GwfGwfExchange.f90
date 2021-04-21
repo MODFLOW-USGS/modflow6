@@ -1339,6 +1339,9 @@ contains
             this%inewton = 1
             write(iout, '(4x,a)')                                              &
                              'NEWTON-RAPHSON method used for unconfined cells'
+          case ('XT3D')
+            this%ixt3d = 1
+            write(iout, '(4x,a)') 'XT3D applied on the interface'
           case ('GNC6')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then

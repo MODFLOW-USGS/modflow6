@@ -1,6 +1,6 @@
 ! Module holding the definition of the SpatialModelConnectionType
 module SpatialModelConnectionModule
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, DP, LGP
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
@@ -20,11 +20,12 @@ module SpatialModelConnectionModule
   ! and connected via NumericalExchangeType object(s).
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
-    class(NumericalModelType), pointer  :: owner => null()          !< the model whose connection this is    
-    type(ListType), pointer             :: localExchanges => null() !< aggregation, all exchanges which directly connect with our model
-    type(ListType)                      :: globalExchanges          !< all exchanges in the same solution
-    integer(I4B), pointer               :: stencilDepth => null()   !< default = 1, xt3d = 2, ...
-    integer(I4B)                        :: iNewton                  !< newton-raphson = 1, = 0 otherwise
+    class(NumericalModelType), pointer  :: owner => null()            !< the model whose connection this is    
+    integer(I4B), pointer               :: nrOfConnections => null()  !< total nr. of connected cells
+    type(ListType), pointer             :: localExchanges => null()   !< aggregation, all exchanges which directly connect with our model
+    type(ListType)                      :: globalExchanges            !< all exchanges in the same solution
+    integer(I4B), pointer               :: stencilDepth => null()     !< default = 1, xt3d = 2, ...
+    integer(I4B), pointer               :: iNewton => null()          !< Newton-Raphson formulation, 1 = on, 0 = off
     
     ! the interface system doesn't live in a solution, so we need these
     integer(I4B), pointer                               :: neq => null()
@@ -36,15 +37,14 @@ module SpatialModelConnectionModule
     real(DP), dimension(:), pointer, contiguous         :: x => null()
     integer(I4B), dimension(:), pointer, contiguous     :: iactive => null()
         
-    ! TODO_MJR: mem mgt of these guys:
-    integer(I4B) :: nrOfConnections
+    ! these are not in the memory manager
     class(GridConnectionType), pointer :: gridConnection => null()    
     integer(I4B), dimension(:), pointer :: mapIdxToSln => null() ! maps local matrix (amat) to the global solution matrix
     
   contains
   
     procedure, pass(this) :: spatialConnection_ctor
-    generic, public :: construct => spatialConnection_ctor
+    generic :: construct => spatialConnection_ctor
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
 
     ! partly overriding NumericalExchangeType:
@@ -79,15 +79,13 @@ contains ! module procedures
     this%name = name
     this%memoryPath = create_mem_path(this%name)
     this%owner => model
-    this%iNewton = 0
-    
-    this%nrOfConnections = 0
     
     allocate(this%localExchanges)
     allocate(this%gridConnection)
     call this%allocateScalars()
 
     this%stencilDepth = 1
+    this%nrOfConnections = 0
         
   end subroutine spatialConnection_ctor
   
@@ -173,12 +171,16 @@ contains ! module procedures
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
     call mem_deallocate(this%stencilDepth)
+    call mem_deallocate(this%nrOfConnections)
+    call mem_deallocate(this%iNewton)
     
     call mem_deallocate(this%x)
     call mem_deallocate(this%rhs)
     call mem_deallocate(this%iactive)
     
-    call this%gridConnection%deallocateGridConn()
+    call this%gridConnection%deallocate()
+    deallocate(this%gridConnection)
+    deallocate(this%mapIdxToSln)
   
   end subroutine spatialcon_da
   
@@ -238,6 +240,8 @@ contains ! module procedures
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
     call mem_allocate(this%stencilDepth, 'STENCILDEPTH', this%memoryPath)
+    call mem_allocate(this%nrOfConnections, 'NROFCONNS', this%memoryPath)
+    call mem_allocate(this%iNewton, 'INEWTON', this%memoryPath)
     
   end subroutine allocateScalars
   

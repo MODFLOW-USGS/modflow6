@@ -77,35 +77,16 @@ module SimulationCreateModule
     class(BaseSolutionType), pointer :: sol => null()
     
     if (baseexchangelist%Count() == 0) then
-      ! very possible, silently return
+      ! if this is not a coupled simulation in any way,
+      ! then we will not need model connections
       return
     end if
-
-    write(iout,'(/1x,a)') 'Create model connections from exchanges'
-
+    
     do isol = 1, basesolutionlist%Count()
       sol => GetBaseSolutionFromList(basesolutionlist, isol)
       call connectionBuilder%processSolution(sol)
-    end do
-    
-    ! TODO_MJR: this should not be here, but analogous to models for now...
-    call assignConnectionsToSolution()
-    
+    end do    
   end subroutine connections_cr
-  
-  subroutine assignConnectionsToSolution()
-    use ListsModule, only: basesolutionlist
-    use BaseSolutionModule, only: GetBaseSolutionFromList
-    ! local
-    class(BaseSolutionType), pointer :: sol => null()
-    integer(I4B) :: isol
-    
-    do isol = 1, basesolutionlist%Count()
-      sol => GetBaseSolutionFromList(basesolutionlist, isol)
-      call sol%assignModelConnections()
-    enddo
-    
-  end subroutine assignConnectionsToSolution
    
   !> @brief Deallocate simulation variables
   !<

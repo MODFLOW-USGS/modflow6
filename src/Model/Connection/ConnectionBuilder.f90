@@ -1,5 +1,6 @@
 module ConnectionBuilderModule
   use KindModule, only: I4B, LGP
+  use SimVariablesModule, only: iout
   use ListModule, only: ListType, arePointersEqual, isEqualIface, ListNodeType
   use BaseSolutionModule, only: BaseSolutionType
   use NumericalSolutionModule, only: NumericalSolutionType
@@ -24,11 +25,19 @@ module ConnectionBuilderModule
   
   contains
 
+  !> @brief Process the exchanges in the solution into model connections
+  !!
+  !! This routine processes all exchanges in a solution and,
+  !! when required, creates model connections of the proper 
+  !! type (GWF-GWF, GWT-GWT, ...) for a subset. It removes this
+  !! subset of exchanges from the solution and replaces them with the
+  !! created connections.
+  !<
   subroutine processSolution(this, solution)
-    class(ConnectionBuilderType) :: this
-    class(BaseSolutionType), pointer :: solution
-    class(NumericalSolutionType), pointer :: numSol
+    class(ConnectionBuilderType) :: this            !< the connection builder object
+    class(BaseSolutionType), pointer :: solution    !< the solution for which the exchanges are processed
     ! local
+    class(NumericalSolutionType), pointer :: numSol
     type(ListType) :: newConnections
 
     ! we only deal with Num. Sol. here
@@ -39,23 +48,40 @@ module ConnectionBuilderModule
       return
     end select
 
-    ! 1. create the connections and add local exchanges
-    call this%processExchanges(numSol%exchangelist, newConnections)   
+    ! create the connections and add local exchanges
+    call this%processExchanges(numSol%exchangelist, newConnections)
+    if (newConnections%Count() == 0) then
+      return
+    end if    
 
-    ! 2. replace numerical exchanges in solution with connections
-    call this%setConnectionsToSolution(newConnections, numSol)
+    write(iout,'(/1x,i0,a,a)') newConnections%Count(),                           &
+                               ' model connections created for solution',        &
+                               solution%name
 
-    ! 3. set the global exchanges from this solution to
+    ! set the global exchanges from this solution to
     ! the model connections
     call this%assignExchangesToConnections(numSol%exchangelist, newConnections)
 
+    ! replace numerical exchanges in solution with connections
+    call this%setConnectionsToSolution(newConnections, numSol)
+
+
+    ! clean up local resources
+    call newConnections%Clear(destroy=.false.)
+
   end subroutine processSolution
 
-  subroutine processExchanges(this, exchanges, newConnections)    
+  !> @brief Create connections from exchanges
+  !!
+  !! If the configuration demands it, this will create
+  !! connections for the exchanges, add them to the global
+  !! list, and return them in @param newConnections
+  !<
+  subroutine processExchanges(this, exchanges, newConnections)
     use ListsModule, only: baseconnectionlist
-    class(ConnectionBuilderType) :: this
-    type(ListType), pointer, intent(in) :: exchanges
-    type(ListType), intent(inout) :: newConnections
+    class(ConnectionBuilderType) :: this              !< the connection builder object
+    type(ListType), pointer, intent(in) :: exchanges  !< the list of exchanges to process
+    type(ListType), intent(inout) :: newConnections   !< the newly created connections
     ! local
     class(DisConnExchangeType), pointer :: conEx
     integer(I4B) :: iex
@@ -68,7 +94,7 @@ module ConnectionBuilderModule
         continue
       end if
     
-      ! if we have XT3D on the interface, we use a connection:
+      ! for now, if we have XT3D on the interface, we use a connection:
       if (conEx%ixt3d > 0) then
 
         ! fetch connection for model 1:
@@ -99,15 +125,20 @@ module ConnectionBuilderModule
     end do
 
   end subroutine processExchanges
-  
+
+  !> @brief Create a model connection of a given type
+  !!
+  !! This is a factory method to create the various types
+  !! of model connections
+  !<
   function createModelConnection(model, connectionType) result(connection)
     use SimModule, only: ustop
     use GwfGwfConnectionModule, only: GwfGwfConnectionType
     use GwfModule, only: GwfModelType
     
-    class(NumericalModelType), pointer , intent(in) :: model
-    character(len=*), intent(in)                    :: connectionType
-    class(SpatialModelConnectionType), pointer :: connection
+    class(NumericalModelType), pointer , intent(in) :: model          !< the model for which the connection will be created
+    character(len=*), intent(in)                    :: connectionType !< the type of connection
+    class(SpatialModelConnectionType), pointer :: connection          !< the created connection
     
     ! different concrete connection types:
     class(GwfGwfConnectionType), pointer :: gwfConnection => null()
@@ -122,8 +153,7 @@ module ConnectionBuilderModule
         connection => gwfConnection        
         gwfConnection => null()
         
-      !case('GWT-GWT')
-      !case('GWF-GWT')      
+      !case('GWT-GWT')    
       case default
         write(*,*) 'Error (which should never happen): undefined exchangetype found'
         call ustop()
@@ -132,14 +162,15 @@ module ConnectionBuilderModule
   end function createModelConnection
   
   
-  ! function gets an existing connection for the model, based on the
-  ! type of exchange. Return null() when not found
+  !> @brief This function gets an existing connection for a
+  !! model, based on the type of exchange. Returns null()
+  !! when not found
+  !<
   function lookupConnection(model, exchangeType) result(connection)
-    use ListsModule, only: baseconnectionlist
-    
-    class(NumericalModelType), pointer  :: model
-    character(len=*)                    :: exchangeType
-    class(SpatialModelConnectionType), pointer :: connection    
+    use ListsModule, only: baseconnectionlist    
+    class(NumericalModelType), pointer  :: model              !< the model to get the connection for
+    character(len=*)                    :: exchangeType       !< the type of the connection
+    class(SpatialModelConnectionType), pointer :: connection  !< the connection 
     
     ! locals
     integer(I4B) :: i
@@ -162,8 +193,8 @@ module ConnectionBuilderModule
 
   !> @brief Set connections to the solution
   !!
-  !! Replaces the exchanges in the solution with the
-  !! corresponding connections.
+  !! This adds the connections to the solution and removes 
+  !! those exchanges which are replaced by a connection
   !<
   subroutine setConnectionsToSolution(this, connections, solution)
     class(ConnectionBuilderType) :: this                          !< the connection builder object
@@ -178,6 +209,7 @@ module ConnectionBuilderModule
     logical(LGP) :: keepExchange
 
     equalFct => arePointersEqual
+
     ! first add all exchanges not replaced by the connections to a list
     do iex = 1, solution%exchangelist%Count()
       exPtr => solution%exchangelist%GetItem(iex)

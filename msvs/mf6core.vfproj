@@ -58,7 +58,6 @@
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>
-		<File RelativePath="..\src\Model\Connection\ModelConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>

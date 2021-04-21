@@ -25,8 +25,6 @@ module NumericalSolutionModule
   use NumericalExchangeModule, only: NumericalExchangeType,                    &
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
-  use SpatialModelConnectionModule, only: SpatialModelConnectionType,          &
-                                          GetSpatialModelConnectionFromList
   use SparseModule,            only: sparsematrix
   use SimVariablesModule,      only: iout, isim_mode
   use BlockParserModule,       only: BlockParserType
@@ -44,7 +42,6 @@ module NumericalSolutionModule
     character(len=LINELENGTH)                            :: fname                          !< input file name
     type(ListType), pointer                              :: modellist                      !< list of models in solution
     type(ListType), pointer                              :: exchangelist                   !< list of exchanges in solution
-    type(ListType)                                       :: connectionlist
     integer(I4B), pointer                                :: id                             !< solution number
     integer(I4B), pointer                                :: iu                             !< input file unit
     real(DP), pointer                                    :: ttform                         !< timer - total formulation time
@@ -1887,7 +1884,6 @@ subroutine solution_create(filename, id)
     integer(I4B) :: im, ic
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
-    class(SpatialModelConnectionType), pointer :: mc
     !
     ! -- Set amat and rhs to zero
     call this%sln_reset()
@@ -1899,12 +1895,6 @@ subroutine solution_create(filename, id)
       call cp%exg_cf(kiter)
     enddo
     !
-    ! -- Calculate the matrix terms for each connection
-    do ic=1,this%connectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
-      call mc%exg_cf(kiter)
-    enddo
-    !
     ! -- Calculate the matrix terms for each model
     do im=1,this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
@@ -1914,14 +1904,7 @@ subroutine solution_create(filename, id)
     ! -- Add exchange coefficients to the solution
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      ! TODO_MJR: delete this when done
-      !call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
-    enddo
-    !
-    ! -- Add connection coefficients to the solution
-    do ic=1,this%connectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
-      call mc%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
+      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
     enddo
     !
     ! -- Add model coefficients to the solution
@@ -2280,17 +2263,9 @@ subroutine solution_create(filename, id)
     ! -- Add the cross terms to sparse
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      ! TODO_MJR: delete this when done
-      !call cp%exg_ac(this%sparse)
+      call cp%exg_ac(this%sparse)
     enddo
-    !
-    ! -- Add terms from model connections to sparse
-    do ic=1, this%connectionlist%Count()
-        ! TODO_MJR: probably we should never have the abstract base in the NumericalSolutionType??
-        mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
-        call mc%exg_ac(this%sparse)
-    end do
-    
+    !    
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
     this%nja=this%sparse%nnz
@@ -2311,15 +2286,8 @@ subroutine solution_create(filename, id)
     ! -- Create arrays for mapping exchange connections to global solution
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      ! TODO_MJR: delete this when done
-      !call cp%exg_mc(this%ia, this%ja)
+      call cp%exg_mc(this%ia, this%ja)
     enddo
-    !
-    ! -- Create mapping arrays to global solution for model connections
-    do ic=1, this%connectionlist%Count()
-        mc => GetSpatialModelConnectionFromList(this%connectionlist, ic)
-        call mc%exg_mc(this%ia, this%ja)
-    end do
     !
     ! -- return
     return
