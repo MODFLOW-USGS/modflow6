@@ -1376,8 +1376,9 @@ contains
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Make uzf solution using final solution
-    call this%uzf_solve(reset_state=.false.)
+    ! -- Make uzf solution for budget calculations, and then reset waves.
+    !    Final uzf solve will be done as part of ot().
+    call this%uzf_solve(reset_state=.true.)
     !
     ! -- call base functionality in bnd_cq.  This will calculate uzf-gwf flows
     !    and put them into this%simvals and this%simvtomvr
@@ -2352,6 +2353,11 @@ contains
     real(DP) :: v
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
+    !
+    ! -- Make final uzf solution, and do not reset waves.  This will advance
+    !    the waves to their new state at the end of the time step.  This should
+    !    be the first step of the uzf ot() routines.
+    call this%uzf_solve(reset_state=.false.)
     !
     ! Write simulated values for all uzf observations
     if (this%obs%npakobs > 0) then
