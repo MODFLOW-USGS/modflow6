@@ -27,8 +27,6 @@ module UzfCellGroupModule
     real(DP), dimension(:, :), pointer, contiguous :: uzflst => null()
     real(DP), dimension(:, :), pointer, contiguous :: uzdpst => null()
     integer(I4B), pointer, dimension(:), contiguous :: nwavst => null()
-    real(DP), pointer, dimension(:), contiguous :: uzstor => null()
-    real(DP), pointer, dimension(:), contiguous :: delstor => null()
     real(DP), pointer, dimension(:), contiguous :: totflux => null()
     integer(I4B), pointer, dimension(:), contiguous :: nwav => null()
     integer(I4B), pointer, dimension(:), contiguous :: ntrail => null()
@@ -86,7 +84,7 @@ module UzfCellGroupModule
       procedure :: setgwpet
       procedure :: dealloc
       procedure :: get_water_content_at_depth
-      procedure :: get_water_content
+      procedure :: get_wcnew
     end type UzfCellGroupType
 !  
     contains
@@ -130,8 +128,6 @@ module UzfCellGroupModule
       call mem_allocate(this%etact, ncells, 'ETACT', memory_path)
       call mem_allocate(this%nwav, ncells, 'NWAV', memory_path)
       call mem_allocate(this%ntrail, ncells, 'NTRAIL', memory_path)
-      call mem_allocate(this%uzstor, ncells, 'UZSTOR', memory_path)
-      call mem_allocate(this%delstor, ncells, 'DELSTOR', memory_path)
       call mem_allocate(this%totflux, ncells, 'TOTFLUX', memory_path)
       call mem_allocate(this%sinf, ncells, 'SINF', memory_path)
       call mem_allocate(this%finf, ncells, 'FINF', memory_path)
@@ -174,8 +170,6 @@ module UzfCellGroupModule
       allocate(this%etact(ncells))
       allocate(this%nwav(ncells))
       allocate(this%ntrail(ncells))
-      allocate(this%uzstor(ncells))
-      allocate(this%delstor(ncells))
       allocate(this%totflux(ncells))
       allocate(this%sinf(ncells))
       allocate(this%finf(ncells))
@@ -218,8 +212,6 @@ module UzfCellGroupModule
       this%etact(icell) = DZERO
       this%nwav(icell) = nwav
       this%ntrail(icell) = 0
-      this%uzstor(icell) = DZERO
-      this%delstor(icell) = DZERO
       this%totflux(icell) = DZERO
       this%sinf(icell) = DZERO
       this%finf(icell) = DZERO
@@ -282,8 +274,6 @@ module UzfCellGroupModule
       deallocate(this%etact)
       deallocate(this%nwav)
       deallocate(this%ntrail)
-      deallocate(this%uzstor)
-      deallocate(this%delstor)
       deallocate(this%totflux)
       deallocate(this%sinf)
       deallocate(this%finf)
@@ -325,8 +315,6 @@ module UzfCellGroupModule
       call mem_deallocate(this%etact)
       call mem_deallocate(this%nwav)
       call mem_deallocate(this%ntrail)
-      call mem_deallocate(this%uzstor)
-      call mem_deallocate(this%delstor)
       call mem_deallocate(this%totflux)
       call mem_deallocate(this%sinf)
       call mem_deallocate(this%finf)
@@ -663,7 +651,7 @@ module UzfCellGroupModule
 
   subroutine solve(this, thiswork, jbelow, icell, totfluxtot, ietflag,         &
                    issflag, iseepflag, hgwf, qfrommvr, ierr,                   &
-                   reset_state, trhs, thcof, deriv)
+                   reset_state, trhs, thcof, deriv, watercontent)
 ! ******************************************************************************
 ! formulate -- formulate the unsaturated flow object, calculate terms for 
 !              gwf equation            
@@ -689,6 +677,7 @@ module UzfCellGroupModule
     real(DP), intent(inout), optional :: trhs  !< total uzf rhs contribution to GWF model
     real(DP), intent(inout), optional :: thcof !< total uzf hcof contribution to GWF model
     real(DP), intent(inout), optional :: deriv !< derivate term for contribution to GWF model
+    real(DP), intent(inout), optional :: watercontent !< calculated water content
     ! -- local
     real(DP) :: test
     real(DP) :: scale
@@ -791,6 +780,11 @@ module UzfCellGroupModule
     if (present(deriv)) deriv =  deriv1 + deriv2 + derivfinf
     if (present(trhs))  trhs = trhsfinf + trhsseep
     if (present(thcof))  thcof = thcoffinf + thcofseep
+    !
+    ! -- Assign water content prior to resetting waves
+    if (present(watercontent)) then
+      watercontent = this%get_wcnew(icell)
+    end if
     !
     ! -- reset waves to previous state for next iteration  
     if (reset_state) then
@@ -1125,8 +1119,6 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
-    this%uzstor(icell) = DZERO
-    this%delstor(icell) = DZERO
     this%totflux(icell) = DZERO
     this%nwavst(icell) = 1
     this%uzdpst(:, icell) = DZERO
@@ -1149,10 +1141,8 @@ module UzfCellGroupModule
       !
       ! -- calculate water stored in the unsaturated zone
       if (top > DZERO) then
-        this%uzstor(icell) = this%uzdpst(1, icell) * top * this%uzfarea(icell)
         this%uzspst(1, icell) = DZERO
       else
-        this%uzstor(icell) = DZERO
         this%uzflst(1, icell) = DZERO
         this%uzspst(1, icell) = DZERO
       end if
@@ -1163,7 +1153,6 @@ module UzfCellGroupModule
       this%uzdpst(1, icell) = DZERO
       this%uzspst(1, icell) = DZERO
       this%uzthst(1, icell) = this%thtr(icell)
-      this%uzstor(icell) = DZERO   
     end if
     !
     ! -- return
@@ -1789,7 +1778,7 @@ module UzfCellGroupModule
     integer(I4B), intent(in) :: iss
     real(DP), intent(in) :: delt
     ! -- local
-    real(DP) :: uzstorhold, bot, fm, depthsave, top
+    real(DP) :: bot, depthsave, top
     real(DP) :: thick, thtsrinv
     integer(I4B) :: nwavhld, k, j
 ! ------------------------------------------------------------------------------
@@ -1801,9 +1790,6 @@ module UzfCellGroupModule
     if (itest == 1) then
       this%uzflst(1, icell) = DZERO
       this%uzthst(1, icell) = this%thtr(icell)
-      this%delstor(icell) = - this%uzstor(icell)
-      this%uzstor(icell) = DZERO
-      uzstorhold = DZERO
       return
     end if
     if (iss == 1) then          
@@ -1820,8 +1806,6 @@ module UzfCellGroupModule
       this%uzdpst(1, icell) = thick
       this%uzspst(1, icell) = thick
       this%nwavst(icell) = 1
-      this%uzstor(icell) = thick * (this%thti(icell) - this%thtr(icell)) * this%uzfarea(icell)
-      this%delstor(icell) = DZERO
     else
       !
       ! -- water table rises through waves      
@@ -1849,19 +1833,11 @@ module UzfCellGroupModule
       end if    
       !
       ! -- calculate new unsat. storage 
-      if (thick > DZERO) then
-        fm = this%unsat_stor(icell, thick)
-        uzstorhold = this%uzstor(icell)
-        this%uzstor(icell) = fm * this%uzfarea(icell)
-        this%delstor(icell) = this%uzstor(icell) - uzstorhold
-      else
+      if (thick <= DZERO) then
         this%uzspst(1, icell) = DZERO
         this%nwavst(icell) = 1
         this%uzthst(1, icell) = this%thtr(icell)
         this%uzflst(1, icell) = DZERO
-        this%delstor(icell) = -this%uzstor(icell)
-        this%uzstor(icell) = DZERO
-        uzstorhold = DZERO
       end if
       this%watabold(icell) = this%watab(icell)
     end if
@@ -2262,37 +2238,33 @@ module UzfCellGroupModule
     return
   end function get_water_content_at_depth
   
-  function get_water_content(this, icell) result(watercontent)
+  function get_wcnew(this, icell) result(watercontent)
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell  !< uzf cell containing depth
     !
     real(DP) :: watercontent
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: carea
-    real(DP) :: uzwatvol
     real(DP) :: theta_r
     real(DP) :: thk
-    real(DP) :: v
     real(DP) :: hgwf
+    real(DP) :: fm
+    real(DP) :: d
     !
-    ! -- calculate mean uzf moisture-content for the UZF object 
-    !i = this%nodelist(icell)
-    hgwf = this%watab(icell)  ! this%xnew(i)
+    hgwf = this%watab(icell)
     top = this%celtop(icell) 
     bot = this%celbot(icell)
-    carea = this%uzfarea(icell)
-    if ( hgwf > bot ) bot = hgwf
-    thk = top - bot
-    v = thk * carea
-    theta_r = this%THTR(icell)
-    uzwatvol = (this%uzstor(icell) + theta_r * thk) * carea
-    if (hgwf < top) then
-      watercontent = uzwatvol / v
+    thk = top - max(bot, hgwf)
+    if (thk > DZERO) then
+      theta_r = this%thtr(icell)
+      d = thk
+      fm = this%unsat_stor(icell, d)
+      watercontent = fm / thk
+      watercontent = watercontent + theta_r
     else
       watercontent = DZERO
-    endif
+    end if
     return
-  end function get_water_content
+  end function get_wcnew
                       
 end module UzfCellGroupModule

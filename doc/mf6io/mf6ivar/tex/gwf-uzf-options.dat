@@ -5,6 +5,7 @@ BEGIN OPTIONS
   [PRINT_INPUT]
   [PRINT_FLOWS]
   [SAVE_FLOWS]
+  [WATER_CONTENT FILEOUT <wcfile>]
   [BUDGET FILEOUT <budgetfile>]
   [PACKAGE_CONVERGENCE FILEOUT <package_convergence_filename>]
   [TS6 FILEIN <ts6_filename>]
