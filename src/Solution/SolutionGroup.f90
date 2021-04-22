@@ -56,7 +56,7 @@ module SolutionGroupModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,        only: LINELENGTH
-    use SimVariablesModule,     only: iout, isimcnvg
+    use SimVariablesModule,     only: iout, isimcnvg, lastStepFailed
     use SimModule,              only: store_error, ustop
     use TdisModule,             only: kstp, kper
     ! -- dummy
@@ -77,6 +77,9 @@ module SolutionGroupModule
     else
       isuppress_output = 0
     endif
+    !
+    ! -- set failed flag
+    lastStepFailed = 0
     !
     ! -- Picard loop
     picardloop: do kpicard = 1, this%mxiter
@@ -107,6 +110,7 @@ module SolutionGroupModule
       endif
     else
       isimcnvg = 0
+      lastStepFailed = 1
       write(iout, fmtnocnvg) this%id, kper, kstp
     endif
     !

@@ -1,6 +1,6 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
+Test adaptive time step module with a one-d vertical column in which cells
+dry and then rewet based on a ghb in the bottom cell.
 
 """
 
@@ -26,29 +26,35 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_uzf01a"]
+ex = ["gwf_ats02a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
-nlay, nrow, ncol = 100, 1, 1
+nlay, nrow, ncol = 5, 1, 1
+botm = [80., 60., 40., 20., 0.]
+
+# set dt0, dtmin, dtmax, dtadj, dtfailadj
+dt0 = 1.0
+dtmin = 1.e-5
+dtmax = 2.
+dtadj = 2.
+dtfailadj = 5.
 
 
 def build_models():
 
-    perlen = [500.0]
+    perlen = [10, 10]
     nper = len(perlen)
-    nstp = [10]
+    nstp = [5, 5]
     tsmult = nper * [1.0]
     delr = 1.0
     delc = 1.0
-    delv = 1.0
     top = 100.0
-    botm = [top - (k + 1) * delv for k in range(nlay)]
-    strt = 0.5
-    hk = 1.0
+    strt = 90.
+    hk = 2.0
     laytyp = 1
-    ss = 0.0
+    ss = 0.
     sy = 0.1
 
     tdis_rc = []
@@ -64,24 +70,36 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
+
         # create tdis package
-        tdis = flopy.mf6.ModflowTdis(
-            sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-        )
+        ats_filerecord = None
+        if True:
+            atsperiod = [
+                (i, dt0, dtmin, dtmax, dtadj, dtfailadj) for i in range(nper)
+                         ]
+            ats = flopy.mf6.ModflowUtlats(sim,
+                                          maxats=len(atsperiod),
+                                          perioddata=atsperiod)
+            ats_filerecord = name + ".ats"
+
+        tdis = flopy.mf6.ModflowTdis(sim,
+                                     ats_filerecord=ats_filerecord,
+                                     time_units='DAYS',
+                                     nper=nper,
+                                     perioddata=tdis_rc)
 
         # create gwf model
         gwfname = name
-        newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+#        newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
-            newtonoptions=newtonoptions,
-            save_flows=True,
+#            newtonoptions=newtonoptions,
         )
 
         # create iterative model solution and register the gwf model with it
-        nouter, ninner = 100, 10
-        hclose, rclose, relax = 1.5e-6, 1e-6, 0.97
+        nouter, ninner = 20, 5
+        hclose, rclose, relax = 1e-6, 1e-6, 0.97
         imsgwf = flopy.mf6.ModflowIms(
             sim,
             print_option="SUMMARY",
@@ -92,7 +110,7 @@ def build_models():
             inner_maximum=ninner,
             inner_dvclose=hclose,
             rcloserecord=rclose,
-            linear_acceleration="BICGSTAB",
+            linear_acceleration="CG",
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
@@ -116,8 +134,15 @@ def build_models():
         ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
         # node property flow
+        rewet_record = [("WETFCT", 1.0, "IWETIT", 1, "IHDWET", 1)]
+        wetdry = -0.001  # [0.001, 0.001, 0.001]
         npf = flopy.mf6.ModflowGwfnpf(
-            gwf, save_flows=False, icelltype=laytyp, k=hk
+            gwf,
+            save_flows=False,
+            cvoptions='variablecv dewatered',
+            icelltype=laytyp, k=hk,
+            rewet_record=rewet_record,
+            wetdry=wetdry
         )
         # storage
         sto = flopy.mf6.ModflowGwfsto(
@@ -130,9 +155,11 @@ def build_models():
             transient={0: True},
         )
 
-        # ghb
+        # ghb files
+        cond = hk * 1. / 20.
         ghbspdict = {
-            0: [[(nlay - 1, 0, 0), 1.5, 1.0]],
+            0: [[(nlay - 1, 0, 0), 30., cond]],
+            1: [[(nlay - 1, 0, 0), 100., cond]],
         }
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
@@ -142,79 +169,21 @@ def build_models():
             save_flows=False,
         )
 
-        # note: for specifying lake number, use fortran indexing!
-        uzf_obs = {
-            name
-            + ".uzf.obs.csv": [
-                ("wc2", "water-content", 2, 0.5),
-                ("wc50", "water-content", 50, 0.5),
-                ("wcbn2", "water-content", "uzf02", 0.5),
-                ("wcbn50", "water-content", "UZF050", 0.5),
-            ]
-        }
-
-        sd = 0.1
-        vks = hk
-        thtr = 0.05
-        thti = thtr
-        thts = sy
-        eps = 4
-        uzf_pkdat = [
-            [0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]
-        ] + [
-            [
-                k,
-                (k, 0, 0),
-                0,
-                k + 1,
-                sd,
-                vks,
-                thtr,
-                thts,
-                thti,
-                eps,
-                "uzf0{}".format(k + 1),
-            ]
-            for k in range(1, nlay - 1)
-        ]
-        uzf_pkdat[-1][3] = -1
-        infiltration = 2.01
-        uzf_spd = {
-            0: [
-                [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            ]
-        }
-        uzf = flopy.mf6.ModflowGwfuzf(
-            gwf,
-            print_input=True,
-            print_flows=True,
-            save_flows=True,
-            boundnames=True,
-            ntrailwaves=15,
-            nwavesets=40,
-            nuzfcells=len(uzf_pkdat),
-            packagedata=uzf_pkdat,
-            perioddata=uzf_spd,
-            budget_filerecord="{}.uzf.bud".format(name),
-            observations=uzf_obs,
-            filename="{}.uzf".format(name),
-        )
-
         # output control
         oc = flopy.mf6.ModflowGwfoc(
             gwf,
-            budget_filerecord="{}.bud".format(gwfname),
+            budget_filerecord="{}.cbc".format(gwfname),
             head_filerecord="{}.hds".format(gwfname),
             headprintrecord=[
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
-            saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-            printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
+            saverecord=[("HEAD", "ALL")],
+            printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         )
 
         obs_lst = []
-        obs_lst.append(["obs1", "head", (0, 0, 0)])
-        obs_lst.append(["obs2", "head", (1, 0, 0)])
+        obs_lst.append(['obs1', "head", (0, 0, 0)])
+        obs_lst.append(['obs2', "head", (4, 0, 0)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -226,40 +195,64 @@ def build_models():
     return
 
 
+def make_plot(sim):
+    print("making plots...")
+    name = ex[sim.idxsim]
+    ws = exdirs[sim.idxsim]
+    gwfname = name
+
+    fname = gwfname + ".hds"
+    fname = os.path.join(ws, fname)
+    hobj = flopy.utils.HeadFile(
+        fname, precision="double"
+    )
+    head = hobj.get_alldata()[:, :, 0, 0]
+    times = hobj.times
+    hobj.file.close()
+
+    import matplotlib.pyplot as plt
+
+    print(head.shape)
+    plt.figure(figsize=(8, 5))
+    times = np.array(times)
+    for ilay in range(5):
+        h = head[:, ilay]
+        h = np.ma.masked_where(h < 0, h)
+        botline, = plt.plot([times.min(), times.max()], [botm[ilay], botm[ilay]])
+        plt.plot(times, h, marker='o', ls='-', color=botline.get_color(),
+                 label="Layer {}".format(ilay + 1))
+    plt.legend()
+    plt.show()
+    return
+
+
 def eval_flow(sim):
     print("evaluating flow...")
 
     name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    gwfname = name
 
-    # check binary grid file
-    fname = os.path.join(ws, name + ".dis.grb")
-    grbobj = flopy.utils.MfGrdFile(fname)
-    ia = grbobj._datadict["IA"] - 1
-    ja = grbobj._datadict["JA"] - 1
+    if False:
+        make_plot(sim)
 
-    bpth = os.path.join(ws, name + ".uzf.bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    gwf_recharge = bobj.get_data(text="GWF")
+    # This will fail if budget numbers cannot be read
+    fpth = os.path.join(sim.simpath, "{}.lst".format(gwfname))
+    mflist = flopy.utils.Mf6ListBudget(fpth)
+    names = mflist.get_record_names()
+    inc = mflist.get_incremental()
+    msg = 'budget times not monotically increasing {}.'.format(inc["totim"])
+    assert np.all(np.diff(inc["totim"]) > dtmin), msg
+    v = inc["totim"][-1]
+    assert v == 20., 'Last time should be 20.  Found {}'.format(v)
 
-    bpth = os.path.join(ws, name + ".bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    flow_ja_face = bobj.get_data(text="FLOW-JA-FACE")
-    uzf_recharge = bobj.get_data(text="UZF-GWRCH")
-    errmsg = "uzf rch is not equal to negative gwf rch"
-    for gwr, uzr in zip(gwf_recharge, uzf_recharge):
-        assert np.allclose(gwr["q"], -uzr["q"]), errmsg
-
-    # Check on residual, which is stored in diagonal position of
-    # flow-ja-face.  Residual should be less than convergence tolerance,
-    # or this means the residual term is not added correctly.
-    for fjf in flow_ja_face:
-        fjf = fjf.flatten()
-        res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
-        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+    # ensure obs results changing monotonically
+    fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
+    try:
+        tc = np.genfromtxt(fpth, names=True, delimiter=",")
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+    #ensure layer 1 is dry with the DRY value
+    assert np.max(tc["OBS1"][:201]) == -1.e30, 'layer 1 should be dry for this period'
 
     return
 

@@ -18,5 +18,7 @@ module SimVariablesModule
   integer(I4B) :: numnoconverge = 0                                              ! -- number of times there were convergence problems
   integer(I4B) :: ireturnerr = 0                                                 ! -- return code for program (0 successful, 1 non-convergence, 2 error)
   integer(I4B) :: iforcestop = 1                                                 ! -- 1 forces a call to ustop(..) when the simulation has ended, 0 doesn't
-  integer(I4B) :: iunext = iustart
+  integer(I4B) :: iunext = IUSTART
+  integer(I4B) :: lastStepFailed = 0                                             ! -- 1 if last step failed; 0 otherwise (set in converge_check)
+  integer(I4B) :: iFailedStepRetry = 0                                           ! -- current retry for this time step
 end module SimVariablesModule

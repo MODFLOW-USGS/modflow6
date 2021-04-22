@@ -470,22 +470,35 @@ module GwtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimVariablesModule, only: isimcheck
+    use SimVariablesModule, only: isimcheck, iFailedStepRetry
     ! -- dummy
     class(GwtModelType) :: this
     class(BndType), pointer :: packobj
     ! -- local
+    integer(I4B) :: irestore
     integer(I4B) :: ip, n
 ! ------------------------------------------------------------------------------
     !
-    ! -- copy x into xold
-    do n = 1, this%dis%nodes
-      if (this%ibound(n) == 0) then
-        this%xold(n) = DZERO
-      else
-        this%xold(n) = this%x(n)
-      endif
-    enddo
+    ! -- Reset state variable
+    irestore = 0
+    if (iFailedStepRetry > 0) irestore = 1
+    if (irestore == 0) then
+      !
+      ! -- copy x into xold
+      do n = 1, this%dis%nodes
+        if (this%ibound(n) == 0) then
+          this%xold(n) = DZERO
+        else
+          this%xold(n) = this%x(n)
+        end if
+      enddo
+    else
+      !
+      ! -- copy xold into x if this time step is a redo
+      do n = 1, this%dis%nodes
+        this%x(n) = this%xold(n)
+      enddo
+    end if
     !
     ! -- Advance fmi
     call this%fmi%fmi_ad(this%x)

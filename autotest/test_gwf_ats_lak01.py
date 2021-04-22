@@ -1,8 +1,6 @@
-# Test the ability of a lake incised into multiple layers to slowly rise and
-# expand as the surrounding groundwater flows into the lake.  Recharge is
-# on for this problem and the test makes sure that recharge is not added
-# to cells with an active lake above them.
-
+# Same as test_gwf_lak01 except it uses ATS.  Test works by trying a
+# large time step that does not converge.  ATS must then retry using
+# a smaller time step.
 
 import os
 import sys
@@ -19,7 +17,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_lak_01a"]
+ex = ["gwf_ats_lak_01a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -59,7 +57,7 @@ def get_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    nouter, ninner = 700, 300
+    nouter, ninner = 250, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
     name = ex[idx]
@@ -70,10 +68,27 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
 
+    # set dt0, dtmin, dtmax, dtadj, dtfailadj
+    dt0 = 200.
+    dtmin = 1.001e-5
+    dtmax = 10.
+    dtadj = 2.0
+    dtfailadj = 5.
+    ats_filerecord = None
+    if True:
+        atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+                     (7, dt0, dtmin, dtmax, dtadj, dtfailadj)]
+        ats = flopy.mf6.ModflowUtlats(sim,
+                                      maxats=len(atsperiod),
+                                      perioddata=atsperiod)
+        ats_filerecord = name + ".ats"
+
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim,
+                                 ats_filerecord=ats_filerecord,
+                                 time_units='DAYS',
+                                 nper=nper,
+                                 perioddata=tdis_rc)
 
     # create gwf model
     gwfname = name
@@ -361,18 +376,17 @@ def eval_results(sim):
     head = hobj.get_alldata()
 
     stage_answer = [
-        0.69657598,
-        1.10039253,
-        1.36349007,
-        1.56985213,
-        1.74565051,
-        1.90449531,
-        2.0406385,
-        2.15064501,
-        2.25102511,
-        2.34427579,
+         0.18656752, 0.26698475, 0.41029603, 0.5401282 , 0.65826109, 0.76623049,
+         0.86559848, 0.9575622 , 1.03621155, 1.10294338, 1.16476142, 1.22239145,
+         1.27639471, 1.32723404, 1.37526871, 1.42080773, 1.4641106 , 1.50539963,
+         1.54487098, 1.58268724, 1.61899406, 1.65392046, 1.68758034, 1.72097227,
+         1.75402292, 1.78639623, 1.81810513, 1.84917469, 1.87963534, 1.9095193 ,
+         1.93885876, 1.96768493, 1.99602767, 2.02050604, 2.04378479, 2.06646125,
+         2.08860587, 2.11027176, 2.13150123, 2.15232931, 2.17278583, 2.19289665,
+         2.21268448, 2.23216952, 2.25136988, 2.27030183, 2.28898012, 2.30741817,
+         2.325628  , 2.34362223, 2.36140993
     ]
-    errmsg = "lake stage does not match known answer"
+    errmsg = 'lake stage does not match known answer'
     assert np.allclose(stage_answer, stage.flatten()), errmsg
 
     if False:

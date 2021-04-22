@@ -959,6 +959,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
     class(UzfType) :: this
     ! -- locals
@@ -983,10 +984,23 @@ contains
       end do
     end if
     !
-    ! -- reset old water content to new water content
-    do i = 1, this%nodes
-      this%wcold(i) = this%wcnew(i)
-    end do
+    ! -- Update or restore state
+    if (iFailedStepRetry == 0) then
+      !
+      ! -- reset old water content to new water content
+      do i = 1, this%nodes
+        this%wcold(i) = this%wcnew(i)
+      end do
+    else
+      !
+      ! -- Copy wcold back into wcnew as this is a retry of this time step.
+      !    Note that there is no need to reset the waves as they are not
+      !    advanced to their new state until the _ot() method is called,
+      !    and that doesn't happen until a successful solution is obtained.
+      do i = 1, this%nodes
+        this%wcnew(i) = this%wcold(i)
+      end do      
+    end if
     !
     ! -- advance each uzf obj
     do i = 1, this%nodes

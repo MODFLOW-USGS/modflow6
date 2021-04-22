@@ -1,6 +1,5 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
+Test adaptive time step module
 
 """
 
@@ -26,29 +25,35 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_uzf01a"]
+ex = ["gwf_ats01a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
-nlay, nrow, ncol = 100, 1, 1
+nlay, nrow, ncol = 1, 1, 2
+
+# set dt0, dtmin, dtmax, dtadj, dtfailadj
+dt0 = 5
+dtmin = 1.001e-5
+dtmax = 10.
+dtadj = 2.0
+dtfailadj = 5.
 
 
 def build_models():
 
-    perlen = [500.0]
+    perlen = [10]
     nper = len(perlen)
-    nstp = [10]
+    nstp = [1]
     tsmult = nper * [1.0]
-    delr = 1.0
+    delr = 100.0
     delc = 1.0
-    delv = 1.0
     top = 100.0
-    botm = [top - (k + 1) * delv for k in range(nlay)]
-    strt = 0.5
+    botm = [0.0]
+    strt = 50.
     hk = 1.0
     laytyp = 1
-    ss = 0.0
+    ss = 0.
     sy = 0.1
 
     tdis_rc = []
@@ -64,10 +69,22 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
+
         # create tdis package
-        tdis = flopy.mf6.ModflowTdis(
-            sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-        )
+        ats_filerecord = None
+        if True:
+            atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+                         (7, dt0, dtmin, dtmax, dtadj, dtfailadj)]
+            ats = flopy.mf6.ModflowUtlats(sim,
+                                          maxats=len(atsperiod),
+                                          perioddata=atsperiod)
+            ats_filerecord = name + ".ats"
+
+        tdis = flopy.mf6.ModflowTdis(sim,
+                                     ats_filerecord=ats_filerecord,
+                                     time_units='DAYS',
+                                     nper=nper,
+                                     perioddata=tdis_rc)
 
         # create gwf model
         gwfname = name
@@ -75,13 +92,12 @@ def build_models():
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
-            newtonoptions=newtonoptions,
-            save_flows=True,
+#            newtonoptions=newtonoptions,
         )
 
         # create iterative model solution and register the gwf model with it
-        nouter, ninner = 100, 10
-        hclose, rclose, relax = 1.5e-6, 1e-6, 0.97
+        nouter, ninner = 10, 2
+        hclose, rclose, relax = 1e-6, 1e-6, 0.97
         imsgwf = flopy.mf6.ModflowIms(
             sim,
             print_option="SUMMARY",
@@ -92,7 +108,7 @@ def build_models():
             inner_maximum=ninner,
             inner_dvclose=hclose,
             rcloserecord=rclose,
-            linear_acceleration="BICGSTAB",
+            linear_acceleration="CG",
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
@@ -130,9 +146,21 @@ def build_models():
             transient={0: True},
         )
 
-        # ghb
+        # wel files
+        welspdict = {
+            0: [[(0, 0, ncol - 1), -10.]],
+        }
+        wel = flopy.mf6.ModflowGwfwel(
+            gwf,
+            print_input=True,
+            print_flows=True,
+            stress_period_data=welspdict,
+            save_flows=False,
+        )
+
+        # ghb files
         ghbspdict = {
-            0: [[(nlay - 1, 0, 0), 1.5, 1.0]],
+            0: [[(0, 0, 0), 50., 1.]],
         }
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
@@ -142,79 +170,21 @@ def build_models():
             save_flows=False,
         )
 
-        # note: for specifying lake number, use fortran indexing!
-        uzf_obs = {
-            name
-            + ".uzf.obs.csv": [
-                ("wc2", "water-content", 2, 0.5),
-                ("wc50", "water-content", 50, 0.5),
-                ("wcbn2", "water-content", "uzf02", 0.5),
-                ("wcbn50", "water-content", "UZF050", 0.5),
-            ]
-        }
-
-        sd = 0.1
-        vks = hk
-        thtr = 0.05
-        thti = thtr
-        thts = sy
-        eps = 4
-        uzf_pkdat = [
-            [0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]
-        ] + [
-            [
-                k,
-                (k, 0, 0),
-                0,
-                k + 1,
-                sd,
-                vks,
-                thtr,
-                thts,
-                thti,
-                eps,
-                "uzf0{}".format(k + 1),
-            ]
-            for k in range(1, nlay - 1)
-        ]
-        uzf_pkdat[-1][3] = -1
-        infiltration = 2.01
-        uzf_spd = {
-            0: [
-                [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            ]
-        }
-        uzf = flopy.mf6.ModflowGwfuzf(
-            gwf,
-            print_input=True,
-            print_flows=True,
-            save_flows=True,
-            boundnames=True,
-            ntrailwaves=15,
-            nwavesets=40,
-            nuzfcells=len(uzf_pkdat),
-            packagedata=uzf_pkdat,
-            perioddata=uzf_spd,
-            budget_filerecord="{}.uzf.bud".format(name),
-            observations=uzf_obs,
-            filename="{}.uzf".format(name),
-        )
-
         # output control
         oc = flopy.mf6.ModflowGwfoc(
             gwf,
-            budget_filerecord="{}.bud".format(gwfname),
+            budget_filerecord="{}.cbc".format(gwfname),
             head_filerecord="{}.hds".format(gwfname),
             headprintrecord=[
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
-            saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-            printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
+            saverecord=[("HEAD", "ALL")],
+            printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         )
 
         obs_lst = []
-        obs_lst.append(["obs1", "head", (0, 0, 0)])
-        obs_lst.append(["obs2", "head", (1, 0, 0)])
+        obs_lst.append(['obs1', "head", (0, 0, 0)])
+        obs_lst.append(['obs2', "head", (0, 0, 1)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -230,37 +200,33 @@ def eval_flow(sim):
     print("evaluating flow...")
 
     name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    gwfname = name
 
-    # check binary grid file
-    fname = os.path.join(ws, name + ".dis.grb")
-    grbobj = flopy.utils.MfGrdFile(fname)
-    ia = grbobj._datadict["IA"] - 1
-    ja = grbobj._datadict["JA"] - 1
+    # This will fail if budget numbers cannot be read
+    fpth = os.path.join(sim.simpath, "{}.lst".format(gwfname))
+    mflist = flopy.utils.Mf6ListBudget(fpth)
+    names = mflist.get_record_names()
+    inc = mflist.get_incremental()
+    msg = 'budget times not monotically increasing {}.'.format(inc["totim"])
+    assert np.all(np.diff(inc["totim"]) > dtmin), msg
+    v = inc["totim"][-1]
+    assert v == 10., 'Last time should be 10.  Found {}'.format(v)
 
-    bpth = os.path.join(ws, name + ".uzf.bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    gwf_recharge = bobj.get_data(text="GWF")
+    # ensure obs results changing monotonically
+    fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
+    try:
+        tc = np.genfromtxt(fpth, names=True, delimiter=",")
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
 
-    bpth = os.path.join(ws, name + ".bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    flow_ja_face = bobj.get_data(text="FLOW-JA-FACE")
-    uzf_recharge = bobj.get_data(text="UZF-GWRCH")
-    errmsg = "uzf rch is not equal to negative gwf rch"
-    for gwr, uzr in zip(gwf_recharge, uzf_recharge):
-        assert np.allclose(gwr["q"], -uzr["q"]), errmsg
-
-    # Check on residual, which is stored in diagonal position of
-    # flow-ja-face.  Residual should be less than convergence tolerance,
-    # or this means the residual term is not added correctly.
-    for fjf in flow_ja_face:
-        fjf = fjf.flatten()
-        res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
-        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
-
+    msg = 'obs times not monotically increasing {}.'.format(tc["time"])
+    assert np.all(np.diff(tc['time']) > dtmin), msg
+    for obsname in ["OBS1", "OBS2"]:
+        v = tc[obsname]
+        msg = '{} not monotically decreasing: {}.'.format(obsname, v)
+        assert np.all(np.diff(v) < 0), msg
+    v = tc["time"][-1]
+    assert v == 10., 'Last time should be 10.  Found {}'.format(v)
     return
 
 

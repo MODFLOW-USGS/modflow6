@@ -3685,6 +3685,8 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
     class(LakType) :: this
     ! -- local
@@ -3710,16 +3712,32 @@ contains
       end do
     end if
     !
-    ! -- copy xnew into xold and set xnewpak to stage for
-    !    constant stage lakes
-    do n = 1, this%nlakes
-      this%xoldpak(n) = this%xnewpak(n)
-      this%stageiter(n) = this%xnewpak(n)
-      if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%stage(n)
-      end if
-      this%seep0(n) = DZERO
-    end do
+    ! -- Update or restore state
+    if (iFailedStepRetry == 0) then
+      !
+      ! -- copy xnew into xold and set xnewpak to stage for
+      !    constant stage lakes
+      do n = 1, this%nlakes
+        this%xoldpak(n) = this%xnewpak(n)
+        this%stageiter(n) = this%xnewpak(n)
+        if (this%iboundpak(n) < 0) then
+          this%xnewpak(n) = this%stage(n)
+        end if
+        this%seep0(n) = DZERO
+      end do
+    else
+      !
+      ! -- copy xold back into xnew as this is a 
+      !    retry of this time step
+      do n = 1, this%nlakes
+        this%xnewpak(n) = this%xoldpak(n)
+        this%stageiter(n) = this%xnewpak(n)
+        if (this%iboundpak(n) < 0) then
+          this%xnewpak(n) = this%stage(n)
+        end if
+        this%seep0(n) = DZERO
+      end do      
+    end if
     !
     ! -- pakmvrobj ad
     if (this%imover == 1) then

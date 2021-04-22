@@ -449,7 +449,6 @@ subroutine converge_reset()
     !
     ! --
     if(isimcnvg == 0) then
-      !write(iout, fmtfail)
       call sim_message('', fmt=fmtfail, iunit=iout)
       hasConverged = .false.
     endif

@@ -323,7 +323,7 @@ module GwfNpfModule
     return
   end subroutine npf_ar
 
-  subroutine npf_ad(this, nodes, hold)
+  subroutine npf_ad(this, nodes, hold, hnew, irestore)
 ! ******************************************************************************
 ! npf_ad -- Advance
 ! Subroutine (1) Sets hold to bot whenever a wettable cell is dry
@@ -333,8 +333,10 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     implicit none
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nodes
-    real(DP),dimension(nodes),intent(inout) :: hold
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(inout) :: hold
+    real(DP), dimension(nodes), intent(inout) :: hnew
+    integer(I4B), intent(in) :: irestore
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
@@ -344,6 +346,13 @@ module GwfNpfModule
         if(this%wetdry(n) == DZERO) cycle
         if(this%ibound(n) /= 0) cycle
         hold(n) = this%dis%bot(n)
+      enddo
+      !
+      ! -- if restore state, then set hnew to DRY if it is a dry wettable cell
+      do n = 1, this%dis%nodes
+        if(this%wetdry(n) == DZERO) cycle
+        if(this%ibound(n) /= 0) cycle
+        hnew(n) = DHDRY
       enddo
     endif
     !

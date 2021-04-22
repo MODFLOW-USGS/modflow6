@@ -18,15 +18,11 @@ module SfrModule
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
-  use ObsModule, only: ObsType
-  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
+  use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit,              &
                        store_warning, ustop
   use SimVariablesModule, only: errmsg, warnmsg
-  use GenericUtilitiesModule, only: sim_message
-  !use ArrayHandlersModule, only: ExpandArray
-  use BlockParserModule,   only: BlockParserType
   !
   implicit none
   !
@@ -470,7 +466,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(SfrType),intent(inout) :: this
@@ -563,7 +558,7 @@ contains
     use ConstantsModule, only: DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use SimModule, only: ustop, store_error
-    use InputOutputModule, only: urword, getunit, openfile
+    use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(SfrType),   intent(inout) :: this
     character(len=*), intent(inout) :: option
@@ -1401,7 +1396,6 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(SfrType),intent(inout) :: this
@@ -1540,6 +1534,11 @@ contains
     integer(I4B) :: n
     integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Most advanced package AD routines have to restore state if
+    !    the solution failed and the time step is being retried with a smaller
+    !    step size.  This is not needed here because there is no old stage
+    !    or storage effects in the stream.
     !
     ! -- Advance the time series manager
     call this%TsManager%ad()

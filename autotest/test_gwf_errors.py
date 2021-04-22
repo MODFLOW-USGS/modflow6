@@ -222,6 +222,42 @@ def test_disu_errors():
     return
 
 
+@raises(RuntimeError)
+def test_solver_fail():
+    # test failed to converge
+    ws = os.path.join(testdir, "sim4")
+    imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
+    sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs)
+    sim.write_simulation()
+    err_str = [
+        "Simulation convergence failure occurred 1 time(s).",
+        "Premature termination of simulation."
+    ]
+    run_mf6_error(ws, err_str)
+    return
+
+
+def test_fail_continue_success():
+    # test continue but failed to converge
+    ws = os.path.join(testdir, "sim5")
+    tdiskwargs = {"nper": 1, "perioddata": [(10., 10, 1.)]}
+    imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
+    sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs, tdiskwargs=tdiskwargs)
+    sim.name_file.continue_ = True
+    sim.write_simulation()
+    returncode, buff = run_mf6([mf6_exe], ws)
+    assert returncode == 0, "mf6 failed for simple model."
+
+    final_message = "Simulation convergence failure occurred 10 time(s)."
+    failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
+    assert final_message in buff[0], failure_message
+
+    final_message = "Normal termination of simulation."
+    failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
+    assert final_message in buff[0], failure_message
+    return
+
+
 def test_clean_sim():
     shutil.rmtree(testdir)
     return
@@ -237,3 +273,5 @@ if __name__ == "__main__":
     test_sim_errors()
     test_sim_maxerrors()
     test_disu_errors()
+    test_solver_fail()
+    test_fail_continue_success()

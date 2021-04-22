@@ -1,6 +1,12 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
+Purpose of this test is to ensure that time series values are being
+recalculated for the ATS failed retry option.  The first time step fails
+multiple times until it can converge.  Each time it fails, it has to back
+up in time, which requires the constant head time series to be reinterpolated
+for the new totim value.  For this problem, the constant head starts at 100 at
+time zero and drops to 50.0 at time 100.  So the constant head values, which
+are observed and written to and obs output file must fall on a line between
+(0, 100) and (100, 50), which is ensured by this test.
 
 """
 
@@ -26,29 +32,27 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["gwf_uzf01a"]
+ex = ["gwf_ats03a"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
-nlay, nrow, ncol = 100, 1, 1
-
+nlay, nrow, ncol = 1, 1, 10
 
 def build_models():
 
-    perlen = [500.0]
+    perlen = [100.]
     nper = len(perlen)
-    nstp = [10]
+    nstp = [1]
     tsmult = nper * [1.0]
-    delr = 1.0
+    delr = 100.0
     delc = 1.0
-    delv = 1.0
     top = 100.0
-    botm = [top - (k + 1) * delv for k in range(nlay)]
-    strt = 0.5
+    botm = [0.0]
+    strt = 100.
     hk = 1.0
     laytyp = 1
-    ss = 0.0
+    ss = 0.
     sy = 0.1
 
     tdis_rc = []
@@ -64,10 +68,27 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
+
         # create tdis package
-        tdis = flopy.mf6.ModflowTdis(
-            sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-        )
+        # set dt0, dtmin, dtmax, dtadj, dtfailadj
+        dt0 = 100.0
+        dtmin = 1.00e-5
+        dtmax = 100.
+        dtadj = 2.0
+        dtfailadj = 5.
+        ats_filerecord = None
+        if True:
+            atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj)]
+            ats = flopy.mf6.ModflowUtlats(sim,
+                                          maxats=len(atsperiod),
+                                          perioddata=atsperiod)
+            ats_filerecord = name + ".ats"
+
+        tdis = flopy.mf6.ModflowTdis(sim,
+                                     ats_filerecord=ats_filerecord,
+                                     time_units='DAYS',
+                                     nper=nper,
+                                     perioddata=tdis_rc)
 
         # create gwf model
         gwfname = name
@@ -75,12 +96,11 @@ def build_models():
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
-            newtonoptions=newtonoptions,
-            save_flows=True,
+#            newtonoptions=newtonoptions,
         )
 
         # create iterative model solution and register the gwf model with it
-        nouter, ninner = 100, 10
+        nouter, ninner = 15, 5
         hclose, rclose, relax = 1.5e-6, 1e-6, 0.97
         imsgwf = flopy.mf6.ModflowIms(
             sim,
@@ -92,7 +112,7 @@ def build_models():
             inner_maximum=ninner,
             inner_dvclose=hclose,
             rcloserecord=rclose,
-            linear_acceleration="BICGSTAB",
+            linear_acceleration="CG",
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
@@ -130,91 +150,60 @@ def build_models():
             transient={0: True},
         )
 
-        # ghb
-        ghbspdict = {
-            0: [[(nlay - 1, 0, 0), 1.5, 1.0]],
+        # wel files
+        welspdict = {
+            0: [[(0, 0, 0), -1.]],
         }
-        ghb = flopy.mf6.ModflowGwfghb(
+        wel = flopy.mf6.ModflowGwfwel(
             gwf,
             print_input=True,
             print_flows=True,
-            stress_period_data=ghbspdict,
+            stress_period_data=welspdict,
             save_flows=False,
         )
 
-        # note: for specifying lake number, use fortran indexing!
-        uzf_obs = {
-            name
-            + ".uzf.obs.csv": [
-                ("wc2", "water-content", 2, 0.5),
-                ("wc50", "water-content", 50, 0.5),
-                ("wcbn2", "water-content", "uzf02", 0.5),
-                ("wcbn50", "water-content", "UZF050", 0.5),
-            ]
+        # chd files
+        chdspdict = {
+            0: [[(0, 0, ncol-1), "tshead"]],
         }
-
-        sd = 0.1
-        vks = hk
-        thtr = 0.05
-        thti = thtr
-        thts = sy
-        eps = 4
-        uzf_pkdat = [
-            [0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]
-        ] + [
-            [
-                k,
-                (k, 0, 0),
-                0,
-                k + 1,
-                sd,
-                vks,
-                thtr,
-                thts,
-                thti,
-                eps,
-                "uzf0{}".format(k + 1),
-            ]
-            for k in range(1, nlay - 1)
-        ]
-        uzf_pkdat[-1][3] = -1
-        infiltration = 2.01
-        uzf_spd = {
-            0: [
-                [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            ]
-        }
-        uzf = flopy.mf6.ModflowGwfuzf(
+        chd = flopy.mf6.ModflowGwfchd(
             gwf,
             print_input=True,
             print_flows=True,
-            save_flows=True,
-            boundnames=True,
-            ntrailwaves=15,
-            nwavesets=40,
-            nuzfcells=len(uzf_pkdat),
-            packagedata=uzf_pkdat,
-            perioddata=uzf_spd,
-            budget_filerecord="{}.uzf.bud".format(name),
-            observations=uzf_obs,
-            filename="{}.uzf".format(name),
+            stress_period_data=chdspdict,
+            save_flows=False,
+        )
+
+        # chd ts package
+        ts_recarray = [
+            (0.0, 100.0),
+            (100.0, 50),
+        ]
+        filename = name + ".chd.ts"
+        time_series_namerecord = [("tshead",)]
+        interpolation_methodrecord = [("linearend",)]
+        chd.ts.initialize(
+            filename=filename,
+            timeseries=ts_recarray,
+            time_series_namerecord=time_series_namerecord,
+            interpolation_methodrecord=interpolation_methodrecord,
         )
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(
             gwf,
-            budget_filerecord="{}.bud".format(gwfname),
+            budget_filerecord="{}.cbc".format(gwfname),
             head_filerecord="{}.hds".format(gwfname),
             headprintrecord=[
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
-            saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-            printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
+            saverecord=[("HEAD", "ALL")],
+            printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         )
 
         obs_lst = []
-        obs_lst.append(["obs1", "head", (0, 0, 0)])
-        obs_lst.append(["obs2", "head", (1, 0, 0)])
+        obs_lst.append(['obs1', "head", (0, 0, 0)])
+        obs_lst.append(['obs2', "head", (0, 0, ncol-1)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -230,36 +219,19 @@ def eval_flow(sim):
     print("evaluating flow...")
 
     name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    gwfname = name
 
-    # check binary grid file
-    fname = os.path.join(ws, name + ".dis.grb")
-    grbobj = flopy.utils.MfGrdFile(fname)
-    ia = grbobj._datadict["IA"] - 1
-    ja = grbobj._datadict["JA"] - 1
-
-    bpth = os.path.join(ws, name + ".uzf.bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    gwf_recharge = bobj.get_data(text="GWF")
-
-    bpth = os.path.join(ws, name + ".bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    flow_ja_face = bobj.get_data(text="FLOW-JA-FACE")
-    uzf_recharge = bobj.get_data(text="UZF-GWRCH")
-    errmsg = "uzf rch is not equal to negative gwf rch"
-    for gwr, uzr in zip(gwf_recharge, uzf_recharge):
-        assert np.allclose(gwr["q"], -uzr["q"]), errmsg
-
-    # Check on residual, which is stored in diagonal position of
-    # flow-ja-face.  Residual should be less than convergence tolerance,
-    # or this means the residual term is not added correctly.
-    for fjf in flow_ja_face:
-        fjf = fjf.flatten()
-        res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
-        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+    # ensure obs2 (a constant head time series) drops linearly from 100 to 50
+    fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
+    try:
+        tc = np.genfromtxt(fpth, names=True, delimiter=",")
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+    x = np.array(tc["time"])
+    answer = 100. - x * 0.5
+    result = np.array(tc["OBS2"])
+    msg = "obs2 must drop linearly from 100 down to 50: {}".format(result)
+    assert np.allclose(answer, result), msg
 
     return
 

@@ -158,7 +158,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item --  
+	        \item A new Adaptive Time Step (ATS) utility was added.  The ATS utility allows any stress period to be overridden with an alternative time stepping approach.  The ATS utility implements two main capabilities (1) the capability to retry failed time steps with a shorter time step repeatedly until convergence is achieved, and (2) the capability to shorten and lengthen time steps based on simulation behavior.  These capabilities are described in the user input and output guide in a new section on the ATS utility.
 	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER\_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example ``water-content.uzf.bin''.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  
 	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array, which is marked with the text description ``FLOW-JA-FACE''.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
 	\end{itemize}
