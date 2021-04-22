@@ -252,7 +252,32 @@ def test_mf6model():
     
     assert error_count == 1, "error count = " + str(error_count) + \
                              "but should equal 1"
-
+    
+    # fix the error and attempt to rerun model
+    orig_fl = os.path.join(exdirs[0], ex[0] + '.lak.obs')
+    new_fl = os.path.join(exdirs[0], ex[0] + '.lak.obs.new')
+    sr = open(orig_fl, 'r')
+    sw = open(new_fl, 'w')
+    
+    lines = sr.readlines()
+    error_free_line = "  lak1  lak  1  1\n"
+    for line in lines:
+        if " lak " in line:
+            sw.write(error_free_line)
+        else:
+            sw.write(line)
+    
+    
+    sr.close()
+    sw.close()
+    
+    # delete original and replace with corrected lab obs input
+    os.remove(orig_fl)
+    os.rename(new_fl, orig_fl)
+    
+    # rerun the model, should be no errors
+    sim.run_simulation()
+    
     return
 
 
