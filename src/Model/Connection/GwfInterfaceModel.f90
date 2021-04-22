@@ -36,10 +36,11 @@ module GwfInterfaceModelModule
 contains
  
   ! minimal construction
-  subroutine construct(this, name)
+  subroutine construct(this, name, iout)
     use MemoryHelperModule, only: create_mem_path
     class(GwfInterfaceModelType), intent(inout) :: this
     character(len=*), intent(in)  :: name
+    integer(I4B), intent(in) :: iout
     
     ! TODO_MJR: name should be different from connection...    
     this%memoryPath = create_mem_path(name)    
@@ -50,6 +51,7 @@ contains
     this%inewton = 0
     
     ! we need this dummy value
+    this%iout = iout
     this%innpf = 999
     
   end subroutine construct
@@ -74,7 +76,7 @@ contains
       
     ! create discretization and packages
     call this%buildDiscretization()
-    call npf_cr(this%npf, this%name, this%innpf, this%iout) 
+    call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
     ! continue as in gwf_cr...
     
@@ -128,7 +130,7 @@ contains
     real(DP) :: x,y
     
     ! create disu
-    call disu_cr(this%dis, this%name, -1, -1)
+    call disu_cr(this%dis, this%name, -1, this%iout)
     disbase => this%dis
     select type(disbase)
     type is(GwfDisuType)

@@ -1,7 +1,7 @@
 ! TODO: module description
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME
+  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin  
   use SparseModule, only:sparsematrix
   use SpatialModelConnectionModule  
@@ -29,7 +29,8 @@ module GwfGwfConnectionModule
     real(DP), pointer     :: satOmega => null() !
     integer(I4B), pointer :: iCellAvg => null() ! TODO_MJR: discuss this, iCellAvg same value per connection, user can now specify per exchange?
     integer(I4B), pointer :: iXT3D => null()    ! run XT3D on the interface, 0 = don't, 1 = matrix, 2 = rhs
-    
+
+    integer(I4B) :: iout                        ! the list file for the interface model    
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
     generic, public :: construct => gwfGwfConnection_ctor
@@ -54,9 +55,11 @@ contains
   
    subroutine gwfGwfConnection_ctor(this, model)
     use NumericalModelModule, only: NumericalModelType
+    use InputOutputModule, only: openfile
     class(GwfGwfConnectionType) :: this
     class(NumericalModelType), pointer :: model ! note: this must be a GwfModelType
     ! local
+    character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
     integer(I4B), save :: iconn = 1 ! static counter to ensure unique name
 
@@ -69,6 +72,12 @@ contains
     else
       name = trim(model%name)//'_G2C'
     end if
+
+    ! .lst file for interface model
+    fname = trim(model%name)//'.im.lst'
+    call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
+    write(this%iout, '(a,a)') 'Creating GWF-GWF connection for model ',          &
+                              trim(this%gwfModel%name)
     
     ! first call base constructor
     call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
@@ -110,7 +119,7 @@ contains
     ! grid conn is defined, so we first create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    call this%interfaceModel%construct(this%name)
+    call this%interfaceModel%construct(this%name, this%iout)
     call this%interfaceModel%createModel(this%gridConnection)
     this%interfaceModel%npf%ixt3d = this%iXT3D
 

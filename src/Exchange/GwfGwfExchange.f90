@@ -371,6 +371,13 @@ contains
       endif
     endif
     !
+    if (this%ixt3d > 0 .and. this%ianglex == 0) then
+      write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //               &
+                           'specified as an auxiliary variable because ' //      &
+                           'XT3D is enabled on the exchange.'
+      call store_error(errmsg)
+      call ustop()
+    end if
     ! -- Go through each connection and calculate the saturated conductance
     do iexg = 1, this%nexg
       !
@@ -1340,7 +1347,7 @@ contains
                              'NEWTON-RAPHSON method used for unconfined cells'
           case ('XT3D')
             this%ixt3d = 1
-            write(iout, '(4x,a)') 'XT3D applied on the interface'
+            write(iout, '(4x,a)') 'XT3D will be applied on the interface'
           case ('GNC6')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then

@@ -15,9 +15,10 @@ module SpatialModelConnectionModule
   public :: AddSpatialModelConnectionToList
   public :: GetSpatialModelConnectionFromList
 
-  ! Class to manage spatial connection of a model to one or more models of the same type.
-  ! Spatial connection here means that the model domains (spatial discretization) are adjacent
-  ! and connected via NumericalExchangeType object(s).
+  !> Class to manage spatial connection of a model to one 
+  !! or more models of the same type. Spatial connection here 
+  !! means that the model domains (spatial discretization) are 
+  !< adjacent and connected via DisConnExchangeType object(s).
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
     class(NumericalModelType), pointer  :: owner => null()            !< the model whose connection this is    

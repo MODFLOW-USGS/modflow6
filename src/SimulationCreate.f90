@@ -24,7 +24,6 @@ module SimulationCreateModule
   private
   public :: simulation_cr
   public :: simulation_da
-  public :: connections_cr
 
   integer(I4B) :: inunit = 0
   character(len=LENMODELNAME), allocatable, dimension(:) :: modelname
@@ -59,34 +58,6 @@ module SimulationCreateModule
     ! -- Return
     return
   end subroutine simulation_cr
-
-  !> @brief Create the model connections from the exchanges
-  !!
-  !! This will upgrade the numerical exchanges in the solution,
-  !! whenever the configuration requires this, to Connection 
-  !! objects. Currently we anticipate:
-  !!
-  !!   GWF-GWF => GwfGwfConnection
-  !!   GWT-GWT => GwtGwtConecction
-  !<
-  subroutine connections_cr()
-  use DisConnExchangeModule,  only: DisConnExchangeType
-  use ConnectionBuilderModule
-    integer(I4B) :: isol
-    type(ConnectionBuilderType) :: connectionBuilder
-    class(BaseSolutionType), pointer :: sol => null()
-    
-    if (baseexchangelist%Count() == 0) then
-      ! if this is not a coupled simulation in any way,
-      ! then we will not need model connections
-      return
-    end if
-    
-    do isol = 1, basesolutionlist%Count()
-      sol => GetBaseSolutionFromList(basesolutionlist, isol)
-      call connectionBuilder%processSolution(sol)
-    end do    
-  end subroutine connections_cr
    
   !> @brief Deallocate simulation variables
   !<

@@ -1500,6 +1500,11 @@ subroutine solution_create(filename, id)
         call this%outertab%initialize_column(tag, 34, alignment=TABRIGHT)
       end if
     end if
+    !
+    ! -- backtracking
+    if (this%numtrack > 0) then
+      call this%sln_backtracking(mp, cp, kiter)
+    end if
     
     ! TODO_MJR: discuss this, moved timer now sln_reset is inside...
     call code_timer(0, ttform, this%ttform)

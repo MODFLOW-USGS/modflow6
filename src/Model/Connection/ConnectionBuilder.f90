@@ -1,5 +1,6 @@
 module ConnectionBuilderModule
   use KindModule, only: I4B, LGP
+  use SimModule, only: store_error, count_errors, ustop
   use SimVariablesModule, only: iout
   use ListModule, only: ListType, arePointersEqual, isEqualIface, ListNodeType
   use BaseSolutionModule, only: BaseSolutionType
@@ -54,9 +55,8 @@ module ConnectionBuilderModule
       return
     end if    
 
-    write(iout,'(/1x,i0,a,a)') newConnections%Count(),                           &
-                               ' model connections created for solution',        &
-                               solution%name
+    write(iout,'(1x,a,i0,a,a)') 'Created ', newConnections%Count(),              &
+                      ' model connections for solution ', trim(solution%name)
 
     ! set the global exchanges from this solution to
     ! the model connections
@@ -85,6 +85,7 @@ module ConnectionBuilderModule
     ! local
     class(DisConnExchangeType), pointer :: conEx
     integer(I4B) :: iex
+    logical(LGP) :: isValid
     class(SpatialModelConnectionType), pointer :: modelConnection
 
     do iex = 1, exchanges%Count()
@@ -94,8 +95,14 @@ module ConnectionBuilderModule
         continue
       end if
     
-      ! for now, if we have XT3D on the interface, we use a connection:
+      ! for now, if we have XT3D on the interface, we use a connection,
+      ! (this will be more generic in the future)
       if (conEx%ixt3d > 0) then
+
+        call validateExchange(conEx, isValid)
+        if (.not. isValid) then
+          continue
+        end if
 
         ! fetch connection for model 1:
         modelConnection => lookupConnection(conEx%model1, conEx%typename)
@@ -125,6 +132,43 @@ module ConnectionBuilderModule
     end do
 
   end subroutine processExchanges
+
+
+  !> @brief Validate the exchange before creating a connection
+  !!
+  !! (The exchange input has already been checked for self-consistency 
+  !! in the exchange modules)
+  !<
+  subroutine validateExchange(exchange, isValid)
+    use ConstantsModule, only: LINELENGTH    
+    class(DisConnExchangeType), pointer, intent(in) :: exchange !< the exchange to validate
+    logical(LGP), intent(out) :: isValid                        !< validation result
+    ! local
+    character(len=LINELENGTH) :: errmsg
+
+    ! check and store error
+    if (exchange%ixt3d > 0) then      
+      if (exchange%model1%dis%con%ianglex == 0) then
+        write(errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ',      &
+              trim(exchange%name), ' but the discretization in model ',          &
+              trim(exchange%model1%name), ' has no ANGLDEGX specified'
+        call store_error(errmsg)
+      end if
+      if (exchange%model2%dis%con%ianglex == 0) then
+        write(errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ',      &
+              trim(exchange%name), ' but the discretization in model ',          &
+              trim(exchange%model2%name), ' has no ANGLDEGX specified'
+        call store_error(errmsg)
+      end if
+    end if
+
+    ! abort on errors
+    if(count_errors() > 0) then
+      write(errmsg, '(1x,a)') 'Errors occurred while processing exchange'
+      call ustop()
+    end if
+
+  end subroutine validateExchange
 
   !> @brief Create a model connection of a given type
   !!

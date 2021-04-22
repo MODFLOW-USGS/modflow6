@@ -65,14 +65,13 @@ module Mf6CoreModule
     !<
     subroutine Mf6Initialize()
       ! -- modules
-      use SimulationCreateModule, only: simulation_cr, connections_cr
+      use SimulationCreateModule, only: simulation_cr
       !
       ! -- print banner and info to screen
       call printInfo()
       
       ! -- create
       call simulation_cr()
-      call connections_cr()
       
       ! -- define
       call simulation_df()
@@ -246,6 +245,10 @@ module Mf6CoreModule
         call ep%exg_df()
       enddo
       !
+      ! -- when needed, this is were the interface models are
+      ! created and added to the numerical solutions
+      call connections_cr()
+      !
       ! -- Define each connection
       do ic = 1, baseconnectionlist%Count()
         mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
@@ -305,7 +308,38 @@ module Mf6CoreModule
       enddo
       !
     end subroutine simulation_ar
-    class(SpatialModelConnectionType), pointer :: mc => null()
+
+    !> @brief Create the model connections from the exchanges
+    !!
+    !! This will upgrade the numerical exchanges in the solution,
+    !! whenever the configuration requires this, to Connection 
+    !! objects. Currently we anticipate:
+    !!
+    !!   GWF-GWF => GwfGwfConnection
+    !!   GWT-GWT => GwtGwtConecction
+    !<
+    subroutine connections_cr()
+      use ConnectionBuilderModule
+      use SimVariablesModule, only: iout
+      integer(I4B) :: isol
+      type(ConnectionBuilderType) :: connectionBuilder
+      class(BaseSolutionType), pointer :: sol => null()
+
+      write(iout,'(/a)') 'PROCESSING MODEL CONNECTIONS'
+
+      if (baseexchangelist%Count() == 0) then
+        ! if this is not a coupled simulation in any way,
+        ! then we will not need model connections
+        return
+      end if
+
+      do isol = 1, basesolutionlist%Count()
+        sol => GetBaseSolutionFromList(basesolutionlist, isol)
+        call connectionBuilder%processSolution(sol)
+      end do
+
+      write(iout,'(a)') 'END OF MODEL CONNECTIONS'
+    end subroutine connections_cr
     
     !> @brief Read and prepare time step
     !!
