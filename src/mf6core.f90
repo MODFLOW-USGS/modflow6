@@ -162,16 +162,14 @@ contains
   end subroutine Mf6Finalize
   
   subroutine printInfo()
-    use SimVariablesModule, only: istdout
-    use VersionModule, only: write_listfile_header
+    use SimModule, only: initial_message
     use TimerModule, only: start_time
     !
-    ! -- Write banner to screen (unit stdout) and start timer
-    call write_listfile_header(istdout, write_kind_info=.false., &
-                               write_sys_command=.false.)
+    ! -- print initial message
+    call initial_message()
     !
     ! -- get start time
-    call start_time()
+    call start_time()    
     return
   end subroutine printInfo
   
