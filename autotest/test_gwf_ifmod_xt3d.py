@@ -1,0 +1,303 @@
+import os
+import sys
+import numpy as np
+
+try:
+    import flopy
+except:
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
+    raise Exception(msg)
+
+from flopy.utils.lgrutil import Lgr
+from framework import testing_framework
+from simulation import Simulation
+
+# Test for the interface model approach, when running 
+# with a GWF-GWF exchange and XT3D applied on it. 
+# It compares the result for a simple LGR configuration
+# to the analytical values:
+#
+#         1 1 1 1 1 1 1
+#         1 1 1 1 1 1 1
+#         1 1 0 0 0 1 1
+# (H=1.0) 1 1 0 0 0 1 1 (H=0.0)
+#         1 1 0 0 0 1 1
+#         1 1 1 1 1 1 1
+#         1 1 1 1 1 1 1
+#
+# This is also the first test problem presented in 
+# the MODFLOW-USG manual: 'test006_2models'
+# (When running without XT3D, the result will disagree 
+# because the CVFD requirements are violated at the 
+# LGR interface)
+
+ex = ["gwf_ifmod_xt3d"]
+exdirs = []
+for s in ex:
+    exdirs.append(os.path.join("temp", s))
+
+# globally for convenience...
+useXT3D = True
+parent_name = 'parent'
+child_name = 'child'
+h_left = 1.0
+h_right = 0.0
+child_domain = None
+hclose = None
+
+def get_model(idx, dir):
+    global child_domain
+    global hclose
+    
+    name = ex[idx]
+
+    # tdis period data
+    nper = 1
+    tdis_rc = []
+    for i in range(nper):
+        tdis_rc.append((1., 1, 1))
+
+    # solver data
+    nouter, ninner = 100, 300
+    hclose, rclose, relax = 1e-12, 1e-3, 0.97
+    h_start = 1.0
+
+    # dis
+    nlay, nrow, ncol = 1, 7, 7
+
+    row_s, row_e = 3, 5
+    col_s, col_e = 3, 5
+
+    ref_fct = 3
+    nrowc = ref_fct * ((row_e-row_s) + 1)
+    ncolc = ref_fct * ((col_e-col_s) + 1)
+
+    idomain = np.ones((nlay, nrow, ncol))
+    idomain[:, row_s-1:row_e, col_s-1:col_e] = 0
+
+    delr = 100.0
+    delc = 100.0
+    delrc = delr/ref_fct
+    delcc = delc/ref_fct
+    tops = [0.0,-100.0]
+
+    xoriginc = 2*delr
+    yoriginc = 2*delc
+
+    xmin = 0.0
+    xmax = ncol*delr
+    ymin = 0.0
+    ymax = nrow*delc
+    model_domain = [xmin, xmax, ymin, ymax]
+    xminc = xoriginc
+    xmaxc = xoriginc + ncolc*delrc
+    yminc = yoriginc
+    ymaxc = yoriginc + nrowc*delcc
+    child_domain = [xminc, xmaxc, yminc, ymaxc]
+
+    # hydraulic conductivity
+    k11 = 1.0
+    k33 = 1.0
+
+    # boundary stress period data
+    left_chd = [[(ilay,irow,0), h_left] for ilay in range(nlay) for irow in range(nrow)]
+    right_chd = [[(ilay,irow,ncol-1), h_right] for ilay in range(nlay) for irow in range(nrow)]
+    chd_data = left_chd + right_chd  
+    chd_spd = {0: chd_data}    
+
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version='mf6', exe_name='mf6', sim_ws=ws
+    )
+    
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                     nper=nper, perioddata=tdis_rc)
+
+    ims = flopy.mf6.ModflowIms(sim,
+                               print_option='SUMMARY',
+                               outer_hclose=hclose,
+                               outer_maximum=nouter,
+                               under_relaxation='DBD',
+                               inner_maximum=ninner,
+                               inner_hclose=hclose, rcloserecord=rclose,
+                               linear_acceleration='BICGSTAB',
+                               relaxation_factor=relax)
+
+    # The parent model:
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=parent_name, save_flows=True)
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=tops[0], botm=tops[1:],
+                                  idomain=idomain)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
+    npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=True,
+                                  save_flows=True,
+                                  icelltype=0,
+                                  k=k11,
+                                  k33=k33)
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
+    oc = flopy.mf6.ModflowGwfoc(gwf,
+                                head_filerecord='{}.hds'.format(parent_name),
+                                headprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('HEAD', 'ALL')],
+                                printrecord=[('BUDGET', 'ALL')])
+
+    # The child model:
+    gwfc = flopy.mf6.ModflowGwf(sim, modelname=child_name, save_flows=True)
+    dis = flopy.mf6.ModflowGwfdis(gwfc, nlay=nlay, nrow=nrowc, ncol=ncolc,
+                                  delr=delrc, delc=delcc,
+                                  top=tops[0], botm=tops[1:],
+                                  xorigin=xoriginc, yorigin=yoriginc)
+    ic = flopy.mf6.ModflowGwfic(gwfc, strt=h_start)
+    npf = flopy.mf6.ModflowGwfnpf(gwfc, xt3doptions=True,
+                                  save_flows=True,
+                                  icelltype=0,
+                                  k=k11,
+                                  k33=k33)
+    oc = flopy.mf6.ModflowGwfoc(gwfc,
+                                head_filerecord='{}.hds'.format(child_name),
+                                headprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('HEAD', 'ALL')],
+                                printrecord=[('BUDGET', 'ALL')])
+
+    # LGR:
+    nrowp = gwf.dis.nrow.get_data()
+    ncolp = gwf.dis.ncol.get_data()
+    delrp = gwf.dis.delr.array
+    delcp = gwf.dis.delc.array
+    topp = gwf.dis.top.array
+    botmp = gwf.dis.botm.array
+    idomainp = gwf.dis.idomain.array
+
+    lgr = Lgr(nlay, 
+              nrowp, 
+              ncolp,
+              delrp,
+              delcp,
+              topp,
+              botmp,
+              idomainp,
+              ncpp=ref_fct,
+              ncppl=1,
+             )
+
+    exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
+
+    gwfgwf = flopy.mf6.ModflowGwfgwf(sim, exgtype='GWF6-GWF6',
+                                         nexg=len(exgdata),
+                                         exgmnamea=parent_name,
+                                         exgmnameb=child_name,
+                                         exchangedata=exgdata, 
+                                         xt3d = useXT3D,
+                                         auxiliary=["ANGLDEGX", "CDIST"]
+                                        )
+
+    return sim
+
+
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim = get_model(idx, dir)
+        sim.write_simulation()
+    return
+
+
+def eval_heads(sim):
+    print("comparing heads to analytical result...")
+
+    name = ex[sim.idxsim]
+    
+    fpth = os.path.join(sim.simpath, "{}.hds".format(parent_name))
+    hds = flopy.utils.HeadFile(fpth)
+    heads = hds.get_data()
+    
+    fpth = os.path.join(sim.simpath, "{}.hds".format(child_name))
+    hds_c = flopy.utils.HeadFile(fpth)
+    heads_c = hds_c.get_data()
+
+    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(parent_name))
+    grb = flopy.utils.MfGrdFile(fpth)
+    mg = grb.get_modelgrid()
+    
+    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
+    grb_c = flopy.utils.MfGrdFile(fpth)
+    mg_c= grb_c.get_modelgrid()
+
+    xyc = mg.xycenters
+    xyc_c = mg_c.xycenters
+
+    # the exact result:
+    xleft =xyc[0][0]
+    xright = xyc[0][-1]
+    def exact(x):
+        return h_left + (h_right-h_left)*(x - xleft)/(xright-xleft)
+
+    diffs = []
+
+    # first check the parent
+    for irow in range(mg.nrow):
+        for icol in range(mg.ncol):
+            xc = xyc[0][icol]
+            h = heads[0, irow, icol]
+            if h != 1e+30:
+                diffs.append(abs(h-exact(xc)))
+    
+    # and now the child
+    for irow in range(mg_c.nrow):
+        for icol in range(mg_c.ncol):        
+            xc = xyc_c[0][icol] + child_domain[0]
+            h = heads_c[0, irow, icol] 
+            if h != 1e+30:
+                diffs.append(abs(h-exact(xc)))
+
+    # The error should be within solver tolerance,
+    # 10*hclose seems realistic here
+    max_diff = max(diffs)
+    assert max_diff < 10 * hclose, "Max. difference {} exceeds solver tolerance (x10): {}".format(max_diff, 10*hclose)
+
+    return
+
+
+# - No need to change any code below
+def test_mf6model():
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the models
+    build_models()
+
+    # run the test models
+    for idx, dir in enumerate(exdirs):
+        yield test.run_mf6, Simulation(dir, exfunc=eval_heads, idxsim=idx)
+
+    return
+
+
+def main():
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the models
+    build_models()
+
+    # run the test models
+    for idx, dir in enumerate(exdirs):
+        sim = Simulation(dir, exfunc=eval_heads, idxsim=idx)
+        test.run_mf6(sim)
+
+    return
+
+
+if __name__ == "__main__":
+    # print message
+    print("standalone run of {}".format(os.path.basename(__file__)))
+
+    # run main routine
+    main()
