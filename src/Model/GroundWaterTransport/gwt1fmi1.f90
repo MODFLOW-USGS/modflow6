@@ -37,7 +37,6 @@ module GwtFmiModule
     integer(I4B), pointer                           :: iflowsupdated => null()   !< flows were updated for this time step
     integer(I4B), pointer                           :: iflowerr => null()        !< add the flow error correction
     real(DP), dimension(:), pointer, contiguous     :: flowcorrect => null()     !< mass flow correction
-    real(DP), dimension(:), pointer, contiguous     :: flowerr => null()         !< residual error of the flow solution
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< pointer to GWT ibound
     real(DP), dimension(:), pointer, contiguous     :: gwfflowja => null()       !< pointer to the GWF flowja array
     real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis  => null()       !< pointer to npf specific discharge array
@@ -385,42 +384,17 @@ module GwtFmiModule
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
     integer(I4B) :: n, ipos, idiag
-    integer(I4B) :: ip, i, nbound
-    real(DP) :: qbnd
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow imbalance error and make a correction for it
     if (this%iflowerr /= 0) then
       !
-      ! -- Loop through and calculate flow residual for face flows and storage
-      do n = 1, nodes
-        this%flowerr(n) = DZERO
-        if (this%ibound(n) <= 0) cycle
-        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-          this%flowerr(n) = this%flowerr(n) + this%gwfflowja(ipos)
-        enddo
-        if (this%igwfstrgss /= 0) &
-          this%flowerr(n) = this%flowerr(n) + this%gwfstrgss(n)
-        if (this%igwfstrgsy /= 0) &
-          this%flowerr(n) = this%flowerr(n) + this%gwfstrgsy(n)
-      enddo
-      !
-      ! -- Add package flow terms
-      do ip = 1, this%nflowpack
-        nbound = this%gwfpackages(ip)%nbound
-        do i = 1, nbound
-          n = this%gwfpackages(ip)%nodelist(i)
-          if (this%ibound(n) <= 0) cycle
-          qbnd = this%gwfpackages(ip)%get_flow(i)
-          this%flowerr(n) = this%flowerr(n) + qbnd
-        enddo
-      enddo
-      !
       ! -- Correct the transport solution for the flow imbalance by adding
       !    the flow residual to the diagonal
       do n = 1, nodes
         idiag = idxglo(this%dis%con%ia(n))
-        amatsln(idiag) = amatsln(idiag) - this%flowerr(n)
+        ipos = this%dis%con%ia(n)
+        amatsln(idiag) = amatsln(idiag) - this%gwfflowja(ipos)
       enddo
     end if
     !
@@ -452,11 +426,11 @@ module GwtFmiModule
       ! -- Accumulate the flow correction term
       do n = 1, this%dis%nodes
         rate = DZERO
+        idiag = this%dis%con%ia(n)
         if (this%ibound(n) > 0) then
-          rate = -this%flowerr(n) * cnew(n)
+          rate = -this%gwfflowja(idiag) * cnew(n)
         end if
         this%flowcorrect(n) = rate
-        idiag = this%dis%con%ia(n)
         flowja(idiag) = flowja(idiag) + rate
       enddo
     end if
@@ -559,7 +533,6 @@ module GwtFmiModule
     deallocate(this%gwfpackages)
     deallocate(this%flowpacknamearray)
     deallocate(this%aptbudobj)
-    call mem_deallocate(this%flowerr)
     call mem_deallocate(this%flowcorrect)
     call mem_deallocate(this%iatp)
     call mem_deallocate(this%ibdgwfsat0)
@@ -656,14 +629,11 @@ module GwtFmiModule
     !
     ! -- Allocate variables needed for all cases
     if (this%iflowerr == 0) then
-      call mem_allocate(this%flowerr, 1, 'FLOWERR', this%memoryPath)
       call mem_allocate(this%flowcorrect, 1, 'FLOWCORRECT', this%memoryPath)
     else
-      call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%memoryPath)
       call mem_allocate(this%flowcorrect, nodes, 'FLOWCORRECT', this%memoryPath)
     end if
-    do n = 1, size(this%flowerr)
-      this%flowerr(n) = DZERO
+    do n = 1, size(this%flowcorrect)
       this%flowcorrect(n) = DZERO
     enddo
     !
