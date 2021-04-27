@@ -155,7 +155,9 @@ def get_model(idx, dir):
         ]
     )
     print(flowja)
-    flowja = np.array([0.0, 0.01, 0.0, 0.0, -0.01, 0.0, 0.01])
+    # create unbalanced flowja to check flow_imbalance_correction
+    # note that residual must be stored in diagonal position
+    flowja = np.array([0.01, 0.01, -0.01, 0.0, -0.01, 0.01, 0.01])
 
     dt = np.dtype(
         [
