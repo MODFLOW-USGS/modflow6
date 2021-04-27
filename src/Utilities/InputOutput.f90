@@ -2,7 +2,7 @@
 !
 module InputOutputModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, I8B
   use SimVariablesModule, only: iunext, isim_mode
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
@@ -2199,7 +2199,7 @@ module InputOutputModule
     integer(I4B), intent(in) :: offset
     integer(I4B), intent(in) :: whence
     integer(I4B), intent(inout) :: status
-    integer(I4B) :: ipos
+    integer(I8B) :: ipos
 ! ------------------------------------------------------------------------------
     !
     inquire(unit=iu, size=ipos)

@@ -535,30 +535,39 @@ module AdaptiveTimeStepModule
     
     if (isAdaptivePeriod(kper)) then
       n = kperats(kper)
-      tsfact = dtadj(n)
-      if (tsfact > DONE) then
-        !
-        ! -- if idir is present, then dt is a length that should be adjusted
-        !    (divided by or multiplied by) by dtadj.  If idir is not present
-        !    then dt is the submitted time step.
-        if (present(idir)) then
-          dt_temp = DZERO
+      
+      !
+      ! -- if idir is present, then dt is a length that should be adjusted
+      !    (divided by or multiplied by) by dtadj.  If idir is not present
+      !    then dt is the submitted time step and handled below.
+      if (present(idir)) then
+        tsfact = dtadj(n)
+        dt_temp = DZERO
+        if (tsfact > DONE) then
           if (idir == -1) then
             dt_temp = dt / tsfact
           else if (idir == 1) then
             dt_temp = dt * tsfact
           end if
-        else
-          dt_temp = dt
         end if
-        if (kstp > 1 .and. dt_temp > DZERO) then
-          write(iout, fmtdtsubmit) trim(adjustl(sloc)), dt_temp
-        end if
-        if (dt_temp > DZERO .and. dt_temp < dtstable) then
-          ! -- Reset dtstable to a smaller value
-          dtstable = dt_temp
-        end if
+      else
+        !
+        ! -- dt is submitted time step length from this component
+        dt_temp = dt
       end if
+      
+      !
+      ! -- If a valid dt_temp is available, then write a message about
+      !    who submitted it and then check to see if it is smaller
+      !    than any previous, and reset dtstable to dt_temp
+      if (kstp > 1 .and. dt_temp > DZERO) then
+        write(iout, fmtdtsubmit) trim(adjustl(sloc)), dt_temp
+      end if
+      if (dt_temp > DZERO .and. dt_temp < dtstable) then
+        ! -- Reset dtstable to a smaller value
+        dtstable = dt_temp
+      end if
+      
     end if
     return
   end subroutine ats_submit_delt

@@ -672,7 +672,7 @@ module GwtAptModule
     ierr = 0
     if (itemno < 1 .or. itemno > this%ncv) then
       write(errmsg,'(4x,a,1x,i6,1x,a,1x,i6)') &
-        '****ERROR. FEATURENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
+        'FEATURENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
       call store_error(errmsg)
       ierr = 1
     end if
@@ -1567,7 +1567,7 @@ module GwtAptModule
 
         if (n < 1 .or. n > this%ncv) then
           write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. itemno MUST BE > 0 and <= ', this%ncv
+            'itemno MUST BE > 0 and <= ', this%ncv
           call store_error(errmsg)
           cycle
         end if

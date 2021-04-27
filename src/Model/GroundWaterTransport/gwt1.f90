@@ -10,7 +10,7 @@ module GwtModule
 
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
-  use ConstantsModule,             only: LENFTYPE, DZERO, LENPAKLOC
+  use ConstantsModule,             only: LENFTYPE, DZERO, LENPAKLOC, DNODATA
   use VersionModule,               only: write_listfile_header
   use NumericalModelModule,        only: NumericalModelType  
   use BaseModelModule,             only: BaseModelType
@@ -79,6 +79,8 @@ module GwtModule
     procedure, private :: gwt_ot_dv
     procedure, private :: gwt_ot_bdsummary
     procedure, private :: gwt_ot_obs
+    procedure :: model_calculate_delt => gwt_calculate_delt
+    procedure, private :: get_delt_courant
     
   end type GwtModelType
 
@@ -189,7 +191,7 @@ module GwtModule
             'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
         case default
           write(errmsg,'(4x,a,a,a,a)')                                         &
-            '****ERROR. UNKNOWN GWT NAMEFILE (',                               &
+            'UNKNOWN GWT NAMEFILE (',                                          &
             trim(adjustl(this%filename)), ') OPTION: ',                        &
             trim(adjustl(namefile_obj%opts(i)))
           call store_error(errmsg)
@@ -1224,6 +1226,107 @@ module GwtModule
     return
   end subroutine ftype_check
 
+   subroutine gwt_calculate_delt(this)
+! ******************************************************************************
+! gwt_calculate_delt -- Calculate time step length based on gwt behavior
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    use AdaptiveTimeStepModule, only: ats_submit_delt
+    ! -- dummy
+    class(GwtModelType) :: this
+    ! -- local
+    real(DP) :: delt_gwt
+    real(DP) :: delt_courant
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize to DNODATA, which is a very large number (3e30)
+    delt_gwt = DNODATA
+    !
+    ! -- Go through each cell and calculate the average residence time, which
+    !    is a generic way to calculate a cell courant number for an
+    !    unstructured cell
+    if (this%inadv /= 0) then
+      if (this%adv%percel > DZERO) then
+        delt_courant = this%get_delt_courant()
+        delt_courant = delt_courant * this%adv%percel
+        if (delt_courant < delt_gwt) then
+          delt_gwt = delt_courant
+        end if
+      end if
+    end if
+    !
+    ! -- submit stable dt for upcoming step
+    if (delt_gwt /= DNODATA) then
+      call ats_submit_delt(kstp, kper, delt_gwt, this%memoryPath)
+    end if
+    !
+    return
+  end subroutine gwt_calculate_delt
 
+  function get_delt_courant(this) result(delt_courant)
+! ******************************************************************************
+! get_delt_courant -- Calculate time step to meet courant constraint
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtModelType) :: this
+    ! -- return
+    real(DP) :: delt_courant
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: ipos
+    real(DP) :: vol_sat
+    real(DP) :: q
+    real(DP) :: qpos
+    real(DP) :: qneg
+    real(DP) :: cell_residence_time
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    delt_courant = DNODATA
+    !
+    ! -- Process each active cell
+    do n = 1, this%dis%nodes
+      cell_residence_time = DNODATA
+      if (this%ibound(n) > 0) then
+        
+        ! -- Calculate flow through cell
+        qpos = DZERO
+        qneg = DZERO
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n) + 1
+          q = this%fmi%gwfflowja(ipos)
+          if (q < DZERO) then
+            qneg = qneg - q
+          else
+            qpos = qpos + q
+          end if
+        end do
+        q = max(qpos, qneg)
+        
+        ! -- calculate residence time
+        if (q > DZERO) then
+          vol_sat = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+          vol_sat = vol_sat * this%fmi%gwfsat(n) * this%mst%porosity(n)
+          if (vol_sat > DZERO) then
+            cell_residence_time = vol_sat / q
+          end if
+        end if
+      end if
+      
+      ! -- Set this as delt_min if this is smallest residence time
+      if (cell_residence_time < delt_courant) then
+        delt_courant = cell_residence_time
+      end if
+      
+    end do
   
+  end function get_delt_courant
+   
 end module GwtModule

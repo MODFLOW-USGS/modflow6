@@ -708,7 +708,7 @@ module GwtIstModule
             this%idcy = 2
             write(this%iout, fmtidcy2)
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN IST OPTION: ',         &
+            write(errmsg,'(4x,a,a)') 'UNKNOWN IST OPTION: ',                   &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()

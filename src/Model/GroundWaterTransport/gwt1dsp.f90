@@ -527,7 +527,7 @@ module GwtDspModule
             write(this%iout, '(4x,a)')                                         &
                              'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DISPERSION OPTION: ',  &
+            write(errmsg,'(4x,a,a)') 'UNKNOWN DISPERSION OPTION: ',            &
                                      trim(keyword)
             call store_error(errmsg)
             call ustop()

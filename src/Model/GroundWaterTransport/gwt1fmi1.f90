@@ -177,7 +177,7 @@ module GwtFmiModule
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
       if (this%nflowpack > 0) then
-        call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
+        call store_error('FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
           &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
         call ustop()
       endif
@@ -281,7 +281,7 @@ module GwtFmiModule
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
     !    flows may be reused (only when flows are read from a file) then set
-    !    the flag to zero to indicated that flows were not updated
+    !    the flag to zero to indicate that flows were not updated
     this%iflowsupdated = 1
     !
     ! -- If reading flows from a budget file, read the next set of records
