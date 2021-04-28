@@ -25,6 +25,7 @@ module MessageModule
     
     contains
   
+    procedure :: init_message
     procedure :: count_message
     procedure :: set_max_message
     procedure :: store_message
@@ -34,6 +35,19 @@ module MessageModule
   end type MessageType
   
   contains
+
+    !> @brief Always initialize the message object,
+    !! (allocation of message array occurs on-the-fly)
+    !<
+    subroutine init_message(this)
+      class(MessageType) :: this
+      
+      this%nmessage = 0
+      this%max_message = 1000
+      this%max_exceeded = 0
+      this%inc_message = 100
+
+    end subroutine init_message
   
     function count_message(this) result(nmessage)
     ! ******************************************************************************

@@ -21,6 +21,7 @@ module SimModule
   public :: ustop
   public :: converge_reset
   public :: converge_check
+  public :: initial_message
   public :: final_message
   public :: store_warning
   public :: deprecation_warning
@@ -456,6 +457,23 @@ subroutine converge_reset()
     ! -- Return
     return
   end subroutine converge_check
+
+  !> @brief Prints the header and initializes messaging  
+  !<
+  subroutine initial_message()    
+    use VersionModule, only: write_listfile_header
+    !
+    ! -- initialize message lists
+    call sim_errors%init_message()
+    call sim_uniterrors%init_message()
+    call sim_warnings%init_message()
+    call sim_notes%init_message()
+    !
+    ! -- Write banner to screen (unit stdout)
+    call write_listfile_header(istdout, write_kind_info=.false., &
+                               write_sys_command=.false.)
+    !
+  end subroutine initial_message
 
   subroutine final_message()
 ! ******************************************************************************
