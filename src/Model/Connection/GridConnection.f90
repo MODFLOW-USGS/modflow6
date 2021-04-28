@@ -17,7 +17,7 @@ module GridConnectionModule
     class(NumericalModelType), pointer :: model => null()
   end type
   
-  ! TODO_MJR: this will disappear
+  ! TODO_MJR: this will disappear when we introduce dyn. mem.
   integer(I4B), parameter :: MaxNeighbors = 7
   
   ! a global cell with neighbors
@@ -34,64 +34,68 @@ module GridConnectionModule
       type(ModelWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
   end type
   
-  ! --
-  ! This class works as follows:
-  !
-  ! 1: construct the basic instance to store the primary connections between grids
-  ! 2: add those primary connections, typically from exchange file
-  ! 3: add model topology with the proper depth (stencil dependent)
-  ! 4: extend the connection, creating the full data structure and relations
-  ! 5: build the connections object, from which the grid for the interface model can be constructed
-  !
-  ! A note on the different indices:
-  !
-  ! We have a global index, which is the row in the solution matrix,
-  ! a regional index, which runs over all the models involved in this gridconnection,
-  ! a local index, which is just local to each model,
-  ! and finally, something called the interface index, which numbers the
-  ! cells in the interface discretization.
-  !
-  ! --
+  !> This class is used to construct the connections object for 
+  !! the interface model's discretization. It works as follows:
+  !!
+  !! 1: construct basic instance, allocate data structures
+  !!    based on nr. of primary connections
+  !! 2: add primary connections from exchanges
+  !! 3: add secondary, tertiary, ... MODEL connections, depending
+  !!    on the size of the computational stencil
+  !! 4: extend the connection, creating the full data structure
+  !!    and relations
+  !! 5: build the connections object, from which the grid for
+  !!    the interface model can be constructed
+  !!
+  !! A note on the different indices:
+  !!
+  !! We have
+  !!
+  !! - GLOBAL index, which technically labels the row in the solution matrix
+  !! - REGIONAL index, running over all models part of the interface grid
+  !! - LOCAL index, local to each model
+  !! - INTERFACE index, numbering the cells in the interface discretization.
+  !<
   type, public :: GridConnectionType
 
     character(len=LENMEMPATH) :: memoryPath
+    integer(I4B) :: intStencilDepth !< stencil size for the interior
+    integer(I4B) :: extStencilDepth !< stencil size for the exterior
+
     class(NumericalModelType), pointer :: model => null()
     
     integer(I4B), pointer :: linkCapacity => null()
-    integer(I4B), pointer :: stencilDepth => null()
     
-    ! --
-    ! together with the stencil type, these data contain the
-    ! full topology of the interface 
-    integer(I4B), pointer :: nrOfBoundaryCells => null()
-    type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()
-    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()    
-    type(ModelWithNbrsType), pointer :: modelWithNbrs => null() 
-    type(ListType) :: exchanges                                                               ! all relevant exchanges for this connection (up to the specified depth)
-    ! --
-    
-    integer(I4B), pointer :: nrOfCells => null()                                              ! the total number of cells in the interface
-    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()                      ! a map from interface index to global coordinate
-    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null()                    ! a (flat) map from interface index to global index
-
+    integer(I4B), pointer :: nrOfBoundaryCells => null()                        !< nr of boundary cells with connection to another model
+    type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()    !< cells on our side of the primary connections
+    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection
+    type(ModelWithNbrsType), pointer :: modelWithNbrs => null()                 !< tree structure with the neigboring model topology
+    type(ListType) :: exchanges                                                 !< all relevant exchanges for this connection, up to
+                                                                                !! the required depth
+        
+    integer(I4B), pointer :: nrOfCells => null()                                !< the total number of cells in the interface
+    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()        !< a map from interface index to global coordinate
+    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index
      
-    integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()  ! sparse mapping from those regional indices that are within the interface domain
-    type(ListType)                                    :: regionalModels                       ! the models (NumericalModelType) that make up the interface
-    integer(I4B), dimension(:), pointer               :: regionalModelOffset => null()        ! the new offset to compactify the range of indices 
-    integer(I4B), pointer                             :: indexCount => null()                 ! counts the number of cells in the interface
-    
-    type(ConnectionsType), pointer                    :: connections => null()                ! sparse matrix with the connections
-    integer(I4B), dimension(:), pointer               :: connectionMask => null()             ! to mask out certain connections from the amat coefficient calculation
+    integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null()  !< (sparse) mapping from regional index to interface ixd
+    type(ListType)                      :: regionalModels                       !< the models participating in the interface
+    integer(I4B), dimension(:), pointer :: regionalModelOffset => null()        !< the new offset to compactify the range of indices
+    integer(I4B), pointer               :: indexCount => null()                 !< counts the number of cells in the interface
+    type(ConnectionsType), pointer      :: connections => null()                !< sparse matrix with the connections
+    integer(I4B), dimension(:), pointer :: connectionMask => null()             !< to mask out connections from the amat coefficient calculation
     
   contains
+    ! public
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars, allocateArrays
     procedure, public, pass(this) :: deallocate
     procedure, pass(this) :: connectCell
     procedure, pass(this) :: addModelLink 
     procedure, pass(this) :: extendConnection
-    procedure, pass(this) :: getInterfaceIndex
+    
+    ! protected
     procedure, pass(this) :: isPeriodic
+    
     ! private stuff
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
@@ -99,7 +103,8 @@ module GridConnectionModule
     procedure, private, pass(this) :: addRemoteNeighbors
     procedure, private, pass(this) :: connectModels
     procedure, private, pass(this) :: addToRegionalModels
-    procedure, private, pass(this) :: getRegionalModelOffset    
+    procedure, private, pass(this) :: getRegionalModelOffset
+    procedure, private, pass(this) :: getInterfaceIndex
     procedure, private, pass(this) :: getModelWithNbrs
     procedure, private, pass(this) :: getExchangeData
     procedure, private, pass(this) :: registerInterfaceCells
@@ -109,24 +114,24 @@ module GridConnectionModule
     procedure, private, pass(this) :: fillConnectionDataFromExchanges
     procedure, private, pass(this) :: createConnectionMask
     procedure, private, pass(this) :: maskConnections
-    procedure, private, pass(this) :: setMaskOnConnection    
+    procedure, private, pass(this) :: setMaskOnConnection
   end type
   
-  contains ! module procedures
+  contains
 
-  ! note: constructing object allocates data structures
-  subroutine construct(this, model, nCapacity, stencilDepth, connectionName)
+  !> @brief Construct the GridConnection and allocate
+  !! the data structures for the primary connections
+  !<
+  subroutine construct(this, model, nCapacity, connectionName)
     class(GridConnectionType), intent(inout) :: this
-    class(NumericalModelType), pointer, intent(in) :: model        
+    class(NumericalModelType), pointer, intent(in) :: model
     integer(I4B) :: nCapacity ! reserves memory
-    integer(I4B), pointer :: stencilDepth ! assuming symmetric stencils for now
     character(len=*) :: connectionName
     ! local
     character(len=LENCOMPONENTNAME) :: name
     integer(I4B), save :: igconn = 1 ! static counter to ensure unique name
 
     this%model => model
-    this%stencilDepth => stencilDepth
     
     if(len(trim(connectionName)) + 3 > LENCOMPONENTNAME) then
       ! this will give problems storing in memory manager, fix here
@@ -140,7 +145,6 @@ module GridConnectionModule
     call this%allocateScalars()
     call this%allocateArrays(nCapacity)
     
-    ! TODO_MJR: to memorymanager?
     allocate(this%modelWithNbrs)
     allocate(this%boundaryCells(nCapacity))
     allocate(this%connectedCells(nCapacity))
@@ -150,7 +154,11 @@ module GridConnectionModule
     
     this%linkCapacity = nCapacity
     this%nrOfBoundaryCells = 0
-  end subroutine
+
+    this%intStencilDepth = 1
+    this%extStencilDepth = 1
+
+  end subroutine construct
   
   ! TODO_MJR: refactor this, should accept numerical exchanges
   ! add connection between boundary cell and the remote cell
@@ -192,7 +200,7 @@ module GridConnectionModule
     class(DisConnExchangeType), pointer     :: connEx
     ! local
         
-    call this%connectModels(this%modelWithNbrs, connEx, this%stencilDepth)
+    call this%connectModels(this%modelWithNbrs, connEx, this%extStencilDepth)
     
   end subroutine addModelLink
   
@@ -279,8 +287,8 @@ module GridConnectionModule
     class(NumericalModelType), pointer :: numModel
    
     ! we need (stencildepth-1) extra cells for the interior
-    remoteDepth = this%stencilDepth
-    localDepth = 2*this%stencilDepth - 1
+    remoteDepth = this%extStencilDepth
+    localDepth = 2*this%intStencilDepth - 1
     
     ! first add the neighbors for the interior, localOnly because 
     ! connections crossing model boundary will be added anyway
@@ -749,14 +757,15 @@ module GridConnectionModule
       end do        
     end do
     
-  end subroutine fillConnectionDataFromExchanges
+  end subroutine fillConnectionDataFromExchanges  
   
-  
-  ! create the connection masks, the level indicates the nr 
-  ! of connections away from the remote neighbor, the diagonal
-  ! term holds the negated value of their nearest connection
+  !> @brief Create the connection masks
+  !!
+  !! The level indicates the nr of connections away from
+  !! the remote neighbor, the diagonal term holds the negated
+  !< value of their nearest connection
   subroutine createConnectionMask(this)
-    class(GridConnectionType), intent(inout) :: this
+    class(GridConnectionType), intent(inout) :: this !< instance of this grid connection
     ! local
     integer(I4B) :: icell, inbr, n, ipos
     integer(I4B) :: level, newMask
@@ -784,7 +793,7 @@ module GridConnectionModule
     end do
     
     ! set normalized mask:
-    ! =1 for links with connectivity <= stencilDepth
+    ! =1 for links with connectivity <= interior stencil depth
     ! =0 otherwise
     do n = 1, this%connections%nodes 
       ! set diagonals to zero
@@ -793,7 +802,7 @@ module GridConnectionModule
       do ipos = this%connections%ia(n) + 1, this%connections%ia(n + 1) - 1
         newMask = 0
         if (this%connections%mask(ipos) > 0) then
-          if (this%connections%mask(ipos) < this%stencilDepth + 1) then
+          if (this%connections%mask(ipos) < this%intStencilDepth + 1) then
             newMask = 1
           end if
         end if        
@@ -911,6 +920,10 @@ module GridConnectionModule
     call mem_deallocate(this%nrOfCells)
 
     ! arrays
+    deallocate(this%modelWithNbrs)
+    deallocate(this%boundaryCells)
+    deallocate(this%connectedCells)
+
     call mem_deallocate(this%idxToGlobalIdx)
     
   end subroutine deallocate

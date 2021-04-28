@@ -194,7 +194,7 @@ module ConnectionBuilderModule
       case('GWF-GWF')      
         allocate(GwfGwfConnectionType :: gwfConnection)
         call gwfConnection%construct(model)
-        connection => gwfConnection        
+        connection => gwfConnection
         gwfConnection => null()
         
       !case('GWT-GWT')    

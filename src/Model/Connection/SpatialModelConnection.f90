@@ -1,10 +1,10 @@
-! Module holding the definition of the SpatialModelConnectionType
 module SpatialModelConnectionModule
   use KindModule, only: I4B, DP, LGP
+  use SparseModule, only:sparsematrix
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
-  use MemoryManagerModule, only: mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType, GlobalCellType
   use ListModule, only: ListType
@@ -18,32 +18,39 @@ module SpatialModelConnectionModule
   !> Class to manage spatial connection of a model to one 
   !! or more models of the same type. Spatial connection here 
   !! means that the model domains (spatial discretization) are 
-  !< adjacent and connected via DisConnExchangeType object(s).
+  !! adjacent and connected via DisConnExchangeType object(s).
+  !! The connection itself is a Numerical Exchange as well, 
+  !! and part of a Numerical Solution providing the amat and rhs
+  !< values for the exchange.
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
     class(NumericalModelType), pointer  :: owner => null()            !< the model whose connection this is    
-    integer(I4B), pointer               :: nrOfConnections => null()  !< total nr. of connected cells
+    integer(I4B), pointer               :: nrOfConnections => null()  !< total nr. of connected cells (primary)
     type(ListType), pointer             :: localExchanges => null()   !< aggregation, all exchanges which directly connect with our model
     type(ListType)                      :: globalExchanges            !< all exchanges in the same solution
-    integer(I4B), pointer               :: stencilDepth => null()     !< default = 1, xt3d = 2, ...
-    integer(I4B), pointer               :: iNewton => null()          !< Newton-Raphson formulation, 1 = on, 0 = off
+    integer(I4B), pointer               :: intStencilDepth => null()  !< size of the computational stencil for the interior
+                                                                      !! default = 1, xt3d = 2, tvd = ...
+    integer(I4B), pointer               :: extStencilDepth => null()  !< size of the computational stencil at the interface
+                                                                      !! default = 1, xt3d = 2, tvd = ...
     
-    ! the interface system doesn't live in a solution, so we need these
-    integer(I4B), pointer                               :: neq => null()
-    integer(I4B), pointer                               :: nja => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()
-    real(DP), dimension(:), pointer, contiguous         :: amat => null()
-    real(DP), dimension(:), pointer, contiguous         :: rhs => null()
-    real(DP), dimension(:), pointer, contiguous         :: x => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: iactive => null()
+    
+    ! The following variables are equivalent to those in Numerical Solution:
+    integer(I4B), pointer                               :: neq => null()      !< nr. of equations in matrix system
+    integer(I4B), pointer                               :: nja => null()      !< nr. of nonzero matrix elements
+    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()       !< sparse indexing IA
+    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()       !< sparse indexing JA
+    real(DP), dimension(:), pointer, contiguous         :: amat => null()     !< matrix coefficients
+    real(DP), dimension(:), pointer, contiguous         :: rhs => null()      !< rhs of interface system
+    real(DP), dimension(:), pointer, contiguous         :: x => null()        !< dependent variable of interface system
+    integer(I4B), dimension(:), pointer, contiguous     :: active => null()   !< cell status (c.f. ibound) of interface system
         
     ! these are not in the memory manager
-    class(GridConnectionType), pointer :: gridConnection => null()    
-    integer(I4B), dimension(:), pointer :: mapIdxToSln => null() ! maps local matrix (amat) to the global solution matrix
+    class(GridConnectionType), pointer :: gridConnection => null() !< facility to build the interface grid connection structure
+    integer(I4B), dimension(:), pointer :: mapIdxToSln => null()   !< mapping between interface matrix and the solution matrix
     
   contains
   
+    ! public
     procedure, pass(this) :: spatialConnection_ctor
     generic :: construct => spatialConnection_ctor
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
@@ -59,11 +66,14 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialcon_mc
     procedure, pass(this) :: spatialcon_da
 
+    ! protected
+    procedure, pass(this) :: createCoefficientMatrix
+
     ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: setExchangeConnections
     procedure, private, pass(this) :: findModelNeighbors
-    procedure, private, pass(this) :: getNrOfConnections
+    procedure, private, pass(this) :: getNrOfConnections    
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays
     
@@ -85,7 +95,8 @@ contains ! module procedures
     allocate(this%gridConnection)
     call this%allocateScalars()
 
-    this%stencilDepth = 1
+    this%intStencilDepth = 1
+    this%extStencilDepth = 1
     this%nrOfConnections = 0
         
   end subroutine spatialConnection_ctor
@@ -106,7 +117,9 @@ contains ! module procedures
     
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
-    call this%gridConnection%construct(this%owner, this%nrOfConnections, this%stencilDepth, this%name)
+    call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
+    this%gridConnection%intStencilDepth = this%intStencilDepth
+    this%gridConnection%extStencilDepth = this%extStencilDepth
     call this%setupGridConnection()
     
     this%neq = this%gridConnection%nrOfCells
@@ -171,13 +184,17 @@ contains ! module procedures
   
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
-    call mem_deallocate(this%stencilDepth)
+    call mem_deallocate(this%intStencilDepth)
+    call mem_deallocate(this%extStencilDepth)
     call mem_deallocate(this%nrOfConnections)
-    call mem_deallocate(this%iNewton)
+
+    call mem_deallocate(this%ia)
+    call mem_deallocate(this%ja)
+    call mem_deallocate(this%amat)
     
     call mem_deallocate(this%x)
     call mem_deallocate(this%rhs)
-    call mem_deallocate(this%iactive)
+    call mem_deallocate(this%active)
     
     call this%gridConnection%deallocate()
     deallocate(this%gridConnection)
@@ -240,9 +257,9 @@ contains ! module procedures
     
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
-    call mem_allocate(this%stencilDepth, 'STENCILDEPTH', this%memoryPath)
+    call mem_allocate(this%intStencilDepth, 'INTSTDEPTH', this%memoryPath)
+    call mem_allocate(this%extStencilDepth, 'EXTSTDEPTH', this%memoryPath)
     call mem_allocate(this%nrOfConnections, 'NROFCONNS', this%memoryPath)
-    call mem_allocate(this%iNewton, 'INEWTON', this%memoryPath)
     
   end subroutine allocateScalars
   
@@ -255,12 +272,12 @@ contains ! module procedures
     
     call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
-    call mem_allocate(this%iactive, this%neq, 'IACTIVE', this%memoryPath)
+    call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
     
     ! c.f. NumericalSolution
     do i = 1, this%neq
       this%x(i) = DZERO
-      this%iactive(i) = 1 !default is active
+      this%active(i) = 1 !default is active
     enddo
     
   end subroutine allocateArrays
@@ -280,6 +297,30 @@ contains ! module procedures
     end do
     
   end function getNrOfConnections
+  
+  !> @brief Create connection's ia/ja from sparse
+  !<
+  subroutine createCoefficientMatrix(this, sparse)
+    use SimModule, only: ustop
+    class(SpatialModelConnectionType) :: this
+    type(sparsematrix), intent(inout) :: sparse
+    ! local
+    integer(I4B) :: ierror
+        
+    this%nja = sparse%nnz
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
+    call mem_allocate(this%ja, this%nja, 'JA', this%memoryPath)
+    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryPath)
+
+    call sparse%sort()
+    call sparse%filliaja(this%ia, this%ja, ierror)
+
+    if (ierror /= 0) then
+      write(*,*) 'Error: cannot fill ia/ja for model connection'
+      call ustop()
+    end if
+    
+  end subroutine createCoefficientMatrix
 
   function CastAsSpatialModelConnectionClass(obj) result (res)
     implicit none

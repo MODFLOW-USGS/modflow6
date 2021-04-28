@@ -14,23 +14,17 @@ module GwfGwfConnectionModule
   implicit none
   private
 
-  ! Connecting two groundwaterflow models in space
+  !> Connecting two GWF models in space
+  !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
-    ! aggregation, the model with the connection:
-    type(GwfModelType), pointer :: gwfModel => null()
-    
-    ! composition, the interface model
-    type(GwfInterfaceModelType), pointer  :: interfaceModel => null()   
-        
-    ! memory managed data:
-    integer(I4B), pointer :: iVarCV => null()   ! == 1: vertical conductance varies with water table
-    integer(I4B), pointer :: iDewatCV => null() ! == 1: vertical conductance accounts for dewatered portion of underlying cell
-    real(DP), pointer     :: satOmega => null() !
-    integer(I4B), pointer :: iCellAvg => null() ! TODO_MJR: discuss this, iCellAvg same value per connection, user can now specify per exchange?
-    integer(I4B), pointer :: iXT3D => null()    ! run XT3D on the interface, 0 = don't, 1 = matrix, 2 = rhs
+    type(GwfModelType), pointer :: gwfModel => null()                 !< the model for which this connection exists
+    type(GwfInterfaceModelType), pointer  :: interfaceModel => null() !< the interface model
+    integer(I4B), pointer :: iXt3dOnExchange => null()                !< run XT3D on the interface,
+                                                                      !! 0 = don't, 1 = matrix, 2 = rhs
 
-    integer(I4B) :: iout                        ! the list file for the interface model    
+    integer(I4B) :: iout                               !< the list file for the interface model
+    
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
     generic, public :: construct => gwfGwfConnection_ctor
@@ -45,7 +39,6 @@ module GwfGwfConnectionModule
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: createCoefficientMatrix
     procedure, pass(this), private :: maskConnections
     procedure, pass(this), private :: syncInterfaceModel
     
@@ -53,7 +46,9 @@ module GwfGwfConnectionModule
 
 contains
   
-   subroutine gwfGwfConnection_ctor(this, model)
+  !> @brief 
+  !<
+  subroutine gwfGwfConnection_ctor(this, model)
     use NumericalModelModule, only: NumericalModelType
     use InputOutputModule, only: openfile
     class(GwfGwfConnectionType) :: this
@@ -85,12 +80,7 @@ contains
     call this%allocateScalars()
     
     this%typename = 'GWF-GWF'
-    this%iVarCV = 0
-    this%iDewatCV = 0
-    this%satOmega = DZERO  
-    this%iCellAvg = 0
-    this%iNewton = this%gwfModel%inewton
-    this%iXT3D = 0
+    this%iXt3dOnExchange = 1
     
     allocate(this%interfaceModel)
   
@@ -100,17 +90,15 @@ contains
     class(GwfGwfConnectionType) :: this    
     ! local
     type(sparsematrix) :: sparse
+    real(DP) :: satOmega
         
-    this%satOmega = this%gwfModel%npf%satomega
+    satOmega = this%gwfModel%npf%satomega
 
-    ! for now, we enable xt3d when the base model has it,
-    ! not sure yet how to deal with this, XT3D and the interface
-    ! model is like GPL...
     if (this%gwfModel%npf%ixt3d > 0) then
-      this%iXT3D = this%gwfModel%npf%ixt3d
+      this%intStencilDepth = 2
     end if
-    if (this%iXT3D > 0) then
-      this%stencilDepth = 2
+    if (this%iXt3dOnExchange > 0) then
+      this%extStencilDepth = 2
     end if
 
     ! now call base class, this sets up the GridConnection
@@ -121,17 +109,17 @@ contains
     ! we basically follow the logic that is present in sln_df()
     call this%interfaceModel%construct(this%name, this%iout)
     call this%interfaceModel%createModel(this%gridConnection)
-    this%interfaceModel%npf%ixt3d = this%iXT3D
+    this%interfaceModel%npf%ixt3d = this%iXt3dOnExchange
 
     ! define, from here
-    call this%interfaceModel%defineModel(this%satOmega)
+    call this%interfaceModel%defineModel(satOmega)
      
     ! point x, ibound, and rhs to connection
     this%interfaceModel%x => this%x
     call mem_checkin(this%interfaceModel%x, 'X', this%interfaceModel%memoryPath, 'X', this%memoryPath)
     this%interfaceModel%rhs => this%rhs
     call mem_checkin(this%interfaceModel%rhs, 'RHS', this%interfaceModel%memoryPath, 'RHS', this%memoryPath)
-    this%interfaceModel%ibound => this%iactive
+    this%interfaceModel%ibound => this%active
     call mem_checkin(this%interfaceModel%ibound, 'IBOUND', this%interfaceModel%memoryPath, 'IBOUND', this%memoryPath)
     
     ! assign connections, fill ia/ja, map connections (following sln_connect) and mask
@@ -149,27 +137,7 @@ contains
     call this%maskConnections()
     
   end subroutine gwfgwfcon_df
-  
-  subroutine createCoefficientMatrix(this, sparse)
-    use SimModule, only: ustop
-    class(GwfGwfConnectionType) :: this
-    type(sparsematrix) :: sparse
-    ! local
-    integer(I4B) :: ierror
-        
-    this%nja = sparse%nnz
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
-    call mem_allocate(this%ja, this%nja, 'JA', this%memoryPath)
-    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryPath)    
-    call sparse%sort()
-    call sparse%filliaja(this%ia, this%ja, ierror)
-    if (ierror /= 0) then
-      write(*,*) 'Error: cannot fill ia/ja for model connection'
-      call ustop()
-    end if
     
-  end subroutine createCoefficientMatrix
-  
   subroutine maskConnections(this)
     use SimModule, only: ustop
     use CsrUtilsModule, only: getCSRIndex
@@ -218,11 +186,7 @@ contains
     class(GwfGwfConnectionType) :: this
     ! local
 
-    call mem_allocate(this%iVarCV, 'IVARCV', this%memoryPath)
-    call mem_allocate(this%iDewatCV, 'IDEWATCV', this%memoryPath)
-    call mem_allocate(this%satOmega, 'SATOMEGA', this%memoryPath)
-    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryPath)
-    call mem_allocate(this%iXT3D, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%iXt3dOnExchange, 'IXT3DEXG', this%memoryPath)
 
   end subroutine allocateScalars
   
@@ -362,15 +326,7 @@ contains
   subroutine gwfgwfcon_da(this)    
     class(GwfGwfConnectionType) :: this
 
-    call mem_deallocate(this%iVarCV)
-    call mem_deallocate(this%iDewatCV)
-    call mem_deallocate(this%satOmega)
-    call mem_deallocate(this%iCellAvg)
-    call mem_deallocate(this%iXT3D)
-
-    call mem_deallocate(this%ia)
-    call mem_deallocate(this%ja)
-    call mem_deallocate(this%amat)
+    call mem_deallocate(this%iXt3dOnExchange)
     
     call this%interfaceModel%model_da()
     deallocate(this%interfaceModel)
