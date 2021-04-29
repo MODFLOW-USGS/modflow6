@@ -33,7 +33,7 @@ from simulation import Simulation
 # because the CVFD requirements are violated at the 
 # LGR interface)
 
-ex = ["gwf_ifmod_xt3d"]
+ex = ["ifmod_xt3d01"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -110,7 +110,7 @@ def get_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version='mf6', exe_name='mf6', sim_ws=ws
+        sim_name=name, version='mf6', exe_name='mf6', sim_ws=ws, memory_print_option="ALL"
     )
     
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',

@@ -81,12 +81,15 @@ module SpatialModelConnectionModule
 
 contains ! module procedures
   
+  !> @brief Construct the spatial connection base
+  !!
+  !! This constructor is typically called from a derived class.
+  !<
   subroutine spatialConnection_ctor(this, model, name)
-    class(SpatialModelConnectionType) :: this
-    class(NumericalModelType), intent(in), pointer :: model
-    character(len=*), intent(in) :: name
+    class(SpatialModelConnectionType) :: this               !< the connection
+    class(NumericalModelType), intent(in), pointer :: model !< the model that owns the connection
+    character(len=*), intent(in) :: name                    !< the connection name (for memory management mostly)
     
-    ! base props:
     this%name = name
     this%memoryPath = create_mem_path(this%name)
     this%owner => model
@@ -101,9 +104,11 @@ contains ! module procedures
         
   end subroutine spatialConnection_ctor
   
+  !> @brief Add exchange to the list of local exchanges
+  !<
   subroutine addExchangeToSpatialConnection(this, exchange)
-    class(SpatialModelConnectionType) :: this
-    class(DisConnExchangeType), pointer, intent(in) :: exchange
+    class(SpatialModelConnectionType) :: this                   !< this connection
+    class(DisConnExchangeType), pointer, intent(in) :: exchange !< the exchange to add
     ! local
     class(*), pointer :: exg
 
@@ -112,8 +117,10 @@ contains ! module procedures
     
   end subroutine addExchangeToSpatialConnection
   
+  !> @brief Define this connection, mostly sets up the grid
+  !< connection and allocates arrays
   subroutine spatialcon_df(this)
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
@@ -127,14 +134,15 @@ contains ! module procedures
     
   end subroutine spatialcon_df
 
-  ! create the mapping from local system matrix to global
+  !> @brief Creates the mapping from the local system 
+  !< matrix to the global one
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
     use CsrUtilsModule, only: getCSRIndex
     use GridConnectionModule
-    class(SpatialModelConnectionType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(SpatialModelConnectionType) :: this       !< this connection
+    integer(I4B), dimension(:), intent(in) :: iasln !< global IA array
+    integer(I4B), dimension(:), intent(in) :: jasln !< global JA array
     ! local
     integer(I4B) :: m, n, mglo, nglo, ipos, csrIdx
     
@@ -158,13 +166,15 @@ contains ! module procedures
     
   end subroutine spatialcon_mc
   
-  ! add connections to global matrix, c.f. exg_ac in NumericalExchange, 
-  ! but now for all exchanges with this model and skipping over the 
-  ! transposed elements
+  !> @brief Add connections to the global system
+  !!
+  !! Note that this runs over all exchanges connecting this model,
+  !! but skipping over the transposed elements: each model has its
+  !< own interface model to take care of this.
   subroutine spatialcon_ac(this, sparse)
     use SparseModule, only:sparsematrix    
-    class(SpatialModelConnectionType) :: this
-    type(sparsematrix), intent(inout) :: sparse
+    class(SpatialModelConnectionType) :: this   !< this connection
+    type(sparsematrix), intent(inout) :: sparse !< the sparse matrix to add the connections to
     ! local
     integer(I4B) :: icell, iglo, jglo
     type(GlobalCellType), pointer :: ncell, mcell
@@ -179,8 +189,10 @@ contains ! module procedures
     
   end subroutine spatialcon_ac
   
+  !> @brief Deallocation
+  !<
   subroutine spatialcon_da(this)
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
   
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
@@ -202,8 +214,16 @@ contains ! module procedures
   
   end subroutine spatialcon_da
   
+  !> @brief Set up the grid connection
+  !!
+  !! This works in three steps:
+  !! 1. set the primary connections
+  !! 2. create the topology of connected models, finding 
+  !!    neighbors of neighboring models when required
+  !! 3. extend the interface grid, using that information
+  !<
   subroutine setupGridConnection(this)
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     ! local
     
     ! set boundary cells
@@ -217,9 +237,10 @@ contains ! module procedures
     
   end subroutine setupGridConnection
   
-  ! set the primary links
+  !> @brief Set the primary connections from the exchange data
+  !<
   subroutine setExchangeConnections(this)
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: iex, iconn
     type(DisConnExchangeType), pointer :: connEx
@@ -234,10 +255,12 @@ contains ! module procedures
     
   end subroutine setExchangeConnections
   
-  ! extends model topology to deal with cases where
-  ! the stencil covers more than 2 models
+  !> @brief Create the topology of connected models
+  !!
+  !! Needed when we deal with cases where the stencil
+  !< covers more than 2 models
   subroutine findModelNeighbors(this)
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     ! local   
     integer(I4B) :: i
     class(DisConnExchangeType), pointer :: connEx
@@ -251,9 +274,11 @@ contains ! module procedures
       
   end subroutine findModelNeighbors
   
+  !> @brief Allocation of scalars
+  !<
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
@@ -263,10 +288,12 @@ contains ! module procedures
     
   end subroutine allocateScalars
   
+  !> @brief Allocation of arrays
+  !<
   subroutine allocateArrays(this)
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
     
@@ -277,14 +304,15 @@ contains ! module procedures
     ! c.f. NumericalSolution
     do i = 1, this%neq
       this%x(i) = DZERO
-      this%active(i) = 1 !default is active
+      this%active(i) = 1 ! default is active
     enddo
     
   end subroutine allocateArrays
   
-  ! count total nr. of connection between cells, from the exchanges
+  !> @brief Returns total nr. of primary connections
+  !<
   function getNrOfConnections(this) result(nrConns)
-    class(SpatialModelConnectionType) :: this
+    class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B) :: nrConns    
     !local
     integer(I4B) :: iex
@@ -298,12 +326,12 @@ contains ! module procedures
     
   end function getNrOfConnections
   
-  !> @brief Create connection's ia/ja from sparse
+  !> @brief Create connection's matrix (ia,ja,amat) from sparse
   !<
   subroutine createCoefficientMatrix(this, sparse)
     use SimModule, only: ustop
-    class(SpatialModelConnectionType) :: this
-    type(sparsematrix), intent(inout) :: sparse
+    class(SpatialModelConnectionType) :: this   !< this connection
+    type(sparsematrix), intent(inout) :: sparse !< the sparse matrix with the cell connections
     ! local
     integer(I4B) :: ierror
         
@@ -322,10 +350,12 @@ contains ! module procedures
     
   end subroutine createCoefficientMatrix
 
+  !> @brief Cast to SpatialModelConnectionType
+  !<
   function CastAsSpatialModelConnectionClass(obj) result (res)
     implicit none
-    class(*), pointer, intent(inout) :: obj
-    class(SpatialModelConnectionType), pointer :: res
+    class(*), pointer, intent(inout) :: obj           !< object to be cast
+    class(SpatialModelConnectionType), pointer :: res !< the instance of SpatialModelConnectionType 
     !
     res => null()
     if (.not. associated(obj)) return
@@ -337,11 +367,13 @@ contains ! module procedures
     return
   end function CastAsSpatialModelConnectionClass
 
+  !> @brief Add connection to a list
+  !<
   subroutine AddSpatialModelConnectionToList(list, conn)
     implicit none
     ! -- dummy
-    type(ListType),       intent(inout) :: list
-    class(SpatialModelConnectionType), pointer, intent(in) :: conn
+    type(ListType),       intent(inout) :: list                     !< the list
+    class(SpatialModelConnectionType), pointer, intent(in) :: conn  !< the connection
     ! -- local
     class(*), pointer :: obj
     !
@@ -351,10 +383,12 @@ contains ! module procedures
     return
   end subroutine AddSpatialModelConnectionToList
 
+  !> @brief Get the connection from a list
+  !<
   function GetSpatialModelConnectionFromList(list, idx) result(res)
-    type(ListType), intent(inout) :: list
-    integer(I4B), intent(in) :: idx
-    class(SpatialModelConnectionType), pointer :: res
+    type(ListType), intent(inout) :: list             !< the list
+    integer(I4B), intent(in) :: idx                   !< the index of the connection
+    class(SpatialModelConnectionType), pointer :: res !< the returned connection
     
     ! local
     class(*), pointer :: obj
@@ -365,5 +399,3 @@ contains ! module procedures
   end function GetSpatialModelConnectionFromList  
   
 end module SpatialModelConnectionModule
-
-	

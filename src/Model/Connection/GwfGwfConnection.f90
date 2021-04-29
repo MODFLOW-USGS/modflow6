@@ -1,8 +1,8 @@
-! TODO: module description
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin  
+  use SimModule, only: ustop
   use SparseModule, only:sparsematrix
   use SpatialModelConnectionModule  
   use GwfInterfaceModelModule
@@ -14,7 +14,9 @@ module GwfGwfConnectionModule
   implicit none
   private
 
-  !> Connecting two GWF models in space
+  !> Connecting two GWF models in space, implements NumericalExchangeType
+  !! so the solution can used this object to determine the coefficients
+  !! for the coupling between two adjacent models.
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
@@ -23,7 +25,7 @@ module GwfGwfConnectionModule
     integer(I4B), pointer :: iXt3dOnExchange => null()                !< run XT3D on the interface,
                                                                       !! 0 = don't, 1 = matrix, 2 = rhs
 
-    integer(I4B) :: iout                               !< the list file for the interface model
+    integer(I4B) :: iout                                              !< the list file for the interface model
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -46,27 +48,25 @@ module GwfGwfConnectionModule
 
 contains
   
-  !> @brief 
+  !> @brief Basic construction of the connection
   !<
   subroutine gwfGwfConnection_ctor(this, model)
     use NumericalModelModule, only: NumericalModelType
     use InputOutputModule, only: openfile
-    class(GwfGwfConnectionType) :: this
-    class(NumericalModelType), pointer :: model ! note: this must be a GwfModelType
+    class(GwfGwfConnectionType) :: this         !< the connection
+    class(NumericalModelType), pointer :: model !< the model owning this connection, 
+                                                !! this must of course be a GwfModelType
     ! local
     character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
-    integer(I4B), save :: iconn = 1 ! static counter to ensure unique name
 
     this%gwfModel => CastToGwfModel(model)
-        
-    if(len(trim(model%name)) + 4 > LENCOMPONENTNAME) then
-      ! this will give problems storing in memory manager, fix here
-      write(name,'(a,i4.4)') 'G2C', iconn
-      iconn = iconn + 1
-    else
-      name = trim(model%name)//'_G2C'
+    
+    if (model%id > 99999) then
+      write(*,*) 'Error: running 100000 submodels or more is not yet supported'
+      call ustop()
     end if
+    write(name,'(a,i5.5)') 'GFC_', model%id
 
     ! .lst file for interface model
     fname = trim(model%name)//'.im.lst'
@@ -86,11 +86,17 @@ contains
   
   end subroutine gwfGwfConnection_ctor
       
+  !> @brief Define the connection
+  !! 
+  !! This sets up the GridConnection (for creating the 
+  !! interface grid), creates and defines the interface 
+  !< model
   subroutine gwfgwfcon_df(this)
-    class(GwfGwfConnectionType) :: this    
+    class(GwfGwfConnectionType) :: this !< this connection    
     ! local
     type(sparsematrix) :: sparse
     real(DP) :: satOmega
+    character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
         
     satOmega = this%gwfModel%npf%satomega
 
@@ -101,13 +107,14 @@ contains
       this%extStencilDepth = 2
     end if
 
-    ! now call base class, this sets up the GridConnection
+    ! this sets up the GridConnection
     call this%spatialcon_df()
     
-    ! grid conn is defined, so we first create the interface model
+    ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    call this%interfaceModel%construct(this%name, this%iout)
+    write(imName,'(a,i5.5)') 'IFM_', this%gwfModel%id
+    call this%interfaceModel%construct(imName, this%iout)
     call this%interfaceModel%createModel(this%gridConnection)
     this%interfaceModel%npf%ixt3d = this%iXt3dOnExchange
 
@@ -138,10 +145,14 @@ contains
     
   end subroutine gwfgwfcon_df
     
+  !> @brief Mask the owner's connections
+  !!
+  !! Determine which connections are handled by the interface model 
+  !! (using the connections object in its discretization) and
+  !< set their mask to zero for the owning model.
   subroutine maskConnections(this)
-    use SimModule, only: ustop
     use CsrUtilsModule, only: getCSRIndex
-    class(GwfGwfConnectionType) :: this
+    class(GwfGwfConnectionType) :: this !< the connection
     ! local
     integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx
     type(ConnectionsType), pointer :: conn
@@ -181,27 +192,29 @@ contains
     
   end subroutine maskConnections
   
+  !> @brief allocation of scalars in the connection
+  !<
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
-    class(GwfGwfConnectionType) :: this
+    class(GwfGwfConnectionType) :: this !< the connection
     ! local
 
     call mem_allocate(this%iXt3dOnExchange, 'IXT3DEXG', this%memoryPath)
 
   end subroutine allocateScalars
   
-  ! We can only call this after the *_df is finished, e.g. it is not until
-  ! GwfGwfExchange%gwf_gwf_df(...) that the exchange data is being read from file
-  ! So, in this routine, we have to do create, define, and allocate&read 
+  !> @brief Allocate and read the connection
+  !<
   subroutine gwfgwfcon_ar(this)
   use GridConnectionModule, only: GridConnectionType
-    class(GwfGwfConnectionType) :: this
+    class(GwfGwfConnectionType) :: this !< this connection
     ! local    
     integer(I4B) :: icell, idx, localIdx
     class(NumericalModelType), pointer :: model
-    type(GridConnectionType), pointer :: gc
+    type(GridConnectionType), pointer :: gc !< pointer to the grid connection
     
     gc => this%gridConnection
+
     ! init x and ibound with model data
     do icell = 1, gc%nrOfCells     
       idx = gc%idxToGlobal(icell)%index
@@ -214,22 +227,22 @@ contains
     ! *_ar
     call this%interfaceModel%allocateAndReadModel()  
 
-    ! fill mapping to global coordinate index, which can be
-    ! done now because moffset is set in sln_df
+    ! fill mapping to global index (which can be
+    ! done now because moffset is set in sln_df)
     do localIdx = 1, gc%nrOfCells
       gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index +        &
                                     gc%idxToGlobal(localIdx)%model%moffset
     end do
 
-    ! TODO_MJR: ar mover
-    ! TODO_MJR: angledx checks    
-    ! TODO_MJR: ar observation
+    ! TODO_MJR: movers and observations
     
   end subroutine gwfgwfcon_ar
      
+  !> @brief Add connections, handled by the interface model,
+  !< to the global system's sparse
   subroutine gwfgwfcon_ac(this, sparse)        
-    class(GwfGwfConnectionType) :: this
-    type(sparsematrix), intent(inout) :: sparse 
+    class(GwfGwfConnectionType) :: this         !< this connection
+    type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
     ! local
     integer(I4B) :: n, m, ipos
     integer(I4B) :: nglo, mglo
@@ -250,11 +263,12 @@ contains
     
   end subroutine gwfgwfcon_ac
     
-  ! calculate or adjust matrix coefficients which are affected
-  ! by the connection of GWF models
+  !> @brief Calculate (or adjust) matrix coefficients,
+  !! in this case those which are determined or affected
+  !< by the connection of a GWF model with its neigbors
   subroutine gwfgwfcon_cf(this, kiter)
-    class(GwfGwfConnectionType) :: this
-    integer(I4B), intent(in) :: kiter
+    class(GwfGwfConnectionType) :: this !< this connection
+    integer(I4B), intent(in) :: kiter   !< the iteration counter
     ! local
     integer(I4B) :: i
     
@@ -274,8 +288,13 @@ contains
     
   end subroutine gwfgwfcon_cf
   
+  !> @brief Synchronize the interface model
+  !! Fills interface model data from the
+  !! contributing GWF models, at the iteration
+  !< level
   subroutine syncInterfaceModel(this)
-    class(GwfGwfConnectionType) :: this
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
     integer(I4B) :: icell, idx
     class(NumericalModelType), pointer :: model
     
@@ -289,14 +308,15 @@ contains
   
   end subroutine syncInterfaceModel
   
-  ! write the calculated conductances into the global system matrix
+  !> @brief Write the calculated coefficients into the global 
+  !< system matrix and the rhs
   subroutine gwfgwfcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
-    class(GwfGwfConnectionType) :: this
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) ::rhssln
-    integer(I4B), optional, intent(in) :: inwtflag
+    class(GwfGwfConnectionType) :: this               !< this connection
+    integer(I4B), intent(in) :: kiter                 !< the iteration counter
+    integer(I4B), dimension(:), intent(in) :: iasln   !< global system's IA array
+    real(DP), dimension(:), intent(inout) :: amatsln  !< global system matrix coefficients
+    real(DP), dimension(:), intent(inout) ::rhssln    !< global right-hand-side
+    integer(I4B), optional, intent(in) :: inwtflag    !< newton-raphson flag
     ! local
     integer(I4B) :: n, ipos, nglo
     
@@ -322,9 +342,10 @@ contains
     end do    
   end subroutine gwfgwfcon_fc
 
-  ! deallocate resources
+  !> @brief Deallocate all resources
+  !<
   subroutine gwfgwfcon_da(this)    
-    class(GwfGwfConnectionType) :: this
+    class(GwfGwfConnectionType) :: this !< this connection
 
     call mem_deallocate(this%iXt3dOnExchange)
     
@@ -335,11 +356,12 @@ contains
     
   end subroutine gwfgwfcon_da
   
-  ! unsafe routine, you have to know what you're doing with this
+  !> @brief Cast NumericalModelType to GwfModelType
+  !<
   function CastToGwfModel(obj) result(gwfmodel)
     use NumericalModelModule, only: NumericalModelType
-    class(NumericalModelType), pointer :: obj
-    class(GwfModelType), pointer :: gwfmodel
+    class(NumericalModelType), pointer :: obj !< The numerical model to be cast
+    class(GwfModelType), pointer :: gwfmodel  !< The GWF model
     
     gwfmodel => null()
     select type(obj)

@@ -13,21 +13,28 @@ module GwfInterfaceModelModule
   implicit none
   private
   
-  ! Interface model, to help determining conductivity coefficients in the interface
-  ! region between a GwfModel and its neighbors. Note: this model itself will not be
-  ! part of the solution matrix. The DISU discretization is a composition of parts of 
-  ! multiple grids, possibly of different type.
+  !> The GWF Interface Model is a utility to calculate the solution's
+  !! exchange coefficients from the interface between a GWF model and 
+  !! its GWF neighbors. The interface model itself will not be part 
+  !! of the solution, it is not being solved. 
+  !! Patching (a part of the) discretizations of two GWF models in a
+  !! general way, e.g. DIS+DIS with refinement, requires the resulting 
+  !< discretization to be of type DISU.  
   type, public, extends(GwfModelType) :: GwfInterfaceModelType    
-    class(GridConnectionType), pointer    :: gridConnection => null()
-    class(GwfModelType), private, pointer :: owner => null() ! conveniently points to the owning model in gridconnection
+    class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the connections
+                                                                      !! object for the interface grid
+    class(GwfModelType), private, pointer :: owner => null()          !< the real GWF model for which the exchange coefficients
+                                                                      !! are calculated with this interface model
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
     procedure, pass(this) :: defineModel
-    procedure, pass(this) :: allocateAndReadModel 
+    procedure, pass(this) :: allocateAndReadModel
+
     ! override
     procedure :: model_da => deallocateModel
-    ! private stuff
+
+    ! private
     procedure, private, pass(this) :: buildDiscretization
     procedure, private, pass(this) :: setNpfOptions
     procedure, private, pass(this) :: setNpfGridData
@@ -35,23 +42,23 @@ module GwfInterfaceModelModule
  
 contains
  
-  ! minimal construction
+  !> Construction and minimal initialization
+  !<
   subroutine construct(this, name, iout)
     use MemoryHelperModule, only: create_mem_path
-    class(GwfInterfaceModelType), intent(inout) :: this
-    character(len=*), intent(in)  :: name
-    integer(I4B), intent(in) :: iout
+    class(GwfInterfaceModelType), intent(inout) :: this !< the interface model
+    character(len=*), intent(in)  :: name               !< the interface model's name
+    integer(I4B), intent(in) :: iout                    !< the output unit, to be passed 
+                                                        !! to the packages as well
     
-    ! TODO_MJR: name should be different from connection...    
-    this%memoryPath = create_mem_path(name)    
+    this%memoryPath = create_mem_path(name)
     call this%allocate_scalars(name)
-    this%name = name
     
     ! set default model options
     this%inewton = 0
     
+    this%iout = iout    
     ! we need this dummy value
-    this%iout = iout
     this%innpf = 999
     
   end subroutine construct

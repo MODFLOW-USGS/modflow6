@@ -7,13 +7,15 @@ module CsrUtilsModule
   
 contains
   
-  ! return index for element i,j in CSR storage, and -1 when not there
+  !> @brief Return index for element i,j in CSR storage,
+  !< returns -1 when not there
   function getCSRIndex(i, j, ia, ja) result(csrIndex)
     use KindModule, only: I4B
-    integer(I4B) :: i, j                          ! the element to get the index for
-    integer(I4B), dimension(:), intent(in) :: ia  ! csr ia
-    integer(I4B), dimension(:), intent(in) :: ja  ! csr ja
-    integer(I4B) :: csrIndex                 ! the resulting index
+    integer(I4B), intent(in) :: i                 !< the row index
+    integer(I4B), intent(in) :: j                 !< the column index
+    integer(I4B), dimension(:), intent(in) :: ia  !< CSR ia array
+    integer(I4B), dimension(:), intent(in) :: ja  !< CSR ja array
+    integer(I4B) :: csrIndex                      !< the CSR ndex of element i,j
     ! local
     integer(I4B) :: idx
     
