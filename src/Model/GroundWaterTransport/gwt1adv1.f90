@@ -14,7 +14,6 @@ module GwtAdvModule
   type, extends(NumericalPackageType) :: GwtAdvType
     
     integer(I4B), pointer                            :: iadvwt => null()        !< advection scheme (0 up, 1 central, 2 tvd)
-    real(DP), pointer                                :: percel => null()        !< number of cells or fraction cell used for Courant constraint with ATS
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        !< pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
     
@@ -356,7 +355,6 @@ module GwtAdvModule
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)
-    call mem_deallocate(this%percel)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -384,11 +382,9 @@ module GwtAdvModule
     !
     ! -- Allocate
     call mem_allocate(this%iadvwt, 'IADVWT', this%memoryPath)
-    call mem_allocate(this%percel, 'PERCEL', this%memoryPath)
     !
     ! -- Initialize
     this%iadvwt = 0
-    this%percel = DZERO
     !
     ! -- Advection creates an asymmetric coefficient matrix
     this%iasym = 1
@@ -416,9 +412,6 @@ module GwtAdvModule
     ! -- formats
     character(len=*), parameter :: fmtiadvwt =                                 &
       "(4x,'ADVECTION WEIGHTING SCHEME HAS BEEN SET TO: ', a)"
-    character(len=*), parameter :: fmtpercel =                                 &
-      "(4x,'CELL COURANT FRACTION FOR ADAPTIVE TIME STEPPING HAS BEEN SET &
-      &TO: ', 1PG15.6)"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -456,9 +449,6 @@ module GwtAdvModule
                 call this%parser%StoreErrorUnit()
                 call ustop()
             end select
-          case('ATS_COURANT')
-            this%percel = this%parser%GetDouble()
-            write(this%iout, fmtpercel) this%percel
           case default
             write(errmsg,'(4x,a,a)') 'UNKNOWN ADVECTION OPTION: ',             &
                                      trim(keyword)
