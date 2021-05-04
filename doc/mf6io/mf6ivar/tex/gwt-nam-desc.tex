@@ -11,6 +11,8 @@
 
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that all model package flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
 
+\item \texttt{ats\_dcmax}---real value defining the maximum allowable concentration change that will be used to calculate the time step submitted to the adaptive time step controller (if active).  This value must be zero or greater, and if specified in combination with ATS, the GWT Model will check through each package and determine the maximum time step that will result in a change in concentration equal to or less than ATS\_DCMAX.
+
 \end{description}
 \item \textbf{Block: PACKAGES}
 

@@ -124,6 +124,7 @@ module BndModule
     procedure :: set_pointers
     procedure :: define_listlabel
     procedure, private :: pak_setup_outputtab
+    procedure :: calc_deltmax
     !
     ! -- procedures to support observations
     procedure, public :: bnd_obs_supported
@@ -1871,5 +1872,26 @@ module BndModule
     ! -- return
     return
   end subroutine save_print_model_flows
+
+  !> @ brief Calculate maximum time step length
+  !!
+  !!  Method to allow the package to calculate the maximum time
+  !!  time step that it can take.  This time step may be submitted
+  !!  to the Adaptive Time Step controller if it is active, and be
+  !!  used to reduce the time step size if this one is the smallest.
+  !!
+  !<
+  subroutine calc_deltmax(this, dxmaxats, deltmax)
+    ! -- module
+    use ConstantsModule, only: DNODATA
+    ! -- dummy
+    class(BndType) :: this
+    real(DP), intent(in) :: dxmaxats  !< maximum allowable change in the dependent variable, submitted by caller
+    real(DP), intent(out) :: deltmax  !< maximum time step size as determined by this package
+    !
+    ! -- Can be overridden by concrete packages as necessary
+    deltmax = DNODATA
+    return
+  end subroutine calc_deltmax
 
 end module BndModule

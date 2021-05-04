@@ -1,4 +1,3 @@
 BEGIN OPTIONS
   [SCHEME <scheme>]
-  [ATS_COURANT <ats_courant>]
 END OPTIONS

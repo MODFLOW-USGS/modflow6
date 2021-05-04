@@ -5,7 +5,5 @@
 \begin{description}
 \item \texttt{scheme}---scheme used to solve the advection term.  Can be upstream, central, or TVD.  If not specified, upstream weighting is the default weighting scheme.
 
-\item \texttt{ats\_courant}---real value defining the number of cells or fraction of a cell used in a Courant calculation of a maximum time step length to be used with the Adaptive Time Step (ATS) control.  To determine the maximum time step length to be used with ATS, a residence time is calculated for each cell based on the volume of water in the cell divided by the flow through the cell.  This calculation is made for every active cell in the model grid to find the shortest residence time in the cell.  The shortest residence time in the cell is multiplied by the ATS\_COURANT value and this value is submitted to ATS for evaluation of the time step size.  This value will have no affect if it is zero or if ATS is not used for the simulation.  This ATS\_COURANT value can be used to set the time step size based on the simulated flows.  Although the advection schemes are implicit, and are not strictly limited by time step size, accuracy of transport simulations may be improved with ATS\_COURANT values around one.
-
 \end{description}
 
