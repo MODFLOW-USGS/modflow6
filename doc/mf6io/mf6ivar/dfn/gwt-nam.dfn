@@ -37,6 +37,7 @@ name ats_dcmax
 type double precision
 reader urword
 optional true
+default_value 0.0
 longname maximum allowable concentration change to be used with adaptive time stepping
 description real value defining the maximum allowable concentration change that will be used to calculate the time step submitted to the adaptive time step controller (if active).  This value must be zero or greater, and if specified in combination with ATS, the GWT Model will check through each package and determine the maximum time step that will result in a change in concentration equal to or less than ATS\_DCMAX.
 
