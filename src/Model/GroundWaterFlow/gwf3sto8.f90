@@ -752,14 +752,14 @@ contains
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
     !
-    ! -- Allocate
+    ! -- llocate scalars
     call mem_allocate(this%iusesy, 'IUSESY', this%memoryPath)
     call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
     call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
     call mem_allocate(this%iorigss, 'IORIGSS', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     !
-    ! -- Initialize
+    ! -- initialize scalars
     this%iusesy = 0
     this%isfac = 0
     this%isseg = 0
@@ -874,6 +874,7 @@ contains
         case ('DEV_OLDSTORAGEFORMULATION')
           call this%parser%DevOpt()
           this%isseg = 1
+          this%iorigss = 1
           write (this%iout, fmtstoseg)
         case default
           write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
