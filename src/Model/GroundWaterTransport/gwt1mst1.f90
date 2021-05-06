@@ -402,6 +402,7 @@ module GwtMstModule
     real(DP) :: cbarold
     real(DP) :: cavg
     real(DP) :: cbaravg
+    real(DP) :: swavg
 ! ------------------------------------------------------------------------------
     if (isrb == 1) then
       ! -- linear
@@ -410,31 +411,35 @@ module GwtMstModule
       if (present(rhsval)) rhsval = term * swold * cold
       if (present(rate)) rate = term * swnew * cnew - term * swold * cold
     else
+      !
+      ! -- calculate average aqueous concentration
+      cavg = DHALF * (cold + cnew) 
+      !
+      ! -- set values based on isotherm
       if (isrb == 2) then
         ! -- freundlich
         cbarnew = get_freundlich_conc(cnew, const1, const2)
         cbarold = get_freundlich_conc(cold, const1, const2)
-        cavg = DHALF * (cold + cnew) 
         derv = get_freundlich_derivative(cavg, const1, const2)
       else if (isrb == 3) then
         ! -- langmuir
         cbarnew = get_langmuir_conc(cnew, const1, const2)
         cbarold = get_langmuir_conc(cold, const1, const2)
-        cavg = DHALF * (cold + cnew) 
         derv = get_langmuir_derivative(cavg, const1, const2)
       end if
       !
       ! -- calculate hcof, rhs, and rate for freundlich and langmuir
       term = - thetamfrac * rhob * vcell * tled
       cbaravg = (cbarold + cbarnew) * DHALF
+      swavg = (swnew + swold) * DHALF
       if (present(hcofval)) then
-        hcofval = term * derv * (swnew + swold) * DHALF
+        hcofval = term * derv * swavg
       end if
       if (present(rhsval)) then
-        rhsval = term * derv * cold - term * cbaravg * (swnew - swold)
+        rhsval = term * derv * swavg * cold - term * cbaravg * (swnew - swold)
       end if
       if (present(rate)) then
-        rate = term * derv * (swnew + swold) / DTWO * (cnew - cold) &
+        rate = term * derv * swavg * (cnew - cold) &
                + term * cbaravg * (swnew - swold)
       end if
     end if
