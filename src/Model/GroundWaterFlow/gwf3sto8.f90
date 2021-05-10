@@ -22,6 +22,7 @@ module GwfStoModule
     integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
     integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
     integer(I4B), pointer                            :: iorigss => null()        !< indicates if the original storage specific storage formulation should be used
+    integer(I4B), pointer                            :: ipressh => null()        !< indicates if the pressure head storage specific storage formulation should be used
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
     real(DP), dimension(:), pointer, contiguous      :: ss => null()             !< specfic storage or storage coefficient
     real(DP), dimension(:), pointer, contiguous      :: sy => null()             !< specific yield
@@ -335,8 +336,13 @@ contains
       if (this%iconvert(n) /= 0) then
         if (this%iorigss == 0) then
           ththk = DHALF * tthk
-          zold = bt + ththk * snold
-          znew = bt + ththk * snnew
+          if (this%ipressh == 0) then
+            zold = bt
+            znew = bt
+          else
+            zold = bt + ththk * snold
+            znew = bt + ththk * snnew
+          endif
           amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1*snnew
           rhs(n) = rhs(n) - rho1 * (snold * (hold(n) - zold) + snnew * znew)
         else
@@ -464,7 +470,10 @@ contains
         ! -- newton terms for specific storage
         if (this%isseg == 0) then
           if (this%iorigss == 0) then
-            drterm = -rho1 * derv * (h - bt) + rho1 * tthk * snnew * derv 
+            drterm = -rho1 * derv * (h - bt)
+            if (this%ipressh /= 0) then
+              drterm = drterm + rho1 * tthk * snnew * derv 
+            end if
           else
             drterm = -(rho1*derv*h)
           end if
@@ -574,8 +583,13 @@ contains
         if (this%iconvert(n) /= 0) then
           if (this%iorigss == 0) then
             ththk = DHALF * tthk
-            zold = bt + ththk * snold
-            znew = bt + ththk * snnew
+            if (this%ipressh == 0) then
+              zold = bt
+              znew = bt
+            else
+              zold = bt + ththk * snold
+              znew = bt + ththk * snnew
+            end if
             rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
           else
             rate = rho1*ss0*ssh0 - rho1*ss1*hnew(n) - rho1*ssh1
@@ -727,6 +741,7 @@ contains
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%iusesy)
     call mem_deallocate(this%iorigss)
+    call mem_deallocate(this%ipressh)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -757,6 +772,7 @@ contains
     call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
     call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
     call mem_allocate(this%iorigss, 'IORIGSS', this%memoryPath)
+    call mem_allocate(this%ipressh, 'IPRESSH', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     !
     ! -- initialize scalars
@@ -764,6 +780,7 @@ contains
     this%isfac = 0
     this%isseg = 0
     this%iorigss = 0
+    this%ipressh = 0
     this%satomega = DZERO
     !
     ! -- return
@@ -832,6 +849,9 @@ contains
     character(len=*), parameter :: fmtorigss = &
       "(4X,'ORIGINAL_SPECIFIC_STORAGE OPTION:',/,                              &
       &1X,'The original specific storage formulation will be used')"
+    character(len=*), parameter :: fmtpressh = &
+      "(4X,'PRESSURE_HEAD_FORMULATION OPTION:',/,                              &
+      &1X,'The pressure head specific storage formulation will be used')"
     character(len=*), parameter :: fmtstoc = &
       "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
       &1X,'Read storage coefficient rather than specific storage')"
@@ -861,6 +881,10 @@ contains
         case ('ORIGINAL_SPECIFIC_STORAGE')
           this%iorigss = 1
           write (this%iout, fmtorigss)
+        case ('PRESSURE_HEAD_FORMULATION')
+          this%ipressh = 1
+          this%iorigss = 0
+          write (this%iout, fmtpressh)
         !
         ! -- right now these are options that are only available in the
         !    development version and are not included in the documentation.
@@ -875,6 +899,7 @@ contains
           call this%parser%DevOpt()
           this%isseg = 1
           this%iorigss = 1
+          this%ipressh = 0
           write (this%iout, fmtstoseg)
         case default
           write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
