@@ -24,6 +24,7 @@ except:
 from simulation import Simulation
 
 from targets import target_dict as target_dict
+from targets import get_mf6_version
 from common_regression import (
     get_home_dir,
     get_example_basedir,
@@ -190,6 +191,24 @@ def run_mf5to6(sim):
     sim.teardown()
 
 
+def set_make_comparison(test):
+    compare_tests = {
+        "testPr2": ("6.2.1",),
+        "testUzfLakSfr": ("6.2.1",),
+        "testUzfLakSfr_laketable": ("6.2.1",),
+        "testWetDry": ("6.2.1",),
+    }
+    make_comparison = True
+    if test in compare_tests.keys():
+        version = get_mf6_version()
+        print("MODFLOW version='{}'".format(version))
+        version = get_mf6_version(version="mf6-regression")
+        print("MODFLOW regression version='{}'".format(version))
+        if version in compare_tests[test]:
+            make_comparison = False
+    return make_comparison
+
+
 def test_model():
     # determine if test directory exists
     dir_available = is_directory_available(example_basedir)
@@ -202,7 +221,10 @@ def test_model():
     # run the test models
     for on_dir in example_dirs:
         yield run_mf5to6, Simulation(
-            on_dir, mf6_regression=set_mf6_regression(), cmp_verbose=False
+            on_dir,
+            mf6_regression=set_mf6_regression(),
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(on_dir),
         )
 
     return
@@ -228,7 +250,10 @@ def main():
     # run the test models
     for on_dir in example_dirs:
         sim = Simulation(
-            on_dir, mf6_regression=set_mf6_regression(), cmp_verbose=False
+            on_dir,
+            mf6_regression=set_mf6_regression(),
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(on_dir),
         )
         run_mf5to6(sim)
 

@@ -231,7 +231,7 @@ def test_solver_fail():
     sim.write_simulation()
     err_str = [
         "Simulation convergence failure occurred 1 time(s).",
-        "Premature termination of simulation."
+        "Premature termination of simulation.",
     ]
     run_mf6_error(ws, err_str)
     return
@@ -240,9 +240,11 @@ def test_solver_fail():
 def test_fail_continue_success():
     # test continue but failed to converge
     ws = os.path.join(testdir, "sim5")
-    tdiskwargs = {"nper": 1, "perioddata": [(10., 10, 1.)]}
+    tdiskwargs = {"nper": 1, "perioddata": [(10.0, 10, 1.0)]}
     imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
-    sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs, tdiskwargs=tdiskwargs)
+    sim = get_minimal_gwf_simulation(
+        ws, imskwargs=imskwargs, tdiskwargs=tdiskwargs
+    )
     sim.name_file.continue_ = True
     sim.write_simulation()
     returncode, buff = run_mf6([mf6_exe], ws)

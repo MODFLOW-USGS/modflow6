@@ -35,9 +35,9 @@ nlay, nrow, ncol = 1, 1, 2
 # set dt0, dtmin, dtmax, dtadj, dtfailadj
 dt0 = 5
 dtmin = 1.001e-5
-dtmax = 10.
+dtmax = 10.0
 dtadj = 2.0
-dtfailadj = 5.
+dtfailadj = 5.0
 
 
 def build_models():
@@ -50,10 +50,10 @@ def build_models():
     delc = 1.0
     top = 100.0
     botm = [0.0]
-    strt = 50.
+    strt = 50.0
     hk = 1.0
     laytyp = 1
-    ss = 0.
+    ss = 0.0
     sy = 0.1
 
     tdis_rc = []
@@ -69,22 +69,25 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
-
         # create tdis package
         ats_filerecord = None
         if True:
-            atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),
-                         (7, dt0, dtmin, dtmax, dtadj, dtfailadj)]
-            ats = flopy.mf6.ModflowUtlats(sim,
-                                          maxats=len(atsperiod),
-                                          perioddata=atsperiod)
+            atsperiod = [
+                (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+                (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
+            ]
+            ats = flopy.mf6.ModflowUtlats(
+                sim, maxats=len(atsperiod), perioddata=atsperiod
+            )
             ats_filerecord = name + ".ats"
 
-        tdis = flopy.mf6.ModflowTdis(sim,
-                                     ats_filerecord=ats_filerecord,
-                                     time_units='DAYS',
-                                     nper=nper,
-                                     perioddata=tdis_rc)
+        tdis = flopy.mf6.ModflowTdis(
+            sim,
+            ats_filerecord=ats_filerecord,
+            time_units="DAYS",
+            nper=nper,
+            perioddata=tdis_rc,
+        )
 
         # create gwf model
         gwfname = name
@@ -92,7 +95,7 @@ def build_models():
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
-#            newtonoptions=newtonoptions,
+            #            newtonoptions=newtonoptions,
         )
 
         # create iterative model solution and register the gwf model with it
@@ -148,7 +151,7 @@ def build_models():
 
         # wel files
         welspdict = {
-            0: [[(0, 0, ncol - 1), -10.]],
+            0: [[(0, 0, ncol - 1), -10.0]],
         }
         wel = flopy.mf6.ModflowGwfwel(
             gwf,
@@ -160,7 +163,7 @@ def build_models():
 
         # ghb files
         ghbspdict = {
-            0: [[(0, 0, 0), 50., 1.]],
+            0: [[(0, 0, 0), 50.0, 1.0]],
         }
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
@@ -183,8 +186,8 @@ def build_models():
         )
 
         obs_lst = []
-        obs_lst.append(['obs1', "head", (0, 0, 0)])
-        obs_lst.append(['obs2', "head", (0, 0, 1)])
+        obs_lst.append(["obs1", "head", (0, 0, 0)])
+        obs_lst.append(["obs2", "head", (0, 0, 1)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -207,10 +210,10 @@ def eval_flow(sim):
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     inc = mflist.get_incremental()
-    msg = 'budget times not monotically increasing {}.'.format(inc["totim"])
+    msg = "budget times not monotically increasing {}.".format(inc["totim"])
     assert np.all(np.diff(inc["totim"]) > dtmin), msg
     v = inc["totim"][-1]
-    assert v == 10., 'Last time should be 10.  Found {}'.format(v)
+    assert v == 10.0, "Last time should be 10.  Found {}".format(v)
 
     # ensure obs results changing monotonically
     fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
@@ -219,14 +222,14 @@ def eval_flow(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    msg = 'obs times not monotically increasing {}.'.format(tc["time"])
-    assert np.all(np.diff(tc['time']) > dtmin), msg
+    msg = "obs times not monotically increasing {}.".format(tc["time"])
+    assert np.all(np.diff(tc["time"]) > dtmin), msg
     for obsname in ["OBS1", "OBS2"]:
         v = tc[obsname]
-        msg = '{} not monotically decreasing: {}.'.format(obsname, v)
+        msg = "{} not monotically decreasing: {}.".format(obsname, v)
         assert np.all(np.diff(v) < 0), msg
     v = tc["time"][-1]
-    assert v == 10., 'Last time should be 10.  Found {}'.format(v)
+    assert v == 10.0, "Last time should be 10.  Found {}".format(v)
     return
 
 

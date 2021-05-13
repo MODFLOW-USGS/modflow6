@@ -6,7 +6,6 @@
 # the effects of tides on the aquifer.
 
 import os
-import shutil
 import numpy as np
 
 try:
@@ -19,6 +18,7 @@ except:
 
 from framework import testing_framework
 from simulation import Simulation
+from targets import get_mf6_version
 
 ex = ["gwf_henrynr01"]
 exdirs = []
@@ -250,6 +250,18 @@ def build_models():
     return
 
 
+def set_make_comparison():
+    version = get_mf6_version()
+    print("MODFLOW version='{}'".format(version))
+    version = get_mf6_version(version="mf6-regression")
+    print("MODFLOW regression version='{}'".format(version))
+    if version in ("6.2.1",):
+        make_comparison = False
+    else:
+        make_comparison = True
+    return make_comparison
+
+
 # - No need to change any code below
 def test_mf6model():
     # initialize testing framework
@@ -261,7 +273,11 @@ def test_mf6model():
     # run the test models
     for idx, on_dir in enumerate(exdirs):
         yield test.run_mf6, Simulation(
-            on_dir, idxsim=idx, mf6_regression=True, cmp_verbose=False
+            on_dir,
+            idxsim=idx,
+            mf6_regression=True,
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(),
         )
 
     return
@@ -275,9 +291,13 @@ def main():
     build_models()
 
     # run the test models
-    for idx, dir in enumerate(exdirs):
+    for idx, on_dir in enumerate(exdirs):
         sim = Simulation(
-            dir, idxsim=idx, mf6_regression=True, cmp_verbose=False
+            on_dir,
+            idxsim=idx,
+            mf6_regression=True,
+            cmp_verbose=True,
+            make_comparison=set_make_comparison(),
         )
         test.run_mf6(sim)
 

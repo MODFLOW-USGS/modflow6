@@ -51,7 +51,7 @@ def build_models():
     sy = 0.4
 
     # unsat props
-    seconds_to_days = 60. * 60. * 24.
+    seconds_to_days = 60.0 * 60.0 * 24.0
     hk = 4.0e-6 * seconds_to_days  # saturated vertical conductivity
     thts = 0.4  # saturated water content
     thtr = 0.2  # residual water content
@@ -161,7 +161,7 @@ def build_models():
             ]
         }
 
-        surfdep = 1.e-5
+        surfdep = 1.0e-5
         uzf_pkdat = [
             [
                 0,
@@ -272,7 +272,7 @@ def make_plot(sim, obsvals):
     depth = np.arange(1, 31, 2.0)
     for row in obsvals:
         label = "time {}".format(row[0])
-        ax.plot(row[1:], depth, label=label, marker='o')
+        ax.plot(row[1:], depth, label=label, marker="o")
     ax.set_ylim(0.0, 20.0)
     ax.set_xlim(0.15, 0.4)
     ax.invert_yaxis()

@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import flopy
 
 
@@ -62,3 +63,29 @@ target_dict["mf5to6"] = ttarg
 tprog = "zbud6{}".format(target_ext)
 ttarg = os.path.join(bindir, tprog)
 target_dict["zbud6"] = ttarg
+
+
+def run_exe(argv, ws="."):
+    buff = []
+    proc = subprocess.Popen(
+        argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=ws
+    )
+    result, error = proc.communicate()
+    if result is not None:
+        c = result.decode("utf-8")
+        c = c.rstrip("\r\n")
+        print("{}".format(c))
+        buff.append(c)
+
+    return proc.returncode, buff
+
+
+def get_mf6_version(version="mf6"):
+    """Function to get MODFLOW 6 version number"""
+    exe = target_dict[version]
+    return_code, buff = run_exe((exe, "-v"))
+    if return_code == 0:
+        version = buff[0].split()[1]
+    else:
+        version = None
+    return version

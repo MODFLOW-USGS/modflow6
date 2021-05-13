@@ -1,7 +1,7 @@
 # Test for checking maw observation input.  The following observation types:
 # 'maw' and 'conductance,' require that ID2 be provided when
 # ID is an integer corresponding to a well number and not BOUNDNAME.
-# See table in MAW Package section of mf6io.pdf for an explanation of ID, 
+# See table in MAW Package section of mf6io.pdf for an explanation of ID,
 # ID2, and Observation Type.
 
 
@@ -28,14 +28,14 @@ from framework import testing_framework
 from simulation import Simulation
 import targets
 
-mf6_exe = os.path.abspath(targets.target_dict['mf6'])
+mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
 ex = ["maw_obs"]
 newtonoptions = [None, [""], ["NEWTON", "UNDER_RELAXATION"]]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
-    
+
 ddir = "data"
 
 
@@ -196,9 +196,8 @@ def get_model(idx, dir):
 def build_models():
     for idx, dir in enumerate(exdirs):
         sim = get_model(idx, dir)
-        
-    return sim
 
+    return sim
 
 
 def test_mf6model():
@@ -207,15 +206,15 @@ def test_mf6model():
 
     # build the models
     sim = build_models()
-    
+
     # write model input
     sim.write_simulation()
-    
+
     # attempt to run model should fail
     sim.run_simulation()
-    
+
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdirs[0], 'mfsim.lst'), 'r')
+    f = open(os.path.join(exdirs[0], "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -223,16 +222,17 @@ def test_mf6model():
         if "ID2 (icon) is missing" in line:
             expected_msg = True
             error_count += 1
-    
-    assert error_count == 1, "error count = " + str(error_count) + \
-                             ", but should equal 1"
-    
+
+    assert error_count == 1, (
+        "error count = " + str(error_count) + ", but should equal 1"
+    )
+
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdirs[0], ex[0] + '.maw.obs')
-    new_fl = os.path.join(exdirs[0], ex[0] + '.maw.obs.new')
-    sr = open(orig_fl, 'r')
-    sw = open(new_fl, 'w')
-    
+    orig_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs")
+    new_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs.new")
+    sr = open(orig_fl, "r")
+    sw = open(new_fl, "w")
+
     lines = sr.readlines()
     error_free_line = "  mawgw  maw  1  1\n"
     for line in lines:
@@ -243,11 +243,11 @@ def test_mf6model():
 
     sr.close()
     sw.close()
-    
+
     # delete original and replace with corrected lab obs input
     os.remove(orig_fl)
     os.rename(new_fl, orig_fl)
-    
+
     # rerun the model, should be no errors
     sim.run_simulation()
 
@@ -260,15 +260,15 @@ def main():
 
     # build the models
     sim = build_models()
-    
+
     # write model input
     sim.write_simulation()
-    
+
     # attempt to run model should fail
     sim.run_simulation()
-    
+
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdirs[0], 'mfsim.lst'), 'r')
+    f = open(os.path.join(exdirs[0], "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -276,16 +276,17 @@ def main():
         if "ID2 (icon) is missing" in line:
             expected_msg = True
             error_count += 1
-    
-    assert error_count == 1, "error count = " + str(error_count) + \
-                             ", but should equal 1"
-    
+
+    assert error_count == 1, (
+        "error count = " + str(error_count) + ", but should equal 1"
+    )
+
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdirs[0], ex[0] + '.maw.obs')
-    new_fl = os.path.join(exdirs[0], ex[0] + '.maw.obs.new')
-    sr = open(orig_fl, 'r')
-    sw = open(new_fl, 'w')
-    
+    orig_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs")
+    new_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs.new")
+    sr = open(orig_fl, "r")
+    sw = open(new_fl, "w")
+
     lines = sr.readlines()
     error_free_line = "  mawgw  maw  1  1\n"
     for line in lines:
@@ -296,11 +297,11 @@ def main():
 
     sr.close()
     sw.close()
-    
+
     # delete original and replace with corrected lab obs input
     os.remove(orig_fl)
     os.rename(new_fl, orig_fl)
-    
+
     # rerun the model, should be no errors
     sim.run_simulation()
 

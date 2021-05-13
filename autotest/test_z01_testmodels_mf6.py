@@ -19,6 +19,7 @@ except:
     raise Exception(msg)
 
 from simulation import Simulation
+from targets import get_mf6_version
 
 from common_regression import (
     get_home_dir,
@@ -163,6 +164,36 @@ def run_mf6(sim):
     sim.teardown()
 
 
+def set_make_comparison(test):
+    compare_tests = {
+        "test001e_noUZF_3lay": ("6.2.1",),
+        "test005_advgw_tidal": ("6.2.1",),
+        "test017_Crinkle": ("6.2.1",),
+        "test028_sfr": ("6.2.1",),
+        "test028_sfr_rewet": ("6.2.1",),
+        "test028_sfr_rewet_nr": ("6.2.1",),
+        "test028_sfr_rewet_simple": ("6.2.1",),
+        "test028_sfr_simple": ("6.2.1",),
+        "test034_nwtp2": ("6.2.1",),
+        "test034_nwtp2_1d": ("6.2.1",),
+        "test045_lake1tr_nr": ("6.2.1",),
+        "test045_lake2tr": ("6.2.1",),
+        "test045_lake2tr_nr": ("6.2.1",),
+        "test051_uzfp2": ("6.2.1",),
+        "test051_uzfp3_lakmvr_v2": ("6.2.1",),
+        "test051_uzfp3_wellakmvr_v2": ("6.2.1",),
+    }
+    make_comparison = True
+    if test in compare_tests.keys():
+        version = get_mf6_version()
+        print("MODFLOW version='{}'".format(version))
+        version = get_mf6_version(version="mf6-regression")
+        print("MODFLOW regression version='{}'".format(version))
+        if version in compare_tests[test]:
+            make_comparison = False
+    return make_comparison
+
+
 def test_mf6model():
     # determine if test directory exists
     dir_avail = is_directory_available(example_basedir)
@@ -178,6 +209,7 @@ def test_mf6model():
             on_dir,
             mf6_regression=set_mf6_regression(),
             cmp_verbose=False,
+            make_comparison=set_make_comparison(on_dir),
         )
 
     return
@@ -202,7 +234,8 @@ def main():
         sim = Simulation(
             on_dir,
             mf6_regression=set_mf6_regression(),
-            cmp_verbose=False,
+            cmp_verbose=True,
+            make_comparison=set_make_comparison(on_dir),
         )
         run_mf6(sim)
 

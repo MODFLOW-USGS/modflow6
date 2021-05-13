@@ -12,12 +12,18 @@ except:
 from framework import testing_framework, running_on_CI
 from simulation import Simulation
 
-ex = ["gwf_sto03a", "gwf_sto03b",]
+ex = [
+    "gwf_sto03a",
+    "gwf_sto03b",
+]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
-newton = (False, True,)
+newton = (
+    False,
+    True,
+)
 
 cmppth = "mf6"
 
@@ -32,15 +38,17 @@ replace_exe = None
 htol = [None for idx in range(len(exdirs))]
 dtol = 1e-3
 budtol = 1e-2
-ur_gamma = 0.95
 
-bud_lst = ("STO-SS_IN", "STO-SS_OUT",)
+bud_lst = (
+    "STO-SS_IN",
+    "STO-SS_OUT",
+)
 
 # static model data
 # temporal discretization
 nper = 6
 perlen = [1.0 for i in range(nper)]
-nstp = [25 for i in range(nper)]
+nstp = [50 for i in range(nper)]
 tsmult = [1.1 for i in range(nper)]
 tdis_rc = []
 for idx in range(nper):
@@ -52,33 +60,37 @@ shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 delr, delc = 1.0, 1.0
 area = delr * delc
-zelev = (0., -100.,)
+zelev = (
+    0.0,
+    -100.0,
+)
 strt = zelev[-1] + 1e-7
 cmp_offset = 15999.1
 obsname = "H1"
 
 # hydraulic properties
-hk = 1.
+hk = 1.0
 ib = 1
 laytyp = 1
 ss = 1e-5
-sy = 0.
+sy = 0.0
 
 # solver options
 nouter, ninner = 500, 300
-hclose, rclose, relax = 1e-9, 1e-6, 1.0
+hclose, rclose, relax, ur_gamma = 1e-9, 1e-6, 1.0, 0.95
 
 # pumping well data
-absrate = 1.1 * ss * (zelev[-2] - zelev[-1]) * 125.
+absrate = 1.1 * ss * (zelev[-2] - zelev[-1]) * 125.0
 well_spd = {}
 for idx in range(nper):
     if idx % 2 == 0:
-        mult = 1.
+        mult = 1.0
     else:
-        mult = -1.
+        mult = -1.0
     well_spd[idx] = [[0, 0, 0, mult * absrate]]
 
-def build_model(name, ws, newton_bool, offset=0.):
+
+def build_model(name, ws, newton_bool, offset=0.0):
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -120,7 +132,6 @@ def build_model(name, ws, newton_bool, offset=0.):
         save_flows=True,
     )
 
-
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -134,14 +145,10 @@ def build_model(name, ws, newton_bool, offset=0.):
 
     flopy.mf6.ModflowUtlobs(
         gwf,
-        filename='{}.obs'.format(name),
+        filename="{}.obs".format(name),
         digits=10,
         print_input=True,
-        continuous={
-            "head.obs.csv": [
-                (obsname, "HEAD", (0, 0, 0))
-            ]
-        }
+        continuous={"head.obs.csv": [(obsname, "HEAD", (0, 0, 0))]},
     )
 
     # initial conditions
@@ -204,38 +211,64 @@ def build_models():
     return
 
 
+def eval_hmax(fpth):
+    b = flopy.utils.Mf6Obs(fpth)
+    times = b.get_times()
+    ctimes = np.arange(3.0, times[-1], 2.0)
+    bv = np.zeros(ctimes.shape, dtype=float)
+    bv[:] = b.get_data(totim=1.0)[obsname]
+    sv = np.zeros(ctimes.shape, dtype=float)
+    for idx, t in enumerate(ctimes):
+        sv[idx] = b.get_data(totim=t)[obsname]
+
+    msg = "maximum heads in {} exceed tolerance ".format(
+        fpth
+    ) + "- maximum difference {}".format((bv - sv).max())
+    assert np.allclose(bv, sv), msg
+    return
+
+
 def eval_sto(sim):
     print("evaluating head differences...")
-    fpth = os.path.join(
-        sim.simpath,
-        "head.obs.csv"
-    )
-    base_obs = flopy.utils.Mf6Obs(fpth).get_data(obsname="H1")[obsname]
+    fpth = os.path.join(sim.simpath, "head.obs.csv")
+    base_obs = flopy.utils.Mf6Obs(fpth).get_data()[obsname]
 
-    fpth = os.path.join(
-        sim.simpath,
-        cmppth,
-        "head.obs.csv"
-    )
-    offset_obs = flopy.utils.Mf6Obs(fpth).get_data(obsname=obsname)[obsname]
+    fpth = os.path.join(sim.simpath, cmppth, "head.obs.csv")
+    offset_obs = flopy.utils.Mf6Obs(fpth).get_data()[obsname]
     offset_obs -= cmp_offset
 
-    msg = "head differences exceed tolerance when offset removed " + \
-          "- maximum difference {}".format((base_obs - offset_obs).max())
+    msg = (
+        "head differences exceed tolerance when offset removed "
+        + "- maximum difference {}".format((base_obs - offset_obs).max())
+    )
     assert np.allclose(base_obs, offset_obs, atol=1e-6), msg
+
+    print("evaluating maximum heads...")
+    fpth = os.path.join(sim.simpath, "head.obs.csv")
+    eval_hmax(fpth)
+    fpth = os.path.join(sim.simpath, cmppth, "head.obs.csv")
+    eval_hmax(fpth)
+
+    base_obs = flopy.utils.Mf6Obs(fpth)
+    times = base_obs.get_times()
+    cmp_times = np.arange(3.0, times[-1], 2.0)
+    base_cmp = np.zeros(cmp_times.shape, dtype=float)
+    base_cmp[:] = base_obs.get_data(totim=1.0)[obsname]
+    offset_cmp = np.zeros(cmp_times.shape, dtype=float)
+    for idx, t in enumerate(cmp_times):
+        offset_cmp[idx] = base_obs.get_data(totim=t)[obsname]
+
+    msg = (
+        "maximum heads exceed tolerance when offset removed "
+        + "- maximum difference {}".format((base_cmp - offset_cmp).max())
+    )
+    assert np.allclose(base_cmp, offset_cmp), msg
 
     print("evaluating storage...")
     name = ex[sim.idxsim]
-    fpth = os.path.join(
-        sim.simpath,
-        "{}.cbc".format(name)
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(name))
     base_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
-    fpth = os.path.join(
-        sim.simpath,
-        cmppth,
-        "{}.cbc".format(name)
-    )
+    fpth = os.path.join(sim.simpath, cmppth, "{}.cbc".format(name))
     offset_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # get results from cbc file
@@ -250,7 +283,7 @@ def eval_sto(sim):
             if not np.allclose(base_v, offset_v):
                 max_diff[idx] = np.abs(base_v - offset_v).max()
 
-    assert max_diff.sum() == 0., "simulated storage is not the same"
+    assert max_diff.sum() == 0.0, "simulated storage is not the same"
 
     return
 
