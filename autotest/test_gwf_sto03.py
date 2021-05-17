@@ -80,7 +80,7 @@ nouter, ninner = 500, 300
 hclose, rclose, relax, ur_gamma = 1e-9, 1e-6, 1.0, 0.95
 
 # pumping well data
-absrate = 1.1 * ss * (zelev[-2] - zelev[-1]) * 125.0
+absrate = 1.1 * ss * (zelev[-2] - zelev[-1]) * 90.0
 well_spd = {}
 for idx in range(nper):
     if idx % 2 == 0:
@@ -104,9 +104,11 @@ def build_model(name, ws, newton_bool, offset=0.0):
     if newton_bool:
         linear_acceleration = "BICGSTAB"
         newtonoptions = "UNDER_RELAXATION"
+        gamma = 1.
     else:
         linear_acceleration = "CG"
         newtonoptions = None
+        gamma = ur_gamma
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -114,7 +116,7 @@ def build_model(name, ws, newton_bool, offset=0.0):
         outer_dvclose=hclose,
         outer_maximum=nouter,
         under_relaxation="SIMPLE",
-        under_relaxation_gamma=ur_gamma,
+        under_relaxation_gamma=gamma,
         inner_maximum=ninner,
         inner_dvclose=hclose,
         rcloserecord=rclose,

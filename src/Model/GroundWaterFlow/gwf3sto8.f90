@@ -268,15 +268,16 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: tthk
-    real(DP) :: ththk
+    !real(DP) :: ththk
     real(DP) :: zold
     real(DP) :: znew
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss0
+    !real(DP) :: ss0
     real(DP) :: ss1
     real(DP) :: ssh0
     real(DP) :: ssh1
+    real(DP) :: aterm
     real(DP) :: rhsterm
     character(len=LINELENGTH) :: errmsg
     ! -- formats
@@ -310,18 +311,29 @@ contains
       ! -- aquifer saturation
       snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
       snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+      !if (this%iconvert(n) == 0) then
+      !  snold = DONE
+      !  snnew = DONE
+      !else
+      !  snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
+      !  snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+      !end if
+      !
+      ! -- set saturated thickness node elevations
+      zold = bt + DHALF * tthk * snold
+      znew = bt + DHALF * tthk * snnew
+      !
       ! -- set saturation used for ss
-      ss0 = snold
       ssh0 = hold(n)
       ss1 = snnew
       ssh1 = DZERO
       if (this%isseg /= 0) then
-        if (ss0 < DONE) then
-          ss0 = DONE
+        if (snold < DONE) then
           ssh0 = tp
         end if
-        if (ss1 < DONE) then
+        if (snnew < DONE) then
           ss1 = DZERO
+          !snnew = DZERO
           ssh1 = tp
         end if
       end if
@@ -334,19 +346,33 @@ contains
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
         if (this%iorigss == 0) then
-          ththk = DHALF * tthk
-          zold = bt + ththk * snold
-          znew = bt + ththk * snnew
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1*snnew
-          rhs(n) = rhs(n) - rho1 * (snold * (hold(n) - zold) + snnew * znew)
+          if (this%isseg == 0) then
+            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * snnew
+            rhs(n) = rhs(n) - rho1 * (snold * (hold(n) - zold) + snnew * znew)
+            !aterm = -rho1 * snnew
+            !rhsterm = -rho1 * (snold * (hold(n) - zold) + snnew * znew)
+          else
+            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * ss1
+            rhs(n) = rhs(n) - rho1 * ssh0 + rho1 * ssh1
+            !aterm = -rho1 * ss1
+            !rhsterm = -rho1 * ssh0 - rho1 * ssh1
+          end if
         else
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1*ss1
-          rhs(n) = rhs(n) - rho1*ss0*ssh0 + rho1*ssh1
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1*snnew
+          rhs(n) = rhs(n) - rho1 * snold * hold(n)
+          !aterm = -rho1 * snnew
+          !rhsterm = -rho1 * snold * hold(n)
         end if
       else
         amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1
         rhs(n) = rhs(n) - rho1*hold(n)
+        !aterm = -rho1 * snnew
+        !rhsterm = -rho1 * snold * hold(n)
       end if
+      !!
+      !! -- add specific storage terms to amat and rhs
+      !amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+      !rhs(n) = rhs(n) + rhsterm
       !
       ! -- specific yield
       if (this%iconvert(n) /= 0) then
@@ -521,11 +547,11 @@ contains
     real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss0
-    real(DP) :: ss1
+    !real(DP) :: ss0
+    !real(DP) :: ss1
     real(DP) :: ssh0
     real(DP) :: ssh1
-    real(DP) :: ththk
+    !real(DP) :: ththk
     real(DP) :: zold
     real(DP) :: znew
 ! ------------------------------------------------------------------------------
@@ -551,18 +577,21 @@ contains
         tthk = tp - bt
         snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
         snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+        !
+        ! -- set saturated thickness node elevations
+        zold = bt + DHALF * tthk * snold
+        znew = bt + DHALF * tthk * snnew
+        !
         ! -- set saturation used for ss
-        ss0 = snold
+        !ss0 = snold
         ssh0 = hold(n)
-        ss1 = snnew
-        ssh1 = DZERO
+        !ss1 = snnew
+        ssh1 = hnew(n)
         if (this%isseg /= 0) then
-          if (ss0 < DONE) then
-            ss0 = DONE
+          if (snold < DONE) then
             ssh0 = tp
           end if
-          if (ss1 < DONE) then
-            ss1 = DZERO
+          if (snnew < DONE) then
             ssh1 = tp
           end if
         end if
@@ -573,12 +602,18 @@ contains
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
           if (this%iorigss == 0) then
-            ththk = DHALF * tthk
-            zold = bt + ththk * snold
-            znew = bt + ththk * snnew
-            rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
+            !ththk = DHALF * tthk
+            !zold = bt + ththk * snold
+            !znew = bt + ththk * snnew
+            !rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
+            if (this%isseg == 0) then
+              rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
+            else
+              rate = rho1 * (ssh0 - ssh1)
+            end if
           else
-            rate = rho1*ss0*ssh0 - rho1*ss1*hnew(n) - rho1*ssh1
+            !rate = rho1*ss0*ssh0 - rho1*ss1*hnew(n) - rho1*ssh1
+            rate = rho1 * snold * ssh0 - rho1 * snnew * hnew(n) - rho1 * ssh1
           end if
         else
           rate = rho1*hold(n) - rho1*hnew(n)
@@ -874,7 +909,7 @@ contains
         case ('DEV_OLDSTORAGEFORMULATION')
           call this%parser%DevOpt()
           this%isseg = 1
-          this%iorigss = 1
+          this%iorigss = 0
           write (this%iout, fmtstoseg)
         case default
           write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
