@@ -268,13 +268,11 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: tthk
-    !real(DP) :: ththk
     real(DP) :: zold
     real(DP) :: znew
     real(DP) :: snold
     real(DP) :: snnew
-    !real(DP) :: ss0
-    real(DP) :: ss1
+    real(DP) :: ss_sat1
     real(DP) :: ssh0
     real(DP) :: ssh1
     real(DP) :: aterm
@@ -303,37 +301,31 @@ contains
     do n = 1, this%dis%nodes
       idiag = this%dis%con%ia(n)
       if (this%ibound(n) < 1) cycle
+      !
       ! -- aquifer elevations and thickness
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
       tthk = tp - bt
       !
       ! -- aquifer saturation
-      snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
-      snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
-      !if (this%iconvert(n) == 0) then
-      !  snold = DONE
-      !  snnew = DONE
-      !else
-      !  snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
-      !  snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
-      !end if
-      !
-      ! -- set saturated thickness node elevations
-      zold = bt + DHALF * tthk * snold
-      znew = bt + DHALF * tthk * snnew
+      if (this%iconvert(n) == 0) then
+        snold = DONE
+        snnew = DONE
+      else
+        snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
+        snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+      end if
       !
       ! -- set saturation used for ss
+      ss_sat1 = snnew
       ssh0 = hold(n)
-      ss1 = snnew
       ssh1 = DZERO
       if (this%isseg /= 0) then
         if (snold < DONE) then
           ssh0 = tp
         end if
         if (snnew < DONE) then
-          ss1 = DZERO
-          !snnew = DZERO
+          ss_sat1 = DZERO
           ssh1 = tp
         end if
       end if
@@ -342,37 +334,31 @@ contains
       sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
       rho1 = sc1*tled
       !
+      ! -- initialize matrix terms
+      aterm = -rho1 * ss_sat1
+      rhsterm = DZERO
+      !
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
         if (this%iorigss == 0) then
           if (this%isseg == 0) then
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * snnew
-            rhs(n) = rhs(n) - rho1 * (snold * (hold(n) - zold) + snnew * znew)
-            !aterm = -rho1 * snnew
-            !rhsterm = -rho1 * (snold * (hold(n) - zold) + snnew * znew)
+            zold = bt + DHALF * tthk * snold
+            znew = bt + DHALF * tthk * snnew
+            rhsterm = -rho1 * (snold * (hold(n) - zold) + snnew * znew)
           else
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * ss1
-            rhs(n) = rhs(n) - rho1 * ssh0 + rho1 * ssh1
-            !aterm = -rho1 * ss1
-            !rhsterm = -rho1 * ssh0 - rho1 * ssh1
+            rhsterm = -rho1 * ssh0 + rho1 * ssh1
           end if
         else
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1*snnew
-          rhs(n) = rhs(n) - rho1 * snold * hold(n)
-          !aterm = -rho1 * snnew
-          !rhsterm = -rho1 * snold * hold(n)
+          rhsterm = -rho1 * snold * hold(n)
         end if
       else
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1
-        rhs(n) = rhs(n) - rho1*hold(n)
-        !aterm = -rho1 * snnew
-        !rhsterm = -rho1 * snold * hold(n)
+        rhsterm = -rho1 * snold * hold(n)
       end if
-      !!
-      !! -- add specific storage terms to amat and rhs
-      !amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
-      !rhs(n) = rhs(n) + rhsterm
+      !
+      ! -- add specific storage terms to amat and rhs
+      amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+      rhs(n) = rhs(n) + rhsterm
       !
       ! -- specific yield
       if (this%iconvert(n) /= 0) then
@@ -380,20 +366,20 @@ contains
         !
         ! -- secondary storage coefficient
         sc2 = SyCapacity(this%dis%area(n), this%sy(n))
-        rho2 = sc2*tled
+        rho2 = sc2 * tled
         !
         ! -- add specific yield terms to amat at rhs
         if (snnew < DONE) then
           if (snnew > DZERO) then
             amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
-            rhsterm = rho2*tthk*snold
-            rhsterm = rhsterm + rho2*bt
+            rhsterm = rho2 * tthk * snold
+            rhsterm = rhsterm + rho2 * bt
           else
-            rhsterm = -rho2*tthk*(DZERO - snold)
+            rhsterm = -rho2 * tthk * (DZERO - snold)
           end if
           ! -- known flow from specific yield
         else
-          rhsterm = -rho2*tthk*(DONE - snold)
+          rhsterm = -rho2 * tthk * (DONE - snold)
         end if
         rhs(n) = rhs(n) - rhsterm
       end if
@@ -547,11 +533,8 @@ contains
     real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    !real(DP) :: ss0
-    !real(DP) :: ss1
     real(DP) :: ssh0
     real(DP) :: ssh1
-    !real(DP) :: ththk
     real(DP) :: zold
     real(DP) :: znew
 ! ------------------------------------------------------------------------------
@@ -575,17 +558,15 @@ contains
         tp = this%dis%top(n)
         bt = this%dis%bot(n)
         tthk = tp - bt
-        snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
-        snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
         !
-        ! -- set saturated thickness node elevations
-        zold = bt + DHALF * tthk * snold
-        znew = bt + DHALF * tthk * snnew
+        ! -- aquifer saturation
+        if (this%iconvert(n) /= 0) then
+          snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
+          snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+        end if
         !
         ! -- set saturation used for ss
-        !ss0 = snold
         ssh0 = hold(n)
-        !ss1 = snnew
         ssh1 = hnew(n)
         if (this%isseg /= 0) then
           if (snold < DONE) then
@@ -602,21 +583,18 @@ contains
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
           if (this%iorigss == 0) then
-            !ththk = DHALF * tthk
-            !zold = bt + ththk * snold
-            !znew = bt + ththk * snnew
-            !rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
             if (this%isseg == 0) then
+              zold = bt + DHALF * tthk * snold
+              znew = bt + DHALF * tthk * snnew
               rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
             else
               rate = rho1 * (ssh0 - ssh1)
             end if
           else
-            !rate = rho1*ss0*ssh0 - rho1*ss1*hnew(n) - rho1*ssh1
-            rate = rho1 * snold * ssh0 - rho1 * snnew * hnew(n) - rho1 * ssh1
+            rate = rho1 * snold * hold(n) - rho1 * snnew * hnew(n)
           end if
         else
-          rate = rho1*hold(n) - rho1*hnew(n)
+          rate = rho1 * hold(n) - rho1 * hnew(n)
         end if
         !
         ! -- save rate
@@ -632,10 +610,10 @@ contains
           !
           ! -- secondary storage coefficient
           sc2 = SyCapacity(this%dis%area(n), this%sy(n))
-          rho2 = sc2*tled
+          rho2 = sc2 * tled
           !
           ! -- contribution from specific yield
-          rate = rho2*tthk*snold - rho2*tthk*snnew
+          rate = rho2 * tthk * snold - rho2 * tthk * snnew
         end if
         this%strgsy(n) = rate
         !
