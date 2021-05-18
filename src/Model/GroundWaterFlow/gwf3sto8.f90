@@ -424,8 +424,6 @@ contains
     real(DP) :: h
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss0
-    real(DP) :: ss1
     real(DP) :: derv
     real(DP) :: rterm
     real(DP) :: drterm
@@ -452,14 +450,6 @@ contains
       snold = sQuadraticSaturation(tp, bt, hold(n))
       snnew = sQuadraticSaturation(tp, bt, h)
       !
-      ! -- set saturation used for ss
-      ss0 = snold
-      ss1 = snnew
-      if (this%iconf_ss /= 0) then
-        if (ss0 < DONE) ss0 = DZERO
-        if (ss1 < DONE) ss1 = DZERO
-      end if
-      !
       ! -- storage coefficients
       sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       sc2 = SyCapacity(this%dis%area(n), this%sy(n))
@@ -478,7 +468,7 @@ contains
           if (this%iorig_ss == 0) then
             drterm = -rho1 * derv * (h - bt) + rho1 * tthk * snnew * derv 
           else
-            drterm = -(rho1*derv*h)
+            drterm = -(rho1 * derv * h)
           end if
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
           rhs(n) = rhs(n) + drterm*h
@@ -490,10 +480,10 @@ contains
         if (snnew < DONE) then
           ! -- calculate newton terms for specific yield
           if (snnew > DZERO) then
-            rterm = -rho2*tthk*snnew
-            drterm = -rho2*tthk*derv
+            rterm = -rho2 * tthk * snnew
+            drterm = -rho2 * tthk * derv
             amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
-            rhs(n) = rhs(n) - rterm + drterm*h + rho2*bt
+            rhs(n) = rhs(n) - rterm + drterm * h + rho2 * bt
           end if
         end if
       end if
