@@ -17,18 +17,18 @@ contains
   !!
   !! @return      sc1               specific storage capacity
   !<
-  pure function SsCapacity(isfac, top, bot, area, ss) result(sc1)
+  pure function SsCapacity(istor_coef, top, bot, area, ss) result(sc1)
     ! -- dummy variables
-    integer(I4B), intent(in) :: isfac  !< flag indicating if ss is the storage coefficient
-    real(DP), intent(in) :: top        !< top of cell
-    real(DP), intent(in) :: bot        !< bottom of cell
-    real(DP), intent(in) :: area       !< horizontal cell area
-    real(DP), intent(in) :: ss         !< specific storage or storage coefficient
+    integer(I4B), intent(in) :: istor_coef  !< flag indicating if ss is the storage coefficient
+    real(DP), intent(in) :: top             !< top of cell
+    real(DP), intent(in) :: bot             !< bottom of cell
+    real(DP), intent(in) :: area            !< horizontal cell area
+    real(DP), intent(in) :: ss              !< specific storage or storage coefficient
     ! -- local variables
     real(DP) :: sc1
     real(DP) :: thick
     ! -- calculate specific storage capacity
-    if (isfac == 0) then
+    if (istor_coef == 0) then
       thick = top - bot
     else
       thick = DONE

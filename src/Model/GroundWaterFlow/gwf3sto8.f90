@@ -17,11 +17,11 @@ module GwfStoModule
                                             ['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
-    integer(I4B), pointer                            :: isfac => null()          !< indicates if ss is read as storativity
-    integer(I4B), pointer                            :: isseg => null()          !< indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer                            :: istor_coef => null()     !< indicates if ss is the storage coefficient
+    integer(I4B), pointer                            :: iconf_ss => null()       !< indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer                            :: iorig_ss => null()       !< indicates if the original storage specific storage formulation should be used
     integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
     integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
-    integer(I4B), pointer                            :: iorigss => null()        !< indicates if the original storage specific storage formulation should be used
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
     real(DP), dimension(:), pointer, contiguous      :: ss => null()             !< specfic storage or storage coefficient
     real(DP), dimension(:), pointer, contiguous      :: sy => null()             !< specific yield
@@ -320,7 +320,7 @@ contains
       ss_sat1 = snnew
       ssh0 = hold(n)
       ssh1 = DZERO
-      if (this%isseg /= 0) then
+      if (this%iconf_ss /= 0) then
         if (snold < DONE) then
           ssh0 = tp
         end if
@@ -331,7 +331,7 @@ contains
       end if
       !
       ! -- storage coefficients
-      sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+      sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       rho1 = sc1*tled
       !
       ! -- initialize matrix terms
@@ -341,8 +341,8 @@ contains
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
-        if (this%iorigss == 0) then
-          if (this%isseg == 0) then
+        if (this%iorig_ss == 0) then
+          if (this%iconf_ss == 0) then
             zold = bt + DHALF * tthk * snold
             znew = bt + DHALF * tthk * snnew
             rhsterm = -rho1 * (snold * (hold(n) - zold) + snnew * znew)
@@ -455,13 +455,13 @@ contains
       ! -- set saturation used for ss
       ss0 = snold
       ss1 = snnew
-      if (this%isseg /= 0) then
+      if (this%iconf_ss /= 0) then
         if (ss0 < DONE) ss0 = DZERO
         if (ss1 < DONE) ss1 = DZERO
       end if
       !
       ! -- storage coefficients
-      sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+      sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       sc2 = SyCapacity(this%dis%area(n), this%sy(n))
       rho1 = sc1*tled
       rho2 = sc2*tled
@@ -474,8 +474,8 @@ contains
         derv = sQuadraticSaturationDerivative(tp, bt, h)
         !
         ! -- newton terms for specific storage
-        if (this%isseg == 0) then
-          if (this%iorigss == 0) then
+        if (this%iconf_ss == 0) then
+          if (this%iorig_ss == 0) then
             drterm = -rho1 * derv * (h - bt) + rho1 * tthk * snnew * derv 
           else
             drterm = -(rho1*derv*h)
@@ -568,7 +568,7 @@ contains
         ! -- set saturation used for ss
         ssh0 = hold(n)
         ssh1 = hnew(n)
-        if (this%isseg /= 0) then
+        if (this%iconf_ss /= 0) then
           if (snold < DONE) then
             ssh0 = tp
           end if
@@ -577,13 +577,13 @@ contains
           end if
         end if
         ! -- primary storage coefficient
-        sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+        sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
         rho1 = sc1*tled
         !
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
-          if (this%iorigss == 0) then
-            if (this%isseg == 0) then
+          if (this%iorig_ss == 0) then
+            if (this%iconf_ss == 0) then
               zold = bt + DHALF * tthk * snold
               znew = bt + DHALF * tthk * snnew
               rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
@@ -735,11 +735,11 @@ contains
     end if
     !
     ! -- Deallocate scalars
-    call mem_deallocate(this%isfac)
-    call mem_deallocate(this%isseg)
-    call mem_deallocate(this%satomega)
+    call mem_deallocate(this%istor_coef)
+    call mem_deallocate(this%iconf_ss)
+    call mem_deallocate(this%iorig_ss)
     call mem_deallocate(this%iusesy)
-    call mem_deallocate(this%iorigss)
+    call mem_deallocate(this%satomega)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -765,18 +765,18 @@ contains
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
     !
-    ! -- llocate scalars
+    ! -- allocate scalars
+    call mem_allocate(this%istor_coef, 'ISTOR_COEF', this%memoryPath)
+    call mem_allocate(this%iconf_ss, 'ICONF_SS', this%memoryPath)
+    call mem_allocate(this%iorig_ss, 'IORIG_SS', this%memoryPath)
     call mem_allocate(this%iusesy, 'IUSESY', this%memoryPath)
-    call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
-    call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
-    call mem_allocate(this%iorigss, 'IORIGSS', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     !
     ! -- initialize scalars
+    this%istor_coef = 0
+    this%iconf_ss = 0
+    this%iorig_ss = 0
     this%iusesy = 0
-    this%isfac = 0
-    this%isseg = 0
-    this%iorigss = 0
     this%satomega = DZERO
     !
     ! -- return
@@ -848,9 +848,9 @@ contains
     character(len=*), parameter :: fmtstoc = &
       "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
       &1X,'Read storage coefficient rather than specific storage')"
-    character(len=*), parameter :: fmtstoseg = &
-      "(4X,'OLDSTORAGEFORMULATION OPTION:',/,                                  &
-      &1X,'Specific storage changes only occur above cell top')"
+    character(len=*), parameter :: fmtconfss = &
+      "(4X,'SS_CONFINED_ONLY OPTION:',/,                                       &
+      &1X,'Specific storage changes only occur under confined conditions')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -869,26 +869,25 @@ contains
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
         case ('STORAGECOEFFICIENT')
-          this%isfac = 1
+          this%istor_coef = 1
           write (this%iout, fmtstoc)
-        case ('ORIGINAL_SPECIFIC_STORAGE')
-          this%iorigss = 1
-          write (this%iout, fmtorigss)
+        case ('SS_CONFINED_ONLY')
+          this%iconf_ss = 1
+          this%iorig_ss = 0
+          write (this%iout, fmtconfss)
         !
         ! -- right now these are options that are only available in the
         !    development version and are not included in the documentation.
         !    These options are only available when IDEVELOPMODE in
         !    constants module is set to 1
-        case ('DEV_NO_NEWTON')
-          call this%parser%DevOpt()
-          this%inewton = 0
-          write (this%iout, '(4x,a)') &
-            'NEWTON-RAPHSON method disabled for unconfined cell storage'
+        case ('DEV_ORIGINAL_SPECIFIC_STORAGE')
+          this%iorig_ss = 1
+          write (this%iout, fmtorigss)
         case ('DEV_OLDSTORAGEFORMULATION')
           call this%parser%DevOpt()
-          this%isseg = 1
-          this%iorigss = 0
-          write (this%iout, fmtstoseg)
+          this%iconf_ss = 1
+          this%iorig_ss = 0
+          write (this%iout, fmtconfss)
         case default
           write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
             trim(keyword)
