@@ -938,21 +938,21 @@ module GwtMstModule
     ! -- dcy
     if (this%idcy /= 0) then
       call rate_accumulator(this%ratedcy, rin, rout)
-      call model_budget%addentry(rin, rout, delt, budtxt(1),                   &
+      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
                                isuppress_output, rowlabel=this%packName)
     end if
     !
     ! -- srb
     if (this%isrb /= 0) then
       call rate_accumulator(this%ratesrb, rin, rout)
-      call model_budget%addentry(rin, rout, delt, budtxt(2),                   &
+      call model_budget%addentry(rin, rout, delt, budtxt(3),                   &
                                isuppress_output, rowlabel=this%packName)
     end if
     !
     ! -- srb dcy
     if (this%isrb /= 0 .and. this%idcy /= 0) then
       call rate_accumulator(this%ratedcys, rin, rout)
-      call model_budget%addentry(rin, rout, delt, budtxt(3),                   &
+      call model_budget%addentry(rin, rout, delt, budtxt(4),                   &
                                isuppress_output, rowlabel=this%packName)
     end if
     !
