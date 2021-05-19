@@ -1,7 +1,7 @@
 module GwfStoModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DONE, LENBUDTXT
+  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, LENBUDTXT
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQSaturation, sLinearSaturation
@@ -17,13 +17,14 @@ module GwfStoModule
                                             ['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
-    integer(I4B), pointer                            :: isfac => null()          !< indicates if ss is read as storativity
-    integer(I4B), pointer                            :: isseg => null()          !< indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer                            :: istor_coef => null()     !< indicates if ss is the storage coefficient
+    integer(I4B), pointer                            :: iconf_ss => null()       !< indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer                            :: iorig_ss => null()       !< indicates if the original storage specific storage formulation should be used
     integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
     integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
-    real(DP), dimension(:), pointer, contiguous       :: ss => null()             !< specfic storage or storage coefficient
-    real(DP), dimension(:), pointer, contiguous       :: sy => null()             !< specific yield
+    real(DP), dimension(:), pointer, contiguous      :: ss => null()             !< specfic storage or storage coefficient
+    real(DP), dimension(:), pointer, contiguous      :: sy => null()             !< specific yield
     real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !< vector of specific storage rates
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
@@ -267,12 +268,14 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: tthk
+    real(DP) :: zold
+    real(DP) :: znew
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss0
-    real(DP) :: ss1
+    real(DP) :: ss_sat1
     real(DP) :: ssh0
     real(DP) :: ssh1
+    real(DP) :: aterm
     real(DP) :: rhsterm
     character(len=LINELENGTH) :: errmsg
     ! -- formats
@@ -298,57 +301,85 @@ contains
     do n = 1, this%dis%nodes
       idiag = this%dis%con%ia(n)
       if (this%ibound(n) < 1) cycle
+      !
       ! -- aquifer elevations and thickness
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
       tthk = tp - bt
+      !
       ! -- aquifer saturation
-      snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
-      snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+      if (this%iconvert(n) == 0) then
+        snold = DONE
+        snnew = DONE
+      else
+        snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
+        snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+      end if
+      !
       ! -- set saturation used for ss
-      ss0 = snold
+      ss_sat1 = snnew
       ssh0 = hold(n)
-      ss1 = snnew
       ssh1 = DZERO
-      if (this%isseg /= 0) then
-        if (ss0 < DONE) then
-          ss0 = DONE
+      if (this%iconf_ss /= 0) then
+        if (snold < DONE) then
           ssh0 = tp
         end if
-        if (ss1 < DONE) then
-          ss1 = DZERO
+        if (snnew < DONE) then
+          ss_sat1 = DZERO
           ssh1 = tp
         end if
       end if
+      !
       ! -- storage coefficients
-      sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
-      sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+      sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       rho1 = sc1*tled
-      rho2 = sc2*tled
+      !
+      ! -- initialize matrix terms
+      aterm = -rho1 * ss_sat1
+      rhsterm = DZERO
+      !
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1*ss1
-        rhs(n) = rhs(n) - rho1*ss0*ssh0 + rho1*ssh1
+        if (this%iorig_ss == 0) then
+          if (this%iconf_ss == 0) then
+            zold = bt + DHALF * tthk * snold
+            znew = bt + DHALF * tthk * snnew
+            rhsterm = -rho1 * (snold * (hold(n) - zold) + snnew * znew)
+          else
+            rhsterm = -rho1 * ssh0 + rho1 * ssh1
+          end if
+        else
+          rhsterm = -rho1 * snold * hold(n)
+        end if
       else
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1
-        rhs(n) = rhs(n) - rho1*hold(n)
+        rhsterm = -rho1 * snold * hold(n)
       end if
+      !
+      ! -- add specific storage terms to amat and rhs
+      amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+      rhs(n) = rhs(n) + rhsterm
+      !
       ! -- specific yield
       if (this%iconvert(n) /= 0) then
         rhsterm = DZERO
+        !
+        ! -- secondary storage coefficient
+        sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+        rho2 = sc2 * tled
+        !
         ! -- add specific yield terms to amat at rhs
         if (snnew < DONE) then
           if (snnew > DZERO) then
             amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
-            rhsterm = rho2*tthk*snold
-            rhsterm = rhsterm + rho2*bt
+            rhsterm = rho2 * tthk * snold
+            rhsterm = rhsterm + rho2 * bt
           else
-            rhsterm = -rho2*tthk*(DZERO - snold)
+            rhsterm = -rho2 * tthk * (DZERO - snold)
           end if
           ! -- known flow from specific yield
         else
-          rhsterm = -rho2*tthk*(DONE - snold)
+          rhsterm = -rho2 * tthk * (DONE - snold)
         end if
         rhs(n) = rhs(n) - rhsterm
       end if
@@ -393,8 +424,6 @@ contains
     real(DP) :: h
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss0
-    real(DP) :: ss1
     real(DP) :: derv
     real(DP) :: rterm
     real(DP) :: drterm
@@ -410,23 +439,19 @@ contains
     do n = 1, this%dis%nodes
       idiag = this%dis%con%ia(n)
       if (this%ibound(n) <= 0) cycle
+      !
       ! -- aquifer elevations and thickness
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
       tthk = tp - bt
       h = hnew(n)
+      !
       ! -- aquifer saturation
       snold = sQuadraticSaturation(tp, bt, hold(n))
       snnew = sQuadraticSaturation(tp, bt, h)
-      ! -- set saturation used for ss
-      ss0 = snold
-      ss1 = snnew
-      if (this%isseg /= 0) then
-        if (ss0 < DONE) ss0 = DZERO
-        if (ss1 < DONE) ss1 = DZERO
-      end if
+      !
       ! -- storage coefficients
-      sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
+      sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       sc2 = SyCapacity(this%dis%area(n), this%sy(n))
       rho1 = sc1*tled
       rho2 = sc2*tled
@@ -439,8 +464,12 @@ contains
         derv = sQuadraticSaturationDerivative(tp, bt, h)
         !
         ! -- newton terms for specific storage
-        if (this%isseg == 0) then
-          drterm = -(rho1*derv*h)
+        if (this%iconf_ss == 0) then
+          if (this%iorig_ss == 0) then
+            drterm = -rho1 * derv * (h - bt) + rho1 * tthk * snnew * derv 
+          else
+            drterm = -(rho1 * derv * h)
+          end if
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
           rhs(n) = rhs(n) + drterm*h
         end if
@@ -451,10 +480,10 @@ contains
         if (snnew < DONE) then
           ! -- calculate newton terms for specific yield
           if (snnew > DZERO) then
-            rterm = -rho2*tthk*snnew
-            drterm = -rho2*tthk*derv
+            rterm = -rho2 * tthk * snnew
+            drterm = -rho2 * tthk * derv
             amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
-            rhs(n) = rhs(n) - rterm + drterm*h + rho2*bt
+            rhs(n) = rhs(n) - rterm + drterm * h + rho2 * bt
           end if
         end if
       end if
@@ -494,10 +523,10 @@ contains
     real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss0
-    real(DP) :: ss1
     real(DP) :: ssh0
     real(DP) :: ssh1
+    real(DP) :: zold
+    real(DP) :: znew
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize strg arrays
@@ -519,35 +548,46 @@ contains
         tp = this%dis%top(n)
         bt = this%dis%bot(n)
         tthk = tp - bt
-        snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
-        snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+        !
+        ! -- aquifer saturation
+        if (this%iconvert(n) /= 0) then
+          snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
+          snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
+        end if
+        !
         ! -- set saturation used for ss
-        ss0 = snold
         ssh0 = hold(n)
-        ss1 = snnew
-        ssh1 = DZERO
-        if (this%isseg /= 0) then
-          if (ss0 < DONE) then
-            ss0 = DONE
+        ssh1 = hnew(n)
+        if (this%iconf_ss /= 0) then
+          if (snold < DONE) then
             ssh0 = tp
           end if
-          if (ss1 < DONE) then
-            ss1 = DZERO
+          if (snnew < DONE) then
             ssh1 = tp
           end if
         end if
-        ! -- storage coefficients
-        sc1 = SsCapacity(this%isfac, tp, bt, this%dis%area(n), this%ss(n))
-        sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+        ! -- primary storage coefficient
+        sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
         rho1 = sc1*tled
-        rho2 = sc2*tled
         !
         ! -- specific storage
         if (this%iconvert(n) /= 0) then
-          rate = rho1*ss0*ssh0 - rho1*ss1*hnew(n) - rho1*ssh1
+          if (this%iorig_ss == 0) then
+            if (this%iconf_ss == 0) then
+              zold = bt + DHALF * tthk * snold
+              znew = bt + DHALF * tthk * snnew
+              rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
+            else
+              rate = rho1 * (ssh0 - ssh1)
+            end if
+          else
+            rate = rho1 * snold * hold(n) - rho1 * snnew * hnew(n)
+          end if
         else
-          rate = rho1*hold(n) - rho1*hnew(n)
+          rate = rho1 * hold(n) - rho1 * hnew(n)
         end if
+        !
+        ! -- save rate
         this%strgss(n) = rate
         !
         ! -- add storage term to flowja
@@ -557,7 +597,13 @@ contains
         ! -- specific yield
         rate = DZERO
         if (this%iconvert(n) /= 0) then
-          rate = rho2*tthk*snold - rho2*tthk*snnew
+          !
+          ! -- secondary storage coefficient
+          sc2 = SyCapacity(this%dis%area(n), this%sy(n))
+          rho2 = sc2 * tled
+          !
+          ! -- contribution from specific yield
+          rate = rho2 * tthk * snold - rho2 * tthk * snnew
         end if
         this%strgsy(n) = rate
         !
@@ -679,10 +725,11 @@ contains
     end if
     !
     ! -- Deallocate scalars
-    call mem_deallocate(this%isfac)
-    call mem_deallocate(this%isseg)
-    call mem_deallocate(this%satomega)
+    call mem_deallocate(this%istor_coef)
+    call mem_deallocate(this%iconf_ss)
+    call mem_deallocate(this%iorig_ss)
     call mem_deallocate(this%iusesy)
+    call mem_deallocate(this%satomega)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -708,16 +755,18 @@ contains
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
     !
-    ! -- Allocate
+    ! -- allocate scalars
+    call mem_allocate(this%istor_coef, 'ISTOR_COEF', this%memoryPath)
+    call mem_allocate(this%iconf_ss, 'ICONF_SS', this%memoryPath)
+    call mem_allocate(this%iorig_ss, 'IORIG_SS', this%memoryPath)
     call mem_allocate(this%iusesy, 'IUSESY', this%memoryPath)
-    call mem_allocate(this%isfac, 'ISFAC', this%memoryPath)
-    call mem_allocate(this%isseg, 'ISSEG', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     !
-    ! -- Initialize
+    ! -- initialize scalars
+    this%istor_coef = 0
+    this%iconf_ss = 0
+    this%iorig_ss = 0
     this%iusesy = 0
-    this%isfac = 0
-    this%isseg = 0
     this%satomega = DZERO
     !
     ! -- return
@@ -783,12 +832,15 @@ contains
                                    "WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtflow = &
                                    "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*), parameter :: fmtorigss = &
+      "(4X,'ORIGINAL_SPECIFIC_STORAGE OPTION:',/,                              &
+      &1X,'The original specific storage formulation will be used')"
     character(len=*), parameter :: fmtstoc = &
       "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
       &1X,'Read storage coefficient rather than specific storage')"
-    character(len=*), parameter :: fmtstoseg = &
-      "(4X,'OLDSTORAGEFORMULATION OPTION:',/,                                  &
-      &1X,'Specific storage changes only occur above cell top')"
+    character(len=*), parameter :: fmtconfss = &
+      "(4X,'SS_CONFINED_ONLY OPTION:',/,                                       &
+      &1X,'Specific storage changes only occur under confined conditions')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -807,22 +859,25 @@ contains
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
         case ('STORAGECOEFFICIENT')
-          this%isfac = 1
+          this%istor_coef = 1
           write (this%iout, fmtstoc)
-          !
-          ! -- right now these are options that are only available in the
-          !    development version and are not included in the documentation.
-          !    These options are only available when IDEVELOPMODE in
-          !    constants module is set to 1
-        case ('DEV_NO_NEWTON')
-          call this%parser%DevOpt()
-          this%inewton = 0
-          write (this%iout, '(4x,a)') &
-            'NEWTON-RAPHSON method disabled for unconfined cell storage'
+        case ('SS_CONFINED_ONLY')
+          this%iconf_ss = 1
+          this%iorig_ss = 0
+          write (this%iout, fmtconfss)
+        !
+        ! -- right now these are options that are only available in the
+        !    development version and are not included in the documentation.
+        !    These options are only available when IDEVELOPMODE in
+        !    constants module is set to 1
+        case ('DEV_ORIGINAL_SPECIFIC_STORAGE')
+          this%iorig_ss = 1
+          write (this%iout, fmtorigss)
         case ('DEV_OLDSTORAGEFORMULATION')
           call this%parser%DevOpt()
-          this%isseg = 1
-          write (this%iout, fmtstoseg)
+          this%iconf_ss = 1
+          this%iorig_ss = 0
+          write (this%iout, fmtconfss)
         case default
           write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
             trim(keyword)

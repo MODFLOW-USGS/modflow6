@@ -465,20 +465,25 @@ def run_transport_model():
     ats_filerecord = None
     if True:
         dt0 = 100
-        dtmin = 1.e-5
-        dtmax = 10000.
-        dtadj = 2.
-        dtfailadj = 5.
-        atsperiod = [(1, dt0, dtmin, dtmax, dtadj, dtfailadj),]
-        ats = flopy.mf6.ModflowUtlats(sim,
-                                      maxats=len(atsperiod),
-                                      perioddata=atsperiod)
+        dtmin = 1.0e-5
+        dtmax = 10000.0
+        dtadj = 2.0
+        dtfailadj = 5.0
+        atsperiod = [
+            (1, dt0, dtmin, dtmax, dtadj, dtfailadj),
+        ]
+        ats = flopy.mf6.ModflowUtlats(
+            sim, maxats=len(atsperiod), perioddata=atsperiod
+        )
         ats_filerecord = name + ".ats"
 
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 25, 1.0)]
     nper = len(tdis_rc)
     tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc,
+        sim,
+        time_units="DAYS",
+        nper=nper,
+        perioddata=tdis_rc,
         ats_filerecord=ats_filerecord,
     )
 
@@ -670,15 +675,39 @@ def run_transport_model():
     # check simulated concentration in lak 1 and 2 sfr reaches
     res_lak1 = lkaconc[:, 0]
     ans_lak1 = [
-        -1.73249951e-19, -3.18568873e-07, -1.93254232e-06,  5.37979095e-07,
-         5.58611972e-03,  4.53905550e-02,  1.92733156e-01,  5.68672833e-01,
-         2.99824969e+00,  7.10780047e+00,  1.22648840e+01,  1.76704726e+01,
-         2.26942092e+01,  2.70010187e+01,  3.05038540e+01,  3.32193779e+01,
-         3.52479250e+01,  3.67285097e+01,  3.77909702e+01,  3.79877645e+01,
-         3.81699209e+01,  3.83384907e+01,  3.84944857e+01,  3.86388564e+01,
-         3.87724831e+01,  3.88961784e+01,  3.91093083e+01,  3.92927299e+01,
-         3.95693787e+01,  3.99100255e+01,  4.01258276e+01,  4.02675337e+01,
-         4.03501250e+01
+        -1.73249951e-19,
+        -3.18568873e-07,
+        -1.93254232e-06,
+        5.37979095e-07,
+        5.58611972e-03,
+        4.53905550e-02,
+        1.92733156e-01,
+        5.68672833e-01,
+        2.99824969e00,
+        7.10780047e00,
+        1.22648840e01,
+        1.76704726e01,
+        2.26942092e01,
+        2.70010187e01,
+        3.05038540e01,
+        3.32193779e01,
+        3.52479250e01,
+        3.67285097e01,
+        3.77909702e01,
+        3.79877645e01,
+        3.81699209e01,
+        3.83384907e01,
+        3.84944857e01,
+        3.86388564e01,
+        3.87724831e01,
+        3.88961784e01,
+        3.91093083e01,
+        3.92927299e01,
+        3.95693787e01,
+        3.99100255e01,
+        4.01258276e01,
+        4.02675337e01,
+        4.03501250e01,
     ]
     ans_lak1 = np.array(ans_lak1)
     d = res_lak1 - ans_lak1
@@ -687,15 +716,39 @@ def run_transport_model():
 
     res_sfr3 = sfaconc[:, 30]
     ans_sfr3 = [
-       -7.67944653e-23, -1.36626135e-08, -9.22237557e-08,  4.99905352e-08,
-        3.99099797e-04,  3.35353676e-03,  1.47391122e-02,  4.50924724e-02,
-        2.78746896e-01,  7.45757915e-01,  1.46650909e+00,  2.44405848e+00,
-        3.67524186e+00,  5.15790366e+00,  6.87288671e+00,  8.78052541e+00,
-        1.08386493e+01,  1.30048172e+01,  1.52293421e+01,  1.56761479e+01,
-        1.61242587e+01,  1.65730359e+01,  1.70216907e+01,  1.74706790e+01,
-        1.79202485e+01,  1.83702377e+01,  1.92703764e+01,  2.01670548e+01,
-        2.19177092e+01,  2.50962473e+01,  2.78395994e+01,  3.00921256e+01,
-        3.15755870e+01
+        -7.67944653e-23,
+        -1.36626135e-08,
+        -9.22237557e-08,
+        4.99905352e-08,
+        3.99099797e-04,
+        3.35353676e-03,
+        1.47391122e-02,
+        4.50924724e-02,
+        2.78746896e-01,
+        7.45757915e-01,
+        1.46650909e00,
+        2.44405848e00,
+        3.67524186e00,
+        5.15790366e00,
+        6.87288671e00,
+        8.78052541e00,
+        1.08386493e01,
+        1.30048172e01,
+        1.52293421e01,
+        1.56761479e01,
+        1.61242587e01,
+        1.65730359e01,
+        1.70216907e01,
+        1.74706790e01,
+        1.79202485e01,
+        1.83702377e01,
+        1.92703764e01,
+        2.01670548e01,
+        2.19177092e01,
+        2.50962473e01,
+        2.78395994e01,
+        3.00921256e01,
+        3.15755870e01,
     ]
     ans_sfr3 = np.array(ans_sfr3)
     d = res_sfr3 - ans_sfr3
@@ -704,15 +757,39 @@ def run_transport_model():
 
     res_sfr4 = sfaconc[:, 37]
     ans_sfr4 = [
-       -2.00171747e-20, -1.31881904e-07, -8.75301649e-07,  7.69101706e-07,
-        3.28388144e-03,  2.67384200e-02,  1.13765608e-01,  3.36399332e-01,
-        1.79195755e+00,  4.28594083e+00,  7.47548917e+00,  1.09172977e+01,
-        1.42591448e+01,  1.73135656e+01,  2.00235978e+01,  2.23809139e+01,
-        2.44226417e+01,  2.62073204e+01,  2.77851731e+01,  2.80928500e+01,
-        2.83929590e+01,  2.86858017e+01,  2.89715918e+01,  2.92510600e+01,
-        2.95248063e+01,  2.97932113e+01,  3.03110243e+01,  3.08107687e+01,
-        3.17411221e+01,  3.33403357e+01,  3.46770708e+01,  3.57548963e+01,
-        3.64587547e+01
+        -2.00171747e-20,
+        -1.31881904e-07,
+        -8.75301649e-07,
+        7.69101706e-07,
+        3.28388144e-03,
+        2.67384200e-02,
+        1.13765608e-01,
+        3.36399332e-01,
+        1.79195755e00,
+        4.28594083e00,
+        7.47548917e00,
+        1.09172977e01,
+        1.42591448e01,
+        1.73135656e01,
+        2.00235978e01,
+        2.23809139e01,
+        2.44226417e01,
+        2.62073204e01,
+        2.77851731e01,
+        2.80928500e01,
+        2.83929590e01,
+        2.86858017e01,
+        2.89715918e01,
+        2.92510600e01,
+        2.95248063e01,
+        2.97932113e01,
+        3.03110243e01,
+        3.08107687e01,
+        3.17411221e01,
+        3.33403357e01,
+        3.46770708e01,
+        3.57548963e01,
+        3.64587547e01,
     ]
     ans_sfr4 = np.array(ans_sfr4)
     d = res_sfr4 - ans_sfr4
@@ -733,18 +810,20 @@ def run_transport_model():
 
     # check simulation list file for ats information
     fname = os.path.join(wst, "mfsim.lst")
-    with open(fname, 'r') as f:
+    with open(fname, "r") as f:
         lines = f.readlines()
 
     txtlist = [
-        ('Failed solution for step 19 and period 2 will be retried using '
-         'time step of    80.00000'),
-        'ATS IS OVERRIDING TIME STEPPING FOR THIS PERIOD',
-        'INITIAL TIME STEP SIZE                 (DT0) =    100.0000',
-        'MINIMUM TIME STEP SIZE               (DTMIN) =   0.1000000E-04',
-        'MAXIMUM TIME STEP SIZE               (DTMAX) =    10000.00',
-        'MULTIPLIER/DIVIDER FOR TIME STEP     (DTADJ) =    2.000000',
-        'DIVIDER FOR FAILED TIME STEP     (DTFAILADJ) =    5.000000'
+        (
+            "Failed solution for step 19 and period 2 will be retried using "
+            "time step of    80.00000"
+        ),
+        "ATS IS OVERRIDING TIME STEPPING FOR THIS PERIOD",
+        "INITIAL TIME STEP SIZE                 (DT0) =    100.0000",
+        "MINIMUM TIME STEP SIZE               (DTMIN) =   0.1000000E-04",
+        "MAXIMUM TIME STEP SIZE               (DTMAX) =    10000.00",
+        "MULTIPLIER/DIVIDER FOR TIME STEP     (DTADJ) =    2.000000",
+        "DIVIDER FOR FAILED TIME STEP     (DTFAILADJ) =    5.000000",
     ]
     all_found = True
     for stxt in txtlist:
@@ -755,11 +834,13 @@ def run_transport_model():
                 found = True
                 break
         if not found:
-            msg += ' -- NOT FOUND!'
+            msg += " -- NOT FOUND!"
             all_found = False
-            print('text not found in mfsim.lst: {}'.format(stxt))
+            print("text not found in mfsim.lst: {}".format(stxt))
         print(msg)
-    assert all_found, 'One or more required text strings not found in mfsim.lst'
+    assert (
+        all_found
+    ), "One or more required text strings not found in mfsim.lst"
 
     return
 

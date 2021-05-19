@@ -46,6 +46,7 @@ class Simulation(object):
         require_failure=None,
         bmifunc=None,
         mf6_regression=False,
+        make_comparison=True,
     ):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
@@ -90,6 +91,7 @@ class Simulation(object):
         self.coutp = None
         self.bmifunc = bmifunc
         self.mf6_regression = mf6_regression
+        self.make_comparison = make_comparison
         self.action = None
 
         # set htol for comparisons
@@ -321,11 +323,15 @@ class Simulation(object):
 
         """
         self.success = True
+
+        # evaluate if comparison should be made
+        if not self.make_comparison:
+            return
+
         msgall = ""
         msg = sfmt.format("Comparison test", self.name)
         print(msg)
 
-        success_tst = False
         if self.action is not None:
             cpth = os.path.join(self.simpath, self.action)
             files_cmp = None
@@ -692,23 +698,22 @@ class Simulation(object):
                     vmin = self.rclose
                     if vmin < 1e-6:
                         vmin = 1e-6
+                    vmin_tol = 5.0 * vmin
                     idx = (abs(v0) > vmin) & (abs(v1) > vmin)
-                    percent_diff = np.zeros(v0.shape, dtype=v0.dtype)
-                    percent_diff[idx] = (
-                        100.0 * abs(v0[idx] - v1[idx]) / abs(v0[idx])
-                    )
-                    percent_diffmax = percent_diff.max()
-                    indices = np.where(percent_diff == percent_diffmax)[0]
-                    if percent_diffmax > self.pdtol:
+                    diff = np.zeros(v0.shape, dtype=v0.dtype)
+                    diff[idx] = abs(v0[idx] - v1[idx])
+                    diffmax = diff.max()
+                    indices = np.where(diff == diffmax)[0]
+                    if diffmax > vmin_tol:
                         success_tst = False
                         msg = (
                             "{} - ".format(os.path.basename(fpth0))
                             + "{:16s} ".format(key)
-                            + "difference ({:10.4g}) ".format(percent_diffmax)
+                            + "difference ({:10.4g}) ".format(diffmax)
                             + "> {:10.4g} ".format(self.pdtol)
                             + "at {} nodes ".format(indices.size)
                             + " [first location ({})] ".format(indices[0] + 1)
-                            + "at time {} maximum percent ".format(t)
+                            + "at time {} ".format(t)
                         )
                         fcmp.write("{}\n".format(msg))
                         if self.cmp_verbose:

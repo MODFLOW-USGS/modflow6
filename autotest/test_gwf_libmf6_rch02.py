@@ -7,7 +7,7 @@ simulated head in the non-bmi simulation.
 
 import os
 import numpy as np
-from xmipy import XmiWrapper
+from modflowapi import ModflowApi
 
 try:
     import pymake
@@ -190,14 +190,14 @@ def build_models():
 
 def run_perturbation(mf6, max_iter, recharge, tag, rch):
 
-    mf6.prepare_solve(1)
+    mf6.prepare_solve()
     kiter = 0
     while kiter < max_iter:
         # update recharge
         recharge[:, 0] = rch * area
         mf6.set_value(tag, recharge)
         # solve with updated well rate
-        has_converged = mf6.solve(1)
+        has_converged = mf6.solve()
         kiter += 1
         if has_converged:
             break
@@ -217,9 +217,8 @@ def bmifunc(exe, idx, model_ws=None):
     fpth = os.path.join("..", "{}.head.obs.csv".format(ex[idx]))
     hobs = np.genfromtxt(fpth, delimiter=",", names=True)["H1_6_6"]
 
-    mf6_config_file = os.path.join(model_ws, "mfsim.nam")
     try:
-        mf6 = XmiWrapper(exe)
+        mf6 = ModflowApi(exe)
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
@@ -227,7 +226,7 @@ def bmifunc(exe, idx, model_ws=None):
 
     # initialize the model
     try:
-        mf6.initialize(mf6_config_file)
+        mf6.initialize()
     except:
         return bmi_return(success, model_ws)
 
@@ -309,7 +308,7 @@ def bmifunc(exe, idx, model_ws=None):
             return bmi_return(success, model_ws)
 
         # finalize time step
-        mf6.finalize_solve(1)
+        mf6.finalize_solve()
 
         # finalize time step and update time
         mf6.finalize_time_step()
