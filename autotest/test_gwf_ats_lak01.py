@@ -69,26 +69,30 @@ def get_model(idx, dir):
     )
 
     # set dt0, dtmin, dtmax, dtadj, dtfailadj
-    dt0 = 200.
+    dt0 = 200.0
     dtmin = 1.001e-5
-    dtmax = 10.
+    dtmax = 10.0
     dtadj = 2.0
-    dtfailadj = 5.
+    dtfailadj = 5.0
     ats_filerecord = None
     if True:
-        atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj),
-                     (7, dt0, dtmin, dtmax, dtadj, dtfailadj)]
-        ats = flopy.mf6.ModflowUtlats(sim,
-                                      maxats=len(atsperiod),
-                                      perioddata=atsperiod)
+        atsperiod = [
+            (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+            (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
+        ]
+        ats = flopy.mf6.ModflowUtlats(
+            sim, maxats=len(atsperiod), perioddata=atsperiod
+        )
         ats_filerecord = name + ".ats"
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim,
-                                 ats_filerecord=ats_filerecord,
-                                 time_units='DAYS',
-                                 nper=nper,
-                                 perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim,
+        ats_filerecord=ats_filerecord,
+        time_units="DAYS",
+        nper=nper,
+        perioddata=tdis_rc,
+    )
 
     # create gwf model
     gwfname = name
@@ -376,17 +380,59 @@ def eval_results(sim):
     head = hobj.get_alldata()
 
     stage_answer = [
-         0.18656752, 0.26698475, 0.41029603, 0.5401282 , 0.65826109, 0.76623049,
-         0.86559848, 0.9575622 , 1.03621155, 1.10294338, 1.16476142, 1.22239145,
-         1.27639471, 1.32723404, 1.37526871, 1.42080773, 1.4641106 , 1.50539963,
-         1.54487098, 1.58268724, 1.61899406, 1.65392046, 1.68758034, 1.72097227,
-         1.75402292, 1.78639623, 1.81810513, 1.84917469, 1.87963534, 1.9095193 ,
-         1.93885876, 1.96768493, 1.99602767, 2.02050604, 2.04378479, 2.06646125,
-         2.08860587, 2.11027176, 2.13150123, 2.15232931, 2.17278583, 2.19289665,
-         2.21268448, 2.23216952, 2.25136988, 2.27030183, 2.28898012, 2.30741817,
-         2.325628  , 2.34362223, 2.36140993
+        0.18656752,
+        0.26698475,
+        0.41029603,
+        0.5401282,
+        0.65826109,
+        0.76623049,
+        0.86559848,
+        0.9575622,
+        1.03621155,
+        1.10294338,
+        1.16476142,
+        1.22239145,
+        1.27639471,
+        1.32723404,
+        1.37526871,
+        1.42080773,
+        1.4641106,
+        1.50539963,
+        1.54487098,
+        1.58268724,
+        1.61899406,
+        1.65392046,
+        1.68758034,
+        1.72097227,
+        1.75402292,
+        1.78639623,
+        1.81810513,
+        1.84917469,
+        1.87963534,
+        1.9095193,
+        1.93885876,
+        1.96768493,
+        1.99602767,
+        2.02050604,
+        2.04378479,
+        2.06646125,
+        2.08860587,
+        2.11027176,
+        2.13150123,
+        2.15232931,
+        2.17278583,
+        2.19289665,
+        2.21268448,
+        2.23216952,
+        2.25136988,
+        2.27030183,
+        2.28898012,
+        2.30741817,
+        2.325628,
+        2.34362223,
+        2.36140993,
     ]
-    errmsg = 'lake stage does not match known answer'
+    errmsg = "lake stage does not match known answer"
     assert np.allclose(stage_answer, stage.flatten()), errmsg
 
     if False:

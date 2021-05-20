@@ -32,14 +32,14 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
 nlay, nrow, ncol = 5, 1, 1
-botm = [80., 60., 40., 20., 0.]
+botm = [80.0, 60.0, 40.0, 20.0, 0.0]
 
 # set dt0, dtmin, dtmax, dtadj, dtfailadj
 dt0 = 1.0
-dtmin = 1.e-5
-dtmax = 2.
-dtadj = 2.
-dtfailadj = 5.
+dtmin = 1.0e-5
+dtmax = 2.0
+dtadj = 2.0
+dtfailadj = 5.0
 
 
 def build_models():
@@ -51,10 +51,10 @@ def build_models():
     delr = 1.0
     delc = 1.0
     top = 100.0
-    strt = 90.
+    strt = 90.0
     hk = 2.0
     laytyp = 1
-    ss = 0.
+    ss = 0.0
     sy = 0.1
 
     tdis_rc = []
@@ -70,31 +70,32 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
-
         # create tdis package
         ats_filerecord = None
         if True:
             atsperiod = [
                 (i, dt0, dtmin, dtmax, dtadj, dtfailadj) for i in range(nper)
-                         ]
-            ats = flopy.mf6.ModflowUtlats(sim,
-                                          maxats=len(atsperiod),
-                                          perioddata=atsperiod)
+            ]
+            ats = flopy.mf6.ModflowUtlats(
+                sim, maxats=len(atsperiod), perioddata=atsperiod
+            )
             ats_filerecord = name + ".ats"
 
-        tdis = flopy.mf6.ModflowTdis(sim,
-                                     ats_filerecord=ats_filerecord,
-                                     time_units='DAYS',
-                                     nper=nper,
-                                     perioddata=tdis_rc)
+        tdis = flopy.mf6.ModflowTdis(
+            sim,
+            ats_filerecord=ats_filerecord,
+            time_units="DAYS",
+            nper=nper,
+            perioddata=tdis_rc,
+        )
 
         # create gwf model
         gwfname = name
-#        newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+        #        newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
-#            newtonoptions=newtonoptions,
+            #            newtonoptions=newtonoptions,
         )
 
         # create iterative model solution and register the gwf model with it
@@ -139,10 +140,11 @@ def build_models():
         npf = flopy.mf6.ModflowGwfnpf(
             gwf,
             save_flows=False,
-            cvoptions='variablecv dewatered',
-            icelltype=laytyp, k=hk,
+            cvoptions="variablecv dewatered",
+            icelltype=laytyp,
+            k=hk,
             rewet_record=rewet_record,
-            wetdry=wetdry
+            wetdry=wetdry,
         )
         # storage
         sto = flopy.mf6.ModflowGwfsto(
@@ -156,10 +158,10 @@ def build_models():
         )
 
         # ghb files
-        cond = hk * 1. / 20.
+        cond = hk * 1.0 / 20.0
         ghbspdict = {
-            0: [[(nlay - 1, 0, 0), 30., cond]],
-            1: [[(nlay - 1, 0, 0), 100., cond]],
+            0: [[(nlay - 1, 0, 0), 30.0, cond]],
+            1: [[(nlay - 1, 0, 0), 100.0, cond]],
         }
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
@@ -182,8 +184,8 @@ def build_models():
         )
 
         obs_lst = []
-        obs_lst.append(['obs1', "head", (0, 0, 0)])
-        obs_lst.append(['obs2', "head", (4, 0, 0)])
+        obs_lst.append(["obs1", "head", (0, 0, 0)])
+        obs_lst.append(["obs2", "head", (4, 0, 0)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -203,9 +205,7 @@ def make_plot(sim):
 
     fname = gwfname + ".hds"
     fname = os.path.join(ws, fname)
-    hobj = flopy.utils.HeadFile(
-        fname, precision="double"
-    )
+    hobj = flopy.utils.HeadFile(fname, precision="double")
     head = hobj.get_alldata()[:, :, 0, 0]
     times = hobj.times
     hobj.file.close()
@@ -218,9 +218,17 @@ def make_plot(sim):
     for ilay in range(5):
         h = head[:, ilay]
         h = np.ma.masked_where(h < 0, h)
-        botline, = plt.plot([times.min(), times.max()], [botm[ilay], botm[ilay]])
-        plt.plot(times, h, marker='o', ls='-', color=botline.get_color(),
-                 label="Layer {}".format(ilay + 1))
+        (botline,) = plt.plot(
+            [times.min(), times.max()], [botm[ilay], botm[ilay]]
+        )
+        plt.plot(
+            times,
+            h,
+            marker="o",
+            ls="-",
+            color=botline.get_color(),
+            label="Layer {}".format(ilay + 1),
+        )
     plt.legend()
     plt.show()
     return
@@ -240,10 +248,10 @@ def eval_flow(sim):
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     inc = mflist.get_incremental()
-    msg = 'budget times not monotically increasing {}.'.format(inc["totim"])
+    msg = "budget times not monotically increasing {}.".format(inc["totim"])
     assert np.all(np.diff(inc["totim"]) > dtmin), msg
     v = inc["totim"][-1]
-    assert v == 20., 'Last time should be 20.  Found {}'.format(v)
+    assert v == 20.0, "Last time should be 20.  Found {}".format(v)
 
     # ensure obs results changing monotonically
     fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
@@ -251,8 +259,10 @@ def eval_flow(sim):
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-    #ensure layer 1 is dry with the DRY value
-    assert np.max(tc["OBS1"][:201]) == -1.e30, 'layer 1 should be dry for this period'
+    # ensure layer 1 is dry with the DRY value
+    assert (
+        np.max(tc["OBS1"][:201]) == -1.0e30
+    ), "layer 1 should be dry for this period"
 
     return
 

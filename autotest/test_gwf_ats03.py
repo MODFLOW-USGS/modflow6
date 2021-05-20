@@ -39,9 +39,10 @@ for s in ex:
 ddir = "data"
 nlay, nrow, ncol = 1, 1, 10
 
+
 def build_models():
 
-    perlen = [100.]
+    perlen = [100.0]
     nper = len(perlen)
     nstp = [1]
     tsmult = nper * [1.0]
@@ -49,10 +50,10 @@ def build_models():
     delc = 1.0
     top = 100.0
     botm = [0.0]
-    strt = 100.
+    strt = 100.0
     hk = 1.0
     laytyp = 1
-    ss = 0.
+    ss = 0.0
     sy = 0.1
 
     tdis_rc = []
@@ -68,27 +69,28 @@ def build_models():
             sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
         )
 
-
         # create tdis package
         # set dt0, dtmin, dtmax, dtadj, dtfailadj
         dt0 = 100.0
         dtmin = 1.00e-5
-        dtmax = 100.
+        dtmax = 100.0
         dtadj = 2.0
-        dtfailadj = 5.
+        dtfailadj = 5.0
         ats_filerecord = None
         if True:
             atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj)]
-            ats = flopy.mf6.ModflowUtlats(sim,
-                                          maxats=len(atsperiod),
-                                          perioddata=atsperiod)
+            ats = flopy.mf6.ModflowUtlats(
+                sim, maxats=len(atsperiod), perioddata=atsperiod
+            )
             ats_filerecord = name + ".ats"
 
-        tdis = flopy.mf6.ModflowTdis(sim,
-                                     ats_filerecord=ats_filerecord,
-                                     time_units='DAYS',
-                                     nper=nper,
-                                     perioddata=tdis_rc)
+        tdis = flopy.mf6.ModflowTdis(
+            sim,
+            ats_filerecord=ats_filerecord,
+            time_units="DAYS",
+            nper=nper,
+            perioddata=tdis_rc,
+        )
 
         # create gwf model
         gwfname = name
@@ -96,7 +98,7 @@ def build_models():
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
-#            newtonoptions=newtonoptions,
+            #            newtonoptions=newtonoptions,
         )
 
         # create iterative model solution and register the gwf model with it
@@ -152,7 +154,7 @@ def build_models():
 
         # wel files
         welspdict = {
-            0: [[(0, 0, 0), -1.]],
+            0: [[(0, 0, 0), -1.0]],
         }
         wel = flopy.mf6.ModflowGwfwel(
             gwf,
@@ -164,7 +166,7 @@ def build_models():
 
         # chd files
         chdspdict = {
-            0: [[(0, 0, ncol-1), "tshead"]],
+            0: [[(0, 0, ncol - 1), "tshead"]],
         }
         chd = flopy.mf6.ModflowGwfchd(
             gwf,
@@ -202,8 +204,8 @@ def build_models():
         )
 
         obs_lst = []
-        obs_lst.append(['obs1', "head", (0, 0, 0)])
-        obs_lst.append(['obs2', "head", (0, 0, ncol-1)])
+        obs_lst.append(["obs1", "head", (0, 0, 0)])
+        obs_lst.append(["obs2", "head", (0, 0, ncol - 1)])
         obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
         obs = flopy.mf6.ModflowUtlobs(
             gwf, pname="head_obs", digits=20, continuous=obs_dict
@@ -228,7 +230,7 @@ def eval_flow(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
     x = np.array(tc["time"])
-    answer = 100. - x * 0.5
+    answer = 100.0 - x * 0.5
     result = np.array(tc["OBS2"])
     msg = "obs2 must drop linearly from 100 down to 50: {}".format(result)
     assert np.allclose(answer, result), msg
