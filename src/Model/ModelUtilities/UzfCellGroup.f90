@@ -2246,6 +2246,7 @@ module UzfCellGroupModule
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: theta_r
+    real(DP) :: theta_s
     real(DP) :: thk
     real(DP) :: hgwf
     real(DP) :: fm
@@ -2262,7 +2263,8 @@ module UzfCellGroupModule
       watercontent = fm / thk
       watercontent = watercontent + theta_r
     else
-      watercontent = DZERO
+      theta_s = this%thts(icell)
+      watercontent = theta_s
     end if
     return
   end function get_wcnew
