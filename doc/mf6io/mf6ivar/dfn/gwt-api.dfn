@@ -1,4 +1,4 @@
-# --------------------- gwf gen options ---------------------
+# --------------------- gwt api options ---------------------
 
 block options
 name boundnames
@@ -7,7 +7,7 @@ shape
 reader urword
 optional true
 longname
-description REPLACE boundnames {'{#1}': 'general boundary'}
+description REPLACE boundnames {'{#1}': 'api boundary'}
 
 block options
 name print_input
@@ -15,7 +15,7 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'general boundary'}
+description REPLACE print_input {'{#1}': 'api boundary'}
 
 block options
 name print_flows
@@ -23,15 +23,15 @@ type keyword
 reader urword
 optional true
 longname print calculated flows to listing file
-description REPLACE print_flows {'{#1}': 'general boundary'}
+description REPLACE print_flows {'{#1}': 'api boundary'}
 
 block options
 name save_flows
 type keyword
 reader urword
 optional true
-longname save GEN flows to budget file
-description REPLACE save_flows {'{#1}': 'general boundary'}
+longname save api flows to budget file
+description REPLACE save_flows {'{#1}': 'api boundary'}
 
 block options
 name obs_filerecord
@@ -74,7 +74,7 @@ tagged false
 reader urword
 optional false
 longname obs6 input filename
-description REPLACE obs6_filename {'{#1}': 'General Boundary'}
+description REPLACE obs6_filename {'{#1}': 'api boundary'}
 
 block options
 name mover
@@ -83,14 +83,14 @@ tagged true
 reader urword
 optional true
 longname
-description REPLACE mover {'{#1}': 'General Boundary'}
+description REPLACE mover {'{#1}': 'api boundary'}
 
-# --------------------- gwf gen dimensions ---------------------
+# --------------------- gwt api dimensions ---------------------
 
 block dimensions
 name maxbound
 type integer
 reader urword
 optional false
-longname maximum number of general boundaries
-description REPLACE maxbound {'{#1}': 'general boundary'}
+longname maximum number of user-defined api boundaries
+description REPLACE maxbound {'{#1}': 'api boundary'}
