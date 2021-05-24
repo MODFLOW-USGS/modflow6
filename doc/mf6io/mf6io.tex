@@ -117,10 +117,12 @@ https://water.usgs.gov/ogw/
 \renewcommand{\reportrefname}{References Cited}
 
 \newcommand{\programname}{MODFLOW 6}
-\newcommand{\mf}{MODFLOW~6~}
-\newcommand{\mfdot }{MODFLOW~6.~}
-\newcommand{\mfcomma }{MODFLOW~6,~}
-\newcommand{\mfpar }{(MODFLOW~6)~}
+
+\def\tsc#1#2{\csdef{#1}{#2\xspace}}
+\tsc{mff}{MODFLOW}
+\tsc{mf}{MODFLOW~6}
+\tsc{mfpar}{(MODFLOW~6)}
+
 \usepackage{placeins}
 \usepackage{float}
 \floatstyle{plain}

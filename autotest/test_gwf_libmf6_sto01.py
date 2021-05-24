@@ -26,7 +26,7 @@ except:
     raise Exception(msg)
 
 from framework import testing_framework
-from simulation import Simulation, bmi_return
+from simulation import Simulation, api_return
 
 ex = ["libgwf_sto01"]
 exdirs = []
@@ -177,7 +177,7 @@ def build_models():
     return
 
 
-def bmifunc(exe, idx, model_ws=None):
+def api_func(exe, idx, model_ws=None):
     success = False
 
     name = ex[idx].upper()
@@ -189,13 +189,13 @@ def bmifunc(exe, idx, model_ws=None):
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # initialize the model
     try:
         mf6.initialize()
     except:
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # time loop
     current_time = mf6.get_current_time()
@@ -216,7 +216,7 @@ def bmifunc(exe, idx, model_ws=None):
         try:
             mf6.update()
         except:
-            return bmi_return(success, model_ws)
+            return api_return(success, model_ws)
 
         # update time
         current_time = mf6.get_current_time()
@@ -229,10 +229,10 @@ def bmifunc(exe, idx, model_ws=None):
         mf6.finalize()
         success = True
     except:
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # cleanup and return
-    return bmi_return(success, model_ws)
+    return api_return(success, model_ws)
 
 
 # - No need to change any code below
@@ -245,7 +245,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, idxsim=idx, bmifunc=bmifunc)
+        yield test.run_mf6, Simulation(dir, idxsim=idx, api_func=api_func)
 
     return
 
@@ -259,7 +259,7 @@ def main():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, idxsim=idx, bmifunc=bmifunc)
+        sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 
     return

@@ -1,7 +1,7 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used update to set the river stages to
-the same values as they are in the non-bmi simulation.
+Test the api which is used set hcof and rhs in api package compare to river
+package in the non-api simulation.
 """
 import os
 import numpy as np
@@ -26,7 +26,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation, api_return
 
-ex = ["libgwf_riv01"]
+ex = ["libgwf_riv02"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -77,7 +77,7 @@ riv_cond = 35.0
 riv_packname = "MYRIV"
 
 
-def build_model(ws, name, riv_spd):
+def build_model(ws, name, riv_spd, api=False):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -132,9 +132,12 @@ def build_model(ws, name, riv_spd):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
     # riv package
-    riv = flopy.mf6.ModflowGwfriv(
-        gwf, stress_period_data=riv_spd, pname=riv_packname
-    )
+    if api:
+        flopy.mf6.ModflowGwfapi(gwf, maxbound=ncol - 2, pname=riv_packname)
+    else:
+        riv = flopy.mf6.ModflowGwfriv(
+            gwf, stress_period_data=riv_spd, pname=riv_packname
+        )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -165,8 +168,8 @@ def get_model(idx, dir):
 
     # build comparison model with zeroed values
     ws = os.path.join(dir, "libmf6")
-    rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
-    mc = build_model(ws, name, riv_spd={0: rd_bmi})
+    rd_api = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
+    mc = build_model(ws, name, riv_spd={0: rd_api}, api=True)
 
     return sim, mc
 
@@ -178,6 +181,17 @@ def build_models():
         if mc is not None:
             mc.write_simulation()
     return
+
+
+def api_riv_pak(stage, h, hcof, rhs):
+    for idx, icol in enumerate(range(1, ncol - 1)):
+        if h[icol] > riv_bot:
+            hcof[idx] = -riv_cond
+            rhs[idx] = -riv_cond * stage
+        else:
+            hcof[idx] = 0.0
+            rhs[idx] = -riv_cond * (stage - riv_bot)
+    return hcof, rhs
 
 
 def api_func(exe, idx, model_ws=None):
@@ -204,9 +218,27 @@ def api_func(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get copy of (multi-dim) array with river parameters
-    riv_tag = mf6.get_var_address("BOUND", name, riv_packname)
-    new_spd = mf6.get_value(riv_tag)
+    # maximum outer iterations
+    max_iter = mf6.get_value(mf6.get_var_address("MXITER", "SLN_1"))
+
+    # get pointer to simulated heads
+    head_tag = mf6.get_var_address("X", name.upper())
+    head = mf6.get_value_ptr(head_tag)
+
+    # get pointers to API data
+    nbound_tag = mf6.get_var_address("NBOUND", name.upper(), riv_packname)
+    nbound = mf6.get_value_ptr(nbound_tag)
+    nodelist_tag = mf6.get_var_address("NODELIST", name.upper(), riv_packname)
+    nodelist = mf6.get_value_ptr(nodelist_tag)
+    hcof_tag = mf6.get_var_address("HCOF", name.upper(), riv_packname)
+    hcof = mf6.get_value_ptr(hcof_tag)
+    rhs_tag = mf6.get_var_address("RHS", name.upper(), riv_packname)
+    rhs = mf6.get_value_ptr(rhs_tag)
+
+    # set nbound and nodelist
+    nbound[0] = ncol - 2
+    for idx, icol in enumerate(range(1, ncol - 1)):
+        nodelist[idx] = icol + 1
 
     # model time loop
     idx = 0
@@ -218,36 +250,32 @@ def api_func(exe, idx, model_ws=None):
         # prepare... and reads the RIV data from file!
         mf6.prepare_time_step(dt)
 
-        # set the RIV data through the BMI
         if current_time < 5:
-            # set columns of BOUND data (we're setting entire columns of the
-            # 2D array for convenience, setting only the value for the active
-            # stress period should work too)
-            new_spd[:] = [riv_stage, riv_cond, riv_bot]
-            mf6.set_value(riv_tag, new_spd)
+            stage = riv_stage
         else:
-            # change only stage data
-            new_spd[:] = [riv_stage2, riv_cond, riv_bot]
-            mf6.set_value(riv_tag, new_spd)
+            stage = riv_stage2
 
+        # convergence loop
         kiter = 0
         mf6.prepare_solve()
 
-        while kiter < nouter:
+        while kiter < max_iter:
+            # update api package
+            hcof[:], rhs[:] = api_riv_pak(
+                stage,
+                head,
+                hcof,
+                rhs,
+            )
+
+            # solve with updated api data
             has_converged = mf6.solve()
             kiter += 1
 
             if has_converged:
-                msg = (
-                    "Component {}".format(1)
-                    + " converged in {}".format(kiter)
-                    + " outer iterations"
-                )
+                msg = "Converged in {}".format(kiter) + " outer iterations"
                 print(msg)
                 break
-
-        if not has_converged:
-            return api_return(success, model_ws)
 
         # finalize time step
         mf6.finalize_solve()
@@ -256,8 +284,10 @@ def api_func(exe, idx, model_ws=None):
         mf6.finalize_time_step()
         current_time = mf6.get_current_time()
 
-        # increment counter
-        idx += 1
+        # terminate if model did not converge
+        if not has_converged:
+            print("model did not converge")
+            break
 
     # cleanup
     try:

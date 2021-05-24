@@ -44,7 +44,7 @@ class Simulation(object):
         idxsim=None,
         cmp_verbose=True,
         require_failure=None,
-        bmifunc=None,
+        api_func=None,
         mf6_regression=False,
         make_comparison=True,
     ):
@@ -89,7 +89,7 @@ class Simulation(object):
         self.inpt = None
         self.outp = None
         self.coutp = None
-        self.bmifunc = bmifunc
+        self.api_func = api_func
         self.mf6_regression = mf6_regression
         self.make_comparison = make_comparison
         self.action = None
@@ -287,7 +287,7 @@ class Simulation(object):
                         nam = os.path.basename(npth)
                     self.nam_cmp = nam
                     try:
-                        if self.bmifunc is None:
+                        if self.api_func is None:
                             success_cmp, buff = flopy.run_model(
                                 exe,
                                 nam,
@@ -296,7 +296,7 @@ class Simulation(object):
                                 report=True,
                             )
                         else:
-                            success_cmp, buff = self.bmifunc(
+                            success_cmp, buff = self.api_func(
                                 exe, self.idxsim, model_ws=cpth
                             )
                         msg = sfmt.format(
@@ -735,7 +735,7 @@ class Simulation(object):
         return success, msgall
 
 
-def bmi_return(success, model_ws):
+def api_return(success, model_ws):
     """
     parse libmf6.so and libmf6.dll stdout file
     """

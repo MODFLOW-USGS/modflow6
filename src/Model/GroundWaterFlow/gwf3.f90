@@ -94,7 +94,7 @@ module GwfModule
   data cunit/   'IC6  ', 'DIS6 ', 'DISU6', 'OC6  ', 'NPF6 ', & !  5
                 'STO6 ', 'HFB6 ', 'WEL6 ', 'DRN6 ', 'RIV6 ', & ! 10
                 'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
-                '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
+                'API6 ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
                 'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', '     ', & ! 30
                 70 * '     '/
@@ -1452,6 +1452,7 @@ module GwfModule
     use SfrModule, only: sfr_create
     use LakModule, only: lak_create
     use UzfModule, only: uzf_create
+    use ApiModule, only: api_create
     ! -- dummy
     class(GwfModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1491,6 +1492,8 @@ module GwfModule
       call lak_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case('UZF6')
       call uzf_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+    case('API6')
+      call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)
