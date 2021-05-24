@@ -1,7 +1,7 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used update to set the river stages to
-the same values as they are in the non-bmi simulation.
+Test the api which is used set hcof and rhs in api package compare to river
+package in the non-api simulation.
 """
 import os
 import numpy as np
@@ -24,7 +24,7 @@ except:
     raise Exception(msg)
 
 from framework import testing_framework
-from simulation import Simulation, bmi_return
+from simulation import Simulation, api_return
 
 ex = ["libgwf_riv02"]
 exdirs = []
@@ -133,9 +133,7 @@ def build_model(ws, name, riv_spd, api=False):
 
     # riv package
     if api:
-        flopy.mf6.ModflowGwfapi(
-            gwf, maxbound=ncol-2, pname=riv_packname
-        )
+        flopy.mf6.ModflowGwfapi(gwf, maxbound=ncol - 2, pname=riv_packname)
     else:
         riv = flopy.mf6.ModflowGwfriv(
             gwf, stress_period_data=riv_spd, pname=riv_packname
@@ -170,8 +168,8 @@ def get_model(idx, dir):
 
     # build comparison model with zeroed values
     ws = os.path.join(dir, "libmf6")
-    rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
-    mc = build_model(ws, name, riv_spd={0: rd_bmi}, api=True)
+    rd_api = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
+    mc = build_model(ws, name, riv_spd={0: rd_api}, api=True)
 
     return sim, mc
 
@@ -184,18 +182,19 @@ def build_models():
             mc.write_simulation()
     return
 
+
 def api_riv_pak(stage, h, hcof, rhs):
-    for idx, icol in enumerate(range(1, ncol-1)):
+    for idx, icol in enumerate(range(1, ncol - 1)):
         if h[icol] > riv_bot:
             hcof[idx] = -riv_cond
             rhs[idx] = -riv_cond * stage
         else:
-            hcof[idx] = 0.
+            hcof[idx] = 0.0
             rhs[idx] = -riv_cond * (stage - riv_bot)
     return hcof, rhs
 
 
-def bmifunc(exe, idx, model_ws=None):
+def api_func(exe, idx, model_ws=None):
     success = False
 
     name = ex[idx].upper()
@@ -207,22 +206,20 @@ def bmifunc(exe, idx, model_ws=None):
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # initialize the model
     try:
         mf6.initialize()
     except:
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # time loop
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
     # maximum outer iterations
-    max_iter = mf6.get_value(
-        mf6.get_var_address("MXITER", "SLN_1")
-    )
+    max_iter = mf6.get_value(mf6.get_var_address("MXITER", "SLN_1"))
 
     # get pointer to simulated heads
     head_tag = mf6.get_var_address("X", name.upper())
@@ -240,7 +237,7 @@ def bmifunc(exe, idx, model_ws=None):
 
     # set nbound and nodelist
     nbound[0] = ncol - 2
-    for idx, icol in enumerate(range(1, ncol-1)):
+    for idx, icol in enumerate(range(1, ncol - 1)):
         nodelist[idx] = icol + 1
 
     # model time loop
@@ -276,8 +273,7 @@ def bmifunc(exe, idx, model_ws=None):
             kiter += 1
 
             if has_converged:
-                msg = "Converged in {}".format(
-                          kiter) + " outer iterations"
+                msg = "Converged in {}".format(kiter) + " outer iterations"
                 print(msg)
                 break
 
@@ -298,10 +294,10 @@ def bmifunc(exe, idx, model_ws=None):
         mf6.finalize()
         success = True
     except:
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # cleanup and return
-    return bmi_return(success, model_ws)
+    return api_return(success, model_ws)
 
 
 # - No need to change any code below
@@ -314,7 +310,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, idxsim=idx, bmifunc=bmifunc)
+        yield test.run_mf6, Simulation(dir, idxsim=idx, api_func=api_func)
 
     return
 
@@ -328,7 +324,7 @@ def main():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, idxsim=idx, bmifunc=bmifunc)
+        sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 
     return

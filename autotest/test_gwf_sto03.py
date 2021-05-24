@@ -104,7 +104,7 @@ def build_model(name, ws, newton_bool, offset=0.0):
     if newton_bool:
         linear_acceleration = "BICGSTAB"
         newtonoptions = "UNDER_RELAXATION"
-        gamma = 1.
+        gamma = 1.0
     else:
         linear_acceleration = "CG"
         newtonoptions = None
