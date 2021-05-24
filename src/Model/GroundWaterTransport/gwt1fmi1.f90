@@ -3,6 +3,7 @@ module GwtFmiModule
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT
   use SimModule,              only: store_error, store_error_unit, ustop
+  use SimVariablesModule,     only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use ListModule,             only: ListType
@@ -226,7 +227,6 @@ module GwtFmiModule
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: inmvr
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -735,7 +735,7 @@ module GwtFmiModule
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     character(len=*), parameter :: fmtisvflow =                                &
@@ -953,7 +953,6 @@ module GwtFmiModule
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ncrbud
     integer(I4B) :: nflowpack
     integer(I4B) :: i, ip
@@ -1063,7 +1062,6 @@ module GwtFmiModule
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     logical :: success
     integer(I4B) :: n
     integer(I4B) :: ipos
@@ -1239,7 +1237,6 @@ module GwtFmiModule
     ! -- modules
     use TdisModule, only: kstp, kper
     class(GwtFmiType) :: this
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: nu, nr, i, ilay
     integer(I4B) :: ncpl
     real(DP) :: val

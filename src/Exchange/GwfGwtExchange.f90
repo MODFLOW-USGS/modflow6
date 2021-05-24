@@ -2,6 +2,7 @@ module GwfGwtExchangeModule
   
   use KindModule,              only: DP, I4B
   use ListsModule,             only: basemodellist, baseexchangelist
+  use SimVariablesModule,      only: errmsg
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use GwfModule,               only: GwfModelType
@@ -188,12 +189,20 @@ module GwfGwtExchangeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimModule, only: store_error, ustop
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
+    ! -- formats
+    character(len=*),parameter :: fmtdiserr = &
+      "('GWF and GWT Models do not have the same discretization for exchange&
+      & ',a,'.&
+      &  GWF Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  GWT Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  Ensure discretization packages, including IDOMAIN, are identical.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
@@ -209,6 +218,18 @@ module GwfGwtExchangeModule
     type is (GwtModelType)
       gwtmodel => mb
     end select
+    !
+    ! -- Check to make sure sizes are identical
+    if (gwtmodel%dis%nodes /= gwfmodel%dis%nodes .or.&
+        gwtmodel%dis%nodesuser /= gwfmodel%dis%nodesuser) then
+      write(errmsg, fmtdiserr) trim(this%name), &
+                               gwfmodel%dis%nodesuser, &
+                               gwfmodel%dis%nodes, &
+                               gwtmodel%dis%nodesuser, &
+                               gwtmodel%dis%nodes
+      call store_error(errmsg)
+      call ustop()
+    end if
     !
     ! -- setup pointers to gwf variables allocated in gwf_ar
     gwtmodel%fmi%gwfhead   => gwfmodel%x
