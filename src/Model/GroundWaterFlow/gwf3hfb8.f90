@@ -758,8 +758,10 @@ module GwfHfbModule
     character(len=LINELENGTH) :: errmsg
     logical :: found
     ! -- formats
-    character(len=*), parameter :: fmterr = "(1x, 'Error.  HFB no. ',i0, &
+    character(len=*), parameter :: fmterr = "(1x, 'HFB no. ',i0,               &
       &' is between two unconnected cells: ', a, ' and ', a)"
+    character(len=*), parameter :: fmtverr = "(1x, 'HFB no. ',i0,              &
+      &' is between two cells not horizontally connected: ', a, ' and ', a)"
 ! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb
@@ -767,19 +769,32 @@ module GwfHfbModule
       m = this%nodem(ihfb)
       found = .false.
       do ipos = this%ia(n)+1, this%ia(n+1)-1
-        if(m == this%ja(ipos)) then
+        if (m == this%ja(ipos)) then
           found = .true.
           this%idxloc(ihfb) = ipos
           exit
         endif
       enddo
-      if(.not. found) then
+      !
+      ! -- check to make sure cells are connected
+      if (.not. found) then
         call this%dis%noder_to_string(n, nodenstr)
         call this%dis%noder_to_string(m, nodemstr)
         write(errmsg, fmterr) ihfb, trim(adjustl(nodenstr)),                   &
                                   trim(adjustl(nodemstr))
         call store_error(errmsg)
-      endif
+      else
+        !
+        ! -- check to make sure cells are not vertically connected
+        ipos = this%idxloc(ihfb)
+        if (this%ihc(this%jas(ipos)) == 0) then
+          call this%dis%noder_to_string(n, nodenstr)
+          call this%dis%noder_to_string(m, nodemstr)
+          write(errmsg, fmtverr) ihfb, trim(adjustl(nodenstr)),                &
+                                 trim(adjustl(nodemstr))
+          call store_error(errmsg)
+        end if
+      end if
     enddo
     !
     ! -- Stop if errors detected
