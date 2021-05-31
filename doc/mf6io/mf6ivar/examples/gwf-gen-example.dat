@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  PRINT_INPUT (echo input to listing file)
+  PRINT_FLOWS  (print the flows to the listing file)
+END OPTIONS
+
+# Dimensions block
+BEGIN DIMENSIONS
+  MAXBOUND 15
+END DIMENSIONS
+
+# Stress period block(s) are not specified but
+# provided through the MODFLOW API

@@ -89,7 +89,8 @@ module GwtModule
                 'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
                 'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
-                80 * '     '/
+                'API6 ', '     ', '     ', '     ', '     ', & ! 25
+                75 * '     '/
   
   contains
   
@@ -1097,6 +1098,7 @@ module GwtModule
     use GwtSftModule, only: sft_create
     use GwtMwtModule, only: mwt_create
     use GwtUztModule, only: uzt_create
+    use ApiModule, only: api_create
     ! -- dummy
     class(GwtModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1133,6 +1135,8 @@ module GwtModule
     case('IST6')
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
                       pakname, this%fmi, this%mst)
+    case('API6')
+      call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)
