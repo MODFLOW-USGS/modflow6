@@ -8,6 +8,7 @@ module GwfGwfConnectionModule
   use GwfInterfaceModelModule
   use NumericalModelModule
   use GwfModule, only: GwfModelType
+  use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList
   use GwfNpfModule, only: hcond, vcond
   use ConnectionsModule, only: ConnectionsType
   
@@ -38,11 +39,15 @@ module GwfGwfConnectionModule
     procedure, pass(this) :: exg_cf => gwfgwfcon_cf
     procedure, pass(this) :: exg_fc => gwfgwfcon_fc
     procedure, pass(this) :: exg_da => gwfgwfcon_da
+
+    ! overriding 'protected'
+    procedure, pass(this) :: validateConnection
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
     procedure, pass(this), private :: maskConnections
     procedure, pass(this), private :: syncInterfaceModel
+    procedure, pass(this), private :: validateGwfExchange
     
   end type GwfGwfConnectionType
 
@@ -213,6 +218,11 @@ contains
     class(NumericalModelType), pointer :: model
     type(GridConnectionType), pointer :: gc !< pointer to the grid connection
     
+    ! check if we can construct an interface model
+    ! NB: only makes sense after the models' allocate&read have been
+    ! called, which is why we do it here
+    call this%validateConnection()
+
     gc => this%gridConnection
 
     ! init x and ibound with model data
@@ -341,6 +351,80 @@ contains
       end do
     end do    
   end subroutine gwfgwfcon_fc
+
+  !> @brief Validate this connection
+  !! This is called before proceeding to construct 
+  !! the interface model
+  !<
+  subroutine validateConnection(this)
+    use SimVariablesModule, only: errmsg
+    use SimModule, only: count_errors
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
+    
+    ! base validation (geometry/spatial)
+    call this%SpatialModelConnectionType%validateConnection()
+
+    ! loop over exchanges
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      call this%validateGwfExchange(gwfEx)
+    end do
+
+    ! abort on errors
+    if(count_errors() > 0) then
+      write(errmsg, '(1x,a)') 'Errors occurred while processing exchange'
+      call ustop()
+    end if
+
+  end subroutine validateConnection
+
+  !> @brief Validate the exchange, intercepting those
+  !! cases where two models have to be connected with an interface
+  !! model, where the individual configurations don't allow this
+  !!
+  !! Stops with error message on config mismatch
+  !<
+  subroutine validateGwfExchange(this, exchange)
+    use SimVariablesModule, only: errmsg
+    use SimModule, only: store_error
+    use GwfNpfModule, only: GwfNpfType
+    class(GwfGwfConnectionType) :: this !< this connection
+    class(GwfExchangeType) :: exchange  !< the GWF-GWF exchange to validate
+    ! local
+    class(GwfNpfType), pointer :: npf1, npf2
+
+    ! NPF
+    npf1 => exchange%gwfmodel1%npf
+    npf2 => exchange%gwfmodel2%npf
+    if (npf1%iangle1 /= npf2%iangle1 .or. &
+        npf1%iangle2 /= npf2%iangle2 .or. &
+        npf1%iangle3 /= npf2%iangle3) then
+      write(errmsg, '(1x,a,a,a,a,a)') 'Cannot create interface model between ',  &
+                                      trim(exchange%gwfmodel1%name), ' and ',    &
+                                      trim(exchange%gwfmodel2%name),             &
+                                      ', incompatible NPF config (angle)'
+      call store_error(errmsg)
+    end if
+    if (npf1%ik22 /= npf2%ik22 .or. &
+        npf1%ik33 /= npf2%ik33) then
+      write(errmsg, '(1x,a,a,a,a,a)') 'Cannot create interface model between ',  &
+                                      trim(exchange%gwfmodel1%name), ' and ',    &
+                                      trim(exchange%gwfmodel2%name),             &
+                                      ', incompatible NPF config (k22/k33)'
+      call store_error(errmsg)
+    end if
+    if (npf1%iwetdry /= npf2%iwetdry) then
+      write(errmsg, '(1x,a,a,a,a,a)') 'Cannot create interface model between ',  &
+                                      trim(exchange%gwfmodel1%name), ' and ',    &
+                                      trim(exchange%gwfmodel2%name),             &
+                                      ', incompatible NPF config (wetdry)'
+      call store_error(errmsg)
+    end if
+
+  end subroutine validateGwfExchange
 
   !> @brief Deallocate all resources
   !<

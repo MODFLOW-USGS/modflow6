@@ -6,6 +6,7 @@ module GwfGwfExchangeModule
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                                      TABCENTER, TABLEFT, LENAUXNAME
+  use ListModule,              only: ListType
   use ListsModule,             only: basemodellist
   use DisConnExchangeModule,   only: DisConnExchangeType
   use GwfModule,               only: GwfModelType
@@ -20,7 +21,9 @@ module GwfGwfExchangeModule
   implicit none
 
   private
+  public :: GwfExchangeType
   public :: gwfexchange_create
+  public :: GetGwfExchangeFromList
 
   type, extends(DisConnExchangeType) :: GwfExchangeType
     character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
@@ -2324,6 +2327,38 @@ contains
     !
     return
   end subroutine gwf_gwf_process_obsID
+
+  function CastAsGwfExchangeClass(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(GwfExchangeType), pointer :: res
+    !
+    res => null()
+    if (.not. associated(obj)) return
+    !
+    select type (obj)
+    class is (GwfExchangeType)
+      res => obj
+    end select
+    return
+  end function CastAsGwfExchangeClass
+
+  function GetGwfExchangeFromList(list, idx) result (res)
+    implicit none
+    ! -- dummy
+    type(ListType),            intent(inout) :: list
+    integer(I4B),                   intent(in)    :: idx
+    class(GwfExchangeType), pointer    :: res
+    ! -- local
+    class(*), pointer :: obj
+    !
+    obj => list%GetItem(idx)
+    res => CastAsGwfExchangeClass(obj)
+    !
+    return
+  end function GetGwfExchangeFromList
+
+
 
 end module GwfGwfExchangeModule
 

@@ -57,17 +57,16 @@ module SpatialModelConnectionModule
 
     ! partly overriding NumericalExchangeType:
     procedure, pass(this) :: exg_df => spatialcon_df
-    procedure, pass(this) :: exg_ac => spatialcon_ac  
     procedure, pass(this) :: exg_mc => spatialcon_mc
     procedure, pass(this) :: exg_da => spatialcon_da
 
     procedure, pass(this) :: spatialcon_df 
-    procedure, pass(this) :: spatialcon_ac  
     procedure, pass(this) :: spatialcon_mc
     procedure, pass(this) :: spatialcon_da
 
     ! protected
     procedure, pass(this) :: createCoefficientMatrix
+    procedure, pass(this) :: validateConnection
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -75,7 +74,8 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: findModelNeighbors
     procedure, private, pass(this) :: getNrOfConnections    
     procedure, private, pass(this) :: allocateScalars
-    procedure, private, pass(this) :: allocateArrays
+    procedure, private, pass(this) :: allocateArrays    
+    procedure, private, pass(this) :: validateDisConnExchange
     
   end type SpatialModelConnectionType
 
@@ -145,49 +145,28 @@ contains ! module procedures
     integer(I4B), dimension(:), intent(in) :: jasln !< global JA array
     ! local
     integer(I4B) :: m, n, mglo, nglo, ipos, csrIdx
+    logical(LGP) :: isOwnedConnection
     
     allocate(this%mapIdxToSln(this%nja))
     
-    do n = 1, this%neq
+    do n = 1, this%neq      
+      isOwnedConnection = associated(this%gridConnection%idxToGlobal(n)%model, this%owner)
       do ipos = this%ia(n), this%ia(n+1)-1
         m = this%ja(ipos)        
         nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
-        mglo = this%gridConnection%idxToGlobal(m)%index + this%gridConnection%idxToGlobal(m)%model%moffset 
+        mglo = this%gridConnection%idxToGlobal(m)%index + this%gridConnection%idxToGlobal(m)%model%moffset
         csrIdx = getCSRIndex(nglo, mglo, iasln, jasln)
-        if (csrIdx == -1) then
+        if (csrIdx == -1 .and. isOwnedConnection) then
           ! this should not be possible
           write(*,*) 'Error: cannot find cell connection in global system'
           call ustop()
         end if
         
-        this%mapIdxToSln(ipos) = csrIdx       
+        this%mapIdxToSln(ipos) = csrIdx
       end do
     end do
     
   end subroutine spatialcon_mc
-  
-  !> @brief Add connections to the global system
-  !!
-  !! Note that this runs over all exchanges connecting this model,
-  !! but skipping over the transposed elements: each model has its
-  !< own interface model to take care of this.
-  subroutine spatialcon_ac(this, sparse)
-    use SparseModule, only:sparsematrix    
-    class(SpatialModelConnectionType) :: this   !< this connection
-    type(sparsematrix), intent(inout) :: sparse !< the sparse matrix to add the connections to
-    ! local
-    integer(I4B) :: icell, iglo, jglo
-    type(GlobalCellType), pointer :: ncell, mcell
-        
-    do icell = 1, this%gridConnection%nrOfBoundaryCells
-      ncell => this%gridConnection%boundaryCells(icell)%cell
-      mcell => this%gridConnection%connectedCells(icell)%cell
-      iglo = ncell%index + ncell%model%moffset
-      jglo = mcell%index + mcell%model%moffset
-      call sparse%addconnection(iglo, jglo, 1)
-    end do    
-    
-  end subroutine spatialcon_ac
   
   !> @brief Deallocation
   !<
@@ -349,6 +328,53 @@ contains ! module procedures
     end if
     
   end subroutine createCoefficientMatrix
+
+  !> @brief Validate this connection
+  !<
+  subroutine validateConnection(this)
+    class(SpatialModelConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: iex
+    class(DisConnExchangeType), pointer :: disconnEx
+
+    ! loop over exchanges
+    do iex=1, this%localExchanges%Count()
+      disconnEx => GetDisConnExchangeFromList(this%localExchanges, iex)
+      call this%validateDisConnExchange(disconnEx)
+    end do
+
+  end subroutine validateConnection
+
+  !> @brief Validate the exchange, intercepting those
+  !! cases where two models have to be connected through an interface
+  !! model, where the individual configurations don't allow this
+  !!
+  !! Stops with error message on wrong config.
+  !<
+  subroutine validateDisConnExchange(this, exchange)
+    use SimVariablesModule, only: errmsg
+    use SimModule, only: store_error
+    class(SpatialModelConnectionType) :: this !< this connection
+    class(DisConnExchangeType) :: exchange    !< the discretization connection to validate
+
+    if (exchange%ixt3d > 0) then      
+      ! if XT3D, we need these angles:
+      if (exchange%model1%dis%con%ianglex == 0) then
+        write(errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ',      &
+              trim(exchange%name), ' but the discretization in model ',          &
+              trim(exchange%model1%name), ' has no ANGLDEGX specified'
+        call store_error(errmsg)
+      end if
+      if (exchange%model2%dis%con%ianglex == 0) then
+        write(errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ',      &
+              trim(exchange%name), ' but the discretization in model ',          &
+              trim(exchange%model2%name), ' has no ANGLDEGX specified'
+        call store_error(errmsg)
+      end if
+    end if
+
+  end subroutine validateDisConnExchange
+
 
   !> @brief Cast to SpatialModelConnectionType
   !<
