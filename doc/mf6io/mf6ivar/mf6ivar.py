@@ -662,6 +662,7 @@ if __name__ == '__main__':
                   'gwf-mvr',  # dfn completed  tex updated
                   'gwf-gnc',  # dfn completed  tex updated
                   'gwf-oc',  # dfn completed  tex updated
+                  'gwf-api',
                   'gwt-adv',
                   'gwt-dsp',
                   'gwt-cnc',
@@ -681,6 +682,7 @@ if __name__ == '__main__':
                   'gwt-uzt',
                   'gwt-fmi',
                   'gwt-mvt',
+                  'gwt-api',
                   'utl-lak-tab',  # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',
