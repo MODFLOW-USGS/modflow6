@@ -1,0 +1,32 @@
+name: Pull Request Docs Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    # Standard drop-in approach that should work for most people.
+    - name: Sphinx Build
+      uses: ammaraskar/sphinx-action@0.4
+      with:
+        docs-folder: ".build_rtd_docs/"
+
+    # Great extra actions to compose with:
+    # Create an artifact of the processed files.
+    - uses: actions/upload-artifact@v1
+      with:
+        name: rtd-files-for-${{ github.sha }}
+        path: |
+          .build_rtd_docs/_mf6io/
+          .build_rtd_docs/_mf6src/
+          .build_rtd_docs/_static/
+          .build_rtd_docs/mf6io.rst

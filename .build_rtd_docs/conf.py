@@ -10,52 +10,57 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import sys
 import os
-import shutil
+from subprocess import Popen, PIPE
+
+sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
 
 # -- determine if running on readthedocs ------------------------------------
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
-# -- Copy files from .build_rtd_docs if not on readthedocs ------------------
-if not on_rtd:
-    src_pth = os.path.join("..", ".build_rtd_docs")
+# -- Update the modflow 6 version -------------------------------------------
+print("Update the modflow6 version")
+pth = os.path.join("..", "distribution")
+args = (
+    "python",
+    "make_release.py",
+)
+# run the command
+proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
+stdout, stderr = proc.communicate()
+if stdout:
+    print(stdout.decode("utf-8"))
+if stderr:
+    print("Errors:\n{}".format(stderr.decode("utf-8")))
 
-    # copy directories
-    dirs = (
-        "_mf6io",
-        "_mf6src",
-        "_static",
-    )
-    for on_dir in dirs:
-        src = os.path.join(src_pth, on_dir)
-        dst = os.path.join(".", on_dir)
-        if os.path.exists(dst):
-            print("deleting...{}".format(dst))
-            shutil.rmtree(dst)
-        print("copying {} -> {}".format(src, dst))
-        shutil.copytree(src, dst)
+# -- import version from doc/version.py -------------------------------------
+from version import __version__
 
-    # copy files
-    files = (
-        "mf6io.rst",
-        "index.rst"
-    )
-    for file_name in files:
-        src = os.path.join(src_pth, file_name)
-        dst = os.path.join(".", file_name)
-        if os.path.exists(dst):
-            print("deleting...{}".format(dst))
-            os.remove(dst)
-        print("copying {} -> {}".format(src, dst))
-        shutil.copy(src, dst)
-
-
+# -- build the mf6io markdown files -----------------------------------------
+print("Build the mf6io markdown files")
+pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
+args = (
+    "python",
+    "mf6ivar.py"
+)
+# run the command
+proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
+stdout, stderr = proc.communicate()
+if stdout:
+    print(stdout.decode("utf-8"))
+if stderr:
+    print("Errors:\n{}".format(stderr.decode("utf-8")))
 
 # -- Project information -----------------------------------------------------
 
 project = "MODFLOW 6 Program Documentation"
 copyright = "2020, MODFLOW Development Team"
 author = "MODFLOW Development Team"
+
+# -- Project version ---------------------------------------------------------
+version = __version__
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 
@@ -73,10 +78,15 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
+    # "sphinx.ext.graphviz",
     "IPython.sphinxext.ipython_console_highlighting",  # lowercase didn't work
     "sphinx.ext.autosectionlabel",
+    "nbsphinx",
+    "nbsphinx_link",
     "recommonmark",
     "sphinx_markdown_tables",
+    "breathe",
+    "exhale",
 ]
 
 source_suffix = {
@@ -84,14 +94,51 @@ source_suffix = {
     '.md': 'markdown',
 }
 
-# Settings for GitHub actions integration
-if on_rtd:
-    extensions.append("rtds_action")
-    rtds_action_github_repo = "MODFLOW-USGS/modflow6"
-    rtds_action_path = "."
-    rtds_action_artifact_prefix = "rtd-files-for-"
-    rtds_action_github_token = os.environ.get("GITHUB_TOKEN", None)
+# Breathe Configuration
+breathe_default_project = "mf6src"
 
+breathe_projects = {
+    "mf6src": "./xml/",
+}
+
+# Doxygen string
+doxy_str = (
+    # directories to include in doxygen
+    "INPUT = ",
+    "../srcbmi/ ",
+    "../src/",
+    # add other doxygen comments
+    "STRIP_CODE_COMMENTS = NO",
+    "CLASS_DIAGRAMS = YES",
+    # "HAVE_DOT = YES",
+    # "INCLUDE_GRAPH = YES",
+    # "INCLUDED_BY_GRAPH = YES",
+    # "CALL_GRAPH = YES",
+    # "CALLER_GRAPH = YES",
+    # "GRAPHICAL_HIERARCHY = YES",
+    # "DIRECTORY_GRAPH = YES",
+    "OPTIMIZE_FOR_FORTRAN = YES",
+    "EXTRACT_ALL = YES",
+)
+
+# Setup the exhale extension
+exhale_args = {
+    # These arguments are required
+    "containmentFolder": "./_mf6src",
+    "rootFileName": "mf6src.rst",
+    "rootFileTitle": "MODFLOW 6 Source Code",
+    "doxygenStripFromPath": "..",
+    # Suggested optional arguments
+    "createTreeView": True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # "treeViewIsBootstrap": True,
+    "exhaleExecutesDoxygen": True,
+    # "exhaleUseDoxyfile": True,
+    "exhaleDoxygenStdin": " ".join(doxy_str)
+}
+
+# Tell sphinx what the primary language being documented is.
+primary_domain = 'fortran'
 
 # Tell sphinx what the pygments highlight language should be.
 highlight_language = 'fortran'
@@ -120,14 +167,14 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ['_static']
 
 html_context = {
-    "github_repo": "modflow6",
-    "doc_path": ".doc",
     'css_files': [
         '_static/theme_overrides.css',  # override wide tables in RTD theme
     ],
 }
 
 html_theme_options = {
+    "github_url": "https://github.com/MODFLOW-USGS/modflow6",
+    "use_edit_page_button": False
 }
 
 # If true, SmartyPants will be used to convert quotes and dashes to
