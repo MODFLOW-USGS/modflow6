@@ -389,42 +389,37 @@ module GwtSsmModule
     character(len=LENPACKAGENAME) :: rowlabel  = 'SSM'
     integer(I4B) :: ip
     integer(I4B) :: i
-    real(DP), dimension(:, :), allocatable :: budterm
     real(DP) :: rate
+    real(DP) :: rin
+    real(DP) :: rout
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize 
-    allocate(budterm(2, this%fmi%nflowpack))
-    !
-    ! -- do for each flow package
+    ! -- do for each flow package, unless it is being handled by an advanced
+    !    transport package
     do ip = 1, this%fmi%nflowpack
-      !
-      ! -- Initialize the rate accumulators
-      budterm(1, ip) = DZERO
-      budterm(2, ip) = DZERO
       !
       ! -- cycle if package is being managed as an advanced package
       if (this%fmi%iatp(ip) /= 0) cycle
+      !
+      ! -- Initialize the rate accumulators
+      rin = DZERO
+      rout = DZERO
       !
       ! -- do for each boundary
       do i = 1, this%fmi%gwfpackages(ip)%nbound
         call this%ssm_term(ip, i, rrate=rate)
         if(rate < DZERO) then
-          budterm(2, ip) = budterm(2, ip) - rate
+          rout = rout - rate
         else
-          budterm(1, ip) = budterm(1, ip) + rate
+          rin = rin + rate
         endif
         !
       enddo
       !
+      call model_budget%addentry(rin, rout, delt,                              &
+                                 this%fmi%flowpacknamearray(ip),               &
+                                 isuppress_output, rowlabel=rowlabel)
     enddo
-    !
-    ! -- Add contributions to model budget
-    call model_budget%addentry(budterm, delt, this%fmi%flowpacknamearray,      &
-                               isuppress_output, rowlabel=rowlabel)
-    !
-    ! -- deallocate
-    deallocate(budterm)
     !
     ! -- Return
     return
@@ -886,7 +881,7 @@ module GwtSsmModule
           endif
         enddo
         if (.not. pakfound) then
-          write(errmsg,'(1x, a, a)') 'ERROR.  PACKAGE CANNOT BE FOUND: ',      &
+          write(errmsg,'(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ',      &
                                       trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -903,7 +898,7 @@ module GwtSsmModule
           lauxmixed = .true.
         case default
           write(errmsg,'(1x, a, a)')                                          &
-            'ERROR.  SRCTYPE MUST BE AUX.  FOUND: ', trim(srctype)
+            'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
@@ -953,7 +948,7 @@ module GwtSsmModule
       call ustop()
     end if
     !
-    ! -- terminate if erros
+    ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()

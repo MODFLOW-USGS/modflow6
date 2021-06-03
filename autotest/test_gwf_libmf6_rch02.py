@@ -26,7 +26,7 @@ except:
     raise Exception(msg)
 
 from framework import testing_framework
-from simulation import Simulation, bmi_return
+from simulation import Simulation, api_return
 
 ex = ["libgwf_rch02"]
 exdirs = []
@@ -204,7 +204,7 @@ def run_perturbation(mf6, max_iter, recharge, tag, rch):
     return has_converged
 
 
-def bmifunc(exe, idx, model_ws=None):
+def api_func(exe, idx, model_ws=None):
     print("\nBMI implementation test:")
     success = False
 
@@ -222,13 +222,13 @@ def bmifunc(exe, idx, model_ws=None):
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # initialize the model
     try:
         mf6.initialize()
     except:
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     # time loop
     current_time = mf6.get_current_time()
@@ -268,7 +268,7 @@ def bmifunc(exe, idx, model_ws=None):
                 mf6, max_iter, new_recharge, rch_tag, rch
             )
             if not has_converged:
-                return bmi_return(success, model_ws)
+                return api_return(success, model_ws)
             h0 = head.reshape((nrow, ncol))[5, 5]
             r0 = h0 - htarget
 
@@ -277,7 +277,7 @@ def bmifunc(exe, idx, model_ws=None):
                 mf6, max_iter, new_recharge, rch_tag, rch + drch
             )
             if not has_converged:
-                return bmi_return(success, model_ws)
+                return api_return(success, model_ws)
             h1 = head.reshape((nrow, ncol))[5, 5]
             r1 = h1 - htarget
 
@@ -305,7 +305,7 @@ def bmifunc(exe, idx, model_ws=None):
             mf6, max_iter, new_recharge, rch_tag, rch
         )
         if not has_converged:
-            return bmi_return(success, model_ws)
+            return api_return(success, model_ws)
 
         # finalize time step
         mf6.finalize_solve()
@@ -321,13 +321,13 @@ def bmifunc(exe, idx, model_ws=None):
         mf6.finalize()
         success = True
     except:
-        return bmi_return(success, model_ws)
+        return api_return(success, model_ws)
 
     if model_ws is not None:
         os.chdir(init_wd)
 
     # cleanup and return
-    return bmi_return(success, model_ws)
+    return api_return(success, model_ws)
 
 
 # - No need to change any code below
@@ -340,7 +340,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, idxsim=idx, bmifunc=bmifunc)
+        yield test.run_mf6, Simulation(dir, idxsim=idx, api_func=api_func)
 
     return
 
@@ -354,7 +354,7 @@ def main():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, idxsim=idx, bmifunc=bmifunc)
+        sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 
     return

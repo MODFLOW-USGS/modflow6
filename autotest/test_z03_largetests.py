@@ -18,6 +18,7 @@ except:
     raise Exception(msg)
 
 from simulation import Simulation
+from targets import get_mf6_version
 from common_regression import (
     get_home_dir,
     get_example_basedir,
@@ -113,6 +114,23 @@ def run_mf6(sim):
     sim.compare()
     sim.teardown()
 
+def set_make_comparison(test):
+    compare_tests = {
+        "test1004_mvlake_laksfr_tr": ("6.2.1",),
+        "test1004_mvlake_lak_tr": ("6.2.1",),
+        "test1003_MNW2_Fig28": ("6.2.1",),
+        "test1001_Peterson": ("6.2.1",),
+    }
+    make_comparison = True
+    if test in compare_tests.keys():
+        version = get_mf6_version()
+        print("MODFLOW version='{}'".format(version))
+        version = get_mf6_version(version="mf6-regression")
+        print("MODFLOW regression version='{}'".format(version))
+        if version in compare_tests[test]:
+            make_comparison = False
+    return make_comparison
+
 
 def test_mf6model():
     # determine if largetest directory exists
@@ -126,7 +144,10 @@ def test_mf6model():
     # run the test models
     for on_dir in example_dirs:
         yield run_mf6, Simulation(
-            on_dir, mf6_regression=set_mf6_regression(), cmp_verbose=False
+            on_dir,
+            mf6_regression=set_mf6_regression(),
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(on_dir),
         )
 
     return
@@ -149,7 +170,10 @@ def main():
     # run the test models
     for on_dir in example_dirs:
         sim = Simulation(
-            on_dir, mf6_regression=set_mf6_regression(), cmp_verbose=False
+            on_dir,
+            mf6_regression=set_mf6_regression(),
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(on_dir),
         )
         run_mf6(sim)
 

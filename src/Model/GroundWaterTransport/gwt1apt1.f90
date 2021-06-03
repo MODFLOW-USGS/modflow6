@@ -1,9 +1,9 @@
 ! -- Advanced Package Transport Module
 ! -- This module contains most of the routines for simulating transport
 ! -- through the advanced packages.  
-! -- todo: what to do about reactions in lake?  Decay?
-! -- todo: save the apt concentration into the package aux variable?
-! -- todo: calculate the package DENSE aux variable using concentration?
+! -- Future work: 
+!      * support decay, sorption
+!      * dispersion in SFT and UZT?
 !
 ! AFP flows (flowbudptr)    index var     ATP term              Transport Type
 !---------------------------------------------------------------------------------
