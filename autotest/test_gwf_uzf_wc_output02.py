@@ -56,10 +56,13 @@ k33 = 10
 ss = 1e-5
 sy = 0.3
 
-ghbelv1 = -15.0
+ghbelv1 = -22.0
+ghbelv2 = -15.0
 ghbcond = 1000.
-ghbspd = {0: [[(6, 0, 0), ghbelv1, ghbcond], 
-              [(6, 0, ncol - 1), ghbelv1, ghbcond]]}
+ghbspd = {0: [[(7, 0, 0), ghbelv1, ghbcond], 
+              [(7, 0, ncol - 1), ghbelv1, ghbcond]],
+          3: [[(7, 0, 0), ghbelv2, ghbcond], 
+              [(7, 0, ncol - 1), ghbelv2, ghbcond]]}
 
 # iuzno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
 surfdep1 = 0.2
@@ -149,7 +152,7 @@ extwc = 0.08
 pet0 = 0.0
 pet1 = 0.001
 pet2 = 0.010
-finf0 = 0.125
+finf0 = 0.5
 finf1 = 0.000
 finf2 = 0.05
 finf3 = 0.01
@@ -703,7 +706,9 @@ def eval_model(sim):
     mf6_wc = np.array(mf6_wc)
 
     # First test is that all of the lowest layers have saturated water contents
-    assert np.allclose(mf6_wc[:, -1, 0, 1:-1], thts, atol=0.000001), \
+    # in the final 3 stress periods when the GHB boundary forces submersion of
+    # these cells
+    assert np.allclose(mf6_wc[-3:-1, -1, 0, 1:-1], thts, atol=0.000001), \
        'Deepest layer water contents not equal to the saturated water content'
 
     print('Finished running checks')
