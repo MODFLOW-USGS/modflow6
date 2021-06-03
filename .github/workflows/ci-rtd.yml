@@ -18,7 +18,7 @@ jobs:
     - name: Sphinx Build
       uses: ammaraskar/sphinx-action@0.4
       with:
-        pre-build-command: "apt-get install git-all"
+        pre-build-command: "apt-get install git"
         build-command: "make html"
         docs-folder: ".build_rtd_docs/"
 

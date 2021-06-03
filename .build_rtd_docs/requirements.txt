@@ -5,6 +5,8 @@ ipython
 ipykernel
 rtds_action
 recommonmark
+sphinx_rtd_them
+
 
 
 

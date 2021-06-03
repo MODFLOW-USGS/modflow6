@@ -2,6 +2,7 @@ sphinx_markdown_tables
 ipython
 ipykernel
 rtds_action
+sphinx_rtd_them
 
 
 
