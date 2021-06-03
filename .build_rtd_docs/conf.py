@@ -17,12 +17,13 @@ from subprocess import Popen, PIPE
 sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
 
 # -- determine if running on readthedocs ------------------------------------
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
+on_rtd = os.environ.get("READTHEDOCS") == "True"
+
+# -- print current directory
+print("Current Directory...'{}'".format(os.path.abspath(os.getcwd())))
 
 # -- clean up doxygen files -------------------------------------------------
-dox_pths = (
-    "_mf6io",
-)
+dox_pths = ("_mf6io",)
 for dox_pth in dox_pths:
     print("cleaning....{}".format(dox_pth))
     for root, dirs, files in os.walk(dox_pth):
@@ -51,10 +52,7 @@ from version import __version__
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")
 pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
-args = (
-    "python",
-    "mf6ivar.py"
-)
+args = ("python", "mf6ivar.py")
 # run the command
 proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
 stdout, stderr = proc.communicate()
@@ -98,23 +96,23 @@ extensions = [
 ]
 
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # # Tell sphinx what the pygments highlight language should be.
 # highlight_language = 'fortran'
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -126,11 +124,11 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
+    "css_files": [
+        "_static/theme_overrides.css",  # override wide tables in RTD theme
     ],
 }
 

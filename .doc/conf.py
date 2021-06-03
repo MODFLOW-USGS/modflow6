@@ -14,7 +14,7 @@ import os
 import shutil
 
 # -- determine if running on readthedocs ------------------------------------
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
+on_rtd = os.environ.get("READTHEDOCS") == "True"
 
 # -- Copy files from .build_rtd_docs if not on readthedocs ------------------
 if not on_rtd:
@@ -35,10 +35,7 @@ if not on_rtd:
         shutil.copytree(src, dst)
 
     # copy files
-    files = (
-        "mf6io.rst",
-        "index.rst"
-    )
+    files = ("mf6io.rst", "index.rst")
     for file_name in files:
         src = os.path.join(src_pth, file_name)
         dst = os.path.join(".", file_name)
@@ -47,7 +44,6 @@ if not on_rtd:
             os.remove(dst)
         print("copying {} -> {}".format(src, dst))
         shutil.copy(src, dst)
-
 
 
 # -- Project information -----------------------------------------------------
@@ -79,8 +75,8 @@ extensions = [
 ]
 
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # Settings for GitHub actions integration
@@ -93,18 +89,18 @@ if on_rtd:
 
 
 # Tell sphinx what the pygments highlight language should be.
-highlight_language = 'fortran'
+highlight_language = "fortran"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -116,18 +112,17 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 html_context = {
     "github_repo": "modflow6",
     "doc_path": ".doc",
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
+    "css_files": [
+        "_static/theme_overrides.css",  # override wide tables in RTD theme
     ],
 }
 
-html_theme_options = {
-}
+html_theme_options = {}
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
