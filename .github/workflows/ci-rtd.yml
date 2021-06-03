@@ -28,6 +28,6 @@ jobs:
       with:
         name: rtd-files-for-${{ github.sha }}
         path: |
-          .build_rtd_docs/_mf6io/
-          .build_rtd_docs/_static/
-          .build_rtd_docs/mf6io.rst
+          /github/workspace/.build_rtd_docs/_mf6io/
+          /github/workspace/.build_rtd_docs/_static/
+          /github/workspace/.build_rtd_docs/mf6io.rst
