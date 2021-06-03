@@ -12,6 +12,4 @@ Contents:
    :maxdepth: 2
 
    mf6io
-   ./_mf6src/mf6src
-
 

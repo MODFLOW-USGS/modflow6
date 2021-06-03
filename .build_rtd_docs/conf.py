@@ -19,6 +19,17 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
 # -- determine if running on readthedocs ------------------------------------
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
+# -- clean up doxygen files -------------------------------------------------
+dox_pths = (
+    "_mf6io",
+)
+for dox_pth in dox_pths:
+    print("cleaning....{}".format(dox_pth))
+    for root, dirs, files in os.walk(dox_pth):
+        for name in files:
+            fpth = os.path.join(root, name)
+            os.remove(fpth)
+
 # -- Update the modflow 6 version -------------------------------------------
 print("Update the modflow6 version")
 pth = os.path.join("..", "distribution")
@@ -78,15 +89,12 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
-    # "sphinx.ext.graphviz",
     "IPython.sphinxext.ipython_console_highlighting",  # lowercase didn't work
     "sphinx.ext.autosectionlabel",
     "nbsphinx",
     "nbsphinx_link",
     "recommonmark",
     "sphinx_markdown_tables",
-    "breathe",
-    "exhale",
 ]
 
 source_suffix = {
@@ -94,54 +102,8 @@ source_suffix = {
     '.md': 'markdown',
 }
 
-# Breathe Configuration
-breathe_default_project = "mf6src"
-
-breathe_projects = {
-    "mf6src": "./xml/",
-}
-
-# Doxygen string
-doxy_str = (
-    # directories to include in doxygen
-    "INPUT = ",
-    "../srcbmi/ ",
-    "../src/",
-    # add other doxygen comments
-    "STRIP_CODE_COMMENTS = NO",
-    "CLASS_DIAGRAMS = YES",
-    # "HAVE_DOT = YES",
-    # "INCLUDE_GRAPH = YES",
-    # "INCLUDED_BY_GRAPH = YES",
-    # "CALL_GRAPH = YES",
-    # "CALLER_GRAPH = YES",
-    # "GRAPHICAL_HIERARCHY = YES",
-    # "DIRECTORY_GRAPH = YES",
-    "OPTIMIZE_FOR_FORTRAN = YES",
-    "EXTRACT_ALL = YES",
-)
-
-# Setup the exhale extension
-exhale_args = {
-    # These arguments are required
-    "containmentFolder": "./_mf6src",
-    "rootFileName": "mf6src.rst",
-    "rootFileTitle": "MODFLOW 6 Source Code",
-    "doxygenStripFromPath": "..",
-    # Suggested optional arguments
-    "createTreeView": True,
-    # TIP: if using the sphinx-bootstrap-theme, you need
-    # "treeViewIsBootstrap": True,
-    "exhaleExecutesDoxygen": True,
-    # "exhaleUseDoxyfile": True,
-    "exhaleDoxygenStdin": " ".join(doxy_str)
-}
-
-# Tell sphinx what the primary language being documented is.
-primary_domain = 'fortran'
-
-# Tell sphinx what the pygments highlight language should be.
-highlight_language = 'fortran'
+# # Tell sphinx what the pygments highlight language should be.
+# highlight_language = 'fortran'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -172,10 +134,10 @@ html_context = {
     ],
 }
 
-html_theme_options = {
-    "github_url": "https://github.com/MODFLOW-USGS/modflow6",
-    "use_edit_page_button": False
-}
+# html_theme_options = {
+#     "github_url": "https://github.com/MODFLOW-USGS/modflow6",
+#     "use_edit_page_button": False
+# }
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -195,5 +157,6 @@ html_use_smartypants = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = True
+
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
 html_show_copyright = True

@@ -6,6 +6,7 @@ nbsphinx_link
 ipython
 ipykernel
 rtds_action
+recommonmark
 
 
 

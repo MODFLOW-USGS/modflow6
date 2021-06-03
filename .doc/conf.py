@@ -23,7 +23,6 @@ if not on_rtd:
     # copy directories
     dirs = (
         "_mf6io",
-        "_mf6src",
         "_static",
     )
     for on_dir in dirs:
