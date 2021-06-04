@@ -12,9 +12,9 @@ on:
   push:
     branches:
       - develop
-#  pull_request:
-#    branches:
-#      - develop
+  pull_request:
+    branches:
+      - develop
 
 env:
   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe

@@ -45,11 +45,8 @@ jobs:
     name: rtd-trigger
     needs: rtd_build
     runs-on: ubuntu-latest
-    env:
-      webhook_url: ${{ secrets.MF6_RTDS_WEBHOOK_URL }}
-      webhook_token: ${{ secrets.MF6_RTDS_WEBHOOK_TOKEN }}
 
-    if: github.repository_owner == 'MODFLOW-USGS'
+    if: github.repository_owner == 'MODFLOW-USGS' && github.event_name == 'push'
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
@@ -57,8 +54,8 @@ jobs:
       - name: Trigger RTDs build on push to repo branches
         uses: dfm/rtds-action@v1.0.3
         with:
-          webhook_url: https://readthedocs.org/api/v2/webhook/modflow6/156759/
-          webhook_token: 2fb2772835c6885f0e9425cbb34f851af9af7492
+          webhook_url: ${{ secrets.MF6_RTDS_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.MF6_RTDS_WEBHOOK_TOKEN }}
           commit_ref: ${{ github.ref }}
 
   doxygen_build:
@@ -86,7 +83,7 @@ jobs:
 
       - name: Deploy doxygen html to gh-pages
         uses: peaceiris/actions-gh-pages@v3.7.3
-        if: github.repository_owner == 'MODFLOW-USGS' && ${{env.branch-name}} == 'develop'
+        if: github.repository_owner == 'MODFLOW-USGS' && ${{env.branch-name}} == 'develop' && github.event_name == 'push'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{env.working-directory}}/html
