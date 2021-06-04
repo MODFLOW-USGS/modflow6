@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             build_script: ifortvars_linux.sh
           - os: macos-latest
             build_script: ifortvars_macos.sh
