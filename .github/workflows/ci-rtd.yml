@@ -2,13 +2,12 @@ name: Pull Request Docs Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
   pull_request:
     branches: [ develop ]
 
 jobs:
   rtd_build:
-
     runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
@@ -32,14 +31,6 @@ jobs:
           make html
         working-directory: ${{env.working-directory}}
 
-      - name: list files
-        shell: bash
-        run: |
-          pwd
-          ls -lh _mf6io/
-        working-directory: ${{env.working-directory}}
-
-      # Great extra actions to compose with:
       # Create an artifact of the processed files.
       - uses: actions/upload-artifact@v2.2.3
         with:
@@ -69,3 +60,32 @@ jobs:
           webhook_url: https://readthedocs.org/api/v2/webhook/modflow6/156759/
           webhook_token: 2fb2772835c6885f0e9425cbb34f851af9af7492
           commit_ref: ${{ github.ref }}
+
+  doxygen_build:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: .build_rtd_docs
+
+    steps:
+      - uses: actions/checkout@v2.3.4
+
+      - name: Print branch name
+        run: |
+          echo ${GITHUB_REF##*/}
+
+      - name: Install doxygen and graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install doxygen graphviz
+
+      - name: run doxygen
+        run: |
+          doxygen
+        working-directory: ${{env.working-directory}}
+
+      - name: Deploy doxygen html to gh-pages
+        uses: peaceiris/actions-gh-pages@v3.7.3
+        if: github.repository_owner == 'MODFLOW-USGS' && ${GITHUB_REF##*/} == 'develop'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{env.working-directory}}/html
