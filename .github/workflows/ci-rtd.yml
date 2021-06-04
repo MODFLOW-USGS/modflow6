@@ -55,8 +55,8 @@ jobs:
     needs: rtd_build
     runs-on: ubuntu-latest
     env:
-      webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
-      webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+      webhook_url: ${{ secrets.MF6_RTDS_WEBHOOK_URL }}
+      webhook_token: ${{ secrets.MF6_RTDS_WEBHOOK_TOKEN }}
 
     if: github.repository_owner == 'MODFLOW-USGS'
     steps:
