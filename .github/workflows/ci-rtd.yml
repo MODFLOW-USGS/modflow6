@@ -67,13 +67,13 @@ jobs:
         shell: bash
         run: |
           pwd
-          ${{webhook_url}}
-          ${{webhook_token}}
+          ${{env.webhook_url}}
+          ${{env.webhook_token}}
 
 
       - name: Trigger RTDs build on push to repo branches
         uses: dfm/rtds-action@v1.0.3
         with:
-          webhook_url: ${{webhook_url}}
-          webhook_token: ${{webhook_token}}
+          webhook_url: ${{env.webhook_url}}
+          webhook_token: ${{env.webhook_token}}
           commit_ref: ${{ github.ref }}
