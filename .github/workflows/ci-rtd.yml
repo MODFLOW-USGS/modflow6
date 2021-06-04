@@ -69,7 +69,7 @@ jobs:
 
       - name: Print branch name
         run: |
-          echo $branch-name
+          echo ${{env.branch-name}}
 
       - name: Install doxygen and graphviz
         run: |
@@ -82,7 +82,7 @@ jobs:
         working-directory: ${{env.working-directory}}
 
       - name: Deploy doxygen html to gh-pages
-        if: github.repository_owner == 'MODFLOW-USGS' && $branch-name == 'develop' && github.event_name == 'push'
+        if: github.repository_owner == 'MODFLOW-USGS' && ${{env.branch-name}} == 'develop' && github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v3.7.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
