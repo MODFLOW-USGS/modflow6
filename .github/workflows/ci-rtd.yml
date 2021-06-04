@@ -63,17 +63,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
 
-      - name: list url
-        shell: bash
-        run: |
-          pwd
-          ${{env.webhook_url}}
-          ${{env.webhook_token}}
-
-
       - name: Trigger RTDs build on push to repo branches
         uses: dfm/rtds-action@v1.0.3
         with:
-          webhook_url: ${{env.webhook_url}}
-          webhook_token: ${{env.webhook_token}}
+          webhook_url: https://readthedocs.org/api/v2/webhook/modflow6/156759/
+          webhook_token: 2fb2772835c6885f0e9425cbb34f851af9af7492
           commit_ref: ${{ github.ref }}
