@@ -65,13 +65,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
+      branch-name: ${GITHUB_REF##*/}
 
     steps:
       - uses: actions/checkout@v2.3.4
 
       - name: Print branch name
         run: |
-          echo ${GITHUB_REF##*/}
+          echo ${{env.branch-name}}
 
       - name: Install doxygen and graphviz
         run: |
@@ -85,7 +86,7 @@ jobs:
 
       - name: Deploy doxygen html to gh-pages
         uses: peaceiris/actions-gh-pages@v3.7.3
-        if: github.repository_owner == 'MODFLOW-USGS' && ${GITHUB_REF##*/} == 'develop'
+        if: github.repository_owner == 'MODFLOW-USGS' && ${{env.branch-name}} == 'develop'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{env.working-directory}}/html
