@@ -1,8 +1,12 @@
 sphinx_markdown_tables
+nbsphinx
+nbsphinx_link
 ipython
 ipykernel
 rtds_action
+recommonmark
 sphinx_rtd_theme
+
 
 
 
