@@ -7,14 +7,14 @@ on:
     branches: [ develop ]
 
 jobs:
-  build:
+  rtd_build:
 
     runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2.3.4
 
     - name: Setup Python 3.8
       uses: actions/setup-python@v2
@@ -35,15 +35,34 @@ jobs:
     - name: list files
       shell: bash
       run: |
+        pwd
         ls -lh _mf6io/
       working-directory: ${{env.working-directory}}
 
     # Great extra actions to compose with:
     # Create an artifact of the processed files.
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v2.2.3
       with:
         name: rtd-files-for-${{ github.sha }}
         path: |
+          ${{env.working-directory}}/mf6io.rst
           ${{env.working-directory}}/_mf6io/
           ${{env.working-directory}}/_static/
-          ${{env.working-directory}}/mf6io.rst
+
+  # trigger rtd if "rtd_build" job was successful
+  rtd_trigger:
+    name: rtd-trigger
+    needs: rtd_build
+    runs-on: ubuntu-latest
+
+    if: github.repository_owner == 'MODFLOW-USGS'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2.3.4
+
+      - name: Trigger RTDs build on push to repo branches
+        uses: dfm/rtds-action@v1.0.3
+        with:
+          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+          commit_ref: ${{ github.ref }}
