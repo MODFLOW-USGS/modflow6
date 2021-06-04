@@ -276,10 +276,10 @@ def test_build_zbud6():
 
 
 if __name__ == "__main__":
-    test_create_dirs()
-    test_getmfexes(verify=False)
-    test_rebuild_mf6_release()
+    # test_create_dirs()
+    # test_getmfexes(verify=False)
+    # test_rebuild_mf6_release()
     test_build_modflow6()
     test_build_modflow6_so()
-    test_build_mf5to6()
-    test_build_zbud6()
+    # test_build_mf5to6()
+    # test_build_zbud6()

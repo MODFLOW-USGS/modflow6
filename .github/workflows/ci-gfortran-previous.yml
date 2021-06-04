@@ -28,7 +28,8 @@ jobs:
     - name: setup-conda
       uses: s-weigand/setup-conda@v1.0.5
       with:
-        auto-update-conda: true
+        update-conda: true
+        python-version: 3.8
 
     - name: Set up gfortran ${{ matrix.GCC_V }}
       run: |

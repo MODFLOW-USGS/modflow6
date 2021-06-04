@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-18.04, macos-latest, windows-latest]
     defaults:
       run:
         shell: bash
@@ -28,6 +28,7 @@ jobs:
       uses: s-weigand/setup-conda@v1.0.5
       with:
         update-conda: true
+        python-version: 3.8
 
     - name: Setup symbolic links on Linux
       if: runner.os == 'Linux'
