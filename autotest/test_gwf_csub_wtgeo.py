@@ -34,8 +34,8 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 constantcv = [True for idx in range(len(exdirs))]
 
-cmppth = "mfnwt"
-compare = [True, True, True, False, False, False, False]
+cmppth = "mf6-regression"
+compare = [True for idx in range(len(exdirs))]
 tops = [0.0, 0.0, 150.0, 0.0, 0.0, 150.0, 150.0]
 ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
@@ -161,72 +161,6 @@ dstart = [strt for n in range(nlay)]
 dz = [5.894, 0.0, 5.08]
 nz = [1, 0, 1]
 
-# sub output data
-ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
-ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-
-# subwt output data
-ds16swt = [
-    0,
-    0,
-    0,
-    2053,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-]
-ds17swt = [
-    0,
-    nper - 1,
-    0,
-    nstp[-1] - 1,
-    0,
-    0,
-    1,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-]
-
 
 # calculate geostatic and effective stress
 def calc_stress(sgm0, sgs0, h, bt):
@@ -252,12 +186,9 @@ def calc_stress(sgm0, sgs0, h, bt):
     return geo, es
 
 
-# variant SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, ws):
     name = ex[idx]
 
-    # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -293,9 +224,6 @@ def get_model(idx, dir):
         laytyp = [1, 0, 0]
 
     # calculate sk, ndb, and db factors
-    # facndb = [0.15, 1., 0.15]
-    # facdb = [0.45, 0., 0.45]
-    # facsk = [0.4, 0., 0.4]
     facdb = []
     facndb = []
     for k in range(nlay):
@@ -567,103 +495,19 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
 
-    # build MODFLOW-NWT files
-    if compare[idx]:
-        cpth = cmppth
-        ws = os.path.join(dir, cpth)
-        mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
-        dis = flopy.modflow.ModflowDis(
-            mc,
-            nlay=nlay,
-            nrow=nrow,
-            ncol=ncol,
-            nper=nper,
-            perlen=perlen,
-            nstp=nstp,
-            tsmult=tsmult,
-            steady=steady,
-            delr=delr,
-            delc=delc,
-            top=top,
-            botm=botm,
-        )
-        bas = flopy.modflow.ModflowBas(
-            mc, ibound=ib, strt=strt, hnoflo=hnoflo, stoper=0.01
-        )
-        upw = flopy.modflow.ModflowUpw(
-            mc, laytyp=laytyp, hk=hk, vka=vka, ss=wc, sy=sy, hdry=hdry
-        )
-        chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-        rch = flopy.modflow.ModflowRch(mc, rech=rech)
-        wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-        if headformulation[idx]:
-            sub = flopy.modflow.ModflowSub(
-                mc,
-                ipakcb=1001,
-                ndb=ndb,
-                nndb=nndb,
-                nmz=nmz,
-                nn=10,
-                ac2=1.0,
-                isuboc=1,
-                ln=ln,
-                ldn=ldn,
-                rnb=rnbsub,
-                dp=dp,
-                dz=dzsub,
-                nz=nzsub,
-                dhc=dhcsub,
-                dstart=dstartsub,
-                hc=hc,
-                sfe=sfe,
-                sfv=sfv,
-                ids15=ds15,
-                ids16=ds16,
-            )
-        else:
-            swt = flopy.modflow.ModflowSwt(
-                mc,
-                ipakcb=1001,
-                iswtoc=1,
-                nsystm=len(sfe),
-                ithk=1,
-                ivoid=iump[idx],
-                icrcc=1,
-                istpcs=0,
-                lnwt=ln,
-                sse=sfe,
-                ssv=sfv,
-                thick=thickib0,
-                void=void,
-                pcs=pcs,
-                pcsoff=0.0,
-                sgm=sgm,
-                sgs=sgs,
-                gl0=0.0,
-                ids16=ds16swt,
-                ids17=ds17swt,
-            )
-        oc = flopy.modflow.ModflowOc(
-            mc,
-            stress_period_data=None,
-            save_every=1,
-            save_types=["save head", "save budget", "print budget"],
-        )
-        fluxtol = (float(nlay * nrow * ncol) - 4.0) * rclose
-        nwt = flopy.modflow.ModflowNwt(
-            mc,
-            headtol=hclose,
-            fluxtol=fluxtol,
-            maxiterout=nouter,
-            linmeth=2,
-            maxitinner=ninner,
-            unitnumber=132,
-            options="SPECIFIED",
-            backflag=0,
-            idroptol=0,
-        )
-    else:
-        mc = None
+    return sim
+
+
+def get_model(idx, dir):
+
+    # build MODFLOW 6 files
+    ws = dir
+    sim = build_model(idx, ws)
+
+    # build comparision files
+    ws = os.path.join(dir, cmppth)
+    mc = build_model(idx, ws)
+
     return sim, mc
 
 
@@ -678,33 +522,15 @@ def eval_comp(sim):
         except:
             assert False, 'could not load data from "{}"'.format(fpth)
 
-        # MODFLOW-2005 total compaction results
-        cpth = cmppth
-        fn2 = None
-        if headformulation[sim.idxsim]:
-            fn = "{}.total_comp.hds".format(os.path.basename(sim.name))
-        else:
-            fn = "{}.swt_total_comp.hds".format(os.path.basename(sim.name))
-            if delay[sim.idxsim]:
-                fn2 = "{}.total_comp.hds".format(os.path.basename(sim.name))
-        fpth = os.path.join(sim.simpath, cpth, fn)
+        # comparision total compaction results
+        fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
         try:
-            sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
-            tc0 = sobj.get_ts((2, 4, 4))
+            tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
         except:
             assert False, 'could not load data from "{}"'.format(fpth)
-        # add compaction from delay bed
-        if fn2 is not None:
-            fpth = os.path.join(sim.simpath, cpth, fn2)
-            try:
-                sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
-                v = sobj.get_ts((2, 4, 4))
-                tc0[:, 1] += v[:, 1]
-            except:
-                assert False, 'could not load data from "{}"'.format(fpth)
 
         # calculate maximum absolute error
-        diff = tc["TCOMP3"] - tc0[:, 1]
+        diff = tc["TCOMP3"] - tc0["TCOMP3"]
         diffmax = np.abs(diff).max()
         msg = "maximum absolute total-compaction difference ({}) ".format(
             diffmax
@@ -721,9 +547,9 @@ def eval_comp(sim):
         line += " {:>15s}".format("DIFF")
         f.write(line + "\n")
         for i in range(diff.shape[0]):
-            line = "{:15g}".format(tc0[i, 0])
+            line = "{:15g}".format(tc0["time"][i])
             line += " {:15g}".format(tc["TCOMP3"][i])
-            line += " {:15g}".format(tc0[i, 1])
+            line += " {:15g}".format(tc0["TCOMP3"][i])
             line += " {:15g}".format(diff[i])
             f.write(line + "\n")
         f.close()
@@ -850,7 +676,7 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
@@ -873,7 +699,12 @@ def test_mf6model():
         if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(
-            dir, exfunc=eval_comp, exe_dict=r_exe, htol=htol[idx], idxsim=idx
+            dir,
+            exfunc=eval_comp,
+            exe_dict=r_exe,
+            htol=htol[idx],
+            idxsim=idx,
+            mf6_regression=True,
         )
 
     return
@@ -894,6 +725,7 @@ def main():
             exe_dict=replace_exe,
             htol=htol[idx],
             idxsim=idx,
+            mf6_regression=True,
         )
         test.run_mf6(sim)
 

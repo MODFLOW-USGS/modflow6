@@ -1,5 +1,6 @@
 #!/bin/bash
 
+pip install wheel
 pip install requests appdirs nose nose-timer numpy matplotlib
 pip install https://github.com/modflowpy/flopy/zipball/develop
 pip install https://github.com/modflowpy/pymake/zipball/master
