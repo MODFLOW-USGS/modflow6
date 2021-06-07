@@ -132,10 +132,10 @@ def eval_head(sim):
     fpth = os.path.join(sim.simpath, oname)
     v = np.genfromtxt(fpth, delimiter=",", names=True)
 
-    msg = "head in layer 1 != 8. ({})".format(v["H1"][0])
+    msg = "head in layer 1 != 8. ({})".format(v["H1"])
     assert np.allclose(v["H1"], 8.0), msg
 
-    msg = "head in layer 2 != 7. ({})".format(v["H2"][0])
+    msg = "head in layer 2 != 7. ({})".format(v["H2"])
     assert np.allclose(v["H2"], 7.0), msg
 
     return

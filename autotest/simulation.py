@@ -21,6 +21,7 @@ except:
     raise Exception(msg)
 
 import targets
+from framework import running_on_CI
 
 sfmt = "{:25s} - {}"
 extdict = {
@@ -136,6 +137,10 @@ class Simulation(object):
 
         self.delFiles = delFiles
         self.success = False
+
+        # set is_ci
+        self.is_CI = running_on_CI()
+
         return
 
     def __repr__(self):
@@ -266,6 +271,12 @@ class Simulation(object):
                     success is True
                 ), "MODFLOW 6 model should not have failed"
 
+        # print end of mfsim.lst to the screen
+        # if not success and self.is_CI:
+        if success:
+            fpth = os.path.join(self.simpath, "mfsim.lst")
+            self._print_mfsim_listing(fpth)
+
         self.nam_cmp = None
         if success:
             if self.action is not None:
@@ -308,6 +319,13 @@ class Simulation(object):
                             print(msg)
                         else:
                             print(msg)
+
+                            # print end of mfsim.lst to the screen
+                            if "mf6" in key:
+                                if not success and self.is_CI:
+                                    fpth = os.path.join(cpth, "mfsim.lst")
+                                    self._print_mfsim_listing(fpth)
+
                     except:
                         success_cmp = False
                         msg = sfmt.format(
@@ -506,6 +524,21 @@ class Simulation(object):
                 assert success
             else:
                 print("Retaining test files")
+        return
+
+    def _print_mfsim_listing(self, lst_pth):
+        ilen = 100
+        with open(lst_pth) as fp:
+            lines = fp.read().splitlines()
+        print("\n" + 79 * ("-") + "\n")
+        if len(lines) > ilen:
+            i0 = -100
+        else:
+            i0 = 0
+        for line in lines[i0:]:
+            if len(line) > 0:
+                print(line)
+        print(79 * ("-") + "\n\n")
         return
 
     def _get_dvclose(self, dir_pth):
