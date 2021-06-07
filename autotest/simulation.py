@@ -272,8 +272,7 @@ class Simulation(object):
                 ), "MODFLOW 6 model should not have failed"
 
         # print end of mfsim.lst to the screen
-        # if not success and self.is_CI:
-        if success:
+        if not success and self.is_CI:
             fpth = os.path.join(self.simpath, "mfsim.lst")
             self._print_mfsim_listing(fpth)
 
