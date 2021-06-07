@@ -276,6 +276,8 @@ class Simulation(object):
                     cpth = os.path.join(self.simpath, self.action)
                     key = self.action.lower().replace(".cmp", "")
                     exe = os.path.abspath(targets.target_dict[key])
+                    msg = sfmt.format("comparison executable", exe)
+                    print(msg)
                     if (
                         "mf6" in key
                         or "libmf6" in key

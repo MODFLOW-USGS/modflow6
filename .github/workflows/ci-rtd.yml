@@ -8,7 +8,7 @@ on:
 
 jobs:
   rtd_build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
 
@@ -44,7 +44,7 @@ jobs:
   rtd_trigger:
     name: rtd-trigger
     needs: rtd_build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     if: github.repository_owner == 'MODFLOW-USGS' && github.event_name == 'push'
     steps:
@@ -59,7 +59,7 @@ jobs:
           commit_ref: ${{ github.ref }}
 
   doxygen_build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
       branch-name: ${GITHUB_REF##*/}
