@@ -1,0 +1,9 @@
+#!/bin/bash
+
+pip install requests appdirs nose nose-timer numpy matplotlib
+pip install https://github.com/modflowpy/flopy/zipball/develop
+pip install https://github.com/modflowpy/pymake/zipball/master
+pip install https://github.com/Deltares/xmipy/zipball/develop
+pip install https://github.com/MODFLOW-USGS/modflowapi/zipball/develop
+
+
