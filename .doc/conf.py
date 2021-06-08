@@ -87,9 +87,8 @@ if on_rtd:
     rtds_action_artifact_prefix = "rtd-files-for-"
     rtds_action_github_token = os.environ.get("GITHUB_TOKEN", None)
 
-
-# Tell sphinx what the pygments highlight language should be.
-highlight_language = "fortran"
+# set master doc for readthedoce
+master_doc = 'index'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
