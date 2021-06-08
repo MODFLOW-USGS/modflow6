@@ -210,7 +210,7 @@ def build_model(idx, ws):
     newtonoptions = None
     imsla = "CG"
     if newton:
-        newtonoptions = ""
+        newtonoptions = "NEWTON"
         imsla = "BICGSTAB"
 
     sim = flopy.mf6.MFSimulation(

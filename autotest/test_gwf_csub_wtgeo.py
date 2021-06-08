@@ -45,7 +45,7 @@ headformulation = [True, False, False, True, True, False, False]
 ndc = [None, None, None, 19, 19, 19, 19]
 delay = [False, False, False, True, True, True, True]
 # newton = ["", "", "", "", "", None, ""]
-newton = ["" for idx in range(len(exdirs))]
+newton = ["NEWTON" for idx in range(len(exdirs))]
 
 ddir = "data"
 

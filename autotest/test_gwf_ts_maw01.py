@@ -50,7 +50,7 @@ def build_model(ws, name, timeseries=False):
     # solver options
     nouter, ninner = 1000, 100
     hclose, rclose, relax = 1e-6, 1e-3, 1.0
-    newtonoptions = ""
+    newtonoptions = "NEWTON"
     imsla = "BICGSTAB"
 
     # build MODFLOW 6 files

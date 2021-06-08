@@ -1,8 +1,11 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used update the calculate a head-based pumping rate that
-is equivalent to use of the evapotranspiration package in the
-non-bmi simulation.
+Test to make sure that recharge is passed to the highest active layer and
+verify that recharge is in the highest active layer by looking at the
+individual budget terms.  For this test, there are two layers and five
+columns.  The top layer is dry except for the middle cell.  Recharge is
+applied to the top layer.  In the test a, IRCH is not specified.  In test b
+IRCH is specified as 1, and in test c IRCH is specified as [2, 2, 1, 2, 2]
 """
 
 import os
@@ -28,31 +31,39 @@ except:
 from framework import testing_framework
 from simulation import Simulation, api_return
 
-ex = ["libgwf_evt01"]
+ex = ["libgwf_rch01"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
-# et variables
-et_max = 0.1
-et_depth = 5.0
+# recharge package name
+rch_pname = "RCH-1"
+
+# average recharge rate
+avg_rch = 0.001
+
+# calculate recharge rates
+dx = 1 / 20
+rad = np.arange(0, 1 + dx, dx) * 2.0 * np.pi
+f = np.sin(rad)
+rch_rates = avg_rch + f * avg_rch
 
 # temporal discretization
-nper = 100
+nper = rch_rates.shape[0]
 tdis_rc = []
 for i in range(nper):
     tdis_rc.append((1.0, 1, 1))
 
 # model spatial dimensions
-nlay, nrow, ncol = 1, 1, 1
+nlay, nrow, ncol = 1, 1, 100
 
 # cell spacing
-delr = 10.0
-delc = 10.0
+delr = 50.0
+delc = 1.0
 area = delr * delc
 
 # top of the aquifer
-top = 10.0
+top = 25.0
 
 # bottom of the aquifer
 botm = 0.0
@@ -60,15 +71,24 @@ botm = 0.0
 # hydraulic conductivity
 hk = 50.0
 
-# starting head
-strt = 15.0
+# boundary heads
+h1 = 20.0
+h2 = 11.0
+
+# build chd stress period data
+chd_spd = {0: [[(0, 0, 0), h1], [(0, 0, ncol - 1), h2]]}
+
+# build recharge spd
+rch_spd = {}
+for n in range(nper):
+    rch_spd[n] = rch_rates[n]
 
 # solver data
-nouter, ninner = 100, 100
+nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, bmi=False):
+def build_model(ws, name, rech):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -87,8 +107,7 @@ def build_model(ws, name, bmi=False):
         print_option="SUMMARY",
         outer_dvclose=hclose,
         outer_maximum=nouter,
-        under_relaxation="SIMPLE",
-        under_relaxation_gamma=0.98,
+        under_relaxation="DBD",
         inner_maximum=ninner,
         inner_dvclose=hclose,
         rcloserecord=rclose,
@@ -97,14 +116,7 @@ def build_model(ws, name, bmi=False):
     )
 
     # create gwf model
-    newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        newtonoptions=newtonoptions,
-        modelname=name,
-        print_input=True,
-        save_flows=True,
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -118,21 +130,16 @@ def build_model(ws, name, bmi=False):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=top)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=hk)
-    # storage
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, save_flows=True, iconvert=1, ss=1e-5, sy=0.2, transient={0: True}
-    )
 
-    # evapotranspiration
-    if not bmi:
-        evt = flopy.mf6.ModflowGwfevta(
-            gwf, surface=top, rate=et_max, depth=et_depth
-        )
-    wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data=[[(0, 0, 0), 0.0]])
+    # chd file
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
+
+    # recharge file
+    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech, pname=rch_pname)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -149,11 +156,11 @@ def get_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = build_model(ws, name)
+    sim = build_model(ws, name, rech=rch_spd)
 
     # build comparison model
     ws = os.path.join(dir, "libmf6")
-    mc = build_model(ws, name, bmi=True)
+    mc = build_model(ws, name, rech=0.0)
 
     return sim, mc
 
@@ -165,17 +172,6 @@ def build_models():
         if mc is not None:
             mc.write_simulation()
     return
-
-
-def head2et_wellrate(h):
-    if h > top:
-        q = -et_max
-    elif h < top - et_depth:
-        q = 0.0
-    else:
-        f = (h - (top - et_depth)) / et_depth
-        q = -f * et_max
-    return q * area
 
 
 def api_func(exe, idx, model_ws=None):
@@ -202,19 +198,13 @@ def api_func(exe, idx, model_ws=None):
     current_time = mf6.get_current_time()
     end_time = mf6.get_end_time()
 
-    # get pointer to simulated heads
-    head_tag = mf6.get_var_address("X", "LIBGWF_EVT01")
-    head = mf6.get_value_ptr(head_tag)
-
     # maximum outer iterations
     mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
     max_iter = mf6.get_value(mxit_tag)
 
-    # get copy of well data
-    well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
-    well = mf6.get_value(well_tag)
-
-    twell = np.zeros(ncol, dtype=np.float64)
+    # get copy of recharge array
+    rch_tag = mf6.get_var_address("BOUND", name, rch_pname)
+    new_recharge = mf6.get_value(rch_tag)
 
     # model time loop
     idx = 0
@@ -228,14 +218,11 @@ def api_func(exe, idx, model_ws=None):
         kiter = 0
         mf6.prepare_solve()
 
+        # update recharge
+        new_recharge[:, 0] = rch_spd[idx] * area
+        mf6.set_value(rch_tag, new_recharge)
+
         while kiter < max_iter:
-
-            # update well rate
-            twell[:] = head2et_wellrate(head[0])
-            well[:, 0] = twell[:]
-            mf6.set_value(well_tag, well)
-
-            # solve with updated well rate
             has_converged = mf6.solve()
             kiter += 1
 
@@ -260,6 +247,7 @@ def api_func(exe, idx, model_ws=None):
 
         # increment counter
         idx += 1
+
     # cleanup
     try:
         mf6.finalize()

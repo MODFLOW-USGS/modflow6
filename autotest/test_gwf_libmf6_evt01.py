@@ -1,8 +1,8 @@
 """
 MODFLOW 6 Autotest
-Test the bmi which is used to calculate a recharge rate that results in a
-simulated head in the center of the model domain to be equal to the
-simulated head in the non-bmi simulation.
+Test the bmi which is used update the calculate a head-based pumping rate that
+is equivalent to use of the evapotranspiration package in the
+non-bmi simulation.
 """
 
 import os
@@ -28,29 +28,23 @@ except:
 from framework import testing_framework
 from simulation import Simulation, api_return
 
-ex = ["libgwf_rch02"]
+ex = ["libgwf_evt01"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
-# average recharge rate
-avg_rch = 0.001
-drch = 1e-6 * avg_rch
-
-# calculate recharge rates
-dx = 1 / 20
-rad = np.arange(0, 1 + dx, dx) * 2.0 * np.pi
-f = np.sin(rad)
-rch_rates = avg_rch + f * avg_rch
+# et variables
+et_max = 0.1
+et_depth = 5.0
 
 # temporal discretization
-nper = rch_rates.shape[0]
+nper = 100
 tdis_rc = []
 for i in range(nper):
     tdis_rc.append((1.0, 1, 1))
 
 # model spatial dimensions
-nlay, nrow, ncol = 1, 11, 11
+nlay, nrow, ncol = 1, 1, 1
 
 # cell spacing
 delr = 10.0
@@ -64,25 +58,17 @@ top = 10.0
 botm = 0.0
 
 # hydraulic conductivity
-hk = 1.0
+hk = 50.0
 
 # starting head
-strt = 5.0
-
-# build chd stress period data
-chd_spd = {0: [[(0, 0, 0), strt], [(0, nrow - 1, ncol - 1), strt]]}
-
-# build recharge spd
-rch_spd = {}
-for n in range(nper):
-    rch_spd[n] = rch_rates[n]
+strt = 15.0
 
 # solver data
 nouter, ninner = 100, 100
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, rech=rch_spd):
+def build_model(ws, name, bmi=False):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -111,7 +97,7 @@ def build_model(ws, name, rech=rch_spd):
     )
 
     # create gwf model
-    newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+    newtonoptions = "NEWTON UNDER_RELAXATION"
     gwf = flopy.mf6.ModflowGwf(
         sim,
         newtonoptions=newtonoptions,
@@ -136,24 +122,17 @@ def build_model(ws, name, rech=rch_spd):
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=hk)
-
-    # chd file
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
-
-    # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
-
-    # gwf observations
-    onam = "{}.head.obs".format(name)
-    cnam = onam + ".csv"
-    obs_recarray = {cnam: [("h1_6_6", "HEAD", (0, 5, 5))]}
-    gwfobs = flopy.mf6.ModflowUtlobs(
-        gwf,
-        print_input=True,
-        filename=onam,
-        digits=20,
-        continuous=obs_recarray,
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(
+        gwf, save_flows=True, iconvert=1, ss=1e-5, sy=0.2, transient={0: True}
     )
+
+    # evapotranspiration
+    if not bmi:
+        evt = flopy.mf6.ModflowGwfevta(
+            gwf, surface=top, rate=et_max, depth=et_depth
+        )
+    wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data=[[(0, 0, 0), 0.0]])
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -174,7 +153,7 @@ def get_model(idx, dir):
 
     # build comparison model
     ws = os.path.join(dir, "libmf6")
-    mc = build_model(ws, name, rech=0.0)
+    mc = build_model(ws, name, bmi=True)
 
     return sim, mc
 
@@ -188,37 +167,26 @@ def build_models():
     return
 
 
-def run_perturbation(mf6, max_iter, recharge, tag, rch):
-
-    mf6.prepare_solve()
-    kiter = 0
-    while kiter < max_iter:
-        # update recharge
-        recharge[:, 0] = rch * area
-        mf6.set_value(tag, recharge)
-        # solve with updated well rate
-        has_converged = mf6.solve()
-        kiter += 1
-        if has_converged:
-            break
-    return has_converged
+def head2et_wellrate(h):
+    if h > top:
+        q = -et_max
+    elif h < top - et_depth:
+        q = 0.0
+    else:
+        f = (h - (top - et_depth)) / et_depth
+        q = -f * et_max
+    return q * area
 
 
 def api_func(exe, idx, model_ws=None):
-    print("\nBMI implementation test:")
     success = False
 
     name = ex[idx].upper()
-    init_wd = os.path.abspath(os.getcwd())
-    if model_ws is not None:
-        os.chdir(model_ws)
-
-    # get the observations from the standard run
-    fpth = os.path.join("..", "{}.head.obs.csv".format(ex[idx]))
-    hobs = np.genfromtxt(fpth, delimiter=",", names=True)["H1_6_6"]
+    if model_ws is None:
+        model_ws = "."
 
     try:
-        mf6 = ModflowApi(exe)
+        mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
@@ -235,75 +203,51 @@ def api_func(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get pointer to simulated heads
-    head_tag = mf6.get_var_address("X", name)
+    head_tag = mf6.get_var_address("X", "LIBGWF_EVT01")
     head = mf6.get_value_ptr(head_tag)
 
     # maximum outer iterations
     mxit_tag = mf6.get_var_address("MXITER", "SLN_1")
     max_iter = mf6.get_value(mxit_tag)
 
-    # get copy of recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
-    new_recharge = mf6.get_value(rch_tag).copy()
+    # get copy of well data
+    well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
+    well = mf6.get_value(well_tag)
 
-    # determine initial recharge value
-    np.random.seed(0)
-    rch = np.random.normal(1) * avg_rch
+    twell = np.zeros(ncol, dtype=np.float64)
 
     # model time loop
     idx = 0
     while current_time < end_time:
 
-        # target head
-        htarget = hobs[idx]
-
         # get dt and prepare for non-linear iterations
         dt = mf6.get_time_step()
         mf6.prepare_time_step(dt)
 
-        est_iter = 0
-        while est_iter < 100:
-            # base simulation loop
-            has_converged = run_perturbation(
-                mf6, max_iter, new_recharge, rch_tag, rch
-            )
-            if not has_converged:
-                return api_return(success, model_ws)
-            h0 = head.reshape((nrow, ncol))[5, 5]
-            r0 = h0 - htarget
+        # convergence loop
+        kiter = 0
+        mf6.prepare_solve()
 
-            # perturbation simulation loop
-            has_converged = run_perturbation(
-                mf6, max_iter, new_recharge, rch_tag, rch + drch
-            )
-            if not has_converged:
-                return api_return(success, model_ws)
-            h1 = head.reshape((nrow, ncol))[5, 5]
-            r1 = h1 - htarget
+        while kiter < max_iter:
 
-            # calculate update terms
-            dqdr = drch / (r0 - r1)
-            dr = r1 * dqdr
+            # update well rate
+            twell[:] = head2et_wellrate(head[0])
+            well[:, 0] = twell[:]
+            mf6.set_value(well_tag, well)
 
-            # evaluate if the estimation iterations need to continue
-            if abs(r0) < 1e-5:
+            # solve with updated well rate
+            has_converged = mf6.solve()
+            kiter += 1
+
+            if has_converged:
                 msg = (
-                    "Estimation for time {:5.1f}".format(current_time)
-                    + " converged in {:3d}".format(est_iter)
-                    + " iterations"
-                    + " -- final recharge={:10.5f}".format(rch)
-                    + " residual={:10.2g}".format(rch - rch_rates[idx])
+                    "Component {}".format(1)
+                    + " converged in {}".format(kiter)
+                    + " outer iterations"
                 )
                 print(msg)
                 break
-            else:
-                est_iter += 1
-                rch += dr
 
-        # solution with final estimated recharge for the timestep
-        has_converged = run_perturbation(
-            mf6, max_iter, new_recharge, rch_tag, rch
-        )
         if not has_converged:
             return api_return(success, model_ws)
 
@@ -322,9 +266,6 @@ def api_func(exe, idx, model_ws=None):
         success = True
     except:
         return api_return(success, model_ws)
-
-    if model_ws is not None:
-        os.chdir(init_wd)
 
     # cleanup and return
     return api_return(success, model_ws)

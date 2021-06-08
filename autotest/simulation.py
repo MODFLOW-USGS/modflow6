@@ -261,20 +261,34 @@ class Simulation(object):
             print(msg)
             success = False
 
+        # set failure based on success and require_failure setting
         if self.require_failure is None:
-            assert success, "MODFLOW 6 model did not terminate normally"
+            msg = "MODFLOW 6 model did not terminate normally"
+            if success:
+                failure = False
+            else:
+                failure = True
         else:
             if self.require_failure:
-                assert success is False, "MODFLOW 6 model should have failed"
+                msg = "MODFLOW 6 model should have failed"
+                if not success:
+                    failure = False
+                else:
+                    failure = True
             else:
-                assert (
-                    success is True
-                ), "MODFLOW 6 model should not have failed"
+                msg = "MODFLOW 6 model should not have failed"
+                if success:
+                    failure = False
+                else:
+                    failure = True
 
         # print end of mfsim.lst to the screen
-        if not success and self.is_CI:
+        if failure and self.is_CI:
             fpth = os.path.join(self.simpath, "mfsim.lst")
-            self._print_mfsim_listing(fpth)
+            msg = self._get_mfsim_listing(fpth) + msg
+
+        # test for failure
+        assert not failure, msg
 
         self.nam_cmp = None
         if success:
@@ -314,16 +328,13 @@ class Simulation(object):
                         msg = sfmt.format(
                             "Comparison run", self.name + "/" + key
                         )
-                        if success:
-                            print(msg)
-                        else:
-                            print(msg)
+                        print(msg)
 
-                            # print end of mfsim.lst to the screen
-                            if "mf6" in key:
-                                if not success and self.is_CI:
-                                    fpth = os.path.join(cpth, "mfsim.lst")
-                                    self._print_mfsim_listing(fpth)
+                        # print end of mfsim.lst to the screen
+                        if "mf6" in key:
+                            if not success and self.is_CI:
+                                fpth = os.path.join(cpth, "mfsim.lst")
+                                print(self._get_mfsim_listing(fpth))
 
                     except:
                         success_cmp = False
@@ -332,7 +343,7 @@ class Simulation(object):
                         )
                         print(msg)
 
-                    assert success_cmp, "Unsuccessful comparison"
+                    assert success_cmp, "Unsuccessful comparison run"
 
         return
 
@@ -525,20 +536,22 @@ class Simulation(object):
                 print("Retaining test files")
         return
 
-    def _print_mfsim_listing(self, lst_pth):
+    def _get_mfsim_listing(self, lst_pth):
+        """Get the tail of the mfsim.lst listing file"""
+        msg = ""
         ilen = 100
         with open(lst_pth) as fp:
             lines = fp.read().splitlines()
-        print("\n" + 79 * ("-") + "\n")
+        msg = "\n" + 79 * "-" + "\n"
         if len(lines) > ilen:
             i0 = -100
         else:
             i0 = 0
         for line in lines[i0:]:
             if len(line) > 0:
-                print(line)
-        print(79 * ("-") + "\n\n")
-        return
+                msg += "{}\n".format(line)
+        msg += 79 * "-" + "\n\n"
+        return msg
 
     def _get_dvclose(self, dir_pth):
         """Get outer_dvclose value from MODFLOW 6 ims file"""

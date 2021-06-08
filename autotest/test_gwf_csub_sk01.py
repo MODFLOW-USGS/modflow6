@@ -159,7 +159,7 @@ def build_model(idx, ws):
     newtonoptions = None
     imsla = "CG"
     if newton:
-        newtonoptions = ""
+        newtonoptions = "NEWTON"
         imsla = "BICGSTAB"
 
     # build MODFLOW 6 files

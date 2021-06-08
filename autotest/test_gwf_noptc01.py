@@ -53,7 +53,7 @@ ib = 1
 # solver options
 nouter, ninner = 500, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
-newtonoptions = ""
+newtonoptions = "NEWTON"
 imsla = "BICGSTAB"
 
 # chd data

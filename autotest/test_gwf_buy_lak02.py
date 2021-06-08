@@ -77,7 +77,7 @@ def get_model(idx, dir):
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
 
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions="NEWTON")
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,

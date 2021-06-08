@@ -32,7 +32,7 @@ budtol = 1e-2
 
 paktest = "csub"
 
-isnewton = [None, ""]
+isnewton = [None, "NEWTON"]
 
 # set travis to True when version 1.13.0 is released
 continuous_integration = [True for s in ex]

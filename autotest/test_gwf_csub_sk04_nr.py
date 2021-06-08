@@ -115,7 +115,7 @@ def get_model(idx, dir):
 
     # create iterative model solution and register the gwf model with it
     if newton:
-        newtonoptions = ""
+        newtonoptions = "NEWTON"
         imsla = "BICGSTAB"
         rewet_record = None
         wetdry = None

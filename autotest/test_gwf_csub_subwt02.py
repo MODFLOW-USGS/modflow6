@@ -270,7 +270,7 @@ def build_model(idx, ws):
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, save_flows=True, newtonoptions=""
+        sim, modelname=name, save_flows=True, newtonoptions="NEWTON"
     )
 
     dis = flopy.mf6.ModflowGwfdis(
