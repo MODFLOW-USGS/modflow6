@@ -129,7 +129,7 @@ def get_model(idx, dir):
     # --------------------  FLOW --------------------
 
     gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=True, save_flows=True
+        sim, modelname=name, newtonoptions="NEWTON", save_flows=True
     )
 
     idomain = get_idomain(nlay, nrow, ncol, lx, lz, fx=fx, fz=fz)

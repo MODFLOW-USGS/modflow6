@@ -28,7 +28,7 @@ cvopt = [None, None, None]
 constantcv = [True, True, True]
 ndelaybeds = [0, 0, 0]
 
-cmppths = ["mf2005", "mfnwt", "mfnwt"]
+cmppths = ["mf6-regression", "mf6-regression", "mf6-regression"]
 tops = [0.0, 0.0, 150.0]
 newtons = [False, True, True]
 
@@ -152,16 +152,17 @@ for k in range(nlay):
 ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
 ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
-
-# SUB package problem 3
-def get_model(idx, dir):
+# Build MODFLOW 6 files
+def build_model(idx, ws):
     name = ex[idx]
     newton = newtons[idx]
-
-    maxibc = 0
+    newtonoptions = None
+    imsla = "CG"
+    if newton:
+        newtonoptions = "NEWTON"
+        imsla = "BICGSTAB"
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -170,17 +171,7 @@ def get_model(idx, dir):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
-    newtonoptions = None
-    imsla = "CG"
-    if newton:
-        newtonoptions = ""
-        imsla = "BICGSTAB"
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
-
-    # create iterative model solution and register the gwf model with it
+    # create iterative model solution
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -195,7 +186,11 @@ def get_model(idx, dir):
         reordering_method="NONE",
         relaxation_factor=relax,
     )
-    sim.register_ims_package(ims, [gwf.name])
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=name, newtonoptions=newtonoptions
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -346,113 +341,16 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
 
-    # build MODFLOW-2005 files
-    cpth = cmppths[idx]
-    ws = os.path.join(dir, cpth)
-    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
-    dis = flopy.modflow.ModflowDis(
-        mc,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        nper=nper,
-        perlen=perlen,
-        nstp=nstp,
-        tsmult=tsmult,
-        steady=steady,
-        delr=delr,
-        delc=delc,
-        top=tops[idx],
-        botm=botm,
-    )
-    bas = flopy.modflow.ModflowBas(
-        mc, ibound=ib, strt=strt, hnoflo=hnoflo, stoper=0.01
-    )
-    if newton:
-        if cpth == "mfnwt":
-            upw = flopy.modflow.ModflowUpw(
-                mc, laytyp=laytyp, hk=hk, vka=vka, ss=sw, sy=sy, hdry=hdry
-            )
-        else:
-            lpf = flopy.modflow.ModflowLpf(
-                mc,
-                laytyp=laytypu,
-                hk=hk,
-                vka=vka,
-                ss=sw,
-                sy=sy,
-                hdry=hdry,
-                constantcv=True,
-            )
-    else:
-        lpf = flopy.modflow.ModflowLpf(
-            mc,
-            laytyp=laytyp,
-            hk=hk,
-            vka=vka,
-            ss=sw,
-            sy=sy,
-            constantcv=constantcv[idx],
-            storagecoefficient=False,
-            hdry=hdry,
-        )
-    chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-    rch = flopy.modflow.ModflowRch(mc, rech=rech)
-    wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-    sub = flopy.modflow.ModflowSub(
-        mc,
-        ndb=0,
-        nndb=nndb,
-        ipakcb=1001,
-        isuboc=1,
-        ln=lnd,
-        hc=hc,
-        sfe=sfe,
-        sfv=sfv,
-        ids15=ds15,
-        ids16=ds16,
-    )
-    oc = flopy.modflow.ModflowOc(
-        mc,
-        stress_period_data=None,
-        save_every=1,
-        save_types=["save head", "save budget", "print budget"],
-    )
-    if newton:
-        if cpth == "mfnwt":
-            fluxtol = (float(nlay * nrow * ncol) - 4.0) * rclose
-            nwt = flopy.modflow.ModflowNwt(
-                mc,
-                headtol=hclose,
-                fluxtol=fluxtol,
-                maxiterout=nouter,
-                linmeth=2,
-                maxitinner=ninner,
-                unitnumber=132,
-                options="SPECIFIED",
-                backflag=0,
-                idroptol=0,
-            )
-        else:
-            sms = flopy.modflow.ModflowSms(
-                mc,
-                hclose=hclose,
-                hiclose=hclose,
-                mxiter=nouter,
-                iter1=ninner,
-                rclosepcgu=rclose,
-                relaxpcgu=relax,
-                unitnumber=132,
-            )
-    else:
-        pcg = flopy.modflow.ModflowPcg(
-            mc,
-            mxiter=nouter,
-            iter1=ninner,
-            hclose=hclose,
-            rclose=rclose,
-            relax=relax,
-        )
+    return sim
+
+
+# SUB package problem 3
+def get_model(idx, dir):
+    ws = dir
+    sim = build_model(idx, ws)
+
+    ws = os.path.join(dir, cmppths[idx])
+    mc = build_model(idx, ws)
 
     return sim, mc
 
@@ -467,18 +365,16 @@ def eval_comp(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # MODFLOW-2005 total compaction results
+    # regression compaction results
     cpth = cmppths[sim.idxsim]
-    fn = "{}.total_comp.hds".format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, cpth, fn)
+    fpth = os.path.join(sim.simpath, cpth, "csub_obs.csv")
     try:
-        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
-        tc0 = sobj.get_ts((2, 4, 4))
+        tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # calculate maximum absolute error
-    diff = tc["TCOMP3"] - tc0[:, 1]
+    diff = tc["TCOMP3"] - tc0["TCOMP3"]
     diffmax = np.abs(diff).max()
     msg = "maximum absolute total-compaction difference ({}) ".format(diffmax)
 
@@ -488,9 +384,9 @@ def eval_comp(sim):
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
-        line = "{:10.2g}".format(tc0[i, 0])
+        line = "{:10.2g}".format(tc0["time"][i])
         line += "{:10.2g}".format(tc["TCOMP3"][i])
-        line += "{:10.2g}".format(tc0[i, 1])
+        line += "{:10.2g}".format(tc0["TCOMP3"][i])
         line += "{:10.2g}".format(diff[i])
         f.write(line + "\n")
     f.close()
@@ -589,7 +485,7 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
@@ -609,10 +505,12 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
         yield test.run_mf6, Simulation(
-            dir, exfunc=eval_comp, exe_dict=r_exe, htol=htol[idx], idxsim=idx
+            dir,
+            exfunc=eval_comp,
+            htol=htol[idx],
+            idxsim=idx,
+            mf6_regression=True,
         )
 
     return
@@ -630,9 +528,9 @@ def main():
         sim = Simulation(
             dir,
             exfunc=eval_comp,
-            exe_dict=replace_exe,
             htol=htol[idx],
             idxsim=idx,
+            mf6_regression=True,
         )
         test.run_mf6(sim)
 

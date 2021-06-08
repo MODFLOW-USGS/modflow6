@@ -483,7 +483,8 @@ subroutine converge_reset()
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr
+    use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr,         &
+                                  isimcontinue
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1x, 'Simulation convergence failure occurred ', i0, ' time(s).')"
@@ -492,7 +493,11 @@ subroutine converge_reset()
     ! -- Write message if nonconvergence occured in at least one timestep
     if(numnoconverge > 0) then
       write(warnmsg, fmtnocnvg) numnoconverge
-      call sim_warnings%store_message(warnmsg)
+      if (isimcontinue == 0) then
+        call sim_errors%store_message(warnmsg)
+      else
+        call sim_warnings%store_message(warnmsg)
+      end if
     endif
     !
     ! -- write final message

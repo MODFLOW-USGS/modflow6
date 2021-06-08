@@ -40,7 +40,7 @@ def get_model(idx, dir):
     # solver options
     nouter, ninner = 600, 100
     hclose, rclose, relax = 1e-6, 0.1, 1.0
-    newtonoptions = ""
+    newtonoptions = "NEWTON"
     imsla = "BICGSTAB"
 
     # build MODFLOW 6 files

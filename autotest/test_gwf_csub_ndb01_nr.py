@@ -145,7 +145,7 @@ def get_model(idx, dir):
 
     # create iterative model solution and register the gwf model with it
     if newton:
-        newtonoptions = ""
+        newtonoptions = "NEWTON"
         imsla = "BICGSTAB"
         rewet_record = None
         wetdry = None
@@ -170,7 +170,7 @@ def get_model(idx, dir):
         under_relaxation="NONE",
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord=[rclose, "strict"],
+        rcloserecord="{} strict".format(rclose),
         linear_acceleration=imsla,
         scaling_method="NONE",
         reordering_method="NONE",
