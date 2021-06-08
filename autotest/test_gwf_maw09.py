@@ -78,7 +78,7 @@ def get_model(idx, dir):
         complexity="complex",
         outer_dvclose=dvclose,
         inner_dvclose=dvclose,
-        rcloserecord=[rclose, "strict"],
+        rcloserecord="{} strict".format(rclose),
         relaxation_factor=relax,
     )
 
