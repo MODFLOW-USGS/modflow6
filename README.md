@@ -5,10 +5,12 @@ This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The 
 
 ### Version 6.2.2 release candidate
 
-![MODFLOW 6 CI with latest gfortran](https://github.com/MODFLOW-USGS/modflow6/workflows/MODFLOW%206%20CI%20with%20latest%20gfortran/badge.svg)
+[![Intel compiler](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml)
+[![gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml) 
+[![gfortran - previous versions](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml)
 
-![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/workflows/MODFLOW%206%20nightly%20build/badge.svg)
-
+[![MODFLOW 6 intel nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml)
+[![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml)
 
 ## Branches
 
