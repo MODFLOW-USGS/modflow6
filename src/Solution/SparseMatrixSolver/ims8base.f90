@@ -1,0 +1,1506 @@
+
+  MODULE IMSLinearBaseModule
+  ! -- modules
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LINELENGTH, IZERO,                                  &
+    DZERO, DPREC, DEM6, DHALF, DONE
+  use GenericUtilitiesModule, only: sim_message, is_same
+  use BlockParserModule, only: BlockParserType
+  use IMSLinearSparseKitModule, only: ims_sk_pcmilut_lusol,                      &
+                                      ims_sk_pcmilut
+  use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
+
+  IMPLICIT NONE
+
+  type(BlockParserType), private :: parser
+
+  contains
+
+  !> @ brief Preconditioned Conjugate Gradient linear accelerator
+  !!
+  !!  Apply the Preconditioned Conjugate Gradient linear accelerator to
+  !!  the current coefficient matrix, right-hand side, using the current
+  !!  dependent-variable.
+  !!
+  !<
+  SUBROUTINE imsbase_cg(ICNVG, ITMAX, INNERIT, &
+    NEQ, NJA, NIAPC, NJAPC, &
+    IPC, NITERC, ICNVGOPT, NORTH, &
+    DVCLOSE, RCLOSE, L2NORM0, EPFACT, &
+    IA0, JA0, A0, IAPC, JAPC, APC, &
+    X, B, D, P, Q, Z, &
+    NJLU, IW, JLU, &
+    NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
+    CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
+    DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+  ! -- dummy variables
+  integer(I4B), INTENT(INOUT) :: ICNVG                                          !<
+  integer(I4B), INTENT(IN)    :: ITMAX                                          !<
+  integer(I4B), INTENT(INOUT) :: INNERIT                                        !<
+  integer(I4B), INTENT(IN)    :: NEQ                                            !<
+  integer(I4B), INTENT(IN)    :: NJA                                            !<
+  integer(I4B), INTENT(IN)    :: NIAPC                                          !<
+  integer(I4B), INTENT(IN)    :: NJAPC                                          !<
+  integer(I4B), INTENT(IN)    :: IPC                                            !<
+  integer(I4B), INTENT(INOUT) :: NITERC                                         !<
+  integer(I4B), INTENT(IN)    :: ICNVGOPT                                       !<
+  integer(I4B), INTENT(IN)    :: NORTH                                          !<
+  real(DP), INTENT(IN) :: DVCLOSE                                               !<
+  real(DP), INTENT(IN) :: RCLOSE                                                !<
+  real(DP), INTENT(IN) :: L2NORM0                                               !< initial L-2 norm for system of equations
+  real(DP), INTENT(IN) :: EPFACT                                                !<
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA0                           !<
+  integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA0                               !<
+  real(DP), DIMENSION(NJA), INTENT(IN) :: A0                                    !<
+  integer(I4B), DIMENSION(NIAPC + 1), INTENT(IN) :: IAPC                        !<
+  integer(I4B), DIMENSION(NJAPC), INTENT(IN) :: JAPC                            !<
+  real(DP), DIMENSION(NJAPC), INTENT(IN) :: APC                                 !<
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: X                                  !<
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: B                                  !<
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D                                  !<
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: P                                  !<
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Q                                  !<
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Z                                  !<
+  ! -- ILUT dummy variables
+  integer(I4B), INTENT(IN) :: NJLU                                              !<
+  integer(I4B), DIMENSION(NIAPC), INTENT(IN) :: IW                              !<
+  integer(I4B), DIMENSION(NJLU), INTENT(IN) :: JLU                              !<
+  ! -- convergence information dummy variables dummy variables
+  integer(I4B), INTENT(IN) :: NCONV                                     !<                                   !<
+  integer(I4B), INTENT(IN) :: CONVNMOD                                          !<
+  integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART          !<
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV                     !<
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR                     !<
+  character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL                  !<
+  integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER                      !<
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV          !<
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR          !<
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                         !<
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                         !<
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX              !<
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX              !<
+  ! -- local variables
+  LOGICAL :: LORTH
+  logical :: lsame
+  character(len=31) :: cval
+  integer(I4B) :: n
+  integer(I4B) :: iiter
+  integer(I4B) :: xloc, rloc
+  integer(I4B) :: im, im0, im1
+  real(DP) :: tv
+  real(DP) :: deltax
+  real(DP) :: rmax
+  real(DP) :: l2norm
+  real(DP) :: rcnvg
+  real(DP) :: denom
+  real(DP) :: alpha, beta
+  real(DP) :: rho, rho0
+  !
+  ! -- initialize local variables
+  rho0 = DZERO
+  rho = DZERO
+  INNERIT = 0
+  !
+  ! -- INNER ITERATION
+  INNER: DO iiter = 1, itmax
+    INNERIT = INNERIT + 1
+    NITERC = NITERC + 1
+    !
+    ! -- APPLY PRECONDITIONER
+    SELECT CASE (IPC)
+      !
+      ! -- ILU0 AND MILU0
+    CASE (1, 2)
+      CALL ims_base_ilu0a(NJA, NEQ, APC, IAPC, JAPC, D, Z)
+      !
+      ! -- ILUT AND MILUT
+    CASE (3, 4)
+      CALL ims_sk_pcmilut_lusol(NEQ, D, Z, APC, JLU, IW)
+    END SELECT
+    rho = ims_base_dotp(NEQ, D, Z)
+    !
+    ! -- COMPUTE DIRECTIONAL VECTORS
+    IF (IITER == 1) THEN
+      DO n = 1, NEQ
+        P(n) = Z(n)
+      END DO
+    ELSE
+      beta = rho/rho0
+      DO n = 1, NEQ
+        P(n) = Z(n) + beta*P(n)
+      END DO
+    END IF
+    !
+    ! -- COMPUTE ITERATES
+    !
+    ! -- UPDATE Q
+    CALL ims_base_mv(NJA, NEQ, A0, P, Q, IA0, JA0)
+    denom = ims_base_dotp(NEQ, P, Q)
+    denom = denom + SIGN(DPREC, denom)
+    alpha = rho/denom
+    !
+    ! -- UPDATE X AND RESIDUAL
+    deltax = DZERO
+    rmax = DZERO
+    l2norm = DZERO
+    DO im = 1, CONVNMOD
+      DVMAX(im) = DZERO
+      DRMAX(im) = DZERO
+    END DO
+    im = 1
+    im0 = CONVMODSTART(1)
+    im1 = CONVMODSTART(2)
+    DO n = 1, NEQ
+      !
+      ! -- determine current model index
+      if (n == im1) then
+        im = im + 1
+        im0 = CONVMODSTART(im)
+        im1 = CONVMODSTART(im + 1)
+      end if
+      !
+      ! -- identify deltax and rmax
+      tv = alpha*P(n)
+      X(n) = X(n) + tv
+      IF (ABS(tv) > ABS(deltax)) THEN
+        deltax = tv
+        xloc = n
+      END IF
+      IF (ABS(tv) > ABS(DVMAX(im))) THEN
+        DVMAX(im) = tv
+        LOCDV(im) = n
+      END IF
+      tv = D(n)
+      tv = tv - alpha*Q(n)
+      D(n) = tv
+      IF (ABS(tv) > ABS(rmax)) THEN
+        rmax = tv
+        rloc = n
+      END IF
+      IF (ABS(tv) > ABS(DRMAX(im))) THEN
+        DRMAX(im) = tv
+        LOCDR(im) = n
+      END IF
+      l2norm = l2norm + tv*tv
+    END DO
+    l2norm = SQRT(l2norm)
+    !
+    ! -- SAVE SOLVER convergence information dummy variables
+    IF (NCONV > 1) THEN                          !< 
+      n = NITERC
+      WRITE (cval, '(g15.7)') alpha
+      CACCEL(n) = cval
+      ITINNER(n) = iiter
+      DO im = 1, CONVNMOD
+        CONVLOCDV(im, n) = LOCDV(im)
+        CONVLOCDR(im, n) = LOCDR(im)
+        CONVDVMAX(im, n) = DVMAX(im)
+        CONVDRMAX(im, n) = DRMAX(im)
+      END DO
+    END IF
+    !
+    ! -- TEST FOR SOLVER CONVERGENCE
+    IF (ICNVGOPT == 2 .OR. ICNVGOPT == 3 .OR. ICNVGOPT == 4) THEN
+      rcnvg = l2norm
+    ELSE
+      rcnvg = rmax
+    END IF
+    CALL ims_base_testcnvg(ICNVGOPT, ICNVG, INNERIT, &
+      deltax, rcnvg, &
+      L2NORM0, EPFACT, DVCLOSE, RCLOSE)
+    !
+    ! -- CHECK FOR EXACT SOLUTION
+    IF (rcnvg == DZERO) ICNVG = 1
+    !
+    ! -- CHECK FOR STANDARD CONVERGENCE
+    IF (ICNVG .NE. 0) EXIT INNER
+    !
+    ! -- CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT
+    lsame = is_same(rho, rho0)
+    IF (lsame) THEN
+      EXIT INNER
+    END IF
+    !
+    ! -- RECALCULATE THE RESIDUAL
+    IF (NORTH > 0) THEN
+      LORTH = mod(iiter + 1, NORTH) == 0
+      IF (LORTH) THEN
+        CALL ims_base_mv(NJA, NEQ, A0, X, D, IA0, JA0)
+        CALL ims_base_axpy(NEQ, B, -DONE, D, D)
+      END IF
+    END IF
+    !
+    ! -- exit inner if rho is zero
+    if (rho == DZERO) then
+      exit inner
+    end if
+    !
+    ! -- SAVE CURRENT INNER ITERATES
+    rho0 = rho
+  END DO INNER
+  !
+  ! -- RESET ICNVG
+  IF (ICNVG < 0) ICNVG = 0
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE imsbase_cg
+
+  !> @ brief Preconditioned BiConjugate Gradient Stabilized linear accelerator
+  !!
+  !!  Apply the Preconditioned NiConjugate Gradient Stabilized linear
+  !!  accelerator to the current coefficient matrix, right-hand side, using
+  !!  the currentdependent-variable.
+  !!
+  !<
+  SUBROUTINE ims_base_bcgs(ICNVG, ITMAX, INNERIT, &
+    NEQ, NJA, NIAPC, NJAPC, &
+    IPC, NITERC, ICNVGOPT, NORTH, ISCL, DSCALE, &
+    DVCLOSE, RCLOSE, L2NORM0, EPFACT, &
+    IA0, JA0, A0, IAPC, JAPC, APC, &
+    X, B, D, P, Q, &
+    T, V, DHAT, PHAT, QHAT, &
+    NJLU, IW, JLU, &
+    NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
+    CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
+    DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+  ! -- dummy variables
+  integer(I4B), INTENT(INOUT) :: ICNVG                                 !< 
+  integer(I4B), INTENT(IN)    :: ITMAX                                 !< 
+  integer(I4B), INTENT(INOUT) :: INNERIT                               !< 
+  integer(I4B), INTENT(IN)    :: NEQ                                   !< 
+  integer(I4B), INTENT(IN)    :: NJA                                   !< 
+  integer(I4B), INTENT(IN)    :: NIAPC                                 !< 
+  integer(I4B), INTENT(IN)    :: NJAPC                                 !< 
+  integer(I4B), INTENT(IN)    :: IPC                                   !< 
+  integer(I4B), INTENT(INOUT) :: NITERC                                !< 
+  integer(I4B), INTENT(IN)    :: ICNVGOPT                              !< 
+  integer(I4B), INTENT(IN)    :: NORTH                                 !< 
+  integer(I4B), INTENT(IN)    :: ISCL                                  !< 
+  real(DP), DIMENSION(NEQ), INTENT(IN) :: DSCALE                       !< 
+  real(DP), INTENT(IN) :: DVCLOSE                                      !< 
+  real(DP), INTENT(IN) :: RCLOSE                                       !< 
+  real(DP), INTENT(IN) :: L2NORM0                                      !< 
+  real(DP), INTENT(IN) :: EPFACT                                       !< 
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA0                  !< 
+  integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA0                      !< 
+  real(DP), DIMENSION(NJA), INTENT(IN) :: A0                           !< 
+  integer(I4B), DIMENSION(NIAPC + 1), INTENT(IN) :: IAPC               !< 
+  integer(I4B), DIMENSION(NJAPC), INTENT(IN) :: JAPC                   !< 
+  real(DP), DIMENSION(NJAPC), INTENT(IN) :: APC                        !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: X                         !< 
+  real(DP), DIMENSION(NEQ), INTENT(IN) :: B                            !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D                         !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: P                         !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Q                         !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: T                         !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: V                         !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DHAT                      !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: PHAT                      !< 
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: QHAT                      !< 
+  ! -- ILUT dummy variables
+  integer(I4B), INTENT(IN) :: NJLU                                     !< 
+  integer(I4B), DIMENSION(NIAPC), INTENT(IN) :: IW                     !< 
+  integer(I4B), DIMENSION(NJLU), INTENT(IN) :: JLU                     !< 
+  ! -- convergence information dummy variables
+  integer(I4B), INTENT(IN) :: NCONV                                    !< 
+  integer(I4B), INTENT(IN) :: CONVNMOD                                 !< 
+  integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) ::CONVMODSTART  !< 
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV            !< 
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR            !< 
+  character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL         !< 
+  integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER             !< 
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV !< 
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR !< 
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                !< 
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                !< 
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX     !< 
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX     !< 
+  ! -- local variables
+  LOGICAL :: LORTH
+  logical :: lsame
+  character(len=15) :: cval1, cval2
+  integer(I4B) :: n
+  integer(I4B) :: iiter
+  integer(I4B) :: xloc, rloc
+  integer(I4B) :: im, im0, im1
+  real(DP) :: tv
+  real(DP) :: deltax
+  real(DP) :: rmax
+  real(DP) :: l2norm
+  real(DP) :: rcnvg
+  real(DP) :: alpha, alpha0
+  real(DP) :: beta
+  real(DP) :: rho, rho0
+  real(DP) :: omega, omega0
+  real(DP) :: numer, denom
+  !
+  ! -- initialize local variables
+  INNERIT = 0
+  alpha = DZERO
+  alpha0 = DZERO
+  beta = DZERO
+  rho = DZERO
+  rho0 = DZERO
+  omega = DZERO
+  omega0 = DZERO
+  !
+  ! -- SAVE INITIAL RESIDUAL
+  DO n = 1, NEQ
+    DHAT(n) = D(n)
+  END DO
+  !
+  ! -- INNER ITERATION
+  INNER: DO iiter = 1, itmax
+    INNERIT = INNERIT + 1
+    NITERC = NITERC + 1
+    !
+    ! -- CALCULATE rho
+    rho = ims_base_dotp(NEQ, DHAT, D)
+    !
+    ! -- COMPUTE DIRECTIONAL VECTORS
+    IF (IITER == 1) THEN
+      DO n = 1, NEQ
+        P(n) = D(n)
+      END DO
+    ELSE
+      beta = (rho/rho0)*(alpha0/omega0)
+      DO n = 1, NEQ
+        P(n) = D(n) + beta*(P(n) - omega0*V(n))
+      END DO
+    END IF
+    !
+    ! -- APPLY PRECONDITIONER TO UPDATE PHAT
+    SELECT CASE (IPC)
+      !
+      ! -- ILU0 AND MILU0
+    CASE (1, 2)
+      CALL ims_base_ilu0a(NJA, NEQ, APC, IAPC, JAPC, P, PHAT)
+      !
+      ! -- ILUT AND MILUT
+    CASE (3, 4)
+      CALL ims_sk_pcmilut_lusol(NEQ, P, PHAT, APC, JLU, IW)
+    END SELECT
+    !
+    ! -- COMPUTE ITERATES
+    !
+    ! -- UPDATE V WITH A AND PHAT
+    CALL ims_base_mv(NJA, NEQ, A0, PHAT, V, IA0, JA0)
+    !
+    ! -- UPDATE alpha WITH DHAT AND V
+    denom = ims_base_dotp(NEQ, DHAT, V)
+    denom = denom + SIGN(DPREC, denom)
+    alpha = rho/denom
+    !
+    ! -- UPDATE Q
+    DO n = 1, NEQ
+      Q(n) = D(n) - alpha*V(n)
+    END DO
+    !
+    ! ! -- CALCULATE INFINITY NORM OF Q - TEST FOR TERMINATION
+    ! !    TERMINATE IF rmax IS LESS THAN MACHINE PRECISION (DPREC)
+    ! rmax = DZERO
+    ! DO n = 1, NEQ
+    !     tv = Q(n)
+    !     IF (ISCL.NE.0 ) tv = tv / DSCALE(n)
+    !     IF (ABS(tv) > ABS(rmax) ) rmax = tv
+    ! END DO
+    ! IF (ABS(rmax).LE.DPREC) THEN
+    !   deltax = DZERO
+    !   DO n = 1, NEQ
+    !     tv      = alpha * PHAT(n)
+    !     IF (ISCL.NE.0) THEN
+    !       tv = tv * DSCALE(n)
+    !     END IF
+    !     X(n)  = X(n) + tv
+    !     IF (ABS(tv) > ABS(deltax) ) deltax = tv
+    !   END DO
+    !   CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                &
+    !                             deltax, rmax,                            &
+    !                             rmax, EPFACT, DVCLOSE, RCLOSE )
+    !   IF (ICNVG.NE.0 ) EXIT INNER
+    ! END IF
+    !
+    ! -- APPLY PRECONDITIONER TO UPDATE QHAT
+    SELECT CASE (IPC)
+      !
+      ! -- ILU0 AND MILU0
+    CASE (1, 2)
+      CALL ims_base_ilu0a(NJA, NEQ, APC, IAPC, JAPC, Q, QHAT)
+      !
+      ! -- ILUT AND MILUT
+    CASE (3, 4)
+      CALL ims_sk_pcmilut_lusol(NEQ, Q, QHAT, APC, JLU, IW)
+    END SELECT
+    !
+    ! -- UPDATE T WITH A AND QHAT
+    CALL ims_base_mv(NJA, NEQ, A0, QHAT, T, IA0, JA0)
+    !
+    ! -- UPDATE omega
+    numer = ims_base_dotp(NEQ, T, Q)
+    denom = ims_base_dotp(NEQ, T, T)
+    denom = denom + SIGN(DPREC, denom)
+    omega = numer/denom
+    !
+    ! -- UPDATE X AND RESIDUAL
+    deltax = DZERO
+    rmax = DZERO
+    l2norm = DZERO
+    DO im = 1, CONVNMOD
+      DVMAX(im) = DZERO
+      DRMAX(im) = DZERO
+    END DO
+    im = 1
+    im0 = CONVMODSTART(1)
+    im1 = CONVMODSTART(2)
+    DO n = 1, NEQ
+      !
+      ! -- determine current model index
+      if (n == im1) then
+        im = im + 1
+        im0 = CONVMODSTART(im)
+        im1 = CONVMODSTART(im + 1)
+      end if
+      !
+      ! -- X AND DX
+      tv = alpha*PHAT(n) + omega*QHAT(n)
+      X(n) = X(n) + tv
+      IF (ISCL .NE. 0) THEN
+        tv = tv*DSCALE(n)
+      END IF
+      IF (ABS(tv) > ABS(deltax)) THEN
+        deltax = tv
+        xloc = n
+      END IF
+      IF (ABS(tv) > ABS(DVMAX(im))) THEN
+        DVMAX(im) = tv
+        LOCDV(im) = n
+      END IF
+      !
+      ! -- RESIDUAL
+      tv = Q(n) - omega*T(n)
+      D(n) = tv
+      IF (ISCL .NE. 0) THEN
+        tv = tv/DSCALE(n)
+      END IF
+      IF (ABS(tv) > ABS(rmax)) THEN
+        rmax = tv
+        rloc = n
+      END IF
+      IF (ABS(tv) > ABS(DRMAX(im))) THEN
+        DRMAX(im) = tv
+        LOCDR(im) = n
+      END IF
+      l2norm = l2norm + tv*tv
+    END DO
+    l2norm = sqrt(l2norm)
+    !
+    ! -- SAVE SOLVER convergence information dummy variables
+    IF (NCONV > 1) THEN                          !< 
+      n = NITERC
+      WRITE (cval1, '(g15.7)') alpha
+      WRITE (cval2, '(g15.7)') omega
+      CACCEL(n) = trim(adjustl(cval1))//','//trim(adjustl(cval2))
+      ITINNER(n) = iiter
+      DO im = 1, CONVNMOD
+        CONVLOCDV(im, n) = LOCDV(im)
+        CONVLOCDR(im, n) = LOCDR(im)
+        CONVDVMAX(im, n) = DVMAX(im)
+        CONVDRMAX(im, n) = DRMAX(im)
+      END DO
+    END IF
+    !
+    ! -- TEST FOR SOLVER CONVERGENCE
+    IF (ICNVGOPT == 2 .OR. ICNVGOPT == 3 .OR. ICNVGOPT == 4) THEN
+      rcnvg = l2norm
+    ELSE
+      rcnvg = rmax
+    END IF
+    CALL ims_base_testcnvg(ICNVGOPT, ICNVG, INNERIT, &
+      deltax, rcnvg, &
+      L2NORM0, EPFACT, DVCLOSE, RCLOSE)
+    !
+    ! -- CHECK FOR EXACT SOLUTION
+    IF (rcnvg == DZERO) ICNVG = 1
+    !
+    ! -- CHECK FOR STANDARD CONVERGENCE
+    IF (ICNVG .NE. 0) EXIT INNER
+    !
+    ! -- CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE
+    !    DIFFERENT
+    lsame = is_same(rho, rho0)
+    IF (lsame) THEN
+      EXIT INNER
+    END IF
+    lsame = is_same(alpha, alpha0)
+    IF (lsame) THEN
+      EXIT INNER
+    END IF
+    lsame = is_same(omega, omega0)
+    IF (lsame) THEN
+      EXIT INNER
+    END IF
+    !
+    ! -- RECALCULATE THE RESIDUAL
+    IF (NORTH > 0) THEN
+      LORTH = mod(iiter + 1, NORTH) == 0
+      IF (LORTH) THEN
+        CALL ims_base_mv(NJA, NEQ, A0, X, D, IA0, JA0)
+        CALL ims_base_axpy(NEQ, B, -DONE, D, D)
+      END IF
+    END IF
+    !
+    ! -- exit inner if rho or omega are zero
+    if (rho*omega == DZERO) then
+      exit inner
+    end if
+    !
+    ! -- SAVE CURRENT INNER ITERATES
+    rho0 = rho
+    alpha0 = alpha
+    omega0 = omega
+  END DO INNER
+  !
+  ! -- RESET ICNVG
+  IF (ICNVG < 0) ICNVG = 0
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_bcgs
+
+  !> @ brief Calculate LORDER AND IORDER
+  !!
+  !!  Calculate LORDER and IORDER for reordering.
+  !!
+  !<
+  SUBROUTINE ims_base_calc_order(IOUT, IPRIMS, IORD, NEQ, NJA, IA, JA, &
+    LORDER, IORDER)
+  ! -- modules
+  use SimModule, only: ustop, store_error, count_errors
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: IOUT                         !< output unit
+  integer(I4B), INTENT(IN) :: IPRIMS                       !<
+  integer(I4B), INTENT(IN) :: IORD                         !< reordering optionn
+  integer(I4B), INTENT(IN) :: NEQ                          !< number of rows
+  integer(I4B), INTENT(IN) :: NJA                          !< number of non-zero entries
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN)  :: IA      !< row pointer
+  integer(I4B), DIMENSION(NJA), INTENT(IN)  :: JA          !< column pointer
+  integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: LORDER    !<
+  integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: IORDER    !<
+  ! -- local variables
+  character(len=LINELENGTH) :: errmsg
+  integer(I4B) :: n
+  integer(I4B) :: nsp
+  integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork0
+  integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork1
+  integer(I4B) :: iflag
+  !
+  ! -- initialize lorder and iorder
+  DO n = 1, NEQ
+    LORDER(n) = IZERO
+    IORDER(n) = IZERO
+  END DO
+  ALLOCATE (iwork0(NEQ))
+  SELECT CASE (IORD)
+  CASE (1)
+    ALLOCATE (iwork1(NEQ))
+    CALL ims_genrcm(NEQ, NJA, IA, JA, &
+      LORDER, iwork0, iwork1)
+  CASE (2)
+    nsp = 3*NEQ + 4*NJA
+    ALLOCATE (iwork1(nsp))
+    CALL ims_odrv(NEQ, NJA, nsp, IA, JA, LORDER, iwork0, &
+      iwork1, iflag)
+    IF (iflag .NE. 0) THEN
+      write (errmsg, '(A,1X,A)') &
+        'IMSLINEARSUB_CALC_ORDER ERROR CREATING MINIMUM DEGREE ', &
+        'ORDER PERMUTATION '
+      call store_error(errmsg)
+    END IF
+  END SELECT
+  !
+  ! -- GENERATE INVERSE OF LORDER
+  DO n = 1, NEQ
+    IORDER(LORDER(n)) = n
+  END DO
+  !
+  ! -- DEALLOCATE TEMPORARY STORAGE
+  DEALLOCATE (iwork0, iwork1)
+  !
+  ! -- terminate if errors occured
+  if (count_errors() > 0) then
+    call parser%StoreErrorUnit()
+    call ustop()
+  end if
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_calc_order
+
+  !
+  !> @ brief Scale the coefficient matrix
+  !!
+  !!  Scale the coefficient matrix (AMAT), the right-hand side (B),
+  !!  and the estimate of the dependent variable (X).
+  !!
+  !<
+  SUBROUTINE ims_base_scale(IOPT, ISCL, NEQ, NJA, IA, JA, AMAT, X, B, &
+    DSCALE, DSCALE2)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: IOPT                    !< flag to scale (0) or unscale the system of equations
+  integer(I4B), INTENT(IN) :: ISCL                    !< scaling option (1) symmetric (2) L-2 norm
+  integer(I4B), INTENT(IN) :: NEQ                     !< number of equations
+  integer(I4B), INTENT(IN) :: NJA                     !< number of non-zero entries
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA  !< CRS row pointer
+  integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA      !< CRS column pointer
+  real(DP), DIMENSION(NJA), INTENT(INOUT) :: AMAT     !< coefficient matrix
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: X        !< dependent variable
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: B        !< right-hand side
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DSCALE   !< first scaling vector
+  real(DP), DIMENSION(NEQ), INTENT(INOUT)  :: DSCALE2 !< second scaling vector
+  ! -- local variables
+  integer(I4B) :: i, n
+  integer(I4B) :: id, jc
+  integer(I4B) :: i0, i1
+  real(DP) :: v, c1, c2
+  !
+  ! -- SCALE SCALE AMAT, X, AND B
+  IF (IOPT == 0) THEN
+    !
+    ! -- SYMMETRIC SCALING
+    SELECT CASE (ISCL)
+    CASE (1)
+      DO n = 1, NEQ
+        id = IA(n)
+        v = AMAT(id)
+        c1 = DONE/SQRT(ABS(v))
+        DSCALE(n) = c1
+        DSCALE2(n) = c1
+      END DO
+      !
+      ! -- SCALE AMAT -- AMAT = DSCALE(row) * AMAT(i) * DSCALE2(col)
+      DO n = 1, NEQ
+        c1 = DSCALE(n)
+        i0 = IA(n)
+        i1 = IA(n + 1) - 1
+        DO i = i0, i1
+          jc = JA(i)
+          c2 = DSCALE2(jc)
+          AMAT(i) = c1*AMAT(i)*c2
+        END DO
+      END DO
+      !
+      ! -- L-2 NORM SCALING
+    CASE (2)
+      !
+      ! -- SCALE EACH ROW SO THAT THE L-2 NORM IS 1
+      DO n = 1, NEQ
+        c1 = DZERO
+        i0 = IA(n)
+        i1 = IA(n + 1) - 1
+        DO i = i0, i1
+          c1 = c1 + AMAT(i)*AMAT(i)
+        END DO
+        c1 = SQRT(c1)
+        IF (c1 == DZERO) THEN
+          c1 = DONE
+        ELSE
+          c1 = DONE/c1
+        END IF
+        DSCALE(n) = c1
+        !
+        ! -- INITIAL SCALING OF AMAT -- AMAT = DSCALE(row) * AMAT(i)
+        DO i = i0, i1
+          AMAT(i) = c1*AMAT(i)
+        END DO
+      END DO
+      !
+      ! -- SCALE EACH COLUMN SO THAT THE L-2 NORM IS 1
+      DO n = 1, NEQ
+        DSCALE2(n) = DZERO
+      END DO
+      c2 = DZERO
+      DO n = 1, NEQ
+        i0 = IA(n)
+        i1 = IA(n + 1) - 1
+        DO i = i0, i1
+          jc = JA(i)
+          c2 = AMAT(i)
+          DSCALE2(jc) = DSCALE2(jc) + c2*c2
+        END DO
+      END DO
+      DO n = 1, NEQ
+        c2 = DSCALE2(n)
+        IF (c2 == DZERO) THEN
+          c2 = DONE
+        ELSE
+          c2 = DONE/SQRT(c2)
+        END IF
+        DSCALE2(n) = c2
+      END DO
+      !
+      ! -- FINAL SCALING OF AMAT -- AMAT = DSCALE2(col) * AMAT(i)
+      DO n = 1, NEQ
+        i0 = IA(n)
+        i1 = IA(n + 1) - 1
+        DO i = i0, i1
+          jc = JA(i)
+          c2 = DSCALE2(jc)
+          AMAT(i) = c2*AMAT(i)
+        END DO
+      END DO
+    END SELECT
+    !
+    ! -- SCALE X AND B
+    DO n = 1, NEQ
+      c1 = DSCALE(n)
+      c2 = DSCALE2(n)
+      X(n) = X(n)/c2
+      B(n) = B(n)*c1
+    END DO
+    !
+    ! -- UNSCALE SCALE AMAT, X, AND B
+  ELSE
+    DO n = 1, NEQ
+      c1 = DSCALE(n)
+      i0 = IA(n)
+      i1 = IA(n + 1) - 1
+      !
+      ! -- UNSCALE AMAT
+      DO i = i0, i1
+        jc = JA(i)
+        c2 = DSCALE2(jc)
+        AMAT(i) = (DONE/c1)*AMAT(i)*(DONE/c2)
+      END DO
+      !
+      ! -- UNSCALE X AND B
+      c2 = DSCALE2(n)
+      X(n) = X(n)*c2
+      B(n) = B(n)/c1
+    END DO
+  END IF
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_scale
+
+  !> @ brief Update the preconditioner
+  !!
+  !!  Update the preconditioner using the current coefficient matrix.
+  !!
+  !<
+  SUBROUTINE ims_base_pcu(IOUT, NJA, NEQ, NIAPC, NJAPC, IPC, RELAX, &
+    AMAT, IA, JA, APC, IAPC, JAPC, IW, W, &
+    LEVEL, DROPTOL, NJLU, NJW, NWLU, JLU, JW, WLU)
+  ! -- modules
+  use SimModule, only: ustop, store_error, count_errors
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: IOUT                          !< simulation listing file unit
+  integer(I4B), INTENT(IN) :: NJA                           !< number of non-zero entries
+  integer(I4B), INTENT(IN) :: NEQ                           !< number of equations
+  integer(I4B), INTENT(IN) :: NIAPC                         !< preconditioner number of rows
+  integer(I4B), INTENT(IN) :: NJAPC                         !< preconditioner number of non-zero entries
+  integer(I4B), INTENT(IN) :: IPC                           !< precoditioner (1) ILU0 (2) MILU0 (3) ILUT (4) MILUT
+  real(DP), INTENT(IN) :: RELAX                             !< preconditioner relaxation factor for MILU0 and MILUT
+  real(DP), DIMENSION(NJA), INTENT(IN)     :: AMAT          !< coefficient matrix
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN)    :: IA     !< CRS row pointers
+  integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA       !< CRS column pointers
+  real(DP), DIMENSION(NJAPC), INTENT(INOUT) :: APC          !< preconditioner matrix
+  integer(I4B), DIMENSION(NIAPC + 1), INTENT(INOUT) :: IAPC !< preconditioner CRS row pointers
+  integer(I4B), DIMENSION(NJAPC), INTENT(INOUT)   :: JAPC   !< preconditioner CRS column pointers
+  integer(I4B), DIMENSION(NIAPC), INTENT(INOUT)   :: IW     !< preconditioner integed work vector
+  real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W            !< preconditioner work verctor
+  ! -- ILUT dummy variables
+  integer(I4B), INTENT(IN) :: LEVEL                         !< number of levels of fill for ILUT and MILUT
+  real(DP), INTENT(IN) :: DROPTOL                           !< drop tolerance
+  integer(I4B), INTENT(IN) :: NJLU                          !< length of JLU working vector
+  integer(I4B), INTENT(IN) :: NJW                           !< length of JW working vector
+  integer(I4B), INTENT(IN) :: NWLU                          !< length of WLU working vector
+  integer(I4B), DIMENSION(NJLU), INTENT(INOUT) :: JLU       !< ILUT/MILUT JLU working vector
+  integer(I4B), DIMENSION(NJW), INTENT(INOUT) :: JW         !< ILUT/MILUT JW working vector
+  real(DP), DIMENSION(NWLU), INTENT(INOUT) :: WLU           !< ILUT/MILUT WLU working vector
+  ! -- local variables
+  character(len=LINELENGTH) :: errmsg
+  character(len=80), dimension(3) :: cerr
+  integer(I4B) :: ipcflag
+  integer(I4B) :: icount
+  integer(I4B) :: ierr
+  real(DP) :: delta
+  ! -- data
+  DATA cerr/'INCOMPREHENSIBLE ERROR - MATRIX MUST BE WRONG.              ', &
+    'INSUFFICIENT STORAGE IN ARRAYS ALU, JLU TO STORE FACTORS.   ', &
+    'ZERO ROW ENCOUNTERED.                                       '/
+  ! -- formats
+2000 FORMAT(/, ' MATRIX IS SEVERELY NON-DIAGONALLY DOMINANT.', &
+    /, ' ADDED SMALL VALUE TO PIVOT ', i0, ' TIMES IN', &
+    ' IMSLINEARSUB_PCU.')
+  !
+  ! -- initialize local variables
+  ipcflag = 0
+  icount = 0
+  delta = DZERO
+  PCSCALE: DO
+    SELECT CASE (IPC)
+      !
+      ! -- ILU0 AND MILU0
+    CASE (1, 2)
+      CALL ims_base_pcilu0(NJA, NEQ, AMAT, IA, JA, &
+        APC, IAPC, JAPC, IW, W, &
+        RELAX, ipcflag, delta)
+      !
+      ! -- ILUT AND MILUT
+    CASE (3, 4)
+      ierr = 0
+      CALL ims_sk_pcmilut(NEQ, AMAT, JA, IA, &
+        LEVEL, DROPTOL, RELAX, &
+        APC, JLU, IW, NJAPC, WLU, JW, ierr, &
+        ipcflag, delta)
+      IF (ierr .NE. 0) THEN
+        write (errmsg, '(a,1x,a)') 'ILUT ERROR: ', cerr(-ierr)
+        call store_error(errmsg)
+        call parser%StoreErrorUnit()
+        call ustop()
+      END IF
+      !
+      ! -- ADDITIONAL PRECONDITIONERS
+      CASE DEFAULT
+      ipcflag = 0
+    END SELECT
+    IF (ipcflag < 1) THEN
+      EXIT PCSCALE
+    END IF
+    delta = 1.5D0*delta + 0.001
+    ipcflag = 0
+    IF (delta > DHALF) THEN
+      delta = DHALF
+      ipcflag = 2
+    END IF
+    icount = icount + 1
+    !
+    ! -- terminate pcscale loop if not making progress
+    if (icount > 10) then
+      exit PCSCALE
+    end if
+
+  END DO PCSCALE
+  !
+  ! -- write error message if small value added to pivot
+  if (icount > 0) then
+    write (IOUT, 2000) icount
+  end if
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_pcu
+
+  !> @ brief Jacobi preconditioner
+  !!
+  !!  Calculate the Jacobi preconditioner (inverse of the diagonal) using
+  !!  the current coefficient matrix.
+  !!
+  !<
+  SUBROUTINE ims_base_pcjac(NJA, NEQ, AMAT, APC, IA, JA)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NJA                    !< number of non-zero entries
+  integer(I4B), INTENT(IN) :: NEQ                    !< number of equations
+  real(DP), DIMENSION(NJA), INTENT(IN)      :: AMAT  !< coefficient matrix
+  real(DP), DIMENSION(NEQ), INTENT(INOUT)   :: APC   !< preconditioner matrix
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA !< CRS row pointers
+  integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA     !< CRS column pointers
+  ! -- local variables
+  integer(I4B) :: i, n
+  integer(I4B) :: ic0, ic1
+  integer(I4B) :: id
+  real(DP) :: tv
+  ! -- code
+  DO n = 1, NEQ
+    ic0 = IA(n)
+    ic1 = IA(n + 1) - 1
+    id = IA(n)
+    DO i = ic0, ic1
+      IF (JA(i) == n) THEN
+        id = i
+        EXIT
+      END IF
+    END DO
+    tv = AMAT(id)
+    IF (ABS(tv) > DZERO) tv = DONE/tv
+    APC(n) = tv
+  END DO
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_pcjac
+
+  !> @ brief Apply the Jacobi preconditioner
+  !!
+  !!  Apply the Jacobi preconditioner and return the resultant vector.
+  !!
+  !<
+  SUBROUTINE ims_base_jaca(NEQ, A, D1, D2)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NEQ                 !< number of equations
+  real(DP), DIMENSION(NEQ), INTENT(IN)    :: A    !< Jacobi preconditioner
+  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1   !< input vector
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D2   !< resultant vector
+  !  -- local variables
+  integer(I4B) :: n
+  real(DP) :: tv
+  ! -- code
+  DO n = 1, NEQ
+    tv = A(n)*D1(n)
+    D2(n) = tv
+  END DO
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_jaca
+
+  !> @ brief Update the ILU0 preconditioner
+  !!
+  !!  Update the ILU0 preconditioner using the current coefficient matrix.
+  !!
+  !<
+  SUBROUTINE ims_base_pcilu0(NJA, NEQ, AMAT, IA, JA, &
+    APC, IAPC, JAPC, IW, W, &
+    RELAX, IPCFLAG, DELTA)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NJA                         !< number of non-zero entries
+  integer(I4B), INTENT(IN) :: NEQ                         !< number of equations
+  real(DP), DIMENSION(NJA), INTENT(IN)     :: AMAT        !< coefficient matrix
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN)    :: IA   !< CRS row pointers
+  integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA     !< CRS column pointers
+  real(DP), DIMENSION(NJA), INTENT(INOUT)   :: APC        !< preconditioned matrix
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(INOUT) :: IAPC !< preconditioner CRS row pointers
+  integer(I4B), DIMENSION(NJA), INTENT(INOUT)   :: JAPC   !< preconditioner CRS column pointers
+  integer(I4B), DIMENSION(NEQ), INTENT(INOUT)   :: IW     !< preconditioner integer work vector
+  real(DP), DIMENSION(NEQ), INTENT(INOUT)   :: W          !< preconditioner work vector
+  real(DP), INTENT(IN) :: RELAX                           !< MILU0 preconditioner relaxation factor
+  integer(I4B), INTENT(INOUT) :: IPCFLAG                  !< preconditioner error flag
+  real(DP), INTENT(IN) :: DELTA                           !< factor used to correct non-diagonally dominant matrices
+  ! -- local variables
+  integer(I4B) :: ic0, ic1
+  integer(I4B) :: iic0, iic1
+  integer(I4B) :: iu, iiu
+  integer(I4B) :: j, n
+  integer(I4B) :: jj
+  integer(I4B) :: jcol, jw
+  integer(I4B) :: jjcol
+  real(DP) :: drelax
+  real(DP) :: sd1
+  real(DP) :: tl
+  real(DP) :: rs
+  real(DP) :: d
+  !
+  ! -- initialize local variables
+  drelax = RELAX
+  DO n = 1, NEQ
+    IW(n) = 0
+    W(n) = DZERO
+  END DO
+  MAIN: DO n = 1, NEQ
+    ic0 = IA(n)
+    ic1 = IA(n + 1) - 1
+    DO j = ic0, ic1
+      jcol = JA(j)
+      IW(jcol) = 1
+      W(jcol) = W(jcol) + AMAT(j)
+    END DO
+    ic0 = IAPC(n)
+    ic1 = IAPC(n + 1) - 1
+    iu = JAPC(n)
+    rs = DZERO
+    LOWER: DO j = ic0, iu - 1
+      jcol = JAPC(j)
+      iic0 = IAPC(jcol)
+      iic1 = IAPC(jcol + 1) - 1
+      iiu = JAPC(jcol)
+      tl = W(jcol)*APC(jcol)
+      W(jcol) = tl
+      DO jj = iiu, iic1
+        jjcol = JAPC(jj)
+        jw = IW(jjcol)
+        IF (jw .NE. 0) THEN
+          W(jjcol) = W(jjcol) - tl*APC(jj)
+        ELSE
+          rs = rs + tl*APC(jj)
+        END IF
+      END DO
+    END DO LOWER
+    !
+    ! -- DIAGONAL - CALCULATE INVERSE OF DIAGONAL FOR SOLUTION
+    d = W(n)
+    tl = (DONE + DELTA)*d - (drelax*rs)
+    !
+    ! -- ENSURE THAT THE SIGN OF THE DIAGONAL HAS NOT CHANGED AND IS
+    sd1 = SIGN(d, tl)
+    IF (sd1 .NE. d) THEN
+      !
+      ! -- USE SMALL VALUE IF DIAGONAL SCALING IS NOT EFFECTIVE FOR
+      !    PIVOTS THAT CHANGE THE SIGN OF THE DIAGONAL
+      IF (IPCFLAG > 1) THEN
+        tl = SIGN(DEM6, d)
+        !
+        ! -- DIAGONAL SCALING CONTINUES TO BE EFFECTIVE
+      ELSE
+        IPCFLAG = 1
+        EXIT MAIN
+      END IF
+    END IF
+    IF (ABS(tl) == DZERO) THEN
+      !
+      ! -- USE SMALL VALUE IF DIAGONAL SCALING IS NOT EFFECTIVE FOR
+      !    ZERO PIVOTS
+      IF (IPCFLAG > 1) THEN
+        tl = SIGN(DEM6, d)
+        !
+        ! -- DIAGONAL SCALING CONTINUES TO BE EFFECTIVE FOR ELIMINATING
+      ELSE
+        IPCFLAG = 1
+        EXIT MAIN
+      END IF
+    END IF
+    APC(n) = DONE/tl
+    !
+    ! -- RESET POINTER FOR IW TO ZERO
+    IW(n) = 0
+    W(n) = DZERO
+    DO j = ic0, ic1
+      jcol = JAPC(j)
+      APC(j) = W(jcol)
+      IW(jcol) = 0
+      W(jcol) = DZERO
+    END DO
+  END DO MAIN
+  !
+  ! -- RESET IPCFLAG IF SUCCESSFUL COMPLETION OF MAIN
+  IPCFLAG = 0
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_pcilu0
+
+  !> @ brief Apply the ILU0 and MILU0 preconditioners
+  !!
+  !!  Apply the ILU0 and MILU0 preconditioners to the passed vector (R).
+  !!
+  !<
+  SUBROUTINE ims_base_ilu0a(NJA, NEQ, APC, IAPC, JAPC, R, D)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NJA                      !< number of non-zero entries
+  integer(I4B), INTENT(IN) :: NEQ                      !< number of equations
+  real(DP), DIMENSION(NJA), INTENT(IN)  :: APC         !< ILU0/MILU0 preconditioner matrix
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IAPC !< ILU0/MILU0 preconditioner CRS row pointers
+  integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JAPC   !< ILU0/MILU0 preconditioner CRS column pointers
+  real(DP), DIMENSION(NEQ), INTENT(IN)     :: R        !< input vector
+  real(DP), DIMENSION(NEQ), INTENT(INOUT)  :: D        !< output vector after applying APC to R
+  ! -- local variables
+  integer(I4B) :: ic0, ic1
+  integer(I4B) :: iu
+  integer(I4B) :: jcol
+  integer(I4B) :: j, n
+  real(DP) :: tv
+  !
+  ! -- FORWARD SOLVE - APC * D = R
+  FORWARD: DO n = 1, NEQ
+    tv = R(n)
+    ic0 = IAPC(n)
+    ic1 = IAPC(n + 1) - 1
+    iu = JAPC(n) - 1
+    LOWER: DO j = ic0, iu
+      jcol = JAPC(j)
+      tv = tv - APC(j)*D(jcol)
+    END DO LOWER
+    D(n) = tv
+  END DO FORWARD
+  !
+  ! -- BACKWARD SOLVE - D = D / U
+  BACKWARD: DO n = NEQ, 1, -1
+    ic0 = IAPC(n)
+    ic1 = IAPC(n + 1) - 1
+    iu = JAPC(n)
+    tv = D(n)
+    UPPER: DO j = iu, ic1
+      jcol = JAPC(j)
+      tv = tv - APC(j)*D(jcol)
+    END DO UPPER
+    !
+    ! -- COMPUTE D FOR DIAGONAL - D = D / U
+    D(n) = tv*APC(n)
+  END DO BACKWARD
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_ilu0a
+
+  !> @ brief Test for solver convergence
+  !!
+  !!  General routine for testing for solver convergence based on the 
+  !!  user-specified convergence option (Icnvgopt).
+  !<
+  !
+  ! -- TEST FOR SOLVER CONVERGENCE
+  SUBROUTINE ims_base_testcnvg(Icnvgopt, Icnvg, Iiter, &
+    Dvmax, Rmax, &
+    Rmax0, Epfact, Dvclose, Rclose)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN)     :: Icnvgopt  !< convergence option - see documentation for option
+  integer(I4B), INTENT(INOUT)  :: Icnvg     !< flag indicating if convergence achieved (1) or not (0)
+  integer(I4B), INTENT(IN)     :: Iiter     !< inner iteration number (used for strict convergence option)
+  real(DP), INTENT(IN) :: Dvmax             !< maximum dependent-variable change   
+  real(DP), INTENT(IN) :: Rmax              !< maximum flow change
+  real(DP), INTENT(IN) :: Rmax0             !< initial flow change (initial L2-norm)
+  real(DP), INTENT(IN) :: Epfact            !< factor for reducing convergence criteria in subsequent Picard iterations
+  real(DP), INTENT(IN) :: Dvclose           !< Maximum depenendent-variable change allowed
+  real(DP), INTENT(IN) :: Rclose            !< Maximum flow change alowed 
+  ! -- code
+  IF (Icnvgopt == 0) THEN
+    IF (ABS(Dvmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN
+      Icnvg = 1
+    END IF
+  ELSE IF (Icnvgopt == 1) THEN
+    IF (ABS(Dvmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN
+      IF (iiter == 1) THEN
+        Icnvg = 1
+      ELSE
+        Icnvg = -1
+      END IF
+    END IF
+  ELSE IF (Icnvgopt == 2) THEN
+    IF (ABS(Dvmax) <= Dvclose .OR. Rmax <= Rclose) THEN
+      Icnvg = 1
+    ELSE IF (Rmax <= Rmax0*Epfact) THEN
+      Icnvg = -1
+    END IF
+  ELSE IF (Icnvgopt == 3) THEN
+    IF (ABS(Dvmax) <= Dvclose) THEN
+      Icnvg = 1
+    ELSE IF (Rmax <= Rmax0*Rclose) THEN
+      Icnvg = -1
+    END IF
+  ELSE IF (Icnvgopt == 4) THEN
+    IF (ABS(Dvmax) <= Dvclose .AND. Rmax <= Rclose) THEN
+      Icnvg = 1
+    ELSE IF (Rmax <= Rmax0*Epfact) THEN
+      Icnvg = -1
+    END IF
+  END IF
+  !
+  ! -- return
+  RETURN
+  END SUBROUTINE ims_base_testcnvg
+
+  !> @ brief Generate CRS pointers for the preconditioner
+  !!
+  !!  Generate the CRS row and column pointers for the preconditioner.
+  !!  JAPC(1:NEQ) hHas the position of the upper entry for a row,
+  !!  JAPC(NEQ+1:NJA) is the column position for entry,
+  !!  APC(1:NEQ) is the preconditioned inverse of the diagonal, and
+  !!  APC(NEQ+1:NJA) are the preconditioned entries for off diagonals.
+  !<
+  SUBROUTINE ims_base_pccrs(NEQ, NJA, IA, JA, &
+    IAPC, JAPC)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN)         :: NEQ                 !<
+  integer(I4B), INTENT(IN)         :: NJA                 !<
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN)    :: IA   !<
+  integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA     !<
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(INOUT) :: IAPC !<
+  integer(I4B), DIMENSION(NJA), INTENT(INOUT)   :: JAPC   !<
+  ! -- local variables
+  integer(I4B) :: n, j
+  integer(I4B) :: i0, i1
+  integer(I4B) :: nlen
+  integer(I4B) :: ic, ip
+  integer(I4B) :: jcol
+  integer(I4B), DIMENSION(:), ALLOCATABLE :: iarr
+  ! -- code
+  ip = NEQ + 1
+  DO n = 1, NEQ
+    i0 = IA(n)
+    i1 = IA(n + 1) - 1
+    nlen = i1 - i0
+    ALLOCATE (iarr(nlen))
+    ic = 0
+    DO j = i0, i1
+      jcol = JA(j)
+      IF (jcol == n) CYCLE
+      ic = ic + 1
+      iarr(ic) = jcol
+    END DO
+    CALL ims_base_isort(nlen, iarr)
+    IAPC(n) = ip
+    DO j = 1, nlen
+      jcol = iarr(j)
+      JAPC(ip) = jcol
+      ip = ip + 1
+    END DO
+    DEALLOCATE (iarr)
+  END DO
+  IAPC(NEQ + 1) = NJA + 1
+  !
+  ! -- POSITION OF THE FIRST UPPER ENTRY FOR ROW
+  DO n = 1, NEQ
+    i0 = IAPC(n)
+    i1 = IAPC(n + 1) - 1
+    JAPC(n) = IAPC(n + 1)
+    DO j = i0, i1
+      jcol = JAPC(j)
+      IF (jcol > n) THEN
+        JAPC(n) = j
+        EXIT
+      END IF
+    END DO
+  END DO
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_pccrs
+  
+  !> @brief In-place sorting for an integer array
+  !!
+  !! Subroutine sort an integer array in-place.
+  !!
+  !<
+  SUBROUTINE ims_base_isort(NVAL, IARRAY)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NVAL                        !< length of the interger array
+  integer(I4B), DIMENSION(NVAL), INTENT(INOUT) :: IARRAY  !< integer array to be sorted
+  ! -- local variables
+  integer(I4B) :: i, j, itemp
+  ! -- code
+  DO i = 1, NVAL - 1
+    DO j = i + 1, NVAL
+      if (IARRAY(i) > IARRAY(j)) then
+        itemp = IARRAY(j)
+        IARRAY(j) = IARRAY(i)
+        IARRAY(i) = itemp
+      END IF
+    END DO
+  END DO
+  !
+  ! -- RETURN
+  RETURN
+  END SUBROUTINE ims_base_isort
+
+  !> @brief Initialize a real vector to a constant
+  !!
+  !! Subroutine to initialize a real vector to a passed constant.
+  !!
+  !! @param[in,out]  D1  resultant vector
+  !<
+  SUBROUTINE ims_base_setx(NR, D1, C)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NR                !< length of D1
+  real(DP), DIMENSION(NR), INTENT(INOUT) :: D1  !< vector to initialize to C
+  real(DP), INTENT(IN)                   :: C   !< constant value
+  ! -- local variables
+  INTEGER :: n
+  ! -- code
+  DO n = 1, NR
+    D1(n) = C
+  END DO
+  ! -- --RETURN
+  RETURN
+  END SUBROUTINE ims_base_setx
+
+  !> @brief Copy one real vector to another
+  !!
+  !! Subroutine to copy one real vector to another.
+  !!
+  !! @param[in,out]  R  resultant vector
+  !<
+  SUBROUTINE ims_base_dcopy(NR, V, R)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NR               !< number of rows in vector V
+  real(DP), DIMENSION(NR), INTENT(IN)    :: V  !< input real vector
+  real(DP), DIMENSION(NR), INTENT(INOUT) :: R  !< resultant real vector
+  ! -- local variables
+  integer(I4B) :: n
+  ! -- code
+  DO n = 1, NR
+    R(n) = V(n)
+  END DO
+  !
+  ! -- return
+  RETURN
+  END SUBROUTINE ims_base_dcopy
+
+  !> @brief Copy one integer vector to another
+  !!
+  !! Subroutine to copy one integer vector to another.
+  !!
+  !! @param[in,out]  R  resultant vector
+  !<
+  SUBROUTINE ims_base_icopy(NR, V, R)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NR                   !< number of rows in vector V
+  integer(I4B), DIMENSION(NR), INTENT(IN)    :: V  !< input integer vector
+  integer(I4B), DIMENSION(NR), INTENT(INOUT) :: R  !< resultant integer vector
+  ! -- local variables
+  integer(I4B) :: n
+  ! -- code
+  DO n = 1, NR
+    R(n) = V(n)
+  END DO
+  !
+  ! -- return
+  RETURN
+  END SUBROUTINE ims_base_icopy
+
+  !> @brief Scale a real vector with a constant
+  !!
+  !! Subroutine to multiply a vector times a constant.
+  !!
+  !! @param[in,out]  D1  resultant vector
+  !<
+  SUBROUTINE ims_base_rscale(NR, C, D1)
+  ! -- dummy variables
+  INTEGER, INTENT(IN) :: NR                      !< number of rows in vector D1
+  real(DP), INTENT(IN) :: C                      !< constant
+  real(DP), DIMENSION(NR), INTENT(INOUT) :: D1   !< real vector
+  ! -- local variables
+  INTEGER :: n
+  ! -- code
+  DO n = 1, NR
+    D1(n) = C*D1(n)
+  END DO
+  !
+  ! -- return
+  RETURN
+  END SUBROUTINE ims_base_rscale
+
+  !> @brief Calculate matrix vector product
+  !!
+  !! Subroutine to calculate the matrix vector product of
+  !! A and D1.
+  !!
+  !! @param[in,out]  D2  resultant vector
+  !<
+  SUBROUTINE ims_base_mv(NJA, NEQ, A, D1, D2, IA, JA)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NJA                    !< number of non-zero values in A
+  integer(I4B), INTENT(IN) :: NEQ                    !< number of equations (rows in A)
+  real(DP), DIMENSION(NJA), INTENT(IN)    :: A       !< coefficient matrix
+  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1      !< input vector
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D2      !< resultant vector
+  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA !< pointer to start of a row in A
+  integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JA   !< column pointers
+  ! -- local variables
+  integer(I4B) :: ic0, ic1
+  integer(I4B) :: icol
+  integer(I4B) :: m, n
+  real(DP) :: tv
+  ! -- code
+  DO n = 1, NEQ
+    ! -- ADD DIAGONAL AND OFF-DIAGONAL TERMS
+    tv = DZERO
+    ic0 = IA(n)
+    ic1 = IA(n + 1) - 1
+    DO m = ic0, ic1
+      icol = JA(m)
+      tv = tv + A(m)*D1(icol)
+    END DO
+    D2(n) = tv
+  END DO
+  !
+  ! -- return
+  RETURN
+  END SUBROUTINE ims_base_mv
+
+  !> @brief Calculate axpy
+  !!
+  !! Subroutine to add two vectors after multiplying the second
+  !! vector by a constant.
+  !!
+  !! @param[in,out]  DR  resultant vector
+  !<
+  SUBROUTINE ims_base_axpy(NEQ, D1, DC, D2, DR)
+  ! -- dummy variables
+  integer(I4B), INTENT(IN) :: NEQ                !< length of vectors
+  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1  !< first vector
+  real(DP), INTENT(IN) :: DC                     !< constant multiplied by the second vector
+  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D2  !< second vector
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DR  !< resultant vector
+  ! -- local variables
+  integer(I4B) :: n
+  ! -- code
+  DO n = 1, NEQ
+    DR(n) = D1(n) + DC*D2(n)
+  END DO
+  !
+  ! -- return
+  RETURN
+  END SUBROUTINE ims_base_axpy
+
+  !> @brief Calculate the dot product
+  !!
+  !! Function to calculate the dot product of two vectors.
+  !!
+  !! @return      c                dot product of two vectors
+  !<
+  FUNCTION ims_base_dotp(neq, a, b) RESULT(c)
+  ! -- return variable
+  real(DP) :: c                              !< dot product of a and b
+  ! -- dummy variables
+  integer(I4B), intent(in) :: neq            !< size of a and b
+  real(DP), dimension(neq), intent(in) :: a  !< vector a
+  real(DP), dimension(neq), intent(in) :: b  !< vector b
+  ! -- local variables
+  integer(I4B) :: n
+  ! -- code
+  c = DZERO
+  do n = 1, neq
+    c = c + a(n)*b(n)
+  end do
+  ! -- --return
+  return
+  END FUNCTION ims_base_dotp
+
+  !> @brief Calculate the L-2 norm
+  !!
+  !! Function to calculate the L-2 norm of vectors in a scaled form.
+  !! Based on BLAS DNRM2
+  !!
+  !! @return      c                L-2 norm of vector a
+  !<
+  FUNCTION ims_base_rnrm2(neq, a) RESULT(c)
+  ! -- return variable
+  real(DP) :: c                                !< L-2 norm of vector
+  ! -- dummy variables
+  integer(I4B), intent(in) :: neq              !< number of equations
+  real(DP), dimension(neq), intent(in) :: a    !< input vector
+  ! -- local variable
+  integer(I4B) :: n
+  real(DP) :: ssq
+  real(DP) :: scale
+  real(DP) :: norm
+  real(DP) :: absan
+  ! -- code
+  if (neq < 1) then
+    norm = DZERO
+  else if (neq == 1) then
+    norm = ABS(a(1))
+  else
+    scale = DZERO
+    ssq = DONE
+    do n = 1, neq
+      if (a(n) /= DZERO) then
+        absan = abs(a(n))
+        if (scale < absan) then
+          ssq = DONE + ssq*(scale/absan)**2
+          scale = absan
+        else
+          ssq = ssq + (absan/scale)**2
+        end if
+      end if
+    end do
+    norm = scale*sqrt(ssq)
+  END IF
+  c = norm
+  !
+  ! -- return
+  return
+  END FUNCTION ims_base_rnrm2
+
+  END MODULE IMSLinearBaseModule

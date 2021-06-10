@@ -12,7 +12,7 @@ module InputOutputModule
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
-  use GenericUtilitiesModule, only: IS_SAME, sim_message
+  use GenericUtilitiesModule, only: is_same, sim_message
   private
   public :: GetUnit, u8rdcom, uget_block,                                      &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
@@ -1649,7 +1649,7 @@ module InputOutputModule
     character(len=100) :: msg
     !
     ! -- don't get bitten by rounding errors or divide-by-zero
-    if (IS_SAME(t0, t1) .or. IS_SAME(t, t1)) then
+    if (is_same(t0, t1) .or. is_same(t, t1)) then
       y = y1
     elseif (t == t0) then
       y = y0
