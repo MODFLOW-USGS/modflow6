@@ -97,7 +97,7 @@ def build_model(ws, name, bmi=False):
     )
 
     # create gwf model
-    newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+    newtonoptions = "NEWTON UNDER_RELAXATION"
     gwf = flopy.mf6.ModflowGwf(
         sim,
         newtonoptions=newtonoptions,

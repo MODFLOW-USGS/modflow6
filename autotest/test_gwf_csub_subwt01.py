@@ -26,7 +26,7 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
-cmppth = "mf2005"
+cmppth = "mf6-regression"
 
 htol = [None for n in ex]
 dtol = 1e-3
@@ -145,73 +145,9 @@ for k in range(len(thick)):
                 swt6.append(d)
                 ibcno += 1
 
-ds16 = [
-    0,
-    0,
-    0,
-    2052,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-]
-ds17 = [
-    0,
-    10000,
-    0,
-    10000,
-    0,
-    0,
-    1,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-]
 
-
-def get_model(idx, dir):
+def build_model(idx, ws):
     name = ex[idx]
-
-    # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         memory_print_option="all",
@@ -224,12 +160,7 @@ def get_model(idx, dir):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, save_flows=True, print_input=True
-    )
-
-    # create iterative model solution and register the gwf model with it
+    # create iterative model solution
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -244,7 +175,11 @@ def get_model(idx, dir):
         reordering_method="NONE",
         relaxation_factor=relax,
     )
-    sim.register_ims_package(ims, [gwf.name])
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=name, save_flows=True, print_input=True
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -328,76 +263,18 @@ def get_model(idx, dir):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
+    return sim
 
-    # build MODFLOW-2005 files
+
+def get_model(idx, dir):
+
+    # build MODFLOW 6 files
+    ws = dir
+    sim = build_model(idx, ws)
+
+    # build comparision files
     ws = os.path.join(dir, cmppth)
-    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cmppth)
-    dis = flopy.modflow.ModflowDis(
-        mc,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        nper=nper,
-        perlen=perlen,
-        nstp=nstp,
-        tsmult=tsmult,
-        steady=steady,
-        delr=delr,
-        delc=delc,
-        top=top,
-        botm=botm,
-    )
-    bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo)
-    lpf = flopy.modflow.ModflowLpf(
-        mc, laytyp=laytyp, hk=hk, vka=hk, ss=ss, sy=sy, hdry=hdry
-    )
-    # upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
-    #                                hk=hk, vka=hk,
-    #                                ss=ss, sy=sy,
-    #                                hdry=hdry)
-    chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-    swt = flopy.modflow.ModflowSwt(
-        mc,
-        ipakcb=1001,
-        iswtoc=1,
-        nsystm=4,
-        ithk=1,
-        ivoid=ivoid[idx],
-        istpcs=1,
-        lnwt=[0, 0, 0, 0],
-        cc=cc,
-        cr=cr,
-        thick=thick,
-        void=void,
-        pcsoff=ini_stress,
-        sgs=sgs,
-        gl0=gs0[idx],
-        ids16=ds16,
-        ids17=ds17,
-    )
-    oc = flopy.modflow.ModflowOc(
-        mc,
-        stress_period_data=None,
-        save_every=1,
-        save_types=["save head", "save budget", "print budget"],
-    )
-    pcg = flopy.modflow.ModflowPcg(
-        mc,
-        mxiter=nouter,
-        iter1=ninner,
-        hclose=hclose,
-        rclose=rclose,
-        relax=relax,
-        ihcofadd=1,
-    )
-    # nwt = flopy.modflow.ModflowNwt(mc,
-    #                                headtol=hclose, fluxtol=fluxtol,
-    #                                maxiterout=nouter, linmeth=2,
-    #                                unitnumber=132,
-    #                                options='SPECIFIED',
-    #                                backflag=0, idroptol=0,
-    #                                hclosexmd=hclose, mxiterxmd=ninner,
-    #                                ibotav=1)
+    mc = build_model(idx, ws)
 
     return sim, mc
 
@@ -412,19 +289,17 @@ def eval_comp(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # MODFLOW-NWT total compaction results
+    # Comparision total compaction results
     cpth = cmppth
-    fn = "{}.swt_total_comp.hds".format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, cpth, fn)
+    fpth = os.path.join(sim.simpath, cpth, "csub_obs.csv")
     try:
-        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
-        tc0 = sobj.get_ts((0, 0, 1))
+        tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # calculate maximum absolute error
     loctag = "W1L1"
-    diff = tc[loctag] - tc0[:, 1]
+    diff = tc[loctag] - tc0[loctag]
     diffmax = np.abs(diff).max()
     msg = "maximum absolute total-compaction difference ({}) ".format(diffmax)
 
@@ -439,9 +314,9 @@ def eval_comp(sim):
     line += " {:>15s}".format("DIFF")
     f.write(line + "\n")
     for i in range(diff.shape[0]):
-        line = "{:15g}".format(tc0[i, 0])
+        line = "{:15g}".format(tc0["time"][i])
         line += " {:15g}".format(tc[loctag][i])
-        line += " {:15g}".format(tc0[i, 1])
+        line += " {:15g}".format(tc0[loctag][i])
         line += " {:15g}".format(diff[i])
         f.write(line + "\n")
     f.close()
@@ -568,7 +443,7 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
@@ -591,7 +466,11 @@ def test_mf6model():
         if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(
-            dir, exe_dict=r_exe, exfunc=eval_comp, htol=htol[idx]
+            dir,
+            exe_dict=r_exe,
+            exfunc=eval_comp,
+            htol=htol[idx],
+            mf6_regression=True,
         )
 
     return
@@ -607,7 +486,11 @@ def main():
     # run the test models
     for dir in exdirs:
         sim = Simulation(
-            dir, exe_dict=replace_exe, exfunc=eval_comp, htol=htol[idx]
+            dir,
+            exe_dict=replace_exe,
+            exfunc=eval_comp,
+            htol=htol[idx],
+            mf6_regression=True,
         )
         test.run_mf6(sim)
 

@@ -31,7 +31,7 @@ import targets
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
 ex = ["maw_obs"]
-newtonoptions = [None, [""], ["NEWTON", "UNDER_RELAXATION"]]
+newtonoptions = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))

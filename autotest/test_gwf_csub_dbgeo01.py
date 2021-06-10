@@ -29,10 +29,10 @@ bso = [True]
 # continuous_integration = [True for idx in range(len(exdirs))]
 # the delay bed problems only run on the development version of MODFLOW-2005
 # set travis to True when version 1.13.0 is released
-continuous_integration = [False for idx in range(len(exdirs))]
+continuous_integration = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
-replace_exe = {"mf2005": "mf2005devdbl"}
+replace_exe = None
 
 # comparison data
 compdataa = [

@@ -5,10 +5,12 @@ This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The 
 
 ### Version 6.2.2 release candidate
 
-![MODFLOW 6 CI with latest gfortran](https://github.com/MODFLOW-USGS/modflow6/workflows/MODFLOW%206%20CI%20with%20latest%20gfortran/badge.svg)
+[![Intel compiler](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml)
+[![gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml) 
+[![gfortran - previous versions](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml)
 
-![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/workflows/MODFLOW%206%20nightly%20build/badge.svg)
-
+[![MODFLOW 6 intel nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml)
+[![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml)
 
 ## Branches
 
@@ -29,7 +31,7 @@ The `develop` branch often contains bug fixes and new features that are not yet 
 
 Software distributions for the current and previous official USGS releases are available [here](https://github.com/MODFLOW-USGS/modflow6/releases).
 
-## Automated Testing
+## Continuous Integration
 
 This repository contains an `./autotest` folder with python scripts for building and testing the MODFLOW 6 program and other workflow tasks.  The testing workflow relies heavily on several related repositories including:
 
@@ -39,6 +41,10 @@ This repository contains an `./autotest` folder with python scripts for building
 * [MODFLOW-USGS/modflow6-largetestmodels](https://github.com/MODFLOW-USGS/modflow6-largetestmodels)
 * [MODFLOW-USGS/executables](https://github.com/MODFLOW-USGS/executables)
 * [Deltares/xmipy](https://github.com/Deltares/xmipy)
+
+## Code Documentation
+
+Documentation for the code on the `develop` branch is automatically developed using Doxygen as part of the MODFLOW 6 Continuous Integration/Continuous Deployment process. Code documentation is available from the [GitHub Pages](https://modflow-usgs.github.io/modflow6/) for this repository.
 
 ## Using Flopy with the `develop` Version of MODFLOW 6
 

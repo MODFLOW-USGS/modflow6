@@ -83,7 +83,7 @@ def build_models():
 
         # create gwf model
         gwfname = "gwf_" + name
-        newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+        newtonoptions = "NEWTON UNDER_RELAXATION"
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,

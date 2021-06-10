@@ -75,7 +75,7 @@ def build_model(idxsim, ws, name):
     strt = initial_conditions()
     hdsfile = "{}.hds".format(name)
     if newton[idxsim]:
-        newtonoptions = ""
+        newtonoptions = "NEWTON"
     else:
         newtonoptions = None
 

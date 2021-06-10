@@ -107,6 +107,10 @@ CMakeFiles/
 .doc/_build
 .doc/_mf6io
 .doc/_mf6src
+.doc/mf6io.rst
+.build_rtd_docs/_build
+.build_rtd_docs/_mf6io
+.build_rtd_docs/_mf6src
 latex/
 html/
 xml/

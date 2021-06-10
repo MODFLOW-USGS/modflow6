@@ -208,7 +208,7 @@ def get_model(idx, dir):
     sim = build_mf6(idx, ws)
 
     ws = os.path.join(ws, cmppth)
-    mc = build_mf6(idx, ws, newton="")
+    mc = build_mf6(idx, ws, newton="NEWTON")
 
     return sim, mc
 

@@ -103,7 +103,7 @@ def build_model(name, ws, newton_bool, offset=0.0):
     # create iterative model solution and register the gwf model with it
     if newton_bool:
         linear_acceleration = "BICGSTAB"
-        newtonoptions = "UNDER_RELAXATION"
+        newtonoptions = "NEWTON UNDER_RELAXATION"
         gamma = 1.0
     else:
         linear_acceleration = "CG"

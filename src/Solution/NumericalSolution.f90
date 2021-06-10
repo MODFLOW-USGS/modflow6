@@ -360,7 +360,7 @@ contains
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
-    class(NumericalModelType), pointer :: mp
+    class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B) :: ieq
 ! ------------------------------------------------------------------------------
@@ -398,6 +398,12 @@ contains
       this%dxold(i) = DZERO
       this%active(i) = 1 !default is active
     enddo
+    do i = 1, this%convnmod
+      this%locdv(i) = 0
+      this%locdr(i) = 0
+      this%dvmax(i) = DZERO
+      this%drmax(i) = DZERO
+    end do
     !
     ! -- initialize convmodstart
     ieq = 1
@@ -430,7 +436,7 @@ contains
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
-    class(NumericalModelType), pointer :: mp
+    class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
 ! ------------------------------------------------------------------------------
@@ -485,8 +491,8 @@ contains
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
-    class(NumericalModelType), pointer :: mp
-    class(NumericalExchangeType), pointer :: cp
+    class(NumericalModelType), pointer :: mp => null()
+    class(NumericalExchangeType), pointer :: cp => null()
     character(len=linelength) :: errmsg
     character(len=linelength) :: warnmsg
     character(len=linelength) :: keyword
@@ -1274,7 +1280,7 @@ contains
     integer(I4B), intent(inout) :: isgcnvg
     integer(I4B), intent(in) :: isuppress_output    
     ! -- local
-    class(NumericalModelType), pointer :: mp
+    class(NumericalModelType), pointer :: mp => null()
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: fmt
     integer(I4B) :: im
@@ -1370,7 +1376,7 @@ contains
     integer(I4B), intent(in) :: kper
     ! local
     integer(I4B) :: n, im, iallowptc, iptc
-    class(NumericalModelType), pointer :: mp
+    class(NumericalModelType), pointer :: mp => null()
     
     ! -- determine if PTC will be used in any model
     n = 1
@@ -1450,8 +1456,8 @@ contains
     class(NumericalSolutionType) :: this    
     integer(I4B), intent(in) :: kiter
     ! local
-    class(NumericalModelType), pointer :: mp
-    class(NumericalExchangeType), pointer :: cp    
+    class(NumericalModelType), pointer :: mp => null()
+    class(NumericalExchangeType), pointer :: cp => null()    
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: line
@@ -1853,8 +1859,8 @@ contains
     integer(I4B), intent(in) :: isuppress_output
     ! local
     integer(I4B) :: ic, im
-    class(NumericalModelType), pointer :: mp
-    class(NumericalExchangeType), pointer :: cp
+    class(NumericalModelType), pointer :: mp => null()
+    class(NumericalExchangeType), pointer :: cp => null()
     
     ! -- formats for convergence info 
     character(len=*), parameter :: fmtnocnvg =                                 &
@@ -1958,7 +1964,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
+    strh = ''
+    strr = ''
     iouter = 1
+    locdv = 0
+    locdr = 0
     !
     ! -- initialize inner iteration summary table
     if (.not. associated(this%innertab)) then
@@ -2305,14 +2315,13 @@ contains
     class(NumericalSolutionType) :: this
     ! -- local
     integer(I4B) :: i
-    real(DP) :: zero = 0.d0
 ! ------------------------------------------------------------------------------
     !
-    do i=1,this%nja
-      this%amat(i) = zero
+    do i = 1, this%nja
+      this%amat(i) = DZERO
     enddo
-    do i=1,this%neq
-        this%rhs(i) = zero
+    do i = 1, this%neq
+      this%rhs(i) = DZERO
     enddo
     !
     ! -- return
@@ -3083,18 +3092,24 @@ contains
     integer(I4B), intent(in) :: nodesln
     character(len=*), intent(inout) :: str
     ! -- local
-    class(NumericalModelType),pointer :: mp
+    class(NumericalModelType), pointer :: mp=> null()
     integer(I4B) :: i
     integer(I4B) :: istart
     integer(I4B) :: iend
     integer(I4B) :: noder
 ! ------------------------------------------------------------------------------
     !
-    ! -- calculate and set offsets
-    noder = 0
+    ! -- initialize dummy variables
     str = ''
+    !
+    ! -- initialize local variables
+    noder = 0
+    !
+    ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
+      istart = 0
+      iend = 0
       call mp%get_mrange(istart, iend)
       if (nodesln >= istart .and. nodesln <= iend) then
         noder = nodesln - istart + 1
@@ -3120,17 +3135,21 @@ contains
     integer(I4B), intent(inout) :: im
     integer(I4B), intent(inout) :: nodeu
     ! -- local
-    class(NumericalModelType),pointer :: mp
+    class(NumericalModelType),pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B) :: istart
     integer(I4B) :: iend
     integer(I4B) :: noder
 ! ------------------------------------------------------------------------------
     !
-    ! -- calculate and set offsets
+    ! -- initialize local variables
     noder = 0
+    !
+    ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
+      istart = 0
+      iend = 0
       call mp%get_mrange(istart, iend)
       if (nodesln >= istart .and. nodesln <= iend) then
         noder = nodesln - istart + 1

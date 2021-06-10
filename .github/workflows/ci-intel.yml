@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             build_script: ifortvars_linux.sh
           - os: macos-latest
             build_script: ifortvars_macos.sh
@@ -46,10 +46,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
 
-      - name: setup-conda
-        uses: s-weigand/setup-conda@v1.0.5
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v2.2.2
         with:
-          update-conda: true
+          python-version: 3.8
 
       - name: cache install ifort on linux
         if: runner.os == 'Linux'
@@ -93,11 +93,7 @@ jobs:
 
       - name: Install python packages
         run: |
-          .github/common/install-python.sh
-
-      - name: Print conda version
-        run: |
-          conda --version
+          .github/common/install-python-std.sh
 
       - name: Print python package versions
         run: |

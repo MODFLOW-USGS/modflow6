@@ -78,14 +78,14 @@ def get_model(idx, dir):
         complexity="complex",
         outer_dvclose=dvclose,
         inner_dvclose=dvclose,
-        rcloserecord=[rclose, "strict"],
+        rcloserecord="{} strict".format(rclose),
         relaxation_factor=relax,
     )
 
     # create gwf model
     gwfname = "gwf_" + name
 
-    newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+    newtonoptions = "NEWTON UNDER_RELAXATION"
     gwf = flopy.mf6.ModflowGwf(
         sim, modelname=gwfname, newtonoptions=newtonoptions, print_input=True
     )

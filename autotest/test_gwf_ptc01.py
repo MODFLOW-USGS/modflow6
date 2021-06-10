@@ -68,7 +68,7 @@ def build_mf6(idx, ws, storage=True):
         modelname=name,
         model_nam_file="{}.nam".format(name),
         save_flows=True,
-        newtonoptions=["NEWTON"],
+        newtonoptions="NEWTON",
     )
 
     # create iterative model solution and register the gwf model with it
