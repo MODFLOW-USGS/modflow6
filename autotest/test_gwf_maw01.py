@@ -21,7 +21,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ["maw01", "maw01nwt", "maw01nwtur"]
-newtonoptions = [None, [""], ["NEWTON", "UNDER_RELAXATION"]]
+newtonoptions = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))

@@ -485,7 +485,7 @@ def get_examples(component):
         fpth = os.path.join(pth, filename)
         with open(fpth, 'r') as f:
             lines = f.readlines()
-        s += "```adoc\n"
+        s += "```\n"
         for line in lines:
             line = line.rstrip()
             s += "    {}\n".format(line)
@@ -506,7 +506,7 @@ def get_obs_examples(component):
         fpth = os.path.join(pth, filename)
         with open(fpth, 'r') as f:
             lines = f.readlines()
-        s += "```adoc\n"
+        s += "```\n"
         for line in lines:
             line = line.rstrip()
             s += "    {}\n".format(line)
@@ -662,6 +662,7 @@ if __name__ == '__main__':
                   'gwf-mvr',  # dfn completed  tex updated
                   'gwf-gnc',  # dfn completed  tex updated
                   'gwf-oc',  # dfn completed  tex updated
+                  'gwf-api',
                   'gwt-adv',
                   'gwt-dsp',
                   'gwt-cnc',
@@ -681,6 +682,7 @@ if __name__ == '__main__':
                   'gwt-uzt',
                   'gwt-fmi',
                   'gwt-mvt',
+                  'gwt-api',
                   'utl-lak-tab',  # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',
@@ -691,7 +693,7 @@ if __name__ == '__main__':
     dfndir = os.path.join('.', 'dfn')
     texdir = os.path.join('.', 'tex')
     mddir = os.path.join('.', 'md')
-    docdir = os.path.join("..", "..", "..", ".doc", "_mf6io")
+    docdir = os.path.join("..", "..", "..", ".build_rtd_docs", "_mf6io")
 
     # regenerate docdir
     if os.path.isdir(docdir):
@@ -793,7 +795,7 @@ if __name__ == '__main__':
 
             if "period" in b.lower():
                 f.write("\n_FOR ANY STRESS PERIOD_\n\n")
-            f.write("```adoc\n")
+            f.write("```\n")
             s = md_replace(write_block(vardict, b, blk_var_list,
                                        varexcludeprefix='dev_',
                                        indent=4)) + "\n"

@@ -36,6 +36,9 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
+# recharge package name
+rch_pname = "RCH-1"
+
 # average recharge rate
 avg_rch = 0.001
 
@@ -136,7 +139,7 @@ def build_model(ws, name, rech):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
     # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
+    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech, pname=rch_pname)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -200,7 +203,7 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, "RCHA")
+    rch_tag = mf6.get_var_address("BOUND", name, rch_pname)
     new_recharge = mf6.get_value(rch_tag)
 
     # model time loop

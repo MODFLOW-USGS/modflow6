@@ -75,11 +75,15 @@ def build_model(ws, name, uzf=False):
         linear_acceleration="BICGSTAB",
         outer_maximum=200,
         inner_maximum=200,
-        outer_dvclose=1e-6,
+        outer_dvclose=1e-9,
         inner_dvclose=1e-9,
-        rcloserecord=[0.01, "strict"],
+        rcloserecord="0.01 strict",
     )
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions="")
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=name,
+        newtonoptions="NEWTON",
+    )
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,

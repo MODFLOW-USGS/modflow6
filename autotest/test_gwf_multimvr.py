@@ -600,7 +600,7 @@ def instantiate_base_simulation(scen_nam, gwfname, gwfnamec):
         sim,
         modelname=gwfname,
         save_flows=True,
-        newtonoptions=True,
+        newtonoptions="NEWTON",
         model_nam_file="{}.nam".format(gwfname),
     )
 
@@ -750,7 +750,7 @@ def instantiate_base_simulation(scen_nam, gwfname, gwfnamec):
         sim,
         modelname=gwfnamec,
         save_flows=True,
-        newtonoptions=True,
+        newtonoptions="NEWTON",
         model_nam_file="{}.nam".format(gwfnamec),
     )
 

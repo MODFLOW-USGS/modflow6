@@ -114,6 +114,7 @@ def run_mf6(sim):
     sim.compare()
     sim.teardown()
 
+
 def set_make_comparison(test):
     compare_tests = {
         "test1004_mvlake_laksfr_tr": ("6.2.1",),

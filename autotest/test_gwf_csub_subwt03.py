@@ -34,7 +34,7 @@ budtol = 1e-2
 
 paktest = "csub"
 
-isnewton = 2 * [None, ""]
+isnewton = 2 * [None, "NEWTON"]
 headbased = [True, True, False, False]
 delay = 4 * [False]
 

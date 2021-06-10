@@ -113,6 +113,7 @@ def run_mf6(sim):
     sim.compare()
     sim.teardown()
 
+
 def set_make_comparison(test):
     compare_tests = {
         "ex-gwf-sagehen": ("6.2.1",),
@@ -133,6 +134,7 @@ def set_make_comparison(test):
         if version in compare_tests[test]:
             make_comparison = False
     return make_comparison
+
 
 def test_mf6model():
     # determine if largetest directory exists
@@ -175,7 +177,7 @@ def main():
             on_dir,
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison = set_make_comparison(on_dir),
+            make_comparison=set_make_comparison(on_dir),
         )
         run_mf6(sim)
 

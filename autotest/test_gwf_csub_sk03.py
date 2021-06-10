@@ -27,7 +27,7 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 constantcv = [True for idx in range(len(exdirs))]
 
-cmppths = ["mfnwt" for idx in range(len(exdirs))]
+cmppths = ["mf6-regression" for idx in range(len(exdirs))]
 newtons = [True for idx in range(len(exdirs))]
 
 icrcc = [0, 1, 0, 1]
@@ -259,36 +259,25 @@ ds17 = [
 ]
 
 
-# SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, ws):
     name = ex[idx]
     newton = newtons[idx]
+    newtonoptions = None
+    imsla = "CG"
+    if newton:
+        newtonoptions = "NEWTON"
+        imsla = "BICGSTAB"
 
-    # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
+
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="SECONDS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
-    newtonoptions = None
-    imsla = "CG"
-    if newton:
-        newtonoptions = ""
-        imsla = "BICGSTAB"
-
-    sc = sske
-    compression_indices = None
-
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
-
-    # create iterative model solution and register the gwf model with it
+    # create iterative model solution
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -303,7 +292,14 @@ def get_model(idx, dir):
         reordering_method="NONE",
         relaxation_factor=relax,
     )
-    sim.register_ims_package(ims, [gwf.name])
+
+    # create gwf model
+    sc = sske
+    compression_indices = None
+
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=name, newtonoptions=newtonoptions
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -324,7 +320,6 @@ def get_model(idx, dir):
         gwf,
         save_flows=True,
         save_specific_discharge=True,
-        # dev_modflowusg_upstream_weighted_saturation=True,
         icelltype=laytyp,
         k=hk,
         k33=vka,
@@ -529,7 +524,21 @@ def get_model(idx, dir):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
-    mc = None
+
+    return sim
+
+
+# SUB package problem 3
+def get_model(idx, dir):
+
+    # build MODFLOW 6 files
+    ws = dir
+    sim = build_model(idx, ws)
+
+    # build comparison files
+    cpth = cmppths[idx]
+    ws = os.path.join(dir, cpth)
+    mc = build_model(idx, ws)
 
     return sim, mc
 
@@ -630,7 +639,7 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
@@ -653,7 +662,12 @@ def test_mf6model():
         if is_CI and not continuous_integration[idx]:
             continue
         yield test.run_mf6, Simulation(
-            dir, exfunc=eval_comp, exe_dict=r_exe, htol=htol[idx], idxsim=idx
+            dir,
+            exfunc=eval_comp,
+            exe_dict=r_exe,
+            htol=htol[idx],
+            idxsim=idx,
+            mf6_regression=True,
         )
 
     return
@@ -674,6 +688,7 @@ def main():
             exe_dict=replace_exe,
             htol=htol[idx],
             idxsim=idx,
+            mf6_regression=True,
         )
         test.run_mf6(sim)
 

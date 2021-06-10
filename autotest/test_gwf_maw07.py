@@ -88,7 +88,7 @@ def get_model(idx, dir):
     # create gwf model
     gwfname = "gwf_" + name
 
-    newtonoptions = ["NEWTON", "UNDER_RELAXATION"]
+    newtonoptions = "NEWTON UNDER_RELAXATION"
     gwf = flopy.mf6.ModflowGwf(
         sim, modelname=gwfname, newtonoptions=newtonoptions
     )
@@ -102,7 +102,7 @@ def get_model(idx, dir):
         under_relaxation_gamma=0.98,
         inner_maximum=ninner,
         inner_hclose=hclose,
-        rcloserecord=[rclose, "strict"],
+        rcloserecord="{} strict".format(rclose),
         linear_acceleration="BICGSTAB",
         scaling_method="NONE",
         reordering_method="NONE",

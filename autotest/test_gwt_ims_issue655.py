@@ -95,7 +95,7 @@ def build_models(idx, ws):
 
     # create gwf model
     if newton[idx]:
-        newtonoptions = ""
+        newtonoptions = "NEWTON"
         linear_acceleration = "bicgstab"
     else:
         newtonoptions = None

@@ -319,7 +319,6 @@ contains
     ! -- Allocate scalars
     call csubobj%csub_allocate_scalars()
     !
-    !
     ! -- Create memory path to variables from STO package
     csubobj%stoMemPath = create_mem_path(name_model, stoPckName)
     !
@@ -1150,7 +1149,7 @@ contains
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%memoryPath)
     !
     ! -- allocate TS object
-    allocate (this%TsManager)
+    allocate(this%TsManager)
     !
     ! -- initialize values
     this%istounit = 0
@@ -2448,13 +2447,16 @@ contains
       call this%obs%obs_da()
       call this%TsManager%da()
       !
-      ! -- deallocate objects
+      ! -- deallocate and nullify observations
       deallocate (this%obs)
-      deallocate (this%TsManager)
+      nullify(this%obs)
     end if
     !
-    ! -- nullify TsManager
+    ! -- deallocate TsManager
+    deallocate (this%TsManager)
     nullify (this%TsManager)
+
+
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

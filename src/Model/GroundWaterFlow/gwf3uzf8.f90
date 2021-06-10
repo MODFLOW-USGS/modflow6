@@ -2711,9 +2711,10 @@ contains
     !
     ! -- deallocate uzf objects
     call this%uzfobj%dealloc()
+    deallocate(this%uzfobj)
+    nullify(this%uzfobj)
     call this%uzfobjwork%dealloc()
 
-    nullify(this%uzfobj)
     call this%budobj%budgetobject_da()
     deallocate(this%budobj)
     nullify(this%budobj)

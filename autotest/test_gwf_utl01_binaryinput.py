@@ -64,7 +64,6 @@ def get_model(idx, dir):
         modelname=name,
         model_nam_file="{}.nam".format(name),
     )
-    gwf.name_file.newtonoptions = None
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(

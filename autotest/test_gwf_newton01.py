@@ -68,7 +68,7 @@ def build_mf6(idx, ws):
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, save_flows=True, newtonoptions=""
+        sim, modelname=name, save_flows=True, newtonoptions="NEWTON"
     )
 
     flopy.mf6.ModflowGwfdis(
@@ -132,10 +132,10 @@ def eval_head(sim):
     fpth = os.path.join(sim.simpath, oname)
     v = np.genfromtxt(fpth, delimiter=",", names=True)
 
-    msg = "head in layer 1 != 8."
+    msg = "head in layer 1 != 8. ({})".format(v["H1"])
     assert np.allclose(v["H1"], 8.0), msg
 
-    msg = "head in layer 2 != 7."
+    msg = "head in layer 2 != 7. ({})".format(v["H2"])
     assert np.allclose(v["H2"], 7.0), msg
 
     return
