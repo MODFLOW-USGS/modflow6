@@ -27,8 +27,8 @@ MODULE IMSLinearModule
     integer(I4B), POINTER :: IACPC => NULL()                             !< ia for the preconditioner
     integer(I4B), POINTER :: NITERC => NULL()                            !< 
     integer(I4B), POINTER :: NIABCGS => NULL()                           !<
-    integer(I4B), POINTER :: NIAPC => NULL()                             !<
-    integer(I4B), POINTER :: NJAPC => NULL()                             !<
+    integer(I4B), POINTER :: NIAPC => NULL()                             !< number of rows
+    integer(I4B), POINTER :: NJAPC => NULL()                             !< number of non-zero entries
     real(DP), POINTER :: DVCLOSE => NULL()                               !< dependent variable convergence criteria
     real(DP), POINTER :: RCLOSE => NULL()                                !< flow convergence criteria
     real(DP), POINTER :: RELAX => NULL()                                 !< preconditioner relaxation factor
@@ -1025,24 +1025,28 @@ MODULE IMSLinearModule
     END SUBROUTINE IMSLINEAR_AP
 
     
-! -- IMSLinearModule subroutines that do not depend on data stored in the IMSLinearModule class
-!    all data is passed through subroutine calls
-!                                                                       
-! -- ROUTINE TO CALCULATE LORDER AND IORDER FOR REORDERING           
+    ! -- IMSLinearModule subroutines that do not depend on data stored in 
+    !    the IMSLinearModule class all data is passed through subroutine calls
+
+    !> @ brief Calculate LORDER AND IORDER
+    !!
+    !!  Calculate LORDER and IORDER for reordering.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_CALC_ORDER(IOUT, IPRIMS, IORD, NEQ, NJA, IA, JA,  &
                                        LORDER, IORDER)                     
       ! -- modules
       use SimModule, only: ustop, store_error, count_errors
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: IOUT 
-      integer(I4B), INTENT(IN) :: IPRIMS 
-      integer(I4B), INTENT(IN) :: IORD 
-      integer(I4B), INTENT(IN) :: NEQ 
-      integer(I4B), INTENT(IN) :: NJA 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN)  :: IA 
-      integer(I4B), DIMENSION(NJA),   INTENT(IN)  :: JA 
-      integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: LORDER 
-      integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: IORDER 
+      integer(I4B), INTENT(IN) :: IOUT                         !< output unit
+      integer(I4B), INTENT(IN) :: IPRIMS                       !< 
+      integer(I4B), INTENT(IN) :: IORD                         !< reordering optionn
+      integer(I4B), INTENT(IN) :: NEQ                          !< number of rows
+      integer(I4B), INTENT(IN) :: NJA                          !< number of non-zero entries
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN)  :: IA        !< row pointer
+      integer(I4B), DIMENSION(NJA),   INTENT(IN)  :: JA        !< column pointer
+      integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: LORDER    !< 
+      integer(I4B), DIMENSION(NEQ), INTENT(INOUT) :: IORDER    !< 
       ! -- local variables
       character (len=LINELENGTH) :: errmsg 
       integer(I4B) :: n 
@@ -1051,7 +1055,7 @@ MODULE IMSLinearModule
       integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork1 
       integer(I4B) :: iflag 
       !
-      ! -- initialize lorder and itoder
+      ! -- initialize lorder and iorder
       DO n = 1, NEQ 
         LORDER(n) = IZERO 
         IORDER(n) = IZERO 
@@ -1093,22 +1097,26 @@ MODULE IMSLinearModule
       RETURN 
     END SUBROUTINE IMSLINEARSUB_CALC_ORDER 
     !                                                                       
-    ! -- ROUTINE TO SCALE THE COEFFICIENT MATRIX (AMAT),                 
-    !       THE RHS (B), AND THE ESTIMATE OF X (X)                          
+    !> @ brief Scale the coefficient matrix
+    !!
+    !!  Scale the coefficient matrix (AMAT), the right-hand side (B),
+    !!  and the estimate of the dependent variable (X).
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_SCALE(IOPT, ISCL, NEQ, NJA, IA, JA, AMAT, X, B,   &
                                   DSCALE, DSCALE2)                            
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: IOPT 
-      integer(I4B), INTENT(IN) :: ISCL 
-      integer(I4B), INTENT(IN) :: NEQ 
-      integer(I4B), INTENT(IN) :: NJA 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA 
-      integer(I4B), DIMENSION(NJA),   INTENT(IN) :: JA 
-      real(DP), DIMENSION(NJA),  INTENT(INOUT) :: AMAT 
-      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: X 
-      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: B 
-      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: DSCALE 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT)  :: DSCALE2
+      integer(I4B), INTENT(IN) :: IOPT                     !< flag to scale (0) or unscale the system of equations
+      integer(I4B), INTENT(IN) :: ISCL                     !< scaling option (1) symmetric (2) L-2 norm
+      integer(I4B), INTENT(IN) :: NEQ                      !< number of equations
+      integer(I4B), INTENT(IN) :: NJA                      !< number of non-zero entries
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA     !< CRS row pointer
+      integer(I4B), DIMENSION(NJA),   INTENT(IN) :: JA     !< CRS column pointer
+      real(DP), DIMENSION(NJA),  INTENT(INOUT) :: AMAT     !< coefficient matrix
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: X        !< dependent variable
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: B        !< right-hand side
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: DSCALE   !< first scaling vector
+      real(DP), DIMENSION(NEQ), INTENT(INOUT)  :: DSCALE2  !< second scaling vector
       ! -- local variables 
       integer(I4B) :: i, n 
       integer(I4B) :: id, jc 
@@ -1234,38 +1242,42 @@ MODULE IMSLinearModule
       ! -- RETURN                                                        
       RETURN 
     END SUBROUTINE IMSLINEARSUB_SCALE 
-    !                                                                       
-    ! -- ROUTINE TO UPDATE THE PRECONDITIONER                            
+
+    !> @ brief Update the preconditioner
+    !!
+    !!  Update the preconditioner using the current coefficient matrix.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_PCU(IOUT, NJA, NEQ, NIAPC, NJAPC, IPC, RELAX,     &
                                 AMAT, IA, JA, APC, IAPC, JAPC, IW, W,         &
                                 LEVEL, DROPTOL, NJLU, NJW, NWLU, JLU, JW, WLU)               
       ! -- modules
       use SimModule, only: ustop, store_error, count_errors
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: IOUT 
-      integer(I4B), INTENT(IN) :: NJA 
-      integer(I4B), INTENT(IN) :: NEQ 
-      integer(I4B), INTENT(IN) :: NIAPC 
-      integer(I4B), INTENT(IN) :: NJAPC 
-      integer(I4B), INTENT(IN) :: IPC 
-      real(DP), INTENT(IN) :: RELAX 
-      real(DP), DIMENSION(NJA),  INTENT(IN)     :: AMAT 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN)    :: IA 
-      integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA 
-      real(DP), DIMENSION(NJAPC), INTENT(INOUT) :: APC 
-      integer(I4B), DIMENSION(NIAPC+1), INTENT(INOUT) :: IAPC 
-      integer(I4B), DIMENSION(NJAPC), INTENT(INOUT)   :: JAPC 
-      integer(I4B), DIMENSION(NIAPC), INTENT(INOUT)   :: IW 
-      real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W 
-      ! ILUT
-      integer(I4B), INTENT(IN) :: LEVEL
-      real(DP), INTENT(IN) :: DROPTOL
-      integer(I4B), INTENT(IN) :: NJLU
-      integer(I4B), INTENT(IN) :: NJW
-      integer(I4B), INTENT(IN) :: NWLU
-      integer(I4B), DIMENSION(NJLU), INTENT(INOUT) :: JLU
-      integer(I4B), DIMENSION(NJW),  INTENT(INOUT) :: JW
-      real(DP), DIMENSION(NWLU),  INTENT(INOUT) :: WLU
+      integer(I4B), INTENT(IN) :: IOUT                         !< simulation listing file unit                           
+      integer(I4B), INTENT(IN) :: NJA                          !< number of non-zero entries
+      integer(I4B), INTENT(IN) :: NEQ                          !< number of equations
+      integer(I4B), INTENT(IN) :: NIAPC                        !< preconditioner number of rows
+      integer(I4B), INTENT(IN) :: NJAPC                        !< preconditioner number of non-zero entries
+      integer(I4B), INTENT(IN) :: IPC                          !< precoditioner (1) ILU0 (2) MILU0 (3) ILUT (4) MILUT
+      real(DP), INTENT(IN) :: RELAX                            !< preconditioner relaxation factor for MILU0 and MILUT
+      real(DP), DIMENSION(NJA),  INTENT(IN)     :: AMAT        !< coefficient matrix
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN)    :: IA      !< CRS row pointers
+      integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA      !< CRS column pointers
+      real(DP), DIMENSION(NJAPC), INTENT(INOUT) :: APC         !< preconditioner matrix
+      integer(I4B), DIMENSION(NIAPC+1), INTENT(INOUT) :: IAPC  !< preconditioner CRS row pointers
+      integer(I4B), DIMENSION(NJAPC), INTENT(INOUT)   :: JAPC  !< preconditioner CRS column pointers
+      integer(I4B), DIMENSION(NIAPC), INTENT(INOUT)   :: IW    !< preconditioner integed work vector
+      real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W           !< preconditioner work verctor
+      ! -- ILUT dummy variables
+      integer(I4B), INTENT(IN) :: LEVEL                        !< number of levels of fill for ILUT and MILUT
+      real(DP), INTENT(IN) :: DROPTOL                          !< drop tolerance
+      integer(I4B), INTENT(IN) :: NJLU                         !< length of JLU working vector
+      integer(I4B), INTENT(IN) :: NJW                          !< length of JW working vector
+      integer(I4B), INTENT(IN) :: NWLU                         !< length of WLU working vector
+      integer(I4B), DIMENSION(NJLU), INTENT(INOUT) :: JLU      !< ILUT/MILUT JLU working vector
+      integer(I4B), DIMENSION(NJW),  INTENT(INOUT) :: JW       !< ILUT/MILUT JW working vector
+      real(DP), DIMENSION(NWLU),  INTENT(INOUT) :: WLU         !< ILUT/MILUT WLU working vector
       ! -- local variables
       character(len=LINELENGTH) :: errmsg
       character(len=80), dimension(3) :: cerr
@@ -1339,16 +1351,21 @@ MODULE IMSLinearModule
       ! -- RETURN                                                        
       RETURN 
     END SUBROUTINE IMSLINEARSUB_PCU 
-    !                                                                       
-    ! -- JACOBI PRECONDITIONER - INVERSE OF DIAGONAL                     
+
+    !> @ brief Jacobi preconditioner
+    !!
+    !!  Calculate the Jacobi preconditioner (inverse of the diagonal) using
+    !!  the current coefficient matrix.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_PCJ(NJA, NEQ, AMAT, APC, IA, JA) 
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: NJA 
-      integer(I4B), INTENT(IN) :: NEQ 
-      real(DP), DIMENSION(NJA),  INTENT(IN)      :: AMAT 
-      real(DP), DIMENSION(NEQ),  INTENT(INOUT)   :: APC 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA 
-      integer(I4B), DIMENSION(NJA),   INTENT(IN) :: JA 
+      integer(I4B), INTENT(IN) :: NJA                     !< number of non-zero entries
+      integer(I4B), INTENT(IN) :: NEQ                     !< number of equations
+      real(DP), DIMENSION(NJA),  INTENT(IN)      :: AMAT  !< coefficient matrix
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT)   :: APC   !< preconditioner matrix
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA    !< CRS row pointers
+      integer(I4B), DIMENSION(NJA),   INTENT(IN) :: JA    !< CRS column pointers
       ! -- local variables
       integer(I4B) :: i, n 
       integer(I4B) :: ic0, ic1 
@@ -1374,12 +1391,17 @@ MODULE IMSLinearModule
       RETURN 
     END SUBROUTINE IMSLINEARSUB_PCJ 
                                                                         
+    !> @ brief Apply the Jacobi preconditioner
+    !!
+    !!  Apply the Jacobi preconditioner and return the resultant vector.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_JACA(NEQ, A, D1, D2) 
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: NEQ 
-      real(DP), DIMENSION(NEQ),  INTENT(IN)    :: A 
-      real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1 
-      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2 
+      integer(I4B), INTENT(IN) :: NEQ                  !< number of equations
+      real(DP), DIMENSION(NEQ),  INTENT(IN)    :: A    !< Jacobi preconditioner
+      real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1   !< input vector
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2   !< resultant vector
       !  -- local variables
       integer(I4B) :: n 
       real(DP) :: tv 
@@ -1393,23 +1415,28 @@ MODULE IMSLinearModule
       RETURN 
     END SUBROUTINE IMSLINEARSUB_JACA 
                                                                         
+    !> @ brief Update the ILU0 preconditioner
+    !!
+    !!  Update the ILU0 preconditioner using the current coefficient matrix.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_PCILU0(NJA, NEQ, AMAT, IA, JA,                    &
                                     APC, IAPC, JAPC, IW, W,                    &
                                     RELAX, IPCFLAG, DELTA)                        
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: NJA 
-      integer(I4B), INTENT(IN) :: NEQ 
-      real(DP), DIMENSION(NJA),  INTENT(IN)     :: AMAT 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN)    :: IA 
-      integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA 
-      real(DP), DIMENSION(NJA), INTENT(INOUT)   :: APC 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(INOUT) :: IAPC 
-      integer(I4B), DIMENSION(NJA), INTENT(INOUT)   :: JAPC 
-      integer(I4B), DIMENSION(NEQ), INTENT(INOUT)   :: IW 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT)   :: W 
-      real(DP), INTENT(IN) :: RELAX 
-      integer(I4B), INTENT(INOUT) :: IPCFLAG
-      real(DP), INTENT(IN) :: DELTA 
+      integer(I4B), INTENT(IN) :: NJA                         !< number of non-zero entries 
+      integer(I4B), INTENT(IN) :: NEQ                         !< number of equations
+      real(DP), DIMENSION(NJA),  INTENT(IN)     :: AMAT       !< coefficient matrix
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN)    :: IA     !< CRS row pointers
+      integer(I4B), DIMENSION(NJA), INTENT(IN)      :: JA     !< CRS column pointers
+      real(DP), DIMENSION(NJA), INTENT(INOUT)   :: APC        !< preconditioned matrix
+      integer(I4B), DIMENSION(NEQ+1), INTENT(INOUT) :: IAPC   !< preconditioner CRS row pointers
+      integer(I4B), DIMENSION(NJA), INTENT(INOUT)   :: JAPC   !< preconditioner CRS column pointers
+      integer(I4B), DIMENSION(NEQ), INTENT(INOUT)   :: IW     !< preconditioner integer work vector
+      real(DP), DIMENSION(NEQ), INTENT(INOUT)   :: W          !< preconditioner work vector
+      real(DP), INTENT(IN) :: RELAX                           !< MILU0 preconditioner relaxation factor
+      integer(I4B), INTENT(INOUT) :: IPCFLAG                  !< preconditioner error flag
+      real(DP), INTENT(IN) :: DELTA                           !< factor used to correct non-diagonally dominant matrices
       ! -- local variables
       integer(I4B) :: ic0, ic1 
       integer(I4B) :: iic0, iic1 
@@ -1512,15 +1539,20 @@ MODULE IMSLinearModule
       RETURN 
     END SUBROUTINE IMSLINEARSUB_PCILU0 
                                                                         
+    !> @ brief Apply the ILU0 and MILU0 preconditioners
+    !!
+    !!  Apply the ILU0 and MILU0 preconditioners to the passed vector (R).
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_ILU0A(NJA, NEQ, APC, IAPC, JAPC, R, D) 
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: NJA 
-      integer(I4B), INTENT(IN) :: NEQ 
-      real(DP), DIMENSION(NJA),  INTENT(IN)  :: APC 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IAPC 
-      integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JAPC 
-      real(DP), DIMENSION(NEQ),  INTENT(IN)     :: R 
-      real(DP), DIMENSION(NEQ),  INTENT(INOUT)  :: D 
+      integer(I4B), INTENT(IN) :: NJA                     !< number of non-zero entries
+      integer(I4B), INTENT(IN) :: NEQ                     !< number of equations
+      real(DP), DIMENSION(NJA),  INTENT(IN)  :: APC       !< ILU0/MILU0 preconditioner matrix
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IAPC  !< ILU0/MILU0 preconditioner CRS row pointers
+      integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JAPC  !< ILU0/MILU0 preconditioner CRS column pointers
+      real(DP), DIMENSION(NEQ),  INTENT(IN)     :: R      !< input vector
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT)  :: D      !< output vector after applying APC to R
       ! -- local variables
       integer(I4B) :: ic0, ic1 
       integer(I4B) :: iu 
@@ -1560,6 +1592,13 @@ MODULE IMSLinearModule
       RETURN 
     END SUBROUTINE IMSLINEARSUB_ILU0A 
                                                                         
+    !> @ brief Preconditioned Conjugate Gradient linear accelerator
+    !!
+    !!  Apply the Preconditioned Conjugate Gradient linear accelerator to
+    !!  the current coefficient matrix, right-hand side, using the current
+    !!  dependent-variable.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_CG(ICNVG, ITMAX, INNERIT,                         &
                                 NEQ, NJA, NIAPC, NJAPC,                        &
                                 IPC, NITERC, ICNVGOPT, NORTH,                  &
@@ -1571,51 +1610,51 @@ MODULE IMSLinearModule
                                 CACCEL, ITINNER, CONVLOCDV, CONVLOCDR,         &
                                 DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)                                        
       ! -- dummy variables
-      integer(I4B), INTENT(INOUT) :: ICNVG 
-      integer(I4B), INTENT(IN)    :: ITMAX 
-      integer(I4B), INTENT(INOUT) :: INNERIT 
-      integer(I4B), INTENT(IN)    :: NEQ 
-      integer(I4B), INTENT(IN)    :: NJA 
-      integer(I4B), INTENT(IN)    :: NIAPC 
-      integer(I4B), INTENT(IN)    :: NJAPC 
-      integer(I4B), INTENT(IN)    :: IPC 
-      integer(I4B), INTENT(INOUT) :: NITERC 
-      integer(I4B), INTENT(IN)    :: ICNVGOPT 
-      integer(I4B), INTENT(IN)    :: NORTH 
-      real(DP), INTENT(IN) :: DVCLOSE 
-      real(DP), INTENT(IN) :: RCLOSE 
-      real(DP), INTENT(IN) :: L2NORM0 
-      real(DP), INTENT(IN) :: EPFACT 
-      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA0 
-      integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA0 
-      real(DP), DIMENSION(NJA), INTENT(IN) :: A0 
-      integer(I4B), DIMENSION(NIAPC+1), INTENT(IN) :: IAPC 
-      integer(I4B), DIMENSION(NJAPC), INTENT(IN) :: JAPC 
-      real(DP), DIMENSION(NJAPC), INTENT(IN) :: APC 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: X 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: B 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: P 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Q 
-      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Z 
-      ! ILUT
-      integer(I4B), INTENT(IN) :: NJLU
-      integer(I4B), DIMENSION(NIAPC), INTENT(IN) :: IW
-      integer(I4B), DIMENSION(NJLU), INTENT(IN) :: JLU
-      ! CONVERGENCE INFORMATION
-      integer(I4B), INTENT(IN) :: NCONV
-      integer(I4B), INTENT(IN) :: CONVNMOD
-      integer(I4B), DIMENSION(CONVNMOD+1), INTENT(INOUT) ::CONVMODSTART
-      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV
-      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR
-      character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL
-      integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER
-      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV
-      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR
-      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX
-      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX
-      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX
-      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
+      integer(I4B), INTENT(INOUT) :: ICNVG                                          !< 
+      integer(I4B), INTENT(IN)    :: ITMAX                                          !< 
+      integer(I4B), INTENT(INOUT) :: INNERIT                                        !< 
+      integer(I4B), INTENT(IN)    :: NEQ                                            !< 
+      integer(I4B), INTENT(IN)    :: NJA                                            !< 
+      integer(I4B), INTENT(IN)    :: NIAPC                                          !< 
+      integer(I4B), INTENT(IN)    :: NJAPC                                          !< 
+      integer(I4B), INTENT(IN)    :: IPC                                            !< 
+      integer(I4B), INTENT(INOUT) :: NITERC                                         !< 
+      integer(I4B), INTENT(IN)    :: ICNVGOPT                                       !< 
+      integer(I4B), INTENT(IN)    :: NORTH                                          !< 
+      real(DP), INTENT(IN) :: DVCLOSE                                               !< 
+      real(DP), INTENT(IN) :: RCLOSE                                                !< 
+      real(DP), INTENT(IN) :: L2NORM0                                               !< initial L-2 norm for system of equations
+      real(DP), INTENT(IN) :: EPFACT                                                !< 
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA0                             !< 
+      integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA0                               !< 
+      real(DP), DIMENSION(NJA), INTENT(IN) :: A0                                    !< 
+      integer(I4B), DIMENSION(NIAPC+1), INTENT(IN) :: IAPC                          !< 
+      integer(I4B), DIMENSION(NJAPC), INTENT(IN) :: JAPC                            !< 
+      real(DP), DIMENSION(NJAPC), INTENT(IN) :: APC                                 !< 
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: X                                  !< 
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: B                                  !< 
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D                                  !< 
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: P                                  !<  
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Q                                  !< 
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: Z                                  !< 
+      ! -- ILUT dummy variables
+      integer(I4B), INTENT(IN) :: NJLU                                              !< 
+      integer(I4B), DIMENSION(NIAPC), INTENT(IN) :: IW                              !< 
+      integer(I4B), DIMENSION(NJLU), INTENT(IN) :: JLU                              !< 
+      ! -- CONVERGENCE INFORMATION dummy variables
+      integer(I4B), INTENT(IN) :: NCONV                                             !< 
+      integer(I4B), INTENT(IN) :: CONVNMOD                                          !< 
+      integer(I4B), DIMENSION(CONVNMOD+1), INTENT(INOUT) :: CONVMODSTART            !< 
+      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV                     !< 
+      integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR                     !< 
+      character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL                  !< 
+      integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER                      !< 
+      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV          !<  
+      integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR          !< 
+      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                         !< 
+      real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                         !< 
+      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX              !< 
+      real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX              !< 
       ! -- local variables
       LOGICAL :: LORTH
       logical :: lsame 
@@ -1783,6 +1822,13 @@ MODULE IMSLinearModule
       RETURN 
     END SUBROUTINE IMSLINEARSUB_CG 
                                                                         
+    !> @ brief Preconditioned BiConjugate Gradient Stabilized linear accelerator
+    !!
+    !!  Apply the Preconditioned NiConjugate Gradient Stabilized linear 
+    !!  accelerator to the current coefficient matrix, right-hand side, using 
+    !!  the currentdependent-variable.
+    !!
+    !<
     SUBROUTINE IMSLINEARSUB_BCGS(ICNVG, ITMAX, INNERIT,                       &
                                   NEQ, NJA, NIAPC, NJAPC,                      &
                                   IPC, NITERC, ICNVGOPT, NORTH, ISCL, DSCALE,  &
@@ -2234,13 +2280,18 @@ MODULE IMSLinearModule
       ! -- RETURN                                                        
       RETURN                                                          
     END SUBROUTINE IMSLINEARSUB_ISORT
-    !      
-    ! -- INITIALIZE REAL VECTOR      
+
+    !> @brief Initialize a real vector to a constant
+    !!
+    !! Subroutine to initialize a real vector to a passed constant.
+    !!
+    !! @param[in,out]  D1  resultant vector
+    !<
     SUBROUTINE IMSLINEARSUB_SETX(NR, D1, C)
       ! -- dummy variables
-      integer(I4B), INTENT(IN) :: NR
-      real(DP), DIMENSION(NR),  INTENT(INOUT) :: D1
-      real(DP),  INTENT(IN)                   :: C
+      integer(I4B), INTENT(IN) :: NR                 !< length of D1
+      real(DP), DIMENSION(NR),  INTENT(INOUT) :: D1  !< vector to initialize to C
+      real(DP),  INTENT(IN)                   :: C   !< constant value
       ! -- local variables
       INTEGER :: n
       ! -- code
@@ -2318,67 +2369,68 @@ MODULE IMSLinearModule
     END SUBROUTINE IMSLINEARSUB_RSCAL
 
       
-      !> @brief Calculate matrix vector product
-      !!
-      !! Subroutine to calculate the matrix vector product of
-      !! A and D1.
-      !!
-      !! @param[in,out]  D2  resultant vector
-      !<
-      SUBROUTINE IMSLINEARSUB_MV(NJA, NEQ, A, D1, D2, IA, JA)                        
-        ! -- dummy variables
-        integer(I4B), INTENT(IN) :: NJA                   !< number of non-zero values in A                   
-        integer(I4B), INTENT(IN) :: NEQ                   !< number of equations (rows in A)
-        real(DP), DIMENSION(NJA),  INTENT(IN)    :: A     !< coefficient matrix
-        real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1    !< input vector
-        real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2    !< resultant vector
-        integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA  !< pointer to start of a row in A
-        integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JA  !< column pointers
-        ! -- local variables
-        integer(I4B) :: ic0, ic1                                             
-        integer(I4B) :: icol                                                 
-        integer(I4B) :: m, n                                                 
-        real(DP) :: tv                                           
-        ! -- code
-        DO n = 1, NEQ                                                   
-!           ADD DIAGONAL AND OFF-DIAGONAL TERMS                         
-          tv     = DZERO                                                
-          ic0   = IA(n)                                                 
-          ic1   = IA(n+1)-1                                             
-          DO m = ic0, ic1                                               
-            icol = JA(m)                                                
-            tv  = tv + A(m) * D1(icol)                                  
-          END DO                                                        
-          D2(n) = tv                                                    
-        END DO                                                          
-! -- --RETURN                                                        
-        RETURN                                                          
-      END SUBROUTINE IMSLINEARSUB_MV  
+    !> @brief Calculate matrix vector product
+    !!
+    !! Subroutine to calculate the matrix vector product of
+    !! A and D1.
+    !!
+    !! @param[in,out]  D2  resultant vector
+    !<
+    SUBROUTINE IMSLINEARSUB_MV(NJA, NEQ, A, D1, D2, IA, JA)                        
+      ! -- dummy variables
+      integer(I4B), INTENT(IN) :: NJA                   !< number of non-zero values in A                   
+      integer(I4B), INTENT(IN) :: NEQ                   !< number of equations (rows in A)
+      real(DP), DIMENSION(NJA),  INTENT(IN)    :: A     !< coefficient matrix
+      real(DP), DIMENSION(NEQ),  INTENT(IN)    :: D1    !< input vector
+      real(DP), DIMENSION(NEQ),  INTENT(INOUT) :: D2    !< resultant vector
+      integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA  !< pointer to start of a row in A
+      integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JA  !< column pointers
+      ! -- local variables
+      integer(I4B) :: ic0, ic1                                             
+      integer(I4B) :: icol                                                 
+      integer(I4B) :: m, n                                                 
+      real(DP) :: tv                                           
+      ! -- code
+      DO n = 1, NEQ
+        ! -- ADD DIAGONAL AND OFF-DIAGONAL TERMS                         
+        tv     = DZERO                                                
+        ic0   = IA(n)                                                 
+        ic1   = IA(n+1)-1                                             
+        DO m = ic0, ic1                                               
+          icol = JA(m)                                                
+          tv  = tv + A(m) * D1(icol)                                  
+        END DO                                                        
+        D2(n) = tv                                                    
+      END DO
+      !
+      ! -- return                                                          
+      RETURN                                                          
+    END SUBROUTINE IMSLINEARSUB_MV  
       
-      !> @brief Calculate axpy
-      !!
-      !! Subroutine to add two vectors after multiplying the second
-      !! vector by a constant.
-      !!
-      !! @param[in,out]  DR  resultant vector
-      !<
-      SUBROUTINE IMSLINEARSUB_AXPY(NEQ, D1, DC, D2, DR)
-        ! -- dummy variables
-        integer(I4B), INTENT(IN) :: NEQ                !< length of vectors
-        real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1  !< first vector
-        real(DP), INTENT(IN) :: DC                     !< constant multiplied by the second vector
-        real(DP), DIMENSION(NEQ), INTENT(IN)    :: D2  !< second vector
-        real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DR  !< resultant vector
-        ! -- local variables
-        integer(I4B) :: n
-        ! -- code
-         DO n = 1, NEQ
-          DR(n) = D1(n) + DC * D2(n)
-         END DO
-         !
-         ! -- return
-        RETURN
-      END SUBROUTINE IMSLINEARSUB_AXPY
+    !> @brief Calculate axpy
+    !!
+    !! Subroutine to add two vectors after multiplying the second
+    !! vector by a constant.
+    !!
+    !! @param[in,out]  DR  resultant vector
+    !<
+    SUBROUTINE IMSLINEARSUB_AXPY(NEQ, D1, DC, D2, DR)
+      ! -- dummy variables
+      integer(I4B), INTENT(IN) :: NEQ                !< length of vectors
+      real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1  !< first vector
+      real(DP), INTENT(IN) :: DC                     !< constant multiplied by the second vector
+      real(DP), DIMENSION(NEQ), INTENT(IN)    :: D2  !< second vector
+      real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DR  !< resultant vector
+      ! -- local variables
+      integer(I4B) :: n
+      ! -- code
+        DO n = 1, NEQ
+        DR(n) = D1(n) + DC * D2(n)
+        END DO
+        !
+        ! -- return
+      RETURN
+    END SUBROUTINE IMSLINEARSUB_AXPY
 
     !> @brief Calculate the dot product
     !!
@@ -2405,21 +2457,26 @@ MODULE IMSLinearModule
     END FUNCTION IMSLINEARSUB_DP
 
       
+    !> @brief Calculate the L-2 norm
+    !!
+    !! Function to calculate the L-2 norm of vectors in a scaled form.
+    !! Based on BLAS DNRM2
+    !!
+    !! @return      c                L-2 norm of vector a
+    !<
     FUNCTION IMSLINEARSUB_RNRM2(neq, a) RESULT(c)
       ! -- return variable
-      real(DP) :: c
-!     + + + dummy arguments + + +
-      integer(I4B), intent(in) :: neq
-      real(DP), dimension(neq),  intent(in) :: a
-!     + + + local definitions + + +
+      real(DP) :: c                                 !< L-2 norm of vector
+      ! -- dummy variables
+      integer(I4B), intent(in) :: neq               !< number of equations
+      real(DP), dimension(neq),  intent(in) :: a    !< input vector
+      ! -- local variable
       integer(I4B) :: n
       real(DP) :: ssq
       real(DP) :: scale
       real(DP) :: norm
       real(DP) :: absan
-!     + + + parameters + + +
-!     + + + functions + + +
-!     + + + code + + +
+      ! -- code
       if (neq < 1) then
         norm = DZERO
       else if (neq == 1) then
@@ -2441,7 +2498,8 @@ MODULE IMSLinearModule
         norm = scale * sqrt(ssq)
       END IF
       c = norm
-      ! -- --return
+      !
+      ! -- return
       return
     END FUNCTION IMSLINEARSUB_RNRM2
 
