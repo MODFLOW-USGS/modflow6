@@ -38,58 +38,58 @@ module NumericalSolutionModule
   public :: GetNumericalSolutionFromList
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
-    character(len=LENMEMPATH)                            :: memoryPath !< the path for storing solution variables in the memory manager
-    character(len=LINELENGTH)                            :: fname
-    type(ListType), pointer                              :: modellist
-    type(ListType), pointer                              :: exchangelist
-    integer(I4B), pointer                                :: id
-    integer(I4B), pointer                                :: iu
-    real(DP), pointer                                    :: ttform
-    real(DP), pointer                                    :: ttsoln
-    integer(I4B), pointer                                :: neq => NULL()
-    integer(I4B), pointer                                :: nja => NULL()
-    integer(I4B), dimension(:), pointer, contiguous      :: ia => NULL()
-    integer(I4B), dimension(:), pointer, contiguous      :: ja => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: amat => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: rhs => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: x => NULL()
-    integer(I4B), dimension(:), pointer, contiguous      :: active => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: xtemp => NULL()
+    character(len=LENMEMPATH)                            :: memoryPath                     !< the path for storing solution variables in the memory manager
+    character(len=LINELENGTH)                            :: fname                          !<
+    type(ListType), pointer                              :: modellist                      !<
+    type(ListType), pointer                              :: exchangelist                   !<
+    integer(I4B), pointer                                :: id                             !<
+    integer(I4B), pointer                                :: iu                             !<
+    real(DP), pointer                                    :: ttform                         !<
+    real(DP), pointer                                    :: ttsoln                         !<
+    integer(I4B), pointer                                :: neq => NULL()                  !<
+    integer(I4B), pointer                                :: nja => NULL()                  !<
+    integer(I4B), dimension(:), pointer, contiguous      :: ia => NULL()                   !<
+    integer(I4B), dimension(:), pointer, contiguous      :: ja => NULL()                   !<
+    real(DP), dimension(:), pointer, contiguous          :: amat => NULL()                 !<
+    real(DP), dimension(:), pointer, contiguous          :: rhs => NULL()                  !<
+    real(DP), dimension(:), pointer, contiguous          :: x => NULL()                    !<
+    integer(I4B), dimension(:), pointer, contiguous      :: active => NULL()               !<
+    real(DP), dimension(:), pointer, contiguous          :: xtemp => NULL()                !<
     type(BlockParserType) :: parser
     !
     ! -- sparse matrix data
-    real(DP), pointer                                    :: theta => NULL()
-    real(DP), pointer                                    :: akappa => NULL()
-    real(DP), pointer                                    :: gamma => NULL()
-    real(DP), pointer                                    :: amomentum => NULL()
-    real(DP), pointer                                    :: breduc => NULL()
-    real(DP), pointer                                    :: btol => NULL()
-    real(DP), pointer                                    :: res_lim => NULL()
-    real(DP), pointer                                    :: dvclose => NULL()
-    real(DP), pointer                                    :: hiclose => NULL()
-    real(DP), pointer                                    :: bigchold => NULL()
-    real(DP), pointer                                    :: bigch => NULL()
-    real(DP), pointer                                    :: relaxold => NULL()
-    real(DP), pointer                                    :: res_prev => NULL()
-    real(DP), pointer                                    :: res_new => NULL()
-    real(DP), pointer                                    :: res_in  => NULL()
-    integer(I4B), pointer                                :: ibcount => NULL()
-    integer(I4B), pointer                                :: icnvg => NULL()
+    real(DP), pointer                                    :: theta => NULL()                !<
+    real(DP), pointer                                    :: akappa => NULL()               !<
+    real(DP), pointer                                    :: gamma => NULL()                !<
+    real(DP), pointer                                    :: amomentum => NULL()            !<
+    real(DP), pointer                                    :: breduc => NULL()               !<
+    real(DP), pointer                                    :: btol => NULL()                 !<
+    real(DP), pointer                                    :: res_lim => NULL()              !<
+    real(DP), pointer                                    :: dvclose => NULL()              !<
+    real(DP), pointer                                    :: hiclose => NULL()              !<
+    real(DP), pointer                                    :: bigchold => NULL()             !<
+    real(DP), pointer                                    :: bigch => NULL()                !<
+    real(DP), pointer                                    :: relaxold => NULL()             !<
+    real(DP), pointer                                    :: res_prev => NULL()             !<
+    real(DP), pointer                                    :: res_new => NULL()              !<
+    real(DP), pointer                                    :: res_in  => NULL()              !<
+    integer(I4B), pointer                                :: ibcount => NULL()              !<
+    integer(I4B), pointer                                :: icnvg => NULL()                !<
     integer(I4B), pointer                                :: itertot_timestep => NULL()     !< total nr. of linear solves per call to sln_ca
     integer(I4B), pointer                                :: iouttot_timestep => NULL()     !< total nr. of outer iterations per call to sln_ca
     integer(I4B), pointer                                :: itertot_sim => NULL()          !< total nr. of inner iterations for simulation
-    integer(I4B), pointer                                :: mxiter => NULL()
-    integer(I4B), pointer                                :: linmeth => NULL()
-    integer(I4B), pointer                                :: nonmeth => NULL()
-    integer(I4B), pointer                                :: numtrack => NULL()
-    integer(I4B), pointer                                :: iprims => NULL()
-    integer(I4B), pointer                                :: ibflag => NULL()
-    integer(I4B), dimension(:,:), pointer, contiguous    :: lrch => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: hncg => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: dxold => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: deold => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: wsave => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: hchold => NULL()
+    integer(I4B), pointer                                :: mxiter => NULL()               !<
+    integer(I4B), pointer                                :: linmeth => NULL()              !<
+    integer(I4B), pointer                                :: nonmeth => NULL()              !<
+    integer(I4B), pointer                                :: numtrack => NULL()             !<
+    integer(I4B), pointer                                :: iprims => NULL()               !<
+    integer(I4B), pointer                                :: ibflag => NULL()               !<
+    integer(I4B), dimension(:,:), pointer, contiguous    :: lrch => NULL()                 !<
+    real(DP), dimension(:), pointer, contiguous          :: hncg => NULL()                 !<
+    real(DP), dimension(:), pointer, contiguous          :: dxold => NULL()                !<
+    real(DP), dimension(:), pointer, contiguous          :: deold => NULL()                !<
+    real(DP), dimension(:), pointer, contiguous          :: wsave => NULL()                !<
+    real(DP), dimension(:), pointer, contiguous          :: hchold => NULL()               !<
     !
     ! -- convergence summary information
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
@@ -176,29 +176,25 @@ module NumericalSolutionModule
 
 contains
 
-  subroutine solution_create(filename, id)
-! ******************************************************************************
-! solution_create -- Create a New Solution
-! Using the data in filename,  assign this new solution an id number and store
-! the solution in the basesolutionlist.
-! Subroutine: (1) allocate solution and assign id and name
-!             (2) open the filename for later reading
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+!> @ brief Create a new solution
+!!
+!!  Create a new solution using the data in filename, assign this new 
+!!  solution an id number and store the solution in the basesolutionlist.
+!!  Also open the filename for later reading.
+!!
+!<
+subroutine solution_create(filename, id)
     ! -- modules
     use SimVariablesModule, only: iout
     use InputOutputModule,  only: getunit, openfile
-    ! -- dummy
-    character(len=*),intent(in) :: filename
-    integer(I4B),intent(in) :: id
-    ! -- local
+    ! -- dummy variables
+    character(len=*),intent(in) :: filename    !< solution input file name
+    integer(I4B),intent(in) :: id              !< solution id
+    ! -- local variables
     integer(I4B) :: inunit
     type(NumericalSolutionType), pointer :: solution => null()
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
-! ------------------------------------------------------------------------------
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     allocate(solution)
@@ -233,19 +229,16 @@ contains
     return
   end subroutine solution_create
 
+  !> @ brief Allocate scalars
+  !!
+  !!  Allocate scalars for a new solution.
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
+    ! -- dummy variables
     class(NumericalSolutionType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
     call mem_allocate(this%id, 'ID', this%memoryPath)
@@ -296,7 +289,7 @@ contains
     call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
     call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
     !
-    ! -- initialize
+    ! -- initialize scalars
     this%id = 0
     this%iu = 0
     this%ttform = DZERO
@@ -348,22 +341,20 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays
+  !!
+  !!  Allocate arrays for a new solution.
+  !!
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- Allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
+    ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B) :: ieq
-! ------------------------------------------------------------------------------
     !
     ! -- initialize the number of models in the solution
     this%convnmod = this%modellist%Count()
@@ -418,28 +409,24 @@ contains
     return
   end subroutine allocate_arrays
 
+  !> @ brief Define the solution
+  !!
+  !!  Define a new solution. Must be called after the models and exchanges have 
+  !!  been added to solution. The order of the steps is (1) Allocate neq and nja,
+  !!  (2) Assign model offsets and solution ids, (3) Allocate and initialize 
+  !!  the solution arrays, (4) Point each model's x and rhs arrays, and 
+  !!  (5) Initialize the sparsematrix instance
+  !!
+  !<
   subroutine sln_df(this)
-! ******************************************************************************
-! sln_df -- Define the solution
-! Must be called after the models and exchanges have been added to solution.
-! Subroutine: (1) Allocate neq and nja
-!             (2) Assign model offsets and solution ids
-!             (3) Allocate and initialize the solution arrays
-!             (4) Point each model's x and rhs arrays
-!             (5) Initialize the sparsematrix instance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! modules
     use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
+    ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
-! ------------------------------------------------------------------------------
     !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
@@ -475,22 +462,21 @@ contains
     return
   end subroutine sln_df
 
+  !> @ brief Allocate and read data
+  !!
+  !!  Allocate and read data for a solution.
+  !!
+  !<
   subroutine sln_ar(this)
-! ******************************************************************************
-! sln_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     use SimVariablesModule, only: iout
     use SimModule, only: ustop, store_error, count_errors,                       &
                          deprecation_warning
     use InputOutputModule, only: getunit, openfile
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this   !< NumericalSolutionType instance
+    ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
     character(len=linelength) :: errmsg
@@ -514,7 +500,6 @@ contains
     character(len=*), parameter :: fmterrasym = &
       "(a,' **',a,'** PRODUCES AN ASYMMETRIC COEFFICIENT MATRIX, BUT THE       &
         &CONJUGATE GRADIENT METHOD WAS SELECTED. USE BICGSTAB INSTEAD. ')"
-! ------------------------------------------------------------------------------
     !
     ! identify package and initialize.
     WRITE(IOUT,1) this%iu
@@ -1027,25 +1012,23 @@ contains
     return
   end subroutine sln_ar
 
-   subroutine sln_calculate_delt(this)
-! ******************************************************************************
-! sln_calculate_delt -- Calculate time step length
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Calculate delt
+  !!
+  !!  Calculate time step length.
+  !!
+  !<
+  subroutine sln_calculate_delt(this)
     ! -- modules
     use TdisModule, only: kstp, kper, delt
     use AdaptiveTimeStepModule, only: ats_submit_delt
     use ConstantsModule, only: DTWO, DTHREE
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
+    ! -- local variables
     integer(I4B) :: idir
     real(DP) :: delt_temp
     real(DP) :: fact_lower
     real(DP) :: fact_upper
-! ------------------------------------------------------------------------------
     !
     ! -- increase or decrease delt based on kiter fraction.  atsfrac should be
     !    a value of about 1/3.  If the number of outer iterations is less than
@@ -1073,21 +1056,18 @@ contains
     return
   end subroutine sln_calculate_delt
   
-   subroutine sln_ad(this)
-! ******************************************************************************
-! sln_ad -- Advance solution
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Advance solution
+  !!
+  !!  Advance solution.
+  !!
+  !<
+  subroutine sln_ad(this)
     ! -- modules
     use TdisModule, only: kstp, kper
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
-    ! write headers to CSV file
-    
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
+    !
+    ! -- write headers to CSV file
     if (kper == 1 .and. kstp == 1) then
       call this%writeCSVHeader()
     end if
@@ -1103,17 +1083,14 @@ contains
     return
   end subroutine sln_ad
   
+  !> @ brief Output solution
+  !!
+  !!  Output solution data. Currently does nothing.
+  !!
+  !<
   subroutine sln_ot(this)
-! ******************************************************************************
-! sln_ot -- Output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
     !
     ! -- Nothing to do here
     !
@@ -1121,19 +1098,16 @@ contains
     return
   end subroutine sln_ot
 
+  !> @ brief Finalize solution
+  !!
+  !!  Finalize a solution.
+  !!
+  !<
   subroutine sln_fp(this)
-! ******************************************************************************
-! sln_fp -- Final processing
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
     !
-    ! -- Nothing to do here
+    ! -- write timer output 
     if (IDEVELOPMODE == 1) then
       write(this%imslinear%iout, '(//1x,a,1x,a,1x,a)')                         &
         'Solution', trim(adjustl(this%name)), 'summary'
@@ -1148,19 +1122,16 @@ contains
     return
   end subroutine sln_fp
 
+  !> @ brief Deallocate solution
+  !!
+  !!  Deallocate a solution.
+  !!
+  !<
   subroutine sln_da(this)
-! ******************************************************************************
-! sln_da -- Deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
     !
     ! -- IMSLinearModule
     call this%imslinear%imslinear_da()
@@ -1267,19 +1238,17 @@ contains
     return
   end subroutine sln_da
 
+  !> @ brief Solve solution
+  !!
+  !!  Solve the models in this solution for kper and kstp.
+  !!
+  !<
   subroutine sln_ca(this, isgcnvg, isuppress_output)
-! ******************************************************************************
-! sln_ca -- Solve the models in this solution for kper and kstp.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(inout) :: isgcnvg
-    integer(I4B), intent(in) :: isuppress_output    
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this            !< NumericalSolutionType instance
+    integer(I4B), intent(inout) :: isgcnvg          !< solution group convergence flag
+    integer(I4B), intent(in) :: isuppress_output    !< flag for suppressing output
+    ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: fmt
@@ -1321,14 +1290,16 @@ contains
     
   end subroutine sln_ca
        
-  ! write the header for the solver output to the CSV files
+  !> @ brief CSV header
+  !!
+  !!  Write header for solver output to comma-separated value files.
+  !!
+  !<
   subroutine writeCSVHeader(this)  
-    class(NumericalSolutionType) :: this
-    ! local
+    class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
+    ! local variables
     integer(I4B) :: im
-    class(NumericalModelType), pointer :: mp
-    !
-    ! -- code
+    class(NumericalModelType), pointer :: mp => null()
     !
     ! -- outer iteration csv header
     if (this%icsvouterout > 0) then
@@ -1370,11 +1341,16 @@ contains
     return
   end subroutine writeCSVHeader
   
-  ! write the PTC header information to file
+  !> @ brief PTC header
+  !!
+  !!  Write header for pseudo-transient continuation information to a file.
+  !!
+  !<
   subroutine writePTCInfoToFile(this, kper)
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kper
-    ! local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: kper     !< current stress period number
+    ! -- local variable
     integer(I4B) :: n, im, iallowptc, iptc
     class(NumericalModelType), pointer :: mp => null()
     
@@ -1410,13 +1386,19 @@ contains
     
   end subroutine writePTCInfoToFile
   
-  ! prepare for the system solve by advancing the simulation
+  !> @ brief prepare to solve
+  !!
+  !!  Prepare for the system solve by advancing the simulation.
+  !!
+  !<
   subroutine prepareSolve(this)
-    class(NumericalSolutionType) :: this
-    ! local
-    integer(I4B) :: ic, im
-    class(NumericalExchangeType), pointer :: cp
-    class(NumericalModelType), pointer :: mp    
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    ! -- local variables
+    integer(I4B) :: ic
+    integer(I4B) :: im
+    class(NumericalExchangeType), pointer :: cp => null()
+    class(NumericalModelType), pointer :: mp => null()
     
      ! -- Exchange advance
     do ic=1,this%exchangelist%Count()
@@ -1435,27 +1417,23 @@ contains
     
   end subroutine prepareSolve
   
-  ! This routine builds and solves the system for this numerical solution. 
-  ! It roughly consists of the following steps:
-  !
-  ! - backtracking
-  ! - reset amat and rhs
-  ! - calculate matrix terms (*_cf)
-  ! - add coefficients to matrix (*_fc)
-  ! - newton-raphson
-  ! - PTC
-  ! - linear solve
-  ! - convergence checks
-  ! - write output
-  ! - underrelaxation
-  !
-  ! it updates the convergence flag "this%icnvg" accordingly
-  !
+  !> @ brief Build and solve the simulation
+  !!
+  !! Builds and solve the system for this numerical solution. 
+  !! It roughly consists of the following steps
+  !! (1) backtracking, (2) reset amat and rhs (3) calculate matrix 
+  !! terms (*_cf), (4) add coefficients to matrix (*_fc), (6) newton-raphson,
+  !! (6) PTC, (7) linear solve, (8) convergence checks, (9) write output,
+  !! and (10) underrelaxation
+  !!
+  !<
   subroutine solve(this, kiter)
+    ! -- modules
     use TdisModule, only: kstp, kper, totim
-    class(NumericalSolutionType) :: this    
-    integer(I4B), intent(in) :: kiter
-    ! local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this    !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: kiter       !< Picard iteration number
+    ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()    
     character(len=LINELENGTH) :: title
@@ -1492,10 +1470,6 @@ contains
     real(DP) :: ttsoln
     real(DP) :: dpak
     real(DP) :: outer_hncg
-    ! formats
-!   -----------------------------------------------------------------------------
-    !
-    ! -- code
     !
     ! -- initialize local variables
     icsv0 = max(1, this%itertot_sim + 1)
@@ -1850,18 +1824,23 @@ contains
     
   end subroutine solve
   
-  ! finalize the solution calculate, called after the outer iteration loop
+  !> @ brief finalize a solution
+  !!
+  !!  Finalize the solution. Called after the outer iteration loop.
+  !!
+  !<
   subroutine finalizeSolve(this, kiter, isgcnvg, isuppress_output)
+    ! -- modules
     use TdisModule, only: kper, kstp
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
-    integer(I4B), intent(inout) :: isgcnvg
-    integer(I4B), intent(in) :: isuppress_output
-    ! local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this         !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: kiter            !< Picard iteration number after convergence or failure
+    integer(I4B), intent(inout) :: isgcnvg       !< solution group convergence flag
+    integer(I4B), intent(in) :: isuppress_output !< flag for suppressing output
+    ! -- local variables
     integer(I4B) :: ic, im
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
-    
     ! -- formats for convergence info 
     character(len=*), parameter :: fmtnocnvg =                                 &
       &"(1X,'Solution ', i0, ' did not converge for stress period ', i0,       &
@@ -1869,7 +1848,6 @@ contains
     character(len=*), parameter :: fmtcnvg =                                   &
       &"(1X, I0, ' CALLS TO NUMERICAL SOLUTION ', 'IN TIME STEP ', I0,         &
       &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')" 
-    
     !
     ! -- finalize the outer iteration table
     if (this%iprims > 0) then
@@ -1931,21 +1909,20 @@ contains
     
   end subroutine finalizeSolve
   
+  !> @ brief Solution convergence summary
+  !!
+  !!  Save convergence summary to a File.
+  !!
+  !<
   subroutine convergence_summary(this, iu, im, itertot_timestep)
-! ******************************************************************************
-! convergence_summary -- Save convergence summary to a File
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only:getunit
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: iu
-    integer(I4B), intent(in) :: im
-    integer(I4B), intent(in) :: itertot_timestep
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this          !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: iu                !< file unit number for summary file
+    integer(I4B), intent(in) :: im                !< model number
+    integer(I4B), intent(in) :: itertot_timestep  !< total iteration for the time step
+    ! -- local variables
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=LENPAKLOC) :: strh
@@ -1961,7 +1938,6 @@ contains
     integer(I4B) :: locdr
     real(DP) :: dv
     real(DP) :: dr
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     strh = ''
@@ -2050,26 +2026,25 @@ contains
   end subroutine convergence_summary
 
 
+  !> @ brief Solution convergence CSV summary
+  !!
+  !!  Save convergence summary to a comma-separated value file.
+  !!
+  !<
   subroutine csv_convergence_summary(this, iu, totim, kper, kstp, kouter,        &
                                      niter, istart, kstart)
-! ******************************************************************************
-! csv_convergence_summary -- Save convergence summary to a csv file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only:getunit
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: iu
-    real(DP), intent(in) :: totim
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kouter
-    integer(I4B), intent(in) :: niter
-    integer(I4B), intent(in) :: istart
-    integer(I4B), intent(in) :: kstart
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this   !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: iu         !< file unit number
+    real(DP), intent(in) :: totim          !< total simulation time
+    integer(I4B), intent(in) :: kper       !< stress period number
+    integer(I4B), intent(in) :: kstp       !< time step number
+    integer(I4B), intent(in) :: kouter     !< number of outer (Picard) iterations
+    integer(I4B), intent(in) :: niter      !< number of inner iteration in this time step
+    integer(I4B), intent(in) :: istart     !< starting iteration number for this time step
+    integer(I4B), intent(in) :: kstart     !< starting position in the conv* arrays
     ! -- local
     integer(I4B) :: itot
     integer(I4B) :: im
@@ -2147,19 +2122,19 @@ contains
     return
   end subroutine csv_convergence_summary
 
+  !> @ brief Save solution data to a file
+  !!
+  !!  Save solution ia vector, ja vector , coefficient matrix, right-hand side 
+  !!  vector, and the dependent-variable vector to a file.
+  !!
+  !<
   subroutine save(this, filename)
-! ******************************************************************************
-! save -- Save Solution Matrices to a File
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only:getunit
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    character(len=*), intent(in) :: filename
-    ! -- local
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this      !< NumericalSolutionType instance
+    character(len=*), intent(in) :: filename  !< filename to save solution data
+    ! -- local variables
     integer(I4B) :: inunit
 ! ------------------------------------------------------------------------------
     !
@@ -2181,21 +2156,19 @@ contains
     return
   end subroutine save
 
+  !> @ brief Add a model
+  !!
+  !!  Add a model to s solution.
+  !!
+  !<
   subroutine add_model(this, mp)
-! ******************************************************************************
-! addmodel -- Add Model
-! Subroutine: (1) add a model to this%modellist
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    class(BaseModelType), pointer, intent(in) :: mp
-    ! -- local
-    class(NumericalModelType), pointer :: m
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this             !< NumericalSolutionType instance
+    class(BaseModelType), pointer, intent(in) :: mp  !< model instance
+    ! -- local variables
+    class(NumericalModelType), pointer :: m => null()
     !
+    ! -- add a model
     select type(mp)
     class is (NumericalModelType)
       m => mp
@@ -2206,31 +2179,34 @@ contains
     return
   end subroutine add_model
 
-  !> @brief Returns a pointer to the list of models in this solution
+  !> @brief Get a list of models
+  !!
+  !!  Returns a pointer to the list of models in this solution.
+  !!
   !<
   function get_models(this) result(models)
-    class(NumericalSolutionType) :: this !< instance of the numerical solution
+    ! -- return variable
     type(ListType), pointer :: models    !< pointer to the model list
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
 
     models => this%modellist
 
   end function get_models
 
+  !> @brief Add exchange
+  !!
+  !!  Add and exchange to this%exchangelist.
+  !!
+  !<
   subroutine add_exchange(this, exchange)
-! ******************************************************************************
-! addexchange -- Add exchange
-! Subroutine: (1) add an exchange to this%exchangelist
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalSolutionType) :: this
-    class(BaseExchangeType), pointer, intent(in) :: exchange
-    ! -- local
-    class(NumericalExchangeType), pointer :: num_ex
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(NumericalSolutionType) :: this                       !< NumericalSolutionType instance
+    class(BaseExchangeType), pointer, intent(in) :: exchange   !< model exchange instance
+    ! -- local variables
+    class(NumericalExchangeType), pointer :: num_ex => null()
     !
+    ! -- add exchange
     select type(exchange)
     class is (NumericalExchangeType)
       num_ex => exchange
@@ -2245,7 +2221,7 @@ contains
 ! ******************************************************************************
 ! sln_connect -- Assign Connections
 ! Main workhorse method for solution.  This goes through all the models and all
-! the connections and builds up the sparse matrix.
+! the connections and builds up the sparse matrix. Steps are
 ! Subroutine: (1) Add internal model connections,
 !             (2) Add cross terms,
 !             (3) Allocate solution arrays
@@ -3163,28 +3139,45 @@ contains
     return
   end subroutine sln_get_nodeu
 
+  !> @ brief Cast a object as a Numerical Solution
+  !!
+  !!  Get a numerical solution from a list.
+  !!
+  !<
   function CastAsNumericalSolutionClass(obj) result (res)
-    implicit none
-    class(*), pointer, intent(inout) :: obj
-    class(NumericalSolutionType), pointer :: res
+    ! -- dummy variables
+    class(*), pointer, intent(inout) :: obj         !< generic object
+    ! -- return variable
+    class(NumericalSolutionType), pointer :: res    !< output NumericalSolutionType
     !
+    ! -- initialize return variable
     res => null()
+    !
+    ! -- determine if obj is associated
     if (.not. associated(obj)) return
     !
+    ! -- set res
     select type (obj)
     class is (NumericalSolutionType)
       res => obj
     end select
+    !
+    ! -- return
     return
   end function CastAsNumericalSolutionClass
   
+  !> @ brief Get a numerical solution
+  !!
+  !!  Get a numerical solution from a list.
+  !!
+  !<
   function GetNumericalSolutionFromList(list, idx) result (res)
-    implicit none
-    ! -- dummy
-    type(ListType),           intent(inout) :: list
-    integer(I4B),                  intent(in)    :: idx
-    class(NumericalSolutionType), pointer       :: res
-    ! -- local
+    ! -- dummy variables
+    type(ListType), intent(inout) :: list         !< list of numerical solutions
+    integer(I4B), intent(in)    :: idx            !< value to retrieve from the list
+    ! -- return variables
+    class(NumericalSolutionType), pointer :: res  !< numerical solution
+    ! -- local variables
     class(*), pointer :: obj
     !
     obj => list%GetItem(idx)
