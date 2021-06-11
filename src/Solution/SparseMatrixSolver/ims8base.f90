@@ -1,5 +1,10 @@
 
-  MODULE IMSLinearBaseModule
+!> @brief This module contains the IMS linear accelerator subroutines
+!!
+!! This module contains the IMS linear accelerator subroutines used by a 
+!! MODFLOW 6 solution.
+!<
+MODULE IMSLinearBaseModule
   ! -- modules
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO,                                  &
