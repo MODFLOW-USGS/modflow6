@@ -5,7 +5,7 @@ module TimeSeriesModule
   use ConstantsModule,        only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
                                     LINEAREND, LENTIMESERIESNAME, LENHUGELINE, &
                                     DZERO, DONE, DNODATA
-  use GenericUtilitiesModule,       only: IS_SAME
+  use GenericUtilitiesModule,       only: is_same
   use InputOutputModule,      only: GetUnit, openfile, ParseLine, upcase
   use ListModule,             only: ListType, ListNodeType
   use SimModule,              only: count_errors, store_error, &
@@ -347,7 +347,7 @@ contains
         if (associated(currNode%nextNode)) then
           obj => currNode%nextNode%GetItem()
           tsr => CastAsTimeSeriesRecordType(obj)
-          if (tsr%tsrTime < time .and. .not. IS_SAME(tsr%tsrTime, time)) then
+          if (tsr%tsrTime < time .and. .not. is_same(tsr%tsrTime, time)) then
             currNode => currNode%nextNode
           else
             exit
@@ -384,7 +384,7 @@ contains
       obj => tsNode1%GetItem()
       tsrec1 => CastAsTimeSeriesRecordType(obj)
       time1 = tsrec1%tsrTime
-      do while (time1 < time .and. .not. IS_SAME(time1, time))
+      do while (time1 < time .and. .not. is_same(time1, time))
         if (associated(tsNode1%nextNode)) then
           tsNode1 => tsNode1%nextNode
           obj => tsNode1%GetItem()
@@ -401,8 +401,8 @@ contains
       !
     endif
     !
-    if (time0 < time .or. IS_SAME(time0, time)) tsrecEarlier => tsrec0
-    if (time1 > time .or. IS_SAME(time1, time)) tsrecLater => tsrec1
+    if (time0 < time .or. is_same(time0, time)) tsrecEarlier => tsrec0
+    if (time1 > time .or. is_same(time1, time)) tsrecLater => tsrec1
     !
     return
   end subroutine get_surrounding_records
@@ -449,7 +449,7 @@ contains
         if (associated(currNode%nextNode)) then
           obj => currNode%nextNode%GetItem()
           tsr => CastAsTimeSeriesRecordType(obj)
-          if (tsr%tsrTime < time .and. .not. IS_SAME(tsr%tsrTime, time)) then
+          if (tsr%tsrTime < time .and. .not. is_same(tsr%tsrTime, time)) then
             currNode => currNode%nextNode
           else
             exit
@@ -485,7 +485,7 @@ contains
       obj => tsNode1%GetItem()
       tsrec1 => CastAsTimeSeriesRecordType(obj)
       time1 = tsrec1%tsrTime
-      do while (time1 < time .and. .not. IS_SAME(time1, time))
+      do while (time1 < time .and. .not. is_same(time1, time))
         if (associated(tsNode1%nextNode)) then
           tsNode1 => tsNode1%nextNode
           obj => tsNode1%GetItem()
@@ -498,11 +498,11 @@ contains
       !
     endif
     !
-    if (time0 < time .or. IS_SAME(time0, time)) then
+    if (time0 < time .or. is_same(time0, time)) then
       tsrecEarlier => tsrec0
       nodeEarlier => tsNode0
     endif
-    if (time1 > time .or. IS_SAME(time1, time)) then
+    if (time1 > time .or. is_same(time1, time)) then
       tsrecLater => tsrec1
       nodeLater => tsNode1
     endif
@@ -591,7 +591,7 @@ contains
           ierr = 1
         endif
       else
-        if (extendToEndOfSimulation .or. IS_SAME(tsrEarlier%tsrTime, time)) then
+        if (extendToEndOfSimulation .or. is_same(tsrEarlier%tsrTime, time)) then
           get_value_at_time = tsrEarlier%tsrValue
         else
           ! -- Only earlier time is available, and it is not time of interest;
@@ -605,7 +605,7 @@ contains
       endif
     else
       if (associated(tsrLater)) then
-        if (IS_SAME(tsrLater%tsrTime, time)) then
+        if (is_same(tsrLater%tsrTime, time)) then
           get_value_at_time = tsrLater%tsrValue
         else
           ! -- only later time is available, and it is not time of interest
@@ -668,7 +668,7 @@ contains
         currObj => currNode%GetItem()
         currRecord => CastAsTimeSeriesRecordType(currObj)
         currTime = currRecord%tsrTime
-        if (IS_SAME(currTime, time1)) then
+        if (is_same(currTime, time1)) then
           ! Current node time = time1 so should be ldone
           ldone = .true.
         elseif (currTime < time1) then
@@ -702,12 +702,12 @@ contains
           if (lprocess) then
             ! -- determine lower and upper limits of time span of interest
             !    within current interval
-            if (currTime > time0 .or. IS_SAME(currTime, time0)) then
+            if (currTime > time0 .or. is_same(currTime, time0)) then
               t0 = currTime
             else
               t0 = time0
             endif
-            if (nextTime < time1 .or. IS_SAME(nextTime, time1)) then
+            if (nextTime < time1 .or. is_same(nextTime, time1)) then
               t1 = nextTime
             else
               t1 = time1
@@ -742,7 +742,7 @@ contains
         ! -- Are we done yet?
         if (t1 > time1) then
           ldone = .true.
-        elseif (IS_SAME(t1, time1)) then
+        elseif (is_same(t1, time1)) then
           ldone = .true.
         else
           ! -- We are not done yet
@@ -845,7 +845,7 @@ contains
         if (associated(currNode%nextNode)) then
           obj => currNode%nextNode%GetItem()
           tsr => CastAsTimeSeriesRecordType(obj)
-          if (tsr%tsrTime < time .or. IS_SAME(tsr%tsrTime, time)) then
+          if (tsr%tsrTime < time .or. is_same(tsr%tsrTime, time)) then
             currNode => currNode%nextNode
           else
             exit
@@ -878,7 +878,7 @@ contains
       enddo
     endif
     !
-    if (time0 < time .or. IS_SAME(time0, time)) tslNode => tsNode0
+    if (time0 < time .or. is_same(time0, time)) tslNode => tsNode0
     !
     return
   end subroutine get_latest_preceding_node
@@ -1019,7 +1019,7 @@ contains
     do
       tsr => this%GetNextTimeSeriesRecord()
       if (associated(tsr)) then
-        if (IS_SAME(tsr%tsrTime, time)) then
+        if (is_same(tsr%tsrTime, time)) then
           res => tsr
           exit
         endif

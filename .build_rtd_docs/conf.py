@@ -61,6 +61,18 @@ if stdout:
 if stderr:
     print("Errors:\n{}".format(stderr.decode("utf-8")))
 
+# -- update the doxygen version number ---------------------------------------
+print("Update the Doxyfile with the latest version number")
+with open("Doxyfile", "r") as fp:
+    lines = fp.readlines()
+
+tag = "PROJECT_NUMBER"
+with open("Doxyfile", "w") as fp:
+    for line in lines:
+        if tag in line:
+            line = "{}         = version {}\n".format(tag, __version__)
+        fp.write(line)
+
 # -- Project information -----------------------------------------------------
 
 project = "MODFLOW 6 Program Documentation"
