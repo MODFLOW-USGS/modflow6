@@ -66,21 +66,21 @@
   integer(I4B), DIMENSION(NIAPC), INTENT(IN) :: IW                              !< preconditioner integer working vector
   integer(I4B), DIMENSION(NJLU), INTENT(IN) :: JLU                              !< preconditioner JLU working vector
   ! -- convergence information dummy variables dummy variables
-  integer(I4B), INTENT(IN) :: NCONV                                             !<                                   
-  integer(I4B), INTENT(IN) :: CONVNMOD                                          !<
-  integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART          !<
-  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV                     !<
-  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR                     !<
-  character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL                  !<
-  integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER                      !<
-  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV          !<
-  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR          !<
-  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                         !<
-  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                         !<
-  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX              !<
-  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX              !<
+  integer(I4B), INTENT(IN) :: NCONV                                             !< maximum number of inner iterations in a time step (maxiter * maxinner)                                  
+  integer(I4B), INTENT(IN) :: CONVNMOD                                          !< number of models in the solution
+  integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART          !< pointer to the start of each model in the convmod* arrays
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV                     !< location of the maximum dependent-variable change in the solution
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR                     !< location of the maximum flow change in the solution
+  character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL                  !< convergence string
+  integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER                      !< actual number of inner iterations in each Picard iteration
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV          !< location of the maximum dependent-variable change in each model in the solution
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR          !< location of the maximum flow change in each model in the solution
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                         !< maximum dependent-variable change in the solution
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                         !< maximum flow change in the solution
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX              !< maximum dependent-variable change in each model in the solution
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX              !< maximum flow change in each model in the solution
   ! -- local variables
-  LOGICAL :: LORTH
+  LOGICAL :: lorth
   logical :: lsame
   character(len=31) :: cval
   integer(I4B) :: n
@@ -223,8 +223,8 @@
     !
     ! -- RECALCULATE THE RESIDUAL
     IF (NORTH > 0) THEN
-      LORTH = mod(iiter + 1, NORTH) == 0
-      IF (LORTH) THEN
+      lorth = mod(iiter + 1, NORTH) == 0
+      IF (lorth) THEN
         CALL ims_base_mv(NJA, NEQ, A0, X, D, IA0, JA0)
         CALL ims_base_axpy(NEQ, B, -DONE, D, D)
       END IF
@@ -303,19 +303,19 @@
   integer(I4B), DIMENSION(NIAPC), INTENT(IN) :: IW                     !< preconditioner integer working vector
   integer(I4B), DIMENSION(NJLU), INTENT(IN) :: JLU                     !< preconditioner JLU working vector
   ! -- convergence information dummy variables
-  integer(I4B), INTENT(IN) :: NCONV                                    !< 
-  integer(I4B), INTENT(IN) :: CONVNMOD                                 !< 
-  integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) ::CONVMODSTART  !< 
-  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV            !< 
-  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR            !< 
-  character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL         !< 
-  integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER             !< 
-  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV !< 
-  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR !< 
-  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                !< 
-  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                !< 
-  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX     !< 
-  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX     !< 
+  integer(I4B), INTENT(IN) :: NCONV                                    !< maximum number of inner iterations in a time step (maxiter * maxinner)                                  
+  integer(I4B), INTENT(IN) :: CONVNMOD                                 !< number of models in the solution
+  integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART !< pointer to the start of each model in the convmod* arrays
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV            !< location of the maximum dependent-variable change in the solution
+  integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR            !< location of the maximum flow change in the solution
+  character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL         !< convergence string
+  integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER             !< actual number of inner iterations in each Picard iteration
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV !< location of the maximum dependent-variable change in each model in the solution
+  integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR !< location of the maximum flow change in each model in the solution
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX                !< maximum dependent-variable change in the solution
+  real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX                !< maximum flow change in the solution
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX     !< maximum dependent-variable change in each model in the solution
+  real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX     !< maximum flow change in each model in the solution
   ! -- local variables
   LOGICAL :: LORTH
   logical :: lsame
