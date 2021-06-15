@@ -44,6 +44,10 @@ parent_name = 'parent'
 child_name = 'child'
 h_left = 1.0
 h_right = 0.0
+delr = 100.0
+delc = 100.0
+k11 = 1.0
+k33 = 1.0
 child_domain = None
 hclose = None
 
@@ -77,8 +81,6 @@ def get_model(idx, dir):
     idomain = np.ones((nlay, nrow, ncol))
     idomain[:, row_s-1:row_e, col_s-1:col_e] = 0
 
-    delr = 100.0
-    delc = 100.0
     delrc = delr/ref_fct
     delcc = delc/ref_fct
     tops = [0.0,-100.0]
@@ -96,10 +98,6 @@ def get_model(idx, dir):
     yminc = yoriginc
     ymaxc = yoriginc + nrowc*delcc
     child_domain = [xminc, xmaxc, yminc, ymaxc]
-
-    # hydraulic conductivity
-    k11 = 1.0
-    k33 = 1.0
 
     # boundary stress period data
     left_chd = [[(ilay,irow,0), h_left] for ilay in range(nlay) for irow in range(nrow)]
@@ -133,7 +131,9 @@ def get_model(idx, dir):
                                   top=tops[0], botm=tops[1:],
                                   idomain=idomain)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
-    npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=True,
+    npf = flopy.mf6.ModflowGwfnpf(gwf,
+                                  save_specific_discharge=True,
+                                  xt3doptions=True,
                                   save_flows=True,
                                   icelltype=0,
                                   k=k11,
@@ -141,11 +141,11 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     oc = flopy.mf6.ModflowGwfoc(gwf,
                                 head_filerecord='{}.hds'.format(parent_name),
+                                budget_filerecord='{}.cbc'.format(parent_name),
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL')],
-                                printrecord=[('BUDGET', 'ALL')])
+                                saverecord=[('HEAD', 'LAST'), ('BUDGET', 'LAST')])
 
     # The child model:
     gwfc = flopy.mf6.ModflowGwf(sim, modelname=child_name, save_flows=True)
@@ -154,18 +154,20 @@ def get_model(idx, dir):
                                   top=tops[0], botm=tops[1:],
                                   xorigin=xoriginc, yorigin=yoriginc)
     ic = flopy.mf6.ModflowGwfic(gwfc, strt=h_start)
-    npf = flopy.mf6.ModflowGwfnpf(gwfc, xt3doptions=True,
+    npf = flopy.mf6.ModflowGwfnpf(gwfc, 
+                                  save_specific_discharge=True,
+                                  xt3doptions=True,
                                   save_flows=True,
                                   icelltype=0,
                                   k=k11,
                                   k33=k33)
     oc = flopy.mf6.ModflowGwfoc(gwfc,
                                 head_filerecord='{}.hds'.format(child_name),
+                                budget_filerecord='{}.cbc'.format(child_name),
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL')],
-                                printrecord=[('BUDGET', 'ALL')])
+                                saverecord=[('HEAD', 'LAST'), ('BUDGET', 'LAST')])
 
     # LGR:
     nrowp = gwf.dis.nrow.get_data()
@@ -208,9 +210,27 @@ def build_models():
         sim.write_simulation()
     return
 
-
+def qxqyqz(fname, nlay, nrow, ncol):
+    nodes = nlay * nrow * ncol
+    cbb = flopy.utils.CellBudgetFile(fname, precision="double")
+    spdis = cbb.get_data(text="DATA-SPDIS")[0]
+    qx = np.ones((nodes), dtype=float) * 1.0e30
+    qy = np.ones((nodes), dtype=float) * 1.0e30
+    qz = np.ones((nodes), dtype=float) * 1.0e30
+    n0 = spdis["node"] - 1
+    qx[n0] = spdis["qx"]
+    qy[n0] = spdis["qy"]
+    qz[n0] = spdis["qz"]
+    qx = qx.reshape(nlay, nrow, ncol)
+    qy = qy.reshape(nlay, nrow, ncol)
+    qz = qz.reshape(nlay, nrow, ncol)
+    qx = np.ma.masked_equal(qx, 1.0e30)
+    qy = np.ma.masked_equal(qy, 1.0e30)
+    qz = np.ma.masked_equal(qz, 1.0e30)
+    return qx, qy, qz
+    
 def eval_heads(sim):
-    print("comparing heads to analytical result...")
+    print("comparing heads and spec. discharges to analytical result...")
 
     name = ex[sim.idxsim]
     
@@ -218,9 +238,17 @@ def eval_heads(sim):
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
     
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
+    nlay, nrow, ncol = heads.shape
+    qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
+    
     fpth = os.path.join(sim.simpath, "{}.hds".format(child_name))
     hds_c = flopy.utils.HeadFile(fpth)
-    heads_c = hds_c.get_data()
+    heads_c = hds_c.get_data() 
+    
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(child_name))
+    nlay, nrow, ncol = heads_c.shape
+    qxb_c, qyb_c, qzb_c = qxqyqz(fpth, nlay, nrow, ncol)
 
     fpth = os.path.join(sim.simpath, "{}.dis.grb".format(parent_name))
     grb = flopy.utils.MfGrdFile(fpth)
@@ -229,39 +257,66 @@ def eval_heads(sim):
     fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
     grb_c = flopy.utils.MfGrdFile(fpth)
     mg_c= grb_c.get_modelgrid()
-
+    
     xyc = mg.xycenters
     xyc_c = mg_c.xycenters
 
-    # the exact result:
+    # the exact results:
     xleft =xyc[0][0]
     xright = xyc[0][-1]
     def exact(x):
         return h_left + (h_right-h_left)*(x - xleft)/(xright-xleft)
-
-    diffs = []
+        
+    qx_exact = -k11*(h_right-h_left)/((mg.ncol-1)*delr)
 
     # first check the parent
     for irow in range(mg.nrow):
         for icol in range(mg.ncol):
             xc = xyc[0][icol]
-            h = heads[0, irow, icol]
+            h = heads[0, irow, icol]            
             if h != 1e+30:
-                diffs.append(abs(h-exact(xc)))
-    
+                diff = abs(h-exact(xc))
+                assert diff < 10 * hclose, "head difference in parent model {}"\
+                                           " exceeds solver tolerance (x10) {}"\
+                                           " for row {} and col {}".\
+                                           format(diff, 10*hclose, irow, icol)
+
+    for irow in range(mg.nrow):
+        for icol in range(mg.ncol):
+            if qyb[0, irow, icol] != '--':
+                diff = abs(qyb[0, irow, icol])                
+                assert diff < 10 * hclose, "Specific discharge should not have a y-component in this model"
+            if qxb[0, irow, icol] != '--':
+                diff = abs(qxb[0, irow, icol] - qx_exact)
+                assert diff < 10 * hclose, "Difference in spec. dis. for parent {}"\
+                                           " exceeds solver tolerance (x10) {}"\
+                                           " for row {} and col {}".\
+                                           format(diff, 10*hclose, irow, icol)
+
     # and now the child
     for irow in range(mg_c.nrow):
         for icol in range(mg_c.ncol):        
             xc = xyc_c[0][icol] + child_domain[0]
             h = heads_c[0, irow, icol] 
-            if h != 1e+30:
-                diffs.append(abs(h-exact(xc)))
+            if h != 1e+30:            
+                diff = abs(h-exact(xc))
+                assert diff < 10 * hclose, "Head difference in child model {}"\
+                                           " exceeds solver tolerance (x10) {}"\
+                                           " for row {} and col {}".\
+                                           format(max_diff, 10*hclose, irow, icol)
 
-    # The error should be within solver tolerance,
-    # 10*hclose seems realistic here
-    max_diff = max(diffs)
-    assert max_diff < 10 * hclose, "Max. difference {} exceeds solver tolerance (x10): {}".format(max_diff, 10*hclose)
-
+    for irow in range(mg_c.nrow):
+        for icol in range(mg_c.ncol):
+            if qyb_c[0, irow, icol] != '--':
+                diff = abs(qyb_c[0, irow, icol])                
+                assert diff < 10 * hclose, "Specific discharge should not have a y-component in this model"
+            if qxb_c[0, irow, icol] != '--':
+                diff = abs(qxb_c[0, irow, icol] - qx_exact)
+                assert diff < 10 * hclose, "Difference in spec. dis. for child {}"\
+                                           " exceeds solver tolerance (x10) {}"\
+                                           " for row {} and col {}".\
+                                           format(diff, 10*hclose, irow, icol)
+    
     return
 
 

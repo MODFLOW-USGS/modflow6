@@ -298,9 +298,9 @@ module GridConnectionModule
     regionSize = 0
     offset = 0
     do imod = 1, this%regionalModels%Count()
-      numModel => GetNumericalModelFromList(this%regionalModels, imod)      
-      regionSize = regionSize + numModel%dis%nodes 
-      this%regionalModelOffset(imod) = offset     
+      numModel => GetNumericalModelFromList(this%regionalModels, imod)
+      regionSize = regionSize + numModel%dis%nodes
+      this%regionalModelOffset(imod) = offset
       offset = offset + numModel%dis%nodes
     end do
     ! init to -1, meaning 'interface index was not assigned yet'
@@ -494,7 +494,7 @@ module GridConnectionModule
     integer(I4B), dimension(:), allocatable :: nnz
     type(SparseMatrix), pointer :: sparse     
     integer(I4B) :: ierror    
-    type(ConnectionsType), pointer :: conn    
+    type(ConnectionsType), pointer :: conn
             
     ! generate interface cell indices, recursively and build mapping. 
     ! Start with boundaryCells, this way the internal interface nodes 

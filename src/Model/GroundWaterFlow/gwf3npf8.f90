@@ -131,6 +131,7 @@ module GwfNpfModule
     procedure, public                       :: sav_sat
     procedure, public                       :: increase_edge_count
     procedure, public                       :: set_edge_properties
+    procedure, public                       :: calcSatThickness
   endtype
 
   contains
@@ -3598,6 +3599,35 @@ module GwfNpfModule
     ! -- return
     return
   end subroutine set_edge_properties
+
+  !> Calculate saturated thickness between cell n and m
+  !<
+  function calcSatThickness(this, n, m, ihc) result(satThickness)
+    class(GwfNpfType) :: this !< this NPF instance
+    integer(I4B) :: n         !< node n
+    integer(I4B) :: m         !< node m
+    integer(I4B) :: ihc       !< 1 = horizonal connection, 0 for vertical
+    real(DP) :: satThickness  !< saturated thickness
+
+    satThickness = thksatnm(this%ibound(n),    &
+                            this%ibound(m),    &
+                            this%icelltype(n),          &
+                            this%icelltype(m),          &
+                            this%inewton,         &
+                            ihc,          &
+                            this%iusgnrhc,          &
+                            this%hnew(n),         &
+                            this%hnew(m),         &
+                            this%sat(n),          &
+                            this%sat(m),          &
+                            this%dis%top(n),          &
+                            this%dis%top(m),          &
+                            this%dis%bot(n),          &
+                            this%dis%bot(m),          &
+                            this%satomega,          &
+                            this%satmin)          
+
+  end function calcSatThickness
 
   function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,                 &
                     hn, hm, satn, satm, topn, topm, botn, botm,                &

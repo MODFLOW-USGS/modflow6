@@ -20,6 +20,9 @@ from simulation import Simulation
 # decomposed and joined by a GWF-GWF exchange with XT3D applied.
 # The head values should always be indentical. All models are
 # part of the same solution for convenience.
+# In addition, a check on the x,y,z components of specific discharge
+# is present. The values for the rightmost column of the left submodel
+# is compared to the 5th column of the full model: they should be identical.
 ex = ["ifmod_xt3d02"]
 exdirs = []
 for s in ex:
@@ -30,6 +33,8 @@ mname_ref = 'refmodel'
 mname_left = 'leftmodel'
 mname_right = 'rightmodel'
 hclose_check = 1e-9
+
+useXT3D = True
 
 def get_model(idx, dir):    
     name = ex[idx]    
@@ -113,7 +118,9 @@ def get_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=True,
+    npf = flopy.mf6.ModflowGwfnpf(gwf, 
+                                  save_specific_discharge=True,
+                                  xt3doptions=useXT3D,
                                   save_flows=True,
                                   icelltype=0,
                                   k=k11, k22=k22, angle1=k_angle)
@@ -132,11 +139,11 @@ def get_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
                                 head_filerecord='{}.hds'.format(mname_ref),
+                                budget_filerecord='{}.cbc'.format(mname_ref),
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL')],
-                                printrecord=[('BUDGET', 'ALL')])
+                                saverecord=[('HEAD', 'LAST'), ('BUDGET', 'LAST')])
         
     # Now create two coupled models with the interface model enabled,
     # to be stored in the same solution as the reference model
@@ -150,18 +157,20 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=tops[0], botm=tops[1:])
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
-    npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=True,
+    npf = flopy.mf6.ModflowGwfnpf(gwf,
+                                  save_specific_discharge=True,
+                                  xt3doptions=useXT3D,
                                   save_flows=True, 
                                   icelltype=0,
                                   k=k11, k22=k22, angle1=k_angle)
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(gwf,
                                 head_filerecord='{}.hds'.format(mname_left),
+                                budget_filerecord='{}.cbc'.format(mname_left),
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL')],
-                                printrecord=[('BUDGET', 'ALL')])
+                                saverecord=[('HEAD', 'LAST'), ('BUDGET', 'LAST')])
     wel1 = flopy.mf6.ModflowGwfwel(gwf,
                                    stress_period_data=[[well_id, well_rate]],
                                    print_input=True,
@@ -179,29 +188,32 @@ def get_model(idx, dir):
                                   xorigin=shift_x, yorigin=shift_y,
                                   top=tops[0], botm=tops[1:])
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
-    npf = flopy.mf6.ModflowGwfnpf(gwf, xt3doptions=True,
+    npf = flopy.mf6.ModflowGwfnpf(gwf,
+                                  save_specific_discharge=True,
+                                  xt3doptions=useXT3D,
                                   save_flows=True,
                                   icelltype=0,
                                   k=k11, k22=k22, angle1=k_angle)
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(gwf,
                                 head_filerecord='{}.hds'.format(mname_right),
+                                budget_filerecord='{}.cbc'.format(mname_right),
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL')],
-                                printrecord=[('BUDGET', 'ALL')])
+                                saverecord=[('HEAD', 'LAST'), ('BUDGET', 'LAST')])
 
     # exchangedata
     angldegx = 0.0
-    gwfgwf_data = [[(0,irow,ncol_left-1), (0,irow,0), 1, delr/2., delr/2., delc, angldegx] for irow in range(nrow)]
+    cdist = delr
+    gwfgwf_data = [[(0,irow,ncol_left-1), (0,irow,0), 1, delr/2., delr/2., delc, angldegx, cdist] for irow in range(nrow)]
     gwfgwf = flopy.mf6.ModflowGwfgwf(sim, exgtype='GWF6-GWF6',
                                      nexg=len(gwfgwf_data),
                                      exgmnamea=mname_left,
                                      exgmnameb=mname_right,
                                      exchangedata=gwfgwf_data,
-                                     auxiliary=["ANGLDEGX"],
-                                     xt3d = True
+                                     auxiliary=["ANGLDEGX", "CDIST"],
+                                     xt3d = useXT3D
                                     )
                                     
     return sim
@@ -213,24 +225,68 @@ def build_models():
         sim.write_simulation()
     return
 
+def qxqyqz(fname, nlay, nrow, ncol):
+    nodes = nlay * nrow * ncol
+    cbb = flopy.utils.CellBudgetFile(fname, precision="double")
+    spdis = cbb.get_data(text="DATA-SPDIS")[0]
+    qx = np.ones((nodes), dtype=float) * 1.0e30
+    qy = np.ones((nodes), dtype=float) * 1.0e30
+    qz = np.ones((nodes), dtype=float) * 1.0e30
+    n0 = spdis["node"] - 1
+    qx[n0] = spdis["qx"]
+    qy[n0] = spdis["qy"]
+    qz[n0] = spdis["qz"]
+    qx = qx.reshape(nlay, nrow, ncol)
+    qy = qy.reshape(nlay, nrow, ncol)
+    qz = qz.reshape(nlay, nrow, ncol)
+    qx = np.ma.masked_equal(qx, 1.0e30)
+    qy = np.ma.masked_equal(qy, 1.0e30)
+    qz = np.ma.masked_equal(qz, 1.0e30)
+    return qx, qy, qz
 
 def compare_to_ref(sim):    
-    print("comparing heads to single model reference...")
+    print("comparing heads and spec. discharge to single model reference...")
 
     fpth = os.path.join(sim.simpath, "{}.hds".format(mname_ref))
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_ref))
+    nlay, nrow, ncol = heads.shape
+    qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
     
     fpth = os.path.join(sim.simpath, "{}.hds".format(mname_left))
     hds = flopy.utils.HeadFile(fpth)
-    heads_left = hds.get_data()    
+    heads_left = hds.get_data()
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_left))
+    nlay, nrow, ncol = heads_left.shape
+    qxb_left, qyb_left, qzb_left = qxqyqz(fpth, nlay, nrow, ncol)
+    
     fpth = os.path.join(sim.simpath, "{}.hds".format(mname_right))
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data()    
     heads_2models = np.append(heads_left[0],heads_right[0], axis=1)
     
     maxdiff = np.amax(abs(heads - heads_2models))
-    assert maxdiff < 10*hclose_check, "Max. diff {} should be within solver tolerance (x10): {}".format(maxdiff, 10*hclose_check)
+    assert maxdiff < 10*hclose_check, "Max. head diff. {} should \
+                     be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
+
+    maxdiff = np.amax(abs(qxb[:,:,0:5] - qxb_left))
+    assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (x) {} \
+                     should be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
+                    
+    print(qyb[0,0:5,4])
+    print(qyb_left[0,0:5,4])
+    maxdiff = np.amax(abs(qyb[:,:,0:5] - qyb_left))
+    assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (y) {} \
+                     should be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
+                     
+    maxdiff = np.amax(abs(qzb[:,:,0:5] - qzb_left))
+    assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (z) {} \
+                     should be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
 
     return
 

@@ -9,7 +9,7 @@ module GwfGwfConnectionModule
   use NumericalModelModule
   use GwfModule, only: GwfModelType
   use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList
-  use GwfNpfModule, only: hcond, vcond
+  use GwfNpfModule, only: GwfNpfType, hcond, vcond
   use ConnectionsModule, only: ConnectionsType
   
   implicit none
@@ -39,6 +39,8 @@ module GwfGwfConnectionModule
     procedure, pass(this) :: exg_cf => gwfgwfcon_cf
     procedure, pass(this) :: exg_fc => gwfgwfcon_fc
     procedure, pass(this) :: exg_da => gwfgwfcon_da
+    procedure, pass(this) :: exg_cq => gwfgwfcon_cq
+    procedure, pass(this) :: exg_bd => gwfgwfcon_bd
 
     ! overriding 'protected'
     procedure, pass(this) :: validateConnection
@@ -349,7 +351,7 @@ contains
       do ipos = this%ia(n), this%ia(n+1) - 1
         amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
       end do
-    end do    
+    end do
   end subroutine gwfgwfcon_fc
 
   !> @brief Validate this connection
@@ -439,6 +441,103 @@ contains
     call this%spatialcon_da()
     
   end subroutine gwfgwfcon_da
+
+  !> @brief Calculate intra-cell flows
+  !! The calculation will be dispatched to the interface
+  !! model, and then mapped back to real-world cell ids.
+  !<
+  subroutine gwfgwfcon_cq(this, icnvg, isuppress_output, isolnid)
+    class(GwfGwfConnectionType) :: this           !< this connection
+    integer(I4B), intent(inout) :: icnvg          !< TODO_MJR...
+    integer(I4B), intent(in) :: isuppress_output  !<
+    integer(I4B), intent(in) :: isolnid           !<
+    ! local
+    integer(I4B) :: n, m, ipos, isym
+    integer(I4B) :: nloc, mloc
+    integer(I4B) :: ihc
+    real(DP) :: rrate
+    real(DP) :: area
+    real(DP) :: satThick
+    real(DP) :: nx, ny, nz
+    real(DP) :: cx, cy, cz    
+    real(DP) :: conLength
+    real(DP) :: distance
+    logical :: nozee
+    type(ConnectionsType), pointer :: imCon !< interface model connections
+    type(GwfNpfType), pointer :: imNpf       !< interface model npf package
+
+    call this%interfaceModel%model_cq(icnvg, isuppress_output)
+
+    ! two types of flows, at the exchange and the internal
+    ! ones which depend on the connection with other model(s)
+    ! so, we loop over iface model flowja(nja) which are not masked
+    ! and if (n,m) is across the boundary, we dispatch (1x) to simvals
+    ! in the GwfGwfExchange, if not, then we set the model's internal
+    ! flowja
+    imCon => this%interfaceModel%dis%con !< interface model connection object
+    imNpf => this%interfaceModel%npf     !< interface model npf object
+
+    if (this%gwfModel%npf%icalcspdis /= 1) return
+
+    nozee = .false.
+    if (imNpf%ixt3d > 0) then
+      nozee = imNpf%xt3d%nozee
+    end if
+
+    do n = 1, this%neq
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+        ! only add flows to own model
+        cycle
+      end if
+      nloc = this%gridConnection%idxToGlobal(n)%index
+
+      do ipos = imCon%ia(n), imCon%ia(n+1) - 1  
+        m = imCon%ja(ipos)
+        mloc =  this%gridConnection%idxToGlobal(m)%index
+
+        if (imCon%mask(ipos) < 1) then
+          ! skip this connection, it's masked and determined in the model
+          cycle
+        end if
+        
+        if (.not. associated(this%gridConnection%idxToGlobal(m)%model, this%owner)) then
+          ! boundary connection, set edge properties
+          isym = imCon%jas(ipos)
+          ihc = imCon%ihc(isym)
+          area = imCon%hwva(isym)          
+          satThick = imNpf%calcSatThickness(n, m, ihc)
+          rrate = this%interfaceModel%flowja(ipos)
+
+          if (ihc == 0) then
+            if (n > m) rrate = -rrate
+          else
+            area = area * satThick
+          end if
+
+          call this%interfaceModel%dis%connection_normal(n, m, ihc, nx, ny, nz, ipos)   
+          call this%interfaceModel%dis%connection_vector(n, m, nozee, imNpf%sat(n), imNpf%sat(m), &
+                                                         ihc, cx, cy, cz, conLength)
+
+          distance = conLength * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))          
+          call this%gwfModel%npf%set_edge_properties(nloc, ihc, rrate, area, nx, ny, distance)
+        else
+          ! internal, need to set flowja for n-m
+          write(*,*) "set flowja for ", nloc, "-", mloc
+        end if
+      end do
+    end do
+
+  end subroutine gwfgwfcon_cq
+
+  subroutine gwfgwfcon_bd(this, icnvg, isuppress_output, isolnid)
+    class(GwfGwfConnectionType) :: this           !< this connection
+    integer(I4B), intent(inout) :: icnvg          !< TODO_MJR...
+    integer(I4B), intent(in) :: isuppress_output  !<
+    integer(I4B), intent(in) :: isolnid           !<
+
+    ! thoughts: the internal budget terms
+    
+  end subroutine gwfgwfcon_bd
   
   !> @brief Cast NumericalModelType to GwfModelType
   !<
