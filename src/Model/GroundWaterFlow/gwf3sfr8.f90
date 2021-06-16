@@ -1,37 +1,46 @@
 module SfrModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
-                             DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2,        &
-                             DHALF, DP6, DTWOTHIRDS, DP7, DP9, DP99, DP999,      &
-                             DONE, D1P1, DFIVETHIRDS, DTWO, DPI, DEIGHT,         &
-                             DHUNDRED, DEP20,                                    &
-                             NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,             &
-                             LENPACKAGENAME, LENPAKLOC, MAXCHARLEN,              &
-                             DHNOFLO, DHDRY, DNODATA,                            &
-                             TABLEFT, TABCENTER, TABRIGHT                
-  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
-                              sQuadraticSaturationDerivative,                    &
-                              sQSaturationDerivative,                            &
-                              sCubicSaturation, sChSmooth
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2, &
+                             DHALF, DP6, DTWOTHIRDS, DP7, DP9, DP99, DP999, &
+                             DONE, D1P1, DFIVETHIRDS, DTWO, DPI, DEIGHT, &
+                             DHUNDRED, DEP20, &
+                             NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE, &
+                             LENPACKAGENAME, LENPAKLOC, MAXCHARLEN, &
+                             DHNOFLO, DHDRY, DNODATA, &
+                             TABLEFT, TABCENTER, TABRIGHT
+  use SmoothingModule, only: sQuadraticSaturation, sQSaturation, &
+                             sQuadraticSaturationDerivative, &
+                             sQSaturationDerivative, &
+                             sCubicSaturation, sChSmooth
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
-  use InputOutputModule, only: extract_idnum_or_bndname
+  use ObsModule, only: ObsType
+  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule, only: count_errors, store_error, store_error_unit,              &
+  use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning, ustop
   use SimVariablesModule, only: errmsg, warnmsg
+  use GenericUtilitiesModule, only: sim_message
+  use BlockParserModule, only: BlockParserType
   !
   implicit none
   !
   character(len=LENFTYPE)       :: ftype = 'SFR'
-  character(len=LENPACKAGENAME) :: text  = '             SFR'
+  character(len=LENPACKAGENAME) :: text = '             SFR'
   !
   private
   public :: sfr_create
   public :: SfrType
+  !
+  type SfrTabType
+    integer(I4B), pointer :: irno => NULL()
+    real(DP), dimension(:), pointer, contiguous  :: tabxfact => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabdepth => null()
+  end type SfrTabType
   !
   type, extends(BndType) :: SfrType
     ! -- scalars
@@ -39,9 +48,11 @@ module SfrModule
     ! -- characters
     character(len=16), dimension(:), pointer, contiguous :: csfrbudget => NULL()
     character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
-    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
-                                 contiguous :: sfrname => null()
+    character(len=LENBOUNDNAME), dimension(:), pointer, &
+      contiguous :: sfrname => null()
     ! -- integers
+    integer(I4B), pointer :: ntables => NULL()                                    !< number of cross-section tables
+    integer(I4B), pointer :: nxsectpts => NULL()                                  !< total number of points in processed cross-section vectors
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
@@ -99,6 +110,12 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
+    !
+    ! -- cross-section data
+    integer(I4B), dimension(:), pointer, contiguous :: iaxsect => null()       !< ia for reach cross-sections
+    real(DP), dimension(:), pointer, contiguous :: xsectdep => null()          !< reach cross-section depths
+    real(DP), dimension(:), pointer, contiguous :: xsectwetp => null()         !< reach cross-section wetted perimeters
+    real(DP), dimension(:), pointer, contiguous :: xsectarea => null()         !< reach cross-section areas
     ! -- connection data
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
     integer(I4B), dimension(:), pointer, contiguous :: idiv => null()
@@ -111,11 +128,11 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: runoff => null()
     real(DP), dimension(:), pointer, contiguous :: sstage => null()
     ! -- reach aux variables
-    real(DP), dimension(:,:), pointer, contiguous :: rauxvar => null()
+    real(DP), dimension(:, :), pointer, contiguous :: rauxvar => null()
     ! -- diversion data
     integer(I4B), dimension(:), pointer, contiguous :: iadiv => null()
     integer(I4B), dimension(:), pointer, contiguous :: divreach => null()
-    character (len=10), dimension(:), pointer, contiguous :: divcprior => null()
+    character(len=10), dimension(:), pointer, contiguous :: divcprior => null()
     real(DP), dimension(:), pointer, contiguous :: divflow => null()
     real(DP), dimension(:), pointer, contiguous :: divq => null()
     !
@@ -124,7 +141,7 @@ module SfrModule
     real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
     !
     ! -- type bound procedures
-    contains
+  contains
     procedure :: sfr_allocate_scalars
     procedure :: sfr_allocate_arrays
     procedure :: bnd_options => sfr_options
@@ -137,17 +154,15 @@ module SfrModule
     procedure :: bnd_fc => sfr_fc
     procedure :: bnd_fn => sfr_fn
     procedure :: bnd_cc => sfr_cc
-    procedure :: bnd_cq => sfr_cq
-    procedure :: bnd_ot_package_flows => sfr_ot_package_flows
-    procedure :: bnd_ot_dv => sfr_ot_dv
-    procedure :: bnd_ot_bdsummary => sfr_ot_bdsummary
+    procedure :: bnd_bd => sfr_bd
+    procedure :: bnd_ot => sfr_ot
     procedure :: bnd_da => sfr_da
     procedure :: define_listlabel
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => sfr_obs_supported
     procedure, public :: bnd_df_obs => sfr_df_obs
     procedure, public :: bnd_rp_obs => sfr_rp_obs
-    procedure, public :: bnd_bd_obs => sfr_bd_obs
+    procedure, private :: sfr_bd_obs
     ! -- private procedures
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
@@ -158,7 +173,10 @@ module SfrModule
     procedure, private :: sfr_calc_qd
     procedure, private :: sfr_calc_qsource
     procedure, private :: sfr_calc_div
-    ! -- geometry 
+    ! -- cross-sections
+    procedure, private :: sfr_read_table
+    procedure, private :: sfrtables_to_vectors
+    ! -- geometry
     procedure, private :: area_wet
     procedure, private :: perimeter_wet
     procedure, private :: surface_area
@@ -199,10 +217,10 @@ contains
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -210,7 +228,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(sfrobj)
+    allocate (sfrobj)
     packobj => sfrobj
     !
     ! -- create name and memory path
@@ -229,8 +247,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
-    packobj%isadvpak = 1
-    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
@@ -246,13 +263,15 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    class(SfrType),   intent(inout) :: this
+    class(SfrType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
+    call mem_allocate(this%ntables, 'NTABLES', this%memoryPath)
+    call mem_allocate(this%nxsectpts, 'NXSECTPTS', this%memoryPath)
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
@@ -275,6 +294,8 @@ contains
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Set values
+    this%ntables = 0
+    this%nxsectpts = 0
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
@@ -286,7 +307,7 @@ contains
     this%cbcauxitems = 1
     this%unitconv = DONE
     this%dmaxchg = DEM5
-    this%deps = DP999 * this%dmaxchg
+    this%deps = DP999*this%dmaxchg
     this%nconn = 0
     this%icheck = 1
     this%iconvchk = 1
@@ -307,7 +328,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(SfrType),   intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -317,8 +338,8 @@ contains
     !call this%BndType%allocate_arrays()
     !
     ! -- allocate character array for budget text
-    allocate(this%csfrbudget(this%bditems))
-    call mem_allocate(this%sfrname, LENBOUNDNAME, this%maxbound,                 &
+    allocate (this%csfrbudget(this%bditems))
+    call mem_allocate(this%sfrname, LENBOUNDNAME, this%maxbound, &
                       'SFRNAME', this%memoryPath)
     !
     ! -- variables originally in SfrDataType
@@ -346,7 +367,7 @@ contains
     call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%memoryPath)
     !
     ! -- connection data
-    call mem_allocate(this%ia, this%maxbound+1, 'IA', this%memoryPath)
+    call mem_allocate(this%ia, this%maxbound + 1, 'IA', this%memoryPath)
     call mem_allocate(this%ja, 0, 'JA', this%memoryPath)
     call mem_allocate(this%idir, 0, 'IDIR', this%memoryPath)
     call mem_allocate(this%idiv, 0, 'IDIV', this%memoryPath)
@@ -361,11 +382,11 @@ contains
     call mem_allocate(this%sstage, this%maxbound, 'SSTAGE', this%memoryPath)
     !
     ! -- aux variables
-    call mem_allocate(this%rauxvar, this%naux, this%maxbound,                    &
+    call mem_allocate(this%rauxvar, this%naux, this%maxbound, &
                       'RAUXVAR', this%memoryPath)
     !
     ! -- diversion variables
-    call mem_allocate(this%iadiv, this%maxbound+1, 'IADIV', this%memoryPath)
+    call mem_allocate(this%iadiv, this%maxbound + 1, 'IADIV', this%memoryPath)
     call mem_allocate(this%divreach, 0, 'DIVREACH', this%memoryPath)
     call mem_allocate(this%divflow, 0, 'DIVFLOW', this%memoryPath)
     call mem_allocate(this%divq, 0, 'DIVQ', this%memoryPath)
@@ -408,7 +429,7 @@ contains
         this%rauxvar(j, i) = DZERO
       end do
     end do
-    
+
     !
     !
     !-- fill csfrbudget
@@ -440,7 +461,7 @@ contains
     end if
     !
     ! -- allocate character array for budget text
-    allocate(this%cauxcbc(this%cbcauxitems))
+    allocate (this%cauxcbc(this%cbcauxitems))
     !
     ! -- allocate and initialize qauxcbc
     call mem_allocate(this%qauxcbc, this%cbcauxitems, 'QAUXCBC', this%memoryPath)
@@ -466,11 +487,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
+    use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- format
@@ -485,34 +507,34 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')                                                 &
-        'PROCESSING ' // trim(adjustl(this%text)) // ' DIMENSIONS'
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('NREACHES')
-            this%maxbound = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)')'NREACHES = ', this%maxbound
-          case default
-            write(errmsg,'(2a)')                                                 &
-              'Unknown ' // trim(this%text) // ' dimension: ', trim(keyword)
-            call store_error(errmsg)
+        case ('NREACHES')
+          this%maxbound = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'NREACHES = ', this%maxbound
+        case default
+          write (errmsg, '(2a)') &
+            'Unknown '//trim(this%text)//' dimension: ', trim(keyword)
+          call store_error(errmsg)
         end select
       end do
-      write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
     else
       call store_error('Required dimensions block not found.')
     end if
     !
     ! -- verify dimensions were set
-    if(this%maxbound < 1) then
-      write(errmsg, '(a)')                                                       &
+    if (this%maxbound < 1) then
+      write (errmsg, '(a)') &
         'NREACHES was not specified or was specified incorrectly.'
       call store_error(errmsg)
-    endif
+    end if
     !
     ! -- write summary of error messages for block
     if (count_errors() > 0) then
@@ -558,121 +580,121 @@ contains
     use ConstantsModule, only: DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use SimModule, only: ustop, store_error
-    use InputOutputModule, only: getunit, openfile
+    use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
-    class(SfrType),   intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
+    logical, intent(inout) :: found
     ! -- local
     real(DP) :: r
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
-    character(len=*),parameter :: fmtunitconv = &
-      "(4x, 'UNIT CONVERSION VALUE (',g0,') SPECIFIED.')"
-    character(len=*),parameter :: fmtpicard = &
-      "(4x, 'MAXIMUM SFR PICARD ITERATION VALUE (',i0,') SPECIFIED.')"
-    character(len=*),parameter :: fmtiter = &
-      "(4x, 'MAXIMUM SFR ITERATION VALUE (',i0,') SPECIFIED.')"
-    character(len=*),parameter :: fmtdmaxchg = &
-      "(4x, 'MAXIMUM DEPTH CHANGE VALUE (',g0,') SPECIFIED.')"
-    character(len=*),parameter :: fmtsfrbin = &
+    character(len=*), parameter :: fmtunitconv = &
+                                   "(4x, 'UNIT CONVERSION VALUE (',g0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtpicard = &
+                                   "(4x, 'MAXIMUM SFR PICARD ITERATION VALUE (',i0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtiter = &
+                                   "(4x, 'MAXIMUM SFR ITERATION VALUE (',i0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtdmaxchg = &
+                                   "(4x, 'MAXIMUM DEPTH CHANGE VALUE (',g0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtsfrbin = &
       "(4x, 'SFR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x,               &
      &'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for SFR options
     select case (option)
-      case ('PRINT_STAGE')
-        this%iprhed = 1
-        write(this%iout,'(4x,a)') trim(adjustl(this%text))//                     &
-          ' STAGES WILL BE PRINTED TO LISTING FILE.'
+    case ('PRINT_STAGE')
+      this%iprhed = 1
+      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
+        ' STAGES WILL BE PRINTED TO LISTING FILE.'
+      found = .true.
+    case ('STAGE')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%istageout = getunit()
+        call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, 'REPLACE', MNORMAL)
+        write (this%iout, fmtsfrbin) 'STAGE', fname, this%istageout
         found = .true.
-      case('STAGE')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%istageout = getunit()
-          call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',        &
-                       form, access, 'REPLACE', MNORMAL)
-          write(this%iout,fmtsfrbin) 'STAGE', fname, this%istageout
-          found = .true.
-        else
-          call store_error('Optional stage keyword must be followed by fileout.')
-        end if
-      case('BUDGET')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
-                        form, access, 'REPLACE', MNORMAL)
-          write(this%iout,fmtsfrbin) 'BUDGET', fname, this%ibudgetout
-          found = .true.
-        else
-          call store_error('Optional budget keyword must be ' //                 &
-                           'followed by fileout.')
-        end if
-      case('PACKAGE_CONVERGENCE')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ipakcsv = getunit()
-          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
-                        filstat_opt='REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtsfrbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
-          found = .true.
-        else
-          call store_error('Optional package_convergence keyword must be ' //    &
-                           'followed by fileout.')
-        end if
-      case('UNIT_CONVERSION')
-        this%unitconv = this%parser%GetDouble()
-        write(this%iout, fmtunitconv) this%unitconv
+      else
+        call store_error('Optional stage keyword must be followed by fileout.')
+      end if
+    case ('BUDGET')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ibudgetout = getunit()
+        call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, 'REPLACE', MNORMAL)
+        write (this%iout, fmtsfrbin) 'BUDGET', fname, this%ibudgetout
         found = .true.
-      case('MAXIMUM_PICARD_ITERATIONS')
-        this%maxsfrpicard = this%parser%GetInteger()
-        write(this%iout, fmtpicard) this%maxsfrpicard
+      else
+        call store_error('Optional budget keyword must be '// &
+                         'followed by fileout.')
+      end if
+    case ('PACKAGE_CONVERGENCE')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ipakcsv = getunit()
+        call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
+                      filstat_opt='REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmtsfrbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
         found = .true.
-      case('MAXIMUM_ITERATIONS')
-        this%maxsfrit = this%parser%GetInteger()
-        write(this%iout, fmtiter) this%maxsfrit
-        found = .true.
-      case('MAXIMUM_DEPTH_CHANGE')
-        r = this%parser%GetDouble()
-        this%dmaxchg = r
-        this%deps = DP999 * r
-        write(this%iout, fmtdmaxchg) this%dmaxchg
-        found = .true.
-      case('MOVER')
-        this%imover = 1
-        write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-        found = .true.
+      else
+        call store_error('Optional package_convergence keyword must be '// &
+                         'followed by fileout.')
+      end if
+    case ('UNIT_CONVERSION')
+      this%unitconv = this%parser%GetDouble()
+      write (this%iout, fmtunitconv) this%unitconv
+      found = .true.
+    case ('MAXIMUM_PICARD_ITERATIONS')
+      this%maxsfrpicard = this%parser%GetInteger()
+      write (this%iout, fmtpicard) this%maxsfrpicard
+      found = .true.
+    case ('MAXIMUM_ITERATIONS')
+      this%maxsfrit = this%parser%GetInteger()
+      write (this%iout, fmtiter) this%maxsfrit
+      found = .true.
+    case ('MAXIMUM_DEPTH_CHANGE')
+      r = this%parser%GetDouble()
+      this%dmaxchg = r
+      this%deps = DP999*r
+      write (this%iout, fmtdmaxchg) this%dmaxchg
+      found = .true.
+    case ('MOVER')
+      this%imover = 1
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+      found = .true.
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
       !    These options are only available when IDEVELOPMODE in
       !    constants module is set to 1
-      case('DEV_NO_CHECK')
-        call this%parser%DevOpt()
-        this%icheck = 0
-        write(this%iout, '(4x,A)') 'SFR CHECKS OF REACH GEOMETRY ' //         &
-                                   'RELATIVE TO MODEL GRID AND ' //           &
-                                   'REASONABLE PARAMETERS WILL NOT ' //       &
-                                   'BE PERFORMED.'
-        found = .true.
-      case('DEV_NO_FINAL_CHECK')
-        call this%parser%DevOpt()
-        this%iconvchk = 0
-        write(this%iout, '(4x,a)')                                             &
-     &    'A FINAL CONVERGENCE CHECK OF THE CHANGE IN STREAM FLOW ROUTING ' // &
-     &    'STAGES AND FLOWS WILL NOT BE MADE'
-        found = .true.
+    case ('DEV_NO_CHECK')
+      call this%parser%DevOpt()
+      this%icheck = 0
+      write (this%iout, '(4x,A)') 'SFR CHECKS OF REACH GEOMETRY '// &
+        'RELATIVE TO MODEL GRID AND '// &
+        'REASONABLE PARAMETERS WILL NOT '// &
+        'BE PERFORMED.'
+      found = .true.
+    case ('DEV_NO_FINAL_CHECK')
+      call this%parser%DevOpt()
+      this%iconvchk = 0
+      write (this%iout, '(4x,a)')                                             &
+   &    'A FINAL CONVERGENCE CHECK OF THE CHANGE IN STREAM FLOW ROUTING '// &
+   &    'STAGES AND FLOWS WILL NOT BE MADE'
+      found = .true.
       !
       ! -- no valid options found
-      case default
-        !
-        ! -- No options found
-        found = .false.
+    case default
+      !
+      ! -- No options found
+      found = .false.
     end select
     !
     ! -- return
@@ -680,21 +702,21 @@ contains
   end subroutine sfr_options
 
   subroutine sfr_ar(this)
-  ! ******************************************************************************
-  ! sfr_ar -- Allocate and Read
-  ! Subroutine: (1) create new-style package
-  !             (2) point bndobj to the new package
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_ar -- Allocate and Read
+    ! Subroutine: (1) create new-style package
+    !             (2) point bndobj to the new package
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     use SimModule, only: ustop, count_errors
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n, ierr
     ! -- format
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
@@ -706,7 +728,7 @@ contains
       do n = 1, this%maxbound
         this%boundname(n) = this%sfrname(n)
       end do
-    endif
+    end if
     !
     ! -- copy igwfnode into nodelist
     do n = 1, this%maxbound
@@ -733,31 +755,31 @@ contains
     !
     ! -- setup pakmvrobj
     if (this%imover /= 0) then
-      allocate(this%pakmvrobj)
+      allocate (this%pakmvrobj)
       call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%memoryPath)
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine sfr_ar
 
   subroutine sfr_read_packagedata(this)
-  ! ******************************************************************************
-  ! sfr_read_packagedata -- read package data for each reach
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_read_packagedata -- read package data for each reach
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: cellid
     character(len=LINELENGTH) :: keyword
-    character (len=10) :: cnum
+    character(len=10) :: cnum
     character(len=LENBOUNDNAME) :: bndName
     character(len=LENBOUNDNAME) :: bndNameTemp
     character(len=LENBOUNDNAME) :: manningname
@@ -773,18 +795,18 @@ contains
     integer, allocatable, dimension(:) :: nboundchk
     real(DP), pointer :: bndElem => null()
     ! -- format
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- allocate space for checking sfr reach data
-    allocate(nboundchk(this%maxbound))
+    allocate (nboundchk(this%maxbound))
     do i = 1, this%maxbound
       nboundchk(i) = 0
-    enddo 
+    end do
     nconzero = 0
     !
     ! -- allocate local storage for aux variables
     if (this%naux > 0) then
-      allocate(caux(this%naux))
+      allocate (caux(this%naux))
     end if
     !
     ! -- read reach data
@@ -793,7 +815,7 @@ contains
     !
     ! -- parse reaches block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -802,8 +824,8 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%maxbound) then
-          write(errmsg,'(a,1x,a,1x,i0)')                                         &
-            'Reach number (rno) must be greater than 0 and less',                &
+          write (errmsg, '(a,1x,a,1x,i0)') &
+            'Reach number (rno) must be greater than 0 and less', &
             'than or equal to', this%maxbound
           call store_error(errmsg)
           cycle
@@ -815,7 +837,7 @@ contains
         ! -- get model node number
         call this%parser%GetCellid(this%dis%ndim, cellid, flag_string=.true.)
         this%igwfnode(n) = this%dis%noder_from_cellid(cellid, &
-                           this%inunit, this%iout, flag_string=.true.)
+                                                      this%inunit, this%iout, flag_string=.true.)
         this%igwftopnode(n) = this%igwfnode(n)
         !
         ! -- read the cellid string and determine if 'none' is specified
@@ -823,9 +845,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           this%ianynone = this%ianynone + 1
           if (keyword /= 'NONE') then
-            write(cnum, '(i0)') n
-            errmsg = 'Cell ID (' // trim(cellid) //                              &
-                     ') for unconnected reach ' //  trim(cnum) //                &
+            write (cnum, '(i0)') n
+            errmsg = 'Cell ID ('//trim(cellid)// &
+                     ') for unconnected reach '//trim(cnum)// &
                      ' must be NONE'
             call store_error(errmsg)
           end if
@@ -849,8 +871,8 @@ contains
         this%nconnreach(n) = ival
         this%nconn = this%nconn + ival
         if (ival < 0) then
-          write(errmsg, '(a,1x,i0,1x,a,i0,a)')                                   &
-            'NCON for reach', n,                                                 &
+          write (errmsg, '(a,1x,i0,1x,a,i0,a)') &
+            'NCON for reach', n, &
             'must be greater than or equal to 0 (', ival, ').'
           call store_error(errmsg)
         else if (ival == 0) then
@@ -873,15 +895,15 @@ contains
         end do
 
         ! -- set default bndName
-        write(cnum,'(i10.10)') n
-        bndName = 'Reach' // cnum
+        write (cnum, '(i10.10)') n
+        bndName = 'Reach'//cnum
 
         ! -- get reach name
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
             bndName = bndNameTemp
-          endif
+          end if
           !this%boundname(n) = bndName
         end if
         this%sfrname(n) = bndName
@@ -890,16 +912,16 @@ contains
         text = manningname
         jj = 1 !for 'ROUGH'
         bndElem => this%rough(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                            'BND', this%tsManager, this%iprpak,  &
-                                            'MANNING')
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
+                                           'MANNING')
         !
         ! -- set upstream fraction
         text = ustrfname
         jj = 1  ! For 'USTRF'
         bndElem => this%ustrf(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'USTRF')
         !
         ! -- get aux data
@@ -907,7 +929,7 @@ contains
           text = caux(jj)
           ii = n
           bndElem => this%rauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,   &
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName, &
                                              'AUX', this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
@@ -919,7 +941,7 @@ contains
         this%sstage(n) = this%strtop(n)
 
       end do
-      write(this%iout,'(1x,a)')                                                  &
+      write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else
       call store_error('REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
@@ -929,24 +951,24 @@ contains
     !    is specified more than once.
     do i = 1, this%maxbound
       if (nboundchk(i) == 0) then
-        write(errmsg, '(a,i0,1x,a)')                                             &
+        write (errmsg, '(a,i0,1x,a)') &
           'Information for reach ', i, 'not specified in packagedata block.'
         call store_error(errmsg)
       else if (nboundchk(i) > 1) then
-        write(errmsg, '(a,1x,i0,1x,a,1x,i0)')                                    &
+        write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
           'Reach information specified', nboundchk(i), 'times for reach', i
         call store_error(errmsg)
-      endif
+      end if
     end do
-    deallocate(nboundchk)
+    deallocate (nboundchk)
     !
     ! -- Submit warning message if any reach has zero connections
     if (nconzero > 0) then
-      write(warnmsg, '(a,1x,a,1x,a,1x,i0,1x, a)')                              &
-        'SFR Package', trim(this%packName),                                    &
+      write (warnmsg, '(a,1x,a,1x,a,1x,i0,1x, a)') &
+        'SFR Package', trim(this%packName), &
         'has', nconzero, 'reach(es) with zero connections.'
       call store_warning(warnmsg)
-    endif
+    end if
     !
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
@@ -956,7 +978,7 @@ contains
     !
     ! -- deallocate local storage for aux variables
     if (this%naux > 0) then
-      deallocate(caux)
+      deallocate (caux)
     end if
     !
     ! -- return
@@ -964,24 +986,24 @@ contains
   end subroutine sfr_read_packagedata
 
   subroutine sfr_read_connectiondata(this)
-  ! ******************************************************************************
-  ! sfr_read_connectiondata -- read connection data for each reach
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_read_connectiondata -- read connection data for each reach
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate
     use SimModule, only: ustop, store_error, count_errors
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: line
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: n
-    integer(I4B) :: i 
+    integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: jcol
@@ -993,13 +1015,13 @@ contains
     integer(I4B) :: nconnmax
     integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
     integer, allocatable, dimension(:) :: nboundchk
-    integer, allocatable, dimension(:,:) :: iconndata
+    integer, allocatable, dimension(:, :) :: iconndata
     type(sparsematrix), pointer :: sparse => null()
     ! -- format
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- allocate and initialize local variables for reach connections
-    allocate(nboundchk(this%maxbound))
+    allocate (nboundchk(this%maxbound))
     do n = 1, this%maxbound
       nboundchk(n) = 0
     end do
@@ -1007,7 +1029,7 @@ contains
     ! -- calculate the number of non-zero entries (size of ja maxtrix)
     nja = 0
     nconnmax = 0
-    allocate(rowmaxnnz(this%maxbound))
+    allocate (rowmaxnnz(this%maxbound))
     do n = 1, this%maxbound
       ival = this%nconnreach(n)
       if (ival < 0) ival = 0
@@ -1016,7 +1038,7 @@ contains
       if (ival > nconnmax) then
         nconnmax = ival
       end if
-    end do 
+    end do
     !
     ! -- reallocate connection data for package
     call mem_reallocate(this%ja, nja, 'JA', this%memoryPath)
@@ -1032,7 +1054,7 @@ contains
     end do
     !
     ! -- allocate space for iconndata
-    allocate(iconndata(nconnmax, this%maxbound))
+    allocate (iconndata(nconnmax, this%maxbound))
     !
     ! -- initialize iconndata
     do n = 1, this%maxbound
@@ -1042,7 +1064,7 @@ contains
     end do
     !
     ! -- allocate space for connectivity
-    allocate(sparse)
+    allocate (sparse)
     !
     ! -- set up sparse
     call sparse%init(this%maxbound, this%maxbound, rowmaxnnz)
@@ -1053,8 +1075,8 @@ contains
     !
     ! -- parse reach connectivity block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')                                                 &
-        'PROCESSING ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' CONNECTIONDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -1064,12 +1086,12 @@ contains
         !
         ! -- check for error
         if (n < 1 .or. n > this%maxbound) then
-          write(errmsg, '(a,1x,a,1x,i0)')                                        &
-            'SFR reach in connectiondata block is less than one or greater',     &
+          write (errmsg, '(a,1x,a,1x,i0)') &
+            'SFR reach in connectiondata block is less than one or greater', &
             'than NREACHES:', n
           call store_error(errmsg)
           cycle
-        endif
+        end if
         !
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
@@ -1099,26 +1121,26 @@ contains
           if (ival > this%maxbound) then
             call store_error('Reach number exceeds NREACHES in line:')
             call store_error(line)
-          endif
+          end if
           !
           ! -- add connection to sparse
           call sparse%addconnection(n, ival, 1)
         end do
       end do
-      
-      write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
-      
+
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
+
       do n = 1, this%maxbound
         !
         ! -- check for missing or duplicate sfr connections
         if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')                                              &
+          write (errmsg, '(a,1x,i0)') &
             'No connection data specified for reach', n
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                              &
-            'Connection data for reach', n,                                      &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
+            'Connection data for reach', n, &
             'specified', nboundchk(n), 'times.'
           call store_error(errmsg)
         end if
@@ -1138,16 +1160,16 @@ contains
     !
     ! -- test for error condition
     if (ierr /= 0) then
-      write(errmsg, '(a,3(1x,a))')                                               &
-        'Could not fill', trim(this%packName),                                   &
-        'package IA and JA connection data.',                                    &
+      write (errmsg, '(a,3(1x,a))') &
+        'Could not fill', trim(this%packName), &
+        'package IA and JA connection data.', &
         'Check connectivity data in connectiondata block.'
       call store_error(errmsg)
     end if
     !
     ! -- fill flat connection storage
     do n = 1, this%maxbound
-      do j = this%ia(n) + 1, this%ia(n+1) - 1
+      do j = this%ia(n) + 1, this%ia(n + 1) - 1
         jcol = this%ja(j)
         do jj = 1, this%nconnreach(n)
           jcol2 = iconndata(jj, n)
@@ -1164,34 +1186,404 @@ contains
     end do
     !
     ! -- deallocate temporary local storage for reach connections
-    deallocate(rowmaxnnz)
-    deallocate(nboundchk)
-    deallocate(iconndata)
+    deallocate (rowmaxnnz)
+    deallocate (nboundchk)
+    deallocate (iconndata)
     !
     ! -- destroy sparse
     call sparse%destroy()
-    deallocate(sparse)
+    deallocate (sparse)
     !
     ! -- return
     return
   end subroutine sfr_read_connectiondata
 
+  subroutine sfr_read_tables(this)
+! ******************************************************************************
+! sfr_read_tables -- Read the sfr cross-section tables for this package
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this
+    ! -- local variables
+    type(SfrTabType), dimension(:), allocatable :: sfrtables
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: filename
+    integer(I4B) :: ierr
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: n
+    integer(I4B) :: iconn
+    integer(I4B) :: ntabs
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+! ------------------------------------------------------------------------------
+
+    ! -- format
+    !
+    ! -- code
+    !
+    ! -- skip of no outlets
+    if (this%ntables < 1) return
+    !
+    ! -- allocate and initialize nboundchk
+    allocate (nboundchk(this%maxbound))
+    do n = 1, this%maxbound
+      nboundchk(n) = 0
+    end do
+    !
+    ! -- allocate derived type for table data
+    allocate (sfrtables(this%ntables))
+    !
+    ! -- get tables block
+    call this%parser%GetBlock('TABLES', isfound, ierr, &
+                              supportOpenClose=.true.)
+    !
+    ! -- parse lake_tables block if detected
+    if (isfound) then
+      ntabs = 0
+      ! -- process the lake table data
+      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))//' TABLES'
+      readtable: do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        n = this%parser%GetInteger()
+
+        if (n < 1 .or. n > this%maxbound) then
+          write (errmsg, '(a,1x,i6)') 'rno MUST BE > 0 and <= ', this%maxbound
+          call store_error(errmsg)
+          cycle readtable
+        end if
+
+        ! -- increment ntab and nboundchk
+        ntabs = ntabs + 1
+        nboundchk(n) = nboundchk(n) + 1
+
+        ! -- read FILE keyword
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+        case ('TAB6')
+          call this%parser%GetStringCaps(keyword)
+          if (trim(adjustl(keyword)) /= 'FILEIN') then
+            errmsg = 'TAB6 keyword must be followed by "FILEIN" '// &
+                     'then by filename.'
+            call store_error(errmsg)
+            cycle readtable
+          end if
+          call this%parser%GetString(filename)
+          call this%sfr_read_table(n, filename, sfrtables(n))
+        case default
+          write (errmsg, '(a,1x,i4,1x,a)') &
+            'TABLE ENTRY for SFR REACH ', n, 'MUST INCLUDE TAB6 KEYWORD'
+          call store_error(errmsg)
+          cycle readtable
+        end select
+      end do readtable
+
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' TABLES'
+      !
+      ! -- check for missing or duplicate lake connections
+      if (ntabs < this%ntables) then
+        write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
+          'TABLE DATA ARE SPECIFIED', ntabs, &
+          'TIMES BUT NTABLES IS SET TO', this%ntables
+        call store_error(errmsg)
+      end if
+      do n = 1, this%maxbound
+        if (nboundchk(n) > 1) then
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
+            'TABLE DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+          call store_error(errmsg)
+        end if
+      end do
+    else
+      call store_error('REQUIRED TABLES BLOCK NOT FOUND.')
+    end if
+    !
+    ! -- deallocate local storage
+    deallocate (nboundchk)
+    !
+    ! -- write summary of lake_table error messages
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- convert sfrtables to vectors
+    call this%sfrtables_to_vectors(sfrtables)
+    !
+    ! -- destroy sfrtables
+    do n = 1, this%maxbound
+      deallocate (sfrtables(n)%irno)
+      deallocate (sfrtables(n)%tabxfact)
+      deallocate (sfrtables(n)%tabdepth)
+    end do
+    deallocate (sfrtables)
+    !
+    ! -- return
+    return
+  end subroutine sfr_read_tables
+
+  subroutine sfr_read_table(this, irno, filename, sfrtable)
+! ******************************************************************************
+! lak_read_table -- Read the lake table for this package
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use InputOutputModule, only: openfile
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this
+    integer(I4B), intent(in) :: irno
+    character(len=*), intent(in) :: filename
+    type(SfrTabType), intent(inout) :: sfrtable
+    ! -- local variables
+    character(len=LINELENGTH) :: keyword
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+    integer(I4B) :: iu
+    integer(I4B) :: n
+    integer(I4B) :: ipos
+    integer(I4B) :: j
+    integer(I4B) :: jmin
+    integer(I4B) :: iconn
+    real(DP) :: vol
+    real(DP) :: sa
+    real(DP) :: wa
+    real(DP) :: v
+    real(DP) :: v0
+    type(BlockParserType) :: parser
+    ! -- formats
+    character(len=*), parameter :: fmttaberr = &
+                                   '(a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)'
+! ------------------------------------------------------------------------------
+
+    ! -- format
+    !
+    ! -- code
+    !
+    ! -- initialize locals
+    n = 0
+    j = 0
+    !
+    ! -- open the table file
+    iu = 0
+    call openfile(iu, this%iout, filename, 'SFR TABLE')
+    call parser%Initialize(iu, this%iout)
+    !
+    ! -- get dimensions block
+    call parser%GetBlock('DIMENSIONS', isfound, ierr, supportOpenClose=.true.)
+    !
+    ! -- parse lak table dimensions block if detected
+    if (isfound) then
+      ! -- process the lake table dimension data
+      if (this%iprpak /= 0) then
+        write (this%iout, '(/1x,a)') &
+          'PROCESSING '//trim(adjustl(this%text))//' DIMENSIONS'
+      end if
+      readdims: do
+        call parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call parser%GetStringCaps(keyword)
+        select case (keyword)
+        case ('NROW')
+          n = parser%GetInteger()
+
+          if (n < 1) then
+            write (errmsg, '(a)') 'SFR TABLE NROW MUST BE > 0'
+            call store_error(errmsg)
+          end if
+        case ('NCOL')
+          j = parser%GetInteger()
+          jmin = 2
+          if (j < jmin) then
+            write (errmsg, '(a,1x,i0)') 'SFR TABLE NCOL MUST BE >= ', jmin
+            call store_error(errmsg)
+          end if
+
+        case default
+          write (errmsg, '(a,a)') &
+            'UNKNOWN '//trim(this%text)//' DIMENSIONS KEYWORD: ', trim(keyword)
+          call store_error(errmsg)
+        end select
+      end do readdims
+      if (this%iprpak /= 0) then
+        write (this%iout, '(1x,a)') &
+          'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
+      end if
+    else
+      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+    end if
+    !
+    ! -- check that ncol and nrow have been specified
+    if (n < 1) then
+      write (errmsg, '(a)') &
+        'NROW NOT SPECIFIED IN THE SFR TABLE DIMENSIONS BLOCK'
+      call store_error(errmsg)
+    end if
+    if (j < 1) then
+      write (errmsg, '(a)') &
+        'NCOL NOT SPECIFIED IN THE SFR TABLE DIMENSIONS BLOCK'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- only read the table data if n and j are specified to be greater
+    !    than zero
+    if (n*j > 0) then
+      !
+      ! -- allocate space
+      allocate (sfrtable%irno)
+      sfrtable%irno = irno
+      allocate (sfrtable%tabxfact(n))
+      allocate (sfrtable%tabdepth(n))
+
+      ! -- get table block
+      call parser%GetBlock('TABLE', isfound, ierr, supportOpenClose=.true.)
+      !
+      ! -- parse well_connections block if detected
+      if (isfound) then
+
+        ! -- process the table data
+        if (this%iprpak /= 0) then
+          write (this%iout, '(/1x,a)') &
+            'PROCESSING '//trim(adjustl(this%text))//' TABLE'
+        end if
+        ipos = 0
+        readtabledata: do
+          call parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+          ipos = ipos + 1
+          if (ipos > j) then
+            cycle readtabledata
+          end if
+          sfrtable%tabxfact(ipos) = parser%GetDouble()
+          sfrtable%tabdepth(ipos) = parser%GetDouble()
+        end do readtabledata
+
+        if (this%iprpak /= 0) then
+          write (this%iout, '(1x,a)') &
+            'END OF '//trim(adjustl(this%text))//' TABLE'
+        end if
+      else
+        call store_error('REQUIRED TABLE BLOCK NOT FOUND.')
+      end if
+      !
+      ! -- error condition if number of rows read are not equal to nrow
+      if (ipos /= j) then
+        write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
+          'NROW SET TO', j, 'BUT', ipos, 'ROWS WERE READ'
+        call store_error(errmsg)
+      end if
+      !
+      ! -- verify the table data
+      do n = 2, j
+        v = sfrtable%tabxfact(n)
+        v0 = sfrtable%tabxfact(n - 1)
+        if (v <= v0) then
+          write (errmsg, fmttaberr) &
+            'TABLE STAGE ENTRY', n, '(', v, &
+            ') FOR LAKE ', irno, 'MUST BE GREATER THAN THE PREVIOUS STAGE ENTRY', &
+            n - 1, '(', v0, ')'
+          call store_error(errmsg)
+        end if
+      end do
+    end if
+    !
+    ! -- write summary of lake table error messages
+    if (count_errors() > 0) then
+      call parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! Close the table file and clear other parser members
+    call parser%Clear()
+    !
+    ! -- return
+    return
+  end subroutine sfr_read_table
+
+  subroutine sfrtables_to_vectors(this, sfrtables)
+! ******************************************************************************
+! laktables_to_vectors -- Copy the laketables structure data into flattened
+!   vectors that are stored in the memory manager
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this
+    type(SfrTabType), intent(in), dimension(:), contiguous :: sfrtables
+    ! -- local variables
+    integer(I4B) :: n
+    integer(I4B) :: ntabrows
+    integer(I4B) :: j
+    integer(I4B) :: ipos
+    integer(I4B) :: iconn
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate index array for lak tables
+    call mem_allocate(this%iaxsect, this%maxbound + 1, 'IAXSECT', this%memoryPath)
+    !
+    !! -- Move the laktables structure information into flattened arrays
+    !this%ialaktab(1) = 1
+    !do n = 1, this%nlakes
+    !  ! -- ialaktab contains a pointer into the flattened lak table data
+    !  this%ialaktab(n + 1) = this%ialaktab(n) + this%ntabrow(n)
+    !end do
+    !!
+    !! -- Allocate vectors for storing all lake table data
+    !ntabrows = this%ialaktab(this%nlakes + 1) - 1
+    !call mem_allocate(this%tabstage, ntabrows, 'TABSTAGE', this%memoryPath)
+    !call mem_allocate(this%tabvolume, ntabrows, 'TABVOLUME', this%memoryPath)
+    !call mem_allocate(this%tabsarea, ntabrows, 'TABSAREA', this%memoryPath)
+    !call mem_allocate(this%tabwarea, ntabrows, 'TABWAREA', this%memoryPath)
+    !!
+    !! -- Copy data from laketables into vectors
+    !do n = 1, this%nlakes
+    !  j = 1
+    !  do ipos = this%ialaktab(n), this%ialaktab(n + 1) - 1
+    !    this%tabstage(ipos) = laketables(n)%tabstage(j)
+    !    this%tabvolume(ipos) = laketables(n)%tabvolume(j)
+    !    this%tabsarea(ipos) = laketables(n)%tabsarea(j)
+    !    iconn = this%idxlakeconn(n)
+    !    if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
+    !      !
+    !      ! -- tabwarea only filled for ictype 2 and 3
+    !      this%tabwarea(ipos) = laketables(n)%tabwarea(j)
+    !    else
+    !      this%tabwarea(ipos) = DZERO
+    !    end if
+    !    j = j + 1
+    !  end do
+    !end do
+    !
+    ! -- return
+    return
+  end subroutine sfrtables_to_vectors
 
   subroutine sfr_read_diversions(this)
-  ! ******************************************************************************
-  ! sfr_read_diversions -- read diversion data for each diversion
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_read_diversions -- read diversion data for each diversion
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
-    character (len=10) :: cnum
-    character (len=10) :: cval
+    character(len=10) :: cnum
+    character(len=10) :: cval
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: ierr
@@ -1207,7 +1599,7 @@ contains
     integer, allocatable, dimension(:) :: iachk
     integer, allocatable, dimension(:) :: nboundchk
     ! -- format
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- determine the total number of diversions and fill iadiv
     ndiversions = 0
@@ -1216,13 +1608,13 @@ contains
     do n = 1, this%maxbound
       ndiversions = ndiversions + this%ndiv(n)
       i0 = i0 + this%ndiv(n)
-      this%iadiv(n+1) = i0
+      this%iadiv(n + 1) = i0
     end do
     !
     ! -- reallocate memory for diversions
     if (ndiversions > 0) then
       call mem_reallocate(this%divreach, ndiversions, 'DIVREACH', this%memoryPath)
-      allocate(this%divcprior(ndiversions))
+      allocate (this%divcprior(ndiversions))
       call mem_reallocate(this%divflow, ndiversions, 'DIVFLOW', this%memoryPath)
       call mem_reallocate(this%divq, ndiversions, 'DIVQ', this%memoryPath)
     end if
@@ -1234,26 +1626,26 @@ contains
     end do
     !
     ! -- read diversions
-    call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
-                              supportOpenClose=.true.,                          &
+    call this%parser%GetBlock('DIVERSIONS', isfound, ierr, &
+                              supportOpenClose=.true., &
                               blockRequired=.false.)
     !
     ! -- parse reach connectivity block if detected
     if (isfound) then
       if (this%idiversions /= 0) then
-        write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%text)) // &
-                                   ' DIVERSIONS'
+        write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &
+          ' DIVERSIONS'
         !
         ! -- allocate and initialize local variables for diversions
         ndiv = 0
         do n = 1, this%maxbound
           ndiv = ndiv + this%ndiv(n)
         end do
-        allocate(iachk(this%maxbound+1))
-        allocate(nboundchk(ndiv))
+        allocate (iachk(this%maxbound + 1))
+        allocate (nboundchk(ndiv))
         iachk(1) = 1
         do n = 1, this%maxbound
-          iachk(n+1) = iachk(n) + this%ndiv(n)
+          iachk(n + 1) = iachk(n) + this%ndiv(n)
         end do
         do n = 1, ndiv
           nboundchk(n) = 0
@@ -1267,18 +1659,18 @@ contains
           ! -- get reach number
           n = this%parser%GetInteger()
           if (n < 1 .or. n > this%maxbound) then
-            write(cnum, '(i0)') n
-            errmsg = 'Reach number should be between 1 and ' //                  &
-                      trim(cnum) // '.'
+            write (cnum, '(i0)') n
+            errmsg = 'Reach number should be between 1 and '// &
+                     trim(cnum)//'.'
             call store_error(errmsg)
             cycle
           end if
           !
           ! -- make sure reach has at least one diversion
           if (this%ndiv(n) < 1) then
-            write(cnum, '(i0)') n
-            errmsg = 'Diversions cannot be specified ' //                        &
-                     'for reach ' // trim(cnum)
+            write (cnum, '(i0)') n
+            errmsg = 'Diversions cannot be specified '// &
+                     'for reach '//trim(cnum)
             call store_error(errmsg)
             cycle
           end if
@@ -1286,27 +1678,27 @@ contains
           ! -- read diversion number
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%ndiv(n)) then
-            write(cnum, '(i0)') n
-            errmsg = 'Reach  ' // trim(cnum)
-            write(cnum, '(i0)') this%ndiv(n)
-            errmsg = trim(errmsg) // ' diversion number should be between ' //   &
-                     '1 and ' // trim(cnum) // '.'
+            write (cnum, '(i0)') n
+            errmsg = 'Reach  '//trim(cnum)
+            write (cnum, '(i0)') this%ndiv(n)
+            errmsg = trim(errmsg)//' diversion number should be between '// &
+                     '1 and '//trim(cnum)//'.'
             call store_error(errmsg)
             cycle
           end if
-          
+
           ! -- increment nboundchk
           ipos = iachk(n) + ival - 1
           nboundchk(ipos) = nboundchk(ipos) + 1
-          
+
           idiv = ival
           !
           ! -- get target reach for diversion
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%maxbound) then
-            write(cnum, '(i0)') ival
-            errmsg = 'Diversion target reach number should be ' //               &
-                     'between 1 and ' // trim(cnum) // '.'
+            write (cnum, '(i0)') ival
+            errmsg = 'Diversion target reach number should be '// &
+                     'between 1 and '//trim(cnum)//'.'
             call store_error(errmsg)
             cycle
           end if
@@ -1318,38 +1710,38 @@ contains
           call this%parser%GetStringCaps(cval)
           ival = -1
           select case (cval)
-            case('UPTO')
-              ival = 0
-            case('THRESHOLD')
-              ival = -1
-            case('FRACTION')
-              ival = -2
-            case('EXCESS')
-              ival = -3
-            case default
-              errmsg = 'Invalid cprior type ' // trim(cval) // '.'
-              call store_error(errmsg)
+          case ('UPTO')
+            ival = 0
+          case ('THRESHOLD')
+            ival = -1
+          case ('FRACTION')
+            ival = -2
+          case ('EXCESS')
+            ival = -3
+          case default
+            errmsg = 'Invalid cprior type '//trim(cval)//'.'
+            call store_error(errmsg)
           end select
           !
           ! -- set cprior for diversion
           this%divcprior(jpos) = cval
         end do
-        
-        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //       &
-                                  ' DIVERSIONS'
-        
+
+        write (this%iout, '(1x,a)') 'END OF '//trim(adjustl(this%text))// &
+          ' DIVERSIONS'
+
         do n = 1, this%maxbound
           do j = 1, this%ndiv(n)
             ipos = iachk(n) + j - 1
             !
             ! -- check for missing or duplicate reach diversions
             if (nboundchk(ipos) == 0) then
-              write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                               &
+              write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
                 'No data specified for reach', n, 'diversion', j
               call store_error(errmsg)
             else if (nboundchk(ipos) > 1) then
-              write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')               &
-                'Data for reach', n, 'diversion', j,                             &
+              write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'Data for reach', n, 'diversion', j, &
                 'specified', nboundchk(ipos), 'times'
               call store_error(errmsg)
             end if
@@ -1357,15 +1749,15 @@ contains
         end do
         !
         ! -- deallocate local variables
-        deallocate(iachk)
-        deallocate(nboundchk)
+        deallocate (iachk)
+        deallocate (nboundchk)
       else
         !
         ! -- error condition
-        write(errmsg,'(a,1x,a)')                                                 &
-          'A diversions block should not be',                                    &
+        write (errmsg, '(a,1x,a)') &
+          'A diversions block should not be', &
           'specified if diversions are not specified.'
-          call store_error(errmsg)
+        call store_error(errmsg)
       end if
     else
       if (this%idiversions /= 0) then
@@ -1383,7 +1775,6 @@ contains
     return
   end subroutine sfr_read_diversions
 
-
   subroutine sfr_rp(this)
 ! ******************************************************************************
 ! sfr_rp -- Read and Prepare
@@ -1396,9 +1787,10 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
+    use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
@@ -1407,9 +1799,9 @@ contains
     integer(I4B) :: ichkustrm
     logical :: isfound, endOfBlock
     ! -- formats
-    character(len=*),parameter :: fmtblkerr = &
-      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
+    character(len=*), parameter :: fmtblkerr = &
+                                   "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+    character(len=*), parameter :: fmtlsp = &
     &  "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd = &
       "(1X,/1X,'The number of active ',A,'S (',I6, &
@@ -1432,7 +1824,7 @@ contains
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
                                 supportOpenClose=.true.)
-      if(isfound) then
+      if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
         call this%read_check_ionper()
@@ -1444,24 +1836,24 @@ contains
           this%ionper = nper + 1
         else
           ! -- Found invalid block
-          write(errmsg, fmtblkerr) adjustl(trim(line))
+          write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
         end if
-      endif
+      end if
     end if
     !
     ! -- Read data if ionper == kper
-    if(this%ionper==kper) then
+    if (this%ionper == kper) then
       !
       ! -- setup table for period data
       if (this%iprpak /= 0) then
         !
         ! -- reset the input table object
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
-        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        title = trim(adjustl(this%text))//' PACKAGE ('// &
+                trim(adjustl(this%packName))//') DATA FOR PERIOD'
+        write (title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
@@ -1469,7 +1861,7 @@ contains
         text = 'KEYWORD'
         call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
         do n = 1, 2
-          write(text, '(a,1x,i6)') 'VALUE', n
+          write (text, '(a,1x,i6)') 'VALUE', n
           call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
         end do
       end if
@@ -1480,8 +1872,8 @@ contains
         if (endOfBlock) exit
         n = this%parser%GetInteger()
         if (n < 1 .or. n > this%maxbound) then
-          write(errmsg,'(a,1x,a,1x,i0,a)') &
-            'Reach number (RNO) must be greater than 0 and',                     &
+          write (errmsg, '(a,1x,a,1x,i0,a)') &
+            'Reach number (RNO) must be greater than 0 and', &
             'less than or equal to', this%maxbound, '.'
           call store_error(errmsg)
           cycle
@@ -1499,11 +1891,11 @@ contains
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-    !
-    ! -- Reuse data from last stress period
+      !
+      ! -- Reuse data from last stress period
     else
-      write(this%iout,fmtlsp) trim(this%filtyp)
-    endif
+      write (this%iout, fmtlsp) trim(this%filtyp)
+    end if
     !
     ! -- check upstream fraction values
     if (ichkustrm /= 0) then
@@ -1535,11 +1927,6 @@ contains
     integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
-    ! -- Most advanced package AD routines have to restore state if
-    !    the solution failed and the time step is being retried with a smaller
-    !    step size.  This is not needed here because there is no old stage
-    !    or storage effects in the stream.
-    !
     ! -- Advance the time series manager
     call this%TsManager%ad()
     !
@@ -1570,9 +1957,9 @@ contains
     end do
     !
     ! -- pakmvrobj ad
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%ad()
-    endif
+    end if
     !
     ! -- For each observation, push simulated value and corresponding
     !    simulation time from "current" to "preceding" and reset
@@ -1584,14 +1971,14 @@ contains
   end subroutine sfr_ad
 
   subroutine sfr_cf(this, reset_mover)
-  ! ******************************************************************************
-  ! sfr_cf -- Formulate the HCOF and RHS terms
-  ! Subroutine: (1) skip in no wells
-  !             (2) calculate hcof and rhs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_cf -- Formulate the HCOF and RHS terms
+    ! Subroutine: (1) skip in no wells
+    !             (2) calculate hcof and rhs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(SfrType) :: this
     logical, intent(in), optional :: reset_mover
@@ -1599,10 +1986,10 @@ contains
     integer(I4B) :: n
     integer(I4B) :: igwfnode
     logical :: lrm
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sfr reaches
-    if(this%nbound == 0) return
+    if (this%nbound == 0) return
     !
     ! -- find highest active cell
     do n = 1, this%nbound
@@ -1619,21 +2006,21 @@ contains
     ! -- pakmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. lrm) then
+    if (this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine sfr_cf
 
   subroutine sfr_fc(this, rhs, ia, idxglo, amatsln)
-  ! **************************************************************************
-  ! sfr_fc -- Copy rhs and hcof into solution rhs and amat
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
+    ! **************************************************************************
+    ! sfr_fc -- Copy rhs and hcof into solution rhs and amat
+    ! **************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! --------------------------------------------------------------------------
     ! -- dummy
     class(SfrType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -1662,9 +2049,9 @@ contains
       dsmax = DZERO
       !
       ! -- pakmvrobj fc - reset qformvr to zero
-      if(this%imover == 1) then
+      if (this%imover == 1) then
         call this%pakmvrobj%fc()
-      endif
+      end if
       !
       ! -- solve for each sfr reach
       reachsolve: do n = 1, this%nbound
@@ -1707,14 +2094,14 @@ contains
         if (abs(ds) > abs(dsmax)) then
           dsmax = ds
         end if
-        
+
       end do reachsolve
       !
       ! -- evaluate if the sfr picard iterations should be terminated
       if (abs(dsmax) <= this%dmaxchg) then
         exit sfrpicard
       end if
-    
+
     end do sfrpicard
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
@@ -1760,19 +2147,19 @@ contains
       n = this%nodelist(i)
       if (n < 1) cycle
       ipos = ia(n)
-      rterm = this%hcof(i) * this%xnew(n)
+      rterm = this%hcof(i)*this%xnew(n)
       ! -- calculate perturbed head
       hgwf = this%xnew(n) + DEM4
       call this%sfr_solve(i, hgwf, hcof1, rhs1, update=.false.)
-      q1 = rhs1 - hcof1 * hgwf
+      q1 = rhs1 - hcof1*hgwf
       ! -- calculate unperturbed head
-      q2 = this%rhs(i) - this%hcof(i) * this%xnew(n)
+      q2 = this%rhs(i) - this%hcof(i)*this%xnew(n)
       ! -- calculate derivative
-      drterm = (q2 - q1) / DEM4
+      drterm = (q2 - q1)/DEM4
       ! -- add terms to convert conductance formulation into
       !    newton-raphson formulation
       amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
-      rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
+      rhs(n) = rhs(n) - rterm + drterm*this%xnew(n)
     end do
     !
     ! -- return
@@ -1814,7 +2201,7 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
-    icheck = this%iconvchk 
+    icheck = this%iconvchk
     ipakfail = 0
     locdhmax = 0
     locrmax = 0
@@ -1827,8 +2214,8 @@ contains
       if (icnvgmod == 0) then
         icheck = 0
       end if
-    !
-    ! -- saving package convergence data
+      !
+      ! -- saving package convergence data
     else
       !
       ! -- header for package csv
@@ -1840,8 +2227,8 @@ contains
         !
         ! -- setup table
         call table_cr(this%pakcsvtab, this%packName, '')
-        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
-                                     lineseparator=.FALSE., separator=',',       &
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
+                                     lineseparator=.FALSE., separator=',', &
                                      finalize=.FALSE.)
         !
         ! -- add columns to package csv
@@ -1874,7 +2261,7 @@ contains
         r = this%usflow0(n) - this%usflow(n)
         !
         ! -- normalize flow difference and convert to a depth
-        r = r * delt / this%surface_area(n)
+        r = r*delt/this%surface_area(n)
         !
         ! -- evaluate magnitude of differences
         if (n == 1) then
@@ -1898,13 +2285,13 @@ contains
       if (ABS(dhmax) > abs(dpak)) then
         ipak = locdhmax
         dpak = dhmax
-        write(cloc, "(a,'-',a)") trim(this%packName), 'stage'
+        write (cloc, "(a,'-',a)") trim(this%packName), 'stage'
         cpak = trim(cloc)
       end if
       if (ABS(rmax) > abs(dpak)) then
         ipak = locrmax
         dpak = rmax
-        write(cloc, "(a,'-',a)") trim(this%packName), 'inflow'
+        write (cloc, "(a,'-',a)") trim(this%packName), 'inflow'
         cpak = trim(cloc)
       end if
       !
@@ -1933,37 +2320,57 @@ contains
     return
   end subroutine sfr_cc
 
-  subroutine sfr_cq(this, x, flowja, iadv)
+  subroutine sfr_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs, &
+                    isuppress_output, model_budget, imap, iadv)
 ! **************************************************************************
-! sfr_cq -- Calculate flows
+! bnd_bd -- Calculate Volumetric Budget
+! Note that the compact budget will always be used.
+! Subroutine: (1) Process each package entry
+!             (2) Write output
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: kstp, kper, delt, pertim, totim
     use ConstantsModule, only: LENBOUNDNAME
     use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(SfrType), intent(inout) :: this
+    class(SfrType) :: this
     real(DP), dimension(:), intent(in) :: x
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    integer(I4B), intent(in) :: idvfl
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), intent(in) :: iprobs
+    integer(I4B), intent(in) :: isuppress_output
+    type(BudgetType), intent(inout) :: model_budget
+    integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: ibinun
     real(DP) :: qext
     ! -- for budget
     integer(I4B) :: n
+    real(DP) :: d
+    real(DP) :: v
     real(DP) :: qoutflow
     real(DP) :: qfrommvr
     real(DP) :: qtomvr
     ! -- for observations
+    integer(I4B) :: iprobslocal
     ! -- formats
 ! --------------------------------------------------------------------------
     !
-    ! -- call base functionality in bnd_cq.  This will calculate sfr-gwf flows
-    !    and put them into this%simvals
-    call this%BndType%bnd_cq(x, flowja, iadv=1)
+    ! -- Suppress saving of simulated values; they
+    !    will be saved at end of this procedure.
+    iprobslocal = 0
+    !
+    ! -- call base functionality in bnd_bd
+    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal, &
+                             isuppress_output, model_budget, iadv=1)
     !
     ! -- Calculate qextoutflow and qoutflow for subsequent budgets
     do n = 1, this%maxbound
@@ -1977,7 +2384,7 @@ contains
         if (qtomvr > DZERO) then
           qtomvr = -qtomvr
         end if
-      endif
+      end if
       !
       ! -- external downstream stream flow
       qext = this%dsflow(n)
@@ -1985,7 +2392,7 @@ contains
       if (qext > DZERO) then
         qext = -qext
       end if
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         qext = DZERO
         exit
@@ -2010,87 +2417,18 @@ contains
       !
     end do
     !
-    ! -- fill the budget object
-    call this%sfr_fill_budobj()
-    !
-    ! -- return
-    return
-  end subroutine sfr_cq
-
-  subroutine sfr_ot_package_flows(this, icbcfl, ibudfl)
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B) :: ibinun
-    character (len=20), dimension(:), allocatable :: cellidstr
-    integer(I4B) :: n
-    integer(I4B) :: node
-    !
-    ! -- write the flows from the budobj
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
+    ! -- For continuous observations, save simulated values.
+    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+      call this%sfr_bd_obs()
     end if
-    if(icbcfl == 0) ibinun = 0
-    if (ibinun > 0) then
-      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                                  pertim, totim, this%iout)
-    end if
-    !
-    ! -- Print lake flows table
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      !
-      ! -- If there are any 'none' gwf connections then need to calculate
-      !    a vector of cellids and pass that in to the budget flow table because
-      !    the table assumes that there are maxbound gwf entries, which is not
-      !    the case if any 'none's are specified.
-      if (this%ianynone > 0) then
-        allocate(cellidstr(this%maxbound))
-        do n = 1, this%maxbound
-          node = this%igwfnode(n)
-          if (node > 0) then
-            call this%dis%noder_to_string(node, cellidstr(n))
-          else
-            cellidstr(n) = 'NONE'
-          end if
-        end do
-        call this%budobj%write_flowtable(this%dis, kstp, kper, cellidstr)
-        deallocate(cellidstr)
-      else
-        call this%budobj%write_flowtable(this%dis, kstp, kper)
-      end if
-    end if
-    
-  end subroutine sfr_ot_package_flows
-
-  subroutine sfr_ot_dv(this, idvsave, idvprint)
-    use TdisModule, only: kstp, kper, pertim, totim
-    use ConstantsModule, only: DHNOFLO, DHDRY
-    use InputOutputModule, only: ulasav
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: idvsave
-    integer(I4B), intent(in) :: idvprint
-    character (len=20) :: cellid
-    integer(I4B) :: ibinun
-    integer(I4B) :: n
-    integer(I4B) :: node
-    real(DP) :: d
-    real(DP) :: v
-    real(DP) :: hgwf
-    real(DP) :: sbot
-    real(DP) :: depth
-    real(DP) :: stage
-    real(DP) :: w
-    real(DP) :: cond
-    real(DP) :: grad
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
-    if(this%istageout /= 0) then
+    if (this%istageout /= 0) then
       ibinun = this%istageout
     end if
-    if(idvsave == 0) ibinun = 0
+    if (idvfl == 0) ibinun = 0
+    if (isuppress_output /= 0) ibinun = 0
     !
     ! -- write sfr binary output
     if (ibinun > 0) then
@@ -2104,12 +2442,58 @@ contains
         end if
         this%dbuff(n) = v
       end do
-      call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim,   &
+      call ulasav(this%dbuff, '           STAGE', kstp, kper, pertim, totim, &
                   this%maxbound, 1, 1, ibinun)
     end if
-     !
-     ! -- print sfr stage and depth table
-     if (idvprint /= 0 .and. this%iprhed /= 0) then
+    !
+    ! -- fill the budget object
+    call this%sfr_fill_budobj()
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if (this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if (icbcfl == 0) ibinun = 0
+    if (isuppress_output /= 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
+    end if
+    !
+    !
+    ! -- return
+    return
+  end subroutine sfr_bd
+
+  subroutine sfr_ot(this, kstp, kper, iout, ihedfl, ibudfl)
+! ******************************************************************************
+! sfr_ot -- Output package budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: ihedfl
+    integer(I4B), intent(in) :: ibudfl
+    ! -- locals
+    character(len=20) :: cellid
+    character(len=20), dimension(:), allocatable :: cellidstr
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: hgwf
+    real(DP) :: sbot
+    real(DP) :: depth, stage
+    real(DP) :: w, cond, grad
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- write sfr stage and depth table
+    if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
       ! -- set table kstp and kper
       call this%stagetab%set_kstpkper(kstp, kper)
@@ -2123,7 +2507,7 @@ contains
         else
           cellid = 'NONE'
         end if
-        if(this%inamedbound==1) then
+        if (this%inamedbound == 1) then
           call this%stagetab%add_term(this%boundname(n))
         end if
         call this%stagetab%add_term(n)
@@ -2142,7 +2526,7 @@ contains
           else
             grad = stage - hgwf
           end if
-          grad = grad / this%bthick(n)
+          grad = grad/this%bthick(n)
           call this%stagetab%add_term(hgwf)
           call this%stagetab%add_term(cond)
           call this%stagetab%add_term(grad)
@@ -2152,18 +2536,39 @@ contains
           call this%stagetab%add_term('--')
         end if
       end do
-     end if
-    
-  end subroutine sfr_ot_dv
-  
-  subroutine sfr_ot_bdsummary(this, kstp, kper, iout)
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
+    end if
+    !
+    ! -- Output sfr flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      !
+      ! -- If there are any 'none' gwf connections then need to calculate
+      !    a vector of cellids and pass that in to the budget flow table because
+      !    the table assumes that there are maxbound gwf entries, which is not
+      !    the case if any 'none's are specified.
+      if (this%ianynone > 0) then
+        allocate (cellidstr(this%maxbound))
+        do n = 1, this%maxbound
+          node = this%igwfnode(n)
+          if (node > 0) then
+            call this%dis%noder_to_string(node, cellidstr(n))
+          else
+            cellidstr(n) = 'NONE'
+          end if
+        end do
+        call this%budobj%write_flowtable(this%dis, kstp, kper, cellidstr)
+        deallocate (cellidstr)
+      else
+        call this%budobj%write_flowtable(this%dis, kstp, kper)
+      end if
+    end if
+    !
+    ! -- Output sfr budget
     call this%budobj%write_budtable(kstp, kper, iout)
-  end subroutine sfr_ot_bdsummary
-  
+    !
+    ! -- return
+    return
+  end subroutine sfr_ot
+
   subroutine sfr_da(this)
 ! ******************************************************************************
 ! sfr_da -- deallocate
@@ -2181,10 +2586,10 @@ contains
     ! -- arrays
     call mem_deallocate(this%qoutflow)
     call mem_deallocate(this%qextoutflow)
-    deallocate(this%csfrbudget)
+    deallocate (this%csfrbudget)
     call mem_deallocate(this%sfrname, 'SFRNAME', this%memoryPath)
     call mem_deallocate(this%dbuff)
-    deallocate(this%cauxcbc)
+    deallocate (this%cauxcbc)
     call mem_deallocate(this%qauxcbc)
     call mem_deallocate(this%iboundpak)
     call mem_deallocate(this%igwfnode)
@@ -2209,6 +2614,14 @@ contains
     call mem_deallocate(this%usflow0)
     call mem_deallocate(this%denseterms)
     !
+    ! -- cross-section data
+    if (this%nxsectpts > 0) then
+      call mem_deallocate(this%iaxsect)
+      call mem_deallocate(this%xsectdep)
+      call mem_deallocate(this%xsectwetp)
+      call mem_deallocate(this%xsectarea)
+    end if
+    !
     ! -- connection data
     call mem_deallocate(this%ia)
     call mem_deallocate(this%ja)
@@ -2231,7 +2644,7 @@ contains
     call mem_deallocate(this%iadiv)
     call mem_deallocate(this%divreach)
     if (associated(this%divcprior)) then
-      deallocate(this%divcprior)
+      deallocate (this%divcprior)
     end if
     call mem_deallocate(this%divflow)
     call mem_deallocate(this%divq)
@@ -2239,24 +2652,26 @@ contains
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
-    deallocate(this%budobj)
-    nullify(this%budobj)
+    deallocate (this%budobj)
+    nullify (this%budobj)
     !
     ! -- stage table
     if (this%iprhed > 0) then
       call this%stagetab%table_da()
-      deallocate(this%stagetab)
-      nullify(this%stagetab)
+      deallocate (this%stagetab)
+      nullify (this%stagetab)
     end if
     !
     ! -- package csv table
     if (this%ipakcsv > 0) then
       call this%pakcsvtab%table_da()
-      deallocate(this%pakcsvtab)
-      nullify(this%pakcsvtab)
+      deallocate (this%pakcsvtab)
+      nullify (this%pakcsvtab)
     end if
     !
     ! -- scalars
+    call mem_deallocate(this%ntables)
+    call mem_deallocate(this%nxsectpts)
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
@@ -2274,7 +2689,7 @@ contains
     call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%idense)
     call mem_deallocate(this%ianynone)
-    nullify(this%gwfiss)
+    nullify (this%gwfiss)
     !
     ! -- call BndType deallocate
     call this%BndType%bnd_da()
@@ -2294,26 +2709,25 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
   end subroutine define_listlabel
-
 
   subroutine sfr_set_pointers(this, neq, ibound, xnew, xold, flowja)
 ! ******************************************************************************
@@ -2341,35 +2755,34 @@ contains
   !
   ! -- Procedures related to observations (type-bound)
   logical function sfr_obs_supported(this)
-  ! ******************************************************************************
-  ! sfr_obs_supported
-  !   -- Return true because sfr package supports observations.
-  !   -- Overrides BndType%bnd_obs_supported()
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_obs_supported
+    !   -- Return true because sfr package supports observations.
+    !   -- Overrides BndType%bnd_obs_supported()
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     class(SfrType) :: this
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     sfr_obs_supported = .true.
     return
   end function sfr_obs_supported
 
-
   subroutine sfr_df_obs(this)
-  ! ******************************************************************************
-  ! sfr_df_obs (implements bnd_df_obs)
-  !   -- Store observation type supported by sfr package.
-  !   -- Overrides BndType%bnd_df_obs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_df_obs (implements bnd_df_obs)
+    !   -- Store observation type supported by sfr package.
+    !   -- Overrides BndType%bnd_df_obs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(SfrType) :: this
     ! -- local
     integer(I4B) :: indx
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for stage observation type.
@@ -2439,7 +2852,6 @@ contains
     return
   end subroutine sfr_df_obs
 
-
   subroutine sfr_bd_obs(this)
     ! **************************************************************************
     ! sfr_bd_obs
@@ -2450,7 +2862,7 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     ! -- dummy
-    class(SfrType) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2463,56 +2875,56 @@ contains
     ! Write simulated values for all sfr observations
     if (this%obs%npakobs > 0) then
       call this%obs%obs_bd_clear()
-      do i=1 ,this%obs%npakobs
+      do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
         do j = 1, obsrv%indxbnds_count
           n = obsrv%indxbnds(j)
           v = DZERO
           select case (obsrv%ObsTypeId)
-            case ('STAGE')
-              v = this%stage(n)
-            case ('TO-MVR')
-              v = DNODATA
-              if (this%imover == 1) then
-                v = this%pakmvrobj%get_qtomvr(n)
-                if (v > DZERO) then
-                  v = -v
-                end if
-              end if
-            case ('FROM-MVR')
-              v = DNODATA
-              if (this%imover == 1) then
-                v = this%pakmvrobj%get_qfrommvr(n)
-              end if
-            case ('EXT-INFLOW')
-              v = this%inflow(n)
-            case ('INFLOW')
-              v = this%usflow(n)
-            case ('OUTFLOW')
-              v = this%qoutflow(n)
-            case ('EXT-OUTFLOW')
-              v = this%qextoutflow(n)
-            case ('RAINFALL')
-              v = this%rain(n)
-            case ('RUNOFF')
-              v = this%simrunoff(n)
-            case ('EVAPORATION')
-              v = this%simevap(n)
-            case ('SFR')
-              v = this%gwflow(n)
-            case ('UPSTREAM-FLOW')
-              v = this%usflow(n)
-              if (this%imover == 1) then
-                v = v + this%pakmvrobj%get_qfrommvr(n)
-              end if
-            case ('DOWNSTREAM-FLOW')
-              v = this%dsflow(n)
+          case ('STAGE')
+            v = this%stage(n)
+          case ('TO-MVR')
+            v = DNODATA
+            if (this%imover == 1) then
+              v = this%pakmvrobj%get_qtomvr(n)
               if (v > DZERO) then
                 v = -v
               end if
-            case default
-              msg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
-              call store_error(msg)
+            end if
+          case ('FROM-MVR')
+            v = DNODATA
+            if (this%imover == 1) then
+              v = this%pakmvrobj%get_qfrommvr(n)
+            end if
+          case ('EXT-INFLOW')
+            v = this%inflow(n)
+          case ('INFLOW')
+            v = this%usflow(n)
+          case ('OUTFLOW')
+            v = this%qoutflow(n)
+          case ('EXT-OUTFLOW')
+            v = this%qextoutflow(n)
+          case ('RAINFALL')
+            v = this%rain(n)
+          case ('RUNOFF')
+            v = this%simrunoff(n)
+          case ('EVAPORATION')
+            v = this%simevap(n)
+          case ('SFR')
+            v = this%gwflow(n)
+          case ('UPSTREAM-FLOW')
+            v = this%usflow(n)
+            if (this%imover == 1) then
+              v = v + this%pakmvrobj%get_qfrommvr(n)
+            end if
+          case ('DOWNSTREAM-FLOW')
+            v = this%dsflow(n)
+            if (v > DZERO) then
+              v = -v
+            end if
+          case default
+            msg = 'Unrecognized observation type: '//trim(obsrv%ObsTypeId)
+            call store_error(msg)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
@@ -2528,7 +2940,6 @@ contains
     return
   end subroutine sfr_bd_obs
 
-
   subroutine sfr_rp_obs(this)
     use TdisModule, only: kper
     ! -- dummy
@@ -2539,13 +2950,13 @@ contains
     integer(I4B) :: nn1
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
-    class(ObserveType),   pointer :: obsrv => null()
+    class(ObserveType), pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
     ! -- formats
-10  format('Boundary "',a,'" for observation "',a,                               &
-           '" is invalid in package "',a,'"')
-30  format('Boundary name not provided for observation "',a,                     &
-           '" in package "',a,'"')
+10  format('Boundary "', a, '" for observation "', a, &
+           '" is invalid in package "', a, '"')
+30  format('Boundary name not provided for observation "', a, &
+           '" in package "', a, '"')
     !
     ! -- process each package observation
     !    only done the first stress period since boundaries are fixed
@@ -2567,20 +2978,20 @@ contains
               if (this%boundname(j) == bname) then
                 jfound = .true.
                 call obsrv%AddObsIndex(j)
-              endif
-            enddo
+              end if
+            end do
             if (.not. jfound) then
-              write(errmsg,10) trim(bname), trim(obsrv%name), trim(this%packName)
+              write (errmsg, 10) trim(bname), trim(obsrv%name), trim(this%packName)
               call store_error(errmsg)
-            endif
+            end if
           else
-            write(errmsg,30) trim(obsrv%name), trim(this%packName)
+            write (errmsg, 30) trim(obsrv%name), trim(this%packName)
             call store_error(errmsg)
-          endif
+          end if
         else if (nn1 < 1 .or. nn1 > this%maxbound) then
-          write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                             &
-            trim(adjustl(obsrv%ObsTypeId)),                                        &
-            'reach must be greater than 0 and less than or equal to',              &
+          write (errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)') &
+            trim(adjustl(obsrv%ObsTypeId)), &
+            'reach must be greater than 0 and less than or equal to', &
             this%maxbound, '(specified value is ', nn1, ')'
           call store_error(errmsg)
         else
@@ -2598,9 +3009,9 @@ contains
           nn1 = obsrv%NodeNumber
           if (nn1 == NAMEDBOUNDFLAG) then
             if (obsrv%indxbnds_count > 1) then
-              write(errmsg, '(a,3(1x,a))')                                         &
-                trim(adjustl(obsrv%ObsTypeId)),                                    &
-                'for observation', trim(adjustl(obsrv%Name)),                      &
+              write (errmsg, '(a,3(1x,a))') &
+                trim(adjustl(obsrv%ObsTypeId)), &
+                'for observation', trim(adjustl(obsrv%Name)), &
                 ' must be assigned to a reach with a unique boundname.'
               call store_error(errmsg)
             end if
@@ -2611,9 +3022,9 @@ contains
         do j = 1, obsrv%indxbnds_count
           nn1 = obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                           &
-              trim(adjustl(obsrv%ObsTypeId)),                                      &
-              'reach must be greater than 0 and less than or equal to',            &
+            write (errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)') &
+              trim(adjustl(obsrv%ObsTypeId)), &
+              'reach must be greater than 0 and less than or equal to', &
               this%maxbound, '(specified value is ', nn1, ')'
             call store_error(errmsg)
           end if
@@ -2630,17 +3041,16 @@ contains
     return
   end subroutine sfr_rp_obs
 
-
   !
   ! -- Procedures related to observations (NOT type-bound)
   subroutine sfr_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
     !    the ID string of an observation definition for sfr-package observations.
     ! -- dummy
-    type(ObserveType),      intent(inout) :: obsrv
+    type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in)    :: dis
-    integer(I4B),            intent(in)    :: inunitobs
-    integer(I4B),            intent(in)    :: iout
+    integer(I4B), intent(in)    :: inunitobs
+    integer(I4B), intent(in)    :: iout
     ! -- local
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
@@ -2659,7 +3069,7 @@ contains
     call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
-    endif
+    end if
     !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
@@ -2670,7 +3080,6 @@ contains
   !
   ! -- private sfr methods
   !
-
 
   subroutine sfr_set_stressperiod(this, n, ichkustrm)
 ! ******************************************************************************
@@ -2684,7 +3093,7 @@ contains
     use ConstantsModule, only: DZERO, DONE
     use SimModule, only: ustop, store_error
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(inout) :: ichkustrm
     ! -- local
@@ -2696,7 +3105,7 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: jj
     integer(I4B) :: idiv
-    character (len=10) :: cp
+    character(len=10) :: cp
     real(DP) :: divq
     real(DP), pointer :: bndElem => null()
     ! -- formats
@@ -2705,180 +3114,179 @@ contains
     ! -- read line
     call this%parser%GetStringCaps(keyword)
     select case (keyword)
-      case ('STATUS')
-        ichkustrm = 1
-        call this%parser%GetStringCaps(text)
-        if (text == 'INACTIVE') then
-          this%iboundpak(n) = 0
-        else if (text == 'ACTIVE') then
-          this%iboundpak(n) = 1
-        else if (text == 'SIMPLE') then
-          this%iboundpak(n) = -1
-        else
-          write(errmsg,'(2a)') &
-            'Unknown ' // trim(this%text) // ' sfr status keyword: ', trim(text)
-          call store_error(errmsg)
-        end if
-      case ('MANNING')
-        call this%parser%GetString(text)
-        jj = 1  ! For 'MANNING'
-        bndElem => this%rough(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'MANNING')
-      case ('STAGE')
-        call this%parser%GetString(text)
-        jj = 1  ! For 'STAGE'
-        bndElem => this%sstage(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'STAGE')
-      case ('RAINFALL')
-        call this%parser%GetString(text)
-        jj = 1  ! For 'RAIN'
-        bndElem => this%rain(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'RAIN')
-      case ('EVAPORATION')
-        call this%parser%GetString(text)
-        jj = 1  ! For 'EVAP'
-        bndElem => this%evap(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'MANNING')
-      case ('RUNOFF')
-        call this%parser%GetString(text)
-        jj = 1  ! For 'RUNOFF'
-        bndElem => this%runoff(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'RUNOFF')
-     case ('INFLOW')
-        call this%parser%GetString(text)
-        jj = 1  ! For 'INFLOW'
-        bndElem => this%inflow(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'INFLOW')
-      case ('DIVERSION')
-        !
-        ! -- make sure reach has at least one diversion
-        if (this%ndiv(n) < 1) then
-          write(cnum, '(i0)') n
-          errmsg = 'diversions cannot be specified for reach ' // trim(cnum)
-          call store_error(errmsg)
-        end if
-        !
-        ! -- read diversion number
-        ival = this%parser%GetInteger()
-        if (ival < 1 .or. ival > this%ndiv(n)) then
-          write(cnum, '(i0)') n
-          errmsg = 'Reach  ' // trim(cnum)
-          write(cnum, '(i0)') this%ndiv(n)
-          errmsg = trim(errmsg) // ' diversion number should be between 1 ' //   &
-                   'and ' // trim(cnum) // '.'
-          call store_error(errmsg)
-        end if
-        idiv = ival
-        !
-        ! -- read value
-        call this%parser%GetString(text)
-        ii = this%iadiv(n) + idiv - 1
-        jj = 1  ! For 'DIVERSION'
-        bndElem => this%divflow(ii)
-        call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,     &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'DIVFLOW')
-        !
-        ! -- if diversion cprior is 'fraction', ensure that 0.0 <= fraction <= 1.0
-        cp = this%divcprior(ii)
-        divq = this%divflow(ii) 
-        if (cp == 'FRACTION' .and. (divq < DZERO .or. divq > DONE)) then
-          write(errmsg,'(a,1x,i0,a)')                                            &
-                'cprior is type FRACTION for diversion no.', ii,                 &
-                ', but divflow not within the range 0.0 to 1.0'
-          call store_error(errmsg)
-        endif
-      case ('UPSTREAM_FRACTION')
-        ichkustrm = 1
-        call this%parser%GetString(text)
-        jj = 1  ! For 'USTRF'
-        bndElem => this%ustrf(n)
-        call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'USTRF')
-      case ('AUXILIARY')
-        call this%parser%GetStringCaps(caux)
-        do jj = 1, this%naux
-          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
-          call this%parser%GetString(text)
-          ii = n
-          bndElem => this%rauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,   &
-                                             'AUX', this%tsManager, this%iprpak, &
-                                             this%auxname(jj))
-          exit
-        end do
-
-      case default
-        write(errmsg,'(a,a)') &
-          'Unknown ' // trim(this%text) // ' sfr data keyword: ',                &
-          trim(keyword) // '.'
+    case ('STATUS')
+      ichkustrm = 1
+      call this%parser%GetStringCaps(text)
+      if (text == 'INACTIVE') then
+        this%iboundpak(n) = 0
+      else if (text == 'ACTIVE') then
+        this%iboundpak(n) = 1
+      else if (text == 'SIMPLE') then
+        this%iboundpak(n) = -1
+      else
+        write (errmsg, '(2a)') &
+          'Unknown '//trim(this%text)//' sfr status keyword: ', trim(text)
         call store_error(errmsg)
-      end select
+      end if
+    case ('MANNING')
+      call this%parser%GetString(text)
+      jj = 1  ! For 'MANNING'
+      bndElem => this%rough(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'MANNING')
+    case ('STAGE')
+      call this%parser%GetString(text)
+      jj = 1  ! For 'STAGE'
+      bndElem => this%sstage(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'STAGE')
+    case ('RAINFALL')
+      call this%parser%GetString(text)
+      jj = 1  ! For 'RAIN'
+      bndElem => this%rain(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'RAIN')
+    case ('EVAPORATION')
+      call this%parser%GetString(text)
+      jj = 1  ! For 'EVAP'
+      bndElem => this%evap(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'MANNING')
+    case ('RUNOFF')
+      call this%parser%GetString(text)
+      jj = 1  ! For 'RUNOFF'
+      bndElem => this%runoff(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'RUNOFF')
+    case ('INFLOW')
+      call this%parser%GetString(text)
+      jj = 1  ! For 'INFLOW'
+      bndElem => this%inflow(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'INFLOW')
+    case ('DIVERSION')
+      !
+      ! -- make sure reach has at least one diversion
+      if (this%ndiv(n) < 1) then
+        write (cnum, '(i0)') n
+        errmsg = 'diversions cannot be specified for reach '//trim(cnum)
+        call store_error(errmsg)
+      end if
+      !
+      ! -- read diversion number
+      ival = this%parser%GetInteger()
+      if (ival < 1 .or. ival > this%ndiv(n)) then
+        write (cnum, '(i0)') n
+        errmsg = 'Reach  '//trim(cnum)
+        write (cnum, '(i0)') this%ndiv(n)
+        errmsg = trim(errmsg)//' diversion number should be between 1 '// &
+                 'and '//trim(cnum)//'.'
+        call store_error(errmsg)
+      end if
+      idiv = ival
+      !
+      ! -- read value
+      call this%parser%GetString(text)
+      ii = this%iadiv(n) + idiv - 1
+      jj = 1  ! For 'DIVERSION'
+      bndElem => this%divflow(ii)
+      call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'DIVFLOW')
+      !
+      ! -- if diversion cprior is 'fraction', ensure that 0.0 <= fraction <= 1.0
+      cp = this%divcprior(ii)
+      divq = this%divflow(ii)
+      if (cp == 'FRACTION' .and. (divq < DZERO .or. divq > DONE)) then
+        write (errmsg, '(a,1x,i0,a)') &
+          'cprior is type FRACTION for diversion no.', ii, &
+          ', but divflow not within the range 0.0 to 1.0'
+        call store_error(errmsg)
+      end if
+    case ('UPSTREAM_FRACTION')
+      ichkustrm = 1
+      call this%parser%GetString(text)
+      jj = 1  ! For 'USTRF'
+      bndElem => this%ustrf(n)
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
+                                         'BND', this%tsManager, this%iprpak, &
+                                         'USTRF')
+    case ('AUXILIARY')
+      call this%parser%GetStringCaps(caux)
+      do jj = 1, this%naux
+        if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
+        call this%parser%GetString(text)
+        ii = n
+        bndElem => this%rauxvar(jj, ii)
+        call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName, &
+                                           'AUX', this%tsManager, this%iprpak, &
+                                           this%auxname(jj))
+        exit
+      end do
+
+    case default
+      write (errmsg, '(a,a)') &
+        'Unknown '//trim(this%text)//' sfr data keyword: ', &
+        trim(keyword)//'.'
+      call store_error(errmsg)
+    end select
     !
     ! -- return
     return
   end subroutine sfr_set_stressperiod
 
-
   subroutine sfr_solve(this, n, h, hcof, rhs, update)
-  ! ******************************************************************************
-  ! sfr_solve -- Solve continuity equation
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: h
-      real(DP), intent(inout) :: hcof
-      real(DP), intent(inout) :: rhs
-      logical, intent(in), optional :: update
-      ! -- local
-      logical :: lupdate
-      integer(I4B) :: i, ii
-      integer(I4B) :: n2
-      integer(I4B) :: isolve
-      integer(I4B) :: iic, iic2, iic3, iic4
-      integer(I4B) :: ibflg
-      real(DP) :: hgwf
-      real(DP) :: qu, qi, qr, qe, qro, qmp, qsrc
-      real(DP) :: qfrommvr
-      real(DP) :: qgwf
-      real(DP) :: qmpsrc
-      real(DP) :: qc
-      real(DP) :: qt
-      real(DP) :: tp
-      real(DP) :: bt
-      real(DP) :: hsfr
-      real(DP) :: cstr
-      real(DP) :: qd
-      real(DP) :: en1, en2
-      real(DP) :: qen1
-      real(DP) :: f1, f2
-      real(DP) :: qgwf1, qgwf2, qgwfp, qgwfold
-      real(DP) :: fhstr1, fhstr2
-      real(DP) :: d1, d2, dpp, dx
-      real(DP) :: q1, q2
-      real(DP) :: derv
-      real(DP) :: dlh, dlhold
-      real(DP) :: fp
-      real(DP) :: err, errold
-      real(DP) :: sumleak, sumrch
-      real(DP) :: gwfhcof, gwfrhs
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_solve -- Solve continuity equation
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: h
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    logical, intent(in), optional :: update
+    ! -- local
+    logical :: lupdate
+    integer(I4B) :: i, ii
+    integer(I4B) :: n2
+    integer(I4B) :: isolve
+    integer(I4B) :: iic, iic2, iic3, iic4
+    integer(I4B) :: ibflg
+    real(DP) :: hgwf
+    real(DP) :: qu, qi, qr, qe, qro, qmp, qsrc
+    real(DP) :: qfrommvr
+    real(DP) :: qgwf
+    real(DP) :: qmpsrc
+    real(DP) :: qc
+    real(DP) :: qt
+    real(DP) :: tp
+    real(DP) :: bt
+    real(DP) :: hsfr
+    real(DP) :: cstr
+    real(DP) :: qd
+    real(DP) :: en1, en2
+    real(DP) :: qen1
+    real(DP) :: f1, f2
+    real(DP) :: qgwf1, qgwf2, qgwfp, qgwfold
+    real(DP) :: fhstr1, fhstr2
+    real(DP) :: d1, d2, dpp, dx
+    real(DP) :: q1, q2
+    real(DP) :: derv
+    real(DP) :: dlh, dlhold
+    real(DP) :: fp
+    real(DP) :: err, errold
+    real(DP) :: sumleak, sumrch
+    real(DP) :: gwfhcof, gwfrhs
+    ! ------------------------------------------------------------------------------
     !
     ! -- Process optional dummy variables
     if (present(update)) then
@@ -2907,10 +3315,10 @@ contains
     !    groundwater leakage
     ! -- calculate upstream flow
     qu = DZERO
-    do i = this%ia(n) + 1, this%ia(n+1) - 1
+    do i = this%ia(n) + 1, this%ia(n + 1) - 1
       if (this%idir(i) < 0) cycle
       n2 = this%ja(i)
-      do ii = this%ia(n2) + 1, this%ia(n2+1) - 1
+      do ii = this%ia(n2) + 1, this%ia(n2 + 1) - 1
         if (this%idir(ii) > 0) cycle
         if (this%ja(ii) /= n) cycle
         qu = qu + this%qconn(ii)
@@ -2919,15 +3327,15 @@ contains
     this%usflow(n) = qu
     ! -- calculate remaining terms
     qi = this%inflow(n)
-    qr = this%rain(n) * this%width(n) * this%length(n)
-    qe = this%evap(n) * this%width(n) * this%length(n)
+    qr = this%rain(n)*this%width(n)*this%length(n)
+    qe = this%evap(n)*this%width(n)*this%length(n)
     qro = this%runoff(n)
     !
     ! -- Water mover term; assume that it goes in at the upstream end of the reach
     qfrommvr = DZERO
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       qfrommvr = this%pakmvrobj%get_qfrommvr(n)
-    endif
+    end if
     !
     ! -- calculate sum of sources to the reach excluding groundwater leakage
     qc = qu + qi + qr - qe + qro + qfrommvr
@@ -2942,8 +3350,8 @@ contains
       if (qt < DZERO) then
         qro = -(qu + qi + qr + qfrommvr)
         qe = DZERO
-      !
-      ! -- evaporation exceeds sources of water for reach
+        !
+        ! -- evaporation exceeds sources of water for reach
       else
         qe = qu + qi + qr + qro + qfrommvr
       end if
@@ -2955,7 +3363,7 @@ contains
     this%simrunoff(n) = qro
     !
     ! -- calculate flow at the middle of the reach and excluding groundwater leakage
-    qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
+    qmp = qu + qi + qfrommvr + DHALF*(qr - qe + qro)
     qmpsrc = qmp
     !
     ! -- calculate stream depth at the midpoint
@@ -2994,14 +3402,14 @@ contains
       en1 = DZERO
       if (d1 > DEM30) then
         if ((tp - hgwf) > DEM30) then
-          en2 = DP9 * d1
+          en2 = DP9*d1
         else
-          en2 = D1P1 * d1 - (tp - hgwf)
+          en2 = D1P1*d1 - (tp - hgwf)
         end if
       else if ((tp - hgwf) > DEM30) then
         en2 = DONE
       else
-        en2 = DP99 * (hgwf - tp)
+        en2 = DP99*(hgwf - tp)
       end if
       !
       ! -- estimate flow at end points
@@ -3009,7 +3417,7 @@ contains
       if (hgwf > tp) then
         call this%sfr_calc_qgwf(n, DZERO, hgwf, qgwf1)
         qgwf1 = -qgwf1
-        qen1 = qmp - DHALF * qgwf1
+        qen1 = qmp - DHALF*qgwf1
       else
         qgwf1 = DZERO
         qen1 = qmpsrc
@@ -3023,8 +3431,8 @@ contains
       end if
       if (qgwf2 > qsrc) qgwf2 = qsrc
       ! -- calculate two depths
-      call this%sfr_rectch_depth(n, (qmpsrc-DHALF*qgwf1), d1)
-      call this%sfr_rectch_depth(n, (qmpsrc-DHALF*qgwf2), d2)
+      call this%sfr_rectch_depth(n, (qmpsrc - DHALF*qgwf1), d1)
+      call this%sfr_rectch_depth(n, (qmpsrc - DHALF*qgwf2), d2)
       ! -- determine roots
       if (d1 > DEM30) then
         f1 = en1 - d1
@@ -3041,7 +3449,7 @@ contains
       end if
       !
       ! -- iterate to find a solution
-      dpp = DHALF * (en1 + en2)
+      dpp = DHALF*(en1 + en2)
       dx = dpp
       iic = 0
       iic2 = 0
@@ -3053,7 +3461,7 @@ contains
       do i = 1, this%maxsfrit
         ibflg = 0
         d1 = dpp
-        d2 = d1 + DTWO * this%deps
+        d2 = d1 + DTWO*this%deps
         ! -- calculate q at midpoint at both end points
         call this%sfr_calc_qman(n, d1, q1)
         call this%sfr_calc_qman(n, d2, q2)
@@ -3065,24 +3473,24 @@ contains
         !
         if (qgwf1 >= qsrc) then
           en2 = dpp
-          dpp = DHALF * (en1 + en2)
+          dpp = DHALF*(en1 + en2)
           call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
           qgwfp = -qgwfp
           if (qgwfp > qsrc) qgwfp = qsrc
-          call this%sfr_rectch_depth(n, (qmpsrc-DHALF*qgwfp), dx)
+          call this%sfr_rectch_depth(n, (qmpsrc - DHALF*qgwfp), dx)
           ibflg = 1
         else
-          fhstr1 = (qmpsrc-DHALF*qgwf1) - q1
-          fhstr2 = (qmpsrc-DHALF*qgwf2) - q2
+          fhstr1 = (qmpsrc - DHALF*qgwf1) - q1
+          fhstr2 = (qmpsrc - DHALF*qgwf2) - q2
         end if
         !
         if (ibflg == 0) then
           derv = DZERO
-          if (abs(d1-d2) > DZERO) then
-            derv = (fhstr1-fhstr2) / (d1 - d2)
+          if (abs(d1 - d2) > DZERO) then
+            derv = (fhstr1 - fhstr2)/(d1 - d2)
           end if
           if (abs(derv) > DEM30) then
-            dlh = -fhstr1 / derv
+            dlh = -fhstr1/derv
           else
             dlh = DZERO
           end if
@@ -3092,7 +3500,7 @@ contains
           if ((dpp >= en2) .or. (dpp <= en1)) then
             if (abs(dlh) > abs(dlhold) .or. dpp < DEM30) then
               ibflg = 1
-              dpp = DHALF * (en1 + en2)
+              dpp = DHALF*(en1 + en2)
             end if
           end if
           !
@@ -3121,7 +3529,7 @@ contains
           !    or when convergence is slow
           if (iic2 > 7 .or. iic > 12 .or. iic4 == 1) then
             ibflg = 1
-            dpp = DHALF * (en1 + en2)
+            dpp = DHALF*(en1 + en2)
           end if
           !
           ! -- Calculate perturbed gwf flow
@@ -3129,11 +3537,11 @@ contains
           qgwfp = -qgwfp
           if (qgwfp > qsrc) then
             qgwfp = qsrc
-            if (abs(en1-en2) < this%dmaxchg*DEM6) then
-              call this%sfr_rectch_depth(n, (qmpsrc-DHALF*qgwfp), dpp)
+            if (abs(en1 - en2) < this%dmaxchg*DEM6) then
+              call this%sfr_rectch_depth(n, (qmpsrc - DHALF*qgwfp), dpp)
             end if
           end if
-          call this%sfr_rectch_depth(n, (qmpsrc-DHALF*qgwfp), dx)
+          call this%sfr_rectch_depth(n, (qmpsrc - DHALF*qgwfp), dx)
         end if
         !
         ! --
@@ -3145,12 +3553,12 @@ contains
           if (f1*fp < DZERO) then
             en2 = dpp
             f2 = fp
-          ! -- root is between fp and f2
+            ! -- root is between fp and f2
           else
             en1 = dpp
             f1 = fp
           end if
-          err = min(abs(fp), abs(en2-en1))
+          err = min(abs(fp), abs(en2 - en1))
         else
           err = abs(dlh)
         end if
@@ -3171,8 +3579,8 @@ contains
         else
           qgwfold = qgwf1
         end if
-      !
-      ! -- end of iteration
+        !
+        ! -- end of iteration
       end do
     end if itersol
 
@@ -3226,17 +3634,17 @@ contains
       ! -- stream leakage is not head dependent
       if (hgwf < bt) then
         rhs = rhs - sumrch
-      !
-      ! -- stream leakage is head dependent
-      else if ((sumleak-qsrc) < -DEM30) then
+        !
+        ! -- stream leakage is head dependent
+      else if ((sumleak - qsrc) < -DEM30) then
         if (this%gwfiss == 0) then
           rhs = rhs + gwfrhs - sumrch
         else
           rhs = rhs + gwfrhs
         end if
         hcof = gwfhcof
-      !
-      ! -- place holder for UZF
+        !
+        ! -- place holder for UZF
       else
         if (this%gwfiss == 0) then
           rhs = rhs - sumleak - sumrch
@@ -3244,8 +3652,8 @@ contains
           rhs = rhs - sumleak
         end if
       end if
-    !
-    ! -- add groundwater leakage
+      !
+      ! -- add groundwater leakage
     else if (hgwf < bt) then
       rhs = rhs - sumrch
     end if
@@ -3255,24 +3663,24 @@ contains
   end subroutine sfr_solve
 
   subroutine sfr_update_flows(this, n, qd, qgwf)
-  ! ******************************************************************************
-  ! sfr_update_flows -- Update downstream and groundwater leakage terms for reach
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType), intent(inout) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(inout) :: qd
-      real(DP), intent(in) :: qgwf
-      ! -- local
-      integer(I4B) :: i
-      integer(I4B) :: n2
-      integer(I4B) :: idiv
-      integer(I4B) :: jpos
-      real(DP) :: qdiv
-      real(DP) :: f
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_update_flows -- Update downstream and groundwater leakage terms for reach
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType), intent(inout) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(inout) :: qd
+    real(DP), intent(in) :: qgwf
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: n2
+    integer(I4B) :: idiv
+    integer(I4B) :: jpos
+    real(DP) :: qdiv
+    real(DP) :: f
+    ! ------------------------------------------------------------------------------
     !
     ! -- update reach terms
     !
@@ -3286,7 +3694,7 @@ contains
     if (qd > DZERO) then
       !
       ! -- route water to diversions
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         idiv = this%idiv(i)
         if (idiv == 0) cycle
@@ -3302,18 +3710,18 @@ contains
       if (this%imover == 1) then
         call this%pakmvrobj%accumulate_qformvr(n, qd)
         qd = MAX(qd - this%pakmvrobj%get_qtomvr(n), DZERO)
-      endif
+      end if
       !
       ! -- route remaining water to downstream reaches
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         if (this%idiv(i) > 0) cycle
         n2 = this%ja(i)
-        f = this%ustrf(n2) / this%ftotnd(n)
-        this%qconn(i) = qd * f
+        f = this%ustrf(n2)/this%ftotnd(n)
+        this%qconn(i) = qd*f
       end do
     else
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         this%qconn(i) = DZERO
       end do
@@ -3324,21 +3732,21 @@ contains
   end subroutine sfr_update_flows
 
   subroutine sfr_calc_qd(this, n, depth, hgwf, qgwf, qd)
-  ! ******************************************************************************
-  ! sfr_calc_dq -- Calculate downstream flow for reach
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: depth
-      real(DP), intent(in) :: hgwf
-      real(DP), intent(inout) :: qgwf
-      real(DP), intent(inout) :: qd
-      ! -- local
-      real(DP) :: qsrc
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_calc_dq -- Calculate downstream flow for reach
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    real(DP), intent(in) :: hgwf
+    real(DP), intent(inout) :: qgwf
+    real(DP), intent(inout) :: qd
+    ! -- local
+    real(DP) :: qsrc
+    ! ------------------------------------------------------------------------------
     !
     ! -- initialize residual
     qd = DZERO
@@ -3361,22 +3769,22 @@ contains
   end subroutine sfr_calc_qd
 
   subroutine sfr_calc_qsource(this, n, depth, qsrc)
-  ! ******************************************************************************
-  ! sfr_calc_qsource -- Calculate sum of sources for reach - excluding
-  !                     reach leakage
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: depth
-      real(DP), intent(inout) :: qsrc
-      ! -- local
-      real(DP) :: qu, qi, qr, qe, qro, qfrommvr
-      real(DP) :: qt
-      real(DP) :: a, ae
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_calc_qsource -- Calculate sum of sources for reach - excluding
+    !                     reach leakage
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    real(DP), intent(inout) :: qsrc
+    ! -- local
+    real(DP) :: qu, qi, qr, qe, qro, qfrommvr
+    real(DP) :: qt
+    real(DP) :: a, ae
+    ! ------------------------------------------------------------------------------
     !
     ! -- initialize residual
     qsrc = DZERO
@@ -3389,14 +3797,14 @@ contains
     ! -- calculate rainfall and evap
     a = this%surface_area(n)
     ae = this%surface_area_wet(n, depth)
-    qr = this%rain(n) * a
-    qe = this%evap(n) * a
+    qr = this%rain(n)*a
+    qe = this%evap(n)*a
     !
     ! -- calculate mover term
     qfrommvr = DZERO
     if (this%imover == 1) then
       qfrommvr = this%pakmvrobj%get_qfrommvr(n)
-    endif
+    end if
     !
     ! -- calculate down stream flow
     qsrc = qu + qi + qr - qe + qro + qfrommvr
@@ -3411,8 +3819,8 @@ contains
       if (qt < DZERO) then
         qro = -(qu + qi + qr + qfrommvr)
         qe = DZERO
-      !
-      ! -- evaporation exceeds sources of water for reach
+        !
+        ! -- evaporation exceeds sources of water for reach
       else
         qe = qu + qi + qr + qro + qfrommvr
       end if
@@ -3423,23 +3831,22 @@ contains
     return
   end subroutine sfr_calc_qsource
 
-
   subroutine sfr_calc_qman(this, n, depth, qman)
-  ! ******************************************************************************
-  ! sfr_calc_qman -- Calculate stream flow using Manning's equation
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: depth
-      real(DP), intent(inout) :: qman
-      ! -- local
-      real(DP) :: sat
-      real(DP) :: derv
-      real(DP) :: s, r, aw, wp, rh
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_calc_qman -- Calculate stream flow using Manning's equation
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    real(DP), intent(inout) :: qman
+    ! -- local
+    real(DP) :: sat
+    real(DP) :: derv
+    real(DP) :: s, r, aw, wp, rh
+    ! ------------------------------------------------------------------------------
     !
     ! -- initialize qman
     qman = DZERO
@@ -3452,43 +3859,42 @@ contains
     wp = this%perimeter_wet(n)
     rh = DZERO
     if (wp > DZERO) then
-      rh = aw / wp
+      rh = aw/wp
     end if
     !
     ! -- calculate flow
-    qman = sat * this%unitconv * aw * (rh**DTWOTHIRDS) * sqrt(s) / r
+    qman = sat*this%unitconv*aw*(rh**DTWOTHIRDS)*sqrt(s)/r
     !
     ! -- return
     return
   end subroutine sfr_calc_qman
 
-
   subroutine sfr_calc_qgwf(this, n, depth, hgwf, qgwf, gwfhcof, gwfrhs)
-  ! ******************************************************************************
-  ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange (relative to sfr reach)
-  !   so flow is positive into the stream reach
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: depth
-      real(DP), intent(in) :: hgwf
-      real(DP), intent(inout) :: qgwf
-      real(DP), intent(inout), optional :: gwfhcof
-      real(DP), intent(inout), optional :: gwfrhs
-      ! -- local
-      integer(I4B) :: node
-      real(DP) :: tp
-      real(DP) :: bt
-      real(DP) :: hsfr
-      real(DP) :: htmp
-      real(DP) :: cond
-      real(DP) :: sat
-      real(DP) :: derv
-      real(DP) :: gwfhcof0, gwfrhs0
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange (relative to sfr reach)
+    !   so flow is positive into the stream reach
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    real(DP), intent(in) :: hgwf
+    real(DP), intent(inout) :: qgwf
+    real(DP), intent(inout), optional :: gwfhcof
+    real(DP), intent(inout), optional :: gwfrhs
+    ! -- local
+    integer(I4B) :: node
+    real(DP) :: tp
+    real(DP) :: bt
+    real(DP) :: hsfr
+    real(DP) :: htmp
+    real(DP) :: cond
+    real(DP) :: sat
+    real(DP) :: derv
+    real(DP) :: gwfhcof0, gwfrhs0
+    ! ------------------------------------------------------------------------------
     !
     ! -- initialize qgwf
     qgwf = DZERO
@@ -3514,13 +3920,13 @@ contains
     if (htmp < bt) then
       htmp = bt
     end if
-    qgwf = sat * cond * (htmp - hsfr)
-    gwfrhs0 = -sat * cond * hsfr
-    gwfhcof0 = -sat * cond
+    qgwf = sat*cond*(htmp - hsfr)
+    gwfrhs0 = -sat*cond*hsfr
+    gwfhcof0 = -sat*cond
     !
     ! Add density contributions, if active
     if (this%idense /= 0) then
-      call this%sfr_calculate_density_exchange(n, hsfr, hgwf, cond, tp,        &
+      call this%sfr_calculate_density_exchange(n, hsfr, hgwf, cond, tp, &
                                                qgwf, gwfhcof0, gwfrhs0)
     end if
     !
@@ -3533,19 +3939,19 @@ contains
   end subroutine sfr_calc_qgwf
 
   subroutine sfr_calc_cond(this, n, cond)
-  ! ******************************************************************************
-  ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      real(DP), intent(inout) :: cond
-      ! -- local
-      integer(I4B) :: node
-      real(DP) :: wp
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(inout) :: cond
+    ! -- local
+    integer(I4B) :: node
+    real(DP) :: wp
+    ! ------------------------------------------------------------------------------
     !
     ! -- initialize a few variables
     cond = DZERO
@@ -3553,7 +3959,7 @@ contains
     if (node > 0) then
       if (this%ibound(node) > 0) then
         wp = this%perimeter_wet(n)
-        cond = this%hk(n) * this%length(n) * wp / this%bthick(n)
+        cond = this%hk(n)*this%length(n)*wp/this%bthick(n)
       end if
     end if
     !
@@ -3561,26 +3967,25 @@ contains
     return
   end subroutine sfr_calc_cond
 
-
   subroutine sfr_calc_div(this, n, i, qd, qdiv)
-  ! ******************************************************************************
-  ! sfr_calc_div -- Calculate the diversion flow for reach
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(SfrType) :: this
-      integer(I4B), intent(in) :: n
-      integer(I4B), intent(in) :: i
-      real(DP), intent(inout) :: qd
-      real(DP), intent(inout) :: qdiv
-      ! -- local
-      character (len=10) :: cp
-      integer(I4B) :: jpos
-      integer(I4B) :: n2
-      !integer(I4B) :: ip
-      real(DP) :: v
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! sfr_calc_div -- Calculate the diversion flow for reach
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: i
+    real(DP), intent(inout) :: qd
+    real(DP), intent(inout) :: qdiv
+    ! -- local
+    character(len=10) :: cp
+    integer(I4B) :: jpos
+    integer(I4B) :: n2
+    !integer(I4B) :: ip
+    real(DP) :: v
+    ! ------------------------------------------------------------------------------
     !
     ! -- set local variables
     jpos = this%iadiv(n) + i - 1
@@ -3589,29 +3994,29 @@ contains
     v = this%divflow(jpos)
     !
     ! -- calculate diversion
-    select case(cp)
+    select case (cp)
       ! -- flood diversion
-      case ('EXCESS')
-        if (qd < v) then
-          v = DZERO
-        else
-          v = qd - v
-        end if
-      ! -- diversion percentage
-      case ('FRACTION')
-        v = qd * v
-      ! -- STR priority algorithm
-      case ('THRESHOLD')
-        if (qd < v) then
-          v = DZERO
-        end if
-      ! -- specified diversion
-      case ('UPTO')
-        if (v > qd) then
-          v = qd
-        end if
-      case default
+    case ('EXCESS')
+      if (qd < v) then
         v = DZERO
+      else
+        v = qd - v
+      end if
+      ! -- diversion percentage
+    case ('FRACTION')
+      v = qd*v
+      ! -- STR priority algorithm
+    case ('THRESHOLD')
+      if (qd < v) then
+        v = DZERO
+      end if
+      ! -- specified diversion
+    case ('UPTO')
+      if (v > qd) then
+        v = qd
+      end if
+    case default
+      v = DZERO
     end select
     !
     ! -- update upstream from for downstream reaches
@@ -3637,30 +4042,29 @@ contains
     w = this%width(n)
     s = this%slope(n)
     r = this%rough(n)
-    qconst = this%unitconv * w * sqrt(s) / r
-    d1 = (q1 / qconst)**DP6
+    qconst = this%unitconv*w*sqrt(s)/r
+    d1 = (q1/qconst)**DP6
     if (d1 < DEM30) d1 = DZERO
     ! -- return
     return
   end subroutine sfr_rectch_depth
 
-
   subroutine sfr_check_reaches(this)
     class(SfrType) :: this
     ! -- local
-    character (len= 5) :: crch
-    character (len=10) :: cval
-    character (len=30) :: nodestr
-    character (len=LINELENGTH) :: title
-    character (len=LINELENGTH) :: text
+    character(len=5) :: crch
+    character(len=10) :: cval
+    character(len=30) :: nodestr
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
     integer(I4B) :: n, nn
     real(DP) :: btgwf, bt
     ! -- code
     !
     ! -- setup inputtab tableobj
     if (this%iprpak /= 0) then
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STATIC REACH DATA'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STATIC REACH DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%maxbound, 10, this%iout)
       text = 'NUMBER'
@@ -3671,7 +4075,7 @@ contains
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'WIDTH'
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
-      text = 'SLOPE' 
+      text = 'SLOPE'
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'TOP'
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
@@ -3687,7 +4091,7 @@ contains
     !
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound
-      write(crch, '(i5)') n
+      write (crch, '(i5)') n
       nn = this%igwfnode(n)
       if (nn > 0) then
         btgwf = this%dis%bot(nn)
@@ -3697,45 +4101,45 @@ contains
       end if
       ! -- check reach length
       if (this%length(n) <= DZERO) then
-        errmsg = 'Reach ' // crch // ' length must be greater than 0.0.'
+        errmsg = 'Reach '//crch//' length must be greater than 0.0.'
         call store_error(errmsg)
       end if
       ! -- check reach width
       if (this%width(n) <= DZERO) then
-        errmsg = 'Reach ' // crch // ' width must be greater than 0.0.'
+        errmsg = 'Reach '//crch//' width must be greater than 0.0.'
         call store_error(errmsg)
       end if
       ! -- check reach slope
       if (this%slope(n) <= DZERO) then
-        errmsg = 'Reach ' // crch // ' slope must be greater than 0.0.'
+        errmsg = 'Reach '//crch//' slope must be greater than 0.0.'
         call store_error(errmsg)
       end if
       ! -- check bed thickness and bed hk for reaches connected to GWF
       if (nn > 0) then
         bt = this%strtop(n) - this%bthick(n)
         if (bt <= btgwf .and. this%icheck /= 0) then
-          write(cval,'(f10.4)') bt
-          errmsg = 'Reach ' // crch // ' bed bottom (rtp-rbth =' //              &
-                   cval // ') must be greater than the bottom of cell (' //      &
+          write (cval, '(f10.4)') bt
+          errmsg = 'Reach '//crch//' bed bottom (rtp-rbth ='// &
+                   cval//') must be greater than the bottom of cell ('// &
                    nodestr
-          write(cval,'(f10.4)') btgwf
-          errmsg = trim(adjustl(errmsg)) // '=' // cval // ').'
+          write (cval, '(f10.4)') btgwf
+          errmsg = trim(adjustl(errmsg))//'='//cval//').'
           call store_error(errmsg)
         end if
         if (this%hk(n) < DZERO) then
-          errmsg = 'Reach ' // crch // ' hk must be greater than or equal to 0.0.'
+          errmsg = 'Reach '//crch//' hk must be greater than or equal to 0.0.'
           call store_error(errmsg)
         end if
       end if
       ! -- check reach roughness
       if (this%rough(n) <= DZERO) then
-        errmsg = 'Reach ' // crch // " Manning's roughness " //                  &
+        errmsg = 'Reach '//crch//" Manning's roughness "// &
                  'coefficient must be greater than 0.0.'
         call store_error(errmsg)
       end if
       ! -- check reach upstream fraction
       if (this%ustrf(n) < DZERO) then
-        errmsg = 'Reach ' // crch // ' upstream fraction must be greater ' //    &
+        errmsg = 'Reach '//crch//' upstream fraction must be greater '// &
                  'than or equal to 0.0.'
         call store_error(errmsg)
       end if
@@ -3758,14 +4162,13 @@ contains
     return
   end subroutine sfr_check_reaches
 
-
   subroutine sfr_check_connections(this)
     class(SfrType) :: this
     ! -- local
-    character (len= 5) :: crch
-    character (len= 5) :: crch2
-    character (len=LINELENGTH) :: text
-    character (len=LINELENGTH) :: title
+    character(len=5) :: crch
+    character(len=5) :: crch2
+    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: title
     integer(I4B) :: n, nn, nc
     integer(I4B) :: i, ii
     integer(I4B) :: ifound
@@ -3785,14 +4188,14 @@ contains
       ntabcol = 1 + maxconn
       !
       ! -- reset the input table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STATIC REACH CONNECTION DATA'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STATIC REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
       text = 'REACH'
       call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do n = 1, maxconn
-        write(text, '(a,1x,i6)') 'CONN', n
+        write (text, '(a,1x,i6)') 'CONN', n
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       end do
     end if
@@ -3800,12 +4203,12 @@ contains
     ! -- check the reach connections for simple errors
     ! -- connection check
     do n = 1, this%maxbound
-      write(crch, '(i5)') n
-      eachconn: do i = this%ia(n) + 1, this%ia(n+1) - 1
+      write (crch, '(i5)') n
+      eachconn: do i = this%ia(n) + 1, this%ia(n + 1) - 1
         nn = this%ja(i)
-        write(crch2, '(i5)') nn
+        write (crch2, '(i5)') nn
         ifound = 0
-        connreach: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+        connreach: do ii = this%ia(nn) + 1, this%ia(nn + 1) - 1
           nc = this%ja(ii)
           if (nc == n) then
             ifound = 1
@@ -3813,9 +4216,9 @@ contains
           end if
         end do connreach
         if (ifound /= 1) then
-          errmsg = 'Reach ' // crch // ' is connected to ' //                    &
-                   'reach ' // crch2 // ' but reach ' // crch2 //                &
-                   ' is not connected to reach ' // crch // '.'
+          errmsg = 'Reach '//crch//' is connected to '// &
+                   'reach '//crch2//' but reach '//crch2// &
+                   ' is not connected to reach '//crch//'.'
           call store_error(errmsg)
         end if
       end do eachconn
@@ -3823,7 +4226,7 @@ contains
       ! -- write connection data to the table
       if (this%iprpak /= 0) then
         call this%inputtab%add_term(n)
-        do i = this%ia(n) + 1, this%ia(n+1) - 1
+        do i = this%ia(n) + 1, this%ia(n + 1) - 1
           call this%inputtab%add_term(this%ja(i))
         end do
         nn = maxconn - this%nconnreach(n)
@@ -3838,14 +4241,14 @@ contains
     ! -- check upstream connections for each reach
     ierr = 0
     do n = 1, this%maxbound
-      write(crch, '(i5)') n
+      write (crch, '(i5)') n
       eachconnv: do i = this%ia(n) + 1, this%ia(n + 1) - 1
         !
         ! -- skip downstream connections
         if (this%idir(i) < 0) cycle eachconnv
         nn = this%ja(i)
-        write(crch2, '(i5)') nn
-        connreachv: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+        write (crch2, '(i5)') nn
+        connreachv: do ii = this%ia(nn) + 1, this%ia(nn + 1) - 1
           ! -- skip downstream connections
           if (this%idir(ii) < 0) cycle connreachv
           nc = this%ja(ii)
@@ -3854,9 +4257,9 @@ contains
           !    reach nn and reach nn is an upstream connection for reach n
           if (nc == n) then
             ierr = ierr + 1
-            errmsg = 'Reach ' // crch // ' is connected to ' //                  &
-                     'reach ' // crch2 // ' but streamflow from reach ' //       &
-                     crch // ' to reach ' // crch2 // ' is not permitted.'
+            errmsg = 'Reach '//crch//' is connected to '// &
+                     'reach '//crch2//' but streamflow from reach '// &
+                     crch//' to reach '//crch2//' is not permitted.'
             call store_error(errmsg)
             exit connreachv
           end if
@@ -3873,13 +4276,13 @@ contains
     ! -- check that downstream reaches for a reach are
     !    the upstream reaches for the reach
     do n = 1, this%maxbound
-      write(crch, '(i5)') n
-      eachconnds: do i = this%ia(n) + 1, this%ia(n+1) - 1
+      write (crch, '(i5)') n
+      eachconnds: do i = this%ia(n) + 1, this%ia(n + 1) - 1
         nn = this%ja(i)
         if (this%idir(i) > 0) cycle eachconnds
-        write(crch2, '(i5)') nn
+        write (crch2, '(i5)') nn
         ifound = 0
-        connreachds: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+        connreachds: do ii = this%ia(nn) + 1, this%ia(nn + 1) - 1
           nc = this%ja(ii)
           if (nc == n) then
             if (this%idir(i) /= this%idir(ii)) then
@@ -3889,9 +4292,9 @@ contains
           end if
         end do connreachds
         if (ifound /= 1) then
-          errmsg = 'Reach ' // crch // ' downstream connected reach ' //         &
-                   'is reach ' // crch2 // ' but reach ' // crch // ' is not' // &
-                   ' the upstream connected reach for reach ' // crch2 // '.'
+          errmsg = 'Reach '//crch//' downstream connected reach '// &
+                   'is reach '//crch2//' but reach '//crch//' is not'// &
+                   ' the upstream connected reach for reach '//crch2//'.'
           call store_error(errmsg)
         end if
       end do eachconnds
@@ -3904,7 +4307,7 @@ contains
       maxconn = 0
       do n = 1, this%maxbound
         ii = 0
-        do i = this%ia(n) + 1, this%ia(n+1) - 1
+        do i = this%ia(n) + 1, this%ia(n + 1) - 1
           if (this%idir(i) > 0) then
             ii = ii + 1
           end if
@@ -3914,15 +4317,15 @@ contains
       ntabcol = 1 + maxconn
       !
       ! -- reset the input table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STATIC UPSTREAM REACH ' //           &
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STATIC UPSTREAM REACH '// &
               'CONNECTION DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
       text = 'REACH'
       call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do n = 1, maxconn
-        write(text, '(a,1x,i6)') 'UPSTREAM CONN', n
+        write (text, '(a,1x,i6)') 'UPSTREAM CONN', n
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       end do
       !
@@ -3930,7 +4333,7 @@ contains
       do n = 1, this%maxbound
         call this%inputtab%add_term(n)
         ii = 0
-        do i = this%ia(n) + 1, this%ia(n+1) - 1
+        do i = this%ia(n) + 1, this%ia(n + 1) - 1
           if (this%idir(i) > 0) then
             call this%inputtab%add_term(this%ja(i))
             ii = ii + 1
@@ -3939,14 +4342,14 @@ contains
         nn = maxconn - ii
         do i = 1, nn
           call this%inputtab%add_term(' ')
-        end do  
+        end do
       end do
       !
       ! -- calculate the maximum number of downstream connections
       maxconn = 0
       do n = 1, this%maxbound
         ii = 0
-        do i = this%ia(n) + 1, this%ia(n+1) - 1
+        do i = this%ia(n) + 1, this%ia(n + 1) - 1
           if (this%idir(i) < 0) then
             ii = ii + 1
           end if
@@ -3956,15 +4359,15 @@ contains
       ntabcol = 1 + maxconn
       !
       ! -- reset the input table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STATIC DOWNSTREAM ' //               &
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STATIC DOWNSTREAM '// &
               'REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
       text = 'REACH'
       call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do n = 1, maxconn
-        write(text, '(a,1x,i6)') 'DOWNSTREAM CONN', n
+        write (text, '(a,1x,i6)') 'DOWNSTREAM CONN', n
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       end do
       !
@@ -3972,7 +4375,7 @@ contains
       do n = 1, this%maxbound
         call this%inputtab%add_term(n)
         ii = 0
-        do i = this%ia(n) + 1, this%ia(n+1) - 1
+        do i = this%ia(n) + 1, this%ia(n + 1) - 1
           if (this%idir(i) < 0) then
             call this%inputtab%add_term(this%ja(i))
             ii = ii + 1
@@ -3981,7 +4384,7 @@ contains
         nn = maxconn - ii
         do i = 1, nn
           call this%inputtab%add_term(' ')
-        end do  
+        end do
       end do
     end if
     !
@@ -3989,16 +4392,15 @@ contains
     return
   end subroutine sfr_check_connections
 
-
   subroutine sfr_check_diversions(this)
     class(SfrType) :: this
     ! -- local
-    character (len=LINELENGTH) :: title
-    character (len=LINELENGTH) :: text
-    character (len= 5) :: crch
-    character (len= 5) :: cdiv
-    character (len= 5) :: crch2
-    character (len=10) :: cprior
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    character(len=5) :: crch
+    character(len=5) :: cdiv
+    character(len=5) :: crch2
+    character(len=10) :: cprior
     integer(I4B) :: maxdiv
     integer(I4B) :: n
     integer(I4B) :: nn
@@ -4008,7 +4410,7 @@ contains
     integer(I4B) :: ifound
     integer(I4B) :: jpos
     ! -- format
-10  format('Diversion ',i0,' of reach ',i0,                                      &
+10  format('Diversion ', i0, ' of reach ', i0, &
            ' is invalid or has not been defined.')
     ! -- code
     !
@@ -4022,8 +4424,8 @@ contains
       end do
       !
       ! -- reset the input table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') REACH DIVERSION DATA'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') REACH DIVERSION DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(maxdiv, 4, this%iout)
       text = 'REACH'
@@ -4039,28 +4441,28 @@ contains
     ! -- check that diversion data are correct
     do n = 1, this%maxbound
       if (this%ndiv(n) < 1) cycle
-      write(crch, '(i5)') n
-      
+      write (crch, '(i5)') n
+
       do idiv = 1, this%ndiv(n)
         !
         ! -- determine diversion index
         jpos = this%iadiv(n) + idiv - 1
         !
         ! -- write idiv to cdiv
-        write(cdiv, '(i5)') idiv
+        write (cdiv, '(i5)') idiv
         !
         !
         nn = this%divreach(jpos)
-        write(crch2, '(i5)') nn
+        write (crch2, '(i5)') nn
         !
         ! -- make sure diversion reach is connected to current reach
         ifound = 0
         if (nn < 1 .or. nn > this%maxbound) then
-          write(errmsg,10) idiv, n
+          write (errmsg, 10) idiv, n
           call store_error(errmsg)
           cycle
         end if
-        connreach: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+        connreach: do ii = this%ia(nn) + 1, this%ia(nn + 1) - 1
           nc = this%ja(ii)
           if (nc == n) then
             if (this%idir(ii) > 0) then
@@ -4070,9 +4472,9 @@ contains
           end if
         end do connreach
         if (ifound /= 1) then
-          errmsg = 'Reach ' // crch // ' is not a upstream reach for ' //        &
-                   'reach ' // crch2 // ' as a result diversion ' // cdiv //     &
-                   ' from reach ' // crch //' to reach ' // crch2 //             &
+          errmsg = 'Reach '//crch//' is not a upstream reach for '// &
+                   'reach '//crch2//' as a result diversion '//cdiv// &
+                   ' from reach '//crch//' to reach '//crch2// &
                    ' is not possible. Check reach connectivity.'
           call store_error(errmsg)
         end if
@@ -4093,16 +4495,15 @@ contains
     return
   end subroutine sfr_check_diversions
 
-
   subroutine sfr_check_ustrf(this)
     class(SfrType) :: this
     ! -- local
-    character (len=LINELENGTH) :: title
-    character (len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
     logical :: lcycle
     logical :: ladd
-    character (len=5) :: crch, crch2
-    character (len=10) :: cval
+    character(len=5) :: crch, crch2
+    character(len=10) :: cval
     integer(I4B) :: maxcols
     integer(I4B) :: npairs
     integer(I4B) :: ipair
@@ -4125,7 +4526,7 @@ contains
       npairs = 0
       do n = 1, this%maxbound
         ipair = 0
-        ec: do i = this%ia(n) + 1, this%ia(n+1) - 1
+        ec: do i = this%ia(n) + 1, this%ia(n + 1) - 1
           !
           ! -- skip upstream connections
           if (this%idir(i) > 0) cycle ec
@@ -4139,21 +4540,21 @@ contains
           npairs = max(npairs, ipair)
         end do ec
       end do
-      maxcols = 1 + npairs * 2
+      maxcols = 1 + npairs*2
       !
       ! -- reset the input table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') CONNECTED REACH UPSTREAM '        // &
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') CONNECTED REACH UPSTREAM '// &
               'FRACTION DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%maxbound, maxcols, this%iout)
       text = 'REACH'
       call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do i = 1, npairs
-        write(cval, '(i10)') i
-        text = 'DOWNSTREAM REACH ' // trim(adjustl(cval)) 
+        write (cval, '(i10)') i
+        text = 'DOWNSTREAM REACH '//trim(adjustl(cval))
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
-        text = 'FRACTION ' // trim(adjustl(cval)) 
+        text = 'FRACTION '//trim(adjustl(cval))
         call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       end do
     end if
@@ -4162,14 +4563,14 @@ contains
     do n = 1, this%maxbound
       do idiv = 1, this%ndiv(n)
         i0 = this%iadiv(n)
-        i1 = this%iadiv(n+1) - 1
-        do jpos = i0, i1 
-          do i = this%ia(n) + 1, this%ia(n+1) - 1
+        i1 = this%iadiv(n + 1) - 1
+        do jpos = i0, i1
+          do i = this%ia(n) + 1, this%ia(n + 1) - 1
             n2 = this%ja(i)
             if (this%divreach(jpos) == n2) then
               this%idiv(i) = jpos - i0 + 1
               exit
-            end if 
+            end if
           end do
         end do
       end do
@@ -4181,7 +4582,7 @@ contains
       !
       ! -- determine the number of downstream reaches
       ids = 0
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) < 0) then
           ids = ids + 1
         end if
@@ -4193,16 +4594,16 @@ contains
         n2 = this%divreach(jpos)
         f = this%ustrf(n2)
         if (f /= DZERO) then
-          write(errmsg, '(a,2(1x,i0,1x,a),1x,a,g0,a,2(1x,a))')                   &
-            'Reach', n, 'is connected to reach', n2, 'by a diversion',           &
-            'but the upstream fraction is not equal to zero (', f, '). Check',   &
+          write (errmsg, '(a,2(1x,i0,1x,a),1x,a,g0,a,2(1x,a))') &
+            'Reach', n, 'is connected to reach', n2, 'by a diversion', &
+            'but the upstream fraction is not equal to zero (', f, '). Check', &
             trim(this%packName), 'package diversion and package data.'
           if (ids > 1) then
             call store_error(errmsg)
           else
-            write(warnmsg, '(a,3(1x,a))')                                        &
-              trim(warnmsg), 'A warning instead of an error is issued because',  &
-              'the reach is only connected to the diversion reach in the ',      &
+            write (warnmsg, '(a,3(1x,a))') &
+              trim(warnmsg), 'A warning instead of an error is issued because', &
+              'the reach is only connected to the diversion reach in the ', &
               'downstream direction.'
             call store_warning(warnmsg)
           end if
@@ -4217,12 +4618,12 @@ contains
       ids = 0
       rval = DZERO
       f = DZERO
-      write(crch, '(i5)') n
+      write (crch, '(i5)') n
       if (this%iprpak /= 0) then
         call this%inputtab%add_term(n)
       end if
       ipair = 0
-      eachconn: do i = this%ia(n) + 1, this%ia(n+1) - 1
+      eachconn: do i = this%ia(n) + 1, this%ia(n + 1) - 1
         lcycle = .FALSE.
         !
         ! -- initialize downstream connection q
@@ -4242,11 +4643,11 @@ contains
           cycle eachconn
         end if
         ipair = ipair + 1
-        write(crch2, '(i5)') n2
+        write (crch2, '(i5)') n2
         ids = ids + 1
         ladd = .true.
         f = f + this%ustrf(n2)
-        write(cval, '(f10.4)') this%ustrf(n2)
+        write (cval, '(f10.4)') this%ustrf(n2)
         !
         ! -- write upstream fractions
         if (this%iprpak /= 0) then
@@ -4278,10 +4679,10 @@ contains
       ! -- evaluate if an error condition has occured
       !    the sum of fractions is not equal to 1
       if (ids /= 0) then
-        if (abs(f-DONE) > DEM6) then
-          write(errmsg, '(a,1x,i0,1x,a,g0,a,3(1x,a))')                           &
-            'Upstream fractions for reach ', n, 'is not equal to one (', f,      &
-            '). Check', trim(this%packName), 'package reach connectivity and',       &
+        if (abs(f - DONE) > DEM6) then
+          write (errmsg, '(a,1x,i0,1x,a,g0,a,3(1x,a))') &
+            'Upstream fractions for reach ', n, 'is not equal to one (', f, &
+            '). Check', trim(this%packName), 'package reach connectivity and', &
             'package data.'
           call store_error(errmsg)
         end if
@@ -4295,7 +4696,7 @@ contains
   subroutine sfr_setup_budobj(this)
 ! ******************************************************************************
 ! sfr_setup_budobj -- Set up the budget object that stores all the sfr flows
-!   The terms listed here must correspond in number and order to the ones 
+!   The terms listed here must correspond in number and order to the ones
 !   listed in the sfr_fill_budobj routine.
 ! ******************************************************************************
 !
@@ -4315,7 +4716,7 @@ contains
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
     !
-    ! -- Determine the number of sfr budget terms. These are fixed for 
+    ! -- Determine the number of sfr budget terms. These are fixed for
     !    the simulation and cannot change.  This includes FLOW-JA-FACE
     !    so they can be written to the binary budget files, but these internal
     !    flows are not included as part of the budget table.
@@ -4347,13 +4748,13 @@ contains
     q = DZERO
     do n = 1, this%maxbound
       n1 = n
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         n2 = this%ja(i)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
       end do
     end do
     !
-    ! -- 
+    ! --
     text = '             GWF'
     idx = idx + 1
     maxlist = this%maxbound - this%ianynone
@@ -4375,7 +4776,7 @@ contains
       end if
     end do
     !
-    ! -- 
+    ! --
     text = '        RAINFALL'
     idx = idx + 1
     maxlist = this%maxbound
@@ -4388,7 +4789,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '     EVAPORATION'
     idx = idx + 1
     maxlist = this%maxbound
@@ -4401,7 +4802,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '          RUNOFF'
     idx = idx + 1
     maxlist = this%maxbound
@@ -4414,7 +4815,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '      EXT-INFLOW'
     idx = idx + 1
     maxlist = this%maxbound
@@ -4427,7 +4828,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '     EXT-OUTFLOW'
     idx = idx + 1
     maxlist = this%maxbound
@@ -4440,7 +4841,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '         STORAGE'
     idx = idx + 1
     maxlist = this%maxbound
@@ -4454,10 +4855,10 @@ contains
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
     !
-    ! -- 
+    ! --
     if (this%imover == 1) then
       !
-      ! -- 
+      ! --
       text = '        FROM-MVR'
       idx = idx + 1
       maxlist = this%maxbound
@@ -4470,7 +4871,7 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
       !
-      ! -- 
+      ! --
       text = '          TO-MVR'
       idx = idx + 1
       maxlist = this%maxbound
@@ -4484,11 +4885,11 @@ contains
                                                naux)
     end if
     !
-    ! -- 
+    ! --
     naux = this%naux
     if (naux > 0) then
       !
-      ! -- 
+      ! --
       text = '       AUXILIARY'
       idx = idx + 1
       maxlist = this%maxbound
@@ -4542,16 +4943,16 @@ contains
     call this%budobj%budterm(idx)%reset(this%nconn)
     do n = 1, this%maxbound
       n1 = n
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         n2 = this%ja(i)
         ! flow to downstream reaches
         if (this%idir(i) < 0) then
           qt = this%dsflow(n)
           q = -this%qconn(i)
-        ! flow from upstream reaches
+          ! flow from upstream reaches
         else
           qt = this%usflow(n)
-          do ii = this%ia(n2) + 1, this%ia(n2+1) - 1
+          do ii = this%ia(n2) + 1, this%ia(n2 + 1) - 1
             if (this%idir(ii) > 0) cycle
             if (this%ja(ii) /= n) cycle
             q = this%qconn(ii)
@@ -4560,7 +4961,7 @@ contains
         end if
         ! calculate flow area
         call this%sfr_rectch_depth(n, qt, d)
-        this%qauxcbc(1) = d * this%width(n)
+        this%qauxcbc(1) = d*this%width(n)
         call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
       end do
     end do
@@ -4571,7 +4972,7 @@ contains
     do n = 1, this%maxbound
       n2 = this%igwfnode(n)
       if (n2 > 0) then
-        this%qauxcbc(1) = this%width(n) * this%length(n)
+        this%qauxcbc(1) = this%width(n)*this%length(n)
         q = -this%gwflow(n)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end if
@@ -4582,7 +4983,7 @@ contains
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
       a = this%surface_area(n)
-      q = this%rain(n) * a
+      q = this%rain(n)*a
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     !
@@ -4615,7 +5016,7 @@ contains
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
       q = DZERO
-      do i = this%ia(n) + 1, this%ia(n+1) - 1
+      do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         idiv = this%idiv(i)
         if (idiv > 0) then
@@ -4638,14 +5039,14 @@ contains
     do n = 1, this%maxbound
       q = DZERO
       d = this%depth(n)
-      a = this%width(n) * this%length(n)
-      this%qauxcbc(1) = a * d
+      a = this%width(n)*this%length(n)
+      this%qauxcbc(1) = a*d
       call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
     end do
     !
     ! -- MOVER
     if (this%imover == 1) then
-      ! 
+      !
       ! -- FROM MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%maxbound)
@@ -4686,9 +5087,9 @@ contains
 
   subroutine sfr_setup_tableobj(this)
 ! ******************************************************************************
-! sfr_setup_tableobj -- Set up the table object that is used to write the sfr 
-!                       stage data. The terms listed here must correspond in  
-!                       number and order to the ones written to the stage table 
+! sfr_setup_tableobj -- Set up the table object that is used to write the sfr
+!                       stage data. The terms listed here must correspond in
+!                       number and order to the ones written to the stage table
 !                       in the sfr_ot method.
 ! ******************************************************************************
 !
@@ -4707,7 +5108,7 @@ contains
     ! -- setup stage table
     if (this%iprhed > 0) then
       !
-      ! -- Determine the number of sfr budget terms. These are fixed for 
+      ! -- Determine the number of sfr budget terms. These are fixed for
       !    the simulation and cannot change.  This includes FLOW-JA-FACE
       !    so they can be written to the binary budget files, but these internal
       !    flows are not included as part of the budget table.
@@ -4717,18 +5118,18 @@ contains
       end if
       !
       ! -- set up table title
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STAGES FOR EACH CONTROL VOLUME'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STAGES FOR EACH CONTROL VOLUME'
       !
       ! -- set up stage tableobj
       call table_cr(this%stagetab, this%packName, title)
-      call this%stagetab%table_df(this%maxbound, nterms, this%iout,              &
+      call this%stagetab%table_df(this%maxbound, nterms, this%iout, &
                                   transient=.TRUE.)
       !
       ! -- Go through and set up table budget term
       if (this%inamedbound == 1) then
         text = 'NAME'
-        call this%stagetab%initialize_column(text, LENBOUNDNAME, alignment=TABLEFT)
+        call this%stagetab%initialize_column(text, 20, alignment=TABLEFT)
       end if
       !
       ! -- reach number
@@ -4767,8 +5168,6 @@ contains
     ! -- return
     return
   end subroutine sfr_setup_tableobj
-  
-  
 
   ! -- geometry functions
   function area_wet(this, n, depth)
@@ -4788,13 +5187,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
-    area_wet = depth * this%width(n)
+    area_wet = depth*this%width(n)
     !
     ! -- Return
     return
   end function area_wet
-  
-  
+
   function perimeter_wet(this, n)
 ! ******************************************************************************
 ! perimeter_wet -- return wetted perimeter
@@ -4833,12 +5231,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate surface area
-    surface_area = this%width(n) * this%length(n)
+    surface_area = this%width(n)*this%length(n)
     !
     ! -- Return
     return
-  end function surface_area  
-  
+  end function surface_area
+
   function surface_area_wet(this, n, depth)
 ! ******************************************************************************
 ! area_wet -- return wetted surface area
@@ -4859,12 +5257,12 @@ contains
     !
     ! -- Calculate surface area
     top_width = this%top_width_wet(n, depth)
-    surface_area_wet = top_width * this%length(n)
+    surface_area_wet = top_width*this%length(n)
     !
     ! -- Return
     return
   end function surface_area_wet
-  
+
   function top_width_wet(this, n, depth)
 ! ******************************************************************************
 ! area_wet -- return wetted surface area
@@ -4886,7 +5284,7 @@ contains
     !
     ! -- Calculate surface area
     sat = sCubicSaturation(DEM5, DZERO, depth, DEM5)
-    top_width_wet = this%width(n) * sat
+    top_width_wet = this%width(n)*sat
     !
     ! -- Return
     return
@@ -4902,7 +5300,7 @@ contains
     ! -- module
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j
     ! -- formats
@@ -4917,17 +5315,17 @@ contains
         this%denseterms(j, i) = DZERO
       end do
     end do
-    write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR SFR &
-      &PACKAGE: ' // trim(adjustl(this%packName))
+    write (this%iout, '(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR SFR &
+      &PACKAGE: '//trim(adjustl(this%packName))
     !
     ! -- return
     return
   end subroutine sfr_activate_density
 
-  subroutine sfr_calculate_density_exchange(this, n, stage, head, cond,        &
+  subroutine sfr_calculate_density_exchange(this, n, stage, head, cond, &
                                             bots, flow, gwfhcof, gwfrhs)
 ! ******************************************************************************
-! sfr_calculate_density_exchange -- Calculate the groundwater-sfr density 
+! sfr_calculate_density_exchange -- Calculate the groundwater-sfr density
 !                                   exchange terms.
 !
 ! -- Arguments are as follows:
@@ -4951,7 +5349,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(SfrType),intent(inout) :: this
+    class(SfrType), intent(inout) :: this
     integer(I4B), intent(in) :: n
     real(DP), intent(in) :: stage
     real(DP), intent(in) :: head
@@ -5010,14 +5408,14 @@ contains
     else
       !
       ! -- calulate average relative density
-      rdenseavg = DHALF * (rdensesfr + rdensegwf)
+      rdenseavg = DHALF*(rdensesfr + rdensegwf)
       !
-      ! -- Add contribution of first density term: 
+      ! -- Add contribution of first density term:
       !      cond * (denseavg/denseref - 1) * (hgwf - hsfr)
-      d1 = cond * (rdenseavg - DONE) 
+      d1 = cond*(rdenseavg - DONE)
       gwfhcof = gwfhcof - d1
-      gwfrhs = gwfrhs - d1 * ss
-      d1 = d1 * (hh - ss)
+      gwfrhs = gwfrhs - d1*ss
+      d1 = d1*(hh - ss)
       flow = flow + d1
       !
       ! -- Add second density term if stage and head not below bottom
@@ -5027,9 +5425,9 @@ contains
         !      cond * (havg - elevavg) * (densegwf - densesfr) / denseref
         elevgwf = this%denseterms(3, n)
         elevsfr = bots
-        elevavg = DHALF * (elevsfr + elevgwf)
-        havg = DHALF * (hh + ss)
-        d2 = cond * (havg - elevavg) * (rdensegwf - rdensesfr)
+        elevavg = DHALF*(elevsfr + elevgwf)
+        havg = DHALF*(hh + ss)
+        d2 = cond*(havg - elevavg)*(rdensegwf - rdensesfr)
         gwfrhs = gwfrhs + d2
         flow = flow + d2
       end if
@@ -5038,6 +5436,5 @@ contains
     ! -- return
     return
   end subroutine sfr_calculate_density_exchange
-
 
 end module SfrModule

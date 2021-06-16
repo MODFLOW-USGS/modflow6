@@ -19,6 +19,8 @@ Reach connectivity must be explicitly specified for this version of the SFR Pack
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-dimensions.dat}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-packagedata.dat}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-connectiondata.dat}
+\noindent \textit{IF \texttt{ntables} IS GREATER THAN ZERO}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-tables.dat}
 \noindent \textit{IF \texttt{ndv} IS GREATER THAN ZERO FOR ANY REACH}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-diversions.dat}
 
@@ -39,7 +41,7 @@ Reach connectivity must be explicitly specified for this version of the SFR Pack
 
 \vspace{5mm}
 \subsubsection{Available observation types}
-Streamflow Routing Package observations include reach stage and all of the terms that contribute to the continuity equation for each stream reach. Additional SFR Package observations include the sum of inflows from upstream reaches and from mover terms (\texttt{upstream-flow}) and downstream outflow from a reach prior to diversions and the mover package (\texttt{downstream-flow}). The data required for each SFR Package observation type is defined in table~\ref{table:gwf-sfrobstype}. Negative and positive values for \texttt{sfr} observations represent a loss from and gain to the GWF model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the SFR package, respectively.
+Streamflow Routing Package observations include reach stage and all of the terms that contribute to the continuity equation for each stream reach. Additional SFR Package observations include the sum of inflows from upstream reaches, from mover terms (\texttt{upstream-flow}) and downstream outflow from a reach prior to diversions and the mover package (\texttt{downstream-flow}), the wetted perimeter of a reach (\texttt{wetted-perimeter}), and the cross-sectional area of a reach (\texttt{area}). \texttt{wetted-perimeter} and \texttt{area} observations for a reach are constant unless cross-section data is specified for a reach in the optional \texttt{TABLES} block. The data required for each SFR Package observation type is defined in table~\ref{table:gwf-sfrobstype}. Negative and positive values for \texttt{sfr} volumetric flow observations represent a loss from and gain to the GWF model, respectively. For all other volumetric flow terms, negative and positive values represent a loss from and gain from the SFR package, respectively.
 
 \FloatBarrier
 \begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
@@ -72,3 +74,26 @@ Streamflow Routing Package observations include reach stage and all of the terms
 \vspace{5mm}
 \subsubsection{Example Observation Input File}
 \lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-sfr-example-obs.dat}
+
+\newpage
+\subsection{SFR Reach Cross-Section Table Input File}
+SFR reach cross-section tables containing station and elevation cross-section data can be specified for individual reaches.  SFR cross-section tables are specified by including file names in the TABLES block of the SFR Package.  These file names correspond to a SFR cross-section table input file.  The format of the SFR cross-section table input file is described here.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-sfr-tab-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-sfr-tab-table.dat}
+\vspace{5mm}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/utl-sfr-tab-desc.tex}
+\end{description}
+
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-sfr-tab-example.dat}
+
+

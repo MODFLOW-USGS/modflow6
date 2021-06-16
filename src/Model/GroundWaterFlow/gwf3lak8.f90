@@ -1028,12 +1028,11 @@ contains
     call this%parser%GetBlock('TABLES', isfound, ierr, &
                               supportOpenClose=.true.)
     !
-    ! -- parse lake_tables block if detected
+    ! -- parse tables block if detected
     if (isfound) then
       ntabs = 0
       ! -- process the lake table data
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//        &
-        ' LAKE_TABLES'
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//' TABLES'
       readtable: do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -1071,7 +1070,7 @@ contains
       end do readtable
       
       write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' LAKE_TABLES'
+        'END OF ' // trim(adjustl(this%text)) // ' TABLES'
       !
       ! -- check for missing or duplicate lake connections
       if (ntabs < this%ntables) then
