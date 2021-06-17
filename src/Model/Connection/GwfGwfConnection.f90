@@ -1,6 +1,7 @@
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH
+  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH  
+  use CsrUtilsModule, only: getCSRIndex
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin  
   use SimModule, only: ustop
   use SparseModule, only:sparsematrix
@@ -10,7 +11,9 @@ module GwfGwfConnectionModule
   use GwfModule, only: GwfModelType
   use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList
   use GwfNpfModule, only: GwfNpfType, hcond, vcond
+  use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
+  use GridConnectionModule, only: GlobalCellType
   
   implicit none
   private
@@ -50,6 +53,7 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: maskConnections
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
+    procedure, pass(this), private :: setFlowToExchanges
     
   end type GwfGwfConnectionType
 
@@ -447,35 +451,33 @@ contains
   !! model, and then mapped back to real-world cell ids.
   !<
   subroutine gwfgwfcon_cq(this, icnvg, isuppress_output, isolnid)
-    class(GwfGwfConnectionType) :: this           !< this connection
-    integer(I4B), intent(inout) :: icnvg          !< TODO_MJR...
-    integer(I4B), intent(in) :: isuppress_output  !<
-    integer(I4B), intent(in) :: isolnid           !<
+    class(GwfGwfConnectionType) :: this          !< this connection
+    integer(I4B), intent(inout) :: icnvg         !< convergence flag
+    integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
+    integer(I4B), intent(in) :: isolnid          !< solution id
     ! local
     integer(I4B) :: n, m, ipos, isym
-    integer(I4B) :: nloc, mloc
+    integer(I4B) :: nLoc, mLoc, iposLoc
     integer(I4B) :: ihc
     real(DP) :: rrate
     real(DP) :: area
     real(DP) :: satThick
     real(DP) :: nx, ny, nz
     real(DP) :: cx, cy, cz    
-    real(DP) :: conLength
-    real(DP) :: distance
+    real(DP) :: conLen
+    real(DP) :: dist
     logical :: nozee
-    type(ConnectionsType), pointer :: imCon !< interface model connections
-    type(GwfNpfType), pointer :: imNpf       !< interface model npf package
+    type(ConnectionsType), pointer :: imCon                 !< interface model connections
+    class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
+    class(DisBaseType), pointer :: imDis                    !< interface model discretization
+    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
+
+    imDis => this%interfaceModel%dis
+    imCon => this%interfaceModel%dis%con
+    imNpf => this%interfaceModel%npf
+    toGlobal => this%gridConnection%idxToGlobal
 
     call this%interfaceModel%model_cq(icnvg, isuppress_output)
-
-    ! two types of flows, at the exchange and the internal
-    ! ones which depend on the connection with other model(s)
-    ! so, we loop over iface model flowja(nja) which are not masked
-    ! and if (n,m) is across the boundary, we dispatch (1x) to simvals
-    ! in the GwfGwfExchange, if not, then we set the model's internal
-    ! flowja
-    imCon => this%interfaceModel%dis%con !< interface model connection object
-    imNpf => this%interfaceModel%npf     !< interface model npf object
 
     if (this%gwfModel%npf%icalcspdis /= 1) return
 
@@ -484,23 +486,27 @@ contains
       nozee = imNpf%xt3d%nozee
     end if
 
+    ! loop over flowja in the interface model and set edge properties
+    ! for flows crossing the boundary, and set flowja for internal
+    ! flows affected by the connection.
     do n = 1, this%neq
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+      if (.not. associated(toGlobal(n)%model, this%owner)) then
         ! only add flows to own model
         cycle
       end if
-      nloc = this%gridConnection%idxToGlobal(n)%index
 
-      do ipos = imCon%ia(n), imCon%ia(n+1) - 1  
-        m = imCon%ja(ipos)
-        mloc =  this%gridConnection%idxToGlobal(m)%index
+      nLoc = toGlobal(n)%index
 
+      do ipos = imCon%ia(n), imCon%ia(n+1) - 1
         if (imCon%mask(ipos) < 1) then
-          ! skip this connection, it's masked and determined in the model
+          ! skip this connection, it's masked so not determined by us
           cycle
         end if
-        
-        if (.not. associated(this%gridConnection%idxToGlobal(m)%model, this%owner)) then
+
+        m = imCon%ja(ipos)
+        mLoc =  toGlobal(m)%index
+
+        if (.not. associated(toGlobal(m)%model, this%owner)) then
           ! boundary connection, set edge properties
           isym = imCon%jas(ipos)
           ihc = imCon%ihc(isym)
@@ -508,34 +514,82 @@ contains
           satThick = imNpf%calcSatThickness(n, m, ihc)
           rrate = this%interfaceModel%flowja(ipos)
 
+          call imDis%connection_normal(n, m, ihc, nx, ny, nz, ipos)   
+          call imDis%connection_vector(n, m, nozee, imNpf%sat(n), imNpf%sat(m), &
+                                       ihc, cx, cy, cz, conLen)
+
           if (ihc == 0) then
-            if (n > m) rrate = -rrate
+            ! check if n is below m
+            if (nz > 0) rrate = -rrate
           else
             area = area * satThick
           end if
 
-          call this%interfaceModel%dis%connection_normal(n, m, ihc, nx, ny, nz, ipos)   
-          call this%interfaceModel%dis%connection_vector(n, m, nozee, imNpf%sat(n), imNpf%sat(m), &
-                                                         ihc, cx, cy, cz, conLength)
-
-          distance = conLength * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))          
-          call this%gwfModel%npf%set_edge_properties(nloc, ihc, rrate, area, nx, ny, distance)
+          dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
+          call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
+                                                     nx, ny, dist)
         else
           ! internal, need to set flowja for n-m
-          write(*,*) "set flowja for ", nloc, "-", mloc
+          ! TODO_MJR: should we mask the flowja calculation in the model?
+          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)          
+          this%gwfModel%flowja(iposLoc) = this%interfaceModel%flowja(ipos)
         end if
       end do
     end do
 
+    call this%setFlowToExchanges()    
+
   end subroutine gwfgwfcon_cq
 
+  !> @brief Set the flows (flowja from interface model) to the 
+  !< simvals in the exchanges, leaving the budget calcution in there
+  subroutine setFlowToExchanges(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: iex, i
+    integer(I4B) :: nIface, mIface, ipos
+    class(GwfExchangeType), pointer :: gwfEx
+
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      do i = 1, gwfEx%nexg
+
+        gwfEx%simvals(i) = DZERO
+
+        if (gwfEx%gwfmodel1%ibound(gwfEx%nodem1(i)) /= 0 .and.                  &
+            gwfEx%gwfmodel2%ibound(gwfEx%nodem2(i)) /= 0) then
+
+          nIface = this%gridConnection%getInterfaceIndex(gwfEx%nodem1(i), gwfEx%model1)
+          mIface = this%gridConnection%getInterfaceIndex(gwfEx%nodem2(i), gwfEx%model2)
+          ipos = getCSRIndex(nIface, mIface, this%interfaceModel%ia, this%interfaceModel%ja)
+          gwfEx%simvals(i) = this%interfaceModel%flowja(ipos)
+
+        end if
+      end do
+    end do
+
+  end subroutine setFlowToExchanges
+
+  !> @brief Calculate the budget terms for this connection, this is
+  !< dispatched to the GWF-GWF exchanges
   subroutine gwfgwfcon_bd(this, icnvg, isuppress_output, isolnid)
     class(GwfGwfConnectionType) :: this           !< this connection
-    integer(I4B), intent(inout) :: icnvg          !< TODO_MJR...
-    integer(I4B), intent(in) :: isuppress_output  !<
-    integer(I4B), intent(in) :: isolnid           !<
+    integer(I4B), intent(inout) :: icnvg          !< convergence flag
+    integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
+    integer(I4B), intent(in) :: isolnid           !< solution id
+    ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
 
-    ! thoughts: the internal budget terms
+    ! call exchange budget routine, and only call
+    ! it once, remember we have 2 interface models
+    ! per 1 GWF-GWF exchange
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        call gwfEx%exg_bd(icnvg, isuppress_output, isolnid)
+      end if
+    end do
     
   end subroutine gwfgwfcon_bd
   

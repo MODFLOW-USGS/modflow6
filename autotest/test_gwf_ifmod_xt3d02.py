@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import numpy as np
 
@@ -18,11 +19,27 @@ from simulation import Simulation
 # It compares the result of a single, strongly anisotropic model 
 # with XT3D enabled to the equivalent case where the domain is
 # decomposed and joined by a GWF-GWF exchange with XT3D applied.
+#
+#        'refmodel'              'leftmodel'     'rightmodel'
+#
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+#
 # The head values should always be indentical. All models are
 # part of the same solution for convenience.
 # In addition, a check on the x,y,z components of specific discharge
-# is present. The values for the rightmost column of the left submodel
-# is compared to the 5th column of the full model: they should be identical.
+# is present. The values of the left submodel are compared to
+# the left part of the full model, and similar for right: they 
+# should be identical. Finally, the budget error is checked.
+
 ex = ["ifmod_xt3d02"]
 exdirs = []
 for s in ex:
@@ -63,6 +80,7 @@ def get_model(idx, dir):
     area = delr * delc
 
     # shift (hor. and vert.)
+    shift_some_x = -20*delr # avoids overlap
     shift_x = 5*delr
     shift_y = 0.0
 
@@ -112,6 +130,7 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
+                                  xorigin=shift_some_x, yorigin=0.0,
                                   top=tops[0], botm=tops[1:])
 
     # initial conditions
@@ -263,31 +282,65 @@ def compare_to_ref(sim):
     
     fpth = os.path.join(sim.simpath, "{}.hds".format(mname_right))
     hds = flopy.utils.HeadFile(fpth)
-    heads_right = hds.get_data()    
+    heads_right = hds.get_data()
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_right))
+    nlay, nrow, ncol = heads_right.shape
+    qxb_right, qyb_right, qzb_right = qxqyqz(fpth, nlay, nrow, ncol)
+    
     heads_2models = np.append(heads_left[0],heads_right[0], axis=1)
     
+    # compare heads
     maxdiff = np.amax(abs(heads - heads_2models))
     assert maxdiff < 10*hclose_check, "Max. head diff. {} should \
                      be within solver tolerance (x10): {}" \
                      .format(maxdiff, 10*hclose_check)
 
+    # compare spdis_x left
     maxdiff = np.amax(abs(qxb[:,:,0:5] - qxb_left))
     assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (x) {} \
                      should be within solver tolerance (x10): {}" \
                      .format(maxdiff, 10*hclose_check)
-                    
-    print(qyb[0,0:5,4])
-    print(qyb_left[0,0:5,4])
+    
+    # compare spdis_y left
     maxdiff = np.amax(abs(qyb[:,:,0:5] - qyb_left))
     assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (y) {} \
                      should be within solver tolerance (x10): {}" \
                      .format(maxdiff, 10*hclose_check)
-                     
+      
+    # compare spdis_z left
     maxdiff = np.amax(abs(qzb[:,:,0:5] - qzb_left))
     assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (z) {} \
                      should be within solver tolerance (x10): {}" \
                      .format(maxdiff, 10*hclose_check)
+                     
+    # compare spdis_x right
+    maxdiff = np.amax(abs(qxb[:,:,5:] - qxb_right))
+    assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (x) {} \
+                     should be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
+    
+    # compare spdis_y right
+    maxdiff = np.amax(abs(qyb[:,:,5:] - qyb_right))
+    assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (y) {} \
+                     should be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
+      
+    # compare spdis_z right
+    maxdiff = np.amax(abs(qzb[:,:,5:] - qzb_right))
+    assert maxdiff < 10*hclose_check, "Max. diff. in spec. discharge (z) {} \
+                     should be within solver tolerance (x10): {}" \
+                     .format(maxdiff, 10*hclose_check)
 
+    # check budget error from .lst file
+    for mname in [mname_ref, mname_left, mname_right]:
+        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        for line in open(fpth):
+            if line.lstrip().startswith("PERCENT"):
+                cumul_balance_error = float(line.split()[3])
+                assert abs(cumul_balance_error) < 0.00001, \
+                       "Cumulative balance error = {} for {}, should equal 0.0" \
+                       .format(cumul_balance_error, mname)
+    
     return
 
 

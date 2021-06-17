@@ -93,6 +93,8 @@ module GwfGwfExchangeModule
     procedure, private :: gwf_gwf_df_obs
     procedure, private :: gwf_gwf_rp_obs
     procedure, public  :: gwf_gwf_save_simvals
+    procedure, private :: gwf_gwf_calc_simvals
+    procedure, public  :: gwf_gwf_set_spdis
   end type GwfExchangeType
 
 contains
@@ -729,43 +731,36 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO, DPIO180
-    use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n1
-    integer(I4B) :: n2
-    integer(I4B) :: ihc
-    integer(I4B) :: ibdn1
-    integer(I4B) :: ibdn2
-    integer(I4B) :: ictn1
-    integer(I4B) :: ictn2
-    integer(I4B) :: iusg
-    real(DP) :: topn1
-    real(DP) :: topn2
-    real(DP) :: botn1
-    real(DP) :: botn2
-    real(DP) :: satn1
-    real(DP) :: satn2
-    real(DP) :: hn1
-    real(DP) :: hn2
-    real(DP) :: rrate
-    real(DP) :: thksat
-    real(DP) :: angle
-    real(DP) :: nx
-    real(DP) :: ny
-    real(DP) :: distance
-    real(DP) :: dltot
-    real(DP) :: hwva
-    real(DP) :: area
 ! ------------------------------------------------------------------------------
     !
     ! -- calculate flow and store in simvals
+    call this%gwf_gwf_calc_simvals()    
+    !
+    ! -- calculate specific discharge and set to model
+    call this%gwf_gwf_set_spdis()
+    !
+    ! -- return
+    return
+  end subroutine gwf_gwf_cq
+
+
+  !> @brief Calculate flow rates for the exchanges and
+  !< store them in a member array
+  subroutine gwf_gwf_calc_simvals(this)
+    use ConstantsModule, only: DZERO
+    class(GwfExchangeType) :: this !< the exchange
+    ! local
+    integer(I4B) :: i
+    integer(I4B) :: n1, n2
+    integer(I4B) :: ibdn1, ibdn2
+    real(DP) :: rrate
+
     do i = 1, this%nexg
       rrate = DZERO
       n1 = this%nodem1(i)
@@ -780,7 +775,36 @@ contains
       endif
       this%simvals(i) = rrate
     end do
-    !
+    
+    return
+  end subroutine gwf_gwf_calc_simvals
+
+  !> @brief Calculate specific discharge from flow rates
+  !< and set them to the models
+  subroutine gwf_gwf_set_spdis(this)
+    use ConstantsModule, only: DZERO, DPIO180
+    use GwfNpfModule, only: thksatnm
+    class(GwfExchangeType) :: this !< the exchange
+    ! local
+    integer(I4B) :: iusg
+    integer(I4B) :: i
+    integer(I4B) :: n1, n2
+    integer(I4B) :: ibdn1, ibdn2
+    integer(I4B) :: ictn1, ictn2
+    integer(I4B) :: ihc
+    real(DP) :: rrate
+    real(DP) :: topn1, topn2
+    real(DP) :: botn1, botn2
+    real(DP) :: satn1, satn2
+    real(DP) :: hn1, hn2
+    real(DP) :: nx, ny
+    real(DP) :: distance
+    real(DP) :: dltot
+    real(DP) :: hwva
+    real(DP) :: area
+    real(DP) :: thksat
+    real(DP) :: angle
+
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
@@ -869,9 +893,8 @@ contains
       !
     enddo
     !
-    ! -- return
     return
-  end subroutine gwf_gwf_cq
+  end subroutine gwf_gwf_set_spdis
   
   subroutine gwf_gwf_bd(this, icnvg, isuppress_output, isolnid)
 ! ******************************************************************************

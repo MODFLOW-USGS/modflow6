@@ -27,11 +27,16 @@ from simulation import Simulation
 #         1 1 1 1 1 1 1
 #         1 1 1 1 1 1 1
 #
+# with the region with ibound == 0 being simulated on the
+# a refined, 9x9 grid.
+# 
 # This is also the first test problem presented in 
 # the MODFLOW-USG manual: 'test006_2models'
-# (When running without XT3D, the result will disagree 
-# because the CVFD requirements are violated at the 
-# LGR interface)
+#
+# When running without XT3D, the results will disagree 
+# with theory because the CVFD requirements are violated at the 
+# at the LGR interface. We compare heads, specific discharge, and
+# confirm that there is no budget error.
 
 ex = ["ifmod_xt3d01"]
 exdirs = []
@@ -316,6 +321,17 @@ def eval_heads(sim):
                                            " exceeds solver tolerance (x10) {}"\
                                            " for row {} and col {}".\
                                            format(diff, 10*hclose, irow, icol)
+                                          
+    # todo: mflistbudget                                        
+    # check cumulative balance error from .lst file
+    for mname in [parent_name, child_name]:
+        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        for line in open(fpth):
+            if line.lstrip().startswith("PERCENT"):
+                cumul_balance_error = float(line.split()[3])
+                assert abs(cumul_balance_error) < 0.00001, \
+                       "Cumulative balance error = {} for {}, should equal 0.0" \
+                       .format(cumul_balance_error, mname)
     
     return
 
