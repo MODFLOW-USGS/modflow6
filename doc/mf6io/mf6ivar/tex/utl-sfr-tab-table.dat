@@ -1,0 +1,5 @@
+BEGIN TABLE
+  <xfraction> <depth>
+  <xfraction> <depth>
+  ...
+END TABLE

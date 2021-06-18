@@ -1,3 +1,4 @@
 BEGIN DIMENSIONS
   NREACHES <nreaches>
+  NTABLES <ntables>
 END DIMENSIONS

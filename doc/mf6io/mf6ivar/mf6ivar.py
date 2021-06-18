@@ -683,6 +683,7 @@ if __name__ == '__main__':
                   'gwt-mvt',
                   'gwt-api',
                   'utl-lak-tab',  # dfn completed  tex updated
+                  'utl-sfr-tab',
                   'utl-obs',
                   'utl-ts',
                   'utl-tas',

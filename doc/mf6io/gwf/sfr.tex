@@ -72,3 +72,25 @@ Streamflow Routing Package observations include reach stage and all of the terms
 \vspace{5mm}
 \subsubsection{Example Observation Input File}
 \lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-sfr-example-obs.dat}
+
+\newpage
+\subsection{Streamflow Routing Package Cross-Sections Table Input File}
+Cross-sections tables of distance and relative depth can be specified for individual reaches.  Cross-Section tables are specified by including file names in the LAKE\_TABLES block of the SFR Package.  These file names correspond to a lake table input file.  The format of the lake table input file is described here.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-sfr-tab-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-sfr-tab-table.dat}
+\vspace{5mm}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/utl-sfr-tab-desc.tex}
+\end{description}
+
+\subsubsection{Example Input File}
+%\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-sfr-tab-example.dat}
+
