@@ -73,6 +73,7 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 [Langevin, C.D., Panday, S, and Provost, A.M., 2020, Hydraulic-head formulation for density-dependent flow and transport: Groundwater, v. 58, no. 3, p. 349–362.](https://doi.org/10.1111/gwat.12967)
 
+[Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the MODFLOW 6 water mover package to represent natural and managed hydrologic connections: Groundwater, v. xx, no. xx, p. xx-xx.](https://doi.org/10.1111/gwat.13117)
 #### ***Software/Code***
 
 [Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2021, MODFLOW 6 Modular Hydrologic Model version 6.2.2 release candidate: U.S. Geological Survey Software Release, 18 February 2021, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
