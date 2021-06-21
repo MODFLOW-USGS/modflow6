@@ -326,8 +326,6 @@ if __name__ == "__main__":
     # run models
     for idx, example in enumerate(example_dirs):
         run_model(current_app, previous_app, example, f, silent=False)
-        if idx > 30:
-            break
 
     # close the markdown file
     f.close()
