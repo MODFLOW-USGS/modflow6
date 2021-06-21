@@ -27,6 +27,10 @@ jobs:
           pip install -r requirements.txt
         working-directory: ${{env.working-directory}}
 
+      - name: Install python packages
+        run: |
+          .github/common/install-python-std.sh
+
       - name: Setup symbolic links on Linux
         run: |
           sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
