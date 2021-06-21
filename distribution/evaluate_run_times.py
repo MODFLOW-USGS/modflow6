@@ -300,8 +300,8 @@ if __name__ == "__main__":
         + "short run times (< 30 seconds) may not be significant.\n\n\n"
     )
     line += "| Example Problem "
-    line += "| Current MODFLOW 6 Version {} ".format(v)
-    line += "| Previous MODFLOW 6 Version {} ".format(v0)
+    line += "| Current Version {} ".format(v)
+    line += "| Previous Version {} ".format(v0)
     line += "| Percent difference |\n"
     line += "| :---------- | :----------: | :----------: | :----------: |\n"
     f.write(line)

@@ -47,6 +47,12 @@ jobs:
           make html
         working-directory: ${{env.working-directory}}
 
+      - name: Output run-time file if not triggering rtd build
+        if: github.repository_owner == 'MODFLOW-USGS' && github.event_name != 'push'
+        run: |
+          cat run-time-comparison.md
+        working-directory: ${{env.distribution-directory}}
+
       # Create an artifact of the processed files.
       - uses: actions/upload-artifact@v2.2.3
         with:
@@ -105,7 +111,7 @@ jobs:
           python make_release.py
         working-directory: ${{env.distribution-directory}}
 
-      - name: update MODFLOW 6 version
+      - name: update MODFLOW 6 version in Doxyfile
         run: |
           import sys
           import os

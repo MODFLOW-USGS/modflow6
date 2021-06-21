@@ -54,11 +54,14 @@ from version import __version__
 print("Copy the run-time comparison table")
 dstdir = "_mf6run"
 fpth = "run-time-comparison.md"
+src = os.path.join("..", "distribution", fpth)
 dst = os.path.join(dstdir, fpth)
+# clean up an existing _mf6run directory
 if os.path.isdir(dstdir):
     shutil.rmtree(dstdir)
-    os.makedirs(dstdir)
-src = os.path.join("..", "distribution", fpth)
+# make the _mf6run directory
+os.makedirs(dstdir)
+# copy the file
 shutil.copy(src, dst)
 
 # -- build the mf6io markdown files -----------------------------------------
