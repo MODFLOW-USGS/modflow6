@@ -76,7 +76,7 @@ def build_previous_version(pth):
 def build_current_version():
     if not _is_dryrun():
         build_mf6(appdir=working_dir)
-    return os.path.abspath(os.path.join("..", "bin", "mf6{}".format(app_ext)))
+    return os.path.abspath(os.path.join(working_dir, "mf6{}".format(app_ext)))
 
 
 def get_mf6_version(app, verbose=False):
