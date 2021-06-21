@@ -79,9 +79,8 @@ def build_current_version():
     return os.path.abspath(os.path.join(working_dir, "mf6{}".format(app_ext)))
 
 
-def get_mf6_version(app, verbose=False):
-    version = None
-    argv = [app, "-v"]
+def get_mf6_cmdargs(app, argv, text="mf6:", verbose=False):
+    return_text = None
     proc = subprocess.Popen(
         argv,
         stdout=subprocess.PIPE,
@@ -94,12 +93,24 @@ def get_mf6_version(app, verbose=False):
         c = c.rstrip("\r\n")
         if verbose:
             print("{}".format(c))
-        if "mf6:" in c:
-            version = c.split()[1]
-            if verbose:
-                print("version: {}".format(version))
+        if text in c:
+            idx0 = c.index(text) + len(text) + 1
+            return_text = c[idx0:].strip()
+    return return_text
+
+def get_mf6_version(app, verbose=False):
+    version = get_mf6_cmdargs(app, [app, "-v"], verbose=verbose)
+    if version is not None:
+        version = version.split()[0]
+        if verbose:
+            print("version: {}".format(version))
     return version
 
+def get_mf6_compiler(app, verbose=False):
+    compiler = get_mf6_cmdargs(app, [app, "-c"], verbose=verbose)
+    if verbose and compiler is not None:
+        print("compiler: {}".format(compiler))
+    return compiler
 
 def revert_files(app, example):
     replace_dict = {
@@ -192,7 +203,7 @@ def run_function(app, example):
     )
 
 
-def run_model(app, app0, example, fmd, silent=True):
+def run_model(app, app0, example, fmd, silent=True, pool=False):
     id0 = example.index(examples_dir) + len(examples_dir) + 1
     test = example[id0:]
     print("Running simulation: {}".format(test))
@@ -214,26 +225,31 @@ def run_model(app, app0, example, fmd, silent=True):
     # # run the previous application
     # success0, buff0 = run_function(app0, prev_dir)
 
+    # processing options
+    args = ((app, example), (app0, prev_dir),)
+
+    # Multi-processing using Pool
     # initialize the pool
     pool = Pool(processes=2)
 
     # run the models
-    args = ((app, example), (app0, prev_dir))
-    results = [pool.apply(run_function, args=arg) for arg in args]
+    results = [pool.apply_async(run_function, args=arg) for arg in args]
 
     # close the pool
     pool.close()
 
-    success = results[0][0]
+    # set variables for processing
+    success, buff = results[0].get()
+    success0, buff0 = results[1].get()
+
     if success:
-        elt = get_elapsed_time(results[0][1])
+        elt = get_elapsed_time(buff)
         line += " {} |".format(elt)
     else:
         line += " -- |"
 
-    success0 = results[1][0]
     if success0:
-        elt0 = get_elapsed_time(results[1][1])
+        elt0 = get_elapsed_time(buff0)
         line += " {} |".format(elt0)
     else:
         line += " -- |"
@@ -297,7 +313,8 @@ if __name__ == "__main__":
         + "indicated by '--'. The percent difference, where calculated, "
         + "is relative to the simulation run time for the previous "
         + "version. Percent differences for example problems with "
-        + "short run times (< 30 seconds) may not be significant.\n\n\n"
+        + "short run times (less than 30 seconds) may not be significant.\n\n"
+        + "{}.\n\n\n".format(get_mf6_compiler(current_app, verbose=True))
     )
     line += "| Example Problem "
     line += "| Current Version {} ".format(v)
@@ -309,6 +326,8 @@ if __name__ == "__main__":
     # run models
     for idx, example in enumerate(example_dirs):
         run_model(current_app, previous_app, example, f, silent=False)
+        if idx > 30:
+            break
 
     # close the markdown file
     f.close()
