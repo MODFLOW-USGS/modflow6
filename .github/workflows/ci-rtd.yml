@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
+      distribution-directory: distribution
 
     steps:
       - uses: actions/checkout@v2.3.4
@@ -26,6 +27,17 @@ jobs:
           pip install -r requirements.txt
         working-directory: ${{env.working-directory}}
 
+      - name: Setup symbolic links on Linux
+        run: |
+          sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
+          sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
+          sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
+
+      - name: Run-time comparison
+        run: |
+          python evaluate_run_times.py
+        working-directory: ${{env.distribution-directory}}
+
       - name: run sphinx
         run: |
           make html
@@ -37,6 +49,7 @@ jobs:
           name: rtd-files-for-${{ github.sha }}
           path: |
             ${{env.working-directory}}/mf6io.rst
+            ${{env.working-directory}}/_mf6run/
             ${{env.working-directory}}/_mf6io/
             ${{env.working-directory}}/_static/
 
@@ -62,6 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       working-directory: .build_rtd_docs
+      distribution-directory: distribution
+      common-directory: .github/common
       branch-name: ${GITHUB_REF##*/}
 
     steps:
@@ -75,6 +90,35 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install doxygen graphviz
+
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: update MODFLOW 6 version
+        run: |
+          python make_release.py
+        working-directory: ${{env.distribution-directory}}
+
+      - name: update MODFLOW 6 version
+        run: |
+          import sys
+          import os
+          sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
+          from version import __version__
+          print("Update the Doxyfile with the latest version number")
+          with open("Doxyfile", "r") as fp:
+              lines = fp.readlines()
+
+          tag = "PROJECT_NUMBER"
+          with open("Doxyfile", "w") as fp:
+              for line in lines:
+                  if tag in line:
+                      line = '{}         = "version {}"\n'.format(tag, __version__)
+                  fp.write(line)
+        shell: python
+        working-directory: ${{env.working-directory}}
 
       - name: run doxygen
         run: |

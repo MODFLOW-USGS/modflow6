@@ -12,6 +12,7 @@
 #
 import sys
 import os
+import shutil
 from subprocess import Popen, PIPE
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
@@ -49,6 +50,17 @@ if stderr:
 # -- import version from doc/version.py -------------------------------------
 from version import __version__
 
+# -- copy run-time comparison markdown --------------------------------------
+print("Copy the run-time comparison table")
+dstdir = "_mf6run"
+fpth = "run-time-comparison.md"
+dst = os.path.join(dstdir, fpth)
+if os.path.isdir(dstdir):
+    shutil.rmtree(dstdir)
+    os.makedirs(dstdir)
+src = os.path.join("..", "distribution", fpth)
+shutil.copy(src, dst)
+
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")
 pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
@@ -70,7 +82,7 @@ tag = "PROJECT_NUMBER"
 with open("Doxyfile", "w") as fp:
     for line in lines:
         if tag in line:
-            line = "{}         = version {}\n".format(tag, __version__)
+            line = '{}         = "version {}"\n'.format(tag, __version__)
         fp.write(line)
 
 # -- Project information -----------------------------------------------------
