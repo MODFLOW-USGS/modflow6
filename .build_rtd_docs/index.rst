@@ -12,4 +12,5 @@ Contents:
    :maxdepth: 2
 
    mf6io
+   _mf6run/run-time-comparison.md
 

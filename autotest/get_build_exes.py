@@ -122,11 +122,15 @@ def rebuild_mf6_release():
     return
 
 
-def build_mf6():
+def build_mf6(srcdir=None, appdir=None):
     pm = pymake.Pymake()
     pm.target = "mf6" + eext
-    pm.srcdir = os.path.join("..", "src")
-    pm.appdir = os.path.join("..", "bin")
+    if srcdir is None:
+        srcdir = os.path.join("..", "src")
+    pm.srcdir = srcdir
+    if appdir is None:
+        appdir = os.path.join("..", "bin")
+    pm.appdir = appdir
     pm.include_subdirs = True
     pm.inplace = True
     pm.makeclean = True
