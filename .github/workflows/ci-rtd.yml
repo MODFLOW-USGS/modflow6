@@ -58,6 +58,7 @@ jobs:
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
+            ${{env.working-directory}}/index.rst
             ${{env.working-directory}}/mf6io.rst
             ${{env.working-directory}}/_mf6run/
             ${{env.working-directory}}/_mf6io/
