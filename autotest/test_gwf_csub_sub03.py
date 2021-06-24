@@ -390,17 +390,15 @@ def eval_comp(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # MODFLOW-2005 total compaction results
-    fn = "{}.total_comp.hds".format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, "mf2005", fn)
+    # Comparision total compaction results
+    fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
     try:
-        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
-        tc0 = sobj.get_ts((2, 4, 4))
+        tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # calculate maximum absolute error
-    diff = tc["TCOMP3"] - tc0[:, 1]
+    diff = tc["TCOMP3"] - tc0["TCOMP3"]
     diffmax = np.abs(diff).max()
     msg = "maximum absolute total-compaction difference ({}) ".format(diffmax)
 
