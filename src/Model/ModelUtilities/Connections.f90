@@ -969,14 +969,12 @@ module ConnectionsModule
       allocate(hwvatemp(this%nja))
       allocate(angldegxtemp(this%nja))
       !
-      ! -- Compress user arrays into reduced arrays.
-      !    Allow for negative diagonal value, and convert to positive
+      ! -- Compress user arrays into reduced arrays
       iposr = 1
       do nu = 1, nodesuser
         nr = nodereduced(nu)
         do ipos = iainp(nu), iainp(nu + 1) - 1
           mu = jainp(ipos)
-          if (abs(mu) == nu) mu = nu 
           mr = nodereduced(mu)
           if (nr < 1 .or. mr < 1) cycle
           ihctemp(iposr) = ihcinp(ipos)
