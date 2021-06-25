@@ -399,11 +399,48 @@ module GwfDisuModule
       "('Cell ', i0, ' with thickness <= 0. Top, bot: ', 2(1pg24.15))"
     character(len=*), parameter :: fmtarea = &
       "('Cell ', i0, ' with area <= 0. Area: ', 1(1pg24.15))"
+    character(len=*), parameter :: fmtjan = &
+      "('Cell ', i0, ' must have its first connection be itself.  Found: ', i0)"
+    character(len=*), parameter :: fmtjam = &
+      "('Cell ', i0, ' has invalid connection in JA.  Found: ', i0)"
     character(len=*),parameter :: fmterrmsg =                                  &
       "(' Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
       &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
       &rules cell ', i0, ' must be below cell ', i0, '.')"    
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Check connectivity
+    do n = 1, this%nodesuser
+      !
+      ! -- Ensure first connection is to itself, and
+      !    that ja(ia(n)) is positive
+      ipos = this%iainp(n)
+      m = this%jainp(ipos)
+      if (m < 0) then
+        m = abs(m)
+        this%jainp(ipos) = m
+      end if
+      if (n /= m) then
+        write(errmsg, fmtjan) n, m
+        call store_error(errmsg)
+      end if
+      !
+      ! -- Check for valid node numbers in connected cells
+      do ipos = this%iainp(n) + 1, this%iainp(n + 1) - 1
+        m = this%jainp(ipos)
+        if (m < 0 .or. m > this%nodesuser) then
+          ! -- make sure first connection is to itself
+          write(errmsg, fmtjam) n, m
+          call store_error(errmsg)          
+        end if        
+      end do
+    end do
+    !
+    ! -- terminate if errors found
+    if(count_errors() > 0) then
+      if (this%inunit > 0) call store_error_unit(this%inunit)
+      call ustop()
+    endif
     !
     ! -- Ensure idomain values are valid
     do n = 1, this%nodesuser
