@@ -1,7 +1,17 @@
+!> @brief This module contains the storage package methods
+!!
+!! This module contains the methods used to add the effects of storage
+!! on the groundwater flow equation. The contribution of specific 
+!! storage and specific yield can be represented.
+!!
+!<
 module GwfStoModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, LENBUDTXT
+  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO,               &
+                             LENBUDTXT, LINELENGTH
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: ustop, store_error, count_errors
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQSaturation, sLinearSaturation
@@ -55,11 +65,10 @@ contains
   !<
   subroutine sto_cr(stoobj, name_model, inunit, iout)
     ! -- dummy variables
-    type(GwfStoType), pointer :: stoobj
+    type(GwfStoType), pointer :: stoobj         !< GwfStoType object
     character(len=*), intent(in) :: name_model  !< name of model
     integer(I4B), intent(in) :: inunit          !< package input file unit
     integer(I4B), intent(in) :: iout            !< model listing file unit
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (stoobj)
@@ -91,7 +100,7 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy variables
-    class(GwfStoType)                       :: this
+    class(GwfStoType)                       :: this            !< GwfStoType object
     class(DisBaseType), pointer, intent(in) :: dis             !< model discretization object
     integer(I4B), dimension(:), pointer, contiguous :: ibound  !< model ibound array
     ! -- local variables
@@ -99,7 +108,6 @@ contains
     character(len=*), parameter :: fmtsto = &
       "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014',                 &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the storage package.
     write (this%iout, fmtsto) this%inunit
@@ -134,17 +142,15 @@ contains
   !<
   subroutine sto_rp(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: store_error, ustop
     implicit none
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this  !< GwfStoType object
     ! -- local variables
-    integer(I4B)               :: ierr
-    logical                   :: isfound, readss, readsy, endOfBlock
-    character(len=16)        :: css(0:1)
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    integer(I4B) :: ierr
+    logical :: isfound, readss, readsy, endOfBlock
+    character(len=16) :: css(0:1)
+    character(len=LINELENGTH) :: line, keyword
     ! -- formats
     character(len=*), parameter :: fmtlsp = &
                                    "(1X,/1X,'REUSING ',A,' FROM LAST STRESS PERIOD')"
@@ -153,7 +159,6 @@ contains
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
-! ------------------------------------------------------------------------------
     !
     ! -- get stress period data
     if (this%ionper < kper) then
@@ -226,8 +231,7 @@ contains
   !<
   subroutine sto_ad(this)
     ! -- dummy variables
-    class(GwfStoType) :: this
-! ------------------------------------------------------------------------------
+    class(GwfStoType) :: this  !< GwfStoType object
     !
     ! -- Subroutine does not do anything at the moment
     !
@@ -239,17 +243,12 @@ contains
   !!
   !!  Fill the coefficient matrix and right-hand side with the STO package terms.
   !!
-  !! @param[in,out]  amat  A matrix
-  !! @param[in,out]  rhs   right-hand side
-  !!
   !<
   subroutine sto_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
     ! -- modules
-    use SimModule, only: ustop, store_error
-    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                           !< GwfStoType object
     integer(I4B), intent(in) :: kiter                   !< outer iteration numbed
     real(DP), intent(in), dimension(:) :: hold          !< previous heads
     real(DP), intent(in), dimension(:) :: hnew          !< current heads
@@ -277,12 +276,10 @@ contains
     real(DP) :: ssh1
     real(DP) :: aterm
     real(DP) :: rhsterm
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtsperror =                                &
       &"('DETECTED TIME STEP LENGTH OF ZERO.  GWF STORAGE PACKAGE CANNOT BE ', &
       &'USED UNLESS DELT IS NON-ZERO.')"
-! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
@@ -394,15 +391,12 @@ contains
   !!  Fill the coefficient matrix and right-hand side with STO package
   !!  with Newton-Raphson terms.
   !!
-  !! @param[in,out]  amat  A matrix
-  !! @param[in,out]  rhs   right-hand side
-  !!
   !<
   subroutine sto_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                            !< GwfStoType object
     integer(I4B), intent(in) :: kiter                    !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold           !< previous heads
     real(DP), intent(in), dimension(:) :: hnew           !< current heads
@@ -427,7 +421,6 @@ contains
     real(DP) :: derv
     real(DP) :: rterm
     real(DP) :: drterm
-! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
@@ -498,14 +491,12 @@ contains
   !!  Flow calculation for the STO package components. Components include
   !!  specific storage and specific yield storage.
   !!
-  !!  @param[in,out]  flowja  model budget object
-  !!
   !<
   subroutine sto_cq(this, flowja, hnew, hold)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                                    !< GwfStoType object
     real(DP), dimension(:), contiguous, intent(inout) :: flowja  !< connection flows
     real(DP), dimension(:), contiguous, intent(in) :: hnew       !< current head
     real(DP), dimension(:), contiguous, intent(in) :: hold       !< previous head
@@ -527,7 +518,6 @@ contains
     real(DP) :: ssh1
     real(DP) :: zold
     real(DP) :: znew
-! ------------------------------------------------------------------------------
     !
     ! -- initialize strg arrays
     do n = 1, this%dis%nodes
@@ -622,21 +612,18 @@ contains
   !!  Budget calculation for the STO package components. Components include
   !!  specific storage and specific yield storage.
   !!
-  !!  @param[in,out]  model_budget  model budget object
-  !!
   !<
   subroutine sto_bd(this, isuppress_output, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                          !< GwfStoType object
     integer(I4B), intent(in) :: isuppress_output       !< flag to suppress model output
     type(BudgetType), intent(inout) :: model_budget    !< model budget object
     ! -- local variables
     real(DP) :: rin
     real(DP) :: rout
-! ------------------------------------------------------------------------------
     !
     ! -- Add confined storage rates to model budget
     call rate_accumulator(this%strgss, rin, rout)
@@ -661,7 +648,7 @@ contains
   !<
   subroutine sto_save_model_flows(this, icbcfl, icbcun)
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this           !< GwfStoType object
     integer(I4B), intent(in) :: icbcfl  !< flag to output budget data
     integer(I4B), intent(in) :: icbcun  !< cell-by-cell file unit number
     ! -- local variables
@@ -669,7 +656,6 @@ contains
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact
-! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -712,8 +698,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(GwfStoType) :: this
-! ------------------------------------------------------------------------------
+    class(GwfStoType) :: this  !< GwfStoType object
     !
     ! -- Deallocate arrays if package is active
     if (this%inunit > 0) then
@@ -748,9 +733,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy variables
-    class(GwfStoType) :: this
-    ! -- local variables
-! ------------------------------------------------------------------------------
+    class(GwfStoType) :: this  !< GwfStoType object
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -781,15 +764,13 @@ contains
   subroutine allocate_arrays(this, nodes)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: DZERO
     ! -- dummy variables
-    class(GwfStoType), target :: this
+    class(GwfStoType), target :: this !< GwfStoType object
     integer(I4B), intent(in) :: nodes !< active model nodes
     ! -- local variables
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
-    ! -- Allocate
+    ! -- Allocate arrays
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
     call mem_allocate(this%ss, nodes, 'SS', this%memoryPath)
@@ -797,7 +778,7 @@ contains
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
     !
-    ! -- Initialize
+    ! -- Initialize arrays
     this%iss = 0
     do n = 1, nodes
       this%iconvert(n) = 1
@@ -818,12 +799,10 @@ contains
   !<
   subroutine read_options(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this  !< GwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -841,7 +820,6 @@ contains
     character(len=*), parameter :: fmtconfss = &
       "(4X,'SS_CONFINED_ONLY OPTION:',/,                                       &
       &1X,'Specific storage changes only occur under confined conditions')"
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
@@ -904,12 +882,10 @@ contains
   !<
   subroutine read_data(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy variables
-    class(GwfStotype) :: this
+    class(GwfStotype) :: this  !< GwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
     character(len=LINELENGTH) :: cellstr
     integer(I4B) :: istart, istop, lloc, ierr
@@ -926,7 +902,6 @@ contains
     data aname(2)/'        SPECIFIC STORAGE'/
     data aname(3)/'          SPECIFIC YIELD'/
     data aname(4)/'     STORAGE COEFFICIENT'/
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     isfound = .false.

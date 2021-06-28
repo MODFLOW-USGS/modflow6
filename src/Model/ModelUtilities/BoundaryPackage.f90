@@ -1,3 +1,10 @@
+!> @brief This module contains the base model package 
+!!
+!! This module contains the base model boundary package class that is 
+!! extended by all model boundary packages. The base model boundary 
+!! package extends the NumericalPackageType.
+!!
+!<
 module BndModule
 
   use KindModule,                   only: DP, LGP, I4B
@@ -33,62 +40,62 @@ module BndModule
 
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
-    character(len=LENLISTLABEL), pointer :: listlabel  => null()                 !title of table written for RP
-    character(len=LENPACKAGENAME) :: text = ''
+    character(len=LENLISTLABEL), pointer :: listlabel  => null()                 !< title of table written for RP
+    character(len=LENPACKAGENAME) :: text = ''                                   !< text string for package flow term 
     character(len=LENAUXNAME), dimension(:), pointer,                           &
-                                 contiguous :: auxname => null()                 !vector of auxname
+                                 contiguous :: auxname => null()                 !< vector of auxname
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
-                                 contiguous :: boundname => null()               !vector of boundnames
+                                 contiguous :: boundname => null()               !< vector of boundnames
     !
     ! -- scalars
-    integer(I4B), pointer :: isadvpak    => null()                               !flag indicating package is advanced (1) or not (0)
-    integer(I4B), pointer :: ibcnum      => null()                               !consecutive package number for this boundary condition
-    integer(I4B), pointer :: maxbound    => null()                               !max number of boundaries
-    integer(I4B), pointer :: nbound      => null()                               !number of boundaries for current stress period
-    integer(I4B), pointer :: ncolbnd     => null()                               !number of columns of the bound array
-    integer(I4B), pointer :: iscloc      => null()                               !bound column to scale with SFAC
-    integer(I4B), pointer :: naux        => null()                               !number of auxiliary variables
-    integer(I4B), pointer :: inamedbound => null()                               !flag to read boundnames
-    integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
-    integer(I4B), pointer :: npakeq      => null()                               !number of equations in this package (normally 0 unless package adds rows to matrix)
-    integer(I4B), pointer :: ioffset     => null()                               !offset of this package in the model
+    integer(I4B), pointer :: isadvpak    => null()                               !< flag indicating package is advanced (1) or not (0)
+    integer(I4B), pointer :: ibcnum      => null()                               !< consecutive package number for this boundary condition
+    integer(I4B), pointer :: maxbound    => null()                               !< max number of boundaries
+    integer(I4B), pointer :: nbound      => null()                               !< number of boundaries for current stress period
+    integer(I4B), pointer :: ncolbnd     => null()                               !< number of columns of the bound array
+    integer(I4B), pointer :: iscloc      => null()                               !< bound column to scale with SFAC
+    integer(I4B), pointer :: naux        => null()                               !< number of auxiliary variables
+    integer(I4B), pointer :: inamedbound => null()                               !< flag to read boundnames
+    integer(I4B), pointer :: iauxmultcol => null()                               !< column to use as multiplier for column iscloc
+    integer(I4B), pointer :: npakeq      => null()                               !< number of equations in this package (normally 0 unless package adds rows to matrix)
+    integer(I4B), pointer :: ioffset     => null()                               !< offset of this package in the model
     ! -- arrays
-    integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !vector of reduced node numbers
-    integer(I4B), dimension(:), pointer, contiguous :: noupdateauxvar => null()  !override auxvars from being updated
-    real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !array of package specific boundary numbers
-    real(DP), dimension(:), pointer, contiguous :: hcof => null()                !diagonal contribution
-    real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !right-hand side contribution
-    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
-    real(DP), dimension(:), pointer, contiguous :: simvals => null()             !simulated values
-    real(DP), dimension(:), pointer, contiguous  :: simtomvr => null()           !simulated to mover values
+    integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !< vector of reduced node numbers
+    integer(I4B), dimension(:), pointer, contiguous :: noupdateauxvar => null()  !< override auxvars from being updated
+    real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !< array of package specific boundary numbers
+    real(DP), dimension(:), pointer, contiguous :: hcof => null()                !< diagonal contribution
+    real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !< right-hand side contribution
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !< auxiliary variable array
+    real(DP), dimension(:), pointer, contiguous :: simvals => null()             !< simulated values
+    real(DP), dimension(:), pointer, contiguous  :: simtomvr => null()           !< simulated to mover values
     !
     ! -- water mover flag and object
-    integer(I4B), pointer :: imover => null()
-    type(PackageMoverType), pointer :: pakmvrobj => null()
+    integer(I4B), pointer :: imover => null()                                    !< flag indicating of the mover is active in the package
+    type(PackageMoverType), pointer :: pakmvrobj => null()                       !< mover object for package
     !
     ! -- timeseries
-    type(TimeSeriesManagerType), pointer :: TsManager => null()                  ! time series manager
-    type(TimeArraySeriesManagerType), pointer :: TasManager => null()            ! time array series manager
-    integer(I4B) :: indxconvertflux = 0                                          ! indxconvertflux is column of bound to multiply by area to convert flux to rate
+    type(TimeSeriesManagerType), pointer :: TsManager => null()                  !< time series manager
+    type(TimeArraySeriesManagerType), pointer :: TasManager => null()            !< time array series manager
+    integer(I4B) :: indxconvertflux = 0                                          !< indxconvertflux is column of bound to multiply by area to convert flux to rate
     logical(LGP) :: AllowTimeArraySeries = .false.
     !
     ! -- pointers for observations
-    integer(I4B), pointer :: inobspkg => null()                                  ! unit number for obs package
-    type(ObsType), pointer :: obs => null()                                      ! observation package
+    integer(I4B), pointer :: inobspkg => null()                                  !< unit number for obs package
+    type(ObsType), pointer :: obs => null()                                      !< observation package
     !
     ! -- pointers to model/solution variables
-    integer(I4B), pointer :: neq                                                 !number of equations for model
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !ibound array
-    real(DP), dimension(:), pointer, contiguous :: xnew => null()                !dependent variable (head) for this time step
-    real(DP), dimension(:), pointer, contiguous :: xold => null()                !dependent variable for last time step
-    real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
-    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
+    integer(I4B), pointer :: neq                                                 !< number of equations for model
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< model ibound array
+    real(DP), dimension(:), pointer, contiguous :: xnew => null()                !< model dependent variable (head) for this time step
+    real(DP), dimension(:), pointer, contiguous :: xold => null()                !< model dependent variable for last time step
+    real(DP), dimension(:), pointer, contiguous :: flowja => null()              !< model intercell flows
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !< pointer to icelltype array in NPF
     character(len=LENMEMPATH) :: ictMemPath = ''                                 !< memory path to the icelltype data (for GWF this is in NPF)
     !
     ! -- table objects
-    type(TableType), pointer :: inputtab => null()
-    type(TableType), pointer :: outputtab => null()
-    type(TableType), pointer :: errortab => null()
+    type(TableType), pointer :: inputtab => null()                               !< input table object 
+    type(TableType), pointer :: outputtab => null()                              !< output table object for package flows writtent to the model listing file
+    type(TableType), pointer :: errortab => null()                               !< package error table 
 
     
   contains
@@ -139,1737 +146,1796 @@ module BndModule
 
   contains
 
-  subroutine bnd_df(this, neq, dis)
-! ******************************************************************************
-! bnd_df -- Define package options and dimensions
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- module
-    use TimeSeriesManagerModule, only: tsmanager_cr
-    use TimeArraySeriesManagerModule, only: tasmanager_cr
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    integer(I4B), intent(inout) :: neq
-    class(DisBaseType), pointer :: dis
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    ! -- set pointer to dis object for the model
-    this%dis => dis
-    !
-    ! -- Create time series managers
-    call tsmanager_cr(this%TsManager, this%iout)
-    call tasmanager_cr(this%TasManager, dis, this%iout)
-    !
-    ! -- create obs package
-    call obs_cr(this%obs, this%inobspkg)
-    !
-    ! -- Write information to model list file
-    write(this%iout,1) this%filtyp, trim(adjustl(this%text)), this%inunit
-1   format(1X,/1X,a,' -- ',a,' PACKAGE, VERSION 8, 2/22/2014',                 &
-    ' INPUT READ FROM UNIT ',I0)
-    !
-    ! -- Initialize block parser
-    call this%parser%Initialize(this%inunit, this%iout)
-    !
-    ! -- set and read options
-    call this%read_options()
-    !
-    ! -- Now that time series will have been read, need to call the df
-    !    routine to define the manager
-    call this%tsmanager%tsmanager_df()
-    call this%tasmanager%tasmanager_df()
-    !
-    ! -- read the package dimensions block
-    call this%read_dimensions()
-    !
-    ! -- update package moffset for packages that add rows
-    if (this%npakeq > 0) then
-      this%ioffset = neq - this%dis%nodes
-    end if
-    !
-    ! -- update neq
-    neq = neq + this%npakeq
-    !
-    ! -- Store information needed for observations
-    if (this%bnd_obs_supported()) then
-      call this%obs%obs_df(this%iout, this%packName, this%filtyp, this%dis)
-      call this%bnd_df_obs()
-    endif
-    !
-    ! -- return
-    return
-  end subroutine bnd_df
-
-  subroutine bnd_ac(this, moffset, sparse)
-! ******************************************************************************
-! bnd_ac -- Add package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use SparseModule, only: sparsematrix
-    use SimModule, only: store_error, ustop
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    integer(I4B), intent(in) :: moffset
-    type(sparsematrix), intent(inout) :: sparse
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    !
-    ! -- return
-    return
-  end subroutine bnd_ac
-
-  subroutine bnd_mc(this, moffset, iasln, jasln)
-! ******************************************************************************
-! bnd_mc -- Map package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    !
-    ! -- return
-    return
-  end subroutine bnd_mc
-
-  subroutine bnd_ar(this)
-! ******************************************************************************
-! bnd_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    call this%obs%obs_ar()
-    !
-    ! -- Allocate arrays in package superclass
-    call this%allocate_arrays()
-    !
-    ! -- read optional initial package parameters
-    call this%read_initial_attr()
-    !
-    ! -- setup pakmvrobj for standard stress packages
-    if (this%imover == 1) then
-      allocate(this%pakmvrobj)
-      call this%pakmvrobj%ar(this%maxbound, 0, this%memoryPath)
-    endif
-    !
-    ! -- return
-    return
-  end subroutine bnd_ar
-  
-  subroutine bnd_rp(this)
-! ******************************************************************************
-! bnd_rp -- Read and Prepare
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use TdisModule, only: kper, nper
-    use SimModule, only: ustop, store_error, store_error_unit
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    integer(I4B) :: ierr, nlist
-    logical(LGP) :: isfound
-    character(len=LINELENGTH) :: line
-    ! -- formats
-    character(len=*),parameter :: fmtblkerr = &
-      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
-      "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-    character(len=*), parameter :: fmtnbd = &
-      "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
-       &') IS GREATER THAN MAXIMUM(',I6,')')"
-! ------------------------------------------------------------------------------
-    !
-    ! -- Set ionper to the stress period number for which a new block of data
-    !    will be read.
-    if(this%inunit == 0) return
-    !
-    ! -- get stress period data
-    if (this%ionper < kper) then
+    !> @ brief Define boundary package options and dimensions
+    !!
+    !!  Define base boundary package options and dimensions for 
+    !!  a model boundary package.
+    !!
+    !<
+    subroutine bnd_df(this, neq, dis)
+      ! -- modules
+      use TimeSeriesManagerModule, only: tsmanager_cr
+      use TimeArraySeriesManagerModule, only: tasmanager_cr
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      integer(I4B), intent(inout) :: neq    !< number of equations
+      class(DisBaseType), pointer :: dis    !< discretization object
       !
-      ! -- get period block
-      call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
-      if (isfound) then
-        !
-        ! -- read ionper and check for increasing period numbers
-        call this%read_check_ionper()
-      else
-        !
-        ! -- PERIOD block not found
-        if (ierr < 0) then
-          ! -- End of file found; data applies for remainder of simulation.
-          this%ionper = nper + 1
-        else
-          ! -- Found invalid block
-          call this%parser%GetCurrentLine(line)
-          write(errmsg, fmtblkerr) adjustl(trim(line))
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        end if
-      endif
-    end if
-    !
-    ! -- read data if ionper == kper
-    if(this%ionper == kper) then
-      nlist = -1
-      ! -- Remove all time-series and time-array-series links associated with
-      !    this package.
-      call this%TsManager%Reset(this%packName)
-      call this%TasManager%Reset(this%packName)
+      ! -- set pointer to dis object for the model
+      this%dis => dis
       !
-      ! -- Read data as a list
-      call this%dis%read_list(this%parser%iuactive, this%iout,                 &
-                               this%iprpak, nlist, this%inamedbound,           &
-                               this%iauxmultcol, this%nodelist,                &
-                               this%bound, this%auxvar, this%auxname,          &
-                               this%boundname, this%listlabel,                 &
-                               this%packName, this%tsManager, this%iscloc)
-      this%nbound = nlist
+      ! -- Create time series managers
+      call tsmanager_cr(this%TsManager, this%iout)
+      call tasmanager_cr(this%TasManager, dis, this%iout)
       !
-      ! Define the tsLink%Text value(s) appropriately.
-      ! E.g. for WEL package, entry 1, assign tsLink%Text = 'Q'
-      ! For RIV package, entry 1 text = 'STAGE', entry 2 text = 'COND',
-      !                  entry 3 text = 'RBOT'; etc.
-      call this%bnd_rp_ts()
+      ! -- create obs package
+      call obs_cr(this%obs, this%inobspkg)
       !
-      ! -- Terminate the block
-      call this%parser%terminateblock()
+      ! -- Write information to model list file
+      write(this%iout,1) this%filtyp, trim(adjustl(this%text)), this%inunit
+   1  format(1X,/1X,a,' -- ',a,' PACKAGE, VERSION 8, 2/22/2014',                 &
+      ' INPUT READ FROM UNIT ',I0)
       !
-    else
-      write(this%iout,fmtlsp) trim(this%filtyp)
-    endif
-    !
-    ! -- return
-    return
-  end subroutine bnd_rp
-
-  subroutine bnd_ad(this)
-    use ConstantsModule, only: DZERO
-    class(BndType) :: this
-    !this package has no AD routine
-    real(DP) :: begintime, endtime
-    !
-    ! -- Initialize time variables
-    begintime = totimc
-    endtime = begintime + delt
-    !
-    ! -- Advance the time series managers
-    call this%TsManager%ad()
-    call this%TasManager%ad()
-    !
-    ! -- For each observation, push simulated value and corresponding
-    !    simulation time from "current" to "preceding" and reset
-    !    "current" value.
-    call this%obs%obs_ad()
-    !
-    return
-  end subroutine bnd_ad
-
-  subroutine bnd_ck(this)
-! ******************************************************************************
-! bnd_ck -- Check boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- check stress period data
-    ! -- each package must override generic functionality
-    !
-    ! -- return
-    return
-  end subroutine bnd_ck
-
-  subroutine bnd_cf(this, reset_mover)
-! ******************************************************************************
-! bnd_cf -- This is the package specific routine where a package adds its
-!           contributions to this%rhs and this%hcof
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    class(BndType) :: this
-    logical(LGP), intent(in), optional :: reset_mover
-! ------------------------------------------------------------------------------
-    ! -- bnd has no cf routine
-    !
-    ! -- return
-    return
-  end subroutine bnd_cf
-
-  subroutine bnd_fc(this, rhs, ia, idxglo, amatsln)
-! ******************************************************************************
-! bnd_fc -- Copy rhs and hcof into solution rhs and amat
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType) :: this
-    real(DP), dimension(:), intent(inout) :: rhs
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
-    ! -- local
-    integer(I4B) :: i, n, ipos
-! ------------------------------------------------------------------------------
-    !
-    ! -- Copy package rhs and hcof into solution rhs and amat
-    do i = 1, this%nbound
-      n = this%nodelist(i)
-      rhs(n) = rhs(n) + this%rhs(i)
-      ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
-    enddo
-    !
-    ! -- return
-    return
-  end subroutine bnd_fc
-
-  subroutine bnd_fn(this, rhs, ia, idxglo, amatsln)
-! ******************************************************************************
-! bnd_fn -- add additional terms to convert conductance formulation
-!           to Newton-Raphson formulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType) :: this
-    real(DP), dimension(:), intent(inout) :: rhs
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
-    ! -- local
-! ------------------------------------------------------------------------------
-
-    !
-    ! -- No addition terms for newton-raphson with constant conductance
-    !    boundary conditions
-    !
-    ! -- return
-    return
-  end subroutine bnd_fn
-
-  subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
-! ******************************************************************************
-! bnd_nur -- under-relaxation
-! Subroutine: (1) Under-relaxation of Groundwater Flow Model Package Heads
-!                 for current outer iteration using the cell bottoms at the
-!                 bottom of the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType), intent(inout) :: this
-    integer(I4B), intent(in) :: neqpak
-    real(DP), dimension(neqpak), intent(inout) :: x
-    real(DP), dimension(neqpak), intent(in) :: xtemp
-    real(DP), dimension(neqpak), intent(inout) :: dx
-    integer(I4B), intent(inout) :: inewtonur
-    real(DP), intent(inout) :: dxmax
-    integer(I4B), intent(inout) :: locmax
-    ! -- local
-! ------------------------------------------------------------------------------
-
-    !
-    ! -- Newton-Raphson under-relaxation
-    !
-    ! -- return
-    return
-  end subroutine bnd_nur
-
-  subroutine bnd_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
-! ******************************************************************************
-! bnd_cc -- additional convergence check for advanced packages
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType), intent(inout) :: this
-    integer(I4B), intent(in) :: innertot
-    integer(I4B), intent(in) :: kiter
-    integer(I4B),intent(in) :: iend
-    integer(I4B), intent(in) :: icnvgmod
-    character(len=LENPAKLOC), intent(inout) :: cpak
-    integer(I4B), intent(inout) :: ipak
-    real(DP), intent(inout) :: dpak
-    ! -- local
-! ------------------------------------------------------------------------------
-
-    !
-    ! -- No addition convergence check for boundary conditions
-    !
-    ! -- return
-    return
-  end subroutine bnd_cc
-
-  subroutine bnd_cq(this, x, flowja, iadv)
-! ******************************************************************************
-! bnd_cq -- calculate flows for advanced packages
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType), intent(inout) :: this
-    real(DP), dimension(:), intent(in) :: x
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
-    integer(I4B), optional, intent(in) :: iadv
-    ! -- local
-    integer(I4B) :: imover
-! ------------------------------------------------------------------------------
-    !
-    ! -- check for iadv optional variable to indicate this is an advanced
-    !    package and that mover calculations should not be done here
-    if (present(iadv)) then
-      if (iadv == 1) then
-        imover = 0
-      else
-        imover = 1
+      ! -- Initialize block parser
+      call this%parser%Initialize(this%inunit, this%iout)
+      !
+      ! -- set and read options
+      call this%read_options()
+      !
+      ! -- Now that time series will have been read, need to call the df
+      !    routine to define the manager
+      call this%tsmanager%tsmanager_df()
+      call this%tasmanager%tasmanager_df()
+      !
+      ! -- read the package dimensions block
+      call this%read_dimensions()
+      !
+      ! -- update package moffset for packages that add rows
+      if (this%npakeq > 0) then
+        this%ioffset = neq - this%dis%nodes
       end if
-    else
-      imover = this%imover
-    end if
-    !
-    ! -- Calculate package flows.  In the first call, simval is calculated
-    !    from hcof, rhs, and head.  The second call may reduce the value in
-    !    simval by what is sent to the mover.  The mover rate is stored in
-    !    simtomvr.  imover is set to zero here for advanced packages, which
-    !    handle and store mover quantities separately.
-    call this%bnd_cq_simrate(x, flowja, imover)
-    if (imover == 1) then
-      call this%bnd_cq_simtomvr(flowja)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine bnd_cq
-
-  subroutine bnd_cq_simrate(this, hnew, flowja, imover)
-! ******************************************************************************
-! bnd_cq_simrate -- Calculate flow between package and aquifer and store in
-! simval
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: DZERO
-    ! -- dummy
-    class(BndType) :: this
-    real(DP), dimension(:), intent(in) :: hnew
-    real(DP), dimension(:), intent(inout) :: flowja
-    integer(I4B), intent(in) :: imover
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: node
-    integer(I4B) :: idiag
-    real(DP) :: rrate
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- If no boundaries, skip flow calculations.
-    if (this%nbound > 0) then
       !
-      ! -- Loop through each boundary calculating flow.
-      do i = 1, this%nbound
-        node = this%nodelist(i)
+      ! -- update neq
+      neq = neq + this%npakeq
+      !
+      ! -- Store information needed for observations
+      if (this%bnd_obs_supported()) then
+        call this%obs%obs_df(this%iout, this%packName, this%filtyp, this%dis)
+        call this%bnd_df_obs()
+      endif
+      !
+      ! -- return
+      return
+    end subroutine bnd_df
+
+    !> @ brief Add boundary package connection to matrix
+    !!
+    !!  Add boundary package connection to the matrix for packages that add 
+    !!  connections to the coefficient matrix. An example would be the GWF model 
+    !!  MAW package. Base implementation that must be extended.
+    !!
+    !<
+    subroutine bnd_ac(this, moffset, sparse)
+      ! -- modules
+      use SparseModule, only: sparsematrix
+      use SimModule, only: store_error, ustop
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this         !< BndType object
+      integer(I4B), intent(in) :: moffset          !< solution matrix model offset 
+      type(sparsematrix), intent(inout) :: sparse  !< sparse object
+      !
+      ! -- return
+      return
+    end subroutine bnd_ac
+
+    !> @ brief Map boundary package connection to matrix
+    !!
+    !!  Map boundary package connection to the matrix for packages that add 
+    !!  connections to the coefficient matrix. An example would be the GWF model 
+    !!  MAW package. Base implementation that must be extended.
+    !!
+    !<
+    subroutine bnd_mc(this, moffset, iasln, jasln)
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this             !< BndType object
+      integer(I4B), intent(in) :: moffset              !< solution matrix model offset
+      integer(I4B), dimension(:), intent(in) :: iasln  !< solution CRS row pointers
+      integer(I4B), dimension(:), intent(in) :: jasln  !< solution CRS column pointers
+      !
+      ! -- return
+      return
+    end subroutine bnd_mc
+
+    !> @ brief Allocate and read method for boundary package
+    !!
+    !!  Generic method to allocate and read static data for model boundary 
+    !!  packages. A boundary package only needs to overide this method if
+    !!  input data varies from the standard boundary package.
+    !!
+    !<
+    subroutine bnd_ar(this)
+      ! -- modules
+      use MemoryManagerModule, only: mem_setptr
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      !
+      ! -- allocate and read observations
+      call this%obs%obs_ar()
+      !
+      ! -- Allocate arrays in package superclass
+      call this%allocate_arrays()
+      !
+      ! -- read optional initial package parameters
+      call this%read_initial_attr()
+      !
+      ! -- setup pakmvrobj for standard stress packages
+      if (this%imover == 1) then
+        allocate(this%pakmvrobj)
+        call this%pakmvrobj%ar(this%maxbound, 0, this%memoryPath)
+      endif
+      !
+      ! -- return
+      return
+    end subroutine bnd_ar
+    
+    !> @ brief Allocate and read method for package
+    !!
+    !!  Generic method to read and prepare period data for model boundary 
+    !!  packages. A boundary package only needs to overide this method if
+    !!  period data varies from the standard boundary package.
+    !!
+    !<
+    subroutine bnd_rp(this)
+      ! -- modules
+      use TdisModule, only: kper, nper
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      ! -- local variables
+      integer(I4B) :: ierr
+      integer(I4B) :: nlist
+      logical(LGP) :: isfound
+      character(len=LINELENGTH) :: line
+      ! -- formats
+      character(len=*),parameter :: fmtblkerr = &
+        "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+      character(len=*),parameter :: fmtlsp = &
+        "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
+      character(len=*), parameter :: fmtnbd = &
+        "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
+        &') IS GREATER THAN MAXIMUM(',I6,')')"
+      !
+      ! -- Set ionper to the stress period number for which a new block of data
+      !    will be read.
+      if(this%inunit == 0) return
+      !
+      ! -- get stress period data
+      if (this%ionper < kper) then
         !
-        ! -- If cell is no-flow or constant-head, then ignore it.
-        rrate = DZERO
-        if (node > 0) then
-          idiag = this%dis%con%ia(node)
-          if(this%ibound(node) > 0) then
-            !
-            ! -- Calculate the flow rate into the cell.
-            rrate = this%hcof(i) * hnew(node) - this%rhs(i)
+        ! -- get period block
+        call this%parser%GetBlock('PERIOD', isfound, ierr, &
+                                  supportOpenClose=.true.)
+        if (isfound) then
+          !
+          ! -- read ionper and check for increasing period numbers
+          call this%read_check_ionper()
+        else
+          !
+          ! -- PERIOD block not found
+          if (ierr < 0) then
+            ! -- End of file found; data applies for remainder of simulation.
+            this%ionper = nper + 1
+          else
+            ! -- Found invalid block
+            call this%parser%GetCurrentLine(line)
+            write(errmsg, fmtblkerr) adjustl(trim(line))
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
           end if
-          flowja(idiag) = flowja(idiag) + rrate
-        end if
-        !
-        ! -- Save simulated value to simvals array.
-        this%simvals(i) = rrate
-        !
-      end do
-    endif
-    !
-    ! -- return
-    return
-  end subroutine bnd_cq_simrate
-
-  subroutine bnd_cq_simtomvr(this, flowja)
-! ******************************************************************************
-! bnd_cq_simtomvr -- Calculate the flow between package and boundary that
-! is sent to the mover.  Store this value in simtomvr
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: DZERO
-    ! -- dummy
-    class(BndType) :: this
-    real(DP), dimension(:), intent(inout) :: flowja
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: node
-    real(DP) :: q
-    real(DP) :: fact
-    real(DP) :: rrate
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- If no boundaries, skip flow calculations.
-    if (this%nbound > 0) then
+        endif
+      end if
       !
-      ! -- Loop through each boundary calculating flow.
-      do i = 1, this%nbound
-        node = this%nodelist(i)
+      ! -- read data if ionper == kper
+      if(this%ionper == kper) then
+        nlist = -1
+        ! -- Remove all time-series and time-array-series links associated with
+        !    this package.
+        call this%TsManager%Reset(this%packName)
+        call this%TasManager%Reset(this%packName)
         !
-        ! -- If cell is no-flow or constant-head, then ignore it.
-        rrate = DZERO
-        if (node > 0) then
-          if(this%ibound(node) > 0) then
-            !
-            ! -- Calculate the flow rate into the cell.
-            q = this%simvals(i)
-            
-            
-            if (q < DZERO) then
-              rrate = this%pakmvrobj%get_qtomvr(i)
+        ! -- Read data as a list
+        call this%dis%read_list(this%parser%iuactive, this%iout,                 &
+                                this%iprpak, nlist, this%inamedbound,           &
+                                this%iauxmultcol, this%nodelist,                &
+                                this%bound, this%auxvar, this%auxname,          &
+                                this%boundname, this%listlabel,                 &
+                                this%packName, this%tsManager, this%iscloc)
+        this%nbound = nlist
+        !
+        ! Define the tsLink%Text value(s) appropriately.
+        ! E.g. for WEL package, entry 1, assign tsLink%Text = 'Q'
+        ! For RIV package, entry 1 text = 'STAGE', entry 2 text = 'COND',
+        !                  entry 3 text = 'RBOT'; etc.
+        call this%bnd_rp_ts()
+        !
+        ! -- Terminate the block
+        call this%parser%terminateblock()
+        !
+      else
+        write(this%iout,fmtlsp) trim(this%filtyp)
+      endif
+      !
+      ! -- return
+      return
+    end subroutine bnd_rp
+
+    !> @ brief Advance the boundary package
+    !!
+    !!  Advance data in the boundary package. The method sets advances
+    !!  time series, time array series, and observation data. A boundary 
+    !!  package only needs to overide this method if additional data
+    !!  needs to be advanced.
+    !!
+    !<
+    subroutine bnd_ad(this)
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      ! -- local variables
+      real(DP) :: begintime, endtime
+      !
+      ! -- Initialize time variables
+      begintime = totimc
+      endtime = begintime + delt
+      !
+      ! -- Advance the time series managers
+      call this%TsManager%ad()
+      call this%TasManager%ad()
+      !
+      ! -- For each observation, push simulated value and corresponding
+      !    simulation time from "current" to "preceding" and reset
+      !    "current" value.
+      call this%obs%obs_ad()
+      !
+      return
+    end subroutine bnd_ad
+
+    !> @ brief Check boundary package period data
+    !!
+    !!  Check the boundary package period data. Base implementation that 
+    !!  must be extended by each model boundary package.
+    !!
+    !<
+    subroutine bnd_ck(this)
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      !
+      ! -- check stress period data
+      ! -- each package must override generic functionality
+      !
+      ! -- return
+      return
+    end subroutine bnd_ck
+
+    !> @ brief Formulate the package hcof and rhs terms.
+    !!
+    !!  Formulate the hcof and rhs terms for the package that will be
+    !!  added to the coefficient matrix and right-hand side vector.
+    !!  Base implementation that must be extended by each model 
+    !!  boundary package.
+    !!
+    !<
+    subroutine bnd_cf(this, reset_mover)
+      ! -- modules
+      class(BndType) :: this                             !< BndType object
+      logical(LGP), intent(in), optional :: reset_mover  !< boolean for resetting mover 
+      !
+      ! -- bnd has no cf routine
+      !
+      ! -- return
+      return
+    end subroutine bnd_cf
+
+    !> @ brief Copy hcof and rhs terms into solution.
+    !!
+    !!  Add the hcof and rhs terms for the boundary package to the 
+    !!  coefficient matrix and right-hand side vector. A boundary 
+    !!  package only needs to overide this method if it is different for
+    !!  a specific boundary package.
+    !!
+    !<
+    subroutine bnd_fc(this, rhs, ia, idxglo, amatsln)
+      ! -- dummy variables
+      class(BndType) :: this                            !< BndType object
+      real(DP), dimension(:), intent(inout) :: rhs      !< right-hand side vector for model
+      integer(I4B), dimension(:), intent(in) :: ia      !< solution CRS row pointers
+      integer(I4B), dimension(:), intent(in) :: idxglo  !< mapping vector for model (local) to solution (global)
+      real(DP), dimension(:), intent(inout) :: amatsln  !< solution coefficient matrix
+      ! -- local variables
+      integer(I4B) :: i
+      integer(I4B) :: n
+      integer(I4B) :: ipos
+      !
+      ! -- Copy package rhs and hcof into solution rhs and amat
+      do i = 1, this%nbound
+        n = this%nodelist(i)
+        rhs(n) = rhs(n) + this%rhs(i)
+        ipos = ia(n)
+        amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      end do
+      !
+      ! -- return
+      return
+    end subroutine bnd_fc
+
+    !> @ brief Add Newton-Raphson terms for package into solution.
+    !!
+    !!  Calculate and add the Newton-Raphson terms for the boundary package 
+    !!  to the coefficient matrix and right-hand side vector. A boundary 
+    !!  package only needs to overide this method if a specific boundary 
+    !!  package needs to add Newton-Raphson terms.
+    !!
+    !<
+    subroutine bnd_fn(this, rhs, ia, idxglo, amatsln)
+      ! -- dummy variables
+      class(BndType) :: this                             !< BndType object
+      real(DP), dimension(:), intent(inout) :: rhs       !< right-hand side vector for model
+      integer(I4B), dimension(:), intent(in) :: ia       !< solution CRS row pointers
+      integer(I4B), dimension(:), intent(in) :: idxglo   !< mapping vector for model (local) to solution (global)
+      real(DP), dimension(:), intent(inout) :: amatsln   !< solution coefficient matrix
+      !
+      ! -- No addition terms for Newton-Raphson with constant conductance
+      !    boundary conditions
+      !
+      ! -- return
+      return
+    end subroutine bnd_fn
+
+    !> @ brief Apply Newton-Raphson under-relaxation for package.
+    !!
+    !!  Apply Newton-Raphson under-relaxation for a boundary package. A boundary 
+    !!  package only needs to overide this method if a specific boundary 
+    !!  package needs to apply Newton-Raphson under-relaxation. An example is
+    !!  the MAW package which adds rows to the system of equations and may need
+    !!  to have the dependent-variable constrained by the bottom of the model.
+    !!
+    !<
+    subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
+      ! -- dummy variables
+      class(BndType), intent(inout) :: this             !< BndType object
+      integer(I4B), intent(in) :: neqpak                !< number of equations in the package
+      real(DP), dimension(neqpak), intent(inout) :: x   !< dependent variable
+      real(DP), dimension(neqpak), intent(in) :: xtemp  !< previous dependent variable
+      real(DP), dimension(neqpak), intent(inout) :: dx  !< change in dependent variable
+      integer(I4B), intent(inout) :: inewtonur          !< flag indicating if newton-raphson under-relaxation should be applied
+      real(DP), intent(inout) :: dxmax                  !< maximum change in the dependent variable
+      integer(I4B), intent(inout) :: locmax             !< location of the maximum change in the dependent variable
+      ! -- local variables
+      !
+      ! -- Newton-Raphson under-relaxation
+      !
+      ! -- return
+      return
+    end subroutine bnd_nur
+
+    !> @ brief Convergence check for package.
+    !!
+    !!  Perform additional convergence checks on the flow between the package
+    !!  and the model it is attached to. This additional convergence check is
+    !!  applied to pacakages that solve their own continuity equation as
+    !!  part of the formulate step at the beginning of a Picard iteration.
+    !!  A boundary package only needs to overide this method if a specific boundary 
+    !!  package solves its own continuity equation. Example packages that implement 
+    !!  this additional convergence check is the CSUB, SFR, LAK, and UZF packages.
+    !!
+    !<
+    subroutine bnd_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+      ! -- dummy variables
+      class(BndType), intent(inout) :: this             !< BndType object
+      integer(I4B), intent(in) :: innertot              !< total number of inner iterations
+      integer(I4B), intent(in) :: kiter                 !< Picard iteration number
+      integer(I4B),intent(in) :: iend                   !< flag indicating if this is the last Picard iteration
+      integer(I4B), intent(in) :: icnvgmod              !< flag inficating if the model has met specific convergence criteria
+      character(len=LENPAKLOC), intent(inout) :: cpak   !< string for user node
+      integer(I4B), intent(inout) :: ipak               !< location of the maximum dependent variable change
+      real(DP), intent(inout) :: dpak                   !< maximum dependent variable change
+      !
+      ! -- No addition convergence check for boundary conditions
+      !
+      ! -- return
+      return
+    end subroutine bnd_cc
+
+    !> @ brief Calculate advanced package flows.
+    !!
+    !!  Calculate the flow between connected advanced package control volumes. 
+    !!  Only advanced boundary packages need to overide this method.
+    !!
+    !<
+    subroutine bnd_cq(this, x, flowja, iadv)
+      ! -- dummy variables
+      class(BndType), intent(inout) :: this                         !< BndType object
+      real(DP), dimension(:), intent(in) :: x                       !< current dependent-variable value
+      real(DP), dimension(:), contiguous, intent(inout) :: flowja   !< flow between two connected control volumes
+      integer(I4B), optional, intent(in) :: iadv                    !< flag that indicates if this is an advance package
+      ! -- local variables
+      integer(I4B) :: imover
+  ! ------------------------------------------------------------------------------
+      !
+      ! -- check for iadv optional variable to indicate this is an advanced
+      !    package and that mover calculations should not be done here
+      if (present(iadv)) then
+        if (iadv == 1) then
+          imover = 0
+        else
+          imover = 1
+        end if
+      else
+        imover = this%imover
+      end if
+      !
+      ! -- Calculate package flows.  In the first call, simval is calculated
+      !    from hcof, rhs, and head.  The second call may reduce the value in
+      !    simval by what is sent to the mover.  The mover rate is stored in
+      !    simtomvr.  imover is set to zero here for advanced packages, which
+      !    handle and store mover quantities separately.
+      call this%bnd_cq_simrate(x, flowja, imover)
+      if (imover == 1) then
+        call this%bnd_cq_simtomvr(flowja)
+      end if
+      !
+      ! -- return
+      return
+    end subroutine bnd_cq
+
+    !> @ brief Calculate simrate.
+    !!
+    !!  Calculate the flow between package and the model (for example, GHB and 
+    !!  groundwater cell) and store in the simvals variable. This method only 
+    !!  needs to be overridden if a different calculation needs to be made.
+    !!
+    !<
+    subroutine bnd_cq_simrate(this, hnew, flowja, imover)
+      ! -- dummy variables
+      class(BndType) :: this                              !< BndType object
+      real(DP), dimension(:), intent(in) :: hnew          !< current dependent-variable value
+      real(DP), dimension(:), intent(inout) :: flowja     !< flow between package and model
+      integer(I4B), intent(in) :: imover                  !< flag indicating if the mover package is active
+      ! -- local variables
+      integer(I4B) :: i
+      integer(I4B) :: node
+      integer(I4B) :: idiag
+      real(DP) :: rrate
+      ! -- formats
+  ! ------------------------------------------------------------------------------
+      !
+      ! -- If no boundaries, skip flow calculations.
+      if (this%nbound > 0) then
+        !
+        ! -- Loop through each boundary calculating flow.
+        do i = 1, this%nbound
+          node = this%nodelist(i)
+          !
+          ! -- If cell is no-flow or constant-head, then ignore it.
+          rrate = DZERO
+          if (node > 0) then
+            idiag = this%dis%con%ia(node)
+            if(this%ibound(node) > 0) then
               !
-              ! -- Evaluate if qtomvr exceeds the calculated rrate.
-              !    When fact is greater than 1, qtomvr is numerically
-              !    larger than rrate (which should never happen) and 
-              !    represents a water budget error. When this happens,
-              !    rrate is set to 0. so that the water budget error is
-              !    correctly accounted for in the listing water budget. 
-              fact = -rrate / q
-              if (fact > DONE) then
-                ! -- all flow goes to mover
-                q = DZERO
-              else
-                ! -- magnitude of rrate (which is negative) is reduced by 
-                !    qtomvr (which is positive)
-                q = q + rrate
-              end if
-              this%simvals(i) = q
+              ! -- Calculate the flow rate into the cell.
+              rrate = this%hcof(i) * hnew(node) - this%rhs(i)
+            end if
+            flowja(idiag) = flowja(idiag) + rrate
+          end if
+          !
+          ! -- Save simulated value to simvals array.
+          this%simvals(i) = rrate
+          !
+        end do
+      endif
+      !
+      ! -- return
+      return
+    end subroutine bnd_cq_simrate
+
+    !> @ brief Calculate flow to the mover.
+    !!
+    !!  Calculate the flow between package and the model that is sent to the 
+    !!  mover package and store in the simtomvr variable. This method only 
+    !!  needs to be overridden if a different calculation needs to be made.
+    !!
+    !<
+    subroutine bnd_cq_simtomvr(this, flowja)
+      ! -- dummy variables
+      class(BndType) :: this                           !< BndType object
+      real(DP), dimension(:), intent(inout) :: flowja  !< flow between package and model
+      ! -- local variables
+      integer(I4B) :: i
+      integer(I4B) :: node
+      real(DP) :: q
+      real(DP) :: fact
+      real(DP) :: rrate
+      !
+      ! -- If no boundaries, skip flow calculations.
+      if (this%nbound > 0) then
+        !
+        ! -- Loop through each boundary calculating flow.
+        do i = 1, this%nbound
+          node = this%nodelist(i)
+          !
+          ! -- If cell is no-flow or constant-head, then ignore it.
+          rrate = DZERO
+          if (node > 0) then
+            if(this%ibound(node) > 0) then
+              !
+              ! -- Calculate the flow rate into the cell.
+              q = this%simvals(i)
               
-              if (rrate > DZERO) then
-                rrate = -rrate
+              
+              if (q < DZERO) then
+                rrate = this%pakmvrobj%get_qtomvr(i)
+                !
+                ! -- Evaluate if qtomvr exceeds the calculated rrate.
+                !    When fact is greater than 1, qtomvr is numerically
+                !    larger than rrate (which should never happen) and 
+                !    represents a water budget error. When this happens,
+                !    rrate is set to 0. so that the water budget error is
+                !    correctly accounted for in the listing water budget. 
+                fact = -rrate / q
+                if (fact > DONE) then
+                  ! -- all flow goes to mover
+                  q = DZERO
+                else
+                  ! -- magnitude of rrate (which is negative) is reduced by 
+                  !    qtomvr (which is positive)
+                  q = q + rrate
+                end if
+                this%simvals(i) = q
+                
+                if (rrate > DZERO) then
+                  rrate = -rrate
+                end if
               end if
             end if
           end if
-        end if
-        !
-        ! -- Save simulated value to simtomvr array.
-        this%simtomvr(i) = rrate
-        !
-      end do
-    endif
-    !
-    ! -- return
-    return
-  end subroutine bnd_cq_simtomvr
-  
-  subroutine bnd_bd(this, model_budget)
-    ! -- add package ratin/ratout to model budget
-    use TdisModule, only: delt
-    use BudgetModule, only: BudgetType, rate_accumulator
-    class(BndType) :: this
-    type(BudgetType), intent(inout) :: model_budget
-    character (len=LENPACKAGENAME) :: text
-    real(DP) :: ratin
-    real(DP) :: ratout
-    integer(I4B) :: isuppress_output
-    isuppress_output = 0
-    call rate_accumulator(this%simvals(1:this%nbound), ratin, ratout)
-    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
-                               isuppress_output, this%packName)
-    if (this%imover == 1 .and. this%isadvpak == 0) then
-      text = trim(adjustl(this%text)) // '-TO-MVR'
-      text = adjustr(text)
-      call rate_accumulator(this%simtomvr(1:this%nbound), ratin, ratout)
-      call model_budget%addentry(ratin, ratout, delt, text,                    &
-                                 isuppress_output, this%packName)
-    end if
+          !
+          ! -- Save simulated value to simtomvr array.
+          this%simtomvr(i) = rrate
+          !
+        end do
+      endif
+      !
+      ! -- return
+      return
+    end subroutine bnd_cq_simtomvr
     
-  end subroutine bnd_bd
+    !> @ brief Add package flows to model budget.
+    !!
+    !!  Add the flow between package and the model (ratin and ratout) to the 
+    !!  model budget. This method only needs to be overridden if a different 
+    !!  calculation needs to be made.
+    !!
+    !<
+    subroutine bnd_bd(this, model_budget)
+      ! -- modules
+      use TdisModule, only: delt
+      use BudgetModule, only: BudgetType, rate_accumulator
+      ! -- dummy variables
+      class(BndType) :: this                             !< BndType object
+      type(BudgetType), intent(inout) :: model_budget    !< model budget object
+      ! -- local variables
+      character (len=LENPACKAGENAME) :: text
+      real(DP) :: ratin
+      real(DP) :: ratout
+      integer(I4B) :: isuppress_output
+      !
+      ! -- initialize local variables
+      isuppress_output = 0
+      !
+      ! -- call accumulator and add to the model budget
+      call rate_accumulator(this%simvals(1:this%nbound), ratin, ratout)
+      call model_budget%addentry(ratin, ratout, delt, this%text,                 &
+                                isuppress_output, this%packName)
+      if (this%imover == 1 .and. this%isadvpak == 0) then
+        text = trim(adjustl(this%text)) // '-TO-MVR'
+        text = adjustr(text)
+        call rate_accumulator(this%simtomvr(1:this%nbound), ratin, ratout)
+        call model_budget%addentry(ratin, ratout, delt, text,                    &
+                                  isuppress_output, this%packName)
+      end if
+      !
+      ! -- return
+      return
+    end subroutine bnd_bd
 
-  subroutine bnd_ot_package_flows(this, icbcfl, ibudfl)
-    class(BndType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    !
-    ! -- override for advanced packages
-  end subroutine bnd_ot_package_flows
-  
-  subroutine bnd_ot_dv(this, idvsave, idvprint)
-    class(BndType) :: this
-    integer(I4B), intent(in) :: idvsave
-    integer(I4B), intent(in) :: idvprint
-    !
-    ! -- override for advanced packages
-  end subroutine bnd_ot_dv
-  
-  subroutine bnd_ot_bdsummary(this, kstp, kper, iout)
-    class(BndType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    !
-    ! -- override for advanced packages
-  end subroutine bnd_ot_bdsummary
-  
-  subroutine bnd_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
-! ******************************************************************************
-! bnd_ot_model_flows -- write flows to binary file and/or print flows to budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LENBOUNDNAME, DZERO
-    ! -- dummy
-    class(BndType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    ! -- local
-    character (len=LINELENGTH) :: title
-    character (len=LENPACKAGENAME) :: text
-    integer(I4B) :: imover
-    ! -- for observations
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Call generic subroutine to save and print simvals and simtomvr
-    title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) // &
-              ') FLOW RATES'
-    call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-      this%outputtab, this%nbound, this%nodelist, this%simvals, &
-      this%ibound, title, this%text, this%ipakcb, this%dis, this%naux, &
-      this%name_model, this%name_model, this%name_model, this%packName, &
-      this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
-    !
-    ! -- Set mover flag, and shut off if this is an advanced package.  Advanced
-    !    packages must handle mover flows differently by including them in
-    !    their balance equations.  These simtomvr flows are the general
-    !    flow to mover terms calculated by bnd_cq_simtomvr()
-    imover = this%imover
-    if (this%isadvpak /= 0) imover = 0
-    if (imover == 1) then
-      text = trim(adjustl(this%text)) // '-TO-MVR'
-      text = adjustr(text)
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
-              trim(this%packName) // ') FLOW RATES TO-MVR'
+    !> @ brief Output advanced package flow terms.
+    !!
+    !!  Output advanced boundart package flow terms. This method only needs to
+    !!  be overridden for advanced packages that save flow terms than contribute 
+    !!  to the continuity equation for each control volume.
+    !!
+    !<
+    subroutine bnd_ot_package_flows(this, icbcfl, ibudfl)
+      ! -- dummy variables
+      class(BndType) :: this              !< BndType object
+      integer(I4B), intent(in) :: icbcfl  !< flag and unit number for cell-by-cell output
+      integer(I4B), intent(in) :: ibudfl  !< flag indication if cell-by-cell data should be saved
+      !
+      ! -- override for advanced packages
+      !
+      ! -- return
+      return
+    end subroutine bnd_ot_package_flows
+    
+    !> @ brief Output advanced package dependent-variable terms.
+    !!
+    !!  Output advanced boundary package dependent-variable terms. This method only needs 
+    !!  to be overridden for advanced packages that save dependent variable terms
+    !!  for each control volume.
+    !!
+    !<
+    subroutine bnd_ot_dv(this, idvsave, idvprint)
+      ! -- dummy variables
+      class(BndType) :: this                 !< BndType object
+      integer(I4B), intent(in) :: idvsave    !< flag and unit number for dependent-variable output
+      integer(I4B), intent(in) :: idvprint   !< flag indicating if dependent-variable should be written to the model listing file
+      !
+      ! -- override for advanced packages
+      !
+      ! -- return
+      return
+    end subroutine bnd_ot_dv
+    
+    !> @ brief Output advanced package budget summary.
+    !!
+    !!  Output advanced boundary package budget summary. This method only needs 
+    !!  to be overridden for advanced packages that save budget summaries
+    !!  to the model listing file.
+    !!
+    !<
+    subroutine bnd_ot_bdsummary(this, kstp, kper, iout)
+      ! -- dummy variables
+      class(BndType) :: this            !< BndType object
+      integer(I4B), intent(in) :: kstp  !< time step number
+      integer(I4B), intent(in) :: kper  !< period number
+      integer(I4B), intent(in) :: iout  !< flag and unit number for the model listing file
+      !
+      ! -- override for advanced packages
+      !
+      ! -- return
+      return
+    end subroutine bnd_ot_bdsummary
+    
+    !> @ brief Output package flow terms.
+    !!
+    !!  Output flow terms between the boundary package and model to a binary file and/or 
+    !!  print flows to the model listing file. This method should not need to
+    !!  be overridden.
+    !!
+    !<
+    subroutine bnd_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+      ! -- dummy variables
+      class(BndType) :: this                                     !< BndType object
+      integer(I4B), intent(in) :: icbcfl                         !< flag for cell-by-cell output
+      integer(I4B), intent(in) :: ibudfl                         !< flag indication if cell-by-cell data should be saved
+      integer(I4B), intent(in) :: icbcun                         !< unit number for cell-by-cell output
+      integer(I4B), dimension(:), optional, intent(in) :: imap   !< mapping vector
+      ! -- local variables
+      character (len=LINELENGTH) :: title
+      character (len=LENPACKAGENAME) :: text
+      integer(I4B) :: imover
+      !
+      ! -- Call generic subroutine to save and print simvals and simtomvr
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) // &
+                ') FLOW RATES'
       call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-        this%outputtab, this%nbound, this%nodelist, this%simtomvr, &
-        this%ibound, title, text, this%ipakcb, this%dis, this%naux, &
+        this%outputtab, this%nbound, this%nodelist, this%simvals, &
+        this%ibound, title, this%text, this%ipakcb, this%dis, this%naux, &
         this%name_model, this%name_model, this%name_model, this%packName, &
         this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
-    end if    
-    !
-    ! -- return
-    return
-  end subroutine bnd_ot_model_flows
-
-  subroutine bnd_da(this)
-! ******************************************************************************
-! bnd_da -- Deallocate objects
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
-    ! -- dummy
-    class(BndType) :: this
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    ! -- deallocate arrays
-    call mem_deallocate(this%nodelist)
-    call mem_deallocate(this%noupdateauxvar)
-    call mem_deallocate(this%bound)
-    call mem_deallocate(this%hcof)
-    call mem_deallocate(this%rhs)
-    call mem_deallocate(this%simvals)
-    call mem_deallocate(this%simtomvr)
-    call mem_deallocate(this%auxvar)
-    call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
-    call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
-    nullify(this%icelltype)
-    !
-    ! -- pakmvrobj
-    if (this%imover /= 0) then
-      call this%pakmvrobj%da()
-      deallocate(this%pakmvrobj)
-      nullify(this%pakmvrobj)
-    endif
-    !
-    ! -- input table object
-    if (associated(this%inputtab)) then
-      call this%inputtab%table_da()
-      deallocate(this%inputtab)
-      nullify(this%inputtab)
-    end if
-    !
-    ! -- output table object
-    if (associated(this%outputtab)) then
-      call this%outputtab%table_da()
-      deallocate(this%outputtab)
-      nullify(this%outputtab)
-    end if
-    !
-    ! -- error table object
-    if (associated(this%errortab)) then
-      call this%errortab%table_da()
-      deallocate(this%errortab)
-      nullify(this%errortab)
-    end if
-    !
-    ! -- deallocate character variables
-    call mem_deallocate(this%listlabel, 'LISTLABEL', this%memoryPath)
-    !
-    ! -- Deallocate scalars
-    call mem_deallocate(this%isadvpak)
-    call mem_deallocate(this%ibcnum)
-    call mem_deallocate(this%maxbound)
-    call mem_deallocate(this%nbound)
-    call mem_deallocate(this%ncolbnd)
-    call mem_deallocate(this%iscloc)
-    call mem_deallocate(this%naux)
-    call mem_deallocate(this%inamedbound)
-    call mem_deallocate(this%iauxmultcol)
-    call mem_deallocate(this%inobspkg)
-    call mem_deallocate(this%imover)
-    call mem_deallocate(this%npakeq)
-    call mem_deallocate(this%ioffset)
-    !
-    ! -- deallocate methods on objects
-    call this%obs%obs_da()
-    call this%TsManager%da()
-    call this%TasManager%da()
-    !
-    ! -- deallocate objects
-    deallocate(this%obs)
-    deallocate(this%TsManager)
-    deallocate(this%TasManager)
-    nullify(this%TsManager)
-    nullify(this%TasManager)
-    !
-    ! -- Deallocate parent object
-    call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
-  end subroutine bnd_da
-
-  subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- Allocate Package Members
-! Subroutine: (1) allocate
-!             (2) initialize
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
-    use MemoryHelperModule, only: create_mem_path
-    ! -- dummy
-    class(BndType) :: this
-    ! -- local
-    integer(I4B), pointer :: imodelnewton => NULL()
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate scalars in NumericalPackageType
-    call this%NumericalPackageType%allocate_scalars()
-    !
-    ! -- allocate character variables
-    call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%memoryPath)
-    !
-    ! -- allocate integer variables
-    call mem_allocate(this%isadvpak, 'ISADVPAK', this%memoryPath)
-    call mem_allocate(this%ibcnum, 'IBCNUM', this%memoryPath)
-    call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath)
-    call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
-    call mem_allocate(this%ncolbnd, 'NCOLBND', this%memoryPath)
-    call mem_allocate(this%iscloc, 'ISCLOC', this%memoryPath)
-    call mem_allocate(this%naux, 'NAUX', this%memoryPath)
-    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
-    call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
-    call mem_allocate(this%inobspkg, 'INOBSPKG', this%memoryPath)
-    !
-    ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%imover, 'IMOVER', this%memoryPath)
-    !
-    ! -- allocate scalars for packages that add rows to the matrix (e.g. MAW)
-    call mem_allocate(this%npakeq, 'NPAKEQ', this%memoryPath)
-    call mem_allocate(this%ioffset, 'IOFFSET', this%memoryPath)
-    !
-    ! -- allocate TS objects
-    allocate(this%TsManager)
-    allocate(this%TasManager)
-    !
-    ! -- allocate text strings
-    call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
-    !
-    ! -- Initialize variables
-    this%isadvpak = 0
-    this%ibcnum = 0
-    this%maxbound = 0
-    this%nbound = 0
-    this%ncolbnd = 0
-    this%iscloc = 0
-    this%naux = 0
-    this%inamedbound = 0
-    this%iauxmultcol = 0
-    this%inobspkg = 0
-    this%imover = 0
-    this%npakeq = 0
-    this%ioffset = 0
-    !
-    ! -- Set pointer to model inewton variable
-    call mem_setptr(imodelnewton, 'INEWTON', create_mem_path(this%name_model))
-    this%inewton = imodelnewton
-    imodelnewton => null()
-    !
-    ! -- return
-    return
-  end subroutine allocate_scalars
-
-  subroutine allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! allocate_arrays -- Allocate Package Members
-! Subroutine: (1) allocate
-!             (2) initialize
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
-    ! -- dummy
-    class(BndType) :: this
-    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
-    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: j
-! ------------------------------------------------------------------------------
-    !
-    ! -- Point nodelist if it is passed in, otherwise allocate
-    if(present(nodelist)) then
-      this%nodelist => nodelist
-    else
-      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST',                &
-                        this%memoryPath)
-      do j = 1, this%maxbound
-        this%nodelist(j) = 0
-      end do
-    endif
-    !
-    ! -- noupdateauxvar (allows an external caller to stop auxvars from being
-    !    recalculated
-    call mem_allocate(this%noupdateauxvar, this%naux, 'NOUPDATEAUXVAR', this%memoryPath)
-    this%noupdateauxvar(:) = 0
-    !
-    ! -- Allocate the bound array
-    call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
-                      this%memoryPath)
-    !
-    ! -- Allocate hcof and rhs
-    call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)
-    call mem_allocate(this%rhs, this%maxbound, 'RHS', this%memoryPath)
-    !
-    ! -- Allocate the simvals array
-    call mem_allocate(this%simvals, this%maxbound, 'SIMVALS', this%memoryPath)
-    if (this%imover == 1) then
-      call mem_allocate(this%simtomvr, this%maxbound, 'SIMTOMVR', this%memoryPath)
-      do i = 1, this%maxbound
-        this%simtomvr(i) = DZERO
-      enddo
-    else
-      call mem_allocate(this%simtomvr, 0, 'SIMTOMVR', this%memoryPath)
-    endif
-    !
-    ! -- Point or allocate auxvar
-    if(present(auxvar)) then
-      this%auxvar => auxvar
-    else
-      call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',         &
-                        this%memoryPath)
-      do i = 1, this%maxbound
-        do j = 1, this%naux
-          this%auxvar(j, i) = DZERO
-        end do
-      end do
-    endif
-    !
-    ! -- Allocate boundname
-    if (this%inamedbound /= 0) then
-      call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound,             &
-                        'BOUNDNAME', this%memoryPath)
-    end if
-    !
-    ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
-    !    this%ictMemPath will be 'NPF'.  If boundary packages do not set
-    !    this%ictMemPath, then icelltype will remain as null()
-    if (this%ictMemPath /= '') then
-      call mem_setptr(this%icelltype, 'ICELLTYPE', this%ictMemPath)
-    end if
-    !
-    ! -- Initialize values
-    do j = 1, this%maxbound
-      do i = 1, this%ncolbnd
-        this%bound(i, j) = DZERO
-      end do
-    end do
-    do i = 1, this%maxbound
-      this%hcof(i) = DZERO
-      this%rhs(i) = DZERO
-    end do
-    !
-    ! -- setup the output table
-    call this%pak_setup_outputtab()
-    !
-    ! -- return
-    return
-  end subroutine allocate_arrays
-
-  subroutine pack_initialize(this)
-! ******************************************************************************
-! pack_initialize -- Allocate and/or initialize selected members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BndType) :: this
-! ------------------------------------------------------------------------------
-    !
-    return
-  end subroutine pack_initialize
-
-  subroutine set_pointers(this, neq, ibound, xnew, xold, flowja)
-! ******************************************************************************
-! set_pointers -- Set pointers to model arrays and variables so that a package
-!                 has access to these things.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BndType) :: this
-    integer(I4B), pointer :: neq
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
-    real(DP), dimension(:), pointer, contiguous :: xnew
-    real(DP), dimension(:), pointer, contiguous :: xold
-    real(DP), dimension(:), pointer, contiguous :: flowja
-! ------------------------------------------------------------------------------
-    !
-    ! -- Set the pointers
-    this%neq => neq
-    this%ibound => ibound
-    this%xnew => xnew
-    this%xold => xold
-    this%flowja => flowja
-    !
-    ! -- return
-  end subroutine set_pointers
-
-  subroutine bnd_read_options(this)
-! ******************************************************************************
-! read_options -- Read the base package options supported by BndType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use InputOutputModule,   only: urdaux
-    use MemoryManagerModule, only: mem_reallocate
-    use SimModule,           only: ustop, store_error, store_error_unit
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    character(len=:), allocatable :: line
-    character(len=LINELENGTH) :: fname
-    character(len=LINELENGTH) :: keyword
-    character(len=LENAUXNAME) :: sfacauxname
-    character(len=LENAUXNAME), dimension(:), allocatable :: caux
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: n
-    integer(I4B) :: ierr
-    integer(I4B) :: inobs
-    logical(LGP) :: isfound
-    logical(LGP) :: endOfBlock
-    logical(LGP) :: foundchildclassoption
-    ! -- format
-    character(len=*),parameter :: fmtflow = &
-      "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
-    character(len=*),parameter :: fmtflow2 = &
-      "(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL')"
-    character(len=*), parameter :: fmttas = &
-      "(4x, 'TIME-ARRAY SERIES DATA WILL BE READ FROM FILE: ', a)"
-    character(len=*), parameter :: fmtts = &
-      "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
-    character(len=*), parameter :: fmtnme = &
-      "(a, i0, a)"
-! ------------------------------------------------------------------------------
-    !
-    ! -- set default options
-    !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
-    !
-    ! -- parse options block if detected
-    if (isfound) then
-      write(this%iout,'(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
-        //' OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) then
-          exit
-        end if
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case('AUX', 'AUXILIARY')
-            call this%parser%GetRemainingLine(line)
-            lloc = 1
-            call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
-                        istart, istop, caux, line, this%text)
-            call mem_reallocate(this%auxname, LENAUXNAME, this%naux,             &
-                                'AUXNAME', this%memoryPath)
-            do n = 1, this%naux
-              this%auxname(n) = caux(n)
-            end do
-            deallocate(caux)
-          case ('SAVE_FLOWS')
-            this%ipakcb = -1
-            write(this%iout, fmtflow2)
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(this%iout,'(4x,a)') 'LISTS OF '//trim(adjustl(this%text))// &
-              ' CELLS WILL BE PRINTED.'
-          case ('PRINT_FLOWS')
-            this%iprflow = 1
-            write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
-              ' FLOWS WILL BE PRINTED TO LISTING FILE.'
-          case ('BOUNDNAMES')
-            this%inamedbound = 1
-            write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
-              ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'
-          case ('TS6')
-            call this%parser%GetStringCaps(keyword)
-            if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'TS6 keyword must be followed by "FILEIN" ' //          &
-                       'then by filename.'
-              call store_error(errmsg)
-            endif
-            call this%parser%GetString(fname)
-            write(this%iout,fmtts)trim(fname)
-            call this%TsManager%add_tsfile(fname, this%inunit)
-          case ('TAS6')
-            if (this%AllowTimeArraySeries) then
-              if (.not. this%dis%supports_layers()) then
-                errmsg = 'TAS6 FILE cannot be used ' // &
-                         'with selected discretization type.'
-                call store_error(errmsg)
-              endif
-            else
-              errmsg = 'The ' // trim(this%filtyp) // &
-                       ' package does not support TIMEARRAYSERIESFILE'
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
-            endif
-            call this%parser%GetStringCaps(keyword)
-            if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'TAS6 keyword must be followed by "FILEIN" ' //         &
-                       'then by filename.'
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
-            endif
-            call this%parser%GetString(fname)
-            write(this%iout,fmttas)trim(fname)
-            call this%TasManager%add_tasfile(fname)
-          case ('AUXMULTNAME')
-            call this%parser%GetStringCaps(sfacauxname)
-            this%iauxmultcol = -1
-            write(this%iout, '(4x,a,a)')                                       &
-                             'AUXILIARY MULTIPLIER NAME: ', sfacauxname
-          case ('OBS6')
-            call this%parser%GetStringCaps(keyword)
-            if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'OBS6 keyword must be followed by "FILEIN" ' //         &
-                       'then by filename.'
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
-            endif
-            if (this%obs%active) then
-              errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
-                       'Only one OBS6 entry allowed for a package.'
-              call store_error(errmsg)
-            endif
-            this%obs%active = .true.
-            call this%parser%GetString(this%obs%inputFilename)
-            inobs = GetUnit()
-            call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
-            this%obs%inUnitObs = inobs
-          !
-          ! -- right now these are options that are only available in the
-          !    development version and are not included in the documentation.
-          !    These options are only available when IDEVELOPMODE in
-          !    constants module is set to 1
-          case ('DEV_NO_NEWTON')
-            call this%parser%DevOpt()
-            this%inewton = 0
-            write(this%iout, '(4x,a)')                                           &
-              'NEWTON-RAPHSON method disabled for unconfined cells'
-          case default
-            !
-            ! -- Check for child class options
-            call this%bnd_options(keyword, foundchildclassoption)
-            !
-            ! -- No child class options found, so print error message
-            if(.not. foundchildclassoption) then
-              write(errmsg,'(a,3(1x,a))')                                        &
-                'UNKNOWN', trim(adjustl(this%text)), 'OPTION:', trim(keyword)
-              call store_error(errmsg)
-            endif
-        end select
-      end do
-      write(this%iout,'(1x,a)') 'END OF '//trim(adjustl(this%text)) // ' OPTIONS'
-    else
-      write(this%iout,'(1x,a)') 'NO '//trim(adjustl(this%text)) //               &
-        ' OPTION BLOCK DETECTED.'
-    end if
-    !
-    ! -- AUXMULTNAME was specified, so find column of auxvar that will be multiplier
-    if(this%iauxmultcol < 0) then
       !
-      ! -- Error if no aux variable specified
-      if(this%naux == 0) then
-        write(errmsg,'(a,2(1x,a))')                                              &
-          'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)),            &
-          'BUT NO AUX VARIABLES SPECIFIED.'
-        call store_error(errmsg)
+      ! -- Set mover flag, and shut off if this is an advanced package.  Advanced
+      !    packages must handle mover flows differently by including them in
+      !    their balance equations.  These simtomvr flows are the general
+      !    flow to mover terms calculated by bnd_cq_simtomvr()
+      imover = this%imover
+      if (this%isadvpak /= 0) imover = 0
+      if (imover == 1) then
+        text = trim(adjustl(this%text)) // '-TO-MVR'
+        text = adjustr(text)
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
+                trim(this%packName) // ') FLOW RATES TO-MVR'
+        call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+          this%outputtab, this%nbound, this%nodelist, this%simtomvr, &
+          this%ibound, title, text, this%ipakcb, this%dis, this%naux, &
+          this%name_model, this%name_model, this%name_model, this%packName, &
+          this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+      end if    
+      !
+      ! -- return
+      return
+    end subroutine bnd_ot_model_flows
+
+    !> @ brief Deallocate package memory
+    !!
+    !!  Deallocate base boundary package scalars and arrays. This method 
+    !!  only needs to be overridden if additional variables are defined 
+    !!  for a specific package.
+    !!
+    !<
+    subroutine bnd_da(this)
+      ! -- modules
+      use MemoryManagerModule, only: mem_deallocate
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      !
+      ! -- deallocate arrays
+      call mem_deallocate(this%nodelist)
+      call mem_deallocate(this%noupdateauxvar)
+      call mem_deallocate(this%bound)
+      call mem_deallocate(this%hcof)
+      call mem_deallocate(this%rhs)
+      call mem_deallocate(this%simvals)
+      call mem_deallocate(this%simtomvr)
+      call mem_deallocate(this%auxvar)
+      call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
+      call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
+      nullify(this%icelltype)
+      !
+      ! -- pakmvrobj
+      if (this%imover /= 0) then
+        call this%pakmvrobj%da()
+        deallocate(this%pakmvrobj)
+        nullify(this%pakmvrobj)
       endif
       !
-      ! -- Assign mult column
+      ! -- input table object
+      if (associated(this%inputtab)) then
+        call this%inputtab%table_da()
+        deallocate(this%inputtab)
+        nullify(this%inputtab)
+      end if
+      !
+      ! -- output table object
+      if (associated(this%outputtab)) then
+        call this%outputtab%table_da()
+        deallocate(this%outputtab)
+        nullify(this%outputtab)
+      end if
+      !
+      ! -- error table object
+      if (associated(this%errortab)) then
+        call this%errortab%table_da()
+        deallocate(this%errortab)
+        nullify(this%errortab)
+      end if
+      !
+      ! -- deallocate character variables
+      call mem_deallocate(this%listlabel, 'LISTLABEL', this%memoryPath)
+      !
+      ! -- Deallocate scalars
+      call mem_deallocate(this%isadvpak)
+      call mem_deallocate(this%ibcnum)
+      call mem_deallocate(this%maxbound)
+      call mem_deallocate(this%nbound)
+      call mem_deallocate(this%ncolbnd)
+      call mem_deallocate(this%iscloc)
+      call mem_deallocate(this%naux)
+      call mem_deallocate(this%inamedbound)
+      call mem_deallocate(this%iauxmultcol)
+      call mem_deallocate(this%inobspkg)
+      call mem_deallocate(this%imover)
+      call mem_deallocate(this%npakeq)
+      call mem_deallocate(this%ioffset)
+      !
+      ! -- deallocate methods on objects
+      call this%obs%obs_da()
+      call this%TsManager%da()
+      call this%TasManager%da()
+      !
+      ! -- deallocate objects
+      deallocate(this%obs)
+      deallocate(this%TsManager)
+      deallocate(this%TasManager)
+      nullify(this%TsManager)
+      nullify(this%TasManager)
+      !
+      ! -- Deallocate parent object
+      call this%NumericalPackageType%da()
+      !
+      ! -- return
+      return
+    end subroutine bnd_da
+
+    !> @ brief Allocate package scalars
+    !!
+    !!  Allocate and initialize base boundary package scalars. This method 
+    !!  only needs to be overridden if additional scalars are defined 
+    !!  for a specific package.  
+    !!
+    !<
+    subroutine allocate_scalars(this)
+      ! -- modules
+      use MemoryManagerModule, only: mem_allocate, mem_setptr
+      use MemoryHelperModule, only: create_mem_path
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      ! -- local variables
+      integer(I4B), pointer :: imodelnewton => null()
+      !
+      ! -- allocate scalars in NumericalPackageType
+      call this%NumericalPackageType%allocate_scalars()
+      !
+      ! -- allocate character variables
+      call mem_allocate(this%listlabel, LENLISTLABEL, 'LISTLABEL', this%memoryPath)
+      !
+      ! -- allocate integer variables
+      call mem_allocate(this%isadvpak, 'ISADVPAK', this%memoryPath)
+      call mem_allocate(this%ibcnum, 'IBCNUM', this%memoryPath)
+      call mem_allocate(this%maxbound, 'MAXBOUND', this%memoryPath)
+      call mem_allocate(this%nbound, 'NBOUND', this%memoryPath)
+      call mem_allocate(this%ncolbnd, 'NCOLBND', this%memoryPath)
+      call mem_allocate(this%iscloc, 'ISCLOC', this%memoryPath)
+      call mem_allocate(this%naux, 'NAUX', this%memoryPath)
+      call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
+      call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%memoryPath)
+      call mem_allocate(this%inobspkg, 'INOBSPKG', this%memoryPath)
+      !
+      ! -- allocate the object and assign values to object variables
+      call mem_allocate(this%imover, 'IMOVER', this%memoryPath)
+      !
+      ! -- allocate scalars for packages that add rows to the matrix (e.g. MAW)
+      call mem_allocate(this%npakeq, 'NPAKEQ', this%memoryPath)
+      call mem_allocate(this%ioffset, 'IOFFSET', this%memoryPath)
+      !
+      ! -- allocate TS objects
+      allocate(this%TsManager)
+      allocate(this%TasManager)
+      !
+      ! -- allocate text strings
+      call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
+      !
+      ! -- Initialize variables
+      this%isadvpak = 0
+      this%ibcnum = 0
+      this%maxbound = 0
+      this%nbound = 0
+      this%ncolbnd = 0
+      this%iscloc = 0
+      this%naux = 0
+      this%inamedbound = 0
       this%iauxmultcol = 0
-      do n = 1, this%naux
-        if(sfacauxname == this%auxname(n)) then
-          this%iauxmultcol = n
-          exit
-        endif
-      enddo
+      this%inobspkg = 0
+      this%imover = 0
+      this%npakeq = 0
+      this%ioffset = 0
       !
-      ! -- Error if aux variable cannot be found
-      if(this%iauxmultcol == 0) then
-        write(errmsg,'(a,2(1x,a))')                                              &
-          'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)),            &
-          'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
-        call store_error(errmsg)
-      endif
-    end if
-    !
-    ! -- terminate if errors were detected
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- return
-    return
-  end subroutine bnd_read_options
-
-  subroutine bnd_read_dimensions(this)
-! ******************************************************************************
-! bnd_read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    logical(LGP) :: isfound
-    logical(LGP) :: endOfBlock
-    integer(I4B) :: ierr
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    ! -- get dimensions block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
-                              supportOpenClose=.true.)
-    !
-    ! -- parse dimensions block if detected
-    if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-        ' DIMENSIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('MAXBOUND')
-            this%maxbound = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i7)') 'MAXBOUND = ', this%maxbound
-          case default
-            write(errmsg,'(a,3(1x,a))') &
-              'UNKNOWN', trim(this%text), 'DIMENSION:', trim(keyword)
-            call store_error(errmsg)
-        end select
-      end do
+      ! -- Set pointer to model inewton variable
+      call mem_setptr(imodelnewton, 'INEWTON', create_mem_path(this%name_model))
+      this%inewton = imodelnewton
+      imodelnewton => null()
       !
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
-    else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- verify dimensions were set
-    if(this%maxbound <= 0) then
-      write(errmsg, '(a)') 'MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- terminate if there are errors
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- Call define_listlabel to construct the list label that is written
-    !    when PRINT_INPUT option is used.
-    call this%define_listlabel()
-    !
-    ! -- return
-    return
-  end subroutine bnd_read_dimensions
+      ! -- return
+      return
+    end subroutine allocate_scalars
 
-  subroutine bnd_read_initial_attr(this)
-! ******************************************************************************
-! bndreadinitialparms -- Read initial parameters for this package
-!                         Most packages do not need initial parameter data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine bnd_read_initial_attr
-
-  subroutine bnd_options(this, option, found)
-! ******************************************************************************
-! bnd_options -- set options for a class derived from BndType
-! This subroutine can be overridden by specific packages to set custom options
-! that are not part of the package superclass.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    character(len=*), intent(inout) :: option
-    logical(LGP), intent(inout) :: found
-! ------------------------------------------------------------------------------
-    !
-    ! Return with found = .false.
-    found = .false.
-    !
-    ! -- return
-    return
-  end subroutine bnd_options
-
-  subroutine pak_setup_outputtab(this)
-! ******************************************************************************
-! bnd_options -- set options for a class derived from BndType
-! This subroutine can be overridden by specific packages to set custom options
-! that are not part of the package superclass.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType),intent(inout) :: this
-    ! -- local
-    character(len=LINELENGTH) :: title
-    character(len=LINELENGTH) :: text
-    integer(I4B) :: ntabcol
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate and initialize the output table
-    if (this%iprflow /= 0) then
+    !> @ brief Allocate package arrays
+    !!
+    !!  Allocate and initialize base boundary package arrays. This method 
+    !!  only needs to be overridden if additional arrays are defined 
+    !!  for a specific package.  
+    !!
+    !<
+    subroutine allocate_arrays(this, nodelist, auxvar)
+      ! -- modules
+      use MemoryManagerModule, only: mem_allocate, mem_setptr
+      ! -- dummy variables
+      class(BndType) :: this                                                 !< BndType object
+      integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist  !< package nodelist
+      real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar     !< package aux variable array
+      ! -- local variables
+      integer(I4B) :: i
+      integer(I4B) :: j
       !
-      ! -- dimension table
-      ntabcol = 3
-      if (this%inamedbound > 0) then
-        ntabcol = ntabcol + 1
-      end if
-      !
-      ! -- initialize the output table object
-      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //     &
-              ') FLOW RATES'
-      call table_cr(this%outputtab, this%packName, title)
-      call this%outputtab%table_df(this%maxbound, ntabcol, this%iout,            &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
-        call this%outputtab%initialize_column(text, LENBOUNDNAME, alignment=TABLEFT)
-      end if
-    end if
-    !
-    ! -- return
-    return
-  end subroutine pak_setup_outputtab
-
-
-  subroutine define_listlabel(this)
-    ! define_listlabel
-    ! -- List-type packages should always override define_listlabel
-    !    to enable "NAME" to be added to label.
-    class(BndType), intent(inout) :: this
-    !
-    return
-  end subroutine define_listlabel
-
-  ! -- Procedures related to observations
-
-  function bnd_obs_supported(this) result(supported)
-    ! **************************************************************************
-    ! bnd_obs_supported
-    !   -- Return true if package supports observations. Default is false.
-    !   -- Needs to be a BndType procedure.
-    !   -- Override for packages that do support observations.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    ! -- return variable
-    logical(LGP) :: supported
-    ! -- dummy
-    class(BndType) :: this
-    ! --------------------------------------------------------------------------
-    supported = .false.
-    !
-    ! -- Return
-    return
-  end function bnd_obs_supported
-
-  subroutine bnd_df_obs(this)
-    ! **************************************************************************
-    ! bnd_df_obs
-    !   -- Store observation type(s) supported by package.
-    !   -- Needs to be a BndType procedure.
-    !   -- Override in any package that supports observations.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-      class(BndType) :: this
-    ! --------------------------------------------------------------------------
-    ! -- do nothing here. Override as needed.
-    return
-  end subroutine bnd_df_obs
-
-  subroutine bnd_rp_obs(this)
-    ! -- This procedure should be overridden in any package that
-    !    supports observations and needs to check user input
-    !    or process observation input using package data in some
-    !    other way.
-    ! -- dummy
-    class(BndType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: j
-    class(ObserveType), pointer :: obsrv => null()
-    character(len=LENBOUNDNAME) :: bname
-    logical(LGP) :: jfound
-    !
-    if (.not. this%bnd_obs_supported()) return
-    !
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      !
-      ! -- indxbnds needs to be reset each stress period because 
-      !    list of boundaries can change each stress period.
-      call obsrv%ResetObsIndex()
-      obsrv%BndFound = .false.
-      !
-      bname = obsrv%FeatureName
-      if (bname /= '') then
-        !
-        ! -- Observation location(s) is(are) based on a boundary name.
-        !    Iterate through all boundaries to identify and store
-        !    corresponding index(indices) in bound array.
-        jfound = .false.
-        do j=1,this%nbound
-          if (this%boundname(j) == bname) then
-            jfound = .true.
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call obsrv%AddObsIndex(j)
-          end if
-        end do
+      ! -- Point nodelist if it is passed in, otherwise allocate
+      if(present(nodelist)) then
+        this%nodelist => nodelist
       else
-        !
-        ! -- Observation location is a single node number
-        jfound = .false.
-        jloop: do j=1,this%nbound
-          if (this%nodelist(j) == obsrv%NodeNumber) then
-            jfound = .true.
-            obsrv%BndFound = .true.
-            obsrv%CurrentTimeStepEndValue = DZERO
-            call obsrv%AddObsIndex(j)
-          end if
-        end do jloop
-      end if
-    end do
-    !
-    if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
-      call ustop()
-    endif
-    !
-    return
-  end subroutine bnd_rp_obs
-
-  subroutine bnd_bd_obs(this)
-    ! obs_bd
-    ! -- Generic procedure to save simulated values for
-    !    all observations defined for a package.
-    class(BndType) :: this
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n
-    real(DP) :: v
-    type(ObserveType), pointer :: obsrv => null()
-    !---------------------------------------------------------------------------
-    !
-    call this%obs%obs_bd_clear()
-    !
-    ! -- Save simulated values for all of package's observations.
-    do i=1,this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      if (obsrv%BndFound) then
-        do n = 1, obsrv%indxbnds_count
-          if (obsrv%ObsTypeId == 'TO-MVR') then
-            if (this%imover == 1) then
-              v = this%pakmvrobj%get_qtomvr(obsrv%indxbnds(n))
-              if (v > DZERO) then
-                v = -v
-              end if
-            else
-              v = DNODATA
-            end if
-          else
-            v = this%simvals(obsrv%indxbnds(n))
-          end if
-          call this%obs%SaveOneSimval(obsrv, v)
+        call mem_allocate(this%nodelist, this%maxbound, 'NODELIST',                &
+                          this%memoryPath)
+        do j = 1, this%maxbound
+          this%nodelist(j) = 0
+        end do
+      endif
+      !
+      ! -- noupdateauxvar (allows an external caller to stop auxvars from being
+      !    recalculated
+      call mem_allocate(this%noupdateauxvar, this%naux, 'NOUPDATEAUXVAR', this%memoryPath)
+      this%noupdateauxvar(:) = 0
+      !
+      ! -- Allocate the bound array
+      call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
+                        this%memoryPath)
+      !
+      ! -- Allocate hcof and rhs
+      call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)
+      call mem_allocate(this%rhs, this%maxbound, 'RHS', this%memoryPath)
+      !
+      ! -- Allocate the simvals array
+      call mem_allocate(this%simvals, this%maxbound, 'SIMVALS', this%memoryPath)
+      if (this%imover == 1) then
+        call mem_allocate(this%simtomvr, this%maxbound, 'SIMTOMVR', this%memoryPath)
+        do i = 1, this%maxbound
+          this%simtomvr(i) = DZERO
         enddo
       else
-        call this%obs%SaveOneSimval(obsrv, DNODATA)
+        call mem_allocate(this%simtomvr, 0, 'SIMTOMVR', this%memoryPath)
       endif
-    enddo
-    !
-    return
-  end subroutine bnd_bd_obs
-
-  subroutine bnd_ot_obs(this)
-    ! -- Generic procedure to save simulated values for
-    !    all observations defined for a package.
-    ! -- dummy
-    class(BndType) :: this
-    ! -- local
-    !---------------------------------------------------------------------------
-    !
-    call this%obs%obs_ot()
-    !
-    return
-  end subroutine bnd_ot_obs
-
-  ! -- Procedures related to time series
-
-  subroutine bnd_rp_ts(this)
-    ! -- Generic procedure to assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    Override as needed.
-    ! -- dummy
-    class(BndType), intent(inout) :: this
-    !
-    return
-  end subroutine bnd_rp_ts
-
-  ! -- Procedures related to casting
-
-  function CastAsBndClass(obj) result(res)
-    implicit none
-    class(*), pointer, intent(inout) :: obj
-    class(BndType), pointer :: res
-    !
-    res => null()
-    if (.not. associated(obj)) return
-    !
-    select type (obj)
-    class is (BndType)
-      res => obj
-    end select
-    return
-  end function CastAsBndClass
-
-  subroutine AddBndToList(list, bnd)
-    implicit none
-    ! -- dummy
-    type(ListType),          intent(inout) :: list
-    class(BndType), pointer, intent(inout) :: bnd
-    ! -- local
-    class(*), pointer :: obj
-    !
-    obj => bnd
-    call list%Add(obj)
-    !
-    return
-  end subroutine AddBndToList
-
-  function GetBndFromList(list, idx) result (res)
-    implicit none
-    ! -- dummy
-    type(ListType), intent(inout) :: list
-    integer(I4B),        intent(in)    :: idx
-    class(BndType),    pointer    :: res
-    ! -- local
-    class(*), pointer :: obj
-    !
-    obj => list%GetItem(idx)
-    res => CastAsBndClass(obj)
-    !
-    return
-  end function GetBndFromList
-
-  subroutine save_print_model_flows(icbcfl, ibudfl, icbcun, iprflow, &
-    outputtab, nbound, nodelist, flow, ibound, title, text, ipakcb, dis, naux, &
-    textmodel, textpackage, dstmodel, dstpackage, auxname, auxvar, iout, &
-    inamedbound, boundname, imap)
-! ******************************************************************************
-! save_print_model_flows -- write flows to binary file and/or print flows to budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper
-    use ConstantsModule, only: LENBOUNDNAME, DZERO
-    ! -- dummy
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprflow !< print flows to list file
-    type(TableType), pointer, intent(inout) :: outputtab
-    integer(I4B), intent(in) :: nbound
-    integer(I4B), dimension(:), contiguous, intent(in) :: nodelist
-    real(DP), dimension(:), contiguous, intent(in) :: flow
-    integer(I4B), dimension(:), contiguous, intent(in) :: ibound
-    character(len=*), intent(in) :: title
-    character(len=*), intent(in) :: text
-    integer(I4B), intent(in) :: ipakcb
-    class(DisBaseType), intent(in) :: dis
-    integer(I4B), intent(in) :: naux
-    character(len=*), intent(in) :: textmodel
-    character(len=*), intent(in) :: textpackage
-    character(len=*), intent(in) :: dstmodel
-    character(len=*), intent(in) :: dstpackage
-    character(len=*), dimension(:), intent(in) :: auxname
-    real(DP), dimension(:, :), intent(in) :: auxvar
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: inamedbound
-    character(len=LENBOUNDNAME), dimension(:), contiguous :: boundname
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    ! -- local
-    character(len=20) :: nodestr
-    integer(I4B) :: nodeu
-    integer(I4B) :: maxrows
-    integer(I4B) :: i
-    integer(I4B) :: node
-    integer(I4B) :: n2
-    integer(I4B) :: ibinun
-    integer(I4B) :: nboundcount
-    real(DP) :: rrate
-    ! -- for observations
-    character(len=LENBOUNDNAME) :: bname
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- set table kstp and kper
-    if (iprflow /= 0) then
-      call outputtab%set_kstpkper(kstp, kper)
-    end if
-    !
-    ! -- set maxrows
-    maxrows = 0
-    if (ibudfl /= 0 .and. iprflow /= 0) then
-      do i = 1, nbound
-        node = nodelist(i)
-        if (node > 0) then
-          if (ibound(node) > 0) then
-            maxrows = maxrows + 1
-          end if
-        end if
-      end do
-      if (maxrows > 0) then
-        call outputtab%set_maxbound(maxrows)
+      !
+      ! -- Point or allocate auxvar
+      if(present(auxvar)) then
+        this%auxvar => auxvar
+      else
+        call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',         &
+                          this%memoryPath)
+        do i = 1, this%maxbound
+          do j = 1, this%naux
+            this%auxvar(j, i) = DZERO
+          end do
+        end do
+      endif
+      !
+      ! -- Allocate boundname
+      if (this%inamedbound /= 0) then
+        call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound,             &
+                          'BOUNDNAME', this%memoryPath)
       end if
-      call outputtab%set_title(title)
-    end if
-    !
-    ! -- Set unit number for binary output
-    if (ipakcb < 0) then
-      ibinun = icbcun
-    else if (ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = ipakcb
-    end if
-    if (icbcfl == 0) then
-      ibinun = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if(ibinun /= 0) then
       !
-      ! -- Count nbound as the number of entries with node > 0
-      !    SFR, for example, can have a 'none' connection, which
-      !    means it should be excluded from budget file
-      nboundcount = 0
-      do i = 1, nbound
-        node = nodelist(i)
-        if (node > 0) nboundcount = nboundcount + 1
+      ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
+      !    this%ictMemPath will be 'NPF'.  If boundary packages do not set
+      !    this%ictMemPath, then icelltype will remain as null()
+      if (this%ictMemPath /= '') then
+        call mem_setptr(this%icelltype, 'ICELLTYPE', this%ictMemPath)
+      end if
+      !
+      ! -- Initialize values
+      do j = 1, this%maxbound
+        do i = 1, this%ncolbnd
+          this%bound(i, j) = DZERO
+        end do
       end do
-      call dis%record_srcdst_list_header(text, textmodel, textpackage, &
-                  dstmodel, dstpackage, naux,                          &
-                  auxname, ibinun, nboundcount, iout)
-    endif
-    !
-    ! -- If no boundaries, skip flow calculations.
-    if (nbound > 0) then
+      do i = 1, this%maxbound
+        this%hcof(i) = DZERO
+        this%rhs(i) = DZERO
+      end do
       !
-      ! -- Loop through each boundary calculating flow.
-      do i = 1, nbound
-        node = nodelist(i)
-        ! -- assign boundary name
-        if (inamedbound > 0) then
-          bname = boundname(i)
-        else
-          bname = ''
+      ! -- setup the output table
+      call this%pak_setup_outputtab()
+      !
+      ! -- return
+      return
+    end subroutine allocate_arrays
+
+    !> @ brief Allocate and initialize select package members
+    !!
+    !!  Allocate and initialize select base boundary package members. 
+    !!  This method needs to be overridden by a package if it is 
+    !!  needed for a specific package.
+    !!
+    !<
+    subroutine pack_initialize(this)
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      !
+      ! -- return
+      return
+    end subroutine pack_initialize
+
+    !> @ brief Set pointers to model variables
+    !!
+    !!  Set pointers to model variables so that a package has access to these
+    !!  variables. This base method should not need to be overridden.
+    !!
+    !<
+    subroutine set_pointers(this, neq, ibound, xnew, xold, flowja)
+      ! -- dummy variables
+      class(BndType) :: this                                     !< BndType object
+      integer(I4B), pointer :: neq                               !< number of equations in the model
+      integer(I4B), dimension(:), pointer, contiguous :: ibound  !< model idomain
+      real(DP), dimension(:), pointer, contiguous :: xnew        !< current dependent variable
+      real(DP), dimension(:), pointer, contiguous :: xold        !< previous dependent variable
+      real(DP), dimension(:), pointer, contiguous :: flowja      !< connection flow terms
+      !
+      ! -- Set the pointers
+      this%neq => neq
+      this%ibound => ibound
+      this%xnew => xnew
+      this%xold => xold
+      this%flowja => flowja
+      !
+      ! -- return
+    end subroutine set_pointers
+
+    !> @ brief Read additional options for package
+    !!
+    !!  Read base options for boundary packages.
+    !!
+    !<
+    subroutine bnd_read_options(this)
+      ! -- modules
+      use InputOutputModule,   only: urdaux
+      use MemoryManagerModule, only: mem_reallocate
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      ! -- local variables
+      character(len=:), allocatable :: line
+      character(len=LINELENGTH) :: fname
+      character(len=LINELENGTH) :: keyword
+      character(len=LENAUXNAME) :: sfacauxname
+      character(len=LENAUXNAME), dimension(:), allocatable :: caux
+      integer(I4B) :: lloc
+      integer(I4B) :: istart
+      integer(I4B) :: istop
+      integer(I4B) :: n
+      integer(I4B) :: ierr
+      integer(I4B) :: inobs
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
+      logical(LGP) :: foundchildclassoption
+      ! -- format
+      character(len=*),parameter :: fmtflow = &
+        "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      character(len=*),parameter :: fmtflow2 = &
+        "(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL')"
+      character(len=*), parameter :: fmttas = &
+        "(4x, 'TIME-ARRAY SERIES DATA WILL BE READ FROM FILE: ', a)"
+      character(len=*), parameter :: fmtts = &
+        "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
+      character(len=*), parameter :: fmtnme = &
+        "(a, i0, a)"
+      !
+      ! -- set default options
+      !
+      ! -- get options block
+      call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+                                supportOpenClose=.true., blockRequired=.false.)
+      !
+      ! -- parse options block if detected
+      if (isfound) then
+        write(this%iout,'(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
+          //' OPTIONS'
+        do
+          call this%parser%GetNextLine(endOfBlock)
+          if (endOfBlock) then
+            exit
+          end if
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+            case('AUX', 'AUXILIARY')
+              call this%parser%GetRemainingLine(line)
+              lloc = 1
+              call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
+                          istart, istop, caux, line, this%text)
+              call mem_reallocate(this%auxname, LENAUXNAME, this%naux,             &
+                                  'AUXNAME', this%memoryPath)
+              do n = 1, this%naux
+                this%auxname(n) = caux(n)
+              end do
+              deallocate(caux)
+            case ('SAVE_FLOWS')
+              this%ipakcb = -1
+              write(this%iout, fmtflow2)
+            case ('PRINT_INPUT')
+              this%iprpak = 1
+              write(this%iout,'(4x,a)') 'LISTS OF '//trim(adjustl(this%text))// &
+                ' CELLS WILL BE PRINTED.'
+            case ('PRINT_FLOWS')
+              this%iprflow = 1
+              write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
+                ' FLOWS WILL BE PRINTED TO LISTING FILE.'
+            case ('BOUNDNAMES')
+              this%inamedbound = 1
+              write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
+                ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'
+            case ('TS6')
+              call this%parser%GetStringCaps(keyword)
+              if(trim(adjustl(keyword)) /= 'FILEIN') then
+                errmsg = 'TS6 keyword must be followed by "FILEIN" ' //          &
+                        'then by filename.'
+                call store_error(errmsg)
+              endif
+              call this%parser%GetString(fname)
+              write(this%iout,fmtts)trim(fname)
+              call this%TsManager%add_tsfile(fname, this%inunit)
+            case ('TAS6')
+              if (this%AllowTimeArraySeries) then
+                if (.not. this%dis%supports_layers()) then
+                  errmsg = 'TAS6 FILE cannot be used ' // &
+                          'with selected discretization type.'
+                  call store_error(errmsg)
+                endif
+              else
+                errmsg = 'The ' // trim(this%filtyp) // &
+                        ' package does not support TIMEARRAYSERIESFILE'
+                call store_error(errmsg)
+                call this%parser%StoreErrorUnit()
+                call ustop()
+              endif
+              call this%parser%GetStringCaps(keyword)
+              if(trim(adjustl(keyword)) /= 'FILEIN') then
+                errmsg = 'TAS6 keyword must be followed by "FILEIN" ' //         &
+                        'then by filename.'
+                call store_error(errmsg)
+                call this%parser%StoreErrorUnit()
+                call ustop()
+              endif
+              call this%parser%GetString(fname)
+              write(this%iout,fmttas)trim(fname)
+              call this%TasManager%add_tasfile(fname)
+            case ('AUXMULTNAME')
+              call this%parser%GetStringCaps(sfacauxname)
+              this%iauxmultcol = -1
+              write(this%iout, '(4x,a,a)')                                       &
+                              'AUXILIARY MULTIPLIER NAME: ', sfacauxname
+            case ('OBS6')
+              call this%parser%GetStringCaps(keyword)
+              if(trim(adjustl(keyword)) /= 'FILEIN') then
+                errmsg = 'OBS6 keyword must be followed by "FILEIN" ' //         &
+                        'then by filename.'
+                call store_error(errmsg)
+                call this%parser%StoreErrorUnit()
+                call ustop()
+              endif
+              if (this%obs%active) then
+                errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
+                        'Only one OBS6 entry allowed for a package.'
+                call store_error(errmsg)
+              endif
+              this%obs%active = .true.
+              call this%parser%GetString(this%obs%inputFilename)
+              inobs = GetUnit()
+              call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
+              this%obs%inUnitObs = inobs
+            !
+            ! -- right now these are options that are only available in the
+            !    development version and are not included in the documentation.
+            !    These options are only available when IDEVELOPMODE in
+            !    constants module is set to 1
+            case ('DEV_NO_NEWTON')
+              call this%parser%DevOpt()
+              this%inewton = 0
+              write(this%iout, '(4x,a)')                                           &
+                'NEWTON-RAPHSON method disabled for unconfined cells'
+            case default
+              !
+              ! -- Check for child class options
+              call this%bnd_options(keyword, foundchildclassoption)
+              !
+              ! -- No child class options found, so print error message
+              if(.not. foundchildclassoption) then
+                write(errmsg,'(a,3(1x,a))')                                        &
+                  'UNKNOWN', trim(adjustl(this%text)), 'OPTION:', trim(keyword)
+                call store_error(errmsg)
+              endif
+          end select
+        end do
+        write(this%iout,'(1x,a)') 'END OF '//trim(adjustl(this%text)) // ' OPTIONS'
+      else
+        write(this%iout,'(1x,a)') 'NO '//trim(adjustl(this%text)) //               &
+          ' OPTION BLOCK DETECTED.'
+      end if
+      !
+      ! -- AUXMULTNAME was specified, so find column of auxvar that will be multiplier
+      if(this%iauxmultcol < 0) then
+        !
+        ! -- Error if no aux variable specified
+        if(this%naux == 0) then
+          write(errmsg,'(a,2(1x,a))')                                              &
+            'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)),            &
+            'BUT NO AUX VARIABLES SPECIFIED.'
+          call store_error(errmsg)
+        endif
+        !
+        ! -- Assign mult column
+        this%iauxmultcol = 0
+        do n = 1, this%naux
+          if(sfacauxname == this%auxname(n)) then
+            this%iauxmultcol = n
+            exit
+          endif
+        enddo
+        !
+        ! -- Error if aux variable cannot be found
+        if(this%iauxmultcol == 0) then
+          write(errmsg,'(a,2(1x,a))')                                              &
+            'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)),            &
+            'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
+          call store_error(errmsg)
+        endif
+      end if
+      !
+      ! -- terminate if errors were detected
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
+      !
+      ! -- return
+      return
+    end subroutine bnd_read_options
+
+    !> @ brief Read dimensions for package
+    !!
+    !!  Read base dimensions for boundary packages. This method should not
+    !!  need to be overridden unless more than MAXBOUND is specified in the
+    !!  DIMENSIONS block.
+    !!
+    !<
+    subroutine bnd_read_dimensions(this)
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      ! -- local variables
+      character(len=LINELENGTH) :: keyword
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
+      integer(I4B) :: ierr
+      !
+      ! -- get dimensions block
+      call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+                                supportOpenClose=.true.)
+      !
+      ! -- parse dimensions block if detected
+      if (isfound) then
+        write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+          ' DIMENSIONS'
+        do
+          call this%parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+            case ('MAXBOUND')
+              this%maxbound = this%parser%GetInteger()
+              write(this%iout,'(4x,a,i7)') 'MAXBOUND = ', this%maxbound
+            case default
+              write(errmsg,'(a,3(1x,a))') &
+                'UNKNOWN', trim(this%text), 'DIMENSION:', trim(keyword)
+              call store_error(errmsg)
+          end select
+        end do
+        !
+        write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
+      else
+        call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
+      !
+      ! -- verify dimensions were set
+      if(this%maxbound <= 0) then
+        write(errmsg, '(a)') 'MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+        call store_error(errmsg)
+      end if
+      !
+      ! -- terminate if there are errors
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
+      !
+      ! -- Call define_listlabel to construct the list label that is written
+      !    when PRINT_INPUT option is used.
+      call this%define_listlabel()
+      !
+      ! -- return
+      return
+    end subroutine bnd_read_dimensions
+
+    !> @ brief Read initial parameters for package
+    !!
+    !!  Read initial parameters for a boundary package. This method is not
+    !!  needed for most boundary packages. The SFR package is an example of a
+    !!  package that has overridden this method.
+    !!
+    !<
+    subroutine bnd_read_initial_attr(this)
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      !
+      ! -- return
+      return
+    end subroutine bnd_read_initial_attr
+
+    !> @ brief Read additional options for package
+    !!
+    !!  Read additional options for a boundary package. This method should
+    !!  be overridden options in addition to the base options are implemented
+    !!  in a boundary package.
+    !!
+    !<
+    subroutine bnd_options(this, option, found)
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this         !< BndType object
+      character(len=*), intent(inout) :: option    !< option keyword string
+      logical(LGP), intent(inout) :: found         !< boolean indicating if the option was found
+      !
+      ! Return with found = .false.
+      found = .false.
+      !
+      ! -- return
+      return
+    end subroutine bnd_options
+
+    !> @ brief Setup output table for package
+    !!
+    !!  Setup output table for a boundary package that is used to output
+    !!  package to model flow terms to the model listing file.
+    !!
+    !<
+    subroutine pak_setup_outputtab(this)
+      ! -- dummy variables
+      class(BndType),intent(inout) :: this  !< BndType object
+      ! -- local variables
+      character(len=LINELENGTH) :: title
+      character(len=LINELENGTH) :: text
+      integer(I4B) :: ntabcol
+      !
+      ! -- allocate and initialize the output table
+      if (this%iprflow /= 0) then
+        !
+        ! -- dimension table
+        ntabcol = 3
+        if (this%inamedbound > 0) then
+          ntabcol = ntabcol + 1
         end if
         !
-        ! -- If cell is no-flow or constant-head, then ignore it.
-        rrate = DZERO
-        if (node > 0) then
-            !
-            ! -- Use simval, which was calculated in cq()
-            rrate = flow(i)
-            !
-            ! -- Print the individual rates if the budget is being printed
-            !    and PRINT_FLOWS was specified (iprflow < 0)
-            if (ibudfl /= 0) then
-              if (iprflow /= 0) then
-                !
-                ! -- set nodestr and write outputtab table
-                nodeu = dis%get_nodeuser(node)
-                call dis%nodeu_to_string(nodeu, nodestr)
-                call outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
-                                                     rrate, bname)
-              end if
-            end if
+        ! -- initialize the output table object
+        title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) //     &
+                ') FLOW RATES'
+        call table_cr(this%outputtab, this%packName, title)
+        call this%outputtab%table_df(this%maxbound, ntabcol, this%iout,            &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
+        call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab%initialize_column(text, LENBOUNDNAME, alignment=TABLEFT)
+        end if
+      end if
+      !
+      ! -- return
+      return
+    end subroutine pak_setup_outputtab
+
+
+    !> @ brief Define the list label for the package
+    !!
+    !!  Method defined the list label for the boundary package. This method
+    !!  needs to be overridden by each boundary package.
+    !!
+    !<
+    subroutine define_listlabel(this)
+      ! -- dummy variables
+      class(BndType), intent(inout) :: this !< BndType object
+      !
+      ! -- return
+      return
+    end subroutine define_listlabel
+
+    ! -- Procedures related to observations
+
+    !> @brief Determine if observations are supported.
+    !!
+    !!  Function to determine if observations are supported by the boundary package.
+    !!  By default, observations are not supported. This method should be overridden
+    !!  if observations are supported in a boundary package.
+    !!
+    !!  @return  supported       boolean indicating if observations are supported
+    !!
+    !<
+    function bnd_obs_supported(this) result(supported)
+      ! -- return variable
+      logical(LGP) :: supported  !< boolean indicating if observations are supported
+      ! -- dummy variables
+      class(BndType) :: this     !< BndType object
+      !
+      ! -- initialize return variables
+      supported = .false.
+      !
+      ! -- return
+      return
+    end function bnd_obs_supported
+
+    !> @brief Define the observation types available in the package
+    !!
+    !!  Method to define the observation types available in a boundary 
+    !!  package. This method should be overridden if observations are 
+    !!  supported in a boundary package.
+    !!
+    !<
+    subroutine bnd_df_obs(this)
+      !
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      !
+      ! -- do nothing here. Override as needed.
+      !
+      ! -- return
+      return
+    end subroutine bnd_df_obs
+
+    !> @brief Read and prepare observations for a package
+    !!
+    !! Method to read and prepare observations for a boundary package
+    !! This method should not need to be overridden for most boundary
+    !! packages.
+    !!
+    !<
+    subroutine bnd_rp_obs(this)
+      ! -- dummy variables
+      class(BndType), intent(inout) :: this  !< BndType object
+      ! -- local variables
+      integer(I4B) :: i
+      integer(I4B) :: j
+      class(ObserveType), pointer :: obsrv => null()
+      character(len=LENBOUNDNAME) :: bname
+      logical(LGP) :: jfound
+      !
+      if (.not. this%bnd_obs_supported()) return
+      !
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        !
+        ! -- indxbnds needs to be reset each stress period because 
+        !    list of boundaries can change each stress period.
+        call obsrv%ResetObsIndex()
+        obsrv%BndFound = .false.
+        !
+        bname = obsrv%FeatureName
+        if (bname /= '') then
           !
-          ! -- If saving cell-by-cell flows in list, write flow
-          if (ibinun /= 0) then
-            n2 = i
-            if (present(imap)) n2 = imap(i)
-            call dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
-                                                naux, auxvar(:,i),          &
-                                                olconv2=.FALSE.)
+          ! -- Observation location(s) is(are) based on a boundary name.
+          !    Iterate through all boundaries to identify and store
+          !    corresponding index(indices) in bound array.
+          jfound = .false.
+          do j=1,this%nbound
+            if (this%boundname(j) == bname) then
+              jfound = .true.
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              call obsrv%AddObsIndex(j)
+            end if
+          end do
+        else
+          !
+          ! -- Observation location is a single node number
+          jfound = .false.
+          jloop: do j=1,this%nbound
+            if (this%nodelist(j) == obsrv%NodeNumber) then
+              jfound = .true.
+              obsrv%BndFound = .true.
+              obsrv%CurrentTimeStepEndValue = DZERO
+              call obsrv%AddObsIndex(j)
+            end if
+          end do jloop
+        end if
+      end do
+      !
+      if (count_errors() > 0) then
+        call store_error_unit(this%inunit)
+        call ustop()
+      endif
+      !
+      return
+    end subroutine bnd_rp_obs
+
+    !> @brief Save observations for the package
+    !!
+    !! Method to save simulated values for the boundary package.
+    !! This method will need to be overridden for boundary packages
+    !! with more observations than the calculate flow term (simvals)
+    !! and to-mover.
+    !!
+    !<
+    subroutine bnd_bd_obs(this)
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      ! -- local variables
+      integer(I4B) :: i
+      integer(I4B) :: n
+      real(DP) :: v
+      type(ObserveType), pointer :: obsrv => null()
+      !
+      ! -- clear the observations
+      call this%obs%obs_bd_clear()
+      !
+      ! -- Save simulated values for all of package's observations.
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        if (obsrv%BndFound) then
+          do n = 1, obsrv%indxbnds_count
+            if (obsrv%ObsTypeId == 'TO-MVR') then
+              if (this%imover == 1) then
+                v = this%pakmvrobj%get_qtomvr(obsrv%indxbnds(n))
+                if (v > DZERO) then
+                  v = -v
+                end if
+              else
+                v = DNODATA
+              end if
+            else
+              v = this%simvals(obsrv%indxbnds(n))
+            end if
+            call this%obs%SaveOneSimval(obsrv, v)
+          end do
+        else
+          call this%obs%SaveOneSimval(obsrv, DNODATA)
+        end if
+      end do
+      !
+      ! -- return
+      return
+    end subroutine bnd_bd_obs
+
+    !> @brief Output observations for the package
+    !!
+    !! Method to output simulated values for the boundary package.
+    !! This method should not need to be overridden.
+    !!
+    !<
+    subroutine bnd_ot_obs(this)
+      ! -- dummy variables
+      class(BndType) :: this  !< BndType object
+      !
+      ! -- call the observation output method
+      call this%obs%obs_ot()
+      !
+      ! -- return
+      return
+    end subroutine bnd_ot_obs
+
+    ! -- Procedures related to time series
+
+    !> @brief Assign time series links for the package
+    !!
+    !! Assign the time series links for the boundary package. This
+    !! method will need to be overridden for boundary packages that
+    !! support time series.
+    !!
+    !<
+    subroutine bnd_rp_ts(this)
+      ! -- dummy variables
+      class(BndType), intent(inout) :: this
+      !
+      ! -- return
+      return
+    end subroutine bnd_rp_ts
+
+    ! -- Procedures related to casting
+
+    !> @brief Cast as a boundary tyoe
+    !!
+    !!  Subroutine to cast an object as a boundary package type.
+    !!
+    !<
+    function CastAsBndClass(obj) result(res)
+      class(*), pointer, intent(inout) :: obj  !< input object
+      class(BndType), pointer :: res           !< output class of type BndType
+      !
+      ! -- initialize res
+      res => null()
+      !
+      ! -- make sure obj is associated
+      if (.not. associated(obj)) return
+      !
+      ! -- point res to obj
+      select type (obj)
+      class is (BndType)
+        res => obj
+      end select
+      !
+      ! -- return
+      return
+    end function CastAsBndClass
+
+    !> @brief Add boundary to package list
+    !!
+    !!  Subroutine to add a boundary package to a package list.
+    !!
+    !<
+    subroutine AddBndToList(list, bnd)
+      ! -- dummy variables
+      type(ListType), intent(inout) :: list           !< package list
+      class(BndType), pointer, intent(inout) :: bnd   !< boundary package
+      ! -- local variables
+      class(*), pointer :: obj
+      !
+      obj => bnd
+      call list%Add(obj)
+      !
+      ! -- return
+      return
+    end subroutine AddBndToList
+
+    !> @brief Get boundary from package list
+    !!
+    !!  Function to get a boundary package from a package list.
+    !!
+    !!  @return  res  boundary package object
+    !!
+    !<
+    function GetBndFromList(list, idx) result (res)
+      ! -- dummy variables
+      type(ListType), intent(inout) :: list  !< package list 
+      integer(I4B), intent(in) :: idx        !< package number
+      class(BndType), pointer :: res         !< boundary package idx
+      ! -- local variables
+      class(*), pointer :: obj
+      !
+      ! -- get the package from the list
+      obj => list%GetItem(idx)
+      res => CastAsBndClass(obj)
+      !
+      ! -- return
+      return
+    end function GetBndFromList
+
+    !> @brief Save and/or print flows for a package
+    !!
+    !!  Subroutine to save and/or print package flows to a model to a
+    !!  binary cell-by-cell flow file and the model listing file.
+    !!
+    !<
+    subroutine save_print_model_flows(icbcfl, ibudfl, icbcun, iprflow, &
+      outputtab, nbound, nodelist, flow, ibound, title, text, ipakcb, dis, naux, &
+      textmodel, textpackage, dstmodel, dstpackage, auxname, auxvar, iout, &
+      inamedbound, boundname, imap)
+      ! -- modules
+      use TdisModule, only: kstp, kper
+      ! -- dummy variables
+      integer(I4B), intent(in) :: icbcfl                                  !< flag indicating if the flow should be saved to the binary cell-by-cell flow file 
+      integer(I4B), intent(in) :: ibudfl                                  !< flag indicating if the flow should be saved or printed
+      integer(I4B), intent(in) :: icbcun                                  !< file unit number for the binary cell-by-cell file
+      integer(I4B), intent(in) :: iprflow                                 !< print flows to list file
+      type(TableType), pointer, intent(inout) :: outputtab                !< output table object
+      integer(I4B), intent(in) :: nbound                                  !< number of boundaries this stress period
+      integer(I4B), dimension(:), contiguous, intent(in) :: nodelist      !< boundary node list
+      real(DP), dimension(:), contiguous, intent(in) :: flow              !< boundary flow terms
+      integer(I4B), dimension(:), contiguous, intent(in) :: ibound        !< ibound array for the model
+      character(len=*), intent(in) :: title                               !< title for the output table
+      character(len=*), intent(in) :: text                                !< flow term description
+      integer(I4B), intent(in) :: ipakcb                                  !< flag indicating if flows will be saved
+      class(DisBaseType), intent(in) :: dis                               !< model discretization object
+      integer(I4B), intent(in) :: naux                                    !< number of aux variables
+      character(len=*), intent(in) :: textmodel                           !< model name
+      character(len=*), intent(in) :: textpackage                         !< package name
+      character(len=*), intent(in) :: dstmodel                            !< mover destination model
+      character(len=*), intent(in) :: dstpackage                          !< mover destination package
+      character(len=*), dimension(:), intent(in) :: auxname               !< aux variable name
+      real(DP), dimension(:, :), intent(in) :: auxvar                     !< aux variable
+      integer(I4B), intent(in) :: iout                                    !< model listing file unit
+      integer(I4B), intent(in) :: inamedbound                             !< flag indicating if boundnames are defined for the boundary entries
+      character(len=LENBOUNDNAME), dimension(:), contiguous :: boundname  !< bound names
+      integer(I4B), dimension(:), optional, intent(in) :: imap            !< mapping array
+      ! -- local variables
+      character(len=20) :: nodestr
+      integer(I4B) :: nodeu
+      integer(I4B) :: maxrows
+      integer(I4B) :: i
+      integer(I4B) :: node
+      integer(I4B) :: n2
+      integer(I4B) :: ibinun
+      integer(I4B) :: nboundcount
+      real(DP) :: rrate
+      ! -- for observations
+      character(len=LENBOUNDNAME) :: bname
+      !
+      ! -- set table kstp and kper
+      if (iprflow /= 0) then
+        call outputtab%set_kstpkper(kstp, kper)
+      end if
+      !
+      ! -- set maxrows
+      maxrows = 0
+      if (ibudfl /= 0 .and. iprflow /= 0) then
+        do i = 1, nbound
+          node = nodelist(i)
+          if (node > 0) then
+            if (ibound(node) > 0) then
+              maxrows = maxrows + 1
+            end if
+          end if
+        end do
+        if (maxrows > 0) then
+          call outputtab%set_maxbound(maxrows)
+        end if
+        call outputtab%set_title(title)
+      end if
+      !
+      ! -- Set unit number for binary output
+      if (ipakcb < 0) then
+        ibinun = icbcun
+      else if (ipakcb == 0) then
+        ibinun = 0
+      else
+        ibinun = ipakcb
+      end if
+      if (icbcfl == 0) then
+        ibinun = 0
+      end if
+      !
+      ! -- If cell-by-cell flows will be saved as a list, write header.
+      if(ibinun /= 0) then
+        !
+        ! -- Count nbound as the number of entries with node > 0
+        !    SFR, for example, can have a 'none' connection, which
+        !    means it should be excluded from budget file
+        nboundcount = 0
+        do i = 1, nbound
+          node = nodelist(i)
+          if (node > 0) nboundcount = nboundcount + 1
+        end do
+        call dis%record_srcdst_list_header(text, textmodel, textpackage, &
+                    dstmodel, dstpackage, naux,                          &
+                    auxname, ibinun, nboundcount, iout)
+      endif
+      !
+      ! -- If no boundaries, skip flow calculations.
+      if (nbound > 0) then
+        !
+        ! -- Loop through each boundary calculating flow.
+        do i = 1, nbound
+          node = nodelist(i)
+          ! -- assign boundary name
+          if (inamedbound > 0) then
+            bname = boundname(i)
+          else
+            bname = ''
+          end if
+          !
+          ! -- If cell is no-flow or constant-head, then ignore it.
+          rrate = DZERO
+          if (node > 0) then
+              !
+              ! -- Use simval, which was calculated in cq()
+              rrate = flow(i)
+              !
+              ! -- Print the individual rates if the budget is being printed
+              !    and PRINT_FLOWS was specified (iprflow < 0)
+              if (ibudfl /= 0) then
+                if (iprflow /= 0) then
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = dis%get_nodeuser(node)
+                  call dis%nodeu_to_string(nodeu, nodestr)
+                  call outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                      rrate, bname)
+                end if
+              end if
+            !
+            ! -- If saving cell-by-cell flows in list, write flow
+            if (ibinun /= 0) then
+              n2 = i
+              if (present(imap)) n2 = imap(i)
+              call dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                  naux, auxvar(:,i),          &
+                                                  olconv2=.FALSE.)
+            end if
+          end if
+          !
+        end do
+        if (ibudfl /= 0) then
+          if (iprflow /= 0) then
+            write(iout,'(1x)')
           end if
         end if
-        !
-      end do
-      if (ibudfl /= 0) then
-        if (iprflow /= 0) then
-           write(iout,'(1x)')
-        end if
-      end if
 
-    endif
-    !
-    ! -- return
-    return
-  end subroutine save_print_model_flows
+      endif
+      !
+      ! -- return
+      return
+    end subroutine save_print_model_flows
 
 end module BndModule

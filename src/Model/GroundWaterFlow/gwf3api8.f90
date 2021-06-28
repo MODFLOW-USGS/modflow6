@@ -1,3 +1,14 @@
+!> @brief This module contains the API package methods
+!!
+!! This module contains the overridden methods from the base model package
+!! class for the API package. The API package is designed to be used with the
+!! shared object and have period data specified using the MODFLOW API. Several 
+!! methods need to be overridden since no period data are specified in the 
+!! API input file. Overridden methods include:
+!!   - bnd_rp no period data is specified 
+!!   - bnd_fc BOUND array is not filled. hcof and rhs are specified dierctly
+!!
+!<
 module apimodule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
@@ -35,13 +46,13 @@ contains
   !<
   subroutine api_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
     ! -- dummy variables
-    class(BndType), pointer :: packobj         !< pointer to default package type
+    class(BndType), pointer :: packobj          !< pointer to default package type
     integer(I4B), intent(in) :: id              !< package id
     integer(I4B), intent(in) :: ibcnum          !< boundary condition number
     integer(I4B), intent(in) :: inunit          !< unit number of USR package input file
     integer(I4B), intent(in) :: iout            !< unit number of model listing file
-    character(len=*), intent(in) :: namemodel  !< model name
-    character(len=*), intent(in) :: pakname    !< package name
+    character(len=*), intent(in) :: namemodel   !< model name
+    character(len=*), intent(in) :: pakname     !< package name
     ! -- local variables
     type(ApiType), pointer :: apiobj
     !
@@ -74,9 +85,6 @@ contains
   !> @ brief Read additional options for package
   !!
   !!  Read additional options for USR package.
-  !!
-  !! @param[in,out]  option  string with option text
-  !! @param[in,out]  found   boolean indicating if a valid option was provided
   !!
   !<
   subroutine api_options(this, option, found)
@@ -120,9 +128,6 @@ contains
   !!
   !!  Fill the coefficient matrix and right-hand side with the USR
   !!  package terms.
-  !!
-  !! @param[in,out]  rhs     right-hand side vector
-  !! @param[in,out]  amatsln A matrix for the solution
   !!
   !<
   subroutine api_fc(this, rhs, ia, idxglo, amatsln)

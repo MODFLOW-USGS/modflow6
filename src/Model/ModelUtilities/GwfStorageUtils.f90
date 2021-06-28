@@ -1,3 +1,11 @@
+!> @brief This module contains the storage capacity subroutines
+!!
+!! This module contains the subroutines to calculate the specific
+!! storage (SC1) and specific yield (SC2) capacities that are used in
+!! the storage (STO) package. This module does not depend on the 
+!! STO package.
+!!
+!<
 module GwfStorageUtilsModule
 
   use KindModule, only: DP, I4B
