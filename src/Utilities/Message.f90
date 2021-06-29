@@ -1,5 +1,11 @@
-! Message object that stores errors, warnings, notes, and
-! error units recorded in a simulation.
+!> @brief This module contains message methods
+!!
+!! This module contains generic message methods that are used to 
+!! create warning and error messages and notes. This module also has methods
+!! for counting messages. The module does not have any dependencies on 
+!! models, exchanges, or solutions in a simulation.
+!!
+!<
 module MessageModule
   
   use KindModule, only: LGP, I4B, DP
@@ -15,13 +21,13 @@ module MessageModule
   
   type :: MessageType
 
-    character(len=LINELENGTH) :: title
-    character(len=LINELENGTH) :: name
-    integer(I4B) :: nmessage = 0
-    integer(I4B) :: max_message = 1000
-    integer(I4B) :: max_exceeded = 0
-    integer(I4B) :: inc_message = 100
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: message
+    character(len=LINELENGTH) :: title                               !< title of the message 
+    character(len=LINELENGTH) :: name                                !< message name
+    integer(I4B) :: nmessage = 0                                     !< number of messages stored
+    integer(I4B) :: max_message = 1000                               !< default maximum number of messages that can be stored
+    integer(I4B) :: max_exceeded = 0                                 !< flag indicating if the maximum number of messages has exceed the maximum number
+    integer(I4B) :: inc_message = 100                                !< amount to increment message array by when calling ExpandArray
+    character(len=MAXCHARLEN), allocatable, dimension(:) :: message  !< message array
     
     contains
   
@@ -36,32 +42,40 @@ module MessageModule
   
   contains
 
-    !> @brief Always initialize the message object,
-    !! (allocation of message array occurs on-the-fly)
+    !> @brief Always initialize the message object
+    !!
+    !! Subroutine that initializes the message object. Allocation of message 
+    !! array occurs on-the-fly.
+    !!
     !<
     subroutine init_message(this)
-      class(MessageType) :: this
-      
+      ! -- dummy variables
+      class(MessageType) :: this  !< MessageType object
+      !
+      ! -- initialize message variables
       this%nmessage = 0
       this%max_message = 1000
       this%max_exceeded = 0
       this%inc_message = 100
-
+      !
+      ! -- return
+      return
     end subroutine init_message
   
+    !> @brief Return number of messages
+    !!
+    !!  Function to return the number of messages that have been stored.
+    !!
+    !!  @return  ncount number of messages stored
+    !!
+    !<
     function count_message(this) result(nmessage)
-    ! ******************************************************************************
-    ! Return message count
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
-      ! -- modules
+      ! -- dummy variables
+      class(MessageType) :: this     !< MessageType object
       ! -- return variable
-      ! -- dummy
-      class(MessageType) :: this
       integer(I4B) :: nmessage
-    ! ------------------------------------------------------------------------------
+      !
+      ! -- set nmessage
       if (allocated(this%message)) then
         nmessage = this%nmessage
       else
@@ -72,43 +86,41 @@ module MessageModule
       return
     end function count_message
     
+    !> @brief Set the maximum number of messages stored
+    !!
+    !!  Subroutine to set the maximum number of messages that will be stored
+    !!  in a simulation.
+    !!
+    !<
     subroutine set_max_message(this, imax)
-    ! ******************************************************************************
-    ! Set maximum number of messages stored
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
-      ! -- modules
-      ! -- return variable
-      ! -- dummy
-      class(MessageType) :: this
-      integer(I4B), intent(in) :: imax
-    ! ------------------------------------------------------------------------------
+      ! -- dummy variables
+      class(MessageType) :: this           !< MessageType object
+      integer(I4B), intent(in) :: imax     !< maximum number of messages that will be stored
+      !
+      ! -- set max_message
       this%max_message = imax
       !
       ! -- return
       return
     end subroutine set_max_message
     
+    !> @brief Store message
+    !!
+    !!  Subroutine to store a message for printing at the end of
+    !!  the simulation.
+    !!
+    !<
     subroutine store_message(this, msg, substring)
-    ! ******************************************************************************
-    ! Store a message for printing at end of simulation
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
-      ! -- modules
-      ! -- dummy
-      class(MessageType) :: this
-      character(len=*), intent(in) :: msg
-      character(len=*), intent(in), optional :: substring
-      ! -- local
+      ! -- dummy variables
+      class(MessageType) :: this                           !< MessageType object
+      character(len=*), intent(in) :: msg                  !< message
+      character(len=*), intent(in), optional :: substring  !< optional string that can be used 
+                                                           !! to prevent storing duplicate messages 
+      ! -- local variables
       logical(LGP) :: inc_array
       logical(LGP) :: increment_message
       integer(I4B) :: i
       integer(I4B) :: idx
-    ! ------------------------------------------------------------------------------
       !
       ! -- determine if messages should be expanded
       inc_array = .TRUE.
@@ -154,20 +166,18 @@ module MessageModule
       return
     end subroutine store_message
     
+    !> @brief Print messages
+    !!
+    !!  Subroutine to print stored messages.
+    !!
+    !<
     subroutine print_message(this, title, name, iunit, level)
-    ! ******************************************************************************
-    ! Print all messages that have been stored
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
-      ! -- modules
-      ! -- dummy
-      class(MessageType) :: this
-      character(len=*), intent(in) :: title
-      character(len=*), intent(in) :: name
-      integer(I4B), intent(in), optional :: iunit
-      integer(I4B), intent(in), optional :: level
+      ! -- dummy variables
+      class(MessageType) :: this                   !< MessageType object
+      character(len=*), intent(in) :: title        !< message title
+      character(len=*), intent(in) :: name         !< message name
+      integer(I4B), intent(in), optional :: iunit  !< optional file unit to save messages to
+      integer(I4B), intent(in), optional :: level  !< optional level of messages to print
       ! -- local
       character(len=LINELENGTH) :: errmsg
       character(len=LINELENGTH) :: cerr
@@ -178,7 +188,6 @@ module MessageModule
       integer(I4B) :: iwidth
       ! -- formats
       character(len=*), parameter :: stdfmt = "(/,A,/)"
-    ! ------------------------------------------------------------------------------
       !
       ! -- process optional variables
       if (present(iunit)) then
@@ -235,28 +244,19 @@ module MessageModule
       return
     end subroutine print_message
 
+    !> @brief Write messages
+    !!
+    !!  Subroutine that formats and writes a single message.
+    !!
+    !<
     subroutine write_message(message, icount, iwidth, iunit, level)
-  ! ******************************************************************************
-  ! Subroutine write_message formats and writes a message.
-  !
-  ! -- Arguments are as follows:
-  !       MESSAGE      : message to be written
-  !       ICOUNT       : counter to prepended to the message  
-  !       IWIDTH       : maximum width of the prepended counter
-  !       IUNIT        : the unit number to which the message is written
-  !       LEVEL        : level of message (VSUMMARY, VALL, VDEBUG)
-  !
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-    ! -- dummy
-    character (len=*), intent(in)           :: message
-    integer(I4B),      intent(in)           :: icount
-    integer(I4B),      intent(in)           :: iwidth
-    integer(I4B),      intent(in), optional :: iunit
-    integer(I4B),      intent(in), optional :: level
-    ! -- local
+    ! -- dummy variables
+    character (len=*), intent(in)           :: message   !< message to be written
+    integer(I4B),      intent(in)           :: icount    !< counter to prepended to the message  
+    integer(I4B),      intent(in)           :: iwidth    !< maximum width of the prepended counter
+    integer(I4B),      intent(in), optional :: iunit     !< the unit number to which the message is written
+    integer(I4B),      intent(in), optional :: level     !< level of message (VSUMMARY, VALL, VDEBUG)
+    ! -- local variables
     character(len=MAXCHARLEN) :: amessage
     character(len=20)         :: ablank
     character(len=16)         :: cfmt
@@ -270,7 +270,6 @@ module MessageModule
     integer(I4B)              :: ipos
     integer(I4B)              :: i
     integer(I4B)              :: j
-  ! ------------------------------------------------------------------------------
     !
     ! -- return if no message is passed
     if (len_trim(message) < 1) then
@@ -366,14 +365,20 @@ module MessageModule
     
   !> @ brief Deallocate message
   !!
-  !! Deallocate the array of strings if it was allocated 
+  !! Subroutine that deallocate the array of strings if it was allocated 
   !!
   !<
   subroutine deallocate_message(this)
-    class(MessageType) :: this
+    ! -- dummy variables
+    class(MessageType) :: this    !< MessageType object
+    !
+    ! -- deallocate the message
     if (allocated(this%message)) then
       deallocate(this%message)
     end if
+    !
+    ! -- return
+    return
   end subroutine deallocate_message
 
 end module MessageModule

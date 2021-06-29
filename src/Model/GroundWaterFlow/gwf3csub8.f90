@@ -1,3 +1,11 @@
+!> @brief This module contains the CSUB package methods
+!!
+!! This module contains the methods used to add the effects of elastic 
+!! skeletal storage, compaction, and subsidence on the groundwater flow 
+!! equation. The contribution of elastic skelatal, inelastic and elastic
+!! interbed storage and water compressibility can be represented.
+!!
+!<
 module GwfCsubModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM8, DEM7, &
@@ -7804,7 +7812,6 @@ contains
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
     logical :: flag_string
-    !--------------------------------------------------------------------------
     !
     ! -- initialize variables
     strng = obsrv%IDstring

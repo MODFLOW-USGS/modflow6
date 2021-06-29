@@ -1,9 +1,16 @@
+!> @brief This module contains the base numerical package type 
+!!
+!! This module contains the base model package class that is extended
+!! by all model packages.
+!!
+!<
 module NumericalPackageModule
   ! -- modules
   use KindModule, only: DP, I4B
   use ConstantsModule,              only: LENPACKAGENAME, LENMODELNAME,        &
                                           LENMEMPATH, LENFTYPE, LINELENGTH,    &
                                           LENVARNAME
+  use SimVariablesModule,           only: errmsg
   use SimModule,                    only: store_error, ustop
   use BlockParserModule,            only: BlockParserType
   use BaseDisModule,                only: DisBaseType
@@ -16,12 +23,12 @@ module NumericalPackageModule
   type :: NumericalPackageType
 
     ! -- strings
-    character(len=LENMODELNAME)                        :: name_model      = ''       !< the name of the model that contains this package
-    character(len=LENPACKAGENAME)                      :: packName        = ''       !< name of the package
-    character(len=LENMEMPATH)                          :: memoryPath      = ''       !< the location in the memory manager where the variables are stored
-    character(len=LENMEMPATH)                          :: memoryPathModel = ''       !< the location in the memory manager where the variables
-                                                                                     ! of the parent model are stored
-    character(len=LENFTYPE)                            :: filtyp          = ''       !< file type (CHD, DRN, RIV, etc.)
+    character(len=LENMODELNAME)                        :: name_model      = ''   !< the name of the model that contains this package
+    character(len=LENPACKAGENAME)                      :: packName        = ''   !< name of the package
+    character(len=LENMEMPATH)                          :: memoryPath      = ''   !< the location in the memory manager where the variables are stored
+    character(len=LENMEMPATH)                          :: memoryPathModel = ''   !< the location in the memory manager where the variables
+                                                                                 !! of the parent model are stored
+    character(len=LENFTYPE)                            :: filtyp          = ''   !< file type (CHD, DRN, RIV, etc.)
  
     ! -- integers
     integer(I4B), pointer                              :: id          => null()  !< consecutive package number in model
@@ -37,7 +44,7 @@ module NumericalPackageModule
     !
     ! -- derived types
     type(BlockParserType)                              :: parser                 !< parser object for reading blocks of information
-    class(DisBaseType), pointer                        :: dis => null()
+    class(DisBaseType), pointer                        :: dis => null()          !< model discretization object
     
   contains
     procedure :: set_names
@@ -49,200 +56,193 @@ module NumericalPackageModule
   !
   contains
   !
-  subroutine set_names(this, ibcnum, name_model, pakname, ftype)
-! ******************************************************************************
-! set_names -- Assign strings to some character attributes
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalPackageType),intent(inout) :: this
-    integer(I4B), intent(in) :: ibcnum
-    character(len=*), intent(in) :: name_model
-    character(len=*), intent(in) :: pakname
-    character(len=*), intent(in) :: ftype
-    ! -- locals
-    character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
-    this%filtyp = ftype
-    this%name_model = name_model
-    if(pakname == '') then
-      write(this%packName,'(a, i0)') trim(ftype) // '-', ibcnum
-    else
+    !> @ brief Set package names
+    !!
+    !!  Method to assign the filtyp (ftype), the model name, and package name for 
+    !!  a package. This method also creates the memoryPath and memoryPathModel that
+    !!  is used by the memory manager when variables are allocated. 
+    !!
+    !<
+    subroutine set_names(this, ibcnum, name_model, pakname, ftype)
+      ! -- dummy variables
+      class(NumericalPackageType),intent(inout) :: this  !< NumericalPackageType object
+      integer(I4B), intent(in) :: ibcnum                 !< unique package number
+      character(len=*), intent(in) :: name_model         !< name of the model
+      character(len=*), intent(in) :: pakname            !< name of the package
+      character(len=*), intent(in) :: ftype              !< package type
       !
-      ! -- Ensure pakname has no spaces
-      if(index(trim(pakname), ' ') > 0) then
-        errmsg = 'Package name contains spaces: ' // trim(pakname)
+      ! -- set names
+      this%filtyp = ftype
+      this%name_model = name_model
+      if(pakname == '') then
+        write(this%packName,'(a, i0)') trim(ftype) // '-', ibcnum
+      else
+        !
+        ! -- Ensure pakname has no spaces
+        if(index(trim(pakname), ' ') > 0) then
+          errmsg = 'Package name contains spaces: ' // trim(pakname)
+          call store_error(errmsg)
+          errmsg = 'Remove spaces from name.'
+          call store_error(errmsg)
+          call ustop()
+        endif
+        !
+        this%packName = pakname
+      endif
+      this%memoryPath = create_mem_path(name_model, this%packName)
+      this%memoryPathModel = create_mem_path(name_model)
+      !
+      ! -- return
+      return
+    end subroutine set_names
+  
+    !> @ brief Allocate package scalars
+    !!
+    !!  Allocate and initialize base numerical package scalars. 
+    !!
+    !<
+    subroutine allocate_scalars(this)
+      ! -- modules
+      use MemoryManagerModule, only: mem_allocate, mem_setptr
+      ! -- dummy variables
+      class(NumericalPackageType) :: this  !< NumericalPackageType object
+      ! -- local variables
+      integer(I4B), pointer :: imodelnewton => null()
+      integer(I4B), pointer :: imodelprpak => null()
+      integer(I4B), pointer :: imodelprflow => null()
+      integer(I4B), pointer :: imodelpakcb => null()
+      !
+      ! -- allocate scalars
+      call mem_allocate(this%id, 'ID', this%memoryPath)
+      call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+      call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+      call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
+      call mem_allocate(this%iasym, 'IASYM', this%memoryPath)
+      call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+      call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
+      call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
+      !
+      call mem_allocate(this%ionper, 'IONPER', this%memoryPath)
+      call mem_allocate(this%lastonper, 'LASTONPER', this%memoryPath)
+      !
+      ! -- set pointer to model variables
+      call mem_setptr(imodelnewton, 'INEWTON', this%memoryPathModel)
+      call mem_setptr(imodelprpak, 'IPRPAK', this%memoryPathModel)
+      call mem_setptr(imodelprflow, 'IPRFLOW', this%memoryPathModel)
+      call mem_setptr(imodelpakcb, 'IPAKCB', this%memoryPathModel)
+      !
+      ! -- initialize
+      this%id = 0
+      this%inunit = 0
+      this%iout = 0
+      this%inewton = imodelnewton
+      this%iasym = 0
+      this%iprpak = imodelprpak
+      this%iprflow = imodelprflow
+      this%ipakcb = imodelpakcb
+      this%ionper = 0
+      this%lastonper = 0
+      !
+      ! -- nullify unneeded pointers
+      imodelnewton => null()
+      imodelprpak  => null()
+      imodelprflow => null()
+      imodelpakcb  => null()
+      !
+      ! -- return
+      return
+    end subroutine allocate_scalars
+
+    !> @ brief Deallocate package scalars
+    !!
+    !!  Deallocate and initialize base numerical package scalars. 
+    !!
+    !<
+    subroutine da(this)
+      ! -- modules
+      use MemoryManagerModule, only: mem_deallocate
+      ! -- dummy variables
+      class(NumericalPackageType) :: this  !< NumericalPackageType object
+      !
+      ! -- deallocate
+      call mem_deallocate(this%id)
+      call mem_deallocate(this%inunit)
+      call mem_deallocate(this%iout)
+      call mem_deallocate(this%inewton)
+      call mem_deallocate(this%iasym)
+      call mem_deallocate(this%iprpak)
+      call mem_deallocate(this%iprflow)
+      call mem_deallocate(this%ipakcb)
+      call mem_deallocate(this%ionper)
+      call mem_deallocate(this%lastonper)
+      !
+      ! -- return
+      return
+    end subroutine da
+
+    !> @ brief Check ionper
+    !!
+    !!  Generic method to read and check ionperiod, which is used to determine 
+    !!  if new period data should be read from the input file. The check of 
+    !!  ionperiod also makes sure periods are increasing in subsequent period
+    !!  data blocks.
+    !!
+    !<
+    subroutine read_check_ionper(this)
+      ! -- modules
+      use TdisModule, only: kper
+      ! -- dummy variables
+      class(NumericalPackageType), intent(inout) :: this  !< NumericalPackageType object
+      !
+      ! -- save last value and read period number
+      this%lastonper = this%ionper
+      this%ionper = this%parser%GetInteger()
+      !
+      ! -- make check
+      if (this%ionper <= this%lastonper) then
+        write(errmsg, '(a, i0)') &
+          'ERROR IN STRESS PERIOD ', kper
         call store_error(errmsg)
-        errmsg = 'Remove spaces from name.'
+        write(errmsg, '(a, i0)') &
+          'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
         call store_error(errmsg)
+        write(errmsg, '(a, i0)') &
+          'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
         call ustop()
       endif
       !
-      this%packName = pakname
-    endif
-    this%memoryPath = create_mem_path(name_model, this%packName)
-    this%memoryPathModel = create_mem_path(name_model)
-    !
-    ! -- Return
-    return
-  end subroutine set_names
-  
-  subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate the scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
-    ! -- dummy
-    class(NumericalPackageType) :: this
-    ! -- local
-    integer(I4B), pointer :: imodelnewton => NULL()
-    integer(I4B), pointer :: imodelprpak => NULL()
-    integer(I4B), pointer :: imodelprflow => NULL()
-    integer(I4B), pointer :: imodelpakcb => NULL()
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate
-    call mem_allocate(this%id, 'ID', this%memoryPath)
-    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
-    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
-    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
-    call mem_allocate(this%iasym, 'IASYM', this%memoryPath)
-    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
-    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
-    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
-    !
-    call mem_allocate(this%ionper, 'IONPER', this%memoryPath)
-    call mem_allocate(this%lastonper, 'LASTONPER', this%memoryPath)
-    !
-    ! -- set pointer to model variables
-    call mem_setptr(imodelnewton, 'INEWTON', this%memoryPathModel)
-    call mem_setptr(imodelprpak, 'IPRPAK', this%memoryPathModel)
-    call mem_setptr(imodelprflow, 'IPRFLOW', this%memoryPathModel)
-    call mem_setptr(imodelpakcb, 'IPAKCB', this%memoryPathModel)
-    !
-    ! -- initialize
-    this%id = 0
-    this%inunit = 0
-    this%iout = 0
-    this%inewton = imodelnewton
-    this%iasym = 0
-    this%iprpak = imodelprpak
-    this%iprflow = imodelprflow
-    this%ipakcb = imodelpakcb
-    this%ionper = 0
-    this%lastonper = 0
-    !
-    ! -- nullify unneeded pointers
-    imodelnewton => NULL()
-    imodelprpak  => NULL()
-    imodelprflow => NULL()
-    imodelpakcb  => NULL()
-    !
-    ! -- Return
-    return
-  end subroutine allocate_scalars
+      ! -- return
+      return
+    end subroutine read_check_ionper
 
-  subroutine da(this)
-! ******************************************************************************
-! deallocate -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
-    ! -- dummy
-    class(NumericalPackageType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate
-    call mem_deallocate(this%id)
-    call mem_deallocate(this%inunit)
-    call mem_deallocate(this%iout)
-    call mem_deallocate(this%inewton)
-    call mem_deallocate(this%iasym)
-    call mem_deallocate(this%iprpak)
-    call mem_deallocate(this%iprflow)
-    call mem_deallocate(this%ipakcb)
-    call mem_deallocate(this%ionper)
-    call mem_deallocate(this%lastonper)
-    !
-    ! -- Return
-    return
-  end subroutine da
-  !
-  subroutine read_check_ionper(this)
-! ******************************************************************************
-! read_check_ionper -- Read ionper and check to make sure periods are increasing
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kper
-    ! -- dummy
-    class(NumericalPackageType),intent(inout) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
-    !
-    ! -- save last value and read period number
-    this%lastonper = this%ionper
-    this%ionper = this%parser%GetInteger()
-    !
-    ! -- make check
-    if (this%ionper <= this%lastonper) then
-      write(errmsg, '(a, i0)') &
-        'ERROR IN STRESS PERIOD ', kper
-      call store_error(errmsg)
-      write(errmsg, '(a, i0)') &
-        'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-      call store_error(errmsg)
-      write(errmsg, '(a, i0)') &
-        'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
-    !
-    ! -- return
-    return
-  end subroutine read_check_ionper
-
-  subroutine get_block_data(this, tags, lfound, varinames)
-! ******************************************************************************
-! get_block_data -- Read griddata block for a package 
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    !> @ brief Read griddata block for a package
+    !!
+    !!  Generic method to read data in the GRIDDATA block for a package.
+    !!
+    !<
+    subroutine get_block_data(this, tags, lfound, varinames)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
-    ! -- dummy
-    class(NumericalPackageType) :: this
-    character(len=24), dimension(:), intent(in)           :: tags
-    logical, dimension(:), intent(inout)                  :: lfound
-    character(len=24), dimension(:), intent(in), optional :: varinames
-    ! -- local
+    ! -- dummy variables
+    class(NumericalPackageType) :: this                                  !< NumericalPackageType object
+    character(len=24), dimension(:), intent(in)           :: tags        !< vector with variable tags 
+    logical, dimension(:), intent(inout)                  :: lfound      !< boolean vector indicating of a variable tag was found
+    character(len=24), dimension(:), intent(in), optional :: varinames   !< optional vector of variable names
+    ! -- local variables
     logical :: lkeyword
     logical :: endOfBlock
     integer(I4B) :: nsize
     integer(I4B) :: j
     character(len=24)         :: tmpvar
     character(len=LENVARNAME) :: varname
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc
     integer(I4B), dimension(:), pointer, contiguous :: aint
     real(DP), dimension(:), pointer, contiguous     :: adbl
-! ------------------------------------------------------------------------------
+    !
     ! -- initialize nsize
     nsize = size(tags)
     do
