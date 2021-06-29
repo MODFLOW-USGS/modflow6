@@ -1,3 +1,8 @@
+"""
+Test to confirm that the sum wel and wel-reduced observations is equal
+to the specified well pumping rate when the AUTO_FLOW_REDUCE option is
+specified.
+"""
 import os
 import numpy as np
 
@@ -28,15 +33,17 @@ ddir = "data"
 
 # set static data
 nper = 1
-tdis_rc = [(50.0, 50, 1.), ]
+tdis_rc = [
+    (50.0, 50, 1.05),
+]
 
 nlay, nrow, ncol = 2, 1, 1
-delr = delc = 10.
-top, botm = 10., [9., 8.]
+delr = delc = 10.0
+top, botm = 10.0, [9.0, 8.0]
 strt = top
 hk = 1.0
 sy = 0.1
-wellq = tdis_rc[0][0] / sy
+wellq = 0.25
 
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
@@ -48,11 +55,17 @@ def get_model(idx, ws):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws,
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
+        sim_ws=ws,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc,
+        sim,
+        time_units="DAYS",
+        nper=nper,
+        perioddata=tdis_rc,
     )
 
     # create iterative model solution and register the gwf model with it
@@ -90,7 +103,10 @@ def get_model(idx, ws):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=strt,
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -105,7 +121,7 @@ def get_model(idx, ws):
         gwf,
         save_flows=True,
         iconvert=1,
-        ss=0.,
+        ss=0.0,
         sy=sy,
         steady_state={0: False},
         transient={0: False},
@@ -113,7 +129,10 @@ def get_model(idx, ws):
 
     # wel files
     obs = {
-        "wel.obs.csv": [["q", "wel", (0, 0, 0)], ["qred", "wel-reduction", (0, 0, 0)]]
+        "wel.obs.csv": [
+            ["q", "wel", (0, 0, 0)],
+            ["qred", "wel-reduction", (0, 0, 0)],
+        ]
     }
     wel_spd = {0: [[0, 0, 0, -wellq]]}
     wel = flopy.mf6.ModflowGwfwel(
@@ -122,9 +141,12 @@ def get_model(idx, ws):
         print_flows=True,
         auto_flow_reduce="auto_flow_reduce 0.5",
         stress_period_data=wel_spd,
-        observations=obs,
     )
-
+    welobs = wel.obs.initialize(
+        digits=25,
+        print_input=True,
+        continuous=obs,
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -153,7 +175,6 @@ def eval_obs(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     qtot = tc["Q"] + tc["QRED"]
-
 
     # calculate maximum absolute error
     diff = qtot + wellq

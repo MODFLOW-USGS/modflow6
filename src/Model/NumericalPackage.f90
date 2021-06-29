@@ -27,7 +27,7 @@ module NumericalPackageModule
     character(len=LENPACKAGENAME)                      :: packName        = ''   !< name of the package
     character(len=LENMEMPATH)                          :: memoryPath      = ''   !< the location in the memory manager where the variables are stored
     character(len=LENMEMPATH)                          :: memoryPathModel = ''   !< the location in the memory manager where the variables
-                                                                                 !  of the parent model are stored
+                                                                                 !! of the parent model are stored
     character(len=LENFTYPE)                            :: filtyp          = ''   !< file type (CHD, DRN, RIV, etc.)
  
     ! -- integers
