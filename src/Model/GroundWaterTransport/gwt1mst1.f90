@@ -44,6 +44,7 @@ module GwtMstModule
     real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  !< first or zero order decay rate (sorbed)
     real(DP), dimension(:), pointer, contiguous      :: ratedcy => null()       !< rate of decay
     real(DP), dimension(:), pointer, contiguous      :: decaylast => null()     !< decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous      :: decayslast => null()    !< sorbed decay rate used for last iteration (needed for zero order decay)
     !
     ! -- sorption
     integer(I4B), pointer                            :: isrb => null()          !< sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
@@ -194,7 +195,7 @@ module GwtMstModule
     ! -- decay sorbed contribution
     if (this%isrb /= 0 .and. this%idcy /= 0) then
       call this%mst_fc_dcy_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, &
-                               cnew)
+                               cnew, kiter)
     end if
     !
     ! -- Return
@@ -452,98 +453,15 @@ module GwtMstModule
     return
   end subroutine mst_srb_term
 
-  !> @ brief Calculate sorption concentration using Freundlich
-  !!
-  !!  Function to calculate sorption concentration using Freundlich
-  !!
-  !<
-  function get_freundlich_conc(conc, kf, a) result(cbar)
-    ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kf
-    real(DP), intent(in) :: a
-    ! -- return
-    real(DP) :: cbar
-    !
-    if (conc > DZERO) then
-      cbar = kf * conc ** a
-    else
-      cbar = DZERO
-    end if
-    return
-  end function 
-  
-  !> @ brief Calculate sorption concentration using Langmuir
-  !!
-  !!  Function to calculate sorption concentration using Langmuir
-  !!
-  !<
-  function get_langmuir_conc(conc, kl, sbar) result(cbar)
-    ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kl
-    real(DP), intent(in) :: sbar
-    ! -- return
-    real(DP) :: cbar
-    !
-    if (conc > DZERO) then
-      cbar = (kl * sbar * conc) / (DONE + kl * conc)
-    else
-      cbar = DZERO
-    end if
-    return
-  end function 
-  
-  !> @ brief Calculate sorption derivative using Freundlich
-  !!
-  !!  Function to calculate sorption derivative using Freundlich
-  !!
-  !<
-  function get_freundlich_derivative(conc, kf, a) result(derv)
-    ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kf
-    real(DP), intent(in) :: a
-    ! -- return
-    real(DP) :: derv
-    !
-    if (conc > DZERO) then
-      derv = kf * a * conc ** (a - DONE)
-    else
-      derv = DZERO
-    end if
-    return
-  end function 
-  
-  !> @ brief Calculate sorption derivative using Langmuir
-  !!
-  !!  Function to calculate sorption derivative using Langmuir
-  !!
-  !<
-  function get_langmuir_derivative(conc, kl, sbar) result(derv)
-    ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kl
-    real(DP), intent(in) :: sbar
-    ! -- return
-    real(DP) :: derv
-    !
-    if (conc > DZERO) then
-      derv = (kl * sbar) / (DONE + kl * conc) ** DTWO
-    else
-      derv = DZERO
-    end if
-    return
-  end function 
-  
   !> @ brief Fill sorption-decay coefficient method for package
   !!
   !!  Method to calculate and fill sorption-decay coefficients for the package.
   !!
   !<
   subroutine mst_fc_dcy_srb(this, nodes, cold, nja, njasln, amatsln, idxglo,   &
-                            rhs, cnew)
+                            rhs, cnew, kiter)
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
     class(GwtMstType) :: this
     integer, intent(in) :: nodes
@@ -554,6 +472,7 @@ module GwtMstModule
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     real(DP), intent(in), dimension(nodes) :: cnew
+    integer(I4B), intent(in) :: kiter
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: hhcof, rrhs
@@ -563,6 +482,9 @@ module GwtMstModule
     real(DP) :: thetamfrac
     real(DP) :: term
     real(DP) :: csrb
+    real(DP) :: decay_rate
+    real(DP) :: csrbold
+    real(DP) :: csrbnew
     !
     ! -- loop through and calculate sorption contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -597,17 +519,33 @@ module GwtMstModule
         else if (this%isrb == 3) then
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
-          csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
         end if
       elseif (this%idcy == 2) then
         !
-        ! -- zero-order decay rate is not a function of concentration, so add
-        !    to right hand side
+        ! -- Call function to get zero-order decay rate, which may be changed
+        !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-          ! -- Add zero order sorption term only if distribution coefficient > 0
-          rrhs = term
+          
+          if (this%isrb == 1) then
+            csrbold = cold(n) * distcoef
+            csrbnew = cnew(n) * distcoef
+          else if (this%isrb == 2) then
+            csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          else if (this%isrb == 3) then
+            csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
+          end if
+          
+          decay_rate = get_zero_order_decay(this%decay_sorbed(n),              &
+                                            this%decayslast(n),                &
+                                            kiter, csrbold, csrbnew, delt)
+          this%decayslast(n) = decay_rate
+          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
         end if
+        
       endif
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
@@ -834,6 +772,7 @@ module GwtMstModule
   !<
   subroutine mst_cq_dcy_srb(this, nodes, cnew, cold, flowja)
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
     class(GwtMstType) :: this
     integer(I4B), intent(in) :: nodes
@@ -851,6 +790,9 @@ module GwtMstModule
     real(DP) :: thetamfrac
     real(DP) :: term
     real(DP) :: csrb
+    real(DP) :: csrbnew
+    real(DP) :: csrbold
+    real(DP) :: decay_rate
     !
     ! -- Calculate sorbed decay change
     !    This routine will only be called if sorption and decay are active
@@ -888,17 +830,29 @@ module GwtMstModule
         else if (this%isrb == 3) then
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
-          csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
         end if
       elseif (this%idcy == 2) then
         !
-        ! -- zero-order decay rate is not a function of concentration, so add
-        !    to right hand side
+        ! -- Call function to get zero-order decay rate, which may be changed
+        !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-          ! -- Add zero order sorption term only if distribution coefficient > 0
-          rrhs = term
-        end if
+          if (this%isrb == 1) then
+            csrbold = cold(n) * distcoef
+            csrbnew = cnew(n) * distcoef
+          else if (this%isrb == 2) then
+            csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          else if (this%isrb == 3) then
+            csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
+          end if
+          decay_rate = get_zero_order_decay(this%decay_sorbed(n),              &
+                                            this%decayslast(n),                &
+                                            0, csrbold, csrbnew, delt)
+          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
+        end if      
       endif
       !
       ! -- calculate rate
@@ -1041,6 +995,7 @@ module GwtMstModule
       call mem_deallocate(this%decay_sorbed)
       call mem_deallocate(this%ratedcy)
       call mem_deallocate(this%decaylast)
+      call mem_deallocate(this%decayslast)
       call mem_deallocate(this%isrb)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
@@ -1119,10 +1074,13 @@ module GwtMstModule
       call mem_allocate(this%decaylast, nodes, 'DECAYLAST', this%memoryPath)
     end if
     if (this%idcy /= 0 .and. this%isrb /= 0) then
-        call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS',           &
-                          this%memoryPath)
+      call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS',           &
+                        this%memoryPath)
+      call mem_allocate(this%decayslast, this%dis%nodes, 'DECAYSLAST',       &
+                        this%memoryPath)
     else
-        call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
+      call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
+      call mem_allocate(this%decayslast, 1, 'DECAYSLAST', this%memoryPath)
     endif
     call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED',                    &
                       this%memoryPath)
@@ -1162,6 +1120,10 @@ module GwtMstModule
     end do
     do n = 1, size(this%sp2)
       this%sp2(n) = DZERO
+    end do
+    do n = 1, size(this%ratedcys)
+      this%ratedcys(n) = DZERO
+      this%decayslast(n) = DZERO
     end do
     !
     ! -- Return
@@ -1508,6 +1470,90 @@ module GwtMstModule
     ! -- Return
     return
   end function get_thetaimfrac
+  
+  !> @ brief Calculate sorption concentration using Freundlich
+  !!
+  !!  Function to calculate sorption concentration using Freundlich
+  !!
+  !<
+  function get_freundlich_conc(conc, kf, a) result(cbar)
+    ! -- dummy
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kf
+    real(DP), intent(in) :: a
+    ! -- return
+    real(DP) :: cbar
+    !
+    if (conc > DZERO) then
+      cbar = kf * conc ** a
+    else
+      cbar = DZERO
+    end if
+    return
+  end function 
+  
+  !> @ brief Calculate sorption concentration using Langmuir
+  !!
+  !!  Function to calculate sorption concentration using Langmuir
+  !!
+  !<
+  function get_langmuir_conc(conc, kl, sbar) result(cbar)
+    ! -- dummy
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kl
+    real(DP), intent(in) :: sbar
+    ! -- return
+    real(DP) :: cbar
+    !
+    if (conc > DZERO) then
+      cbar = (kl * sbar * conc) / (DONE + kl * conc)
+    else
+      cbar = DZERO
+    end if
+    return
+  end function 
+  
+  !> @ brief Calculate sorption derivative using Freundlich
+  !!
+  !!  Function to calculate sorption derivative using Freundlich
+  !!
+  !<
+  function get_freundlich_derivative(conc, kf, a) result(derv)
+    ! -- dummy
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kf
+    real(DP), intent(in) :: a
+    ! -- return
+    real(DP) :: derv
+    !
+    if (conc > DZERO) then
+      derv = kf * a * conc ** (a - DONE)
+    else
+      derv = DZERO
+    end if
+    return
+  end function 
+  
+  !> @ brief Calculate sorption derivative using Langmuir
+  !!
+  !!  Function to calculate sorption derivative using Langmuir
+  !!
+  !<
+  function get_langmuir_derivative(conc, kl, sbar) result(derv)
+    ! -- dummy
+    real(DP), intent(in) :: conc
+    real(DP), intent(in) :: kl
+    real(DP), intent(in) :: sbar
+    ! -- return
+    real(DP) :: derv
+    !
+    if (conc > DZERO) then
+      derv = (kl * sbar) / (DONE + kl * conc) ** DTWO
+    else
+      derv = DZERO
+    end if
+    return
+  end function 
   
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!
