@@ -31,13 +31,9 @@ module SimulationCreateModule
 
   contains
 
+  !> @brief Read the simulation name file and initialize the models, exchanges
+  !<
   subroutine simulation_cr()
-! ******************************************************************************
-! Read the simulation name file and initialize the models, exchanges
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- local
     character(len=LINELENGTH) :: line
@@ -63,13 +59,9 @@ module SimulationCreateModule
     return
   end subroutine simulation_cr
 
+  !> @brief Deallocate simulation variables
+  !<
   subroutine simulation_da()
-! ******************************************************************************
-! Deallocate simulation variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -81,17 +73,16 @@ module SimulationCreateModule
     return
   end subroutine simulation_da
 
+  !> @brief Read the simulation name file
+  !!
+  !! Read the simulation name file and initialize the models, exchanges,
+  !! solutions, solutions groups.  Then add the exchanges to the appropriate
+  !! solutions.
+  !!
+  !<
   subroutine read_simulation_namefile(namfile)
-! ******************************************************************************
-! Read the simulation name file and initialize the models, exchanges,
-! solutions, solutions groups.  Then add the exchanges to the appropriate
-! solutions.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    character(len=*),intent(in) :: namfile
+    character(len=*),intent(in) :: namfile  !< simulation name file
     ! -- local
     character(len=LINELENGTH) :: line
 ! ------------------------------------------------------------------------------
@@ -136,13 +127,9 @@ module SimulationCreateModule
     return
   end subroutine read_simulation_namefile
 
+  !> @brief Set the simulation options
+  !<
   subroutine options_create()
-! ******************************************************************************
-! Set the simulation options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_set_print_option
     use SimVariablesModule, only: isimcontinue, isimcheck
@@ -202,13 +189,10 @@ module SimulationCreateModule
     return
   end subroutine options_create
 
+  !> @brief Set the timing module to be used for the simulation
+  !<
   subroutine timing_create()
-! ******************************************************************************
-! Set the timing module to be used for the simulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: tdis_cr
     ! -- dummy
     ! -- local
@@ -264,13 +248,9 @@ module SimulationCreateModule
     return
   end subroutine timing_create
 
+  !> @brief Set the models to be used for the simulation
+  !<
   subroutine models_create()
-! ******************************************************************************
-! Set the models to be used for the simulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use GwfModule,              only: gwf_cr
     use GwtModule,              only: gwt_cr
@@ -325,13 +305,9 @@ module SimulationCreateModule
     return
   end subroutine models_create
 
+  !> @brief Set the exchanges to be used for the simulation
+  !<
   subroutine exchanges_create()
-! ******************************************************************************
-! Set the exchanges to be used for the simulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use GwfGwfExchangeModule,    only: gwfexchange_create
     use GwfGwtExchangeModule,    only: gwfgwt_cr
@@ -440,13 +416,10 @@ module SimulationCreateModule
     return
   end subroutine exchanges_create
 
+  !> @brief Set the solution_groups to be used for the simulation
+  !<
   subroutine solution_groups_create()
-! ******************************************************************************
-! Set the solution_groups to be used for the simulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use SolutionGroupModule,        only: SolutionGroupType,                   &
                                           solutiongroup_create
     use BaseSolutionModule,         only: BaseSolutionType
@@ -660,15 +633,11 @@ module SimulationCreateModule
         end do
       end do
     enddo
-end subroutine assign_exchanges
+  end subroutine assign_exchanges
 
+  !> @brief Add the model to the list of modelnames, check that the model name is valid
+  !<
   subroutine add_model(im, mtype, mname)
-! ******************************************************************************
-! Add the model to the list of modelnames, check that the model name is valid.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     integer, intent(inout) :: im
     character(len=*), intent(in) :: mtype
@@ -677,7 +646,7 @@ end subroutine assign_exchanges
     integer :: ilen
     integer :: i
     character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
+  ! ------------------------------------------------------------------------------
     im = im + 1
     call expandarray(modelname)
     call parser%GetStringCaps(mname)
@@ -712,5 +681,4 @@ end subroutine assign_exchanges
     ! -- return
     return
   end subroutine add_model
-  
 end module SimulationCreateModule
