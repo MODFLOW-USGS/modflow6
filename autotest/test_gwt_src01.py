@@ -223,7 +223,7 @@ def get_model(idx, dir):
 
     # mass loading source
     srcs = {0: [[(0, 0, 0), 1.0]]}
-    cnc = flopy.mf6.ModflowGwtsrc(
+    src = flopy.mf6.ModflowGwtsrc(
         gwt,
         maxbound=len(srcs),
         stress_period_data=srcs,

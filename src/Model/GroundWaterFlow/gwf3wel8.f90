@@ -65,7 +65,7 @@ contains
       class(BndType), pointer :: packobj         !< pointer to default package type
       integer(I4B),intent(in) :: id              !< package id
       integer(I4B),intent(in) :: ibcnum          !< boundary condition number
-      integer(I4B),intent(in) :: inunit          !< unit number of USR package input file
+      integer(I4B),intent(in) :: inunit          !< unit number of WEL package input file
       integer(I4B),intent(in) :: iout            !< unit number of model listing file
       character(len=*), intent(in) :: namemodel  !< model name
       character(len=*), intent(in) :: pakname    !< package name
