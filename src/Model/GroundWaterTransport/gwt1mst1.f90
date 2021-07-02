@@ -1,5 +1,7 @@
 !> -- @ brief Mobile Storage and Transfer (MST) Module
-!!    GwtMstType is responsible for adding the effects of
+!!
+!!    The GwtMstModule is contains the GwtMstType, which is the 
+!!    derived type responsible for adding the effects of
 !!      1. Changes in dissolved solute mass
 !!      2. Decay of dissolved solute mass
 !!      3. Sorption
@@ -93,11 +95,11 @@ module GwtMstModule
   !<
   subroutine mst_cr(mstobj, name_model, inunit, iout, fmi)
     ! -- dummy
-    type(GwtMstType), pointer :: mstobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(GwtMstType), pointer :: mstobj            !< unallocated new mst object to create
+    character(len=*), intent(in) :: name_model     !< name of the model
+    integer(I4B), intent(in) :: inunit             !< unit number of WEL package input file
+    integer(I4B), intent(in) :: iout               !< unit number of model listing file
+    type(GwtFmiType), intent(in), target :: fmi    !< fmi package for this GWT model
     !
     ! -- Create the object
     allocate(mstobj)
@@ -128,9 +130,9 @@ module GwtMstModule
   subroutine mst_ar(this, dis, ibound)
     ! -- modules
     ! -- dummy
-    class(GwtMstType), intent(inout) :: this
-    class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    class(GwtMstType), intent(inout) :: this                    !< GwtMstType object
+    class(DisBaseType), pointer, intent(in) :: dis              !< pointer to dis package
+    integer(I4B), dimension(:), pointer, contiguous :: ibound   !< pointer to GWT ibound array
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtmst =                                    &
@@ -166,16 +168,16 @@ module GwtMstModule
                     rhs, kiter)
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    real(DP), intent(in), dimension(nodes) :: cnew
-    integer(I4B), intent(in) :: kiter
+    class(GwtMstType) :: this                                       !< GwtMstType object
+    integer, intent(in) :: nodes                                    !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                  !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                                 !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                              !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln           !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo              !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs                !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew                  !< concentration at end of this time step
+    integer(I4B), intent(in) :: kiter                               !< solution outer iteration number
     ! -- local
     !
     ! -- storage contribution
@@ -211,14 +213,14 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
+    class(GwtMstType) :: this                                !< GwtMstType object
+    integer, intent(in) :: nodes                             !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold           !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                          !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                       !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln    !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo       !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs         !< right-hand side vector for model
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
@@ -263,16 +265,16 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), intent(in), dimension(nodes) :: cnew
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    integer(I4B), intent(in) :: kiter
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer, intent(in) :: nodes                                   !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    integer(I4B), intent(in) :: nja                                !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                             !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln          !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo             !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs               !< right-hand side vector for model
+    integer(I4B), intent(in) :: kiter                              !< solution outer iteration number
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: hhcof, rrhs
@@ -325,15 +327,15 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    real(DP), intent(in), dimension(nodes) :: cnew
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer, intent(in) :: nodes                                   !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                                !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                             !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln          !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo             !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs               !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
@@ -387,20 +389,20 @@ module GwtMstModule
                           swnew, swold, const1, const2, rate, hcofval, rhsval) 
     ! -- modules
     ! -- dummy
-    integer(I4B), intent(in) :: isrb
-    real(DP), intent(in) :: thetamfrac
-    real(DP), intent(in) :: rhob
-    real(DP), intent(in) :: vcell
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: cnew
-    real(DP), intent(in) :: cold
-    real(DP), intent(in) :: swnew
-    real(DP), intent(in) :: swold
-    real(DP), intent(in) :: const1
-    real(DP), intent(in) :: const2
-    real(DP), intent(out), optional :: rate
-    real(DP), intent(out), optional :: hcofval
-    real(DP), intent(out), optional :: rhsval
+    integer(I4B), intent(in) :: isrb                  !< sorption flag 1, 2, 3 are linear, freundlich, and langmuir
+    real(DP), intent(in) :: thetamfrac                !< fraction of total porosity that is mobile
+    real(DP), intent(in) :: rhob                      !< bulk density
+    real(DP), intent(in) :: vcell                     !< volume of cell
+    real(DP), intent(in) :: tled                      !< one over time step length
+    real(DP), intent(in) :: cnew                      !< concentration at end of this time step
+    real(DP), intent(in) :: cold                      !< concentration at end of last time step
+    real(DP), intent(in) :: swnew                     !< cell saturation at end of this time step
+    real(DP), intent(in) :: swold                     !< cell saturation at end of last time step
+    real(DP), intent(in) :: const1                    !< distribution coefficient or freundlich or langmuir constant
+    real(DP), intent(in) :: const2                    !< zero, freundlich exponent, or langmuir sorption sites
+    real(DP), intent(out), optional :: rate           !< calculated sorption rate
+    real(DP), intent(out), optional :: hcofval        !< diagonal contribution to solution coefficient matrix
+    real(DP), intent(out), optional :: rhsval         !< contribution to solution right-hand-side 
     ! -- local
     real(DP) :: term
     real(DP) :: derv
@@ -463,16 +465,16 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    real(DP), intent(in), dimension(nodes) :: cnew
-    integer(I4B), intent(in) :: kiter
+    class(GwtMstType) :: this                                       !< GwtMstType object
+    integer, intent(in) :: nodes                                    !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                  !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                                 !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                              !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln           !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo              !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs                !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew                  !< concentration at end of this time step
+    integer(I4B), intent(in) :: kiter                               !< solution outer iteration number
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: hhcof, rrhs
@@ -566,11 +568,11 @@ module GwtMstModule
   subroutine mst_cq(this, nodes, cnew, cold, flowja)
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     !
     ! - storage
@@ -604,11 +606,11 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -656,11 +658,11 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -714,11 +716,11 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -774,11 +776,11 @@ module GwtMstModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -877,9 +879,9 @@ module GwtMstModule
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    integer(I4B), intent(in) :: isuppress_output                  !< flag to supress output
+    type(BudgetType), intent(inout) :: model_budget               !< model budget object
     ! -- local
     real(DP) :: rin
     real(DP) :: rout
@@ -921,9 +923,9 @@ module GwtMstModule
   !<
   subroutine mst_ot_flow(this, icbcfl, icbcun)
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: icbcun
+    class(GwtMstType) :: this                          !< GwtMstType object
+    integer(I4B), intent(in) :: icbcfl                 !< flag and unit number for cell-by-cell output
+    integer(I4B), intent(in) :: icbcun                 !< flag indication if cell-by-cell data should be saved
     ! -- local
     integer(I4B) :: ibinun
     !character(len=16), dimension(2) :: aname
@@ -983,7 +985,7 @@ module GwtMstModule
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                      !< GwtMstType object
     !
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
@@ -1024,7 +1026,7 @@ module GwtMstModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                     !< GwtMstType object
     ! -- local
     !
     ! -- Allocate scalars in NumericalPackageType
@@ -1052,8 +1054,8 @@ module GwtMstModule
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                             !< number of nodes
     ! -- local
     integer(I4B) :: n
     !
@@ -1139,7 +1141,7 @@ module GwtMstModule
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                      !< GwtMstType object
     ! -- local
     character(len=LINELENGTH) :: keyword, keyword2
     integer(I4B) :: ierr
@@ -1218,7 +1220,7 @@ module GwtMstModule
     use ConstantsModule,   only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                     !< GwtMstType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
@@ -1415,8 +1417,8 @@ module GwtMstModule
   subroutine addto_prsity2(this, thetaim)
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    real(DP), dimension(:), intent(in) :: thetaim
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: thetaim                 !< immobile domain porosity that contributes to total porosity
     ! -- local
     integer(I4B) :: n
     !
@@ -1438,8 +1440,8 @@ module GwtMstModule
   function get_thetamfrac(this, node) result(thetamfrac)
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: node
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    integer(I4B), intent(in) :: node                              !< node number
     ! -- return
     real(DP) :: thetamfrac
     !
@@ -1452,15 +1454,16 @@ module GwtMstModule
   
   !> @ brief Return immobile porosity fraction
   !!
-  !!  Calculate and return the fraction of the total porosity that is immobile
+  !!  Pass in an immobile domain porosity and calculate the fraction
+  !!  of the total porosity that is immobile
   !!
   !<
   function get_thetaimfrac(this, node, thetaim) result(thetaimfrac)
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: thetaim
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: node                               !< node number
+    real(DP), intent(in) :: thetaim                                !< immobile domain porosity
     ! -- return
     real(DP) :: thetaimfrac
     !
@@ -1478,9 +1481,9 @@ module GwtMstModule
   !<
   function get_freundlich_conc(conc, kf, a) result(cbar)
     ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kf
-    real(DP), intent(in) :: a
+    real(DP), intent(in) :: conc                                !< solute concentration
+    real(DP), intent(in) :: kf                                  !< freundlich constant
+    real(DP), intent(in) :: a                                   !< freundlich exponent
     ! -- return
     real(DP) :: cbar
     !
@@ -1499,9 +1502,9 @@ module GwtMstModule
   !<
   function get_langmuir_conc(conc, kl, sbar) result(cbar)
     ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kl
-    real(DP), intent(in) :: sbar
+    real(DP), intent(in) :: conc                              !< solute concentration
+    real(DP), intent(in) :: kl                                !< langmuir constant
+    real(DP), intent(in) :: sbar                              !< langmuir sorption sites
     ! -- return
     real(DP) :: cbar
     !
@@ -1520,9 +1523,9 @@ module GwtMstModule
   !<
   function get_freundlich_derivative(conc, kf, a) result(derv)
     ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kf
-    real(DP), intent(in) :: a
+    real(DP), intent(in) :: conc                              !< solute concentration
+    real(DP), intent(in) :: kf                                !< freundlich constant
+    real(DP), intent(in) :: a                                 !< freundlich exponent
     ! -- return
     real(DP) :: derv
     !
@@ -1541,9 +1544,9 @@ module GwtMstModule
   !<
   function get_langmuir_derivative(conc, kl, sbar) result(derv)
     ! -- dummy
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kl
-    real(DP), intent(in) :: sbar
+    real(DP), intent(in) :: conc                              !< solute concentration
+    real(DP), intent(in) :: kl                                !< langmuir constant
+    real(DP), intent(in) :: sbar                              !< langmuir sorption sites
     ! -- return
     real(DP) :: derv
     !
@@ -1568,9 +1571,9 @@ module GwtMstModule
     ! -- dummy
     real(DP), intent(in) :: decay_rate_usr    !< user-entered decay rate
     real(DP), intent(in) :: decay_rate_last   !< decay rate used for last iteration
-    integer(I4B), intent(in) :: kiter         !< iteration counter
+    integer(I4B), intent(in) :: kiter         !< Picard iteration counter
     real(DP), intent(in) :: cold              !< concentration at end of last time step
-    real(DP), intent(in) :: cnew              !< current concentration
+    real(DP), intent(in) :: cnew              !< concentration at end of this time step
     real(DP), intent(in) :: delt              !< length of time step
     ! -- return
     real(DP) :: decay_rate                    !< returned value for decay rate
