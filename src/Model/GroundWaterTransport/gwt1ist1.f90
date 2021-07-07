@@ -6,7 +6,7 @@ module GwtIstModule
   use BndModule,              only: BndType
   use BudgetModule,           only: BudgetType
   use GwtFmiModule,           only: GwtFmiType
-  use GwtMstModule,           only: GwtMstType
+  use GwtMstModule,           only: GwtMstType, get_zero_order_decay
   use OutputControlData,      only: OutputControlDataType
   !
   implicit none
@@ -24,29 +24,35 @@ module GwtIstModule
   !
   type, extends(BndType) :: GwtIstType
     
-    type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
-    type(GwtMstType), pointer                        :: mst => null()           ! pointer to mst object
+    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
+    type(GwtMstType), pointer                        :: mst => null()           !< pointer to mst object
     
-    integer(I4B), pointer                            :: icimout => null()       ! unit number for binary cim output
-    integer(I4B), pointer                            :: idcy => null()          ! order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer                            :: isrb => null()          ! sorption active flag (0:off, 1:on)
-    real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        ! mass transfer rate to immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       ! porosity of the immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  ! bulk density
-    real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
-    real(DP), dimension(:), pointer, contiguous      :: decay => null()         ! first or zero order rate constant for liquid
-    real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  ! first or zero order rate constant for sorbed mass
-    real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! mass transfer rate
-    real(DP), dimension(2, NBDITEMS)                 :: budterm                 ! immmobile domain mass summaries
+    integer(I4B), pointer                            :: icimout => null()       !< unit number for binary cim output
+    integer(I4B), pointer                            :: idcy => null()          !< order of decay rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer                            :: isrb => null()          !< sorption active flag (0:off, 1:on)
+    integer(I4B), pointer                            :: kiter => null()         !< picard iteration counter
+    real(DP), dimension(:), pointer, contiguous      :: cim => null()           !< concentration for immobile domain
+    real(DP), dimension(:), pointer, contiguous      :: cimnew => null()        !< immobile concentration at end of current time step
+    real(DP), dimension(:), pointer, contiguous      :: cimold => null()        !< immobile concentration at end of last time step
+    real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        !< mass transfer rate to immobile domain
+    real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       !< porosity of the immobile domain
+    real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  !< bulk density
+    real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      !< distribution coefficient
+    real(DP), dimension(:), pointer, contiguous      :: decay => null()         !< first or zero order rate constant for liquid
+    real(DP), dimension(:), pointer, contiguous      :: decaylast => null()     !< decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous      :: decayslast => null()    !< sorbed decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  !< first or zero order rate constant for sorbed mass
+    real(DP), dimension(:), pointer, contiguous      :: strg => null()          !< mass transfer rate
+    real(DP), dimension(2, NBDITEMS)                 :: budterm                 !< immmobile domain mass summaries
     
-    type(BudgetType), pointer                        :: budget => null()        ! budget object
-    type(OutputControlDataType), pointer             :: ocd => null()           ! output control object for cim
+    type(BudgetType), pointer                        :: budget => null()        !< budget object
+    type(OutputControlDataType), pointer             :: ocd => null()           !< output control object for cim
     
   contains
   
     procedure :: bnd_ar => ist_ar
     procedure :: bnd_rp => ist_rp
+    procedure :: bnd_ad => ist_ad
     procedure :: bnd_fc => ist_fc
     procedure :: bnd_cq => ist_cq
     procedure :: bnd_bd => ist_bd
@@ -59,8 +65,8 @@ module GwtIstModule
     procedure :: read_options
     procedure, private :: ist_allocate_arrays
     procedure, private :: read_data
-    procedure, private :: calcddbud
-    procedure, private :: calccim
+    !procedure, private :: calcddbud
+    !procedure, private :: calccim
     
   end type GwtIstType
   
@@ -133,6 +139,7 @@ module GwtIstModule
     ! -- dummy
     class(GwtIstType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: n
     ! -- formats
     character(len=*), parameter :: fmtist =                                    &
       "(1x,/1x,'IST -- IMMOBILE DOMAIN STORAGE AND TRANSFER PACKAGE, ',        &
@@ -148,8 +155,19 @@ module GwtIstModule
     ! -- Allocate arrays
     call this%ist_allocate_arrays()
     !
+    ! -- Now that arrays are allocated, check in the cimnew array to 
+    !    the output control manager for subsequent printing/saving
+    call this%ocd%init_dbl('CIM', this%cimnew, this%dis, 'PRINT LAST ',        &
+                           'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',            &
+                            this%iout, DHNOFLO)
+    !
     ! -- read the data block
     call this%read_data()
+    !
+    ! -- set cimnew to the cim start values read from input
+    do n = 1, this%dis%nodes
+      this%cimnew(n) = this%cim(n)
+    end do
     !
     ! -- add thetaim to the prsity2 accumulator in mst package
     call this%mst%addto_prsity2(this%thetaim)
@@ -177,23 +195,6 @@ module GwtIstModule
     return
   end subroutine ist_ar
   
-  subroutine ist_read_dimensions(this)
-! ******************************************************************************
-! ist_read_dimensions -- override in order to skip dimensions
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(GwtIstType),intent(inout) :: this
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine ist_read_dimensions
-
   subroutine ist_rp(this)
 ! ******************************************************************************
 ! ist_rp -- override in order to skip reading for ist package
@@ -210,6 +211,41 @@ module GwtIstModule
     ! -- return
     return
   end subroutine ist_rp
+
+  !> @ brief Advance the ist package
+  !!
+  !!  Advance the IST Package and handle the adaptive time stepping
+  !!  feature by copying from new to old or old to new accordingly
+  !!
+  !<
+  subroutine ist_ad(this)
+    ! -- modules
+    use SimVariablesModule, only: iFailedStepRetry
+    ! -- dummy variables
+    class(GwtIstType) :: this  !< BndType object
+    ! -- local variables
+    integer(I4B) :: n
+    !
+    ! -- Call parent advance
+    call this%BndType%bnd_ad()
+    !
+    ! -- set independent kiter counter to zero
+    this%kiter = 0
+    !
+    ! -- copy cimnew into cimold or vice versa if this is a repeat of
+    !    a failed time step
+    if (iFailedStepRetry == 0) then
+      do n = 1, this%dis%nodes
+        this%cimold(n) = this%cimnew(n)
+      end do
+    else
+      do n = 1, this%dis%nodes
+        this%cimnew(n) = this%cimold(n)
+      end do
+    end if
+    !
+    return
+  end subroutine ist_ad
 
   subroutine ist_fc(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
@@ -232,6 +268,8 @@ module GwtIstModule
     real(DP) :: hhcof, rrhs
     real(DP) :: swt, swtpdt
     real(DP) :: vcell
+    real(DP) :: thetaim
+    real(DP) :: zetaim
     real(DP) :: thetamfrac
     real(DP) :: thetaimfrac
     real(DP) :: kd
@@ -240,10 +278,16 @@ module GwtIstModule
     real(DP) :: lambda2im
     real(DP) :: gamma1im
     real(DP) :: gamma2im
+    real(DP) :: cimold
+    real(DP) :: f
+    real(DP) :: cimsrbold
+    real(DP) :: cimsrbnew
+    real(DP), dimension(9) :: ddterm
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
     tled = DONE / delt
+    this%kiter = this%kiter + 1
     !
     ! -- loop through and calculate immobile domain contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -255,7 +299,11 @@ module GwtIstModule
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
+      thetaim = this%thetaim(n)
       idiag = ia(n)
+      !
+      ! -- set exchange coefficient      
+      zetaim = this%zetaim(n)
       !
       ! -- Set thetamfrac and thetaimfrac
       thetamfrac = this%mst%get_thetamfrac(n)
@@ -268,18 +316,40 @@ module GwtIstModule
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
+      !
+      ! -- setup decay variables
       if (this%idcy == 1) lambda1im = this%decay(n)
-      if (this%idcy == 2) gamma1im = this%decay(n)
+      if (this%idcy == 2) then
+        gamma1im = get_zero_order_decay(this%decay(n), this%decaylast(n),      &
+                                        this%kiter, this%cimold(n),            &
+                                        this%cimnew(n), delt)
+        this%decaylast(n) = gamma1im
+      end if
+      !
+      ! -- setup sorption variables
       if (this%isrb > 0) then
         kd = this%distcoef(n)
         rhob = this%bulk_density(n)
         if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+        if (this%idcy == 2) then
+          cimsrbold = this%cimold(n) * kd
+          cimsrbnew = this%cimnew(n) * kd
+          gamma2im = get_zero_order_decay(this%decay_sorbed(n),                &
+                                          this%decayslast(n),                  &
+                                          this%kiter, cimsrbold,               &
+                                          cimsrbnew, delt)
+          this%decayslast(n) = gamma2im
+        end if
       end if
-      call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                          thetamfrac, thetaimfrac, rhob, kd,                 &
-                          lambda1im, lambda2im, gamma1im, gamma2im,          &
-                          this%zetaim(n), this%cim(n), hhcof, rrhs)
+      !
+      ! -- calculate the terms and then get the hcof and rhs contributions
+      call get_ddterm(thetaim, vcell, delt, swtpdt,                            &
+                      thetaimfrac, rhob, kd, lambda1im, lambda2im,             &
+                      gamma1im, gamma2im, zetaim, ddterm, f)
+      cimold = this%cimold(n)
+      call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
+      !
+      ! -- update solution accumulators
       amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
       rhs(n) = rhs(n) + rrhs
       !
@@ -311,6 +381,8 @@ module GwtIstModule
     real(DP) :: swt, swtpdt
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
+    real(DP) :: thetaim
+    real(DP) :: zetaim
     real(DP) :: thetamfrac
     real(DP) :: thetaimfrac
     real(DP) :: kd
@@ -319,20 +391,34 @@ module GwtIstModule
     real(DP) :: lambda2im
     real(DP) :: gamma1im
     real(DP) :: gamma2im
+    real(DP) :: cimnew
+    real(DP) :: cimold
+    real(DP) :: f
+    real(DP) :: cimsrbold
+    real(DP) :: cimsrbnew
+    real(DP), dimension(9) :: ddterm
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate immobile domain rhs and hcof
+    ! -- initialize
+    this%budterm(:, :) = DZERO    
+    !
+    ! -- Calculate immobile domain transfer rate
     do n = 1, this%dis%nodes
       !
       ! -- skip if transport inactive
       rate = DZERO
+      cimnew = DZERO
       if(this%ibound(n) > 0) then
         !
         ! -- calculate new and old water volumes
         vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
         swtpdt = this%fmi%gwfsat(n)
         swt = this%fmi%gwfsatold(n, delt)
+        thetaim = this%thetaim(n)
+        !
+        ! -- set exchange coefficient      
+        zetaim = this%zetaim(n)
         !
         ! -- Set thetamfrac and thetaimfrac
         thetamfrac = this%mst%get_thetamfrac(n)
@@ -349,35 +435,51 @@ module GwtIstModule
         gamma1im = DZERO
         gamma2im = DZERO
         if (this%idcy == 1) lambda1im = this%decay(n)
-        if (this%idcy == 2) gamma1im = this%decay(n)
+        if (this%idcy == 2) then
+          gamma1im = get_zero_order_decay(this%decay(n), this%decaylast(n), 0, &
+                                          this%cimold(n), this%cimnew(n), delt)
+        end if
         if (this%isrb > 0) then
           kd = this%distcoef(n)
           rhob = this%bulk_density(n)
           if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-          if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+          if (this%idcy == 2) then
+            cimsrbold = this%cimold(n) * kd
+            cimsrbnew = this%cimnew(n) * kd
+            gamma2im = get_zero_order_decay(this%decay_sorbed(n),                &
+                                            this%decayslast(n),                  &
+                                            0, cimsrbold,                        &
+                                            cimsrbnew, delt)
+          end if
         end if
-        call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                            thetamfrac, thetaimfrac, rhob, kd,                 &
-                            lambda1im, lambda2im, gamma1im, gamma2im,          &
-                            this%zetaim(n), this%cim(n), hhcof, rrhs)
+        !
+        ! -- calculate the terms and then get the hcof and rhs contributions
+        call get_ddterm(thetaim, vcell, delt, swtpdt,                          &
+                        thetaimfrac, rhob, kd, lambda1im, lambda2im,           &
+                        gamma1im, gamma2im, zetaim, ddterm, f)
+        cimold = this%cimold(n)
+        call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
+        !
+        ! -- calculate rate from hcof and rhs
         rate = hhcof * x(n) - rrhs
+        !
+        ! -- calculate immobile domain concentration
+        cimnew = get_ddconc(ddterm, f, cimold, x(n))
+        !
+        ! -- accumulate the budget terms
+        call accumulate_budterm(this%budterm, ddterm, cimnew, cimold, x(n),    &
+                                this%idcy)
       end if
-      
+      !
+      ! -- store rate and add to flowja
       this%strg(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
-      
+      !
+      ! -- store immobile domain concentration
+      this%cimnew(n) = cimnew
       !
     enddo
-    !
-    ! -- update cim
-    call this%calccim(this%cim, x)
-    !
-    ! -- Calculate and store the rates for the immobile domain
-    this%budterm(:, :) = DZERO
-    call this%calcddbud(this%budterm, x)
-    !
-    ! -- return
     return
   end subroutine ist_cq
 
@@ -526,12 +628,17 @@ module GwtIstModule
       call mem_deallocate(this%icimout)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%isrb)
+      call mem_deallocate(this%kiter)
       call mem_deallocate(this%cim)
+      call mem_deallocate(this%cimnew)
+      call mem_deallocate(this%cimold)
       call mem_deallocate(this%zetaim)
       call mem_deallocate(this%thetaim)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
       call mem_deallocate(this%decay)
+      call mem_deallocate(this%decaylast)
+      call mem_deallocate(this%decayslast)
       call mem_deallocate(this%decay_sorbed)
       call mem_deallocate(this%strg)
       this%fmi => null()
@@ -575,18 +682,17 @@ module GwtIstModule
     call mem_allocate(this%icimout, 'ICIMOUT', this%memoryPath)
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
+    call mem_allocate(this%kiter, 'KITER', this%memoryPath)
     !
     ! -- Initialize
     this%icimout = 0
     this%isrb = 0
     this%idcy = 0
+    this%kiter = 0
     !
     ! -- Create the ocd object, which is used to manage printing and saving
     !    of the immobile domain concentrations
     call ocd_cr(this%ocd)
-    call this%ocd%init_dbl('CIM', this%cim, this%dis, 'PRINT LAST ',           &
-                           'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',            &
-                            this%iout, DHNOFLO)
     !
     ! -- Return
     return
@@ -614,6 +720,8 @@ module GwtIstModule
     ! -- allocate ist arrays of size nodes
     call mem_allocate(this%strg, this%dis%nodes, 'STRG', this%memoryPath)
     call mem_allocate(this%cim, this%dis%nodes, 'CIM', this%memoryPath)
+    call mem_allocate(this%cimnew, this%dis%nodes, 'CIMNEW', this%memoryPath)
+    call mem_allocate(this%cimold, this%dis%nodes, 'CIMOLD', this%memoryPath)
     call mem_allocate(this%zetaim, this%dis%nodes, 'ZETAIM', this%memoryPath)
     call mem_allocate(this%thetaim, this%dis%nodes, 'THETAIM', this%memoryPath)
     if (this%isrb == 0) then
@@ -626,24 +734,36 @@ module GwtIstModule
     endif
     if (this%idcy == 0) then
       call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
+      call mem_allocate(this%decaylast, 1, 'DECAYLAST', this%memoryPath)
     else
       call mem_allocate(this%decay, this%dis%nodes, 'DECAY', this%memoryPath)
+      call mem_allocate(this%decaylast, this%dis%nodes, 'DECAYLAST', this%memoryPath)
     endif
+    if (this%isrb == 0 .and. this%idcy == 0) then
+      call mem_allocate(this%decayslast, 1, 'DECAYSLAST', this%memoryPath)
+    else
+      call mem_allocate(this%decayslast, this%dis%nodes, 'DECAYSLAST', this%memoryPath)
+    end if
     call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%memoryPath)
     !
     ! -- initialize
     do n = 1, this%dis%nodes
       this%strg(n) = DZERO
       this%cim(n) = DZERO
+      this%cimnew(n) = DZERO
+      this%cimold(n) = DZERO
       this%zetaim(n) = DZERO
       this%thetaim(n) = DZERO
     enddo
     do n = 1, size(this%decay)
       this%decay(n) = DZERO
+      this%decaylast(n) = DZERO
+    enddo
+    do n = 1, size(this%decayslast)
+      this%decayslast(n) = DZERO
     enddo
     !
-    ! -- Now that cim is allocated, then set a pointer to it from ocd
-    this%ocd%dblvec => this%cim
+    ! -- Set pointers
     this%ocd%dis => this%dis
     !
     ! -- return
@@ -722,6 +842,23 @@ module GwtIstModule
     ! -- Return
     return
   end subroutine read_options
+
+  subroutine ist_read_dimensions(this)
+! ******************************************************************************
+! ist_read_dimensions -- override in order to skip dimensions
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtIstType),intent(inout) :: this
+    ! -- local
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- return
+    return
+  end subroutine ist_read_dimensions
 
   subroutine read_data(this)
 ! ******************************************************************************
@@ -920,306 +1057,384 @@ module GwtIstModule
     return
   end subroutine read_data
 
-  subroutine calcddhcofrhs(thetaim, vcell, delt, swtpdt, swt, thetamfrac,      &
-                           thetaimfrac, rhob, kd, lambda1im, lambda2im,        &
-                           gamma1im, gamma2im, zetaim, cimt, hcof, rhs)
-! ******************************************************************************
-! calcddhcofrhs -- calculate the hcof and rhs contributions for dual domain
-!   mass transfer
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), intent(in) :: thetaim
-    real(DP), intent(in) :: vcell
-    real(DP), intent(in) :: delt
-    real(DP), intent(in) :: swtpdt
-    real(DP), intent(in) :: swt
-    real(DP), intent(in) :: thetamfrac
-    real(DP), intent(in) :: thetaimfrac
-    real(DP), intent(in) :: rhob
-    real(DP), intent(in) :: kd
-    real(DP), intent(in) :: lambda1im
-    real(DP), intent(in) :: lambda2im
-    real(DP), intent(in) :: gamma1im
-    real(DP), intent(in) :: gamma2im
-    real(DP), intent(in) :: zetaim
-    real(DP), intent(in) :: cimt
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rhs    
-    ! -- local
-    real(DP), dimension(9) :: ddterm
-    real(DP) :: f
-! ------------------------------------------------------------------------------
-    !
-    ! -- calculate the ddterms
-    call calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,            &
-                     thetaimfrac, rhob, kd, lambda1im, lambda2im,              &
-                     gamma1im, gamma2im, zetaim, cimt, ddterm, f)
-    !
-    ! -- calculate hcof
-    hcof = ddterm(9) ** 2 / f - ddterm(9)
-    !
-    ! -- calculate rhs, and switch the sign because this term needs to
-    !    be moved to the left hand side
-    rhs = (ddterm(2) + ddterm(4)) * cimt - ddterm(7) - ddterm(8)
-    rhs = rhs * ddterm(9) / f
-    rhs = -rhs
-    !
-    ! -- Return
-    return
-  end subroutine calcddhcofrhs
+!  subroutine calcddhcofrhs(thetaim, vcell, delt, swtpdt, swt, thetamfrac,      &
+!                           thetaimfrac, rhob, kd, lambda1im, lambda2im,        &
+!                           gamma1im, gamma2im, zetaim, cimt, hcof, rhs)
+!! ******************************************************************************
+!! calcddhcofrhs -- calculate the hcof and rhs contributions for dual domain
+!!   mass transfer
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- dummy
+!    real(DP), intent(in) :: thetaim
+!    real(DP), intent(in) :: vcell
+!    real(DP), intent(in) :: delt
+!    real(DP), intent(in) :: swtpdt
+!    real(DP), intent(in) :: swt
+!    real(DP), intent(in) :: thetamfrac
+!    real(DP), intent(in) :: thetaimfrac
+!    real(DP), intent(in) :: rhob
+!    real(DP), intent(in) :: kd
+!    real(DP), intent(in) :: lambda1im
+!    real(DP), intent(in) :: lambda2im
+!    real(DP), intent(in) :: gamma1im
+!    real(DP), intent(in) :: gamma2im
+!    real(DP), intent(in) :: zetaim
+!    real(DP), intent(in) :: cimt
+!    real(DP), intent(inout) :: hcof
+!    real(DP), intent(inout) :: rhs    
+!    ! -- local
+!    real(DP), dimension(9) :: ddterm
+!    real(DP) :: f
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- calculate the ddterms
+!    call calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,            &
+!                     thetaimfrac, rhob, kd, lambda1im, lambda2im,              &
+!                     gamma1im, gamma2im, zetaim, cimt, ddterm, f)
+!    !
+!    ! -- calculate hcof
+!    hcof = ddterm(9) ** 2 / f - ddterm(9)
+!    !
+!    ! -- calculate rhs, and switch the sign because this term needs to
+!    !    be moved to the left hand side
+!    rhs = (ddterm(2) + ddterm(4)) * cimt - ddterm(7) - ddterm(8)
+!    rhs = rhs * ddterm(9) / f
+!    rhs = -rhs
+!    !
+!    ! -- Return
+!    return
+!  end subroutine calcddhcofrhs
 
-  subroutine calcddbud(this, budterm, cnew)
-! ******************************************************************************
-! calcddbud -- calculate the individual budget terms for the immobile domain
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: delt
-    ! -- dummy
-    class(GwtIstType) :: this
-    real(DP), dimension(:, :), intent(inout) :: budterm
-    real(DP), dimension(:), intent(in) :: cnew
-    ! -- local
-    integer(I4B) :: n, i
-    real(DP) :: vcell
-    real(DP) :: swt
-    real(DP) :: swtpdt
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
-    real(DP) :: kd
-    real(DP) :: lambda1im
-    real(DP) :: lambda2im
-    real(DP) :: gamma1im
-    real(DP) :: gamma2im
-    real(DP) :: ddterm(9)
-    real(DP) :: f
-    real(DP) :: cimt
-    real(DP) :: cimtpdt
-    real(DP) :: rate
-    real(DP) :: rhob
-! ------------------------------------------------------------------------------
-    !
-    ! -- Calculate cim
-    do n = 1, this%dis%nodes
-      if (this%ibound(n) <= 0) cycle
-      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      swt = this%fmi%gwfsatold(n, delt)
-      swtpdt = this%fmi%gwfsat(n)
-      thetamfrac = this%mst%get_thetamfrac(n)
-      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-      kd = DZERO
-      rhob = DZERO
-      lambda1im = DZERO
-      lambda2im = DZERO
-      gamma1im = DZERO
-      gamma2im = DZERO
-      if (this%idcy == 1) lambda1im = this%decay(n)
-      if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%isrb > 0) then
-        kd = this%distcoef(n)
-        rhob = this%bulk_density(n)
-        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
-      end if
-      !
-      ! -- calculate the ddterms
-      cimt = this%cim(n)
-      call calcddterms(this%thetaim(n), vcell, delt, swtpdt, swt, thetamfrac,  &
-                       thetaimfrac, rhob, kd, lambda1im,                       &
-                       lambda2im, gamma1im, gamma2im, this%zetaim(n), cimt,    &
-                       ddterm, f)
-      cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                           thetamfrac, thetaimfrac, rhob, kd,                  &
-                           lambda1im, lambda2im, gamma1im, gamma2im,           &
-                           this%zetaim(n), this%cim(n), cnew(n))
-      !
-      ! -- calculate STORAGE-AQUEOUS
-      i = 1
-      rate = - ddterm(1) * cimtpdt + ddterm(2) * cimt
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
-      else
-        budterm(2, i) = budterm(2, i) - rate
-      endif
-      !
-      ! -- calculate STORAGE-SORBED
-      i = 2
-      rate = - ddterm(3) * cimtpdt + ddterm(4) * cimt
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
-      else
-        budterm(2, i) = budterm(2, i) - rate
-      endif
-      !
-      ! -- calculate DECAY-AQUEOUS
-      i = 3
-      rate = DZERO
-      if (this%idcy == 1) then
-        rate = - ddterm(5) * cimtpdt
-      else if (this%idcy == 2) then
-        rate = - ddterm(7)
-      else
-        rate = DZERO
-      endif
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
-      else
-        budterm(2, i) = budterm(2, i) - rate
-      endif
-      !
-      ! -- calculate DECAY-SORBED
-      i = 4
-      if (this%idcy == 1) then
-        rate = - ddterm(6) * cimtpdt
-      else if (this%idcy == 2) then
-        rate = - ddterm(8)
-      else
-        rate = DZERO
-      endif
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
-      else
-        budterm(2, i) = budterm(2, i) - rate
-      endif
-      !
-      ! -- calculate MOBILE-DOMAIN
-      i = 5
-      rate = ddterm(9) * cnew(n) - ddterm(9) * cimtpdt
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
-      else
-        budterm(2, i) = budterm(2, i) - rate
-      endif
-      !
-    enddo
-    !
-    ! -- Return
-    return
-  end subroutine calcddbud
+!  subroutine calcddbud(this, budterm, cnew)
+!! ******************************************************************************
+!! calcddbud -- calculate the individual budget terms for the immobile domain
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- modules
+!    use TdisModule, only: delt
+!    ! -- dummy
+!    class(GwtIstType) :: this
+!    real(DP), dimension(:, :), intent(inout) :: budterm
+!    real(DP), dimension(:), intent(in) :: cnew
+!    ! -- local
+!    integer(I4B) :: n, i
+!    real(DP) :: vcell
+!    real(DP) :: swt
+!    real(DP) :: swtpdt
+!    real(DP) :: thetamfrac
+!    real(DP) :: thetaimfrac
+!    real(DP) :: kd
+!    real(DP) :: lambda1im
+!    real(DP) :: lambda2im
+!    real(DP) :: gamma1im
+!    real(DP) :: gamma2im
+!    real(DP) :: ddterm(9)
+!    real(DP) :: f
+!    real(DP) :: cimt
+!    real(DP) :: cimtpdt
+!    real(DP) :: rate
+!    real(DP) :: rhob
+!    real(DP) :: ctmp
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- Calculate cim
+!    do n = 1, this%dis%nodes
+!      if (this%ibound(n) <= 0) cycle
+!      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+!      swt = this%fmi%gwfsatold(n, delt)
+!      swtpdt = this%fmi%gwfsat(n)
+!      thetamfrac = this%mst%get_thetamfrac(n)
+!      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
+!      kd = DZERO
+!      rhob = DZERO
+!      lambda1im = DZERO
+!      lambda2im = DZERO
+!      gamma1im = DZERO
+!      gamma2im = DZERO
+!      if (this%idcy == 1) lambda1im = this%decay(n)
+!      if (this%idcy == 2) then
+!        !gamma1im = this%decay(n)
+!        ctmp = max(cnew(n), DZERO)
+!        cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,        &
+!                             thetamfrac, thetaimfrac, rhob, kd,                &
+!                             lambda1im, lambda2im, gamma1im, gamma2im,         &
+!                             this%zetaim(n), cimt, ctmp)
+!        gamma1im = get_zero_order_decay(this%decay(n), this%decaylast(n), 0,   &
+!                        this%cimold(n), cimtpdt, delt)
+!      end if
+!      if (this%isrb > 0) then
+!        kd = this%distcoef(n)
+!        rhob = this%bulk_density(n)
+!        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+!        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+!      end if
+!      !
+!      ! -- calculate the ddterms
+!      cimt = this%cimold(n)
+!      call calcddterms(this%thetaim(n), vcell, delt, swtpdt, swt, thetamfrac,  &
+!                       thetaimfrac, rhob, kd, lambda1im,                       &
+!                       lambda2im, gamma1im, gamma2im, this%zetaim(n), cimt,    &
+!                       ddterm, f)
+!      ctmp = max(cnew(n), DZERO)
+!      cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,          &
+!                           thetamfrac, thetaimfrac, rhob, kd,                  &
+!                           lambda1im, lambda2im, gamma1im, gamma2im,           &
+!                           this%zetaim(n), cimt, ctmp)
+!      !
+!      ! -- calculate STORAGE-AQUEOUS
+!      i = 1
+!      rate = - ddterm(1) * cimtpdt + ddterm(2) * cimt
+!      if (rate > DZERO) then
+!        budterm(1, i) = budterm(1, i) + rate
+!      else
+!        budterm(2, i) = budterm(2, i) - rate
+!      endif
+!      !
+!      ! -- calculate STORAGE-SORBED
+!      i = 2
+!      rate = - ddterm(3) * cimtpdt + ddterm(4) * cimt
+!      if (rate > DZERO) then
+!        budterm(1, i) = budterm(1, i) + rate
+!      else
+!        budterm(2, i) = budterm(2, i) - rate
+!      endif
+!      !
+!      ! -- calculate DECAY-AQUEOUS
+!      i = 3
+!      rate = DZERO
+!      if (this%idcy == 1) then
+!        rate = - ddterm(5) * cimtpdt
+!      else if (this%idcy == 2) then
+!        rate = - ddterm(7)
+!      else
+!        rate = DZERO
+!      endif
+!      if (rate > DZERO) then
+!        budterm(1, i) = budterm(1, i) + rate
+!      else
+!        budterm(2, i) = budterm(2, i) - rate
+!      endif
+!      !
+!      ! -- calculate DECAY-SORBED
+!      i = 4
+!      if (this%idcy == 1) then
+!        rate = - ddterm(6) * cimtpdt
+!      else if (this%idcy == 2) then
+!        rate = - ddterm(8)
+!      else
+!        rate = DZERO
+!      endif
+!      if (rate > DZERO) then
+!        budterm(1, i) = budterm(1, i) + rate
+!      else
+!        budterm(2, i) = budterm(2, i) - rate
+!      endif
+!      !
+!      ! -- calculate MOBILE-DOMAIN
+!      i = 5
+!      rate = ddterm(9) * cnew(n) - ddterm(9) * cimtpdt
+!      if (rate > DZERO) then
+!        budterm(1, i) = budterm(1, i) + rate
+!      else
+!        budterm(2, i) = budterm(2, i) - rate
+!      endif
+!      !
+!    enddo
+!    !
+!    ! -- Return
+!    return
+!  end subroutine calcddbud
 
-  subroutine calccim(this, cim, cnew)
-! ******************************************************************************
-! calccimt -- if dual domain mass transfer, then calculate immobile domain
-!   concentration using cnew (concentration solution for last time step)
-! ******************************************************************************
+!  subroutine calccim(this, cimnew, cnew, cimold)
+!! ******************************************************************************
+!! calccim -- if dual domain mass transfer, then calculate immobile domain
+!!   concentration using cnew (concentration solution for this time step)
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- modules
+!    use TdisModule, only: delt
+!    ! -- dummy
+!    class(GwtIstType) :: this
+!    real(DP), dimension(:), intent(inout) :: cimnew
+!    real(DP), dimension(:), intent(in) :: cnew
+!    real(DP), dimension(:), intent(in) :: cimold
+!    ! -- local
+!    integer(I4B) :: n
+!    real(DP) :: vcell
+!    real(DP) :: swt
+!    real(DP) :: swtpdt
+!    real(DP) :: thetamfrac
+!    real(DP) :: thetaimfrac
+!    real(DP) :: kd
+!    real(DP) :: lambda1im
+!    real(DP) :: lambda2im
+!    real(DP) :: gamma1im
+!    real(DP) :: gamma2im
+!    real(DP) :: ctmp
+!    real(DP) :: rhob
+!    real(DP) :: cimtpdt
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- Calculate cim
+!    do n = 1, this%dis%nodes
+!      if(this%ibound(n) <= 0) cycle
+!      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+!      swt = this%fmi%gwfsatold(n, delt)
+!      swtpdt = this%fmi%gwfsat(n)
+!      thetamfrac = this%mst%get_thetamfrac(n)
+!      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
+!      kd = DZERO
+!      rhob = DZERO
+!      lambda1im = DZERO
+!      lambda2im = DZERO
+!      gamma1im = DZERO
+!      gamma2im = DZERO
+!      if (this%idcy == 1) lambda1im = this%decay(n)
+!      if (this%idcy == 2) then
+!        !gamma1im = this%decay(n)
+!        ctmp = max(cnew(n), DZERO)
+!        cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,        &
+!                             thetamfrac, thetaimfrac, rhob, kd,                &
+!                             lambda1im, lambda2im, gamma1im, gamma2im,         &
+!                             this%zetaim(n), this%cimold(n), ctmp)
+!        gamma1im = get_zero_order_decay(this%decay(n), this%decaylast(n), 0,   &
+!                        this%cimold(n), cimtpdt, delt)
+!      end if
+!      if (this%isrb > 0) then
+!        kd = this%distcoef(n)
+!        rhob = this%bulk_density(n)
+!        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+!        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
+!      end if
+!      !
+!      ! -- calculate cimnew using cnew
+!      ctmp = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
+!                        thetamfrac, thetaimfrac, rhob, kd,                   &
+!                        lambda1im, lambda2im, gamma1im, gamma2im,            &
+!                        this%zetaim(n), cimold(n), cnew(n))
+!      cimnew(n) = ctmp
+!    enddo
+!    !
+!    ! -- Return
+!    return
+!  end subroutine calccim
 !
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: delt
-    ! -- dummy
-    class(GwtIstType) :: this
-    real(DP), dimension(:), intent(inout) :: cim
-    real(DP), dimension(:), intent(in) :: cnew
-    ! -- local
-    integer(I4B) :: n
-    real(DP) :: vcell
-    real(DP) :: swt
-    real(DP) :: swtpdt
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
-    real(DP) :: kd
-    real(DP) :: lambda1im
-    real(DP) :: lambda2im
-    real(DP) :: gamma1im
-    real(DP) :: gamma2im
-    real(DP) :: ctmp
-    real(DP) :: rhob
-! ------------------------------------------------------------------------------
-    !
-    ! -- Calculate cim
-    do n = 1, this%dis%nodes
-      if(this%ibound(n) <= 0) cycle
-      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      swt = this%fmi%gwfsatold(n, delt)
-      swtpdt = this%fmi%gwfsat(n)
-      thetamfrac = this%mst%get_thetamfrac(n)
-      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-      kd = DZERO
-      rhob = DZERO
-      lambda1im = DZERO
-      lambda2im = DZERO
-      gamma1im = DZERO
-      gamma2im = DZERO
-      if (this%idcy == 1) lambda1im = this%decay(n)
-      if (this%idcy == 2) gamma1im = this%decay(n)
-      if (this%isrb > 0) then
-        kd = this%distcoef(n)
-        rhob = this%bulk_density(n)
-        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-        if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
-      end if
-      ctmp = this%cim(n)
-      ctmp = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
-                        thetamfrac, thetaimfrac, rhob, kd,                   &
-                        lambda1im, lambda2im, gamma1im, gamma2im,            &
-                        this%zetaim(n), ctmp, cnew(n))
-      cim(n) = ctmp
-    enddo
-    !
-    ! -- Return
-    return
-  end subroutine calccim
-
-  function calcddconc(thetaim, vcell, delt, swtpdt, swt, thetamfrac,           &
-                      thetaimfrac, rhob, kd, lambda1im, lambda2im, gamma1im,   &
-                      gamma2im, zetaim, cimt, ctpdt) result (ddconc)
-! ******************************************************************************
-! calcddconc -- Calculate and return the concentration of the immobile domain
-!   for a single cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    real(DP), intent(in) :: thetaim
-    real(DP), intent(in) :: vcell
-    real(DP), intent(in) :: delt
-    real(DP), intent(in) :: swtpdt
-    real(DP), intent(in) :: swt
-    real(DP), intent(in) :: thetamfrac
-    real(DP), intent(in) :: thetaimfrac
-    real(DP), intent(in) :: rhob
-    real(DP), intent(in) :: kd
-    real(DP), intent(in) :: lambda1im
-    real(DP), intent(in) :: lambda2im
-    real(DP), intent(in) :: gamma1im
-    real(DP), intent(in) :: gamma2im
-    real(DP), intent(in) :: zetaim
-    real(DP), intent(in) :: cimt
-    real(DP), intent(in) :: ctpdt
-    ! -- result
-    real(DP) :: ddconc
-    ! -- local
-    real(DP), dimension(9) :: ddterm
-    real(DP) :: f
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize
-    ddconc = DZERO
-    !
-    ! -- calculate the ddterms
-    call calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,            &
-                     thetaimfrac, rhob, kd, lambda1im, lambda2im,              &
-                     gamma1im, gamma2im, zetaim, cimt, ddterm, f)
-    !
-    ! -- calculate ddconc
-    ddconc = (ddterm(2) + ddterm(4)) * cimt + ddterm(9) * ctpdt - ddterm(7)    &
-             - ddterm(8)
-    ddconc = ddconc / f
-    !
-    ! -- Return
-    return
-  end function calcddconc
+!  function calcddconc(thetaim, vcell, delt, swtpdt, swt, thetamfrac,           &
+!                      thetaimfrac, rhob, kd, lambda1im, lambda2im, gamma1im,   &
+!                      gamma2im, zetaim, cimt, ctpdt) result (ddconc)
+!! ******************************************************************************
+!! calcddconc -- Calculate and return the concentration of the immobile domain
+!!   for a single cell.
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- dummy
+!    real(DP), intent(in) :: thetaim
+!    real(DP), intent(in) :: vcell
+!    real(DP), intent(in) :: delt
+!    real(DP), intent(in) :: swtpdt
+!    real(DP), intent(in) :: swt
+!    real(DP), intent(in) :: thetamfrac
+!    real(DP), intent(in) :: thetaimfrac
+!    real(DP), intent(in) :: rhob
+!    real(DP), intent(in) :: kd
+!    real(DP), intent(in) :: lambda1im
+!    real(DP), intent(in) :: lambda2im
+!    real(DP), intent(in) :: gamma1im
+!    real(DP), intent(in) :: gamma2im
+!    real(DP), intent(in) :: zetaim
+!    real(DP), intent(in) :: cimt
+!    real(DP), intent(in) :: ctpdt
+!    ! -- result
+!    real(DP) :: ddconc
+!    ! -- local
+!    real(DP), dimension(9) :: ddterm
+!    real(DP) :: f
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- initialize
+!    ddconc = DZERO
+!    !
+!    ! -- calculate the ddterms
+!    call calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,            &
+!                     thetaimfrac, rhob, kd, lambda1im, lambda2im,              &
+!                     gamma1im, gamma2im, zetaim, cimt, ddterm, f)
+!    !
+!    ! -- calculate ddconc
+!    ddconc = (ddterm(2) + ddterm(4)) * cimt + ddterm(9) * ctpdt - ddterm(7)    &
+!             - ddterm(8)
+!    ddconc = ddconc / f
+!    !
+!    ! -- Return
+!    return
+!  end function calcddconc
                       
-  subroutine calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,        &
-                         thetaimfrac, rhob, kd, lambda1im, lambda2im,          &
-                         gamma1im, gamma2im, zetaim, cimt, ddterm, f)
+!  subroutine calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,        &
+!                         thetaimfrac, rhob, kd, lambda1im, lambda2im,          &
+!                         gamma1im, gamma2im, zetaim, cimt, ddterm, f)
+!! ******************************************************************************
+!! calcddterms -- Calculate the terms for the immobile domain mass balance
+!!   equation.
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- dummy
+!    real(DP), intent(in) :: thetaim
+!    real(DP), intent(in) :: vcell
+!    real(DP), intent(in) :: delt
+!    real(DP), intent(in) :: swtpdt
+!    real(DP), intent(in) :: swt
+!    real(DP), intent(in) :: thetamfrac
+!    real(DP), intent(in) :: thetaimfrac
+!    real(DP), intent(in) :: rhob
+!    real(DP), intent(in) :: kd
+!    real(DP), intent(in) :: lambda1im
+!    real(DP), intent(in) :: lambda2im
+!    real(DP), intent(in) :: gamma1im
+!    real(DP), intent(in) :: gamma2im
+!    real(DP), intent(in) :: zetaim
+!    real(DP), intent(in) :: cimt
+!    real(DP), dimension(:), intent(inout) :: ddterm
+!    real(DP), intent(inout) :: f
+!    ! -- local
+!    real(DP) :: tled
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- initialize
+!    tled = DONE / delt
+!    !
+!    ! -- Calculate terms.  These terms correspond to the concentration 
+!    !    coefficients in equation 7-4 of the GWT model report
+!    ddterm(1) = thetaim * vcell * tled
+!    ddterm(2) = thetaim * vcell * tled
+!    ddterm(3) = thetaimfrac * rhob * vcell * kd * tled
+!    ddterm(4) = thetaimfrac * rhob * vcell * kd * tled
+!    ddterm(5) = thetaim * lambda1im * vcell
+!    ddterm(6) = thetaimfrac * lambda2im * rhob * kd * vcell
+!    ddterm(7) = thetaim * gamma1im * vcell
+!    ddterm(8) = thetaimfrac * gamma2im * rhob * vcell
+!    ddterm(9) = vcell * swtpdt * zetaim
+!    !
+!    ! -- calculate denominator term, f
+!    f = ddterm(1) + ddterm(3) + ddterm(5) + ddterm(6) + ddterm(9)
+!    !
+!    ! -- Return
+!    return
+!  end subroutine calcddterms
+
+                         
+  subroutine get_ddterm(thetaim, vcell, delt, swtpdt,                          &
+                        thetaimfrac, rhob, kd, lambda1im, lambda2im,           &
+                        gamma1im, gamma2im, zetaim, ddterm, f)
 ! ******************************************************************************
 ! calcddterms -- Calculate the terms for the immobile domain mass balance
 !   equation.
@@ -1232,8 +1447,6 @@ module GwtIstModule
     real(DP), intent(in) :: vcell
     real(DP), intent(in) :: delt
     real(DP), intent(in) :: swtpdt
-    real(DP), intent(in) :: swt
-    real(DP), intent(in) :: thetamfrac
     real(DP), intent(in) :: thetaimfrac
     real(DP), intent(in) :: rhob
     real(DP), intent(in) :: kd
@@ -1242,7 +1455,6 @@ module GwtIstModule
     real(DP), intent(in) :: gamma1im
     real(DP), intent(in) :: gamma2im
     real(DP), intent(in) :: zetaim
-    real(DP), intent(in) :: cimt
     real(DP), dimension(:), intent(inout) :: ddterm
     real(DP), intent(inout) :: f
     ! -- local
@@ -1252,7 +1464,8 @@ module GwtIstModule
     ! -- initialize
     tled = DONE / delt
     !
-    ! -- calculate terms
+    ! -- Calculate terms.  These terms correspond to the concentration 
+    !    coefficients in equation 7-4 of the GWT model report
     ddterm(1) = thetaim * vcell * tled
     ddterm(2) = thetaim * vcell * tled
     ddterm(3) = thetaimfrac * rhob * vcell * kd * tled
@@ -1263,11 +1476,150 @@ module GwtIstModule
     ddterm(8) = thetaimfrac * gamma2im * rhob * vcell
     ddterm(9) = vcell * swtpdt * zetaim
     !
-    ! -- calculate denometer term, f
+    ! -- calculate denominator term, f
     f = ddterm(1) + ddterm(3) + ddterm(5) + ddterm(6) + ddterm(9)
     !
     ! -- Return
     return
-  end subroutine calcddterms
+  end subroutine get_ddterm
+                         
+  subroutine get_hcofrhs(ddterm, f, cimold, hcof, rhs)
+! ******************************************************************************
+! get_hcofrhs -- calculate the hcof and rhs contributions for dual domain
+!   mass transfer
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), dimension(:), intent(in) :: ddterm
+    real(DP), intent(in) :: f
+    real(DP), intent(in) :: cimold
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs    
+! ------------------------------------------------------------------------------
+    !
+    ! -- calculate hcof
+    hcof = ddterm(9) ** 2 / f - ddterm(9)
+    !
+    ! -- calculate rhs, and switch the sign because this term needs to
+    !    be moved to the left hand side
+    rhs = (ddterm(2) + ddterm(4)) * cimold - ddterm(7) - ddterm(8)
+    rhs = rhs * ddterm(9) / f
+    rhs = -rhs
+    !
+    ! -- Return
+    return
+  end subroutine get_hcofrhs
+
+  function get_ddconc(ddterm, f, cimold, cnew) result (cimnew)
+! ******************************************************************************
+! calcddconc -- Calculate and return the concentration of the immobile domain
+!   for a single cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), dimension(:), intent(in) :: ddterm
+    real(DP), intent(in) :: f
+    real(DP), intent(in) :: cimold
+    real(DP), intent(in) :: cnew
+    ! -- result
+    real(DP) :: cimnew
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- calculate ddconc
+    cimnew = (ddterm(2) + ddterm(4)) * cimold + ddterm(9) * cnew - ddterm(7)    &
+             - ddterm(8)
+    cimnew = cimnew / f
+    !
+    ! -- Return
+    return
+  end function get_ddconc
+  
+  subroutine accumulate_budterm(budterm, ddterm, cimnew, cimold, cnew, idcy)
+! ******************************************************************************
+! accumulate_budterm -- calculate the individual budget terms for the immobile domain
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    real(DP), dimension(:, :), intent(inout) :: budterm
+    real(DP), dimension(:), intent(in) :: ddterm
+    real(DP), intent(in) :: cimnew
+    real(DP), intent(in) :: cimold
+    real(DP), intent(in) :: cnew
+    integer(I4B), intent(in) :: idcy
+    ! -- local
+    real(DP) :: rate
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- calculate STORAGE-AQUEOUS
+    i = 1
+    rate = - ddterm(1) * cimnew + ddterm(2) * cimold
+    if (rate > DZERO) then
+      budterm(1, i) = budterm(1, i) + rate
+    else
+      budterm(2, i) = budterm(2, i) - rate
+    endif
+    !
+    ! -- calculate STORAGE-SORBED
+    i = 2
+    rate = - ddterm(3) * cimnew + ddterm(4) * cimold
+    if (rate > DZERO) then
+      budterm(1, i) = budterm(1, i) + rate
+    else
+      budterm(2, i) = budterm(2, i) - rate
+    endif
+    !
+    ! -- calculate DECAY-AQUEOUS
+    i = 3
+    rate = DZERO
+    if (idcy == 1) then
+      rate = - ddterm(5) * cimnew
+    else if (idcy == 2) then
+      rate = - ddterm(7)
+    else
+      rate = DZERO
+    endif
+    if (rate > DZERO) then
+      budterm(1, i) = budterm(1, i) + rate
+    else
+      budterm(2, i) = budterm(2, i) - rate
+    endif
+    !
+    ! -- calculate DECAY-SORBED
+    i = 4
+    if (idcy == 1) then
+      rate = - ddterm(6) * cimnew
+    else if (idcy == 2) then
+      rate = - ddterm(8)
+    else
+      rate = DZERO
+    endif
+    if (rate > DZERO) then
+      budterm(1, i) = budterm(1, i) + rate
+    else
+      budterm(2, i) = budterm(2, i) - rate
+    endif
+    !
+    ! -- calculate MOBILE-DOMAIN
+    i = 5
+    rate = ddterm(9) * cnew - ddterm(9) * cimnew
+    if (rate > DZERO) then
+      budterm(1, i) = budterm(1, i) + rate
+    else
+      budterm(2, i) = budterm(2, i) - rate
+    endif
+    !
+    !
+    ! -- Return
+    return
+  end subroutine accumulate_budterm
 
 end module GwtIstModule
