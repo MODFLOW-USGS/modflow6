@@ -183,7 +183,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	        \item Add DISU Package check to ensure that JA(IA(n)) is equal to n and that no values in JA are less than zero or greater than nodes.
 	        \item When IDOMAIN is used with the DISU Package and any IDOMAIN value is zero, then the program was expecting all JA values to be positive. The program is supposed to allow a negative JA value to be specified for the corresponding cell (in the diagonal position), but this was not working.  A fix was implemented to allow a negative cell number to be specified in the diagonal position of the JA array when the IDOMAIN capability is active.
 	        \item A new check was added to the Horizontal Flow Barrier (HFB) Package to ensure that barriers are between cells that are horizontally connected.  The program would previously continue running if a barrier was between vertically connected cells.
-	        \item There was no check to prevent the zero-order decay functionality of the Mobile Storage and Transfer (MST) Package in the GWT Model from producing negative concentrations.  The program now reduces the zero-order decay rate for the aqueous and sorbed phases to ensure that decay does not consume more mass than is available.
+	        \item There was no check to prevent the zero-order decay functionality of the Mobile Storage and Transfer (MST) and Immobile Storage and Transfer (IST) Packages in the GWT Model from producing negative concentrations.  The program now reduces the zero-order decay rate for the aqueous and sorbed phases (for the mobile and immobile domains) to ensure that decay does not consume more mass than is available.
 	\end{itemize}
 
 %	\underline{STRESS PACKAGES}

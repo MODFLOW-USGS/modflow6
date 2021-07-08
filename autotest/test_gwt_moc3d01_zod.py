@@ -1,5 +1,5 @@
 # This autotest is based on the MOC3D problem 1 autotest except that it
-# tests the zero order decay for a simple one-dimensional flow problem.
+# tests the zero-order decay for a simple one-dimensional flow problem.
 # The test ensures that concentrations do not go below zero (they do go
 # slightly negative but, it does ensure that the decay rate shuts off as
 # where concentrations are zero.
@@ -30,12 +30,12 @@ from simulation import Simulation
 ex = [
     "moc3d01zoda",
     "moc3d01zodb",
+    "moc3d01zodc",
+    "moc3d01zodd",
 ]
-diffc = [0, 0]
-alphal = [0.1, 0.1]
-retardation = [None, 40]
-perlens = 4 * [120.0] + 3 * [240.0] + [120.0]
-decay = [0.01, 0.01]
+retardation = [None, 40, None, 40]
+decay = [0.01, 0.01, 0.1, 0.1]
+ist_package = [False, False, True, True]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -45,8 +45,7 @@ ddir = "data"
 def get_model(idx, dir):
     nlay, nrow, ncol = 1, 122, 1
     nper = 1
-    perlen = perlens[idx]  # [120.]
-    perlen = [perlen]
+    perlen = [120]
     nstp = [240]
     tsmult = [1.0]
     steady = [True]
@@ -59,6 +58,8 @@ def get_model(idx, dir):
     hdry = -1e30
     hk = 0.01
     laytyp = 0
+    diffc = 0.0
+    alphal = 0.1
     # ss = 0.
     # sy = 0.1
 
@@ -78,7 +79,7 @@ def get_model(idx, dir):
         version="mf6",
         exe_name="mf6",
         sim_ws=ws,
-        #continue_=True,
+        # continue_=True,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -176,10 +177,10 @@ def get_model(idx, dir):
 
     # create gwt model
     gwtname = "gwt_" + name
-    gwt = flopy.mf6.MFModel(
+    gwt = flopy.mf6.ModflowGwt(
         sim,
-        model_type="gwt6",
         modelname=gwtname,
+        save_flows=True,
         model_nam_file="{}.nam".format(gwtname),
     )
 
@@ -229,20 +230,13 @@ def get_model(idx, dir):
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(
         gwt,
-        diffc=diffc[idx],
-        alh=alphal[idx],
-        alv=alphal[idx],
+        diffc=diffc,
+        alh=alphal,
+        alv=alphal,
         ath1=0.0,
         atv=0.0,
         filename="{}.dsp".format(gwtname),
     )
-
-    # constant concentration
-    # cncs = {0: [[(0, 0, 0), 1.0]]}
-    # cnc = flopy.mf6.ModflowGwtcnc(gwt, maxbound=len(cncs),
-    #                              stress_period_data=cncs,
-    #                              save_flows=False,
-    #                              pname='CNC-1')
 
     # storage
     porosity = 0.1
@@ -273,6 +267,21 @@ def get_model(idx, dir):
         bulk_density=rhob,
     )
 
+    if ist_package[idx]:
+        ist = flopy.mf6.ModflowGwtist(
+            gwt,
+            cim_filerecord="{}.ist.ucn".format(gwtname),
+            sorption=sorption,
+            zero_order_decay=True,
+            cim=0.0,
+            thetaim=porosity,
+            zetaim=1.0,
+            decay=decay_rate,
+            bulk_density=rhob,
+            distcoef=kd,
+            decay_sorbed=decay_rate,
+        )
+
     # sources
     sourcerecarray = [("WEL-1", "AUX", "CONCENTRATION")]
     ssm = flopy.mf6.ModflowGwtssm(
@@ -287,7 +296,7 @@ def get_model(idx, dir):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "ALL")],
+        saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
 
@@ -373,6 +382,7 @@ def eval_transport(sim):
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
 
+    # get mobile domain concentration object
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
         cobj = flopy.utils.HeadFile(
@@ -382,6 +392,55 @@ def eval_transport(sim):
         tssim = cobj.get_ts(station)
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
+
+    # get mobile domain budget object
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(gwtname))
+    bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+
+    # Check to make sure decay rates in budget file are correct.  If there is
+    # enough mass in the cell, then the qdecay value in the budget file
+    # should be equal to decay_rate * vcell * porosity
+    records = bobj.get_data(text="decay")
+    qdecay_budfile = records[0].flatten()
+    conc = cobj.get_data().flatten()
+    delt = 0.5
+    vcell = 0.1 * 0.1 * 1.0
+    porosity = 0.1
+    decay_rate = decay[sim.idxsim]
+    for i in range(122):
+        if conc[i] / delt > decay_rate:
+            qknown = -decay_rate * vcell * porosity
+            errmsg = (
+                "Decay rate in budget file for cell {} should be "
+                "{} but found {} instead.".format(i, qdecay_budfile[i], qknown)
+            )
+            assert np.allclose(qdecay_budfile[i], qknown), errmsg
+        # print(i, qdecay_budfile[i], conc[i])
+
+    # get immobile domain concentration object
+    fpth = os.path.join(sim.simpath, "{}.ist.ucn".format(gwtname))
+    cimobj = None
+    if os.path.isfile(fpth):
+        try:
+            cimobj = flopy.utils.HeadFile(fpth, precision="double", text="CIM")
+        except:
+            assert False, 'could not load data from "{}"'.format(fpth)
+
+        records = bobj.get_data(text="immobile domain")
+        qim_budfile = records[0]["q"]
+        cim = cimobj.get_data().flatten()
+        cm = cobj.get_data().flatten()
+        zetaim = 1.0
+        qim_calculated = (cim - cm) * zetaim * vcell
+        # for i in range(122):
+        #    print(i, cm[i], cim[i], qim_budfile[i], qim_calculated[i])
+        errmsg = (
+            "Mass transfer rates from the gwt budget file do not "
+            "compare with mass transfer rates calculated from "
+            "simulated mobile and immobile domain concentrations\n"
+            "{} /= {}".format(qim_budfile, qim_calculated)
+        )
+        np.allclose(qim_budfile, qim_calculated), errmsg
 
     makeplot = False
     if makeplot:
@@ -394,6 +453,7 @@ def eval_transport(sim):
         make_plot_cd(cobj, fname)
 
     tssim = tssim[::10]
+    # print(tssim)
 
     # answer for case with decay and no sorption; taken from run that appeared
     # to have the correct answer.
@@ -452,14 +512,74 @@ def eval_transport(sim):
         [1.15500000e002, 6.70913131e-001, -9.41863049e-028, -1.35492374e-095],
     ]
 
+    # answer for case with decay and immobile decay
+    tsresc = [
+        [5.00000000e-01, 1.65743548e-01, -1.39555608e-23, -1.03298414e-58],
+        [5.50000000e00, 5.51785563e-01, -2.76206627e-19, -2.74200362e-48],
+        [1.05000000e01, 6.21289408e-01, -6.09303923e-17, -1.91368986e-42],
+        [1.55000000e01, 6.40753522e-01, -1.15763652e-14, -3.37399929e-38],
+        [2.05000000e01, 6.47093855e-01, -8.67649072e-13, -7.64970045e-35],
+        [2.55000000e01, 6.49242740e-01, -2.19763560e-11, -4.76281208e-32],
+        [3.05000000e01, 6.49974496e-01, -2.51506337e-10, -1.22402706e-29],
+        [3.55000000e01, 6.50223670e-01, -1.60030036e-09, -1.60049973e-27],
+        [4.05000000e01, 6.50308495e-01, -6.57525969e-09, -1.18805853e-25],
+        [4.55000000e01, 6.50337367e-01, -1.94556067e-08, -5.38410639e-24],
+        [5.05000000e01, 6.50347194e-01, -4.48948696e-08, -1.58919144e-22],
+        [5.55000000e01, 6.50350539e-01, -8.55687627e-08, -3.23225526e-21],
+        [6.05000000e01, 6.50351677e-01, -1.40383011e-07, -4.74407296e-20],
+        [6.55000000e01, 6.50352064e-01, -2.04424667e-07, -5.25063604e-19],
+        [7.05000000e01, 6.50352196e-01, -2.70732861e-07, -4.54062637e-18],
+        [7.55000000e01, 6.50352241e-01, -3.32744054e-07, -3.15436152e-17],
+        [8.05000000e01, 6.50352257e-01, -3.86026011e-07, -1.81353174e-16],
+        [8.55000000e01, 6.50352262e-01, -4.28731200e-07, -1.08242509e-15],
+        [9.05000000e01, 6.50352263e-01, -4.61082450e-07, -8.17129224e-15],
+        [9.55000000e01, 6.50352264e-01, -4.84506720e-07, -5.07227416e-14],
+        [1.00500000e02, 6.50352264e-01, -5.00868717e-07, -2.65281543e-13],
+        [1.05500000e02, 6.50352264e-01, -5.11977756e-07, -1.18943691e-12],
+        [1.10500000e02, 6.50352264e-01, -5.19353201e-07, -4.63985776e-12],
+        [1.15500000e02, 6.50352264e-01, -5.24163707e-07, -1.59530793e-11],
+    ]
+
+    # answer for case with decay, sorption and immobile decay
+    tsresd = [
+        [5.00000000e-001, 7.83710928e-003, -5.80158910e-057, -2.25314132e-155],
+        [5.50000000e000, 3.62624591e-002, -6.24807157e-049, -4.24647039e-143],
+        [1.05000000e001, 3.94430245e-002, -4.21132371e-045, -3.49914067e-135],
+        [1.55000000e001, 3.97989039e-002, -1.88015521e-042, -4.22140911e-129],
+        [2.05000000e001, 3.98387239e-002, -2.08000273e-040, -4.21326343e-124],
+        [2.55000000e001, 3.98431794e-002, -9.73158626e-039, -7.70768515e-120],
+        [3.05000000e001, 3.98436780e-002, -2.51979242e-037, -4.05412972e-116],
+        [3.55000000e001, 3.98437337e-002, -4.22148524e-036, -8.16181323e-113],
+        [4.05000000e001, 3.98437400e-002, -5.06137417e-035, -7.64733456e-110],
+        [4.55000000e001, 3.98437407e-002, -4.65644754e-034, -3.83768947e-107],
+        [5.05000000e001, 3.98437408e-002, -3.45690053e-033, -1.14526800e-104],
+        [5.55000000e001, 3.98437408e-002, -2.14998235e-032, -2.20207186e-102],
+        [6.05000000e001, 3.98437408e-002, -1.15268865e-031, -2.90478786e-100],
+        [6.55000000e001, 3.98437408e-002, -5.44749494e-031, -2.76391812e-098],
+        [7.05000000e001, 3.98437408e-002, -2.30981090e-030, -1.97569761e-096],
+        [7.55000000e001, 3.98437408e-002, -8.91352546e-030, -1.09703810e-094],
+        [8.05000000e001, 3.98437408e-002, -3.16720540e-029, -4.86540314e-093],
+        [8.55000000e001, 3.98437408e-002, -1.04623376e-028, -1.76436266e-091],
+        [9.05000000e001, 3.98437408e-002, -3.23874014e-028, -5.33676335e-090],
+        [9.55000000e001, 3.98437408e-002, -9.45855357e-028, -1.36963650e-088],
+        [1.00500000e002, 3.98437408e-002, -2.62075822e-027, -3.02677070e-087],
+        [1.05500000e002, 3.98437408e-002, -6.92256308e-027, -5.83417810e-086],
+        [1.10500000e002, 3.98437408e-002, -1.75036545e-026, -9.91958533e-085],
+        [1.15500000e002, 3.98437408e-002, -4.25158985e-026, -1.50254693e-083],
+    ]
+
     tsresa = np.array(tsresa)
     tsresb = np.array(tsresb)
-    tsreslist = [tsresa, tsresb]
+    tsresc = np.array(tsresc)
+    tsresd = np.array(tsresd)
+    tsreslist = [tsresa, tsresb, tsresc, tsresd]
     tsres = tsreslist[sim.idxsim]
+    errmsg = (
+        "Simulated concentrations do not match with known solution.\n"
+        "{} /= {}".format(tssim, tsres)
+    )
     if tsres is not None:
-        assert np.allclose(
-            tsres, tssim
-        ), "simulated concentrations do not match with known solution."
+        assert np.allclose(tsres, tssim), errmsg
 
     return
 

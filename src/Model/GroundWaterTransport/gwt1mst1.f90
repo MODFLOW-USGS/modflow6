@@ -1591,7 +1591,12 @@ module GwtMstModule
       if (kiter == 1) then
         decay_rate = min(decay_rate_usr, cold / delt)
       else
-        decay_rate = decay_rate_last + cnew / delt
+        decay_rate = decay_rate_last
+        if (cnew < DZERO) then
+          decay_rate = decay_rate_last + cnew / delt
+        else if (cnew > cold) then
+          decay_rate = decay_rate_last + cnew / delt
+        end if
         decay_rate = min(decay_rate_usr, decay_rate)
       end if
       decay_rate = max(decay_rate, DZERO)
