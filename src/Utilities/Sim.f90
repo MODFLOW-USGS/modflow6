@@ -499,11 +499,20 @@ module SimModule
       !
       ! -- write final message
       if(isimcnvg == 0) then
-        ireturnerr = 1
         call print_final_message('Premature termination of simulation.', iout)
       else
         call print_final_message('Normal termination of simulation.', iout)
       endif
+      !
+      ! -- If the simulation did not converge and the continue
+      !    option was not set, then set the return code to 1.  The
+      !    purpose of setting the returncode this way is that the
+      !    program will terminate without a stop code if the simulation
+      !    reached the end and the continue flag was set, even if the
+      !    the simulation did not converge.
+      if (isimcnvg == 0 .and. isimcontinue == 0) then
+        ireturnerr = 1
+      end if
       !
       ! -- destroy messages
       call sim_errors%deallocate_message()
