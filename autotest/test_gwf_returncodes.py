@@ -37,8 +37,7 @@ def run_mf6(argv, ws):
     return proc.returncode, buff
 
 
-@raises(RuntimeError)
-def idomain_runtime_error():
+def get_sim(ws, idomain, continue_flag=False, nouter=500):
     # static model data
     # temporal discretization
     nper = 1
@@ -55,22 +54,18 @@ def idomain_runtime_error():
     hk = 1.0
 
     # solver options
-    nouter, ninner = 500, 300
+    ninner = 300
     hclose, rclose, relax = 1e-9, 1e-6, 1.0
     newtonoptions = "NEWTON"
     imsla = "BICGSTAB"
 
-    # chd data
-    c6 = []
-    ccol = [1, ncol - 1]
-    for j in ccol:
-        c6.append([(0, nrow - 1, j), strt])
-    cd6 = {0: c6}
-    maxchd = len(cd6[0])
-
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+        sim_name=name,
+        version="mf6",
+        exe_name=mf6_exe,
+        sim_ws=ws,
+        continue_=continue_flag,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -108,7 +103,7 @@ def idomain_runtime_error():
         delc=delc,
         top=top,
         botm=botm,
-        idomain=0,
+        idomain=idomain,
     )
 
     # initial conditions
@@ -116,6 +111,17 @@ def idomain_runtime_error():
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=1, k=hk)
+
+    # constant head
+    if idomain > 0:
+        c6 = []
+        ccol = [1, ncol - 1]
+        for j in ccol:
+            c6.append([(0, nrow - 1, j), strt])
+        c6 = [[0, 0, 0, 1.], [0, nrow - 1, ncol - 1, 0.]]
+        cd6 = {0: c6}
+        maxchd = len(cd6[0])
+        chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=cd6, maxbound=maxchd)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -126,6 +132,66 @@ def idomain_runtime_error():
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
+
+    # write the input files
+    sim.write_simulation()
+    return sim
+
+
+def test_normal_termination():
+    # get the simulation
+    sim = get_sim(ws, idomain=1)
+
+    # write the input files
+    sim.write_simulation()
+
+    # run the simulation
+    returncode, buff = run_mf6([mf6_exe], ws)
+    msg = "could not run {}".format(sim.name)
+    if returncode != 0:
+        msg = ("The run should have been successful but it terminated "
+               "with non-zero returncode")
+        raise ValueError(msg)
+
+    return
+
+
+def test_converge_fail_continue():
+    # get the simulation
+    sim = get_sim(ws, idomain=1, continue_flag=True, nouter=1)
+
+    # write the input files
+    sim.write_simulation()
+
+    # run the simulation
+    returncode, buff = run_mf6([mf6_exe], ws)
+    msg = ("The run should have been successful even though it failed, because"
+           " the continue flag was set.  But a non-zero error code was "
+           "found: {}".format(returncode))
+    assert returncode == 0, msg
+    return
+
+
+@raises(RuntimeError)
+def converge_fail_nocontinue():
+    # get the simulation
+    sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
+
+    # write the input files
+    sim.write_simulation()
+
+    # run the simulation
+    returncode, buff = run_mf6([mf6_exe], ws)
+    msg = "This run should fail with a returncode of 1"
+    if returncode == 1:
+        raise RuntimeError(msg)
+
+    return
+
+@raises(RuntimeError)
+def idomain_runtime_error():
+    # get the simulation
+    sim = get_sim(ws, idomain=0)
 
     # write the input files
     sim.write_simulation()
@@ -141,6 +207,13 @@ def idomain_runtime_error():
         else:
             msg += " but IDOMAIN ARRAY ERROR not returned"
             raise ValueError(msg)
+    return
+
+
+def test_converge_fail_nocontinue():
+    # run the test models
+    yield converge_fail_nocontinue
+
     return
 
 
@@ -206,6 +279,7 @@ def test_compiler_argv():
 
 
 def test_clean_sim():
+    print("Cleaning up")
     shutil.rmtree(ws)
 
 
@@ -215,3 +289,5 @@ if __name__ == "__main__":
 
     idomain_runtime_error()
     test_unknown_keyword_error()
+    test_normal_termination()
+    converge_fail_nocontinue()
