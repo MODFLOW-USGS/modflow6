@@ -349,7 +349,7 @@ def eval_heads(sim):
                 assert diff < 10 * hclose, (
                     "Head difference in child model {}"
                     " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(max_diff, 10 * hclose, irow, icol)
+                    " for row {} and col {}".format(diff, 10 * hclose, irow, icol)
                 )
 
     for irow in range(mg_c.nrow):
