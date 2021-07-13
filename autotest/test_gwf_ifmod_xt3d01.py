@@ -380,6 +380,22 @@ def eval_heads(sim):
                     cumul_balance_error, mname
                 )
 
+
+    # Check on residual, which is stored in diagonal position of
+    # flow-ja-face.  Residual should be less than convergence tolerance,
+    # or this means the residual term is not added correctly.
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
+    cbb = flopy.utils.CellBudgetFile(fpth)
+    flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
+    ia = grb._datadict["IA"] - 1    
+    for fjf in flow_ja_face:
+        fjf = fjf.flatten()
+        res = fjf[ia[:-1]]
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
+        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
     return
 
 

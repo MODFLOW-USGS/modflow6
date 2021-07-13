@@ -459,6 +459,7 @@ contains
     integer(I4B) :: n, m, ipos, isym
     integer(I4B) :: nLoc, mLoc, iposLoc
     integer(I4B) :: ihc
+    integer(I4B) :: idiag
     real(DP) :: rrate
     real(DP) :: area
     real(DP) :: satThick
@@ -466,6 +467,7 @@ contains
     real(DP) :: cx, cy, cz    
     real(DP) :: conLen
     real(DP) :: dist
+    real(DP) :: dq
     logical :: nozee
     type(ConnectionsType), pointer :: imCon                 !< interface model connections
     class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
@@ -531,8 +533,14 @@ contains
         else
           ! internal, need to set flowja for n-m
           ! TODO_MJR: should we mask the flowja calculation in the model?
-          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)          
+          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
+          dq = this%interfaceModel%flowja(ipos) - this%gwfModel%flowja(iposLoc)
+          idiag = this%gwfModel%dis%con%ia(nLoc)
+
+          ! update flowja with correct value
           this%gwfModel%flowja(iposLoc) = this%interfaceModel%flowja(ipos)
+          ! account for change in the residual at the diagonal
+          this%gwfModel%flowja(idiag) = this%gwfModel%flowja(idiag) - dq
         end if
       end do
     end do
