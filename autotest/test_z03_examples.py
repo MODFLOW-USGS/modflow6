@@ -116,7 +116,7 @@ def run_mf6(sim):
 
 def set_make_comparison(test):
     compare_tests = {
-        "ex-gwf-gwf-capture": ("6.2.1",),
+        "ex-gwf-capture": ("6.2.1",),
         "ex-gwf-sagehen": ("6.2.1",),
         "ex-gwf-sfr-p01b": ("6.2.1",),
         "ex-gwf-nwt-p02a": ("6.2.1",),
