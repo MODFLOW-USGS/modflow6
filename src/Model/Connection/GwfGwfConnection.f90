@@ -459,15 +459,13 @@ contains
     integer(I4B) :: n, m, ipos, isym
     integer(I4B) :: nLoc, mLoc, iposLoc
     integer(I4B) :: ihc
-    integer(I4B) :: idiag
     real(DP) :: rrate
     real(DP) :: area
     real(DP) :: satThick
     real(DP) :: nx, ny, nz
-    real(DP) :: cx, cy, cz    
+    real(DP) :: cx, cy, cz
     real(DP) :: conLen
     real(DP) :: dist
-    real(DP) :: dq
     logical :: nozee
     type(ConnectionsType), pointer :: imCon                 !< interface model connections
     class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
@@ -499,7 +497,7 @@ contains
 
       nLoc = toGlobal(n)%index
 
-      do ipos = imCon%ia(n), imCon%ia(n+1) - 1
+      do ipos = imCon%ia(n)+1, imCon%ia(n+1) - 1
         if (imCon%mask(ipos) < 1) then
           ! skip this connection, it's masked so not determined by us
           cycle
@@ -530,17 +528,15 @@ contains
           dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
           call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
                                                      nx, ny, dist)
+          this%gwfModel%flowja(this%gwfModel%ia(nLoc)) =                        &
+            this%gwfModel%flowja(this%gwfModel%ia(nLoc)) + rrate
         else
           ! internal, need to set flowja for n-m
           ! TODO_MJR: should we mask the flowja calculation in the model?
           iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
-          dq = this%interfaceModel%flowja(ipos) - this%gwfModel%flowja(iposLoc)
-          idiag = this%gwfModel%dis%con%ia(nLoc)
 
           ! update flowja with correct value
           this%gwfModel%flowja(iposLoc) = this%interfaceModel%flowja(ipos)
-          ! account for change in the residual at the diagonal
-          this%gwfModel%flowja(idiag) = this%gwfModel%flowja(idiag) - dq
         end if
       end do
     end do
