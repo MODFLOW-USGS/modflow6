@@ -842,6 +842,8 @@ contains
       if (this%gwfmodel1%npf%icalcspdis == 1) then
         call this%gwfmodel1%npf%set_edge_properties(n1, ihc, rrate, area,      &
                                                     nx, ny, distance)
+        this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) =                         &
+          this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) + rrate
       endif
       !
       ! -- Submit this connection and flow information to the npf
@@ -854,8 +856,10 @@ contains
       if (this%gwfmodel2%npf%icalcspdis == 1) then
         distance = dltot * this%cl2(i) / (this%cl1(i) + this%cl2(i))
         if (ihc /= 0) rrate = -rrate
-        call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,     &
+        call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,      &
                                                     -nx, -ny, distance)
+        this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) =                         &
+          this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) + rrate
       endif
       !
     enddo

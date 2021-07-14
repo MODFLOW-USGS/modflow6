@@ -216,6 +216,20 @@ def eval_mf6(sim):
     qxb, qyb, qzb = qxqyqz(fname, nlayb, nrowb, ncolb)
     msg = "qx should be the same {} {}".format(qxa[0, 2, 1], qxb[0, 0, 0])
     assert np.allclose(qxa[0, 2, 1], qxb[0, 0, 0]), msg
+    
+    cbcpth = os.path.join(sim.simpath, "{}.cbc".format(namea))
+    grdpth = os.path.join(sim.simpath, "{}.dis.grb".format(namea))
+    grb = flopy.utils.MfGrdFile(grdpth)
+    cbb = flopy.utils.CellBudgetFile(cbcpth, precision="double")
+    flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
+    ia = grb._datadict["IA"] - 1
+    for fjf in flow_ja_face:
+        fjf = fjf.flatten()
+        res = fjf[ia[:-1]]
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
+        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
 

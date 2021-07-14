@@ -933,7 +933,6 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SparseModule, only: csr_diagsum
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -971,11 +970,6 @@ module GwfModule
       call packobj%bnd_cq(this%x, this%flowja)
     enddo
     !
-    ! -- Finalize calculation of flowja by adding face flows to the diagonal.
-    !    This results in the flow residual being stored in the diagonal
-    !    position for each cell.
-    call csr_diagsum(this%dis%con%ia, this%flowja)
-    !
     ! -- Return
     return
   end subroutine gwf_cq
@@ -989,6 +983,7 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SparseModule, only: csr_diagsum
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -997,6 +992,11 @@ module GwfModule
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Finalize calculation of flowja by adding face flows to the diagonal.
+    !    This results in the flow residual being stored in the diagonal
+    !    position for each cell.
+    call csr_diagsum(this%dis%con%ia, this%flowja)
     !
     ! -- Save the solution convergence flag
     this%icnvg = icnvg
