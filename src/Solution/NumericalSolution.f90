@@ -805,7 +805,7 @@ subroutine solution_create(filename, id)
       end if
     end if
     !
-    if (THIS%THETA < DEM3) then
+    if (THIS%theta < DEM3) then
       this%theta = DEM3
     end if
     !

@@ -92,8 +92,8 @@ module GridConnectionModule
   contains
     ! public
     procedure, pass(this) :: construct
-    procedure, private, pass(this) :: allocateScalars, allocateArrays
-    procedure, public, pass(this) :: deallocate
+    procedure, private, pass(this) :: allocateScalars
+    procedure, public, pass(this) :: destroy
     procedure, pass(this) :: connectCell
     procedure, pass(this) :: addModelLink 
     procedure, pass(this) :: extendConnection
@@ -116,6 +116,9 @@ module GridConnectionModule
     procedure, private, pass(this) :: getModelWithNbrs
     procedure, private, pass(this) :: getExchangeData
     procedure, private, pass(this) :: registerInterfaceCells
+    procedure, private, pass(this) :: addToGlobalMap
+    procedure, private, pass(this) :: compressGlobalMap
+    procedure, private, pass(this) :: sortInterfaceGrid
     procedure, private, pass(this) :: makePrimaryConnections
     procedure, private, pass(this) :: connectNeighborCells
     procedure, private, pass(this) :: fillConnectionDataInternal
@@ -141,11 +144,11 @@ module GridConnectionModule
     this%memoryPath = create_mem_path(connectionName, 'GC')
 
     call this%allocateScalars()
-    call this%allocateArrays(nCapacity)
     
     allocate(this%modelWithNbrs)
     allocate(this%boundaryCells(nCapacity))
     allocate(this%connectedCells(nCapacity))
+    allocate(this%idxToGlobal(2*nCapacity))
     
     this%modelWithNbrs%model => model
     call this%addToRegionalModels(model)
@@ -345,8 +348,9 @@ module GridConnectionModule
     type(SparseMatrix), pointer :: sparse     
     integer(I4B) :: ierror    
     type(ConnectionsType), pointer :: conn
-            
-    ! Recursively generate interface cell indices and add to region lookup table 
+        
+    ! Recursively generate interface cell indices, fill map to global cells,
+    ! and add to region lookup table 
     this%indexCount = 0
     do icell = 1, this%nrOfBoundaryCells
       call this%registerInterfaceCells(this%boundaryCells(icell))
@@ -355,9 +359,14 @@ module GridConnectionModule
       call this%registerInterfaceCells(this%connectedCells(icell))
     end do
     this%nrOfCells = this%indexCount
+
+    ! compress lookup table
+    call this%compressGlobalMap()
+
+    ! sort interface indexes such that 'n > m' means 'n below m'
+    call this%sortInterfaceGrid()
     
     ! allocate a map from interface index to global coordinates
-    allocate(this%idxToGlobal(this%nrOfCells))
     call mem_allocate(this%idxToGlobalIdx, this%nrOfCells,                      &
                       'IDXTOGLOBALIDX', this%memoryPath)
     
@@ -617,6 +626,7 @@ module GridConnectionModule
     if (ifaceIdx == -1) then
       this%indexCount = this%indexCount + 1
       ifaceIdx = this%indexCount
+      call this%addToGlobalMap(ifaceIdx, cellWithNbrs%cell)
       this%regionalToInterfaceIdxMap(regionIdx) = ifaceIdx
     end if
     
@@ -626,6 +636,58 @@ module GridConnectionModule
     end do
       
   end subroutine registerInterfaceCells
+
+  !> @brief Add entry to lookup table, inflating when necessary
+  !<
+  subroutine addToGlobalMap(this, ifaceIdx, cell)
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    integer(I4B), intent(in) :: ifaceIdx             !< unique idx in the interface grid
+    type(GlobalCellType), intent(in) :: cell         !< the global cell
+	  ! local
+    integer(I4B) :: newSize
+    type(GlobalCellType), dimension(:), pointer :: tempMap
+		
+    if (ifaceIdx > size(this%idxToGlobal)) then
+      newSize = 2*size(this%idxToGlobal)
+      allocate(tempMap(size(this%idxToGlobal)))
+      tempMap(1:size(this%idxToGlobal)) = this%idxToGlobal(1:size(this%idxToGlobal))
+
+      deallocate(this%idxToGlobal)
+      allocate(this%idxToGlobal(newSize))
+      this%idxToGlobal(1:size(tempMap)) = tempMap(1:size(tempMap))
+    end if
+    this%idxToGlobal(ifaceIdx) = cell
+
+  end subroutine addToGlobalMap
+
+  !> @brief Compress lookup table to get rid of unused entries
+  !<
+  subroutine compressGlobalMap(this)
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    ! local
+    type(GlobalCellType), dimension(:), pointer :: tempMap
+
+    if (size(this%idxToGlobal) > this%nrOfCells) then
+      allocate(tempMap(this%nrOfCells))
+      tempMap(1:this%nrOfCells) = this%idxToGlobal(1:this%nrOfCells)
+      deallocate(this%idxToGlobal)
+      allocate(this%idxToGlobal(this%nrOfCells))
+      this%idxToGlobal(1:this%nrOfCells) = tempMap(1:this%nrOfCells)
+    end if
+
+  end subroutine compressGlobalMap
+
+  !> @brief Soft cell ids in the interface grid such that
+  !< id_1 < id_2 means that cell 1 lies above cell 2
+  subroutine sortInterfaceGrid(this)
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+
+    ! allocate map old id => new id
+    !this%idxToGlobal
+
+    ! 
+    
+  end subroutine sortInterfaceGrid
   
   !> @brief Add primary connections to the sparse data structure
   !<
@@ -639,10 +701,6 @@ module GridConnectionModule
     do icell = 1, this%nrOfBoundaryCells  
       ifaceIdx = this%getInterfaceIndex(this%boundaryCells(icell)%cell)
       ifaceIdxNbr = this%getInterfaceIndex(this%connectedCells(icell)%cell)
-      
-      ! set mapping
-      this%idxToGlobal(ifaceIdx) = this%boundaryCells(icell)%cell
-      this%idxToGlobal(ifaceIdxNbr) = this%connectedCells(icell)%cell
       
       ! add diagonals to sparse
       call sparse%addconnection(ifaceIdx, ifaceIdx, 1)
@@ -666,10 +724,9 @@ module GridConnectionModule
     integer(I4B) :: ifaceIdx, ifaceIdxNbr    ! unique idx in the interface grid
     integer(I4B) :: inbr
     
-    ifaceIdx = this%getInterfaceIndex(cell%cell)   
+    ifaceIdx = this%getInterfaceIndex(cell%cell)
     do inbr = 1, cell%nrOfNbrs
-      ifaceIdxNbr = this%getInterfaceIndex(cell%neighbors(inbr)%cell)      
-      this%idxToGlobal(ifaceIdxNbr) = cell%neighbors(inbr)%cell      
+      ifaceIdxNbr = this%getInterfaceIndex(cell%neighbors(inbr)%cell)
       
       call sparse%addconnection(ifaceIdxNbr, ifaceIdxNbr, 1)
       call sparse%addconnection(ifaceIdx, ifaceIdxNbr, 1)
@@ -704,7 +761,7 @@ module GridConnectionModule
         if (associated(ncell%model, mcell%model)) then
           ! within same model, straight copy
           connOrig => ncell%model%dis%con
-          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)   
+          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)
           if (iposOrig == 0) then
             ! periodic boundary conditions can add connections between cells in 
             ! the same model, but they are dealt with through the exchange data
@@ -970,17 +1027,9 @@ module GridConnectionModule
     
   end subroutine allocateScalars
   
-  !> @brief Allocate array data
-  !<
-  subroutine allocateArrays(this, nConns)
-    class(GridConnectionType), intent(in) :: this !< this grid connection instance
-    integer(I4B) :: nConns
-    
-  end subroutine allocateArrays  
-  
   !> @brief Deallocate grid connection resources
   !<
-  subroutine deallocate(this)
+  subroutine destroy(this)
   use MemoryManagerModule, only: mem_deallocate
     class(GridConnectionType) :: this !< this grid connection instance
     
@@ -990,13 +1039,14 @@ module GridConnectionModule
     call mem_deallocate(this%nrOfCells)
 
     ! arrays
+    deallocate(this%idxToGlobal)
     deallocate(this%modelWithNbrs)
     deallocate(this%boundaryCells)
     deallocate(this%connectedCells)
 
     call mem_deallocate(this%idxToGlobalIdx)
     
-  end subroutine deallocate
+  end subroutine destroy
   
   !> @brief Test if the connection between nodes within
   !< the same model is periodic

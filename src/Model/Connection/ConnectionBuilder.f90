@@ -85,7 +85,6 @@ module ConnectionBuilderModule
     ! local
     class(DisConnExchangeType), pointer :: conEx
     integer(I4B) :: iex
-    logical(LGP) :: isValid
     class(SpatialModelConnectionType), pointer :: modelConnection
 
     do iex = 1, exchanges%Count()

@@ -187,7 +187,7 @@ contains ! module procedures
     call mem_deallocate(this%rhs)
     call mem_deallocate(this%active)
     
-    call this%gridConnection%deallocate()
+    call this%gridConnection%destroy()
     deallocate(this%gridConnection)
     deallocate(this%mapIdxToSln)
   
