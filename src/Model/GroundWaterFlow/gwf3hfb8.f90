@@ -144,7 +144,7 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     use TdisModule, only: kper, nper
     ! -- dummy
     class(GwfHfbType) :: this
@@ -181,7 +181,6 @@ module GwfHfbModule
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -554,7 +553,7 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
@@ -580,11 +579,10 @@ module GwfHfbModule
             write(this%iout,'(4x,a)') &
               'THE LIST OF HFBS WILL BE PRINTED.'
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN HFB OPTION: ',         &
+            write(errmsg,'(4x,a,a)') 'Unknown HFB option: ', &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF HFB OPTIONS'
@@ -602,7 +600,7 @@ module GwfHfbModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GwfHfbType),intent(inout) :: this
     ! -- local
@@ -629,28 +627,24 @@ module GwfHfbModule
             write(this%iout,'(4x,a,i7)') 'MAXHFB = ', this%maxhfb
           case default
             write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN HFB DIMENSION: ', &
-                                     trim(keyword)
+              'Unknown HFB dimension: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       !
       write(this%iout,'(1x,a)')'END OF HFB DIMENSIONS'
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- verify dimensions were set
     if(this%maxhfb <= 0) then
       write(errmsg, '(1x,a)') &
-        'ERROR.  MAXHFB MUST BE SPECIFIED WITH VALUE GREATER THAN ZERO.'
+        'MAXHFB must be specified with value greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
@@ -669,7 +663,7 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     use TdisModule, only: kper
     ! -- dummy
     class(GwfHfbType) :: this
@@ -700,7 +694,6 @@ module GwfHfbModule
       if(ihfb > this%maxhfb) then
         call store_error('MAXHFB not large enough.')
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       call this%parser%GetCellid(this%dis%ndim, cellidn)
       this%noden(ihfb) = this%dis%noder_from_cellid(cellidn, &
@@ -726,7 +719,6 @@ module GwfHfbModule
     if(nerr > 0) then
       call store_error('Errors encountered in HFB input file.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     write(this%iout, '(3x,i0,a,i0)') this%nhfb,                                &
@@ -748,7 +740,7 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors, ustop, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
@@ -800,7 +792,6 @@ module GwfHfbModule
     ! -- Stop if errors detected
     if(count_errors() > 0) then
       call store_error_unit(this%inunit)
-      call ustop()
     endif
     !
     ! -- return

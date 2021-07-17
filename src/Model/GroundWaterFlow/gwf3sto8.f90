@@ -11,7 +11,7 @@ module GwfStoModule
   use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO,               &
                              LENBUDTXT, LINELENGTH
   use SimVariablesModule, only: errmsg
-  use SimModule, only: ustop, store_error, count_errors
+  use SimModule, only: store_error, count_errors
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQSaturation, sLinearSaturation
@@ -182,7 +182,6 @@ contains
           write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       end if
     end if
@@ -205,11 +204,10 @@ contains
         case ('TRANSIENT')
           this%iss = 0
         case default
-          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN STORAGE DATA TAG: ', &
+          write (errmsg, '(4x,a,a)') 'Unknown STORAGE data tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
@@ -287,8 +285,7 @@ contains
     ! -- Ensure time step length is not zero
     if (delt == DZERO) then
       write (errmsg, fmtsperror)
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- set variables
@@ -857,10 +854,9 @@ contains
           this%iorig_ss = 0
           write (this%iout, fmtconfss)
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
+          write (errmsg, '(4x,a,a)') 'Unknown STO option: ', &
             trim(keyword)
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
       write (this%iout, '(1x,a)') 'END OF STORAGE OPTIONS'
@@ -937,19 +933,17 @@ contains
                                         aname(3))
           readsy = .true.
         case default
-          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
+          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check for ICONVERT
@@ -984,7 +978,6 @@ contains
     !
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check SS and SY for negative values

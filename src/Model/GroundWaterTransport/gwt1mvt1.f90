@@ -7,7 +7,7 @@ module GwtMvtModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, LENPAKLOC, &
                              DNODATA, LENPACKAGENAME, TABCENTER, LENMODELNAME
-  use SimModule, only: store_error, ustop
+  use SimModule, only: store_error
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use GwtFmiModule, only: GwtFmiType
@@ -585,7 +585,6 @@ module GwtMvtModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF MVT OPTIONS'

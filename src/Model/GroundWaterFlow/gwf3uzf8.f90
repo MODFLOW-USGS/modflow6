@@ -23,7 +23,7 @@ module UzfModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
   use SimVariablesModule, only: errmsg
-  use SimModule, only: count_errors, store_error, ustop, store_error_unit
+  use SimModule, only: count_errors, store_error, store_error_unit
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
 
@@ -398,7 +398,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: DZERO, MNORMAL
     use OpenSpecModule, only: access, form
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use InputOutputModule, only: urword, getunit, openfile
     implicit none
     ! -- dummy
@@ -543,7 +543,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     class(uzftype),intent(inout) :: this
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -614,7 +614,6 @@ contains
     ! -- teminate if there are dimension errors
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set the number of waves
@@ -666,7 +665,7 @@ contains
     use TdisModule, only: kper, nper
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
@@ -725,7 +724,6 @@ contains
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -926,7 +924,6 @@ contains
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set wave data for first stress period and second that follows SS
@@ -1737,8 +1734,7 @@ contains
         if (ierr > 0) then
             if ( ierr == 1 ) &
               errmsg = 'UZF variable NWAVESETS needs to be increased.'
-            call store_error(errmsg)
-            call ustop()
+            call store_error(errmsg, terminate=.TRUE.)
         end if
         !
         ! -- Calculate gwet
@@ -1854,7 +1850,7 @@ contains
 !                         UzfCellGroup type.
 ! ******************************************************************************
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType), intent(inout) :: this
@@ -2048,7 +2044,6 @@ contains
     ! -- write summary of UZF cell property error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- setup sparse for connectivity used to identify multiple uzf cells per
@@ -2184,7 +2179,7 @@ contains
 ! check_cell_area -- Check UZF cell areas.
 ! ******************************************************************************
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType) :: this
@@ -2258,7 +2253,6 @@ contains
     ! -- terminate if errors were encountered
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     ! -- return
     return
@@ -2445,7 +2439,6 @@ contains
       ! -- write summary of error messages
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
     end if
     !
@@ -2526,8 +2519,7 @@ contains
               trim(adjustl(obsrv%ObsTypeId)), 'for observation',                 &
               trim(adjustl(obsrv%Name)),                                         &
               'must be assigned to a UZF cell with a unique boundname.'
-            call store_error(errmsg)
-            call ustop()
+            call store_error(errmsg, terminate=.TRUE.)
           end if
           !
           ! -- check WATER-CONTENT depth
@@ -2570,7 +2562,6 @@ contains
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
         call store_error_unit(this%inunit)
-        call ustop()
       end if
     end if
     !

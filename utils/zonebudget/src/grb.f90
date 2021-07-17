@@ -47,7 +47,6 @@ module GrbModule
     if ( hdrtxt(istart:istop) /= 'GRID') then
       call store_error('GRB FILE MUST BEGIN WITH WORD GRID.  FOUND: ' // hdrtxt(istart:istop))
       call store_error_unit(inunit)
-      call ustop()
     endif
     !
     ! -- grid type, allocate mshape accordingly
@@ -64,7 +63,6 @@ module GrbModule
     else
       call store_error('UNKNOWN GRID TYPE IN GRB FILE: ' // hdrtxt(istart:istop))
       call store_error_unit(inunit)
-      call ustop()
     endif
     mshape(:) = 0
     !

@@ -36,7 +36,7 @@ module GwtMwtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LINELENGTH
-  use SimModule, only: store_error, ustop
+  use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
@@ -190,7 +190,6 @@ module GwtMwtModule
                             &// trim(adjustl(this%flowpackagename)) // '.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- allocate space for idxbudssm, which indicates whether this is a 

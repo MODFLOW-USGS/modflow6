@@ -146,8 +146,8 @@ module ObsModule
   use ObsOutputModule,     only: ObsOutputType
   use ObsUtilityModule,    only: write_fmtd_cont, write_unfmtd_cont
   use OpenSpecModule,      only: ACCESS, FORM
-  use SimModule,           only: count_errors, store_error, store_error_unit,    &
-                                 ustop
+  use SimVariablesModule,  only: errmsg
+  use SimModule,           only: count_errors, store_error, store_error_unit
   use TdisModule,          only: totim
 
   implicit none
@@ -254,7 +254,7 @@ contains
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: ermsg, strng
+    character(len=LINELENGTH) :: strng
     logical :: flag_string
 ! ------------------------------------------------------------------------------
     !
@@ -277,10 +277,9 @@ contains
       !    is for a named boundary or group of boundaries.
       obsrv%NodeNumber = NAMEDBOUNDFLAG
     else
-      ermsg = 'Error reading data from ID string'
-      call store_error(ermsg)
+      errmsg = 'Error reading data from ID string'
+      call store_error(errmsg)
       call store_error_unit(inunitobs)
-      call ustop()
     endif
     !
     return
@@ -514,8 +513,7 @@ contains
     ! -- Ensure that obsrvType is not blank
     if (obsrvType=='') then
       msg = 'Programmer error: Invalid argument in store_obs_type.'
-      call store_error(msg)
-      call ustop()
+      call store_error(msg, terminate=.TRUE.)
     endif
     !
     ! -- Find first unused element
@@ -532,7 +530,6 @@ contains
              // 'need to increase MAXOBSTYPES.'
       call store_error(msg)
       call store_error_unit(this%inUnitObs)
-      call ustop()
     endif
     !
     ! -- Convert character argument to upper case
@@ -642,7 +639,6 @@ contains
     !
     if (count_errors() > 0) then
       call store_error_unit(this%inunitobs)
-      call ustop()
     end if
     !
     return
@@ -664,8 +660,7 @@ contains
     integer(I4B) :: localprecision
     integer(I4B) :: localdigits
     character(len=40) :: keyword
-    character(len=LINELENGTH) :: ermsg
-    character(len=LINELENGTH) :: errormessage, fname
+    character(len=LINELENGTH) :: fname
     type(ListType), pointer :: lineList => null()
     logical :: continueread, found, endOfBlock
     ! -- formats
@@ -692,12 +687,11 @@ contains
       supportOpenClose=.true., blockRequired=.false.)
     if (ierr /= 0) then
       ! end of file
-      ermsg = 'End-of-file encountered while searching for' // &
+      errmsg = 'End-of-file encountered while searching for' // &
               ' OPTIONS in OBS ' // &
               'input file "' // trim(this%inputFilename) // '"'
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     elseif (.not. found) then
       this%blockTypeFound = ''
       if (this%iout>0) write(this%iout,10)
@@ -717,25 +711,25 @@ contains
           if (localdigits==0) then
             localdigits = this%parser%GetInteger()
             if (localdigits < 1) then
-              errormessage = 'Error in OBS input: Invalid value for DIGITS option'
-              call store_error(errormessage)
+              errmsg = 'Error in OBS input: Invalid value for DIGITS option'
+              call store_error(errmsg)
               exit readblockoptions
             endif
             if (localdigits < 2) localdigits = 2
             if (localdigits > 16) localdigits = 16
             write(this%iout,40)localdigits
           else
-            errormessage = 'Error in OBS input: DIGITS has already been defined'
-            call store_error(errormessage)
+            errmsg = 'Error in OBS input: DIGITS has already been defined'
+            call store_error(errmsg)
             exit readblockoptions
           endif
         case ('PRINT_INPUT')
           this%echo = .true.
           write(this%iout,'(a)')'The PRINT_INPUT option has been specified.'
         case default
-          errormessage = 'Error in OBS input: Unrecognized option: ' // &
+          errmsg = 'Error in OBS input: Unrecognized option: ' // &
                          trim(keyword)
-          call store_error(errormessage)
+          call store_error(errmsg)
           exit readblockoptions
         end select
       enddo readblockoptions
@@ -743,7 +737,6 @@ contains
     !
     if (count_errors()>0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     write(this%iout,'(1x)')
@@ -934,7 +927,6 @@ contains
     type(ObsDataType), pointer :: obsDatum
     ! -- local
     integer(I4B) :: i
-    character( len=MAXCHARLEN) :: ermsg
 ! ------------------------------------------------------------------------------
     !
     obsDatum => null()
@@ -946,10 +938,9 @@ contains
     enddo
     !
     if (.not. associated(obsDatum)) then
-      ermsg = 'Observation type not found: ' // trim(obsTypeID)
-      call store_error(ermsg)
+      errmsg = 'Observation type not found: ' // trim(obsTypeID)
+      call store_error(errmsg)
       call store_error_unit(this%inUnitObs)
-      call ustop()
     endif
     !
     return
@@ -1018,7 +1009,7 @@ contains
     logical :: fmtd, found, endOfBlock
     character(len=LENBIGLINE) :: pnamein, fnamein
     character(len=LENHUGELINE) :: line
-    character(len=LINELENGTH) :: btagfound, ermsg, message, word
+    character(len=LINELENGTH) :: btagfound, message, word
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=20) :: accarg, bin, fmtarg
@@ -1031,7 +1022,7 @@ contains
     !
     ! -- initialize local variables
     numspec = -1
-    ermsg = ''
+    errmsg = ''
     !
     inquire(unit=this%parser%iuactive, name=pnamein)
     call GetFileFromPath(pnamein, fnamein)
@@ -1087,9 +1078,9 @@ contains
         call store_error(message)
         cycle
       else if (this%obsOutputList%ContainsFile(fname)) then
-        ermsg = 'OBS outfile "' // trim(fname) // &
+        errmsg = 'OBS outfile "' // trim(fname) // &
                 '" is provided more than once.'
-        call store_error(ermsg)
+        call store_error(errmsg)
         cycle
       end if
       !
@@ -1142,9 +1133,9 @@ contains
           end if
         end do readblockcontinuous
       case default
-        ermsg = 'Error: Observation block type not recognized: ' //              &
+        errmsg = 'Error: Observation block type not recognized: ' //              &
                 trim(btagfound)
-        call store_error(ermsg)
+        call store_error(errmsg)
       end select
     end do readblocks
     !
@@ -1156,7 +1147,6 @@ contains
     ! -- determine if error condition occurs
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return

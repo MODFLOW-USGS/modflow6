@@ -64,7 +64,7 @@ module OutputControlData
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors, store_error_unit, ustop
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(OutputControlDataType) :: this
     integer(I4B), intent(in) :: inunit
@@ -88,7 +88,6 @@ module OutputControlData
     !
     if(count_errors() > 0) then
       call store_error_unit(inunit)
-      call ustop()
     endif
     !
     ! -- return
@@ -299,7 +298,7 @@ module OutputControlData
     use ConstantsModule, only: MNORMAL 
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
-    use SimModule, only: store_error, store_error_unit, count_errors, ustop
+    use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
     class(OutputControlDataType) :: this
     character(len=*), intent(in) :: linein
@@ -334,7 +333,6 @@ module OutputControlData
        call store_error('Looking for FILEOUT or PRINT_FORMAT.  Found:')
        call store_error(trim(adjustl(line)))
        call store_error_unit(inunit)
-       call ustop()
     end select
     !
     ! -- return

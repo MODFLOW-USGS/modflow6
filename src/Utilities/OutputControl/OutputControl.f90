@@ -89,7 +89,7 @@ module OutputControlModule
     ! -- modules
     use TdisModule,              only: kper, nper
     use ConstantsModule,         only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit, count_errors
+    use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
     class(OutputControlType) :: this
     ! -- local
@@ -154,7 +154,6 @@ module OutputControlModule
         ! -- Stop or set iperoc and continue
         if(count_errors() > 0) then
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         this%iperoc = ival
       endif
@@ -203,7 +202,6 @@ module OutputControlModule
           call store_error('UNRECOGNIZED KEYWORD: '//keyword2)
           call store_error(trim(line))
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         call this%parser%GetRemainingLine(line)
         call ocdobjptr%psmobj%rp(trim(printsave)//' '//line,      &
@@ -326,7 +324,7 @@ module OutputControlModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(OutputControlType) :: this
     ! -- local
@@ -361,7 +359,6 @@ module OutputControlModule
           errmsg = "UNKNOWN OC OPTION '" // trim(keyword) // "'."
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         call this%parser%GetRemainingLine(line)
         call ocdobjptr%set_option(line, this%parser%iuactive, this%iout)

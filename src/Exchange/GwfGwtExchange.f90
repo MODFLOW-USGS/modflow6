@@ -189,7 +189,7 @@ module GwfGwtExchangeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -227,8 +227,7 @@ module GwfGwtExchangeModule
                                gwfmodel%dis%nodes, &
                                gwtmodel%dis%nodesuser, &
                                gwtmodel%dis%nodes
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- setup pointers to gwf variables allocated in gwf_ar

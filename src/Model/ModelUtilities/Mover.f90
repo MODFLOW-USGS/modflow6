@@ -50,7 +50,7 @@ module MvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword, extract_idnum_or_bndname
-    use SimModule, only: ustop, store_error, store_error_unit, count_errors    
+    use SimModule, only: store_error, store_error_unit, count_errors    
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(MvrType) :: this
@@ -128,9 +128,8 @@ module MvrModule
       case('UPTO')
         this%imvrtype = 4
       case default
-        call store_error('ERROR. INVALID MOVER TYPE: '//trim(line(istart:istop)) )
+        call store_error('INVALID MOVER TYPE: '//trim(line(istart:istop)) )
         call store_error_unit(inunit)
-        call ustop()
     end select
     !
     ! -- Read mover value
@@ -139,10 +138,9 @@ module MvrModule
     !
     ! -- Check to make sure provider and receiver are not the same
     if(this%pckNameSrc == this%pckNameTgt .and. this%iRchNrSrc == this%iRchNrTgt) then
-      call store_error('ERROR. PROVIDER AND RECEIVER ARE THE SAME: '//         &
+      call store_error('PROVIDER AND RECEIVER ARE THE SAME: '//         &
         trim(line))
       call store_error_unit(inunit)
-      call ustop()
     endif
     !
     ! -- Check to make sure pname1 and pname2 are both listed in pckMemPaths
@@ -175,18 +173,16 @@ module MvrModule
     end if
     if (count_errors() > 0) then
       call store_error_unit(inunit)
-      call ustop()
     end if
     !
     ! -- Set pointer to QTOMVR array in the provider boundary package
     temp_ptr => pakmovers(ipakloc1)%qtomvr
     if(this%iRchNrSrc < 1 .or. this%iRchNrSrc > size(temp_ptr)) then
-      call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
+      call store_error('PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'PROVIDER ID = ', this%iRchNrSrc,            &
         '; PACKAGE SIZE = ', size(temp_ptr)
       call store_error(trim(errmsg))
       call store_error_unit(inunit)
-      call ustop()
     endif
     this%qtomvr_ptr => temp_ptr(this%iRchNrSrc)
     !
@@ -201,12 +197,11 @@ module MvrModule
     ! -- Set pointer to QFROMMVR array in the receiver boundary package
     temp_ptr => pakmovers(ipakloc2)%qfrommvr
     if(this%iRchNrTgt < 1 .or. this%iRchNrTgt > size(temp_ptr)) then
-      call store_error('ERROR. RECEIVER ID < 1 OR GREATER THAN PACKAGE SIZE ')
+      call store_error('RECEIVER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%iRchNrTgt,            &
         '; PACKAGE SIZE = ', size(temp_ptr)
       call store_error(trim(errmsg))
       call store_error_unit(inunit)
-      call ustop()
     endif
     this%qfrommvr_ptr => temp_ptr(this%iRchNrTgt)
     !

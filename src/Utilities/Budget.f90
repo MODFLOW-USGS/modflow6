@@ -19,7 +19,7 @@
 module BudgetModule
 
   use KindModule, only: DP, I4B
-  use SimModule,  only: store_error, count_errors, ustop
+  use SimModule,  only: store_error, count_errors
   use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, DZERO
   
   implicit none
@@ -412,8 +412,7 @@ module BudgetModule
       if(trim(adjustl(this%vbnm(this%msum))) /= trim(adjustl(text))) then
         write(errmsg, fmtbuderr) trim(adjustl(this%vbnm(this%msum))), &
                                  trim(adjustl(text))
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
     endif
     !
@@ -511,7 +510,7 @@ module BudgetModule
     !
     ! -- Check for errors
     if(count_errors() > 0) then
-      call ustop()
+      call store_error('Could not add multi-entry', terminate=.TRUE.)
     endif
     !
     ! -- Return

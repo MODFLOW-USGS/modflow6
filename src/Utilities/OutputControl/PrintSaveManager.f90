@@ -28,7 +28,8 @@ module PrintSaveManagerModule
   
   use KindModule, only: DP, I4B
   use ArrayHandlersModule, only: expandarray
-  use SimModule,           only: store_error, ustop
+  use SimVariablesModule, only: errmsg
+  use SimModule,           only: store_error
   use InputOutputModule,   only: urword
   implicit none
   private
@@ -126,9 +127,9 @@ module PrintSaveManagerModule
     case('SAVE')
       ls = .true.
     case default
-       call store_error('Looking for PRINT or SAVE.  Found:')
-       call store_error(trim(adjustl(line)))
-       call ustop()
+       write(errmsg, '(2a)') &
+       'Looking for PRINT or SAVE. Found:', trim(adjustl(line))
+       call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- set member variables
@@ -196,9 +197,10 @@ module PrintSaveManagerModule
         if(iout > 0) write(iout,"(6x,a)") 'THE LAST TIME STEP WILL BE SAVED'
       endif
     case default
-       call store_error('Looking for ALL, STEPS, FIRST, LAST, OR FREQUENCY.')
-       call store_error('Found: '//trim(adjustl(line)))
-       call ustop()
+      write (errmsg, '(2a)') &
+        'Looking for ALL, STEPS, FIRST, LAST, OR FREQUENCY. Found: ', &
+        trim(adjustl(line))
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- return

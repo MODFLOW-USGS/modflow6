@@ -1,6 +1,7 @@
 module SortModule
   use KindModule
-  use SimModule, only: store_error, ustop
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error
   use ConstantsModule, only: LINELENGTH
   implicit none
 
@@ -29,7 +30,6 @@ module SortModule
       integer(I4B), dimension(:), intent(inout) :: v
       logical, intent(in), optional :: reverse
       ! -- local variables
-      character(len=LINELENGTH) :: errmsg
       logical :: lrev
       integer(I4B), parameter :: nn=15
       integer(I4B), parameter :: nstack=50
@@ -124,8 +124,8 @@ module SortModule
           jstack = jstack + 2
           if (jstack > nstack) then
             write(errmsg,'(4x,a,3(1x,a))') &
-              '****ERROR. JSTACK > NSTACK IN SortModule::qsort'
-            call ustop()
+              'JSTACK > NSTACK IN SortModule::qsort'
+            call store_error(errmsg, terminate=.TRUE.)
           end if
           if ((iright - i + 1) >= (j - 1)) then
             istack(jstack) = iright
@@ -165,7 +165,6 @@ module SortModule
       real(DP), dimension(:), intent(inout) :: v
       logical, intent(in), optional :: reverse
       ! -- local variables
-      character(len=LINELENGTH) :: errmsg
       logical :: lrev
       integer(I4B), parameter :: nn=15
       integer(I4B), parameter :: nstack=50
@@ -260,8 +259,8 @@ module SortModule
           jstack = jstack + 2
           if (jstack > nstack) then
             write(errmsg,'(4x,a,3(1x,a))') &
-              '****ERROR. JSTACK > NSTACK IN SortModule::qsort'
-            call ustop()
+              'JSTACK > NSTACK IN SortModule::qsort'
+            call store_error(errmsg, terminate=.TRUE.)
           end if
           if ((iright - i + 1) >= (j - 1)) then
             istack(jstack) = iright

@@ -11,7 +11,7 @@ module BlockParserModule
   use VersionModule,      only: IDEVELOPMODE
   use InputOutputModule,  only: uget_block, uget_any_block, uterminate_block, &
                                 u9rdcom, urword, upcase
-  use SimModule,          only: store_error, store_error_unit, ustop
+  use SimModule,          only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   
   implicit none
@@ -226,7 +226,6 @@ contains
           errmsg = 'Unexpected end of file reached.'
           call store_error(errmsg)
           call this%StoreErrorUnit()
-          call ustop()
         endif
       else
         this%lloc = 1
@@ -338,7 +337,6 @@ contains
       trim(errmsg), trim(adjustl(this%line)), "'."
     call store_error(errmsg)
     call this%StoreErrorUnit()
-    call ustop()
     !
     ! -- return
     return
@@ -442,7 +440,7 @@ contains
       errmsg = "LOOKING FOR 'END " // trim(this%blockname) //                    &
                "'.  FOUND: " // "'" // trim(this%line) // "'."
       call store_error(errmsg)
-      call this%StoreErrorUnit(terminate=.TRUE.)
+      call this%StoreErrorUnit()
     endif
     !
     ! -- return
@@ -521,22 +519,25 @@ contains
   !> @ brief Store the unit number
   !!
   !! Method to store the unit number for the file that caused a read error.
+  !! Default is to terminate the simulation when this method is called.
   !!
   !<
   subroutine StoreErrorUnit(this, terminate)
     ! -- dummy variable
     class(BlockParserType), intent(inout) :: this   !< BlockParserType object
     logical, intent(in), optional :: terminate      !< boolean indicating if the simulation should be terminated
+    ! -- loacl variables
+    logical :: lterminate
     !
-    ! -- store error unit
-    call store_error_unit(this%iuext)
-    !
-    ! -- test if the simulation should be terminated
+    ! -- process optional variables
     if (present(terminate)) then
-      if (terminate) then
-        call ustop()
-      end if
+      lterminate = terminate
+    else
+      lterminate = .TRUE.
     end if
+  !
+    ! -- store error unit
+    call store_error_unit(this%iuext, terminate=lterminate)
     !
     ! -- return
     return
@@ -578,7 +579,7 @@ contains
       errmsg = "Invalid keyword '" // trim(this%laststring) // &
                "' detected in block '" // trim(this%blockname) // "'."
       call store_error(errmsg)
-      call this%StoreErrorUnit(terminate=.TRUE.)
+      call this%StoreErrorUnit()
     endif
     !
     ! -- Return

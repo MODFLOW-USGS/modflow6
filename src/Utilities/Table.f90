@@ -9,7 +9,7 @@ module TableModule
                              TABCENTER
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
-  use SimModule, only: store_error, ustop
+  use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
   
   implicit none
@@ -230,8 +230,7 @@ module TableModule
         this%ientry, ') in the', trim(adjustl(this%name)), 'table ("',           &
         trim(adjustl(this%title)), '") that only has', this%ntableterm,          &
         'columns.'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- initialize table term
@@ -622,8 +621,7 @@ module TableModule
         'Trying to add data to column ', this%ientry, 'in the',                  &
         trim(adjustl(this%name)), 'table (', trim(adjustl(this%title)),          &
         ') that only has', this%ntableterm, 'columns.'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- Return

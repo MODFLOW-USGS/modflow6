@@ -6,7 +6,7 @@ module AdaptiveTimeStepModule
  
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: iout, errmsg, warnmsg
-  use SimModule, only: ustop, store_error, count_errors, store_warning
+  use SimModule, only: store_error, count_errors, store_warning
   use BlockParserModule, only: BlockParserType
   use ConstantsModule, only: DZERO, DONE, LINELENGTH, DNODATA, TABLEFT, &
                              TABCENTER
@@ -225,7 +225,6 @@ module AdaptiveTimeStepModule
                                     trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write(iout,'(1x,a)') 'END OF ATS OPTIONS'
@@ -270,7 +269,6 @@ module AdaptiveTimeStepModule
                                       trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)') 'END OF ATS DIMENSIONS'
@@ -278,7 +276,6 @@ module AdaptiveTimeStepModule
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -325,14 +322,12 @@ module AdaptiveTimeStepModule
       ! -- Check for errors
       if(count_errors() > 0) then
         call parser%StoreErrorUnit()
-        call ustop()
       endif
       write(iout,'(1x,a)') 'END READING ATS PERIODDATA'
     else
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -484,7 +479,6 @@ module AdaptiveTimeStepModule
     ! -- Check for errors
     if(count_errors() > 0) then
       call parser%StoreErrorUnit()
-      call ustop()
     endif
     write(iout,'(1x,a)') 'DONE PROCESSING ATS INPUT'
   end subroutine ats_check_timing

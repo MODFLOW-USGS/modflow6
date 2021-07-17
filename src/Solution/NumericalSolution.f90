@@ -459,8 +459,7 @@ subroutine solution_create(filename, id)
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     use SimVariablesModule, only: iout
-    use SimModule, only: ustop, store_error, count_errors,                       &
-                         deprecation_warning
+    use SimModule, only: store_error, count_errors, deprecation_warning
     use InputOutputModule, only: getunit, openfile
     ! -- dummy variables
     class(NumericalSolutionType) :: this   !< NumericalSolutionType instance
@@ -935,7 +934,6 @@ subroutine solution_create(filename, id)
     ierr = count_errors()
     if (ierr>0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! reallocate space for nonlinear arrays and initialize
@@ -990,7 +988,6 @@ subroutine solution_create(filename, id)
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- close ims input file

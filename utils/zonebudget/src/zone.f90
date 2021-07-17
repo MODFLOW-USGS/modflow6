@@ -76,7 +76,6 @@ module ZoneModule
                                       trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
           end select
       end do
       write(iout,'(a)') 'End processing zone dimensions'
@@ -84,7 +83,6 @@ module ZoneModule
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED ZONE DIMENSIONS BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Validate size and allocate arrays
@@ -98,7 +96,6 @@ module ZoneModule
         write(errmsg, '(a,i0)') 'CHANGE SIZE OF ZONE ARRAY TO  ', ncr
         call store_error(errmsg)
         call store_error_unit(inunit)
-        call ustop()
       endif
     else
       ! -- Number of cells/reaches not available in grb or no grb specified
@@ -129,7 +126,6 @@ module ZoneModule
                   &WHEN A BINARY GRID FILE IS PROVIDED AND THE MODEL IS LAYERED'
                 call store_error(errmsg)
                 call parser%StoreErrorUnit()
-                call ustop()
               endif
               ncpl = ncells / nlay
               write(iout, '(4x, a, i0)') 'LAYERED detected.  Using NLAY = ', nlay
@@ -149,13 +145,11 @@ module ZoneModule
                                      trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
     else
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Write messages

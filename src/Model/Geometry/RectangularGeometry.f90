@@ -132,7 +132,7 @@ module RectangularGeometryModule
     ! -- module
     use InputOutputModule, only: urword
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(RectangularGeometryType) :: this
     character(len=LINELENGTH) :: errmsg
@@ -161,10 +161,8 @@ module RectangularGeometryModule
       this%width = rval      
     case default
       write(errmsg,'(4x,a,a)') &
-        '****ERROR. UNKNOWN RECTANGULAR GEOMETRY ATTRIBUTE: ', &
-                               line(istart:istop)
-      call store_error(errmsg)
-      call ustop()
+        'Unknown rectangular geometry attribute: ', line(istart:istop)
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- return

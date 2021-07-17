@@ -402,7 +402,7 @@ module GwtAdvModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwtAdvType) :: this
     ! -- local
@@ -447,13 +447,11 @@ module GwtAdvModule
                   'SCHEME MUST BE "UPSTREAM", "CENTRAL" OR "TVD"'
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
-                call ustop()
             end select
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN ADVECTION OPTION: ',   &
+            write(errmsg,'(4x,a,a)')'Unknown ADVECTION option: ',  &
                                      trim(keyword)
-            call store_error(errmsg)
-            call ustop()
+            call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
       if (this%iadvwt /= 1) then
@@ -475,8 +473,6 @@ module GwtAdvModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    ! -- modules
-    use SimModule, only: ustop  
     ! -- return
     real(DP) :: omega
     ! -- dummy

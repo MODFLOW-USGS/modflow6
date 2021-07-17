@@ -5,7 +5,7 @@ module GwfDisuModule
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: count_errors, store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use BaseDisModule, only: DisBaseType
   use BlockParserModule, only: BlockParserType
@@ -279,7 +279,7 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisuType) :: this
@@ -310,7 +310,6 @@ module GwfDisuModule
       call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
         &THAN ZERO.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Write message if reduced grid
@@ -438,8 +437,9 @@ module GwfDisuModule
     !
     ! -- terminate if errors found
     if(count_errors() > 0) then
-      if (this%inunit > 0) call store_error_unit(this%inunit)
-      call ustop()
+      if (this%inunit > 0) then
+        call store_error_unit(this%inunit)
+      end if
     endif
     !
     ! -- Ensure idomain values are valid
@@ -472,8 +472,9 @@ module GwfDisuModule
         'Vertical offset tolerance must be greater than zero. Found ', &
         this%voffsettol
       call store_error(errmsg)
-      if (this%inunit > 0) call store_error_unit(this%inunit)
-      call ustop()
+      if (this%inunit > 0) then
+        call store_error_unit(this%inunit)
+      end if
     end if
     !
     ! -- For cell n, ensure that underlying cells have tops less than
@@ -494,8 +495,9 @@ module GwfDisuModule
     !
     ! -- terminate if errors found
     if(count_errors() > 0) then
-      if (this%inunit > 0) call store_error_unit(this%inunit)
-      call ustop()
+      if (this%inunit > 0) then
+        call store_error_unit(this%inunit)
+      end if
     endif
     !
     ! -- Return
@@ -593,8 +595,7 @@ module GwfDisuModule
       write(errmsg,'(a,i0,a,i0,a)')                                              &
         'Program error: nodeu_to_array size of array (', isize,                  &
         ') is not equal to the discretization dimension (', this%ndim, ')'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- fill array
@@ -613,7 +614,7 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     implicit none
     class(GwfDisuType) :: this
     character(len=LINELENGTH) :: keyword
@@ -684,7 +685,6 @@ module GwfDisuModule
     nerr = count_errors()
     if(nerr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return
@@ -700,7 +700,7 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     implicit none
     class(GwfDisuType) :: this
     character(len=LINELENGTH) :: keyword
@@ -758,7 +758,6 @@ module GwfDisuModule
     ! -- terminate if errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- allocate vectors that are the size of nodesuser
@@ -863,7 +862,6 @@ module GwfDisuModule
     ! -- terminate if errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -879,7 +877,7 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
@@ -890,7 +888,6 @@ module GwfDisuModule
     integer(I4B), parameter :: nname = 6
     logical,dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname(nname)
-    character(len=300) :: ermsg
     ! -- formats
     ! -- data
     data aname(1) /'                     IAC'/
@@ -939,18 +936,16 @@ module GwfDisuModule
                             this%njausr, this%iout, 0)
             lname(6) = .true.
           case default
-            write(ermsg,'(4x,a,a)')'ERROR. UNKNOWN CONNECTIONDATA TAG: ',      &
+            write(errmsg,'(4x,a,a)')'Unknown CONNECTIONDATA tag: ',      &
                                      trim(keyword)
-            call store_error(ermsg)
+            call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING CONNECTIONDATA'
     else
-      call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
+      call store_error('Required CONNECTIONDATA block not found.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- verify all items were read
@@ -961,15 +956,14 @@ module GwfDisuModule
       !
       ! -- error if not read
       if(.not. lname(n)) then
-        write(ermsg,'(1x,a,a)') &
-          'ERROR.  REQUIRED CONNECTIONDATA INPUT WAS NOT SPECIFIED: ', &
+        write(errmsg,'(1x,a,a)') &
+          'REQUIRED CONNECTIONDATA INPUT WAS NOT SPECIFIED: ', &
           adjustl(trim(aname(n)))
-        call store_error(ermsg)
+        call store_error(errmsg)
       endif
     enddo
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     if (.not. lname(6)) then
       write(this%iout, '(1x,a)') 'ANGLDEGX NOT FOUND IN CONNECTIONDATA ' //    &
@@ -988,14 +982,13 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B) :: i
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
     real(DP) :: xmin, xmax, ymin, ymax
-    character(len=300) :: ermsg
     ! -- formats
     character(len=*), parameter :: fmtvnum = &
       "('ERROR. VERTEX NUMBER NOT CONSECUTIVE.  LOOKING FOR ',i0," //           &
@@ -1017,10 +1010,9 @@ module GwfDisuModule
         ! -- vertex number
         ival = this%parser%GetInteger()
         if(ival /= i) then
-          write(ermsg, fmtvnum) i, ival
-          call store_error(ermsg)
+          write(errmsg, fmtvnum) i, ival
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- x
@@ -1046,9 +1038,8 @@ module GwfDisuModule
       ! -- Terminate the block
       call this%parser%terminateblock()
     else
-      call store_error('ERROR.  REQUIRED VERTICES BLOCK NOT FOUND.')
+      call store_error('Required vertices block not found.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Write information
@@ -1072,7 +1063,7 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     use InputOutputModule, only: urword
     use SparseModule, only: sparsematrix
     ! -- dummy
@@ -1082,7 +1073,6 @@ module GwfDisuModule
     logical :: isfound, endOfBlock
     integer(I4B) :: maxvert, maxvertcell, iuext
     real(DP) :: xmin, xmax, ymin, ymax
-    character(len=300) :: ermsg
     integer(I4B), dimension(:), allocatable :: maxnnz
     type(sparsematrix) :: vertspm
     ! -- formats
@@ -1122,10 +1112,9 @@ module GwfDisuModule
         ! -- cell number
         ival = this%parser%GetInteger()
         if(ival /= i) then
-          write(ermsg, fmtcnum) i, ival
-          call store_error(ermsg)
+          write(errmsg, fmtcnum) i, ival
+          call store_error(errmsg)
           call store_error_unit(iuext)
-          call ustop()
         endif
         !
         ! -- Cell x center
@@ -1174,9 +1163,8 @@ module GwfDisuModule
       ! -- Terminate the block
       call this%parser%terminateblock()
     else
-      call store_error('ERROR.  REQUIRED CELL2D BLOCK NOT FOUND.')
+      call store_error('Required CELL2D block not found.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Convert vertspm into ia/ja form
@@ -1378,7 +1366,7 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: noden
@@ -1436,7 +1424,7 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use DisvGeom, only: line_unit_vector
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1460,8 +1448,7 @@ module GwfDisuModule
       write(errmsg, '(a)') &
         'Cannot calculate unit vector components for DISU grid if VERTEX ' //    &
         'data are not specified'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- Find xy coords
@@ -1620,7 +1607,7 @@ module GwfDisuModule
     ! -- local
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
-    character(len=LINELENGTH) :: ermsg, fname
+    character(len=LINELENGTH) :: fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1648,15 +1635,14 @@ module GwfDisuModule
     endif
     !
     if(nodeu < 1 .or. nodeu > this%nodesuser) then
-      write(ermsg, *) ' Node number in list is outside of the grid', nodeu
-      call store_error(ermsg)
+      write(errmsg, *) ' Node number in list is outside of the grid', nodeu
+      call store_error(errmsg)
       inquire(unit=in, name=fname)
       call store_error('Error converting in file: ')
       call store_error(trim(adjustl(fname)))
       call store_error('Cell number cannot be determined in line: ')
       call store_error(trim(adjustl(line)))
       call store_error_unit(in)
-      call ustop()
     end if
     !
     ! -- return
@@ -1692,7 +1678,7 @@ module GwfDisuModule
     integer(I4B) :: lloclocal, istart, istop, ndum, n
     integer(I4B) :: istat
     real(DP) :: r
-    character(len=LINELENGTH) :: ermsg, fname
+    character(len=LINELENGTH) :: fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1721,15 +1707,14 @@ module GwfDisuModule
     endif
     !
     if(nodeu < 1 .or. nodeu > this%nodesuser) then
-      write(ermsg, *) ' Node number in list is outside of the grid', nodeu
-      call store_error(ermsg)
+      write(errmsg, *) ' Node number in list is outside of the grid', nodeu
+      call store_error(errmsg)
       inquire(unit=inunit, name=fname)
       call store_error('Error converting in file: ')
       call store_error(trim(adjustl(fname)))
       call store_error('Cell number cannot be determined in cellid: ')
       call store_error(trim(adjustl(cellid)))
       call store_error_unit(inunit)
-      call ustop()
     end if
     !
     ! -- return
@@ -1776,7 +1761,7 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisuType), intent(inout)                  :: this
@@ -1828,7 +1813,7 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisuType), intent(inout)              :: this

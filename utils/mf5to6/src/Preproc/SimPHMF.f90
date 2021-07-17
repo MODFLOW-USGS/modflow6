@@ -8,8 +8,7 @@ module SimModule
   public :: count_errors, iverbose, record_exchange, record_model,             &
             record_package, record_solution, sim_message, store_error, ustop,  &
             store_warning, numbernotes, write_message, store_note,   &
-            count_warnings, count_notes, store_error_unit, print_notes, &
-            store_error_filename
+            count_warnings, count_notes, store_error_unit, print_notes
   integer, parameter :: MAXOBJ = 4
   integer :: iverbose=0 !0: print nothing
                         !1: print first level subroutine information
@@ -185,7 +184,7 @@ integer function count_notes()
   return
 end function count_notes
 
-subroutine store_error(errmsg)
+subroutine store_error(errmsg, terminate)
   ! **************************************************************************
   ! Store an error message for printing at end of simulation
   ! **************************************************************************
@@ -195,9 +194,18 @@ subroutine store_error(errmsg)
   implicit none
   ! -- dummy arguments
   character(len=*), intent(in) :: errmsg
+  logical, optional, intent(in) :: terminate  !< boolean indicating if the simulation should be terminated
   ! -- local variables
+  logical :: lterminate
   integer :: i
   !
+  ! -- process optional variables
+  if (present(terminate)) then
+    lterminate = terminate
+  else
+    lterminate = .FALSE.
+  end if
+!
   ! Do not store duplicate
   if (allocated(sim_errors)) then
     do i=1,size(sim_errors)
@@ -209,10 +217,15 @@ subroutine store_error(errmsg)
   i = size(sim_errors)
   sim_errors(i) = errmsg
   !
+  ! -- terminate the simulation
+  if (lterminate) then
+    call ustop()
+  end if
+!
   return
 end subroutine store_error
 
-subroutine store_error_unit(iunit)
+subroutine store_error_unit(iunit, terminate)
   ! **************************************************************************
   ! Convert iunit to file name and indicate error reading from this file
   ! **************************************************************************
@@ -222,33 +235,29 @@ subroutine store_error_unit(iunit)
   implicit none
   ! -- dummy arguments
   integer, intent(in) :: iunit
+  logical, optional, intent(in) :: terminate  !< boolean indicating if the simulation should be terminated
   ! -- local variables
+  logical :: lterminate
   character(len=LINELENGTH) :: fname
+  !
+  ! -- process optional variables
+  if (present(terminate)) then
+    lterminate = terminate
+  else
+    lterminate = .FALSE.
+  end if
   !
   inquire(unit=iunit, name=fname)
   call store_error('ERROR OCCURRED WHILE READING FILE: ')
   call store_error(trim(adjustl(fname)))
   !
+  ! -- terminate the simulation
+  if (lterminate) then
+    call ustop()
+  end if
+  !
   return
 end subroutine store_error_unit
-
-subroutine store_error_filename(filename)
-  ! **************************************************************************
-  ! Indicate error reading from this file
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
-  implicit none
-  ! -- dummy arguments
-  character(len=*), intent(in) :: filename
-  ! -- local variables
-  !
-  call store_error('ERROR OCCURRED WHILE READING FILE: ')
-  call store_error(trim(adjustl(filename)))
-  !
-  return
-end subroutine store_error_filename
 
 subroutine store_warning(warnmsg)
   ! **************************************************************************

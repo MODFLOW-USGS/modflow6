@@ -41,7 +41,7 @@ module GwtAptModule
                              DNODATA, TABLEFT, TABCENTER, TABRIGHT,            &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              LENAUXNAME
-  use SimModule, only: store_error, store_error_unit, count_errors, ustop
+  use SimModule, only: store_error, store_error_unit, count_errors
   use SimVariablesModule, only: errmsg
   use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
@@ -387,7 +387,6 @@ module GwtAptModule
             trim(adjustl(this%flowpackagename))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         else
           ! -- tell package not to update this auxiliary variable
           this%flowpackagebnd%noupdateauxvar(this%iauxfpconc) = 1
@@ -455,7 +454,6 @@ module GwtAptModule
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -513,7 +511,6 @@ module GwtAptModule
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- fill arrays
@@ -622,7 +619,6 @@ module GwtAptModule
     ! -- terminate if any errors were detected
 999 if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -649,8 +645,8 @@ module GwtAptModule
     !
     ! -- this routine should never be called
     found = .false.
-    call store_error('Program error: pak_set_stressperiod not implemented.')
-    call ustop()
+    call store_error('Program error: pak_set_stressperiod not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- return
     return
@@ -936,8 +932,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_fc_expanded not implemented.')
-    call ustop()
+    call store_error('Program error: pak_fc_expanded not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -1315,8 +1311,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_solve not implemented.')
-    call ustop()
+    call store_error('Program error: pak_solve not implemented.', &
+                      terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -1463,7 +1459,7 @@ module GwtAptModule
     ! -- stop if errors were encountered in the DIMENSIONS block
     ierr = count_errors()
     if (ierr > 0) then
-      call ustop()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- read packagedata block
@@ -1630,7 +1626,6 @@ module GwtAptModule
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- deallocate local storage for aux variables
@@ -1841,8 +1836,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_solve not implemented.')
-    call ustop()
+    call store_error('Program error: pak_solve not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -1999,8 +1994,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_get_nbudterms not implemented.')
-    call ustop()
+    call store_error('Program error: pak_get_nbudterms not implemented.', &
+                      terminate=.TRUE.)
     nbudterms = 0
   end function pak_get_nbudterms
   
@@ -2204,8 +2199,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_setup_budobj not implemented.')
-    call ustop()
+    call store_error('Program error: pak_setup_budobj not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- return
     return
@@ -2375,8 +2370,8 @@ module GwtAptModule
 ! -----------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_fill_budobj not implemented.')
-    call ustop()
+    call store_error('Program error: pak_fill_budobj not implemented.', & 
+                      terminate=.TRUE.)
     !
     ! -- return
     return
@@ -2581,8 +2576,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_df_obs not implemented.')
-    call ustop()
+    call store_error('Program error: pak_df_obs not implemented.', &
+                     terminate=.TRUE.)
     !
     return
   end subroutine pak_df_obs
@@ -2761,7 +2756,6 @@ subroutine apt_rp_obs(this)
     ! -- check for errors
     if (count_errors() > 0) then
       call store_error_unit(this%obs%inunitobs)
-      call ustop()
     end if
     !
     return
@@ -2846,9 +2840,7 @@ subroutine apt_rp_obs(this)
                           trim(obsrv%ObsTypeId) // '" for ' // &
                           trim(adjustl(this%text)) // ' package ' // &
                           trim(this%packName)
-                call store_error(errmsg)
-                !call store_error_unit(this%obs%inunitobs)
-                !call ustop()
+                call store_error(errmsg, terminate=.TRUE.)
               end if
           end select
           call this%obs%SaveOneSimval(obsrv, v)
@@ -2858,7 +2850,6 @@ subroutine apt_rp_obs(this)
       ! -- write summary of error messages
       if (count_errors() > 0) then
         call store_error_unit(this%obs%inunitobs)
-        call ustop()
       end if
     end if
     !

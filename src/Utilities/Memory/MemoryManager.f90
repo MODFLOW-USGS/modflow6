@@ -9,7 +9,7 @@ module MemoryManagerModule
                                     TABINTEGER, TABREAL, TABCENTER, TABLEFT,     &
                                     TABRIGHT
   use SimVariablesModule,     only: errmsg
-  use SimModule,              only: store_error, count_errors, ustop
+  use SimModule,              only: store_error, count_errors
   use MemoryTypeModule,       only: MemoryType
   use MemoryListModule,       only: MemoryListType
   use MemoryHelperModule,     only: mem_check_length, split_mem_path
@@ -293,8 +293,7 @@ module MemoryManagerModule
         errmsg = "Programming error in memory manager. Variable '" //            &
           trim(name) // "' in '" // trim(mem_path) // "' cannot be " //     &
           "assigned because it does not exist in memory manager."
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
     !
@@ -325,8 +324,7 @@ module MemoryManagerModule
       "'. Status code is " //  trim(cstat) // '.'
     !
     ! -- store error and stop program execution
-    call store_error(errmsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
   end subroutine allocate_error  
 
   !> @brief Allocate a logical scalar
@@ -385,8 +383,7 @@ module MemoryManagerModule
     ! -- make sure ilen is greater than 0
     if (ilen < 1) then
       errmsg = 'Programming error in allocate_str. ILEN must be greater than 0.' 
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- check variable name length
@@ -443,8 +440,7 @@ module MemoryManagerModule
     if (ilen < 1) then
       errmsg = 'Programming error in allocate_str1d. ' //                        &
         'ILEN must be greater than 0.' 
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- check variable name length
@@ -1002,8 +998,7 @@ module MemoryManagerModule
       errmsg = "Programming error, varible '" // trim(name) // "' from '" //     &
         trim(mem_path) // "' is not defined in the memory manager. Use " //        &
         "mem_allocate instead."
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- return
@@ -1661,8 +1656,7 @@ module MemoryManagerModule
     if (associated(sclr)) then
       call get_from_memorylist(name, mem_path, mt, found, check=.FALSE.)
       if (.not. found) then
-        call store_error('Programming error in deallocate_str.')
-        call ustop()
+        call store_error('Programming error in deallocate_str.', terminate=.TRUE.)
       else
         deallocate(sclr)
       end if
@@ -1690,8 +1684,7 @@ module MemoryManagerModule
         errmsg = "Programming error in deallocate_str1d. Variable '" //          &
           trim(name) // "' in '" // trim(mem_path) // "' is not "    //          &
           "present in the memory manager but is associated."
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       else
         deallocate(astr)
       end if
@@ -1720,8 +1713,7 @@ module MemoryManagerModule
       end if
     end do
     if (.not. found) then
-      call store_error('programming error in deallocate_logical')
-      call ustop()
+      call store_error('programming error in deallocate_logical', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(sclr)
@@ -1753,8 +1745,7 @@ module MemoryManagerModule
       end if
     end do
     if (.not. found) then
-      call store_error('Programming error in deallocate_int.')
-      call ustop()
+      call store_error('Programming error in deallocate_int.', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(sclr)
@@ -1786,8 +1777,7 @@ module MemoryManagerModule
       end if
     end do
     if (.not. found) then
-      call store_error('Programming error in deallocate_dbl.')
-      call ustop()
+      call store_error('Programming error in deallocate_dbl.', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(sclr)
@@ -1828,8 +1818,7 @@ module MemoryManagerModule
       end do
     end if
     if (.not. found .and. size(aint) > 0 ) then
-      call store_error('programming error in deallocate_int1d')
-      call ustop()
+      call store_error('programming error in deallocate_int1d', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(aint)
@@ -1870,8 +1859,7 @@ module MemoryManagerModule
       end do
     end if
     if (.not. found .and. size(aint) > 0 ) then
-      call store_error('programming error in deallocate_int2d')
-      call ustop()
+      call store_error('programming error in deallocate_int2d', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(aint)
@@ -1912,8 +1900,7 @@ module MemoryManagerModule
       end do
     end if
     if (.not. found .and. size(aint) > 0 ) then
-      call store_error('programming error in deallocate_int3d')
-      call ustop()
+      call store_error('programming error in deallocate_int3d', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(aint)
@@ -1954,8 +1941,7 @@ module MemoryManagerModule
       end do
     end if
     if (.not. found .and. size(adbl) > 0 ) then
-      call store_error('programming error in deallocate_dbl1d')
-      call ustop()
+      call store_error('programming error in deallocate_dbl1d', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(adbl)
@@ -1996,8 +1982,7 @@ module MemoryManagerModule
       end do
     end if
     if (.not. found .and. size(adbl) > 0 ) then
-      call store_error('programming error in deallocate_dbl2d')
-      call ustop()
+      call store_error('programming error in deallocate_dbl2d', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(adbl)
@@ -2038,8 +2023,7 @@ module MemoryManagerModule
       end do
     end if
     if (.not. found .and. size(adbl) > 0 ) then
-      call store_error('programming error in deallocate_dbl3d')
-      call ustop()
+      call store_error('programming error in deallocate_dbl3d', terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate(adbl)
@@ -2456,7 +2440,7 @@ module MemoryManagerModule
     enddo
     call memorylist%clear()
     if (count_errors() > 0) then
-      call ustop()
+      call store_error('Could not clear memory list.', terminate=.TRUE.)
     end if
     !
     ! -- return

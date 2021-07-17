@@ -168,7 +168,6 @@ module BudgetDataModule
       write(errmsg, '(a, i0)') 'INVALID METHOD CODE DETECTED: ', imeth
       call store_error(errmsg)
       call store_error_unit(inunit)
-      call ustop()
     endif
     if (iout > 0) then
       write(iout, '(1pg15.6, a, 1x, a)') totim, budtxt, dstpackagename

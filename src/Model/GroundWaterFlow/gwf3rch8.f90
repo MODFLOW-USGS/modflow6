@@ -4,7 +4,7 @@ module RchModule
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
-  use SimModule, only: store_error, store_error_unit, ustop
+  use SimModule, only: store_error, store_error_unit
   use ObsModule, only: DefaultObsIdProcessor
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -134,7 +134,7 @@ module RchModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: DZERO
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     implicit none
     ! -- dummy
     class(RchType),   intent(inout) :: this
@@ -165,7 +165,6 @@ module RchModule
                 ' discretization type.'
         call store_error(ermsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- Write option
@@ -190,7 +189,7 @@ module RchModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(RchType),intent(inout) :: this
     ! -- local
@@ -224,29 +223,25 @@ module RchModule
               write(this%iout,'(4x,a,i7)') 'MAXBOUND = ', this%maxbound
             case default
               write(errmsg,'(4x,a,a)') &
-                '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ', &
-                                       trim(keyword)
+                'Unknown '//trim(this%text)//' DIMENSION: ', trim(keyword)
               call store_error(errmsg)
               call this%parser%StoreErrorUnit()
-              call ustop()
           end select
         end do
         !
         write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
       else
-        call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+        call store_error('Required DIMENSIONS block not found.')
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
     endif
     !
     ! -- verify dimensions were set
     if(this%maxbound <= 0) then
       write(errmsg, '(1x,a)') &
-        'ERROR.  MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+        'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Call define_listlabel to construct the list label that is written
@@ -287,7 +282,7 @@ module RchModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     implicit none
     ! -- dummy
     class(RchType),intent(inout) :: this
@@ -343,7 +338,6 @@ module RchModule
             call store_error(errmsg)
           endif
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -392,7 +386,7 @@ module RchModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LENTIMESERIESNAME, LINELENGTH
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ArrayHandlersModule, only: ifind
     implicit none
     ! -- dummy
@@ -472,10 +466,9 @@ module RchModule
         ! -- Check to see if other variables have already been read.  If so,
         !    then terminate with an error that IRCH must be read first.
         if (ivarsread > 0) then
-          call store_error('****ERROR. IRCH IS NOT FIRST VARIABLE IN &
+          call store_error('IRCH IS NOT FIRST VARIABLE IN &
             &PERIOD BLOCK OR IT IS SPECIFIED MORE THAN ONCE.')
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Read the IRCH array
@@ -529,7 +522,6 @@ module RchModule
           call store_error('****ERROR. LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
           call store_error(trim(line))
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- If this aux variable has been designated as a multiplier array
@@ -794,7 +786,7 @@ module RchModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: get_node
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(RchType) :: this

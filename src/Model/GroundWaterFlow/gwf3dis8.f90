@@ -6,7 +6,7 @@ module GwfDisModule
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: count_errors, store_error, store_error_unit
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
   use TdisModule,          only: kstp, kper, pertim, totim, delt
@@ -311,7 +311,6 @@ module GwfDisModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF DISCRETIZATION OPTIONS'
@@ -367,14 +366,12 @@ module GwfDisModule
                                       trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF DISCRETIZATION DIMENSIONS'
     else
       call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- verify dimensions were set
@@ -382,19 +379,16 @@ module GwfDisModule
       call store_error( &
           'ERROR.  NLAY WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     if(this%nrow < 1) then
       call store_error( &
           'ERROR.  NROW WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     if(this%ncol < 1) then
       call store_error( &
           'ERROR.  NCOL WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- calculate nodesuser
@@ -432,7 +426,7 @@ module GwfDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     use ConstantsModule,   only: LINELENGTH, DZERO
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -509,14 +503,12 @@ module GwfDisModule
                                      trim(keyword)
             call store_error(ermsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
     else
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Verify all required items were read (IDOMAIN not required)
@@ -529,7 +521,6 @@ module GwfDisModule
     enddo
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return
@@ -544,7 +535,7 @@ module GwfDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, count_errors, store_error
+    use SimModule, only: count_errors, store_error
     use ConstantsModule,   only: LINELENGTH, DZERO
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -583,7 +574,6 @@ module GwfDisModule
       call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
         &THAN ZERO.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check cell thicknesses
@@ -608,7 +598,6 @@ module GwfDisModule
     enddo
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Write message if reduced grid
@@ -889,8 +878,7 @@ module GwfDisModule
       write(errmsg,'(a,i0,a,i0,a)')                                              &
         'Program error: nodeu_to_array size of array (', isize,                  &
         ') is not equal to the discretization dimension (', this%ndim, ')'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- get k, i, j
@@ -976,8 +964,7 @@ module GwfDisModule
     nodeu = get_node(k, i, j, this%nlay, this%nrow, this%ncol)
     if (nodeu < 1) then
       write(errmsg, fmterr) k, i, j
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     nodenumber = nodeu
     if(this%nodes < this%nodesuser) nodenumber = this%nodereduced(nodeu)
@@ -1154,7 +1141,6 @@ module GwfDisModule
       call store_error('Cell number cannot be determined in line: ')
       call store_error(trim(adjustl(line)))
       call store_error_unit(in)
-      call ustop()
     end if
     !
     ! -- return
@@ -1249,7 +1235,6 @@ module GwfDisModule
       call store_error('Cell number cannot be determined in cellid: ')
       call store_error(trim(adjustl(cellid)))
       call store_error_unit(inunit)
-      call ustop()
     end if
     !
     ! -- return
@@ -1472,7 +1457,7 @@ module GwfDisModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisType), intent(inout)                   :: this
@@ -1542,7 +1527,7 @@ module GwfDisModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisType), intent(inout)               :: this
@@ -1829,7 +1814,7 @@ module GwfDisModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: get_node
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisType) :: this
@@ -1862,9 +1847,8 @@ module GwfDisModule
           nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
           il = this%ibuff(nodeu)
           if(il < 1 .or. il > nlay) then
-            write(errmsg, *) 'ERROR.  INVALID LAYER NUMBER: ', il
-            call store_error(errmsg)
-            call ustop()
+            write(errmsg, *) 'INVALID LAYER NUMBER: ', il
+            call store_error(errmsg, terminate=.TRUE.)
           endif
           nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
           noder = this%get_nodenumber(nodeu, 0)
@@ -1882,11 +1866,10 @@ module GwfDisModule
       ! -- Check for errors
       nbound = ipos - 1
       if(ierr > 0) then
-        write(errmsg, *) 'ERROR. MAXBOUND DIMENSION IS TOO SMALL.'
+        write(errmsg, *) 'MAXBOUND DIMENSION IS TOO SMALL.'
         call store_error(errmsg)
         write(errmsg, *) 'INCREASE MAXBOUND TO: ', ierr
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
       !
       ! -- If nbound < maxbnd, then initialize nodelist to zero in this range
@@ -1902,9 +1885,8 @@ module GwfDisModule
       call ReadArray(inunit, nodelist, aname, this%ndim, maxbnd, iout, 0)
       do noder = 1, maxbnd
         if(noder < 1 .or. noder > this%nodes) then
-          write(errmsg, *) 'ERROR.  INVALID NODE NUMBER: ', noder
-          call store_error(errmsg)
-          call ustop()
+          write(errmsg, *) 'INVALID NODE NUMBER: ', noder
+          call store_error(errmsg, terminate=.TRUE.)
         endif
       enddo
       nbound = maxbnd

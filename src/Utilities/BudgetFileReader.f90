@@ -1,7 +1,7 @@
 module BudgetFileReaderModule
 
   use KindModule
-  use SimModule, only: store_error, store_error_unit, ustop
+  use SimModule, only: store_error, store_error_unit
   use ConstantsModule, only: LINELENGTH
 
   implicit none
@@ -218,7 +218,6 @@ module BudgetFileReaderModule
       write(errmsg, '(a, i0)') 'INVALID METHOD CODE DETECTED: ', this%imeth
       call store_error(errmsg)
       call store_error_unit(this%inunit)
-      call ustop()
     endif
     if (iout > 0) then
       write(iout, '(1pg15.6, a, 1x, a)') this%totim, this%budtxt, &

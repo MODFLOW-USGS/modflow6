@@ -120,7 +120,7 @@ end subroutine riv_create
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(RivType),intent(inout) :: this
     ! -- local
@@ -166,7 +166,6 @@ end subroutine riv_create
     ! -- write summary of river package error messages
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)
-      call ustop()
     end if
     !
     ! -- return

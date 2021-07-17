@@ -7,7 +7,7 @@ module GwfObsModule
   use ObserveModule,    only: ObserveType
   use ObsModule,        only: ObsType
   use SimModule,        only: count_errors, store_error, &
-                              store_error_unit, ustop
+                              store_error_unit
   implicit none
 
   private
@@ -157,7 +157,6 @@ contains
       ! -- write summary of error messages
       if (count_errors() > 0) then
         call store_error_unit(this%inUnitObs)
-        call ustop()
       end if
     end if
     !
@@ -252,7 +251,6 @@ contains
       ermsg = 'Error reading data from ID string'
       call store_error(ermsg)
       call store_error_unit(inunitobs)
-      call ustop()
     endif
     !
     return
@@ -315,7 +313,6 @@ contains
     !
     if (count_errors() > 0) then
       call store_error_unit(inunitobs)
-      call ustop()
     endif
     !
     return

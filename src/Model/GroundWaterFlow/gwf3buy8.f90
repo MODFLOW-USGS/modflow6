@@ -5,8 +5,7 @@
 module GwfBuyModule
   
   use KindModule,             only: DP, I4B
-  use SimModule,              only: ustop, store_error, count_errors,          &
-                                    store_error_unit
+  use SimModule,              only: store_error, count_errors
   use MemoryManagerModule,    only: mem_allocate, mem_reallocate,              &
                                     mem_deallocate
   use ConstantsModule,        only: DHALF, DZERO, DONE, LENMODELNAME,          &
@@ -202,7 +201,6 @@ module GwfBuyModule
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the BUY Package.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Calculate cell elevations
@@ -299,7 +297,6 @@ module GwfBuyModule
       end do
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
     end if
     !
@@ -1135,21 +1132,18 @@ module GwfBuyModule
               'UNKNOWN BUY DIMENSION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF BUY DIMENSIONS'
     else
       call store_error('REQUIRED BUY DIMENSIONS BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- check dimension
     if (this%nrhospecies < 1) then
       call store_error('NRHOSPECIES MUST BE GREATER THAN ONE.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
@@ -1220,7 +1214,6 @@ module GwfBuyModule
     ! -- Check for errors.
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- write packagedata information
@@ -1661,7 +1654,6 @@ module GwfBuyModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF BUY OPTIONS'
