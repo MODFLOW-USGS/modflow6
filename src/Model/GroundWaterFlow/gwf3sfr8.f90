@@ -29,7 +29,7 @@ module SfrModule
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit,              &
-                       store_warning, ustop
+                       store_warning
   use SimVariablesModule, only: errmsg, warnmsg
   !
   implicit none
@@ -511,7 +511,6 @@ module SfrModule
       ! -- write summary of error messages for block
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- Call define_listlabel to construct the list label that is written
@@ -714,7 +713,6 @@ module SfrModule
       ierr = count_errors()
       if (ierr > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- setup pakmvrobj
@@ -933,7 +931,6 @@ module SfrModule
       ! -- terminate if errors encountered in reach block
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- deallocate local storage for aux variables
@@ -1108,7 +1105,6 @@ module SfrModule
       ! -- terminate if errors encountered in connectiondata block
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- create ia and ja from sparse
@@ -1351,7 +1347,6 @@ module SfrModule
       ! -- write summary of diversion error messages
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- return
@@ -1417,7 +1412,6 @@ module SfrModule
             write(errmsg, fmtblkerr) adjustl(trim(line))
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
           end if
         endif
       end if
@@ -1483,7 +1477,6 @@ module SfrModule
       ! -- write summary of package block error messages
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- return
@@ -2485,7 +2478,6 @@ module SfrModule
         ! -- write summary of package error messages
         if (count_errors() > 0) then
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       end if
       !
@@ -2593,7 +2585,6 @@ module SfrModule
         ! -- evaluate if there are any observation errors
         if (count_errors() > 0) then
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       end if
       !
@@ -3899,7 +3890,6 @@ module SfrModule
       ! -- terminate if connectivity errors
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- check that downstream reaches for a reach are

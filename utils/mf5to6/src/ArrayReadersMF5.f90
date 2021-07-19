@@ -5,8 +5,7 @@ module ArrayReadersMF5Module
   use InputOutputModule, only: openfile, u8rdcom, urword, ucolno, ulaprw
   use KindModule,        only: DP, I4B
   use OpenSpecModule,    only: ACCESS, FORM
-  use SimModule,         only: store_error, ustop, store_error_unit, &
-                               store_error_filename
+  use SimModule,         only: store_error, ustop, store_error_unit
 
   implicit none
 

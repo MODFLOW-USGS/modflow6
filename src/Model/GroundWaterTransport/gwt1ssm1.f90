@@ -115,7 +115,7 @@ module GwtSsmModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
-    use SimModule,           only: ustop, store_error
+    use SimModule,           only: store_error
     use ConstantsModule,   only: LINELENGTH
     ! -- dummy
     class(GwtSsmType) :: this
@@ -140,13 +140,12 @@ module GwtSsmModule
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
-      write(errmsg, '(a)') '****ERROR. SSM PACKAGE DOES NOT HAVE &
+      write(errmsg, '(a)') 'SSM PACKAGE DOES NOT HAVE &
                             &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE &
                             &OR TURN ON FMI AND PROVIDE A BUDGET FILE &
                             &THAT CONTAINS BOUNDARY FLOWS.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Allocate arrays
@@ -783,7 +782,7 @@ module GwtSsmModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwtSSMType) :: this
     ! -- local
@@ -818,11 +817,9 @@ module GwtSsmModule
             this%ipakcb = -1
             write(this%iout, fmtisvflow)
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SSM OPTION: ',         &
-                                     trim(keyword)
+            write(errmsg,'(4x,a,a)') 'UNKNOWN SSM OPTION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF SSM OPTIONS'
@@ -840,7 +837,7 @@ module GwtSsmModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     ! -- dummy
     class(GwtSsmtype) :: this
     ! -- local
@@ -885,7 +882,6 @@ module GwtSsmModule
                                       trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- read the source type
@@ -901,7 +897,6 @@ module GwtSsmModule
             'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
         !
         ! -- read name of auxiliary column
@@ -916,20 +911,18 @@ module GwtSsmModule
         enddo
         if (.not. pakfound) then
           write(errmsg,'(1x, a, a)')                                           &
-            'ERROR.  AUXILIARY NAME CANNOT BE FOUND: ', trim(auxname)
+            'AUXILIARY NAME CANNOT BE FOUND: ', trim(auxname)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Set the column position in iauxpak
         if (this%iauxpak(ip) /= 0) then
           write(errmsg,'(1x, a, a, i0, a)')                                    &
-            'ERROR.  PACKAGE and AUXNAME ALREADY SPECIFIED: ',                 &
+            'PACKAGE and AUXNAME ALREADY SPECIFIED: ',                 &
             trim(keyword), trim(auxname)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         if (lauxmixed) then
           this%iauxpak(ip) = -iaux
@@ -945,13 +938,11 @@ module GwtSsmModule
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED SOURCES BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return

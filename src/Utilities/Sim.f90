@@ -125,14 +125,27 @@ module SimModule
     !!  the simulation.
     !!
     !<
-    subroutine store_error(msg)
-      ! -- modules
-      use ArrayHandlersModule, only: ExpandArray
+    subroutine store_error(msg, terminate)
       ! -- dummy variable
-      character(len=*), intent(in) :: msg  !< error message
+      character(len=*), intent(in) :: msg         !< error message
+      logical, optional, intent(in) :: terminate  !< boolean indicating if the simulation should be terminated
+      ! -- local variables
+      logical :: lterminate
+      !
+      ! -- process optional variables
+      if (present(terminate)) then
+        lterminate = terminate
+      else
+        lterminate = .FALSE.
+      end if
       !
       ! -- store error
       call sim_errors%store_message(msg)
+      !
+      ! -- terminate the simulation
+      if (lterminate) then
+        call ustop()
+      end if
       !
       ! -- return
       return
@@ -188,15 +201,25 @@ module SimModule
     !> @brief Store the file unit number
     !!
     !!  Subroutine to convert the unit number for a open file to a file name
-    !!  and indicate that there is an error reading from the file.
+    !!  and indicate that there is an error reading from the file. By default,
+    !!  the simulation is terminated when this subroutine is called.
     !!
     !<
-    subroutine store_error_unit(iunit)
+    subroutine store_error_unit(iunit, terminate)
       ! -- dummy variables
-      integer(I4B), intent(in) :: iunit  !< open file unit number
+      integer(I4B), intent(in) :: iunit           !< open file unit number
+      logical, optional, intent(in) :: terminate  !< boolean indicating if the simulation should be terminated
       ! -- local variables
+      logical :: lterminate
       character(len=LINELENGTH) :: fname
       character(len=LINELENGTH) :: errmsg
+      !
+      ! -- process optional variables
+      if (present(terminate)) then
+        lterminate = terminate
+      else
+        lterminate = .TRUE.
+      end if
       !
       ! -- store error unit
       inquire(unit=iunit, name=fname)
@@ -204,25 +227,45 @@ module SimModule
         "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(fname)), "'"
       call sim_uniterrors%store_message(errmsg)
       !
+      ! -- terminate the simulation
+      if (lterminate) then
+        call ustop()
+      end if
+      !
       ! -- return
       return
     end subroutine store_error_unit
 
     !> @brief Store the erroring file name
     !!
-    !!  Subroutine to store the file name issuing an error.
+    !!  Subroutine to store the file name issuing an error. By default,
+    !!  the simulation is terminated when this subroutine is called
     !!
     !<
-    subroutine store_error_filename(filename)
+    subroutine store_error_filename(filename, terminate)
       ! -- dummy variables
-      character(len=*), intent(in) :: filename  !< erroring file name
+      character(len=*), intent(in) :: filename    !< erroring file name
+      logical, optional, intent(in) :: terminate  !< boolean indicating if the simulation should be terminated
       ! -- local variables
+      logical :: lterminate
       character(len=LINELENGTH) :: errmsg
+      !
+      ! -- process optional variables
+      if (present(terminate)) then
+        lterminate = terminate
+      else
+        lterminate = .TRUE.
+      end if
       !
       ! -- store error unit
       write(errmsg,'(3a)')                                                           &
         "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(filename)), "'"
       call sim_uniterrors%store_message(errmsg)
+      !
+      ! -- terminate the simulation
+      if (lterminate) then
+        call ustop()
+      end if
       !
       ! -- return
       return

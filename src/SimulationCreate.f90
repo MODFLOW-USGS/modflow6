@@ -4,7 +4,7 @@ module SimulationCreateModule
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
   use SimVariablesModule,     only: simfile, simlstfile, iout
   use GenericUtilitiesModule, only: sim_message, write_centered
-  use SimModule,              only: ustop, store_error, count_errors,            &
+  use SimModule,              only: store_error, count_errors,            &
                                     store_error_unit, MaxErrors
   use VersionModule,          only: write_listfile_header
   use InputOutputModule,      only: getunit, urword, openfile
@@ -166,7 +166,6 @@ module SimulationCreateModule
             if (errmsg /= ' ') then
               call store_error(errmsg)
               call parser%StoreErrorUnit()
-              call ustop()
             endif
           case ('MAXERRORS')
             imax = parser%GetInteger()
@@ -179,7 +178,6 @@ module SimulationCreateModule
                   trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)')'END OF SIMULATION OPTIONS'
@@ -226,7 +224,6 @@ module SimulationCreateModule
                   trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)')'END OF SIMULATION TIMING'
@@ -234,14 +231,12 @@ module SimulationCreateModule
       call store_error('****ERROR.  Did not find TIMING block in simulation'// &
                        ' control file.')
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Ensure that TDIS was found
     if(.not. found_tdis) then
       call store_error('****ERROR. TDIS not found in TIMING block.')
       call parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
@@ -290,7 +285,6 @@ module SimulationCreateModule
                   trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)')'END OF SIMULATION MODELS'
@@ -298,7 +292,6 @@ module SimulationCreateModule
       call store_error('****ERROR.  Did not find MODELS block in simulation'// &
                        ' control file.')
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -348,7 +341,6 @@ module SimulationCreateModule
               write(errmsg, fmtmerr) trim(name1)
               call store_error(errmsg)
               call parser%StoreErrorUnit()
-              call ustop()
             endif
             !
             ! -- get second modelname and then model id
@@ -358,7 +350,6 @@ module SimulationCreateModule
               write(errmsg, fmtmerr) trim(name2)
               call store_error(errmsg)
               call parser%StoreErrorUnit()
-              call ustop()
             endif
             !
             ! -- Create the exchange object.
@@ -378,7 +369,6 @@ module SimulationCreateModule
               write(errmsg, fmtmerr) trim(name1)
               call store_error(errmsg)
               call parser%StoreErrorUnit()
-              call ustop()
             endif
             !
             ! -- get second modelname and then model id
@@ -388,7 +378,6 @@ module SimulationCreateModule
               write(errmsg, fmtmerr) trim(name2)
               call store_error(errmsg)
               call parser%StoreErrorUnit()
-              call ustop()
             endif
             !
             ! -- Create the exchange object.
@@ -401,7 +390,6 @@ module SimulationCreateModule
                   trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)')'END OF SIMULATION EXCHANGES'
@@ -409,7 +397,6 @@ module SimulationCreateModule
       call store_error('****ERROR.  Did not find EXCHANGES block in '//        &
                        'simulation control file.')
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -470,7 +457,6 @@ module SimulationCreateModule
         write(errmsg, '(a,i0,a,i0)' ) 'Found ', sgid, ' when looking for ',isgp
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- Create the solutiongroup and add it to the solutiongrouplist
@@ -521,7 +507,6 @@ module SimulationCreateModule
                   trim(mname)
                 call store_error(errmsg)
                 call parser%StoreErrorUnit()
-                call ustop()
               endif
               mp => GetBaseModelFromList(basemodellist, mid)
               !
@@ -537,7 +522,6 @@ module SimulationCreateModule
                   trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       !
@@ -547,7 +531,6 @@ module SimulationCreateModule
           'ERROR. THERE ARE NO SOLUTIONS FOR SOLUTION GROUP ', isgp
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- If there is only one solution then mxiter should be 1.
@@ -555,7 +538,6 @@ module SimulationCreateModule
         write(errmsg, fmterrmxiter) sgp%mxiter, isgpsoln
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- todo: more error checking?
@@ -568,7 +550,6 @@ module SimulationCreateModule
     if(solutiongrouplist%Count() == 0) then
       call store_error('ERROR.  THERE ARE NO SOLUTION GROUPS.')
       call parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
@@ -593,7 +574,6 @@ module SimulationCreateModule
     enddo
     if (count_errors() > 0) then
       call store_error_unit(inunit)
-      call ustop()
     endif
 
   end subroutine check_model_assignment
@@ -660,7 +640,6 @@ module SimulationCreateModule
             LENMODELNAME
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-      call ustop()
     endif
     do i = 1, ilen
       if (mname(i:i) == ' ') then
@@ -671,7 +650,6 @@ module SimulationCreateModule
               'MODEL NAME CANNOT HAVE SPACES WITHIN IT.'
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-        call ustop()
       endif
     enddo
     modelname(im) = mname

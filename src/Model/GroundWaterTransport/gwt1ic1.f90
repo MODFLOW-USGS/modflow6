@@ -64,7 +64,7 @@ module GwtIcModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwtIcType) :: this
     ! -- local
@@ -99,14 +99,12 @@ module GwtIcModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
     else
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return

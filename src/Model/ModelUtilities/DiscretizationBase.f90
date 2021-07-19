@@ -5,8 +5,9 @@ module BaseDisModule
   use SmoothingModule,         only: sQuadraticSaturation
   use ConnectionsModule,       only: ConnectionsType
   use InputOutputModule,       only: URWORD, ubdsv1
+  use SimVariablesModule,      only: errmsg
   use SimModule,               only: count_errors, store_error,                &
-                                     store_error_unit, ustop
+                                     store_error_unit
   use BlockParserModule,       only: BlockParserType
   use MemoryManagerModule,     only: mem_allocate
   use MemoryHelperModule,      only: create_mem_path
@@ -116,8 +117,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: DisBaseType method dis_df not &
-                     &implemented.')
-    call ustop()
+                     &implemented.', terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -239,8 +239,7 @@ module BaseDisModule
     !
     !
     call store_error('Program error: DisBaseType method write_grb not &
-                     &implemented.')
-    call ustop()
+                     &implemented.', terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -309,8 +308,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: DisBaseType method nodeu_to_string not &
-                     &implemented.')
-    call ustop()
+                     &implemented.', terminate=.TRUE.)
     !
     ! -- return
     return
@@ -332,8 +330,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: DisBaseType method nodeu_to_array not &
-                     &implemented.')
-    call ustop()
+                     &implemented.', terminate=.TRUE.)
     !
     ! -- return
     return
@@ -385,8 +382,8 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     nodenumber = 0
-    call store_error('Program error: get_nodenumber_idx1 not implemented.')
-    call ustop()
+    call store_error('Program error: get_nodenumber_idx1 not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- return
     return
@@ -400,7 +397,7 @@ module BaseDisModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(DisBaseType), intent(in) :: this
     integer(I4B), intent(in) :: k, j
@@ -409,8 +406,8 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     nodenumber = 0
-    call store_error('Program error: get_nodenumber_idx2 not implemented.')
-    call ustop()
+    call store_error('Program error: get_nodenumber_idx2 not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -424,7 +421,7 @@ module BaseDisModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(DisBaseType), intent(in) :: this
     integer(I4B), intent(in) :: k, i, j
@@ -433,8 +430,8 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     nodenumber = 0
-    call store_error('Program error: get_nodenumber_idx3 not implemented.')
-    call ustop()
+    call store_error('Program error: get_nodenumber_idx3 not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -451,7 +448,7 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: noden
@@ -463,8 +460,8 @@ module BaseDisModule
     integer(I4B), intent(in) :: ipos
 ! ------------------------------------------------------------------------------
     !
-    call store_error('Program error: connection_normal not implemented.')
-    call ustop()
+    call store_error('Program error: connection_normal not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- return
     return
@@ -483,7 +480,7 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: noden
@@ -499,8 +496,8 @@ module BaseDisModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call store_error('Program error: connection_vector not implemented.')
-    call ustop()
+    call store_error('Program error: connection_vector not implemented.', &
+                      terminate=.TRUE.)
     !
     ! -- return
     return
@@ -516,8 +513,8 @@ module BaseDisModule
     xcell = -999999.0
     ycell = -999999.0
     
-    call store_error('Program error: get_cellxy not implemented.')
-    call ustop()
+    call store_error('Program error: get_cellxy not implemented.', &
+                      terminate=.TRUE.)
     
   end subroutine get_cellxy     
   
@@ -529,8 +526,8 @@ module BaseDisModule
     ! suppress warning
     dis_type = "Not implemented" 
     
-    call store_error('Program error: get_dis_type not implemented.')
-    call ustop()
+    call store_error('Program error: get_dis_type not implemented.', &
+                      terminate=.TRUE.)
     
   end subroutine get_dis_type
                                
@@ -656,8 +653,7 @@ module BaseDisModule
       !
       nodeu = 0
       call store_error('Program error: DisBaseType method nodeu_from_string &
-                       &not implemented.')
-      call ustop()
+                       &not implemented.', terminate=.TRUE.)
       !
       ! -- return
       return
@@ -690,8 +686,7 @@ module BaseDisModule
     !
     nodeu = 0
     call store_error('Program error: DisBaseType method nodeu_from_cellid &
-                      &not implemented.')
-    call ustop()
+                      &not implemented.', terminate=.TRUE.)
     !
     ! -- return
     return
@@ -721,7 +716,7 @@ module BaseDisModule
     integer(I4B)                     :: noder
     ! -- local
     integer(I4B) :: nodeu
-    character(len=LINELENGTH) :: ermsg, nodestr
+    character(len=LINELENGTH) :: nodestr
     logical :: flag_string_local
 ! ------------------------------------------------------------------------------
     !
@@ -741,10 +736,10 @@ module BaseDisModule
     endif
     if(noder <= 0 .and. .not. flag_string_local) then
       call this%nodeu_to_string(nodeu, nodestr)
-      write(ermsg, *) &
+      write(errmsg, *) &
               ' Cell is outside active grid domain: ' //                       &
               trim(adjustl(nodestr))
-      call store_error(ermsg)
+      call store_error(errmsg)
     endif
     !
     ! -- return
@@ -778,7 +773,7 @@ module BaseDisModule
     ! -- local
     integer(I4B) :: nodeu
     logical :: allowzerolocal
-    character(len=LINELENGTH) :: ermsg, nodestr
+    character(len=LINELENGTH) :: nodestr
     logical :: flag_string_local
 ! ------------------------------------------------------------------------------
     !
@@ -804,10 +799,10 @@ module BaseDisModule
     endif
     if(noder <= 0 .and. .not. flag_string_local) then
       call this%nodeu_to_string(nodeu, nodestr)
-      write(ermsg, *)                                                          &
+      write(errmsg, *)                                                          &
               ' Cell is outside active grid domain: ' //                       &
               trim(adjustl(nodestr))
-      call store_error(ermsg)
+      call store_error(errmsg)
     endif
     !
     ! -- return
@@ -828,8 +823,7 @@ module BaseDisModule
     !
     supports_layers = .false.
     call store_error('Program error: DisBaseType method supports_layers not &
-                     &implemented.')
-    call ustop()
+                     &implemented.', terminate=.TRUE.)
     return
   end function supports_layers
 
@@ -851,8 +845,7 @@ module BaseDisModule
     !
     get_ncpl = 0
     call store_error('Program error: DisBaseType method get_ncpl not &
-                     &implemented.')
-    call ustop()
+                     &implemented.', terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -908,14 +901,11 @@ module BaseDisModule
     integer(I4B), intent(in)                           :: iout
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
     character(len=*), intent(in)                       :: aname
-    ! -- local
-    character(len=LINELENGTH) :: ermsg
-! ------------------------------------------------------------------------------
     !
-    ermsg = 'Programmer error: read_int_array needs to be overridden &
+    ! -- store error
+    errmsg = 'Programmer error: read_int_array needs to be overridden &
             &in any DIS type that extends DisBaseType'
-    call store_error(ermsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
     !
     ! -- return
     return
@@ -939,14 +929,11 @@ module BaseDisModule
     integer(I4B), intent(in)                                   :: iout
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                               :: aname
-    ! -- local
-    character(len=LINELENGTH) :: ermsg
-! ------------------------------------------------------------------------------
     !
-    ermsg = 'Programmer error: read_dbl_array needs to be overridden &
+    ! -- str=ore error message
+    errmsg = 'Programmer error: read_dbl_array needs to be overridden &
             &in any DIS type that extends DisBaseType'
-    call store_error(ermsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
     !
     ! -- return
     return
@@ -1019,7 +1006,7 @@ module BaseDisModule
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH
     use ListReaderModule, only: ListReaderType
-    use SimModule, only: store_error, store_error_unit, count_errors, ustop
+    use SimModule, only: store_error, store_error_unit, count_errors
     use InputOutputModule, only: urword
     use TimeSeriesLinkModule, only:  TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
@@ -1045,9 +1032,9 @@ module BaseDisModule
     integer(I4B), intent(in) :: iscloc
     integer(I4B), intent(in), optional :: indxconvertflux
     ! -- local
-    integer(I4B) :: l, nerr
+    integer(I4B) :: l
     integer(I4B) :: nodeu, noder
-    character(len=LINELENGTH) :: errmsg, nodestr
+    character(len=LINELENGTH) :: nodestr
     integer(I4B) :: ii, jj
     real(DP), pointer :: bndElem => null()
     type(ListReaderType) :: lstrdobj
@@ -1145,12 +1132,10 @@ module BaseDisModule
       enddo
       !
       ! -- Check for errors and terminate if encountered
-      nerr = count_errors()
-      if(nerr > 0) then
-        write(errmsg, *) nerr, ' errors encountered.'
+      if(count_errors() > 0) then
+        write(errmsg, *) count_errors(), ' errors encountered.'
         call store_error(errmsg)
         call store_error_unit(in)
-        call ustop()
       endif
     endif
     !
@@ -1178,14 +1163,11 @@ module BaseDisModule
     character(len=*), intent(in) :: aname
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    ! -- local
-    character(len=LINELENGTH) :: ermsg
-! ------------------------------------------------------------------------------
     !
-    ermsg = 'Programmer error: read_layer_array needs to be overridden &
+    !
+    errmsg = 'Programmer error: read_layer_array needs to be overridden &
             &in any DIS type that extends DisBaseType'
-    call store_error(ermsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
     !
     ! -- return
   end subroutine read_layer_array
@@ -1224,14 +1206,11 @@ module BaseDisModule
     integer(I4B), intent(in)                       :: nwidthp 
     character(len=*), intent(in)                   :: editdesc
     real(DP), intent(in)                           :: dinact
-    ! -- local
-    character(len=LINELENGTH) :: ermsg
-! ------------------------------------------------------------------------------
     !
-    ermsg = 'Programmer error: record_array needs to be overridden &
+    ! -- 
+    errmsg = 'Programmer error: record_array needs to be overridden &
             &in any DIS type that extends DisBaseType'
-    call store_error(ermsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
     !
   end subroutine record_array
 
@@ -1331,14 +1310,11 @@ module BaseDisModule
     integer(I4B), intent(in) :: ibdchn
     integer(I4B), intent(in) :: nlist
     integer(I4B), intent(in) :: iout
-    ! -- local
-    character(len=LINELENGTH) :: ermsg
-! ------------------------------------------------------------------------------
     !
-    ermsg = 'Programmer error: record_srcdst_list_header needs to be &
+    ! -- 
+    errmsg = 'Programmer error: record_srcdst_list_header needs to be &
             &overridden in any DIS type that extends DisBaseType'
-    call store_error(ermsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
     !
     ! -- return
     return
@@ -1409,7 +1385,7 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(DisBaseType) :: this
@@ -1419,13 +1395,11 @@ module BaseDisModule
     character(len=*), intent(in) :: aname
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    ! -- local
-    character(len=LINELENGTH) :: ermsg
     !
-    ermsg = 'Programmer error: nlarray_to_nodelist needs to be &
+    ! -- 
+    errmsg = 'Programmer error: nlarray_to_nodelist needs to be &
             &overridden in any DIS type that extends DisBaseType'
-    call store_error(ermsg)
-    call ustop()
+    call store_error(errmsg, terminate=.TRUE.)
     !
     ! -- return
     return

@@ -7,7 +7,7 @@ module TimeSeriesManagerModule
                                        hash_table_da
   use InputOutputModule,         only: same_word, UPCASE
   use ListModule,                only: ListType
-  use SimModule,                 only: store_error, store_error_unit, ustop
+  use SimModule,                 only: store_error, store_error_unit
   use TdisModule,                only: delt, kper, kstp, totim, totimc, &
                                        totimsav
   use TimeSeriesFileListModule,  only: TimeSeriesFileListType
@@ -112,7 +112,7 @@ module TimeSeriesManagerModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, store_error_unit, ustop
+    use SimModule, only: store_error, store_error_unit
     use ArrayHandlersModule, only: ExpandArray
     ! -- dummy
     class(TimeSeriesManagerType) :: this
@@ -130,7 +130,6 @@ module TimeSeriesManagerModule
         if (this%tsfiles(i) == fname) then
           call store_error('Found duplicate time-series file name: ' // trim(fname))
           call store_error_unit(inunit)
-          call ustop()
         endif
       enddo
     endif
@@ -440,7 +439,7 @@ module TimeSeriesManagerModule
       elseif (auxOrBnd == 'AUX') then
         call AddTimeSeriesLinkToList(this%auxvarTsLinks, tsLink)
       else
-        call ustop('programmer error in make_link')
+        call store_error('programmer error in make_link', terminate=.TRUE.)
       endif
       tsLink%Text = text
       tsLink%BndName = bndName

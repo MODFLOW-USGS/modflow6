@@ -68,7 +68,7 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use BaseDisModule, only: DisBaseType
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GwfIcType) :: this
     real(DP), dimension(:), intent(inout) :: x
@@ -155,7 +155,7 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwfIcType) :: this
     ! -- local
@@ -178,11 +178,9 @@ module GwfIcModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN IC OPTION: ',          &
-                                     trim(keyword)
+            write(errmsg,'(4x,a,a)') 'Unknown IC option: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF IC OPTIONS'
@@ -201,7 +199,7 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwfIcType) :: this
     ! -- local
@@ -232,18 +230,15 @@ module GwfIcModule
                                          this%parser%iuactive, this%strt, &
                                          aname(1))
           case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',             &
-                                     trim(keyword)
+            write(errmsg,'(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
     else
-      call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
+      call store_error('Required GRIDDATA block not found.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return

@@ -6,7 +6,7 @@ module TimeArraySeriesManagerModule
                                        MAXCHARLEN, LENHUGELINE
   use InputOutputModule,         only: GetUnit, openfile
   use ListModule,                only: ListType
-  use SimModule,                 only: store_error, store_error_unit, ustop
+  use SimModule,                 only: store_error, store_error_unit
   use TdisModule,                only: delt, totimc, kper, kstp
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType, &
                                        ConstructTimeArraySeriesLink, &
@@ -185,7 +185,6 @@ contains
               call store_error(ermsg)
               inunit = tasLink%TimeArraySeries%GetInunit()
               call store_error_unit(inunit)
-              call ustop()
             endif
           endif
         endif
@@ -337,7 +336,6 @@ contains
       ermsg = 'Error: Time-array series "' // trim(tasName) // '" not found.'
       call store_error(ermsg)
       call store_error_unit(inunit)
-      call ustop()
     endif
     tasptr => this%taslist(iloc)
     !

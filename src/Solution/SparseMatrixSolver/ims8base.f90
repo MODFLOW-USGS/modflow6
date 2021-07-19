@@ -580,7 +580,7 @@ MODULE IMSLinearBaseModule
   !<
   SUBROUTINE ims_base_calc_order(IORD, NEQ, NJA, IA, JA, LORDER, IORDER)
   ! -- modules
-  use SimModule, only: ustop, store_error, count_errors
+  use SimModule, only: store_error, count_errors
   ! -- dummy variables
   integer(I4B), INTENT(IN) :: IORD                         !< reordering optionn
   integer(I4B), INTENT(IN) :: NEQ                          !< number of rows
@@ -632,7 +632,6 @@ MODULE IMSLinearBaseModule
   ! -- terminate if errors occured
   if (count_errors() > 0) then
     call parser%StoreErrorUnit()
-    call ustop()
   end if
   !
   ! -- RETURN
@@ -795,7 +794,7 @@ MODULE IMSLinearBaseModule
     AMAT, IA, JA, APC, IAPC, JAPC, IW, W, &
     LEVEL, DROPTOL, NJLU, NJW, NWLU, JLU, JW, WLU)
   ! -- modules
-  use SimModule, only: ustop, store_error, count_errors
+  use SimModule, only: store_error, count_errors
   ! -- dummy variables
   integer(I4B), INTENT(IN) :: IOUT                          !< simulation listing file unit
   integer(I4B), INTENT(IN) :: NJA                           !< number of non-zero entries
@@ -861,7 +860,6 @@ MODULE IMSLinearBaseModule
         write (errmsg, '(a,1x,a)') 'ILUT ERROR: ', cerr(-ierr)
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-        call ustop()
       END IF
       !
       ! -- ADDITIONAL PRECONDITIONERS

@@ -8,8 +8,9 @@ module TimeSeriesModule
   use GenericUtilitiesModule,       only: is_same
   use InputOutputModule,      only: GetUnit, openfile, ParseLine, upcase
   use ListModule,             only: ListType, ListNodeType
+  use SimVariablesModule, only: errmsg
   use SimModule,              only: count_errors, store_error, &
-                                    store_error_unit, ustop
+                                    store_error_unit
   use TimeSeriesRecordModule, only: TimeSeriesRecordType, &
                                     ConstructTimeSeriesRecord, &
                                     CastAsTimeSeriesRecordType, &
@@ -283,7 +284,6 @@ contains
     character(len=*),      intent(in)    :: name
     logical, intent(in), optional        :: autoDeallocate
     ! -- local
-    character(len=LINELENGTH) :: ermsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
 ! ------------------------------------------------------------------------------
     !
@@ -303,9 +303,8 @@ contains
     !
     ! -- ensure that NAME has been specified
     if (this%Name == '') then
-      ermsg = 'Error: Name not specified for time series.'
-      call store_error(ermsg)
-      call ustop()
+      errmsg = 'Name not specified for time series.'
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     return
@@ -555,7 +554,6 @@ contains
     integer(I4B) :: ierr
     real(DP) :: ratio, time0, time1, timediff, timediffi, val0, val1, &
                         valdiff
-    character(len=LINELENGTH) :: errmsg
     type(TimeSeriesRecordType), pointer :: tsrEarlier => null()
     type(TimeSeriesRecordType), pointer :: tsrLater => null()
     ! -- formats
@@ -619,9 +617,8 @@ contains
     endif
     !
     if (ierr > 0) then
-      write(errmsg,10)time,trim(this%Name)
-      call store_error(errmsg)
-      call ustop()
+      write(errmsg,10) time, trim(this%Name)
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     return
@@ -647,7 +644,6 @@ contains
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, t01, t1, &
                         timediff, value, value0, value1, valuediff, currVal, nextVal
     logical :: ldone, lprocess
-    character(len=LINELENGTH) :: errmsg
     type(ListNodeType), pointer :: tslNodePreceding => null()
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
     type(TimeSeriesRecordType), pointer :: currRecord => null()
@@ -677,8 +673,7 @@ contains
             if (.not. this%read_next_record()) then
               if(.not. extendToEndOfSimulation) then
                 write(errmsg,10)trim(this%Name),time0,time1
-                call store_error(errmsg)
-                call ustop()
+                call store_error(errmsg, terminate=.TRUE.)
               endif
             endif
           endif
@@ -750,8 +745,7 @@ contains
             ! -- Not done and no more data, so try to read the next record
             if (.not. this%read_next_record()) then
               write(errmsg,10)trim(this%Name),time0,time1
-              call store_error(errmsg)
-              call ustop()
+              call store_error(errmsg, terminate=.TRUE.)
             endif
           elseif (associated(currNode%nextNode)) then
             currNode => currNode%nextNode
@@ -834,8 +828,8 @@ contains
     if (associated(this%list%firstNode)) then
       currNode => this%list%firstNode
     else
-      call store_error('probable programming error in get_latest_preceding_node')
-      call ustop()
+      call store_error('probable programming error in get_latest_preceding_node', &
+                       terminate=.TRUE.)
     endif
     !
     ! -- If the next node is earlier than time of interest, advance along
@@ -1248,7 +1242,6 @@ contains
     logical :: continueread, found, endOfBlock
     real(DP) :: sfaclocal
     character(len=40) :: keyword, keyvalue
-    character(len=LINELENGTH) :: ermsg
     character(len=:), allocatable :: line
     character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: words
 ! ------------------------------------------------------------------------------
@@ -1278,18 +1271,16 @@ contains
       supportOpenClose=.true.)
     if (ierr /= 0) then
       ! end of file
-      ermsg = 'End-of-file encountered while searching for' // &
+      errmsg = 'End-of-file encountered while searching for' // &
               ' ATTRIBUTES in time-series ' // &
               'input file "' // trim(this%datafile) // '"'
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     elseif (.not. found) then
-      ermsg = 'ATTRIBUTES block not found in time-series ' // &
+      errmsg = 'ATTRIBUTES block not found in time-series ' // &
               'tsfile input file "' // trim(this%datafile) // '"'
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- parse ATTRIBUTES entries
@@ -1324,11 +1315,10 @@ contains
         enddo
       case ('METHOD')
         if (this%nTimeSeries == 0) then
-          ermsg = 'Error: NAME attribute not provided before METHOD in file: ' &
+          errmsg = 'Error: NAME attribute not provided before METHOD in file: ' &
                   // trim(filename)
-          call store_error(ermsg)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         select case (keyvalue)
         case ('STEPWISE')
@@ -1338,28 +1328,26 @@ contains
         case ('LINEAREND')
           iMethod = LINEAREND
         case default
-          ermsg = 'Unknown interpolation method: "' // trim(keyvalue) // '"'
-          call store_error(ermsg)
+          errmsg = 'Unknown interpolation method: "' // trim(keyvalue) // '"'
+          call store_error(errmsg)
         end select
         do j=1,this%nTimeSeries
           this%timeSeries(j)%iMethod = iMethod
         enddo
       case ('METHODS')
         if (this%nTimeSeries == 0) then
-          ermsg = 'Error: NAME attribute not provided before METHODS in file: ' &
+          errmsg = 'Error: NAME attribute not provided before METHODS in file: ' &
                   // trim(filename)
-          call store_error(ermsg)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         call this%parser%GetRemainingLine(line)
         call ParseLine(line, nwords, words, this%parser%iuactive)
         if (nwords < this%nTimeSeries) then
-          ermsg = 'Error: METHODS attribute does not list a method for' // &
+          errmsg = 'METHODS attribute does not list a method for' // &
                   ' all time series.'
-          call store_error(ermsg)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         do j=1,this%nTimeSeries
           call upcase(words(j))
@@ -1371,34 +1359,32 @@ contains
           case ('LINEAREND')
             iMethod = LINEAREND
           case default
-            ermsg = 'Unknown interpolation method: "' // trim(words(j)) // '"'
-            call store_error(ermsg)
+            errmsg = 'Unknown interpolation method: "' // trim(words(j)) // '"'
+            call store_error(errmsg)
           end select
           this%timeSeries(j)%iMethod = iMethod
         enddo
       case ('SFAC')
         if (this%nTimeSeries == 0) then
-          ermsg = 'Error: NAME attribute not provided before SFAC in file: ' &
+          errmsg = 'NAME attribute not provided before SFAC in file: ' &
                   // trim(filename)
-          call store_error(ermsg)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         read(keyvalue,*,iostat=istatus)sfaclocal
         if (istatus /= 0) then
-          ermsg = 'Error reading numeric value from: "' // trim(keyvalue) // '"'
-          call store_error(ermsg)
+          errmsg = 'Error reading numeric value from: "' // trim(keyvalue) // '"'
+          call store_error(errmsg)
         endif
         do j=1,this%nTimeSeries
           this%timeSeries(j)%sfac = sfaclocal
         enddo
       case ('SFACS')
         if (this%nTimeSeries == 0) then
-          ermsg = 'Error: NAME attribute not provided before SFACS in file: ' &
+          errmsg = 'NAME attribute not provided before SFACS in file: ' &
                   // trim(filename)
-          call store_error(ermsg)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         do j=1,this%nTimeSeries
           sfaclocal = this%parser%GetDouble()
@@ -1409,11 +1395,10 @@ contains
           this%timeSeries(j)%autoDeallocate = (keyvalue == 'TRUE')
         enddo
       case default
-        ermsg = 'Unknown option found in ATTRIBUTES block: "' // &
+        errmsg = 'Unknown option found in ATTRIBUTES block: "' // &
                 trim(keyword) // '"'
-        call store_error(ermsg)
+        call store_error(errmsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       end select
     enddo
     !
@@ -1423,9 +1408,9 @@ contains
     !
     ! -- Read the first line of time-series data
     if (.not. this%read_tsfile_line()) then
-      ermsg = 'Error: No time-series data contained in file: ' // &
+      errmsg = 'Error: No time-series data contained in file: ' // &
               trim(this%datafile)
-      call store_error(ermsg)
+      call store_error(errmsg)
     endif
     !
     ! -- Clean up and return
@@ -1433,7 +1418,6 @@ contains
     !
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     return

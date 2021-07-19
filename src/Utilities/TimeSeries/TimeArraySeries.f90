@@ -8,8 +8,8 @@ module TimeArraySeriesModule
   use InputOutputModule,  only: GetUnit, openfile
   use KindModule,         only: DP, I4B
   use ListModule,         only: ListType, ListNodeType
-  use SimModule,          only: count_errors, store_error, store_error_unit, &
-                                ustop
+  use SimVariablesModule, only: errmsg
+  use SimModule,          only: count_errors, store_error, store_error_unit
   use TimeArrayModule,    only: TimeArrayType, ConstructTimeArray, &
                                 AddTimeArrayToList, CastAsTimeArrayType, &
                                 GetTimeArrayFromList
@@ -64,7 +64,6 @@ contains
     type(TimeArraySeriesType), pointer, intent(out) :: newTas
     character(len=*), intent(in) :: filename
     ! -- local
-    character(len=LINELENGTH) :: ermsg
     logical :: lex
 ! ------------------------------------------------------------------------------
     ! formats
@@ -77,9 +76,8 @@ contains
     ! -- Ensure that input file exists
     inquire(file=filename,exist=lex)
     if (.not. lex) then
-      write(ermsg,10)trim(filename)
-      call store_error(ermsg)
-      call ustop()
+      write(errmsg,10)trim(filename)
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     newTas%datafile = filename
     !
@@ -107,7 +105,6 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: inunit
     character(len=40) :: keyword, keyvalue
-    character(len=LINELENGTH) :: ermsg
     logical :: found, continueread, endOfBlock
 ! ------------------------------------------------------------------------------
     !
@@ -136,11 +133,10 @@ contains
     call this%parser%GetBlock('ATTRIBUTES', found, ierr, &
       supportOpenClose=.true.)
     if (.not. found) then
-      ermsg = 'Error: Attributes block not found in file: ' // &
+      errmsg = 'Error: Attributes block not found in file: ' // &
               trim(fname)
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- parse ATTRIBUTES entries
@@ -165,63 +161,56 @@ contains
         case ('LINEAR')
           this%iMethod = LINEAR
         case default
-          ermsg = 'Unknown interpolation method: "' // trim(keyvalue) // '"'
-          call store_error(ermsg)
+          errmsg = 'Unknown interpolation method: "' // trim(keyvalue) // '"'
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
       case ('AUTODEALLOCATE')
         this%autoDeallocate = (keyvalue == 'TRUE')
       case ('SFAC')
         read(keyvalue,*,iostat=istatus)this%sfac
         if (istatus /= 0) then
-          ermsg = 'Error reading numeric SFAC value from "' // trim(keyvalue) &
+          errmsg = 'Error reading numeric SFAC value from "' // trim(keyvalue) &
                   // '"'
-          call store_error(ermsg)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
       case default
-        ermsg = 'Unknown option found in ATTRIBUTES block: "' // &
+        errmsg = 'Unknown option found in ATTRIBUTES block: "' // &
                 trim(keyword) // '"'
-        call store_error(ermsg)
+        call store_error(errmsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       end select
     enddo
     !
     ! -- ensure that NAME and METHOD have been specified
     if (this%Name == '') then
-      ermsg = 'Error: Name not specified for time array series in file: ' // &
+      errmsg = 'Name not specified for time array series in file: ' // &
                trim(this%dataFile)
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     if (this%iMethod == UNDEFINED) then
-      ermsg = 'Error: Interpolation method not specified for time' // &
+      errmsg = 'Interpolation method not specified for time' // &
                ' array series in file: ' // trim(this%dataFile)
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- handle any errors encountered so far
     if (count_errors()>0) then
-      ermsg = 'Error(s) encountered initializing time array series from file: ' // &
+      errmsg = 'Error(s) encountered initializing time array series from file: ' // &
                trim(this%dataFile)
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- try to read first time array into linked list
     if (.not. this%read_next_array()) then
-      ermsg = 'Error encountered reading time-array data from file: ' // &
+      errmsg = 'Error encountered reading time-array data from file: ' // &
                trim(this%dataFile)
-      call store_error(ermsg)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     return
@@ -387,7 +376,6 @@ contains
     ! -- local
     integer(I4B) :: i, ierr, istart, istat, istop, lloc, nrow, ncol, nodesperlayer
     logical :: lopen, isFound
-    character(len=LINELENGTH)     :: ermsg
     type(TimeArrayType), pointer  :: ta => null()
 ! ------------------------------------------------------------------------------
     !
@@ -406,10 +394,9 @@ contains
         ncol = this%dis%mshape(2)
       endif
     else
-      ermsg = 'Time array series is not supported for selected discretization type.'
-      call store_error(ermsg)
+      errmsg = 'Time array series is not supported for selected discretization type.'
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     read_next_array = .false.
@@ -462,7 +449,6 @@ contains
     integer(I4B) :: i, ierr
     real(DP) :: ratio, time0, time1, timediff, timediffi, val0, val1, &
                         valdiff
-    character(len=LINELENGTH)    :: ermsg
     type(TimeArrayType), pointer :: taEarlier => null()
     type(TimeArrayType), pointer :: taLater => null()
     ! formats
@@ -529,10 +515,9 @@ contains
     endif
     !
     if (ierr > 0) then
-      write(ermsg,10)time,trim(this%Name)
-      call store_error(ermsg)
+      write(errmsg,10)time,trim(this%Name)
+      call store_error(errmsg)
       call store_error_unit(this%inunit)
-      call ustop()
     endif
     !
     return
@@ -557,7 +542,6 @@ contains
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, &
                         t01, t1, timediff, value, value0, value1, valuediff
     logical :: ldone
-    character(len=LINELENGTH) :: ermsg
     type(ListNodeType), pointer :: precNode => null()
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
     type(TimeArrayType), pointer :: currRecord => null(), nextRecord => null()
@@ -583,10 +567,9 @@ contains
           if (.not. associated(currNode%nextNode)) then
             ! -- try to read the next array
             if (.not. this%read_next_array()) then
-              write(ermsg,10)trim(this%Name),time0,time1
-              call store_error(ermsg)
+              write(errmsg,10)trim(this%Name),time0,time1
+              call store_error(errmsg)
               call store_error_unit(this%inunit)
-              call ustop()
             endif
           endif
           if (associated(currNode%nextNode)) then
@@ -633,10 +616,9 @@ contains
               enddo
             end select
           else
-            write(ermsg,10)trim(this%Name),time0,time1
-            call store_error(ermsg)
-            call store_error('(Probable programming error)')
-            call ustop()
+            write(errmsg,10)trim(this%Name),time0,time1
+            call store_error(errmsg)
+            call store_error('(Probable programming error)', terminate=.TRUE.)
           endif
         else
           ! Current node time = time1 so should be done
@@ -650,19 +632,17 @@ contains
           if (.not. associated(currNode%nextNode)) then
             ! -- try to read the next array
             if (.not. this%read_next_array()) then
-              write(ermsg,10)trim(this%Name),time0,time1
-              call store_error(ermsg)
+              write(errmsg,10)trim(this%Name),time0,time1
+              call store_error(errmsg)
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
           endif
           if (associated(currNode%nextNode)) then
             currNode => currNode%nextNode
           else
-            write(ermsg,10)trim(this%Name),time0,time1
-            call store_error(ermsg)
-            call store_error('(Probable programming error)')
-            call ustop()
+            write(errmsg,10)trim(this%Name),time0,time1
+            call store_error(errmsg)
+            call store_error('(Probable programming error)', terminate=.TRUE.)
           endif
         endif
       enddo
@@ -748,8 +728,8 @@ contains
     if (associated(this%list%firstNode)) then
       currNode => this%list%firstNode
     else
-      call store_error('probable programming error in get_latest_preceding_node')
-      call ustop()
+      call store_error('probable programming error in get_latest_preceding_node', &
+                       terminate=.TRUE.)
     endif
     !
     continue

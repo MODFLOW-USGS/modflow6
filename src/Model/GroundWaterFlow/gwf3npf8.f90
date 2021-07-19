@@ -171,7 +171,7 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
     class(GwfNpftype) :: this                                     !< instance of the NPF package
@@ -211,8 +211,8 @@ module GwfNpfModule
     ! -- Ensure GNC and XT3D are not both on at the same time
     if (this%ixt3d /= 0 .and. ingnc > 0) then
       call store_error('Error in model ' // trim(this%name_model) // &
-        '.  The XT3D option cannot be used with the GNC Package.')
-      call ustop()
+        '.  The XT3D option cannot be used with the GNC Package.', &
+        terminate=.TRUE.)
     endif
     !
     ! -- Return
@@ -1196,7 +1196,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     implicit none
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1253,7 +1253,6 @@ module GwfNpfModule
                                          keyword
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
-                call ustop()
             end select
             write(this%iout,'(4x,a,a)')                                        &
               'CELL AVERAGING METHOD HAS BEEN SET TO: ', keyword
@@ -1340,11 +1339,9 @@ module GwfNpfModule
                              'SATURATION OMEGA: ', this%satomega
 
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF OPTION: ',         &
-                                     trim(keyword)
+            write(errmsg,'(4x,a,a)') 'Unknown NPF option: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF NPF OPTIONS'
@@ -1398,7 +1395,6 @@ module GwfNpfModule
     ! -- terminate if errors encountered in options block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -1430,7 +1426,7 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1447,7 +1443,6 @@ module GwfNpfModule
                            'FROM NPF OPTIONS BLOCK.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     this%irewet = 1
     write(this%iout,'(4x,a)')'REWETTING IS ACTIVE.'
@@ -1465,11 +1460,10 @@ module GwfNpfModule
         case ('IWETIT')
           if (.not. lfound(1)) then
             write(errmsg,'(4x,a)')                                             &
-              '****ERROR. NPF REWETTING FLAGS MUST BE SPECIFIED IN ORDER. ' // &
-              'FOUND IWETIT BUT WETFCT NOT SPECIFIED.'
+              'NPF rewetting flags must be specified in order. ' //            &
+              'Found iwetit but wetfct not specified.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
           endif
           ival = this%parser%GetInteger()
           if(ival <= 0) ival = 1
@@ -1480,22 +1474,19 @@ module GwfNpfModule
         case ('IHDWET')
           if (.not. lfound(2)) then
             write(errmsg,'(4x,a)')                                             &
-              '****ERROR. NPF REWETTING FLAGS MUST BE SPECIFIED IN ORDER. ' // &
-              'FOUND IHDWET BUT IWETIT NOT SPECIFIED.'
+              'NPF rewetting flags must be specified in order. ' //            &
+              'Found ihdwet but iwetit not specified.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
           endif
           this%ihdwet =  this%parser%GetInteger()
           write(this%iout,'(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ',             &
                                         this%ihdwet
           lfound(3) = .true.
         case default
-          write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF REWET OPTION: ',     &
-                                    trim(keyword)
+          write(errmsg,'(4x,a,a)') 'Unknown NPF rewet option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
       end select
     enddo
     !
@@ -1505,7 +1496,6 @@ module GwfNpfModule
         'DID NOT FIND IHDWET AS LAST REWET SETTING.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Write rewet settings
@@ -1526,7 +1516,7 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, count_errors, ustop
+    use SimModule, only: store_error, count_errors
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1579,7 +1569,6 @@ module GwfNpfModule
     ! -- Terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return
@@ -1597,7 +1586,7 @@ module GwfNpfModule
     use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
     use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate, &
                                    mem_reassignptr
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
@@ -1642,10 +1631,9 @@ module GwfNpfModule
       write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
       call this%get_block_data(aname, lname, varinames)
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write(errmsg,'(1x,a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check for ICELLTYPE
@@ -1721,7 +1709,6 @@ module GwfNpfModule
     ! -- terminate if read errors encountered
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Final NPFDATA message
@@ -1805,7 +1792,7 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH, DPIO180    
-    use SimModule, only: store_error, ustop, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(GwfNpfType) :: this
     ! -- local
@@ -1951,7 +1938,6 @@ module GwfNpfModule
     ! -- terminate if data errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     
     return
@@ -1970,7 +1956,7 @@ module GwfNpfModule
   subroutine preprocess_input(this)
   use ConstantsModule, only: LINELENGTH
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
-  use SimModule, only: store_error, ustop, count_errors
+  use SimModule, only: store_error, count_errors
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local        
     integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
@@ -2103,7 +2089,6 @@ module GwfNpfModule
     enddo
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Calculate condsat, but only if xt3d is not active.  If xt3d is
@@ -2228,7 +2213,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule,      only: kstp, kper
-    use SimModule,       only: ustop, store_error
+    use SimModule,       only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpfType) :: this
@@ -2289,7 +2274,6 @@ module GwfNpfModule
         write(errmsg, fmttopbot) ttop,bbot
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- Calculate saturated thickness
@@ -2312,7 +2296,6 @@ module GwfNpfModule
           write(errmsg, fmtni) trim(adjustl(nodestr)), kiter, kstp, kper
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         this%ibound(n)=0
       endif
@@ -3037,7 +3020,7 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GwfNpfType) :: this
     real(DP), intent(in), dimension(:) :: flowja
@@ -3091,8 +3074,7 @@ module GwfNpfModule
     if(this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
       call store_error('Error.  ANGLDEGX not provided in ' //                  &
                        'discretization file.  ANGLDEGX required for ' //       &
-                       'calculation of specific discharge.')
-      call ustop()
+                       'calculation of specific discharge.', terminate=.TRUE.)
     endif
     !
     ! -- Find max number of connections and allocate weight arrays

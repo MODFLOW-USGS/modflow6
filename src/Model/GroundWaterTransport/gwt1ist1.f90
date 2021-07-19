@@ -150,7 +150,7 @@ module GwtIstModule
   !<
   subroutine ist_ar(this)
     ! -- modules
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     use BudgetModule, only: budget_cr
     ! -- dummy
     class(GwtIstType), intent(inout) :: this     !< GwtIstType object
@@ -203,7 +203,6 @@ module GwtIstModule
     endif
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -805,7 +804,7 @@ module GwtIstModule
   subroutine read_options(this)
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwtIstType), intent(inout) :: this  !< GwtIstType object
     ! -- local
@@ -857,7 +856,6 @@ module GwtIstModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF IMMOBILE STORAGE AND TRANSFER &
@@ -891,7 +889,7 @@ module GwtIstModule
   subroutine read_data(this)
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
     class(GwtIstType) :: this  !< GwtIstType object
@@ -974,19 +972,16 @@ module GwtIstModule
                                          aname(7))
             lname(7) = .true.
           case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
-                                     trim(keyword)
+            write(errmsg,'(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write(errmsg,'(1x,a)')'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check for required sorption variables
@@ -1056,13 +1051,13 @@ module GwtIstModule
         &SETTING CIM TO ZERO.'
     endif
     if (.not. lname(6)) then
-      write(errmsg, '(1x,a)') 'ERROR.  DUAL DOMAIN IS ACTIVE BUT DUAL &
+      write(errmsg, '(1x,a)') 'DUAL DOMAIN IS ACTIVE BUT DUAL &
         &DOMAIN MASS TRANSFER RATE (ZETAIM) WAS NOT SPECIFIED.  ZETAIM &
         &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
       call store_error(errmsg)
     endif
     if (.not. lname(7)) then
-      write(errmsg, '(1x,a)') 'ERROR.  DUAL DOMAIN IS ACTIVE BUT &
+      write(errmsg, '(1x,a)') 'DUAL DOMAIN IS ACTIVE BUT &
         &IMMOBILE DOMAIN POROSITY (THETAIM) WAS NOT SPECIFIED.  THETAIM &
         &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
       call store_error(errmsg)
@@ -1071,7 +1066,6 @@ module GwtIstModule
     ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return

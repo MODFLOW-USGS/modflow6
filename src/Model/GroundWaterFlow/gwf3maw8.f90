@@ -22,7 +22,7 @@ module MawModule
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
-                              store_warning, ustop
+                              store_warning
   use BlockParserModule,   only: BlockParserType
   use SimVariablesModule, only: errmsg, warnmsg
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
@@ -719,7 +719,6 @@ contains
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set MAXBOUND
@@ -1045,7 +1044,6 @@ contains
     ! -- write summary of maw well_connection error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1099,8 +1097,7 @@ contains
       write(this%iout,'(1x,a)')                                                  &
         'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
     else
-      call store_error('Required dimensions block not found.')
-      call ustop()
+      call store_error('Required dimensions block not found.', terminate=.TRUE.)
     end if
     !
     ! -- verify dimensions were set correctly
@@ -1113,7 +1110,6 @@ contains
     ! -- stop if errors were encountered in the DIMENSIONS block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- read wells block
@@ -1373,7 +1369,7 @@ contains
     !
     ! -- check for any error conditions
     if (count_errors() > 0) then
-      call ustop()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- return
@@ -1970,8 +1966,7 @@ contains
         else
           ! -- Found invalid block
           write(errmsg, fmtblkerr) adjustl(trim(line))
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         end if
       end if
     end if
@@ -2043,7 +2038,6 @@ contains
     ! -- write summary of maw well stress period error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- qa data if necessary
@@ -3320,7 +3314,7 @@ contains
       !
       ! -- write summary of error messages
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !
@@ -3448,7 +3442,7 @@ contains
       !
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !

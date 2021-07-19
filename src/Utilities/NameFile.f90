@@ -39,7 +39,7 @@ module NameFileModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     ! -- dummy
     class(NameFileType) :: this
     character(len=*), intent(in) :: filename
@@ -128,8 +128,7 @@ module NameFileModule
       ! -- Package block not found.  Terminate with error.
       write(errmsg, '(a, a)') 'Error reading PACKAGES from file: ',            &
                                trim(adjustl(filename))
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     ! -- return
@@ -163,7 +162,6 @@ module NameFileModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
     use InputOutputModule, only: getunit, upcase
     ! -- dummy
     class(NameFileType) :: this
@@ -233,7 +231,6 @@ module NameFileModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
     use InputOutputModule, only: getunit, upcase
     ! -- dummy
     class(NameFileType) :: this
@@ -342,7 +339,7 @@ module NameFileModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use InputOutputModule, only: upcase
     ! -- dummy
     class(NameFileType) :: this
@@ -369,8 +366,7 @@ module NameFileModule
         call store_error(trim(this%input_files(ipos)))
         write(errmsg, '(a, a)') 'Error in PACKAGES block in file: ',  &
                                trim(adjustl(this%filename))
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
       pakname = trim(adjustl(words(3)))
       call upcase(pakname)

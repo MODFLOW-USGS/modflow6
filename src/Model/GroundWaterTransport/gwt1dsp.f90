@@ -496,7 +496,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
+    use SimModule,         only: store_error
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
@@ -527,10 +527,9 @@ module GwtDspModule
             write(this%iout, '(4x,a)')                                         &
                              'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DISPERSION OPTION: ',  &
+            write(errmsg,'(4x,a,a)')'UNKNOWN DISPERSION OPTION: ', &
                                      trim(keyword)
-            call store_error(errmsg)
-            call ustop()
+            call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
       write(this%iout,'(1x,a)')'END OF DISPERSION OPTIONS'
@@ -548,7 +547,7 @@ module GwtDspModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate, mem_copyptr, mem_reassignptr
     ! -- dummy
     class(GwtDsptype) :: this
@@ -627,19 +626,16 @@ module GwtDspModule
                                          aname(6))
             lname(6) = .true.
         case default
-          write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',             &
-                                    trim(keyword)
+          write(errmsg,'(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write(errmsg,'(1x,a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     if(lname(1)) this%idiffc = 1
@@ -685,7 +681,6 @@ module GwtDspModule
     ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return

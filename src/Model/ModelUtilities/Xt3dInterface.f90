@@ -272,7 +272,7 @@ module Xt3dModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
@@ -340,20 +340,18 @@ module Xt3dModule
     !
     ! -- Check to make sure dis package can calculate connection direction info
     if (this%dis%icondir == 0) then
-      call store_error('Error. Vertices not specified for discretization ' // &
+      call store_error('Vertices not specified for discretization ' // &
         'package, but XT3D is active: '// trim(adjustl(this%memoryPath)) //       &
         '. Vertices must be specified in discretization package in order ' // &
-        'to use XT3D.')
-      call ustop()
+        'to use XT3D.', terminate=.TRUE.)
     endif
     !
     ! -- Check to make sure ANGLEDEGX is available for interface normals
     if (this%dis%con%ianglex == 0) then
-      call store_error('Error. ANGLDEGX is not specified in the DIS ' // &
+      call store_error('ANGLDEGX is not specified in the DIS ' // &
         'package, but XT3D is active: '// trim(adjustl(this%memoryPath)) //       &
         '. ANGLDEGX must be provided in discretization package in order ' // &
-        'to use XT3D.')
-      call ustop()
+        'to use XT3D.', terminate=.TRUE.)
     endif
     !
     ! -- allocate arrays

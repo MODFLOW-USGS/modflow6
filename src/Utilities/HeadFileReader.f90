@@ -1,7 +1,6 @@
 module HeadFileReaderModule
 
   use KindModule
-  use SimModule, only: store_error, store_error_unit, ustop
   use ConstantsModule, only: LINELENGTH
 
   implicit none

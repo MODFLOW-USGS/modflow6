@@ -19,7 +19,7 @@ module ObserveModule
   use InputOutputModule,   only: urword
   use ListModule,          only: ListType
   use SimModule,           only: store_warning, store_error, &
-                                store_error_unit, ustop
+                                store_error_unit
   use TdisModule,          only: totim, totalsimtime
   use ArrayHandlersModule, only: ExpandArrayWrapper
   

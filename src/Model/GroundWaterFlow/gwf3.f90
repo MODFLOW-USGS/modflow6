@@ -19,8 +19,7 @@ module GwfModule
   use GwfOcModule,                 only: GwfOcType
   use GhostNodeModule,             only: GhostNodeType, gnc_cr
   use GwfObsModule,                only: GwfObsType, gwf_obs_cr
-  use SimModule,                   only: count_errors, store_error,            &
-                                         store_error_unit, ustop
+  use SimModule,                   only: count_errors, store_error
   use BaseModelModule,             only: BaseModelType
 
   implicit none
@@ -114,7 +113,7 @@ module GwfModule
     use ListsModule,                only: basemodellist
     use MemoryHelperModule,         only: create_mem_path
     use BaseModelModule,            only: AddBaseModelToList
-    use SimModule,                  only: ustop, store_error, count_errors
+    use SimModule,                  only: store_error, count_errors
     use GenericUtilitiesModule,     only: write_centered
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use MemoryManagerModule,        only: mem_allocate
@@ -215,11 +214,10 @@ module GwfModule
             'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
         case default
           write(errmsg,'(4x,a,a,a,a)')                                         &
-            '****ERROR. UNKNOWN GWF NAMEFILE (',                               &
-            trim(adjustl(this%filename)), ') OPTION: ',                        &
+            'Unknown GWF namefile (',                                          &
+            trim(adjustl(this%filename)), ') option: ',                        &
             trim(adjustl(namefile_obj%opts(i)))
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
       end select
     end do
     !
@@ -1440,7 +1438,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use ChdModule, only: chd_create
     use WelModule, only: wel_create
     use DrnModule, only: drn_create
@@ -1496,8 +1494,7 @@ module GwfModule
       call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- Check to make sure that the package name is unique, then store a
@@ -1507,8 +1504,7 @@ module GwfModule
       if(packobj2%packName == pakname) then
         write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
           'already exists: ', trim(pakname)
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
     enddo
     call AddBndToList(this%bndlist, packobj)
@@ -1526,7 +1522,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     use NameFileModule,    only: NameFileType
     ! -- dummy
     class(GwfModelType) :: this
@@ -1607,10 +1603,9 @@ module GwfModule
     !
     ! -- Stop if errors
     if(count_errors() > 0) then
-      write(errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ',           &
+      write(errmsg, '(a, a)') 'Error occurred while reading file: ',           &
         trim(namefile_obj%filename)
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     ! -- return

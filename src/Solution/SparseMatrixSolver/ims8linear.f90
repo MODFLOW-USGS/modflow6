@@ -113,7 +113,7 @@ MODULE IMSLinearModule
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
       use MemoryHelperModule,  only: create_mem_path
-      use SimModule, only: ustop, store_error, count_errors,            &
+      use SimModule, only: store_error, count_errors,            &
                            deprecation_warning
       ! -- dummy variables
       CLASS(ImsLinearDataType), INTENT(INOUT) :: this            !< ImsLinearDataType instance
@@ -385,7 +385,6 @@ MODULE IMSLinearModule
       ! -- CHECK FOR ERRORS IN IMSLINEAR      
       if (count_errors() > 0) then
         call parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- INITIALIZE IMSLINEAR VARIABLES

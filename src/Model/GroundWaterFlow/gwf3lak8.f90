@@ -24,7 +24,7 @@ module LakModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule,           only: count_errors, store_error, ustop
+  use SimModule,           only: count_errors, store_error, store_error_unit
   use GenericUtilitiesModule, only: sim_message
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
@@ -455,7 +455,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -659,7 +659,6 @@ contains
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set MAXBOUND
@@ -692,7 +691,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -867,7 +866,6 @@ contains
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- check that embedded lakes have only one connection
@@ -978,7 +976,6 @@ contains
     ! -- write summary of lake_connection error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -993,7 +990,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -1097,7 +1094,6 @@ contains
     ! -- write summary of lake_table error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- convert laketables to vectors
@@ -1187,7 +1183,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use InputOutputModule, only: openfile
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -1414,7 +1410,6 @@ contains
     ! -- write summary of lake table error messages
     if (count_errors() > 0) then
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! Close the table file and clear other parser members
@@ -1432,7 +1427,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -1607,7 +1602,6 @@ contains
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1622,7 +1616,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -1677,9 +1671,8 @@ contains
     end if
     !
     ! -- stop if errors were encountered in the DIMENSIONS block
-    ierr = count_errors()
-    if (ierr > 0) then
-      call ustop()
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
     end if
     !
     ! -- read lakes block
@@ -1718,7 +1711,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryHelperModule, only: create_mem_path
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -3073,7 +3066,7 @@ contains
 !  lak_check_valid -- Determine if a valid lake or outlet number has been
 !                     specified.
 ! ******************************************************************************
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- return
     integer(I4B) :: ierr
     ! -- dummy
@@ -3113,7 +3106,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(LakType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
@@ -3367,7 +3360,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
     class(LakType),   intent(inout) :: this
@@ -3547,7 +3540,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -3595,7 +3588,6 @@ contains
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -3653,7 +3645,6 @@ contains
     ! -- write summary of lake stress period error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- fill bound array with lake stage, conductance, and bottom elevation
@@ -4930,7 +4921,7 @@ contains
       !
       ! -- write summary of error messages
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !
@@ -5078,7 +5069,7 @@ contains
       !
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !

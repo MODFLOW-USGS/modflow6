@@ -11,7 +11,7 @@ module NumericalPackageModule
                                           LENMEMPATH, LENFTYPE, LINELENGTH,    &
                                           LENVARNAME
   use SimVariablesModule,           only: errmsg
-  use SimModule,                    only: store_error, ustop
+  use SimModule,                    only: store_error
   use BlockParserModule,            only: BlockParserType
   use BaseDisModule,                only: DisBaseType
   use MemoryHelperModule,           only: create_mem_path
@@ -83,8 +83,7 @@ module NumericalPackageModule
           errmsg = 'Package name contains spaces: ' // trim(pakname)
           call store_error(errmsg)
           errmsg = 'Remove spaces from name.'
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         endif
         !
         this%packName = pakname
@@ -210,7 +209,6 @@ module NumericalPackageModule
           'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- return
@@ -279,7 +277,6 @@ module NumericalPackageModule
                                   trim(keyword)
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
     end do
     !

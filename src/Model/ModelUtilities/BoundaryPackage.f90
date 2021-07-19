@@ -15,7 +15,7 @@ module BndModule
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
                                           TABLEFT, TABCENTER
   use SimVariablesModule,           only: errmsg
-  use SimModule,                    only: count_errors, store_error, ustop,    &
+  use SimModule,                    only: count_errors, store_error,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
   use ObsModule,                    only: ObsType, obs_cr
@@ -218,7 +218,7 @@ module BndModule
     subroutine bnd_ac(this, moffset, sparse)
       ! -- modules
       use SparseModule, only: sparsematrix
-      use SimModule, only: store_error, ustop
+      use SimModule, only: store_error
       ! -- dummy variables
       class(BndType),intent(inout) :: this         !< BndType object
       integer(I4B), intent(in) :: moffset          !< solution matrix model offset 
@@ -330,7 +330,6 @@ module BndModule
             write(errmsg, fmtblkerr) adjustl(trim(line))
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
           end if
         endif
       end if
@@ -1258,7 +1257,6 @@ module BndModule
                         ' package does not support TIMEARRAYSERIESFILE'
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
-                call ustop()
               endif
               call this%parser%GetStringCaps(keyword)
               if(trim(adjustl(keyword)) /= 'FILEIN') then
@@ -1266,7 +1264,6 @@ module BndModule
                         'then by filename.'
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
-                call ustop()
               endif
               call this%parser%GetString(fname)
               write(this%iout,fmttas)trim(fname)
@@ -1283,7 +1280,6 @@ module BndModule
                         'then by filename.'
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
-                call ustop()
               endif
               if (this%obs%active) then
                 errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
@@ -1356,7 +1352,6 @@ module BndModule
       ! -- terminate if errors were detected
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- return
@@ -1404,9 +1399,8 @@ module BndModule
         !
         write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
       else
-        call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+        call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- verify dimensions were set
@@ -1418,7 +1412,6 @@ module BndModule
       ! -- terminate if there are errors
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
       !
       ! -- Call define_listlabel to construct the list label that is written
@@ -1625,7 +1618,6 @@ module BndModule
       !
       if (count_errors() > 0) then
         call store_error_unit(this%inunit)
-        call ustop()
       endif
       !
       return

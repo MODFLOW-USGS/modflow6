@@ -12,7 +12,7 @@ module GwtMstModule
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
   use SimVariablesModule,     only: errmsg, warnmsg
-  use SimModule,              only: ustop, store_error, count_errors,          &
+  use SimModule,              only: store_error, count_errors,          &
                                     store_warning
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
@@ -1200,7 +1200,6 @@ module GwtMstModule
             write(errmsg,'(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
@@ -1300,7 +1299,6 @@ module GwtMstModule
             write(errmsg,'(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END PROCESSING GRIDDATA'
@@ -1308,7 +1306,6 @@ module GwtMstModule
       write(errmsg,'(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check for rquired porosity
@@ -1401,7 +1398,6 @@ module GwtMstModule
     ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return
