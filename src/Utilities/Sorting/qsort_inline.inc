@@ -17,7 +17,7 @@
 ! This file contains the sort subroutine body. You must supply
 ! an integer parameter QSORT_THRESHOLD, and internal procedures:
 !    subroutine INIT()
-!    logical function LESS_THAN(a,b)
+!    logical function lessThan(a,b)
 !    subroutine SWAP(a,b)
 !    subroutine RSHIFT(left,right)
 !
@@ -28,7 +28,7 @@
 !   statements cannot precede this code, which begins with declarations.
 !   In many cases, this is just an empty procedure.
 !
-! LOGICAL FUNCTION LESS_THAN(a,b)
+! LOGICAL FUNCTION lessThan(a,b)
 !   Return TRUE if array member 'a' is less than array member 'b'.
 !   Only a TRUE value causes a change in sort order. This minimizes data
 !   manipulation, and maintains the original order for values that are
@@ -86,12 +86,12 @@
     QSORT_LOOP: &
     do
       mid = (low + high)/2
-      if (LESS_THAN (mid, low)) then
+      if (lessThan (mid, low)) then
         call SWAP(mid,low)
       end if
-      if (LESS_THAN (high, mid)) then
+      if (lessThan (high, mid)) then
         call SWAP(high,mid)
-        if (LESS_THAN (mid, low)) then
+        if (lessThan (mid, low)) then
           call SWAP(mid,low)
         end if
       end if
@@ -100,10 +100,10 @@
 
       COLLAPSE_WALLS: &
       do
-        do while (LESS_THAN (left, mid))
+        do while (lessThan (left, mid))
           left=left+1
         end do
-        do while (LESS_THAN (mid, right))
+        do while (lessThan (mid, right))
           right=right-1
         end do
         if (left < right) then
@@ -172,7 +172,7 @@
 ! left is the MIN_LOC index here:
   left=low
   do right = low+1, min(low+QSORT_THRESHOLD,high)
-    if (LESS_THAN(right,left)) left=right
+    if (lessThan(right,left)) left=right
   end do
   if (left/=low) call SWAP(left,low)
 
@@ -181,8 +181,8 @@
   INSERTION_SORT: &
   do right = low+2,high
     left=right-1
-    if (LESS_THAN(right,left)) then
-      do while (LESS_THAN(right,left-1))
+    if (lessThan(right,left)) then
+      do while (lessThan(right,left-1))
         left=left-1
       end do
       call RSHIFT(left,right)

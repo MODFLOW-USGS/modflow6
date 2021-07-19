@@ -1,23 +1,20 @@
 module Sorting
 contains
   ! Sort an array of integers
-  subroutine SortGridCells(arraySize, array)
+  subroutine SortGridCells(lessThan, arraySize, array)
+      interface
+        logical function lessThan(a,b)
+          integer, intent(in) :: a,b
+        endfunction lessThan
+      endinterface
       integer, intent(in) :: arraySize
       integer, intent(inout), dimension(arraySize) :: array
       integer :: QSORT_THRESHOLD = 8
+
       include "qsort_inline.inc"      
       contains
         subroutine init()
         end subroutine init
-
-        logical function less_than(a,b)
-          integer, intent(in) :: a,b
-          if ( array(a) == array(b) ) then
-            less_than = a < b
-          else
-            less_than = array(a) < array(b)
-          end if
-        end function less_than
 
         subroutine swap(a,b)
           integer, intent(in) :: a,b
