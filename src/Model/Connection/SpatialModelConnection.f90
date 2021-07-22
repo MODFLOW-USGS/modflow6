@@ -6,7 +6,7 @@ module SpatialModelConnectionModule
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
-  use GridConnectionModule, only: GridConnectionType, GlobalCellType
+  use GridConnectionModule, only: GridConnectionType
   use ListModule, only: ListType
   
   implicit none

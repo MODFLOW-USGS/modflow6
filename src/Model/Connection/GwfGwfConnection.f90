@@ -13,7 +13,7 @@ module GwfGwfConnectionModule
   use GwfNpfModule, only: GwfNpfType, hcond, vcond
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
-  use GridConnectionModule, only: GlobalCellType
+  use TopologyModule, only: GlobalCellType
   
   implicit none
   private

@@ -1,5 +1,5 @@
 module GridConnectionModule
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
   use ConstantsModule, only: LENMEMPATH
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
@@ -7,35 +7,14 @@ module GridConnectionModule
   use ListModule, only: ListType, isEqualIface, arePointersEqual
   use NumericalModelModule
   use DisConnExchangeModule
-  use ConnectionsModule
+  use TopologyModule
+  use ConnectionsModule  
   use SparseModule, only: sparsematrix
   implicit none
   private
   
-  !> Data structure to hold a global cell identifier,
-  !! using a pointer to the model and its local cell 
-  !< index
-  type, public :: GlobalCellType
-    integer(I4B) :: index                                 !< the index on the model grid
-    class(NumericalModelType), pointer :: model => null() !< the model
-  end type
-  
   ! TODO_MJR: this will disappear when we introduce dyn. mem.
   integer(I4B), parameter :: MaxNeighbors = 7
-  
-  ! a global cell with neighbors
-  type, public :: CellWithNbrsType
-    type(GlobalCellType) :: cell
-    integer(I4B) :: nrOfNbrs = 0
-    type(CellWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
-  end type
-  
-  ! a model with neighbors
-  type, private :: ModelWithNbrsType
-      class(NumericalModelType), pointer :: model => null()
-      integer(I4B) :: nrOfNbrs = 0
-      type(ModelWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
-  end type
   
   !> This class is used to construct the connections object for 
   !! the interface model's spatial discretization/grid. 
@@ -364,7 +343,7 @@ module GridConnectionModule
     call this%compressGlobalMap()
 
     ! sort interface indexes such that 'n > m' means 'n below m'
-    call this%sortInterfaceGrid()
+    ! call this%sortInterfaceGrid()
     
     ! allocate a map from interface index to global coordinates
     call mem_allocate(this%idxToGlobalIdx, this%nrOfCells,                      &
@@ -679,13 +658,47 @@ module GridConnectionModule
 
   !> @brief Soft cell ids in the interface grid such that
   !< id_1 < id_2 means that cell 1 lies above cell 2
-  subroutine sortInterfaceGrid(this)
+  subroutine sortInterfaceGrid(this)    
+    use GridSorting, only: quickSortGrid
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    ! local
+    integer(I4B), dimension(:), allocatable :: newToOldIdx
+    integer(I4B), dimension(:), allocatable :: oldToNewIdx
+    integer(I4B) :: idxOld
+    integer(I4B) :: i
+    type(GlobalCellType), dimension(:), pointer :: sortedGlobalMap
+    integer(I4B), dimension(:), pointer :: sortedRegionMap
 
-    ! allocate map old id => new id
-    !this%idxToGlobal
+    ! sort based on coordinates
+    newToOldIdx = (/ (i, i=1, size(this%idxToGlobal)) /)
+    call quickSortGrid(newToOldIdx, size(newToOldIdx), this%idxToGlobal)
+    
+    ! and invert
+    allocate(oldToNewIdx(size(newToOldIdx)))
+    do i=1, size(oldToNewIdx)
+      oldToNewIdx(newToOldIdx(i)) = i
+    end do
 
-    ! 
+    ! reorder global table
+    allocate(sortedGlobalMap(size(this%idxToGlobal)))
+    do i=1, size(newToOldIdx)
+      sortedGlobalMap(i) = this%idxToGlobal(newToOldIdx(i))
+    end do
+    deallocate(this%idxToGlobal)
+    this%idxToGlobal => sortedGlobalMap
+
+    ! reorder regional lookup table    
+    allocate(sortedRegionMap(size(this%regionalToInterfaceIdxMap)))
+    do i=1, size(sortedRegionMap)
+      if (this%regionalToInterfaceIdxMap(i) /= -1) then
+        idxOld = this%regionalToInterfaceIdxMap(i)
+        sortedRegionMap(i) = oldToNewIdx(idxOld)
+      else
+        sortedRegionMap(i) = -1
+      end if
+    end do
+    deallocate(this%regionalToInterfaceIdxMap)
+    this%regionalToInterfaceIdxMap => sortedRegionMap
     
   end subroutine sortInterfaceGrid
   
@@ -1059,7 +1072,7 @@ module GridConnectionModule
     integer(I4B) :: icell
     
     periodic = .false.    
-    do icell = 1, this%nrOfCells
+    do icell = 1, this%nrOfBoundaryCells
       if (.not. associated(this%boundaryCells(icell)%cell%model, this%connectedCells(icell)%cell%model)) cycle
       
       ! one way

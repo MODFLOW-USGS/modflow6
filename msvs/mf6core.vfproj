@@ -56,9 +56,12 @@
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
 		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\GridSorting.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>
-		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
+		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
+		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\Topology.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
@@ -149,9 +152,6 @@
 		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
-		<Filter Name="Sorting">
-		<File RelativePath="..\src\Utilities\Sorting\qsort_inline.inc"/>
-		<File RelativePath="..\src\Utilities\Sorting\Sorting.f90"/></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
