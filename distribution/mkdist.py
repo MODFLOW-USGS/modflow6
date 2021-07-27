@@ -5,9 +5,10 @@ pymake package.
 
 To make a distribution:
   1.   Install/update pymake, mf6examples, flopy, unix2dos/dos2unix,
-       fortran compiler, jupytext
+       fortran compiler, jupytext, bmipy, xmipy, modflowapi
   2.   Run update_flopy.py in modflow6/autotest
-  3.   Put fresh executables (including mf6.exe) into mf6examples/bin
+  3.   Put fresh executables (including mf6.exe and libmf6.dll) into
+       mf6examples/bin
   4.   Run python scripts in mf6examples/scripts (run process-scripts.py last)
   5.   Create a release branch
   6.   Update version.txt with the correct minor and micro numbers

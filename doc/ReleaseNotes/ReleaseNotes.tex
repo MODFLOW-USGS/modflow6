@@ -154,7 +154,7 @@ MODFLOW~6 is tested with a large number of example problems, and new capabilitie
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.2.2--Month, day, year
+	\item Version mf6.2.2--July 30, 2021
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
@@ -168,8 +168,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 	        \item Added the following new examples: 
 	        \begin{itemize}
-	          \item -- 
-	          \item --
+	          \item ex-gwt-hecht-mendez
+	          \item ex-gwf-capture (This example is described in mf6examples.pdf to demonstrate functionality of the Application Programming Interface; it is not included in the examples folder of this distribution as it requires python and several python packages)
 	        \end{itemize}
 	\end{itemize}
 
@@ -183,7 +183,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	        \item Add DISU Package check to ensure that JA(IA(n)) is equal to n and that no values in JA are less than zero or greater than nodes.
 	        \item When IDOMAIN is used with the DISU Package and any IDOMAIN value is zero, then the program was expecting all JA values to be positive. The program is supposed to allow a negative JA value to be specified for the corresponding cell (in the diagonal position), but this was not working.  A fix was implemented to allow a negative cell number to be specified in the diagonal position of the JA array when the IDOMAIN capability is active.
 	        \item A new check was added to the Horizontal Flow Barrier (HFB) Package to ensure that barriers are between cells that are horizontally connected.  The program would previously continue running if a barrier was between vertically connected cells.
-	        \item There was no check to prevent the zero-order decay functionality of the Mobile Storage and Transfer (MST) and Immobile Storage and Transfer (IST) Packages in the GWT Model from producing negative concentrations.  The program now reduces the zero-order decay rate for the aqueous and sorbed phases (for the mobile and immobile domains) to ensure that decay does not consume more mass than is available.
+	        \item There was no check to prevent the zero-order decay functionality of the Mobile Storage and Transfer (MST) and Immobile Storage and Transfer (IST) Packages in the GWT Model from producing negative concentrations.  The program now reduces the zero-order decay rate for the aqueous and sorbed phases (for the mobile and immobile domains) to ensure that decay does not consume more mass than is available.  These changes do not affect zero-order growth.
 	        \item If a binary budget file from a GWF Model was larger than about 2 Gigabytes, then it could not be used as input for a subsequent GWT Model.  The program was modified to use a long integer to store the byte position.
 	        \item The program was terminating with a non-zero return code if the simulation did not converge.  This is the intended behavior, unless the CONTINUE option is specified in the simulation name file.  The program now terminates with a return code of zero if the simulation does not converge, but the CONTINUE option is set and the program reaches the end of the simulation.
 	\end{itemize}

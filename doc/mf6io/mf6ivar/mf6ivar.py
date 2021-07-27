@@ -654,7 +654,6 @@ if __name__ == '__main__':
                   'gwf-rcha',  # dfn completed  tex updated
                   'gwf-evt',  # dfn completed  tex updated
                   'gwf-evta',  # dfn completed  tex updated
-                  'gwf-gen',  # dfn completed  tex updated
                   'gwf-maw',  # dfn completed  tex updated
                   'gwf-sfr',  # dfn completed  tex updated
                   'gwf-lak',  # dfn completed  tex updated

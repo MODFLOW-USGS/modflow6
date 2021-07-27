@@ -6,6 +6,9 @@ import shutil
 import subprocess
 from multiprocessing import Pool
 
+# Set VERIFY
+VERIFY = False
+
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
 from get_build_exes import build_mf6
@@ -25,7 +28,8 @@ def _get_version():
             version = sys.argv[idx + 1]
             break
     if version is None:
-        version = pymake.repo_latest_version(github_repo=github_repo)
+        version = pymake.repo_latest_version(github_repo=github_repo,
+                                             verify=VERIFY)
     return version
 
 
@@ -58,7 +62,8 @@ def _get_previous_version():
         github_repo
     ) + "/releases/download/{0}/mf{0}.zip".format(version)
     if not _is_dryrun():
-        pymake.download_and_unzip(url, pth=working_dir, verbose=True)
+        pymake.download_and_unzip(url, pth=working_dir, verbose=True,
+                                  verify=VERIFY)
 
     return version, "mf{}".format(version)
 
@@ -177,14 +182,15 @@ def elapsed_string_to_real(elt_str):
 
 def get_examples():
     examples_repo = "MODFLOW-USGS/modflow6-examples"
-    version = pymake.repo_latest_version(github_repo=examples_repo)
+    version = pymake.repo_latest_version(github_repo=examples_repo,
+                                         verify=VERIFY)
     print("current examples version: {}".format(version))
     url = "https://github.com/{}".format(
         examples_repo
     ) + "/releases/download/{}/modflow6-examples.zip".format(version)
     pth = os.path.join(working_dir, examples_dir)
     if not _is_dryrun():
-        pymake.download_and_unzip(url, pth=pth, verbose=True)
+        pymake.download_and_unzip(url, pth=pth, verbose=True, verify=VERIFY)
     example_files = []
     for root, dirs, files in os.walk(pth):
         fpth = os.path.join(root, "mfsim.nam")
