@@ -50,7 +50,7 @@ module GwfGwfConnectionModule
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: maskConnections
+    procedure, pass(this), private :: maskOwnerConnections
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchanges
@@ -152,7 +152,7 @@ contains
     call this%interfaceModel%model_mc(this%ia, this%ja)  
       
     ! mask
-    call this%maskConnections()
+    call this%maskOwnerConnections()
     
   end subroutine gwfgwfcon_df
     
@@ -161,7 +161,7 @@ contains
   !! Determine which connections are handled by the interface model 
   !! (using the connections object in its discretization) and
   !< set their mask to zero for the owning model.
-  subroutine maskConnections(this)
+  subroutine maskOwnerConnections(this)
     use CsrUtilsModule, only: getCSRIndex
     class(GwfGwfConnectionType) :: this !< the connection
     ! local
@@ -201,7 +201,7 @@ contains
       end do
     end do
     
-  end subroutine maskConnections
+  end subroutine maskOwnerConnections
   
   !> @brief allocation of scalars in the connection
   !<

@@ -343,7 +343,7 @@ module GridConnectionModule
     call this%compressGlobalMap()
 
     ! sort interface indexes such that 'n > m' means 'n below m'
-    ! call this%sortInterfaceGrid()
+    call this%sortInterfaceGrid()
     
     ! allocate a map from interface index to global coordinates
     call mem_allocate(this%idxToGlobalIdx, this%nrOfCells,                      &
@@ -634,6 +634,7 @@ module GridConnectionModule
       deallocate(this%idxToGlobal)
       allocate(this%idxToGlobal(newSize))
       this%idxToGlobal(1:size(tempMap)) = tempMap(1:size(tempMap))
+      deallocate(tempMap)
     end if
     this%idxToGlobal(ifaceIdx) = cell
 
@@ -652,13 +653,14 @@ module GridConnectionModule
       deallocate(this%idxToGlobal)
       allocate(this%idxToGlobal(this%nrOfCells))
       this%idxToGlobal(1:this%nrOfCells) = tempMap(1:this%nrOfCells)
+      deallocate(tempMap)
     end if
 
   end subroutine compressGlobalMap
 
   !> @brief Soft cell ids in the interface grid such that
   !< id_1 < id_2 means that cell 1 lies above cell 2
-  subroutine sortInterfaceGrid(this)    
+  subroutine sortInterfaceGrid(this)
     use GridSorting, only: quickSortGrid
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
@@ -666,8 +668,8 @@ module GridConnectionModule
     integer(I4B), dimension(:), allocatable :: oldToNewIdx
     integer(I4B) :: idxOld
     integer(I4B) :: i
-    type(GlobalCellType), dimension(:), pointer :: sortedGlobalMap
-    integer(I4B), dimension(:), pointer :: sortedRegionMap
+    type(GlobalCellType), dimension(:), allocatable :: sortedGlobalMap
+    integer(I4B), dimension(:), allocatable :: sortedRegionMap
 
     ! sort based on coordinates
     newToOldIdx = (/ (i, i=1, size(this%idxToGlobal)) /)
@@ -684,8 +686,10 @@ module GridConnectionModule
     do i=1, size(newToOldIdx)
       sortedGlobalMap(i) = this%idxToGlobal(newToOldIdx(i))
     end do
-    deallocate(this%idxToGlobal)
-    this%idxToGlobal => sortedGlobalMap
+    do i=1, size(newToOldIdx)
+      this%idxToGlobal(i) = sortedGlobalMap(i)
+    end do
+    deallocate(sortedGlobalMap)
 
     ! reorder regional lookup table    
     allocate(sortedRegionMap(size(this%regionalToInterfaceIdxMap)))
@@ -697,8 +701,10 @@ module GridConnectionModule
         sortedRegionMap(i) = -1
       end if
     end do
-    deallocate(this%regionalToInterfaceIdxMap)
-    this%regionalToInterfaceIdxMap => sortedRegionMap
+    do i=1, size(sortedRegionMap)
+      this%regionalToInterfaceIdxMap(i) = sortedRegionMap(i)
+    end do
+    deallocate(sortedRegionMap)
     
   end subroutine sortInterfaceGrid
   
@@ -892,6 +898,11 @@ module GridConnectionModule
     ! now set mask for exchange connections (level == 1)
     do icell = 1, this%nrOfBoundaryCells  
       call this%setMaskOnConnection(this%boundaryCells(icell), this%connectedCells(icell), 1)
+      ! for cross-boundary connections, we need to apply the mask to both n-m and m-n,
+      ! because if the upper triangular one is disabled, its transposed (lower triangular)
+      ! counter part is skipped in the NPF calculation as well.
+      ! TODO_MJR: should we adjust the loop in NPF?
+      call this%setMaskOnConnection(this%connectedCells(icell), this%boundaryCells(icell), 1)
     end do
     
     ! now extend mask recursively into the internal domain (level > 1)

@@ -321,7 +321,8 @@ def eval_heads(sim):
                 assert diff < 10 * hclose, (
                     "head difference in parent model {}"
                     " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(diff, 10 * hclose, irow, icol)
+                    " for row {} and col {}\n"
+                    "(should be {}, was {})".format(diff, 10 * hclose, irow, icol,exact(xc), h)
                 )
 
     for irow in range(mg.nrow):
@@ -395,7 +396,7 @@ def eval_heads(sim):
             res.min(), res.max()
         )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
-
+    
     return
 
 
