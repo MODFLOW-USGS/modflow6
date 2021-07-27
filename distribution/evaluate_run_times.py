@@ -215,7 +215,7 @@ def run_model(app, app0, example, fmd, silent=True, pool=False):
     print("Running simulation: {}".format(test))
     line = "| {} |".format(test)
 
-    # copy directory for precious application
+    # copy directory for previous application
     prev_dir = os.path.join(example, "previous")
     if os.path.isdir(prev_dir):
         shutil.rmtree(prev_dir)

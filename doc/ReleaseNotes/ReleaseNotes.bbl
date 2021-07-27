@@ -1,4 +1,4 @@
-\begin{thebibliography}{8}
+\begin{thebibliography}{9}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -39,6 +39,11 @@ Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model---User guide
   Water-Table Aquifers: {U.S. Geological Survey Techniques and Methods, book 6,
   chap. A23, 42 p.}, accessed June 27, 2017, at
   \url{https://pubs.er.usgs.gov/publication/tm6A23}.
+
+\bibitem[{Morway and others(2021)Morway, Langevin, and Hughes}]{morway2021}
+Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the {MODFLOW 6}
+  water mover package to represent natural and managed hydrologic connections:
+  Groundwater, \url{https://doi.org/https://doi.org/10.1111/gwat.13117}.
 
 \bibitem[{Panday and others(2013)Panday, Langevin, Niswonger, Ibaraki, and
   Hughes}]{modflowusg}
