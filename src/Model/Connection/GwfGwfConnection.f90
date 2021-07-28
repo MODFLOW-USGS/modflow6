@@ -435,7 +435,9 @@ contains
   !> @brief Deallocate all resources
   !<
   subroutine gwfgwfcon_da(this)    
+    use KindModule, only: LGP
     class(GwfGwfConnectionType) :: this !< this connection
+    logical(LGP) :: isOpen
 
     call mem_deallocate(this%iXt3dOnExchange)
     
@@ -443,6 +445,11 @@ contains
     deallocate(this%interfaceModel)
     
     call this%spatialcon_da()
+
+    inquire(this%iout, opened=isOpen)
+    if (isOpen) then
+      close(this%iout)
+    end if
     
   end subroutine gwfgwfcon_da
 

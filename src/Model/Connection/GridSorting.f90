@@ -1,5 +1,6 @@
 module GridSorting  
   use KindModule, only: I4B, DP, LGP
+  use ConstantsModule, only: DHALF
   use TopologyModule, only: GlobalCellType
   use GenericUtilitiesModule, only: is_same
   implicit none
@@ -38,12 +39,12 @@ contains
           call gcn%model%dis%get_cellxy(gcn%index, xn, yn)
           xn = xn + gcn%model%dis%xorigin
           yn = yn + gcn%model%dis%yorigin
-          zn = gcn%model%dis%top(gcn%index)
+          zn = DHALF*(gcn%model%dis%top(gcn%index) + gcn%model%dis%bot(gcn%index))
   
           call gcm%model%dis%get_cellxy(gcm%index, xm, ym)
           xm = xm + gcm%model%dis%xorigin
           ym = ym + gcm%model%dis%yorigin
-          zm = gcm%model%dis%top(gcm%index)
+          zm = DHALF*(gcm%model%dis%top(gcm%index) + gcm%model%dis%bot(gcn%index))
   
           ! compare
           if (.not. is_same(zn, zm, epsilon(zn))) then
