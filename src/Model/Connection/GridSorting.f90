@@ -44,7 +44,7 @@ contains
           call gcm%model%dis%get_cellxy(gcm%index, xm, ym)
           xm = xm + gcm%model%dis%xorigin
           ym = ym + gcm%model%dis%yorigin
-          zm = DHALF*(gcm%model%dis%top(gcm%index) + gcm%model%dis%bot(gcn%index))
+          zm = DHALF*(gcm%model%dis%top(gcm%index) + gcm%model%dis%bot(gcm%index))
   
           ! compare
           if (.not. is_same(zn, zm, epsilon(zn))) then
