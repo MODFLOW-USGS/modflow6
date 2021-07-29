@@ -116,6 +116,7 @@ latex/
 html/
 xml/
 distribution/run-time-comparison.md
+doc/ReleaseNotes/run-time-comparison.tex
 
 # Intel Fortran Visual Studio intermediate files
 msvs/*.fdz

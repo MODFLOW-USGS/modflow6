@@ -298,6 +298,10 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 \noindent Description of the MODFLOW~6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
 
 % -------------------------------------------------
+% if runtime information exists, then include the run time comparison table
+\IfFileExists{./run-time-comparison.tex}{\input{./run-time-comparison.tex}}{}
+
+% -------------------------------------------------
 \section{Disclaimer and Notices}
 
 This software has been approved for release by the U.S. Geological Survey (USGS). Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use. Also refer to the USGS Water Resources Software User Rights Notice for complete use, copyright, and distribution information.
