@@ -1,6 +1,6 @@
 [
     {
-        "status": "Production",
+        "status": "Release Candidate",
         "languages": [
             "Fortran2008"
         ],
@@ -18,7 +18,7 @@
             "email": "langevin@usgs.gov"
         },
         "laborHours": -1,
-        "version": "6.2.2",
+        "version": "6.3.0",
         "date": {
             "metadataLastUpdated": "2021-07-30"
         },

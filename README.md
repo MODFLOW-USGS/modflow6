@@ -3,7 +3,7 @@
 
 This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The  official USGS distribution is available at [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html).
 
-### Version 6.2.2
+### Version 6.3.0 release candidate
 
 [![Intel compiler](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml)
 [![gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml)
@@ -84,19 +84,18 @@ The GWT model for MODFLOW 6 simulates three-dimensional transport of a single so
 
 #### ***Software/Code***
 
-[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2021, MODFLOW 6 Modular Hydrologic Model version 6.2.2: U.S. Geological Survey Software Release, 30 July 2021, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2021, MODFLOW 6 Modular Hydrologic Model version 6.3.0 release candidate: U.S. Geological Survey Software Release, 30 July 2021, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
 
 Disclaimer
 ----------
 
-This software has been approved for release by the U.S. Geological Survey
-(USGS). Although the software has been subjected to rigorous review, the USGS
-reserves the right to update the software as needed pursuant to further analysis
-and review. No warranty, expressed or implied, is made by the USGS or the U.S.
-Government as to the functionality of the software and related material nor
-shall the fact of release constitute any such warranty. Furthermore, the
-software is released on condition that neither the USGS nor the U.S. Government
-shall be held liable for any damages resulting from its authorized or
-unauthorized use.
+This software is preliminary or provisional and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
 
