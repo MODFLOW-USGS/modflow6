@@ -104,7 +104,10 @@ def get_mf6_cmdargs(app, argv, text="mf6:", verbose=False):
     return return_text
 
 def get_mf6_version(app, verbose=False):
-    version = get_mf6_cmdargs(app, [app, "-v"], verbose=verbose)
+    text = "mf6:"
+    if app.endswith(".exe"):
+        text = "mf6.exe:"
+    version = get_mf6_cmdargs(app, [app, "-v"], text=text, verbose=verbose)
     if version is not None:
         version = version.split()[0]
         if verbose:
@@ -112,7 +115,10 @@ def get_mf6_version(app, verbose=False):
     return version
 
 def get_mf6_compiler(app, verbose=False):
-    compiler = get_mf6_cmdargs(app, [app, "-c"], verbose=verbose)
+    text = "mf6:"
+    if app.endswith(".exe"):
+        text = "mf6.exe:"
+    compiler = get_mf6_cmdargs(app, [app, "-c"], text=text, verbose=verbose)
     if verbose and compiler is not None:
         print("compiler: {}".format(compiler))
     return compiler
@@ -219,6 +225,7 @@ def run_model(app, app0, example, fmd, silent=True, pool=False):
     prev_dir = os.path.join(example, "previous")
     if os.path.isdir(prev_dir):
         shutil.rmtree(prev_dir)
+    print("Copying {} ==> {}".format(example, prev_dir))
     shutil.copytree(example, prev_dir)
 
     # modify input files to use deprecated keywords in directory

@@ -653,6 +653,11 @@ def update_latex_releaseinfo(examples_folder):
     msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
     assert ierr == 0, buff + msg
 
+    cmd = ["python", "mk_runtimecomp.py"]
+    buff, ierr = run_command(cmd, pth)
+    msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+    assert ierr == 0, buff + msg
+
     for f in files:
         assert os.path.isfile(os.path.join(pth, f)), (
             "File does not exist: " + f
@@ -670,7 +675,7 @@ def setup_examples(examples_repo, exdestpath, mf6path):
     # next create all examples, but don't run them
     scripts_folder = os.path.join(examples_repo, "scripts")
     scripts_folder = os.path.abspath(scripts_folder)
-    exclude_list = ["ex-gwf-capture"]
+    exclude_list = ["ex-gwf-capture.py"]
     scripts = [
         fname
         for fname in os.listdir(scripts_folder)
@@ -847,6 +852,14 @@ if __name__ == "__main__":
     exdstpath = fd["examples"]
     examples_repo = os.path.join("..", "..", "modflow6-examples.git")
     setup_examples(examples_repo, exdstpath, target)
+
+    # run the comparison tests so the run time comparison table can be
+    # created for the release notes
+    cmd = ["python", "evaluate_run_times.py"]
+    pth = '.'
+    buff, ierr = run_command(cmd, pth)
+    msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+    assert ierr == 0, buff + msg
 
     # Clean and then remake latex docs
     clean_latex_files()
