@@ -14,7 +14,7 @@ type string
 reader urword
 optional true
 longname starting date and time
-description is the starting date and time of the simulation.  This is a text string that is used as a label within the simulation list file.  The value has no affect on the simulation.  The recommended format for the starting date and time is described at https://www.w3.org/TR/NOTE-datetime.
+description is the starting date and time of the simulation.  This is a text string that is used as a label within the simulation list file.  The value has no effect on the simulation.  The recommended format for the starting date and time is described at https://www.w3.org/TR/NOTE-datetime.
 
 block options
 name ats_filerecord
