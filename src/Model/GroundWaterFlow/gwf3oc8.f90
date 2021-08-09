@@ -1,15 +1,20 @@
 module GwfOcModule
 
-  use BaseDisModule,       only: DisBaseType
-  use KindModule,          only: DP, I4B
-  use ConstantsModule,     only: LENMODELNAME
-  use OutputControlModule, only: OutputControlType
-  use OutputControlData,   only: OutputControlDataType, ocd_cr
+  use BaseDisModule,             only: DisBaseType
+  use KindModule,                only: DP, I4B
+  use ConstantsModule,           only: LENMODELNAME
+  use OutputControlModule,       only: OutputControlType
+  use OutputControlDataModule,   only: OutputControlDataType, ocd_cr
 
   implicit none
   private
   public GwfOcType, oc_cr
 
+  !> @ brief Output control for GWF
+  !!
+  !!  Concrete implementation of OutputControlType for the
+  !!  GWF Model
+  !<
   type, extends(OutputControlType) :: GwfOcType
   contains
     procedure :: oc_ar
@@ -17,19 +22,18 @@ module GwfOcModule
   
   contains
 
+  !> @ brief Create GwfOcType
+  !!
+  !!  Create by allocating a new GwfOcType object and initializing
+  !!  member variables.
+  !!
+  !<
   subroutine oc_cr(ocobj, name_model, inunit, iout)
-! ******************************************************************************
-! oc_cr -- Create a new oc object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwfOcType), pointer :: ocobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
+    type(GwfOcType), pointer :: ocobj             !< GwfOcType object
+    character(len=*), intent(in) :: name_model    !< name of the model
+    integer(I4B), intent(in) :: inunit            !< unit number for input
+    integer(I4B), intent(in) :: iout              !< unit number for output
     !
     ! -- Create the object
     allocate(ocobj)
@@ -48,23 +52,21 @@ module GwfOcModule
     return
   end subroutine oc_cr
 
+  !> @ brief Allocate and read GwfOcType
+  !!
+  !!  Setup head and budget as output control variables.
+  !!
+  !<
   subroutine oc_ar(this, head, dis, dnodata)
-! ******************************************************************************
-! oc_ar -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfOcType) :: this
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: head
-    class(DisBaseType), pointer, intent(in) :: dis
-    real(DP), intent(in) :: dnodata
+    class(GwfOcType) :: this                                         !< GwtOcType object
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: head  !< model head
+    class(DisBaseType), pointer, intent(in) :: dis                   !< model discretization package
+    real(DP), intent(in) :: dnodata                                  !< no data value
     ! -- local
     integer(I4B) :: i, nocdobj, inodata
     type(OutputControlDataType), pointer   :: ocdobjptr
     real(DP), dimension(:), pointer, contiguous :: nullvec => null()
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     inodata = 0

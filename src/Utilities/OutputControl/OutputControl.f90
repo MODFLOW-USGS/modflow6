@@ -1,14 +1,26 @@
+!> @brief This module contains the OutputControlModule
+!!
+!! This module defines the OutputControlType.  This type
+!! is overriden by GWF and GWT to create an Output Control
+!! package for the model.
+!!
+!<
 module OutputControlModule
 
-  use KindModule, only: DP, I4B
-  use ConstantsModule,    only: LENMODELNAME, LENMEMPATH
-  use OutputControlData, only: OutputControlDataType, ocd_cr
-  use BlockParserModule, only: BlockParserType
+  use KindModule,              only: DP, I4B
+  use ConstantsModule,         only: LENMODELNAME, LENMEMPATH
+  use SimVariablesModule,      only: errmsg
+  use OutputControlDataModule, only: OutputControlDataType, ocd_cr
+  use BlockParserModule,       only: BlockParserType
 
   implicit none
   private
   public OutputControlType, oc_cr
 
+  !> @ brief OutputControlType
+  !!
+  !!  Generalized output control package
+  !<
   type OutputControlType  
     character(len=LENMEMPATH)                           :: memoryPath                       !< path to data stored in the memory manager
     character(len=LENMODELNAME), pointer                :: name_model => null()             !< name of the model
@@ -33,19 +45,18 @@ module OutputControlModule
 
   contains
 
+  !> @ brief Create OutputControlType
+  !!
+  !!  Create by allocating a new OutputControlType object and initializing
+  !!  member variables.
+  !!
+  !<
   subroutine oc_cr(ocobj, name_model, inunit, iout)
-! ******************************************************************************
-! oc_cr -- Create a new oc object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(OutputControlType), pointer :: ocobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
+    type(OutputControlType), pointer :: ocobj   !< OutputControlType object
+    character(len=*), intent(in) :: name_model  !< name of the model
+    integer(I4B), intent(in) :: inunit          !< unit number for input
+    integer(I4B), intent(in) :: iout            !< unit number for output
     !
     ! -- Create the object
     allocate(ocobj)
@@ -64,34 +75,31 @@ module OutputControlModule
     return
   end subroutine oc_cr
 
+  !> @ brief Define OutputControlType
+  !!
+  !!  Placeholder routine for the moment.
+  !!
+  !<
   subroutine oc_df(this)
-! ******************************************************************************
-! oc_df -- define the Oc Object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(OutputControlType) :: this
-! ------------------------------------------------------------------------------
+    class(OutputControlType) :: this  !< OutputControlType object
     !
     ! -- Return
     return
   end subroutine oc_df
 
+  !> @ brief Read and prepare OutputControlType
+  !!
+  !!  Read a period data block.
+  !!
+  !<
   subroutine oc_rp(this)
-! ******************************************************************************
-! Read and prepare output control for this stress period
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule,              only: kper, nper
     use ConstantsModule,         only: LINELENGTH
     use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
-    class(OutputControlType) :: this
+    class(OutputControlType) :: this  !< OutputControlType object
     ! -- local
     integer(I4B) :: ierr, ival, ipos
     logical :: isfound, found, endOfBlock
@@ -113,7 +121,6 @@ module OutputControlModule
       "(1x,'CURRENT STRESS PERIOD GREATER THAN PERIOD IN OUTPUT CONTROL.')"
     character(len=*), parameter :: fmtpererr2 =                                 &
       "(1x,'CURRENT STRESS PERIOD: ',I0,' SPECIFIED STRESS PERIOD: ',I0)"
-! ------------------------------------------------------------------------------
     !
     ! -- Read next block header if kper greater than last one read
     if (this%iperoc < kper) then
@@ -222,22 +229,21 @@ module OutputControlModule
     return
   end subroutine oc_rp
 
+  !> @ brief Output method for OutputControlType
+  !!
+  !!  Go through each output control data type and output, which will print
+  !!  and/or save data based on user-specified controls.
+  !!
+  !<
   subroutine oc_ot(this, ipflg)
-! ******************************************************************************
-! oc_ot -- output information
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, nstp
+    use TdisModule, only: kstp, endofperiod
     ! -- dummy
-    class(OutputControlType) :: this
-    integer(I4B), intent(inout) :: ipflg
+    class(OutputControlType) :: this      !< OutputControlType object
+    integer(I4B), intent(inout) :: ipflg  !< flag indicating if data was printed
     ! -- local
     integer(I4B) :: ipos
     type(OutputControlDataType), pointer   :: ocdobjptr
-! ------------------------------------------------------------------------------
     !
     ! -- Clear printout flag(ipflg).  This flag indicates that an array was
     !    printed to the listing file.
@@ -245,27 +251,25 @@ module OutputControlModule
     !
     do ipos = 1, size(this%ocdobj)
       ocdobjptr => this%ocdobj(ipos)
-      call ocdobjptr%ocd_ot(ipflg, kstp, nstp(kper), this%iout)
+      call ocdobjptr%ocd_ot(ipflg, kstp, endofperiod, this%iout)
     enddo
     !
     ! -- Return
     return
   end subroutine oc_ot
 
+  !> @ brief Deallocate method for OutputControlType
+  !!
+  !!  Deallocate member variables.
+  !!
+  !<
   subroutine oc_da(this)
-! ******************************************************************************
-! oc_da -- deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(OutputControlType) :: this
+    class(OutputControlType) :: this  !< OutputControlType object
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     do i = 1, size(this%ocdobj)
       call this%ocdobj(i)%ocd_da()
@@ -282,20 +286,18 @@ module OutputControlModule
     return
   end subroutine oc_da
 
+  !> @ brief Allocate scalars method for OutputControlType
+  !!
+  !!  Allocate and initialize member variables.
+  !!
+  !<
   subroutine allocate_scalars(this, name_model)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    class(OutputControlType) :: this
-    character(len=*), intent(in) :: name_model
-! ------------------------------------------------------------------------------
+    class(OutputControlType) :: this            !< OutputControlType object
+    character(len=*), intent(in) :: name_model  !< name of model
     !
     this%memoryPath = create_mem_path(name_model, 'OC')
     !
@@ -315,26 +317,24 @@ module OutputControlModule
     return
   end subroutine allocate_scalars
 
+  !> @ brief Read options for OutputControlType
+  !!
+  !!  Read options block and set member variables.
+  !!
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- read oc options block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(OutputControlType) :: this
+    class(OutputControlType) :: this  !< OutputControlType object
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
     integer(I4B) :: ierr
     integer(I4B) :: ipos
     logical :: isfound, found, endOfBlock
     type(OutputControlDataType), pointer   :: ocdobjptr
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
@@ -370,23 +370,21 @@ module OutputControlModule
     return
   end subroutine read_options
 
+  !> @ brief Save data to file
+  !!
+  !!  Go through data and save if requested by user.
+  !!
+  !<
   logical function oc_save(this, cname)
-! ******************************************************************************
-! oc_save -- determine if it is time to save cname
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, nstp
+    use TdisModule, only: kstp, endofperiod
     ! -- dummy
-    class(OutputControlType) :: this
-    character(len=*), intent(in) :: cname
+    class(OutputControlType) :: this       !< OutputControlType object
+    character(len=*), intent(in) :: cname  !< character string for data name
     ! -- local
     integer(I4B) :: ipos
     logical :: found
     class(OutputControlDataType), pointer :: ocdobjptr
-! ------------------------------------------------------------------------------
     !
     oc_save = .false.
     found = .false.
@@ -398,30 +396,28 @@ module OutputControlModule
       endif
     enddo
     if(found) then
-      oc_save = ocdobjptr%psmobj%kstp_to_save(kstp, nstp(kper))
+      oc_save = ocdobjptr%psmobj%kstp_to_save(kstp, endofperiod)
     endif
     !
     ! -- Return
     return
   end function oc_save
 
+  !> @ brief Determine if time to print
+  !!
+  !!  Determine if it is time to print the data corresponding to cname.
+  !!
+  !<
   logical function oc_print(this, cname)
-! ******************************************************************************
-! oc_print -- determine if it is time to print cname
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, nstp
+    use TdisModule, only: kstp, endofperiod
     ! -- dummy
-    class(OutputControlType) :: this
-    character(len=*), intent(in) :: cname
+    class(OutputControlType) :: this       !< OutputControlType object
+    character(len=*), intent(in) :: cname  !< character string for data name
     ! -- local
     integer(I4B) :: ipos
     logical :: found
     class(OutputControlDataType), pointer :: ocdobjptr
-! ------------------------------------------------------------------------------
     !
     oc_print = .false.
     found = .false.
@@ -433,31 +429,29 @@ module OutputControlModule
       endif
     enddo
     if(found) then
-      oc_print = ocdobjptr%psmobj%kstp_to_print(kstp, nstp(kper))
+      oc_print = ocdobjptr%psmobj%kstp_to_print(kstp, endofperiod)
     endif
     !
     ! -- Return
     return
   end function oc_print
 
+  !> @ brief Determine unit number for saving
+  !!
+  !!  Determine the unit number for saving cname.
+  !!
+  !<
   function oc_save_unit(this, cname)
-! ******************************************************************************
-! oc_save_unit -- determine unit number for saving
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
     integer(I4B) :: oc_save_unit
     ! -- dummy
-    class(OutputControlType) :: this
-    character(len=*), intent(in) :: cname
+    class(OutputControlType) :: this       !< OutputControlType object
+    character(len=*), intent(in) :: cname  !< character string for data name
     ! -- local
     integer(I4B) :: ipos
     logical :: found
     class(OutputControlDataType), pointer :: ocdobjptr
-! ------------------------------------------------------------------------------
     !
     oc_save_unit = 0
     found = .false.
@@ -476,24 +470,22 @@ module OutputControlModule
     return
   end function oc_save_unit
 
+  !> @ brief Set the print flag
+  !!
+  !!  Set the print flag based on convergence and simulation parameters.
+  !!
+  !<
   function set_print_flag(this, cname, icnvg, endofperiod) result(iprint_flag)
-! ******************************************************************************
-! set_print_flag -- determine if cname should be printed
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: isimcontinue
     ! -- return
     integer(I4B) :: iprint_flag
     ! -- dummy
-    class(OutputControlType) :: this
-    character(len=*), intent(in) :: cname
-    integer(I4B), intent(in) :: icnvg
-    logical, intent(in) :: endofperiod
+    class(OutputControlType) :: this       !< OutputControlType object
+    character(len=*), intent(in) :: cname  !< character string for data name
+    integer(I4B), intent(in) :: icnvg      !< convergence flag
+    logical, intent(in) :: endofperiod     !< end of period logical flag
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- default is to not print
     iprint_flag = 0

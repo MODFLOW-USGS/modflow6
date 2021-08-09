@@ -70,8 +70,6 @@ module UzfModule
     integer(I4B), pointer                               :: nsets        => null()
     integer(I4B), pointer                               :: nwav         => null()
     integer(I4B), pointer                               :: nodes        => null()
-    integer(I4B), pointer                               :: nper         => null()
-    integer(I4B), pointer                               :: nstp         => null()
     integer(I4B), pointer                               :: readflag     => null()
     integer(I4B), pointer                               :: outunitbud   => null()
     integer(I4B), pointer                               :: ietflag      => null()  !< et flag, 0 is off, 1 or 2 are different types
