@@ -1,15 +1,20 @@
 module GwtOcModule
 
-  use BaseDisModule,       only: DisBaseType
-  use KindModule,          only: DP, I4B
-  use ConstantsModule,     only: LENMODELNAME
-  use OutputControlModule, only: OutputControlType
-  use OutputControlData,   only: OutputControlDataType, ocd_cr
+  use BaseDisModule,             only: DisBaseType
+  use KindModule,                only: DP, I4B
+  use ConstantsModule,           only: LENMODELNAME
+  use OutputControlModule,       only: OutputControlType
+  use OutputControlDataModule,   only: OutputControlDataType, ocd_cr
 
   implicit none
   private
   public GwtOcType, oc_cr
 
+  !> @ brief Output control for GWT
+  !!
+  !!  Concrete implementation of OutputControlType for the
+  !!  GWT Model
+  !<
   type, extends(OutputControlType) :: GwtOcType
   contains
     procedure :: oc_ar
@@ -17,19 +22,18 @@ module GwtOcModule
   
   contains
 
+  !> @ brief Create GwtOcType
+  !!
+  !!  Create by allocating a new GwtOcType object and initializing
+  !!  member variables.
+  !!
+  !<
   subroutine oc_cr(ocobj, name_model, inunit, iout)
-! ******************************************************************************
-! oc_cr -- Create a new oc object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtOcType), pointer :: ocobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
+    type(GwtOcType), pointer :: ocobj            !< GwtOcType object
+    character(len=*), intent(in) :: name_model   !< name of the model
+    integer(I4B), intent(in) :: inunit           !< unit number for input
+    integer(I4B), intent(in) :: iout             !< unit number for output
     !
     ! -- Create the object
     allocate(ocobj)
@@ -48,23 +52,21 @@ module GwtOcModule
     return
   end subroutine oc_cr
 
-  subroutine oc_ar(this, head, dis, dnodata)
-! ******************************************************************************
-! oc_ar -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Allocate and read GwtOcType
+  !!
+  !!  Setup concentration and budget as output control variables.
+  !!
+  !<
+  subroutine oc_ar(this, conc, dis, dnodata)
     ! -- dummy
-    class(GwtOcType) :: this
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: head
-    class(DisBaseType), pointer, intent(in) :: dis
-    real(DP), intent(in) :: dnodata
+    class(GwtOcType) :: this                                          !< GwtOcType object
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: conc   !< model concentration
+    class(DisBaseType), pointer, intent(in) :: dis                    !< model discretization package
+    real(DP), intent(in) :: dnodata                                   !< no data value
     ! -- local
     integer(I4B) :: i, nocdobj, inodata
     type(OutputControlDataType), pointer   :: ocdobjptr
     real(DP), dimension(:), pointer, contiguous :: nullvec => null()
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     inodata = 0
@@ -78,7 +80,7 @@ module GwtOcModule
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',       &
                                 this%iout, dnodata)
       case (2)
-        call ocdobjptr%init_dbl('CONCENTRATION', head, dis, 'PRINT LAST ',     &
+        call ocdobjptr%init_dbl('CONCENTRATION', conc, dis, 'PRINT LAST ',     &
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',       &
                                 this%iout, dnodata)
       end select

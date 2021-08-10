@@ -13,14 +13,15 @@
 !<
 module GwtIstModule
 
-  use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, LENFTYPE, LENPACKAGENAME,     &
-                                    LENBUDTXT, DHNOFLO
-  use BndModule,              only: BndType
-  use BudgetModule,           only: BudgetType
-  use GwtFmiModule,           only: GwtFmiType
-  use GwtMstModule,           only: GwtMstType, get_zero_order_decay
-  use OutputControlData,      only: OutputControlDataType
+  use KindModule,                   only: DP, I4B
+  use ConstantsModule,              only: DONE, DZERO, LENFTYPE,               &
+                                          LENPACKAGENAME,                      &
+                                          LENBUDTXT, DHNOFLO
+  use BndModule,                    only: BndType
+  use BudgetModule,                 only: BudgetType
+  use GwtFmiModule,                 only: GwtFmiType
+  use GwtMstModule,                 only: GwtMstType, get_zero_order_decay
+  use OutputControlDataModule,      only: OutputControlDataType
   !
   implicit none
   !
@@ -588,7 +589,7 @@ module GwtIstModule
   !<
   subroutine ist_ot_dv(this, idvsave, idvprint)
     ! -- modules
-    use TdisModule, only: kstp, kper, nstp
+    use TdisModule, only: kstp, endofperiod
       ! -- dummy variables
     class(GwtIstType) :: this              !< BndType object
     integer(I4B), intent(in) :: idvsave    !< flag and unit number for dependent-variable output
@@ -604,13 +605,13 @@ module GwtIstModule
     ibinun = 1
     if(idvsave == 0) ibinun = 0
     if (ibinun /= 0) then
-      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                 &
+      call this%ocd%ocd_ot(ipflg, kstp, endofperiod, this%iout,                &
                            iprint_opt=0, isav_opt=ibinun)
     endif
     !
     ! -- Print immobile domain concentrations to listing file
     if (idvprint /= 0) then
-      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                 &
+      call this%ocd%ocd_ot(ipflg, kstp, endofperiod, this%iout,                &
                            iprint_opt=idvprint, isav_opt=0)
     endif
   end subroutine ist_ot_dv
@@ -695,7 +696,7 @@ module GwtIstModule
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
-    use OutputControlData, only: ocd_cr
+    use OutputControlDataModule, only: ocd_cr
     ! -- dummy
     class(GwtIstType) :: this  !< GwtIstType object
     ! -- local

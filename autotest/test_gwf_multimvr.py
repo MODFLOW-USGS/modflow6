@@ -56,7 +56,7 @@ x = [round(x, 3) for x in np.linspace(50.0, 45.0, ncolp)]
 topp = np.repeat(x, nrowp).reshape((15, 15)).T
 z = [round(z, 3) for z in np.linspace(50.0, 0.0, nlayp + 1)]
 botmp = [topp - z[len(z) - 2], topp - z[len(z) - 3], topp - z[0]]
-idomainp = np.ones((nlayp, nrowp, ncolp), dtype=np.int)
+idomainp = np.ones((nlayp, nrowp, ncolp), dtype=np.int32)
 # Zero out where the child grid will reside
 idomainp[0:2, 6:11, 2:8] = 0
 

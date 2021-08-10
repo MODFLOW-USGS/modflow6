@@ -83,7 +83,7 @@ def rebuild_mf6_release():
     download_pth = os.path.join("temp")
     target_dict = pymake.usgs_program_data.get_target(pm.target)
 
-    pm.download_target(pm.target, download_path=download_pth)
+    pm.download_target(pm.target, download_path=download_pth, verify=False)
 
     # Set MODFLOW 6 to compile develop version of the release
     srcpth = os.path.join(
