@@ -1409,6 +1409,7 @@ module SfrModule
             this%ionper = nper + 1
           else
             ! -- Found invalid block
+            call this%parser%GetCurrentLine(line)
             write(errmsg, fmtblkerr) adjustl(trim(line))
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()

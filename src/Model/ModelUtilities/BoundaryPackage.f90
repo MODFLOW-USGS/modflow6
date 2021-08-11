@@ -1,4 +1,4 @@
-!> @brief This module contains the base model package 
+!> @brief This module contains the base boundary package 
 !!
 !! This module contains the base model boundary package class that is 
 !! extended by all model boundary packages. The base model boundary 
@@ -38,6 +38,11 @@ module BndModule
   public :: save_print_model_flows
   private :: CastAsBndClass
 
+  !> @ brief BndType
+  !!
+  !!  Generic boundary package type.  This derived type can be overriden to
+  !!  become concrete boundary package types.
+  !<
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
     character(len=LENLISTLABEL), pointer :: listlabel  => null()                 !< title of table written for RP
