@@ -24,6 +24,14 @@ module GwtSsmInputModule
   character(len=LENFTYPE)       :: ftype = 'SSMI'
   character(len=LENPACKAGENAME) :: text  = '       SSM INPUT'
 
+  !> @brief Derived type for managing SSMI input 
+  !!
+  !! This derived type will read and process an SSMI input file,
+  !! make time series interpolations, and provide concentrations to
+  !! the SSM package that correspond to an individual GWF stress
+  !! package.
+  !!
+  !<
   type :: GwtSsmInputType
     
     character(len=LENMODELNAME)                 :: name_model      = ''         !< the name of the model that contains this package
@@ -52,15 +60,20 @@ module GwtSsmInputModule
     procedure :: set_value
     procedure :: ssmi_rp
     procedure :: ssmi_ad
+    procedure :: ssmi_da
     procedure :: read_check_ionper
-    !procedure :: ar
-    !procedure :: rp
-    !procedure :: da
     
   end type GwtSsmInputType
   
   contains
   
+  !> @ brief Initialize the SSMI type
+  !!
+  !! Initialize the SSMI object by setting up the parser,
+  !! and time series manager, reading options and dimensions,
+  !! and allocating memory.
+  !!
+  !<
   subroutine initialize(this, id, inunit, iout, name_model)
     ! -- dummy variables
     class(GwtSsmInputType) :: this              !<  GwtSsmInputType
@@ -86,6 +99,9 @@ module GwtSsmInputModule
     ! -- Setup the parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
+    ! -- Setup the time series manager
+    call tsmanager_cr(this%TsManager, this%iout)
+    !
     ! -- read options
     call this%read_options()
     !
@@ -95,8 +111,7 @@ module GwtSsmInputModule
     ! -- allocate arrays
     call this%allocate_arrays()
     !
-    ! -- Setup the time series manager
-    call tsmanager_cr(this%TsManager, this%iout)
+    ! -- Now that time series are read, call define
     call this%tsmanager%tsmanager_df()
     !
     ! -- return
@@ -139,7 +154,6 @@ module GwtSsmInputModule
     return
   end subroutine allocate_scalars
 
-  
   !> @ brief Read options for package
   !!
   !!  Read options for this package. 
@@ -158,7 +172,6 @@ module GwtSsmInputModule
       "(4x,'SSMI INFORMATION WILL BE PRINTED TO LISTING FILE.')"
     character(len=*), parameter :: fmtts = &
       "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -288,7 +301,7 @@ module GwtSsmInputModule
   !<
   function get_value(this, ientry) result(value)
     class(GwtSsmInputType) :: this      !< GwtSsmInputType object
-    integer(I4B), intent(in) :: ientry  !< array position to get
+    integer(I4B), intent(in) :: ientry  !< index of the data to return
     real(DP) :: value
     value = this%dblvec(ientry)
     return
@@ -434,6 +447,38 @@ module GwtSsmInputModule
     return
   end subroutine ssmi_ad
     
+  !> @ brief Deallocate variables
+  !!
+  !!  Deallocate and nullify package variables. 
+  !!
+  !<
+  subroutine ssmi_da(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy variables
+    class(GwtSsmInputType) :: this  !< GwtSsmInputType object
+    !
+    ! -- deallocate arrays in memory manager
+    call mem_deallocate(this%dblvec)
+    !
+    ! -- deallocate scalars in memory manager
+    call mem_deallocate(this%id)
+    call mem_deallocate(this%inunit)
+    call mem_deallocate(this%iout)
+    call mem_deallocate(this%maxbound)
+    call mem_deallocate(this%ionper)
+    call mem_deallocate(this%lastonper)
+    call mem_deallocate(this%iprpak)
+    !
+    ! -- deallocate derived types
+    call this%TsManager%da()
+    deallocate(this%TsManager)
+    nullify(this%TsManager)
+    !
+    ! -- return
+    return
+  end subroutine ssmi_da
+
   !> @ brief Check ionper
   !!
   !!  Generic method to read and check ionperiod, which is used to determine 

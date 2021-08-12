@@ -1,5 +1,10 @@
-! -- todo: need observations for SSM terms
-  
+!> @brief This module contains the GwtSsm Module 
+!!
+!! This module contains the code for handling sources and sinks 
+!! associated with groundwater flow model stress packages.
+!!
+!! todo: need observations for SSM terms
+!<
 module GwtSsmModule
   
   use KindModule,             only: DP, I4B, LGP
@@ -21,9 +26,16 @@ module GwtSsmModule
   character(len=LENFTYPE)       :: ftype = 'SSM'
   character(len=LENPACKAGENAME) :: text  = ' SOURCE-SINK MIX'
 
+  !> @brief Derived type for the SSM Package 
+  !!
+  !! This derived type corresponds to the SSM Package, which adds
+  !! the effects of groundwater sources and sinks to the solute transport
+  !! equation.  
+  !!
+  !<
   type, extends(NumericalPackageType) :: GwtSsmType
     
-    integer(I4B), pointer                              :: nbound                !< number of flow boundaries in this time step
+    integer(I4B), pointer                              :: nbound                !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous    :: isrctype => null()    !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
     integer(I4B), dimension(:), pointer, contiguous    :: iauxpak => null()     !< aux col for concentration
     integer(I4B), dimension(:), pointer, contiguous    :: ibound => null()      !< pointer to model ibound
@@ -57,20 +69,19 @@ module GwtSsmModule
   
   contains
   
+  !> @ brief Create a new SSM package
+  !!
+  !!  Create a new SSM package by defining names, allocating scalars
+  !!  and initializing the parser. 
+  !!
+  !<
   subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi)
-! ******************************************************************************
-! ssm_cr -- Create a new SSM object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtSsmType), pointer :: ssmobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
-! ------------------------------------------------------------------------------
+    type(GwtSsmType), pointer :: ssmobj            !< GwtSsmType object
+    character(len=*), intent(in) :: name_model     !< name of the model
+    integer(I4B), intent(in) :: inunit             !< fortran unit for input
+    integer(I4B), intent(in) :: iout               !< fortran unit for output
+    type(GwtFmiType), intent(in), target :: fmi    !< GWT FMI package
     !
     ! -- Create the object
     allocate(ssmobj)
@@ -93,45 +104,44 @@ module GwtSsmModule
     return
   end subroutine ssm_cr
 
+  !> @ brief Define SSM Package
+  !!
+  !! This routine is called from gwt_df(), but does not do anything because
+  !! df is typically used to set up dimensions.  For the ssm package, the
+  !! total number of ssm entries is defined by the flow model.
+  !!
+  !<
   subroutine ssm_df(this)
-! ******************************************************************************
-! ssm_df -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this
+    class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
   end subroutine ssm_df
 
+  !> @ brief Allocate and read SSM Package
+  !!
+  !! This routine is called from gwt_ar().  It allocates arrays, reads
+  !! options and data, and sets up the output table.
+  !!
+  !<
   subroutine ssm_ar(this, dis, ibound, cnew)
-! ******************************************************************************
-! ssm_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this
-    class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
-    real(DP), dimension(:), pointer, contiguous :: cnew
+    class(GwtSsmType) :: this                                   !< GwtSsmType object
+    class(DisBaseType), pointer, intent(in) :: dis              !< discretization package
+    integer(I4B), dimension(:), pointer, contiguous :: ibound   !< GWT model ibound
+    real(DP), dimension(:), pointer, contiguous :: cnew         !< GWT model dependent variable
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtssm =                                    &
       "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017',      &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the storage package.
     write(this%iout, fmtssm) this%inunit
@@ -167,21 +177,22 @@ module GwtSsmModule
     return
   end subroutine ssm_ar
 
+  !> @ brief Read and prepare this SSM Package
+  !!
+  !! This routine is called from gwt_rp().  It is called at the beginning of
+  !! each stress period.  If any SSMI input files are used to provide source
+  !! and sink concentrations, then period blocks for the current stress period
+  !! are read.
+  !!
+  !<
   subroutine ssm_rp(this)
-! ******************************************************************************
-! ssm_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this
+    class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSsmInputType), pointer :: ssmiptr
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Call the rp method on any ssm input files
     do ip = 1, this%fmi%nflowpack
@@ -196,19 +207,22 @@ module GwtSsmModule
     return
   end subroutine ssm_rp
 
+  !> @ brief Advance the SSM Package
+  !!
+  !! This routine is called from gwt_ad().  It is called at the beginning of
+  !! each time step.  The total number of flow boundaries is counted and stored
+  !! in this%nbound.  Also, if any SSMI input files are used to provide source
+  !! and sink concentrations and time series are referenced in those files,
+  !! then ssm concenrations must be interpolated for the time step.
+  !!
+  !<
   subroutine ssm_ad(this)
-! ******************************************************************************
-! ssm_ad -- Calculate number of flow boundaries
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this
+    class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
+    type(GwtSsmInputType), pointer :: ssmiptr
     !
     ! -- Calculate total number of flow boundaries
     this%nbound = 0
@@ -217,18 +231,30 @@ module GwtSsmModule
       this%nbound = this%nbound + this%fmi%gwfpackages(ip)%nbound
     end do
     !
+    ! -- Call the ad method on any ssm input files so that values for 
+    !    time-series are interpolated
+    do ip = 1, this%fmi%nflowpack
+      if (this%fmi%iatp(ip) /= 0) cycle
+      if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
+        ssmiptr => this%ssmivec(ip)
+        call ssmiptr%ssmi_ad()
+      end if
+    end do
+    !
     ! -- Return
     return
   end subroutine ssm_ad
   
+  !> @ brief Calculate the SSM mass flow rate and hcof and rhs values
+  !!
+  !! This is the primary SSM routine that calculates the matrix coefficient
+  !! and right-hand-side value for any package and package entry.  It returns
+  !! several different optional variables that are used throughout this 
+  !! package to update matrix terms, budget calculations, and output tables.
+  !!
+  !<
   subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval,          &
                       cssm, qssm)
-! ******************************************************************************
-! ssm_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSsmType) :: this                     !< GwtSsmType
     integer(I4B), intent(in) :: ipackage          !< package number
@@ -246,7 +272,6 @@ module GwtSsmModule
     real(DP) :: omega
     real(DP) :: hcoftmp
     real(DP) :: rhstmp
-! ------------------------------------------------------------------------------
     !
     ! -- retrieve node number, qbnd and iauxpos
     hcoftmp = DZERO
@@ -315,13 +340,22 @@ module GwtSsmModule
     return
   end subroutine ssm_term
   
+  !> @ brief Provide bound concentration and mixed flag
+  !!
+  !! SSM concentrations can be provided in auxiliary variables or
+  !! through separate SSMI files.  If not provided, the default
+  !! concentration is zero.  This single routine provides the SSM
+  !! bound concentration based on these different approaches.
+  !! The mixed flag indicates whether or not 
+  !!
+  !<
   subroutine get_ssm_conc(this, ipackage, ientry, conc, lauxmixed)
     ! -- dummy
-    class(GwtSsmType) :: this
-    integer(I4B), intent(in) :: ipackage
-    integer(I4B), intent(in) :: ientry
-    real(DP), intent(out) :: conc
-    logical(LGP), intent(out) :: lauxmixed
+    class(GwtSsmType) :: this                !< GwtSsmType
+    integer(I4B), intent(in) :: ipackage     !< package number
+    integer(I4B), intent(in) :: ientry       !< bound number
+    real(DP), intent(out) :: conc            !< user-specified concentration for this bound
+    logical(LGP), intent(out) :: lauxmixed   !< user-specified flag for marking this as a mixed boundary
     ! -- local
     integer(I4B) :: isrctype
     integer(I4B) :: iauxpos
@@ -343,13 +377,13 @@ module GwtSsmModule
     return
   end subroutine get_ssm_conc
   
+  !> @ brief Fill coefficients
+  !!
+  !! This routine adds the effects of the SSM to the matrix equations by
+  !! updating the a matrix and right-hand side vector.
+  !!
+  !<
   subroutine ssm_fc(this, amatsln, idxglo, rhs)
-! ******************************************************************************
-! ssm_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtSsmType) :: this
@@ -365,7 +399,6 @@ module GwtSsmModule
     integer(I4B) :: nbound
     real(DP) :: hcofval
     real(DP) :: rhsval
-! ------------------------------------------------------------------------------
     !
     ! -- do for each flow package
     nflowpack = this%fmi%nflowpack
@@ -389,24 +422,24 @@ module GwtSsmModule
     return
   end subroutine ssm_fc
   
+  !> @ brief Calculate flow
+  !!
+  !! Calulate the resulting mass flow between the boundary and the connected
+  !! GWT model cell.  Update the diagonal position of the flowja array so that
+  !! it ultimately contains the solute balance residual.
+  !!
+  !<
   subroutine ssm_cq(this, flowja)
-! ******************************************************************************
-! ssm_cq -- Calculate the flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtSsmType) :: this                                     !< GwtSsmType object
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja   !< flow across each face in the model grid
     ! -- local
     integer(I4B) :: ip
     integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: rate
-! ------------------------------------------------------------------------------
     !
     ! -- do for each flow package
     do ip = 1, this%fmi%nflowpack
@@ -429,20 +462,20 @@ module GwtSsmModule
     return
   end subroutine ssm_cq
 
+  !> @ brief Calculate the global SSM budget terms
+  !!
+  !! Calculate the global SSM budget terms using separate in and out entries
+  !! for each flow package.
+  !!
+  !<
   subroutine ssm_bd(this, isuppress_output, model_budget)
-! ******************************************************************************
-! ssm_bd -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtSsmType) :: this
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    class(GwtSsmType) :: this                           !< GwtSsmType object
+    integer(I4B), intent(in) :: isuppress_output        !< flag to suppress output
+    type(BudgetType), intent(inout) :: model_budget     !< budget object for the GWT model
     ! -- local
     character(len=LENPACKAGENAME) :: rowlabel  = 'SSM'
     integer(I4B) :: ip
@@ -450,7 +483,6 @@ module GwtSsmModule
     real(DP) :: rate
     real(DP) :: rin
     real(DP) :: rout
-! ------------------------------------------------------------------------------
     !
     ! -- do for each flow package, unless it is being handled by an advanced
     !    transport package
@@ -483,22 +515,23 @@ module GwtSsmModule
     return
   end subroutine ssm_bd
 
+  !> @ brief Output flows
+  !!
+  !! Based on user-specified controls, print SSM mass flow rates to the GWT
+  !! listing file and/or write the SSM mass flow rates to the GWT binary
+  !! budget file.
+  !!
+  !<
   subroutine ssm_ot_flow(this, icbcfl, ibudfl, icbcun)
-! ******************************************************************************
-! ssm_ot_flow -- Print and save the ssm flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtSsmType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
+    class(GwtSsmType) :: this            !< GwtSsmType object
+    integer(I4B), intent(in) :: icbcfl   !< flag for writing binary budget terms
+    integer(I4B), intent(in) :: ibudfl   !< flag for printing budget terms to list file 
+    integer(I4B), intent(in) :: icbcun   !< fortran unit number for binary budget file
     ! -- local
     character (len=LINELENGTH) :: title
     integer(I4B) :: node, nodeu
@@ -517,7 +550,6 @@ module GwtSsmModule
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
-! ------------------------------------------------------------------------------
     !
     ! -- set maxrows
     maxrows = 0
@@ -615,18 +647,30 @@ module GwtSsmModule
     return
   end subroutine ssm_ot_flow
 
+  !> @ brief Deallocate
+  !!
+  !! Deallocate the memory associated with this derived type
+  !!
+  !<
   subroutine ssm_da(this)
-! ******************************************************************************
-! ssm_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtSsmType) :: this
-! ------------------------------------------------------------------------------
+    class(GwtSsmType) :: this  !< GwtSsmType object
+    ! -- local
+    integer(I4B) :: ip
+    type(GwtSsmInputType), pointer :: ssmiptr
+    !
+    ! -- Deallocate the ssmi objects if package was active
+    if(this%inunit > 0) then
+      do ip = 1, size(this%ssmivec)
+        if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
+          ssmiptr => this%ssmivec(ip)
+          call ssmiptr%ssmi_da()
+        end if
+      end do
+      deallocate(this%ssmivec)
+    end if
     !
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
@@ -653,19 +697,17 @@ module GwtSsmModule
     return
   end subroutine ssm_da
 
+  !> @ brief Allocate scalars
+  !!
+  !! Allocate scalar variables for this derived type
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this
+    class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -680,21 +722,19 @@ module GwtSsmModule
     return
   end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays
+  !!
+  !! Allocate array variables for this derived type
+  !!
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this
+    class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     integer(I4B) :: nflowpack
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !    
     ! -- Allocate
     nflowpack = this%fmi%nflowpack
@@ -714,16 +754,15 @@ module GwtSsmModule
     return
   end subroutine allocate_arrays
   
+  !> @ brief Read package options
+  !!
+  !! Read and set the SSM Package options
+  !!
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- read package options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSSMType) :: this
+    class(GwtSSMType) :: this  !< GwtSsmType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -735,7 +774,6 @@ module GwtSsmModule
     character(len=*), parameter :: fmtisvflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
       "WHENEVER ICBCFL IS NOT ZERO.')"
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -768,15 +806,14 @@ module GwtSsmModule
     return
   end subroutine read_options
 
+  !> @ brief Read package data
+  !!
+  !! Read and set the SSM Package data
+  !!
+  !<
   subroutine read_data(this)
-! ******************************************************************************
-! read_data -- read source data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtSsmtype) :: this
+    class(GwtSsmtype) :: this  !< GwtSsmtype object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=20) :: srctype
@@ -789,7 +826,6 @@ module GwtSsmModule
     logical :: lauxmixed
     ! -- formats
     ! -- data
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     isfound = .false.
@@ -960,22 +996,18 @@ module GwtSsmModule
     return
   end subroutine set_ssmivec
   
+  !> @ brief Setup the output table
+  !!
+  !! Setup the output table by creating the column headers.
+  !!
+  !<
   subroutine pak_setup_outputtab(this)
-! ******************************************************************************
-! bnd_options -- set options for a class derived from BndType
-! This subroutine can be overridden by specific packages to set custom options
-! that are not part of the package superclass.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSsmtype),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
     integer(I4B) :: ntabcol
-! ------------------------------------------------------------------------------
     !
     ! -- allocate and initialize the output table
     if (this%iprflow /= 0) then
