@@ -1,0 +1,5 @@
+BEGIN FILEINPUT
+  <pname> SSMI6 FILEIN <ssmi6_filename> [MIXED]
+  <pname> SSMI6 FILEIN <ssmi6_filename> [MIXED]
+  ...
+END FILEINPUT

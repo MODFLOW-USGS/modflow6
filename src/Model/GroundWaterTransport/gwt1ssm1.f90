@@ -60,6 +60,8 @@ module GwtSsmModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: read_sources_aux
+    procedure, private :: read_sources_fileinput
     procedure, private :: pak_setup_outputtab
     procedure, private :: set_iauxpak
     procedure, private :: set_ssmivec
@@ -814,6 +816,24 @@ module GwtSsmModule
   subroutine read_data(this)
     ! -- dummy
     class(GwtSsmtype) :: this  !< GwtSsmtype object
+    !
+    ! -- read and process required SOURCES block
+    call this%read_sources_aux()
+    !
+    ! -- read and process optional FILEINPUT block
+    call this%read_sources_fileinput()
+    return
+  end subroutine read_data
+    
+  !> @ brief Read SOURCES block
+  !!
+  !! Read SOURCES block and look for auxiliary columns in
+  !! corresponding flow data.
+  !!
+  !<
+  subroutine read_sources_aux(this)
+    ! -- dummy
+    class(GwtSsmtype) :: this  !< GwtSsmtype object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=20) :: srctype
@@ -833,7 +853,9 @@ module GwtSsmModule
     nflowpack = this%fmi%nflowpack
     !
     ! -- get sources block
-    call this%parser%GetBlock('SOURCES', isfound, ierr, supportOpenClose=.true.)
+    call this%parser%GetBlock('SOURCES', isfound, ierr,                        &
+                              supportOpenClose=.true.,                         &
+                              blockrequired=.true.)
     if(isfound) then
       write(this%iout,'(1x,a)')'PROCESSING SOURCES'
       do
@@ -856,6 +878,16 @@ module GwtSsmModule
           call this%parser%StoreErrorUnit()
         endif
         !
+        ! -- Ensure package was not specified more than once in SOURCES block
+        if (this%isrctype(ip) /= 0) then
+          write(errmsg,'(1x, a, a)')                                          &
+            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
+            &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+        end if
+        !
         ! -- read the source type
         call this%parser%GetStringCaps(srctype)
         select case(srctype)
@@ -866,39 +898,19 @@ module GwtSsmModule
           write(this%iout,'(1x,a)') 'AUXMIXED SOURCE DETECTED.'
           lauxmixed = .true.
           isrctype = 2
-        case('SSMI')
-          write(this%iout,'(1x,a)') 'SSMI SOURCE DETECTED.'
-          isrctype = 3
-        case('SSMIMIXED')
-          write(this%iout,'(1x,a)') 'SSMIMIXED SOURCE DETECTED.'
-          isrctype = 4
         case default
           write(errmsg,'(1x, a, a)')                                          &
-            'SRCTYPE MUST BE AUX, AUXMIXED, SSMI, or SSMIMIXED.  FOUND: ',    &
-            trim(srctype)
+            'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
         !
-        ! -- Ensure package was not specified more than once in SOURCES block
-        if (this%isrctype(ip) == 0) then
-          this%isrctype(ip) = isrctype
-        else
-          write(errmsg,'(1x, a, a)')                                          &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
+        ! -- Store the source type (1 or 2)
+        this%isrctype(ip) = isrctype
+        !
+        ! -- Find and store the auxiliary column
+        call this%set_iauxpak(ip, trim(keyword))
         
-        select case(isrctype)
-        case(1, 2)
-          call this%set_iauxpak(ip, trim(keyword))
-        case(3, 4)
-          call this%set_ssmivec(ip, trim(keyword))
-        end select
-
       end do
       write(this%iout,'(1x,a)')'END PROCESSING SOURCES'
     else
@@ -914,7 +926,125 @@ module GwtSsmModule
     !
     ! -- Return
     return
-  end subroutine read_data
+  end subroutine read_sources_aux
+  
+  !> @ brief Read FILEINPUT block
+  !!
+  !! Read optional FILEINPUT block and initialize an
+  !! ssmi input file reader for each entry.
+  !!
+  !<
+  subroutine read_sources_fileinput(this)
+    ! -- dummy
+    class(GwtSsmtype) :: this  !< GwtSsmtype object
+    ! -- local
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: keyword2
+    character(len=20) :: srctype
+    integer(I4B) :: ierr
+    integer(I4B) :: ip
+    integer(I4B) :: nflowpack
+    integer(I4B) :: isrctype
+    logical :: isfound, endOfBlock
+    logical :: pakfound
+    logical :: lauxmixed
+    ! -- formats
+    ! -- data
+    !
+    ! -- initialize
+    isfound = .false.
+    lauxmixed = .false.
+    nflowpack = this%fmi%nflowpack
+    !
+    ! -- get sources_file block
+    call this%parser%GetBlock('FILEINPUT', isfound, ierr,                   &
+                              supportOpenClose=.true.,                         &
+                              blockrequired=.false.)
+    if(isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING FILEINPUT'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        !
+        ! -- read package name and make sure it can be found
+        call this%parser%GetStringCaps(keyword)
+        pakfound = .false.
+        do ip = 1, nflowpack
+          if (trim(adjustl(this%fmi%gwfpackages(ip)%name)) == keyword) then
+            pakfound = .true.
+            exit
+          endif
+        enddo
+        if (.not. pakfound) then
+          write(errmsg,'(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ',      &
+                                      trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+        endif
+        !
+        ! -- Ensure package was not specified more than once in SOURCES block
+        if (this%isrctype(ip) /= 0) then
+          write(errmsg,'(1x, a, a)')                                          &
+            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
+            &AND SOURCES_FILES BLOCKS.  THE FOLLOWING PACKAGE WAS SPECIFIED &
+            &MORE THAN ONCE: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+        end if
+        !
+        ! -- read the source type
+        call this%parser%GetStringCaps(srctype)
+        select case(srctype)
+        case('SSMI6')
+          write(this%iout,'(1x,a)') 'SSMI6 SOURCE DETECTED.'
+          isrctype = 3
+          !
+          ! verify filein is next
+          call this%parser%GetStringCaps(keyword2)
+          if(trim(adjustl(keyword2)) /= 'FILEIN') then
+            errmsg = 'SSMI6 keyword must be followed by "FILEIN" ' //           &
+                      'then by filename and optionally by <MIXED>.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          end if
+          !
+          ! -- Use set_ssmivec to read file name and set up
+          !    ssmi file object
+          call this%set_ssmivec(ip, trim(keyword))
+          !
+          ! check for optional MIXED keyword and set isrctype to 4 if found
+          call this%parser%GetStringCaps(keyword2)
+          if (trim(keyword2) == 'MIXED') then
+            isrctype = 4
+            write(this%iout,'(1x,a,a)') 'ASSIGNED MIXED SSM TYPE TO PACKAGE ',&
+              trim(keyword)
+          end if
+        case default
+          write(errmsg,'(1x, a, a)')                                          &
+            'SRCTYPE MUST BE SSMI6.  FOUND: ', trim(srctype)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+        end select
+        !
+        ! -- Store the source type (3 or 4)
+        this%isrctype(ip) = isrctype
+        
+      end do
+      write(this%iout,'(1x,a)')'END PROCESSING FILEINPUT'
+    else
+      write(this%iout,'(1x,a)')                                                &
+        'OPTIONAL FILEINPUT BLOCK NOT FOUND.  CONTINUING.'
+    end if
+    !
+    ! -- terminate if errors
+    if(count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine read_sources_fileinput
   
   !> @ brief Set iauxpak array value for package ip
   !!
