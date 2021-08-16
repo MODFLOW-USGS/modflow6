@@ -1,5 +1,7 @@
 # multiple ssm sources and sinks using a flow model followed by a
-# transport model
+# transport model.  Initial conditions and all inflows and outflows are
+# assigned a concentration of 100.0 so the simulated concentration must also
+# be 100.
 
 import os
 import shutil
@@ -251,17 +253,28 @@ def run_transport_model():
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme="TVD")
     dsp = flopy.mf6.ModflowGwtdsp(gwt, alh=20.0, ath1=2, atv=0.2)
 
-    sourcerecarray = (
-        [("WEL-1", "AUX", "CONCENTRATION")]
-        + [
-            ("GHB-{}".format(i + 1), "AUX", "CONCENTRATION")
-            for i in [0, 1, 2, 3]
-        ]
-        + [("RIV-{}".format(i + 1), "AUX", "CONCENTRATION") for i in [0, 1, 2]]
-        + [("DRN-{}".format(i + 1), "AUX", "CONCENTRATION") for i in [0, 1, 2]]
-    )
+    # Create the ssm sources block information
+    sourcerecarray = []
+    # sourcerecarray += [("WEL-1", "AUX", "CONCENTRATION")]
+    sourcerecarray += [
+        (f"GHB-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]
+    ]
+    sourcerecarray += [
+        (f"RIV-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]
+    ]
+    sourcerecarray += [
+        (f"DRN-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]
+    ]
+
+    fileinput = [
+        ("WEL-1", f"{gwtname}.wel1.ssmi"),
+    ]
     ssm = flopy.mf6.ModflowGwtssm(
-        gwt, print_flows=True, sources=sourcerecarray
+        gwt, print_flows=True, sources=sourcerecarray, fileinput=fileinput,
+    )
+    pd = [(i, "concentration", 100.0) for i in range(nrow)]
+    ssmi = flopy.mf6.ModflowUtlssmi(
+        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.wel1.ssmi"
     )
 
     pd = [
@@ -299,8 +312,18 @@ def run_transport_model():
         name = name + "_OUT"
         a1 = d0["WEL-1_IN"] / 10.0
         a2 = d0[name]
-        errmsg = "{} not equal WEL-1_IN\n{}\n{}".format(name, a1, a2)
+        print(f"Checking budet term {name} against WEL-1_IN / 10.")
+        errmsg = "{} not equal WEL-1_IN / 10.\n{}\n{}".format(name, a1, a2)
         assert np.allclose(a1, a2), errmsg
+
+    print("Checking that all simulated concentrations are 100.")
+    simulated_concentration = gwt.output.concentration().get_alldata()
+    errmsg = (
+        "All simulated concentrations are not 100.  Simulated "
+        "concentrations must all be 100. because the initial "
+        "concentration and all inflows are 100."
+    )
+    assert np.all(simulated_concentration == 100.0), errmsg
 
     return
 
@@ -310,7 +333,7 @@ def test_ssm01fmi():
     run_transport_model()
     d = os.path.join(testdir, testgroup)
     if os.path.isdir(d):
-        shutil.rmtree(d)
+       shutil.rmtree(d)
     return
 
 
