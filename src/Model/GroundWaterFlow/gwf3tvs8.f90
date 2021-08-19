@@ -185,7 +185,6 @@ contains
     character(len=*), intent(in) :: varName
     !
     character(len=LINELENGTH) :: cellstr
-    real(DP) :: thick
     !
     character(len=*), parameter :: fmtserr =                                   &
       "(1x, a, ' changed storage property ',a,' is < 0 for cell ',a, ' ', 1pg15.6)"

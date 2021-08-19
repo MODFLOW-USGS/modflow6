@@ -55,6 +55,7 @@ module GwfNpfModule
     real(DP), pointer                               :: wetfct       => null()    !< wetting factor
     real(DP), pointer                               :: hdry         => null()    !< default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    !< confined (0) or convertible (1)
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag => null() !< array of flags for handling the thickstrt option
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -1073,6 +1074,7 @@ module GwfNpfModule
     !
     ! -- Deallocate arrays
     deallocate(this%aname)
+    call mem_deallocate(this%ithickstartflag)
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
     call mem_deallocate(this%k22, 'K22', trim(this%memoryPath))
@@ -1212,6 +1214,7 @@ module GwfNpfModule
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
+    call mem_allocate(this%ithickstartflag, ncells, 'ITHICKSTARTFLAG', this%memoryPath)
     call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', this%memoryPath)
     call mem_allocate(this%k11, ncells, 'K11', this%memoryPath)
     call mem_allocate(this%sat, ncells, 'SAT', this%memoryPath)
@@ -2056,7 +2059,6 @@ module GwfNpfModule
   use SimModule, only: store_error, count_errors
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local        
-    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
     integer(I4B) :: n, m, ii, nn, ihc    
     real(DP) :: hyn, hym
     real(DP) :: csat    
@@ -2078,10 +2080,8 @@ module GwfNpfModule
     character(len=*),parameter :: fmttebe = &
     "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
     !
-    ! -- allocate temporary storage to handle thickstart option
-    allocate(ithickstartflag(this%dis%nodes))
     do n = 1, this%dis%nodes
-      ithickstartflag(n) = 0
+      this%ithickstartflag(n) = 0
     end do
     !
     ! -- Insure that each cell has at least one non-zero transmissive parameter
@@ -2154,7 +2154,7 @@ module GwfNpfModule
       if(this%ibound(n) == 0) then
         this%sat(n) = DONE
         if(this%icelltype(n) < 0 .and. this%ithickstrt /= 0) then
-          ithickstartflag(n) = 1
+          this%ithickstartflag(n) = 1
           this%icelltype(n) = 0
         endif
       else
@@ -2169,7 +2169,7 @@ module GwfNpfModule
             write(errmsg, fmtihbe) this%ic%strt(n), botn
             call store_error(errmsg)
           endif
-          ithickstartflag(n) = 1
+          this%ithickstartflag(n) = 1
           this%icelltype(n) = 0
         else
           satn = DONE
@@ -2241,9 +2241,6 @@ module GwfNpfModule
     ! -- nullify unneeded gwf pointers
     this%igwfnewtonur => null()
     !
-    ! - clean up local storage
-    deallocate(ithickstartflag)
-    !
     ! -- Return
     return
 
@@ -2303,12 +2300,12 @@ module GwfNpfModule
       ihc = this%dis%con%ihc(jj)
       hyn = this%hy_eff(n, m, ihc, ipos=ii)
       hym = this%hy_eff(m, n, ihc, ipos=ii)
-      if(this%ithickstrt /= 0 .and. this%icelltype(n) < 0) then
+      if(this%ithickstartflag(n) == 0) then
         hn = topn
       else
         hn = this%ic%strt(n)
       end if
-      if(this%ithickstrt /= 0 .and. this%icelltype(m) < 0) then
+      if(this%ithickstartflag(m) == 0) then
         hm = topm
       else
         hm = this%ic%strt(m)
@@ -2362,7 +2359,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     !
     satn = DONE
-    if(this%ibound(n) /= 0 .and. this%icelltype(n) < 0 .and. this%ithickstrt /= 0) then
+    if(this%ibound(n) /= 0 .and. this%ithickstartflag(n) /= 0) then
       call this%thksat(n, this%ic%strt(n), satn)
     endif
     !
