@@ -2059,7 +2059,7 @@ module GwfNpfModule
   use SimModule, only: store_error, count_errors
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local        
-    integer(I4B) :: n, m, ii, nn, ihc    
+    integer(I4B) :: n, m, ii, nn, ihc
     real(DP) :: hyn, hym
     real(DP) :: csat    
     real(DP) :: fawidth 
@@ -2196,7 +2196,7 @@ module GwfNpfModule
     !    that saturation is 1 (except for case where icelltype was entered
     !    as a negative value and THCKSTRT option in effect)
     do n = 1, this%dis%nodes
-        call this%calc_condsat(n, .true.)
+      call this%calc_condsat(n, .true.)
     enddo
     !
     endif
@@ -2275,7 +2275,7 @@ module GwfNpfModule
       ! -- Set the m cell number and cycle if lower triangle connection and we're not updating both upper and lower matrix parts for this node
       m = this%dis%con%ja(ii)
       jj = this%dis%con%jas(ii)
-      if(m < n) then
+      if(m < node) then
         if(upperOnly) cycle
         ! m => node, n => neighbour
         n = m
