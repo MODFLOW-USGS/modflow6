@@ -294,7 +294,7 @@ def eval_flow(sim):
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
-    grbobj = flopy.utils.MfGrdFile(fname)
+    grbobj = flopy.mf6.utils.MfGrdFile(fname)
     ia = grbobj._datadict["IA"] - 1
     ja = grbobj._datadict["JA"] - 1
 

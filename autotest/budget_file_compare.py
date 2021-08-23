@@ -7,7 +7,7 @@
 # get ia/ja from binary grid file
 # fname = '{}.dis.grb'.format(os.path.basename(sim.name))
 # fpth = os.path.join(sim.simpath, fname)
-# grbobj = flopy.utils.MfGrdFile(fpth)
+# grbobj = flopy.mf6.utils.MfGrdFile(fpth)
 # ia = grbobj._datadict['IA'] - 1
 
 

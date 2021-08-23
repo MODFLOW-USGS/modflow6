@@ -110,7 +110,7 @@ def test_disu_idomain_simple():
 
     # check binary grid file
     fname = os.path.join(ws, name + ".disu.grb")
-    grbobj = flopy.utils.MfGrdFile(fname)
+    grbobj = flopy.mf6.utils.MfGrdFile(fname)
     nodes = grbobj._datadict["NODES"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]

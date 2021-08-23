@@ -219,7 +219,7 @@ def eval_mf6(sim):
     
     cbcpth = os.path.join(sim.simpath, "{}.cbc".format(namea))
     grdpth = os.path.join(sim.simpath, "{}.dis.grb".format(namea))
-    grb = flopy.utils.MfGrdFile(grdpth)
+    grb = flopy.utils.mf6.MfGrdFile(grdpth)
     cbb = flopy.utils.CellBudgetFile(cbcpth, precision="double")
     flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
     ia = grb._datadict["IA"] - 1
