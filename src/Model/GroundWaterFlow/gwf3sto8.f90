@@ -388,7 +388,7 @@ contains
             znew = bt + DHALF * tthk * snnew
             rhsterm = -rho1old * snold * (hold(n) - zold) - rho1 * snnew * znew
           else
-            rhsterm = -rho1old * ssh0 + rho1 * ssh1
+            rhsterm = -rho1old * ssh0 - rho1 * ssh1
           end if
         else
           rhsterm = -rho1old * snold * hold(n)
@@ -632,7 +632,7 @@ contains
               znew = bt + DHALF * tthk * snnew
               rate = rho1old * snold * (hold(n) - zold) - rho1 * snnew * (hnew(n) - znew)
             else
-              rate = rho1old * ssh0 - rho1 * ssh1
+              rate = rho1old * ssh0 + rho1 * ssh1
             end if
           else
             rate = rho1old * snold * hold(n) - rho1 * snnew * hnew(n)
