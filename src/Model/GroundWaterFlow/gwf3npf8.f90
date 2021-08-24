@@ -55,7 +55,7 @@ module GwfNpfModule
     real(DP), pointer                               :: wetfct       => null()    !< wetting factor
     real(DP), pointer                               :: hdry         => null()    !< default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    !< confined (0) or convertible (1)
-    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag => null() !< array of flags for handling the thickstrt option
+    integer(I4B), dimension(:), pointer, contiguous:: ithickstartflag => null()  !< array of flags for handling the thickstrt option
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -340,13 +340,12 @@ module GwfNpfModule
     return
   end subroutine npf_ar
 
+  !> @brief Read and prepare method for package
+  !!
+  !! Read and prepare NPF stress period data.
+  !!
+  !<
   subroutine npf_rp(this)
-! ******************************************************************************
-! npf_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
     class(GwfNpfType) :: this
 ! ------------------------------------------------------------------------------
@@ -403,7 +402,8 @@ module GwfNpfModule
     if(this%kchangeper == kper .and. this%kchangestp == kstp) then
       if(this%ixt3d == 0) then
         !
-        ! -- Update the saturated conductance for all connections of the affected nodes
+        ! -- Update the saturated conductance for all connections
+        ! -- of the affected nodes
         do n = 1, this%dis%nodes
           if(this%nodekchange(n) == 1) then
             call this%calc_condsat(n, .false.)
@@ -1397,7 +1397,7 @@ module GwfNpfModule
             end if
             call this%parser%GetStringCaps(keyword)
             if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'TVK keyword must be followed by "FILEIN" ' //          &
+              errmsg = 'TVK keyword must be followed by "FILEIN" ' // &
                        'then by filename.'
               call store_error(errmsg, terminate=.TRUE.)
             endif
@@ -2247,22 +2247,20 @@ module GwfNpfModule
   end subroutine preprocess_input
 
   !> @brief Calculate CONDSAT array entries for the given node
+  !!
+  !! Calculate saturated conductances for all connections of the given node,
+  !! or optionally for the upper portion of the matrix only.
+  !!
   !<
   subroutine calc_condsat(this, node, upperOnly)
-! ******************************************************************************
-! calc_condsat -- Calculate CONDSAT array entries for the given node
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
+    ! -- dummy variables
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: node
     logical, intent(in) :: upperOnly
-    ! -- local
+    ! -- local variables
     integer(I4B) :: ii, m, n, ihc, jj
-    real(DP) :: topm, topn, topnode, botm, botn, botnode, satm, satn, satnode, hyn, hym, hn, hm, fawidth, csat
-! ------------------------------------------------------------------------------
+    real(DP) :: topm, topn, topnode, botm, botn, botnode, satm, satn, satnode
+    real(DP) :: hyn, hym, hn, hm, fawidth, csat
     !
     satnode = this%calc_initial_sat(node)
     !
@@ -2272,7 +2270,8 @@ module GwfNpfModule
     ! -- Go through the connecting cells
     do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
       !
-      ! -- Set the m cell number and cycle if lower triangle connection and we're not updating both upper and lower matrix parts for this node
+      ! -- Set the m cell number and cycle if lower triangle connection and
+      ! -- we're not updating both upper and lower matrix parts for this node
       m = this%dis%con%ja(ii)
       jj = this%dis%con%jas(ii)
       if(m < node) then
@@ -2344,19 +2343,19 @@ module GwfNpfModule
     return
   end subroutine calc_condsat
 
+  !> @brief Calculate initial saturation for the given node
+  !!
+  !! Calculate saturation as a fraction of thickness for the given node, used
+  !! for saturated conductance calculations: full thickness by default (1.0) or
+  !! saturation based on initial conditions if the THICKSTRT option is used.
+  !!
+  !<
   function calc_initial_sat(this, n) result(satn)
-! ******************************************************************************
-! calc_initial_sat -- Calculate initial saturation for node n
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    real(DP) :: satn
-    ! -- dummy
+    ! -- dummy variables
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: n
-! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: satn
     !
     satn = DONE
     if(this%ibound(n) /= 0 .and. this%ithickstartflag(n) /= 0) then

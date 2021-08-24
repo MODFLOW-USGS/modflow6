@@ -41,11 +41,11 @@ module GwfStoModule
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
     real(DP), pointer                                :: satomega => null()       !< newton-raphson saturation omega
-    integer(I4B), pointer                                :: integratechanges => null() !< indicates if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
-    integer(I4B), pointer                                :: intvs => null()            !< TVS (time-varying storage) unit number (0 if unused)
-    type(TvsType), pointer                               :: tvs => null()              !< TVS object
-    real(DP), dimension(:), pointer, contiguous, private :: oldss => null()            !< previous time step specific storage
-    real(DP), dimension(:), pointer, contiguous, private :: oldsy => null()            !< previous time step specific yield
+    integer(I4B), pointer                         :: integratechanges => null()  !< indicates if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
+    integer(I4B), pointer                            :: intvs => null()          !< TVS (time-varying storage) unit number (0 if unused)
+    type(TvsType), pointer                           :: tvs => null()            !< TVS object
+    real(DP), dimension(:), pointer, contiguous, private :: oldss => null()      !< previous time step specific storage
+    real(DP), dimension(:), pointer, contiguous, private :: oldsy => null()      !< previous time step specific yield
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -281,7 +281,7 @@ contains
     use TdisModule, only: delt
     ! -- dummy variables
     class(GwfStoType) :: this                           !< GwfStoType object
-    integer(I4B), intent(in) :: kiter                   !< outer iteration numbed
+    integer(I4B), intent(in) :: kiter                   !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold          !< previous heads
     real(DP), intent(in), dimension(:) :: hnew          !< current heads
     integer(I4B), intent(in) :: njasln                  !< size of the A matrix for the solution
@@ -367,11 +367,15 @@ contains
       rho1 = sc1*tled
       !
       if(this%integratechanges /= 0) then
-        ! -- Integration of storage changes (e.g. when using TVS): separate the old (start of time step) and new (end of time step) storage capacities
-        sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%oldss(n))
+        ! -- Integration of storage changes (e.g. when using TVS):
+        ! -- separate the old (start of time step) and new (end of time step)
+        ! -- primary storage capacities
+        sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), &
+                            this%oldss(n))
         rho1old = sc1old * tled
       else
-        ! -- No integration of storage changes: old and new values are identical => normal MF6 storage formulation
+        ! -- No integration of storage changes: old and new values are
+        ! -- identical => normal MF6 storage formulation
         rho1old = rho1
       end if
       !
@@ -410,11 +414,14 @@ contains
         rho2 = sc2 * tled
         !
         if(this%integratechanges /= 0) then
-          ! -- Integration of storage changes (e.g. when using TVS): separate the old (start of time step) and new (end of time step) storage capacities
+        ! -- Integration of storage changes (e.g. when using TVS):
+        ! -- separate the old (start of time step) and new (end of time step)
+        ! -- secondary storage capacities
           sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
           rho2old = sc2old * tled
         else
-          ! -- No integration of storage changes: old and new values are identical => normal MF6 storage formulation
+        ! -- No integration of storage changes: old and new values are
+        ! -- identical => normal MF6 storage formulation
           rho2old = rho2
         end if
         !
@@ -616,11 +623,15 @@ contains
         rho1 = sc1*tled
         !
         if(this%integratechanges /= 0) then
-          ! -- Integration of storage changes (e.g. when using TVS): separate the old (start of time step) and new (end of time step) storage capacities
-          sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%oldss(n))
+          ! -- Integration of storage changes (e.g. when using TVS):
+          ! -- separate the old (start of time step) and new (end of time step)
+          ! -- primary storage capacities
+          sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), &
+                              this%oldss(n))
           rho1old = sc1old * tled
         else
-          ! -- No integration of storage changes: old and new values are identical => normal MF6 storage formulation
+          ! -- No integration of storage changes: old and new values are
+          ! -- identical => normal MF6 storage formulation
           rho1old = rho1
         end if
         !
@@ -630,7 +641,8 @@ contains
             if (this%iconf_ss == 0) then
               zold = bt + DHALF * tthk * snold
               znew = bt + DHALF * tthk * snnew
-              rate = rho1old * snold * (hold(n) - zold) - rho1 * snnew * (hnew(n) - znew)
+              rate = rho1old * snold * (hold(n) - zold) &
+                     - rho1 * snnew * (hnew(n) - znew)
             else
               rate = rho1old * ssh0 - rho1 * ssh1
             end if
@@ -657,11 +669,14 @@ contains
           rho2 = sc2 * tled
           !
           if(this%integratechanges /= 0) then
-            ! -- Integration of storage changes (e.g. when using TVS): separate the old (start of time step) and new (end of time step) storage capacities
+            ! -- Integration of storage changes (e.g. when using TVS):
+            ! -- separate the old (start of time step) and new (end of time
+            ! -- step) secondary storage capacities
             sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
             rho2old = sc2old * tled
           else
-            ! -- No integration of storage changes: old and new values are identical => normal MF6 storage formulation
+            ! -- No integration of storage changes: old and new values are
+            ! -- identical => normal MF6 storage formulation
             rho2old = rho2
           end if
           !
@@ -833,7 +848,8 @@ contains
     call mem_allocate(this%iorig_ss, 'IORIG_SS', this%memoryPath)
     call mem_allocate(this%iusesy, 'IUSESY', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
-    call mem_allocate(this%integratechanges, 'INTEGRATECHANGES', this%memoryPath)
+    call mem_allocate(this%integratechanges, 'INTEGRATECHANGES', &
+                      this%memoryPath)
     call mem_allocate(this%intvs, 'INTVS', this%memoryPath)
     !
     ! -- initialize scalars
@@ -1116,7 +1132,7 @@ contains
     return
   end subroutine read_data
 
-  !> @ brief Save old storage values
+  !> @ brief Save old storage property values
   !!
   !!  Save ss and sy values from the previous time step for use with storage
   !!  integration when integratechanges is non-zero.

@@ -1,3 +1,10 @@
+!> @brief This module contains time-varying conductivity package methods
+!!
+!! This module contains the methods used to allow hydraulic conductivity
+!! parameters in the NPF package (K11, K22, K33) to be varied throughout
+!! a simulation.
+!!
+!<
 module TvkModule
   use BaseDisModule, only: DisBaseType
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, DZERO
@@ -16,14 +23,14 @@ module TvkModule
   public :: tvk_cr
 
   type, extends(TvBaseType) :: TvkType
-    integer(I4B), pointer :: ik22overk => null()                             ! NPF flag that k22 is specified as anisotropy ratio
-    integer(I4B), pointer :: ik33overk => null()                             ! NPF flag that k33 is specified as anisotropy ratio
-    real(DP), dimension(:), pointer, contiguous :: k11 => null()             ! NPF hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer, contiguous :: k22 => null()             ! NPF hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer, contiguous :: k33 => null()             ! NPF hydraulic conductivity; if specified then this is Kz prior to rotation
-    integer(I4B), pointer :: kchangeper => null()                            ! NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), pointer :: kchangestp => null()                            ! NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
+    integer(I4B), pointer :: ik22overk => null()                             !< NPF flag that k22 is specified as anisotropy ratio
+    integer(I4B), pointer :: ik33overk => null()                             !< NPF flag that k33 is specified as anisotropy ratio
+    real(DP), dimension(:), pointer, contiguous :: k11 => null()             !< NPF hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k22 => null()             !< NPF hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k33 => null()             !< NPF hydraulic conductivity; if specified then this is Kz prior to rotation
+    integer(I4B), pointer :: kchangeper => null()                            !< NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer :: kchangestp => null()                            !< NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() !< NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
   contains
     procedure :: da => tvk_da
     procedure :: ar_set_pointers => tvk_ar_set_pointers
@@ -36,18 +43,17 @@ module TvkModule
 
 contains
 
+  !> @brief Create a new TvkType object
+  !!
+  !! Create a new time-varying conductivity (TvkType) object.
+  !!
+  !<
   subroutine tvk_cr(tvk, name_model, inunit, iout)
-! ******************************************************************************
-! tvk_cr -- Create a new TvkType object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     type(TvkType), pointer, intent(out) :: tvk
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
     !
     allocate(tvk)
     call tvk%init(name_model, 'TVK', 'TVK', inunit, iout)
@@ -55,21 +61,21 @@ contains
     return
   end subroutine tvk_cr
 
+  !> @brief Announce package and set pointers to variables
+  !!
+  !! Announce package version and set array and variable pointers from the NPF
+  !! package for access by TVK.
+  !!
+  !<
   subroutine tvk_ar_set_pointers(this)
-! ******************************************************************************
-! tvk_ar_set_pointers -- Announce package and set pointers to variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
-    !
+    ! -- local variables
     character(len=LENMEMPATH) :: npfMemoryPath
-    !
-    character(len=*), parameter :: fmttvk =                                    &
-      "(1x,/1x,'TVK -- TIME-VARYING K PACKAGE, VERSION 1, 08/18/2021',         &
-     &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
+    ! -- formats
+    character(len=*), parameter :: fmttvk = &
+      "(1x,/1x,'TVK -- TIME-VARYING K PACKAGE, VERSION 1, 08/18/2021', &
+      &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! -- Print a message identifying the TVK package
     write(this%iout, fmttvk) this%inunit
@@ -89,18 +95,18 @@ contains
     return
   end subroutine tvk_ar_set_pointers
 
+  !> @brief Read a TVK-specific option from the OPTIONS block
+  !!
+  !! Process a single TVK-specific option. Used when reading the OPTIONS block
+  !! of the TVK package input file.
+  !!
+  !<
   function tvk_read_option(this, keyword) result(success)
-! ******************************************************************************
-! tvk_read_option -- Read a TVK-specific setting from the OPTIONS block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
     character(len=*), intent(in) :: keyword
-    !
+    ! -- return
     logical :: success
-! ------------------------------------------------------------------------------
     !
     ! -- There are no TVK-specific options, so just return false
     success = .false.
@@ -108,20 +114,19 @@ contains
     return
   end function tvk_read_option
 
+  !> @brief Get an array value pointer given a variable name and node index
+  !!
+  !! Return a pointer to the given node's value in the appropriate NPF array
+  !! based on the given variable name string.
+  !!
+  !<
   function tvk_get_pointer_to_value(this, n, varName) result(bndElem)
-! ******************************************************************************
-! tvk_get_pointer_to_value -- Return a pointer to the property value for node n
-!                             and the given variable name
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
     integer(I4B), intent(in) :: n
     character(len=*), intent(in) :: varName
-    !
+    ! -- return
     real(DP), pointer :: bndElem
-! ------------------------------------------------------------------------------
     !
     select case (varName)
       case ('K')
@@ -137,17 +142,17 @@ contains
     return
   end function tvk_get_pointer_to_value
 
+  !> @brief Mark property changes as having occurred at (kper, kstp)
+  !!
+  !! Deferred procedure implementation called by the TvBaseType code when a
+  !! property value change occurs at (kper, kstp).
+  !!
+  !<
   subroutine tvk_set_changed_at(this, kper, kstp)
-! ******************************************************************************
-! tvk_set_changed_at -- Mark property changes as having occurred at (kper, kstp)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kstp
-! ------------------------------------------------------------------------------
     !
     this%kchangeper = kper
     this%kchangestp = kstp
@@ -155,17 +160,18 @@ contains
     return
   end subroutine tvk_set_changed_at
 
+  !> @brief Clear all per-node change flags
+  !!
+  !! Deferred procedure implementation called by the TvBaseType code when a
+  !! new time step commences, indicating that any previously set per-node
+  !! property value change flags should be reset.
+  !!
+  !<
   subroutine tvk_reset_change_flags(this)
-! ******************************************************************************
-! tvk_reset_change_flags -- Clear all per-node change flags
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
-    !
+    ! -- local variables
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- Clear NPF's nodekchange array
     do i = 1, this%dis%nodes
@@ -175,23 +181,25 @@ contains
     return
   end subroutine tvk_reset_change_flags
 
+  !> @brief Check that a given property value is valid
+  !!
+  !! Deferred procedure implementation called by the TvBaseType code after a
+  !! property value change occurs. Check if the property value of the given
+  !! variable at the given node is invalid, and log an error if so. Update
+  !! K22 and K33 values appropriately when specified as anisotropy.
+  !!
+  !<
   subroutine tvk_validate_change(this, n, varName)
-! ******************************************************************************
-! tvk_validate_change -- Multiply out K22 and K33 factors (if the corresponding
-!                        NPF options are active), mark change and check value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
     integer(I4B), intent(in) :: n
     character(len=*), intent(in) :: varName
-    !
+    ! -- local variables
     character(len=LINELENGTH) :: cellstr
-    !
-    character(len=*), parameter :: fmtkerr =                                   &
-      "(1x, a, ' changed hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
-! ------------------------------------------------------------------------------
+    ! -- formats
+    character(len=*), parameter :: fmtkerr = &
+      "(1x, a, ' changed hydraulic property ', a, ' is <= 0 for cell ', a, &
+      &' ', 1pg15.6)"
     !
     ! -- Mark the node as being changed this time step
     this%nodekchange(n) = 1
@@ -226,15 +234,14 @@ contains
     return
   end subroutine tvk_validate_change
 
+  !> @brief Deallocate package memory
+  !!
+  !! Deallocate TVK package scalars and arrays.
+  !!
+  !<
   subroutine tvk_da(this)
-! ******************************************************************************
-! tvk_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(TvkType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Nullify pointers to other package variables
     nullify(this%ik22overk)
