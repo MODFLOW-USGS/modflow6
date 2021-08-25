@@ -308,8 +308,7 @@ contains
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: ss_sat1
-    real(DP) :: ssh0
-    real(DP) :: ssh1
+    real(DP) :: ssd0
     real(DP) :: aterm
     real(DP) :: rhsterm
     ! -- formats
@@ -350,15 +349,13 @@ contains
       !
       ! -- set saturation used for ss
       ss_sat1 = snnew
-      ssh0 = hold(n) - tp
-      ssh1 = tp
+      ssd0 = hold(n) - tp
       if (this%iconf_ss /= 0) then
         if (snold < DONE) then
-          ssh0 = DZERO
+          ssd0 = DZERO
         end if
         if (snnew < DONE) then
           ss_sat1 = DZERO
-          ssh1 = DZERO
         end if
       end if
       !
@@ -392,7 +389,7 @@ contains
             znew = bt + DHALF * tthk * snnew
             rhsterm = -rho1old * snold * (hold(n) - zold) - rho1 * snnew * znew
           else
-            rhsterm = -rho1old * ssh0 - rho1 * ssh1
+            rhsterm = -rho1old * ssd0 - rho1 * ss_sat1 * tp
           end if
         else
           rhsterm = -rho1old * snold * hold(n)
@@ -576,8 +573,8 @@ contains
     real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ssh0
-    real(DP) :: ssh1
+    real(DP) :: ssd0
+    real(DP) :: ssd1
     real(DP) :: zold
     real(DP) :: znew
     !
@@ -608,14 +605,14 @@ contains
         end if
         !
         ! -- calculate heads above full saturation used for confined-only ss
-        ssh0 = hold(n) - tp
-        ssh1 = hnew(n) - tp
+        ssd0 = hold(n) - tp
+        ssd1 = hnew(n) - tp
         if (this%iconf_ss /= 0) then
           if (snold < DONE) then
-            ssh0 = DZERO
+            ssd0 = DZERO
           end if
           if (snnew < DONE) then
-            ssh1 = DZERO
+            ssd1 = DZERO
           end if
         end if
         ! -- primary storage coefficient
@@ -644,7 +641,7 @@ contains
               rate = rho1old * snold * (hold(n) - zold) &
                      - rho1 * snnew * (hnew(n) - znew)
             else
-              rate = rho1old * ssh0 - rho1 * ssh1
+              rate = rho1old * ssd0 - rho1 * ssd1
             end if
           else
             rate = rho1old * snold * hold(n) - rho1 * snnew * hnew(n)
@@ -802,12 +799,12 @@ contains
       call mem_deallocate(this%strgss)
       call mem_deallocate(this%strgsy)
       !
-      ! -- Deallocate lazily-allocated arrays if used
-      if(associated(this%oldss)) then
-        deallocate(this%oldss)
-      end if
-      if(associated(this%oldsy)) then
-        deallocate(this%oldsy)
+      ! -- deallocate TVS arrays
+      if (this%integratechanges /= 0) then
+        call mem_deallocate(this%oldss)
+        if (this%iusesy /= 0) then
+          call mem_deallocate(this%oldsy)
+        end if
       end if
     end if
     !
@@ -887,6 +884,14 @@ contains
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
     !
+    ! -- allocate TVS arrays
+    if (this%integratechanges /= 0) then
+      call mem_allocate(this%oldss, nodes, 'OLDSS', this%memoryPath)
+      if (this%iusesy /= 0) then
+        call mem_allocate(this%oldsy, nodes, 'OLDSY', this%memoryPath)
+      end if
+    end if
+    !
     ! -- Initialize arrays
     this%iss = 0
     do n = 1, nodes
@@ -895,6 +900,12 @@ contains
       this%sy(n) = DZERO
       this%strgss(n) = DZERO
       this%strgsy(n) = DZERO
+      if (this%integratechanges /= 0) then
+        this%oldss(n) = DZERO
+        if (this%iusesy /= 0) then
+          this%oldsy(n) = DZERO
+        end if
+      end if
     end do
     !
     ! -- return
@@ -1143,14 +1154,6 @@ contains
     class(GwfStoType) :: this  !< GwfStoType object
     ! -- local variables
     integer(I4B) :: n
-    !
-    ! -- Lazily allocate arrays
-    if(.not. associated(this%oldss)) then
-      allocate(this%oldss(this%dis%nodes))
-    end if
-    if(this%iusesy == 1 .and. .not. associated(this%oldsy)) then
-      allocate(this%oldsy(this%dis%nodes))
-    end if
     !
     ! -- Save current specific storage
     do n = 1, this%dis%nodes
