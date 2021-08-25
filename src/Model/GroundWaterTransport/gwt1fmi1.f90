@@ -800,6 +800,7 @@ module GwtFmiModule
     integer(I4B) :: iapt
     logical :: isfound, endOfBlock
     logical :: blockrequired
+    logical :: exist
     type(BudObjPtrArray), dimension(:), allocatable :: tmpbudobj
 ! ------------------------------------------------------------------------------
     !
@@ -829,6 +830,11 @@ module GwtFmiModule
             endif
             call this%parser%GetString(fname)
             inunit = getunit()
+            inquire(file=trim(fname), exist=exist)
+            if (.not. exist) then
+              call store_error('Could not find file '//trim(fname))
+              call this%parser%StoreErrorUnit()
+            end if            
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iubud = inunit
@@ -841,6 +847,11 @@ module GwtFmiModule
               call this%parser%StoreErrorUnit()
             endif
             call this%parser%GetString(fname)
+            inquire(file=trim(fname), exist=exist)
+            if (.not. exist) then
+              call store_error('Could not find file '//trim(fname))
+              call this%parser%StoreErrorUnit()
+            end if            
             inunit = getunit()
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
