@@ -1068,18 +1068,26 @@ module GwtFmiModule
       &i0, ' TO BUDGET FILE TERMS FROM KSTP ', i0, ' AND KPER ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Do not read the budget if the budget is at end of file or if the next
-    !    record in the budget file is the first timestep of the next stress
-    !    period.
+    ! -- If the latest record read from the budget file is from a stress
+    ! -- period with only one time step, reuse that record (do not read a
+    ! -- new record) if the GWT model is still in that same stress period,
+    ! -- or if that record is the last one in the budget file.
     readnext = .true.
     if (kstp * kper > 1) then
-      if (this%bfr%endoffile) then
-        readnext = .false.
-      else
-        if (this%bfr%kpernext == kper + 1 .and. this%bfr%kstpnext == 1) &
+      if (this%bfr%kstp == 1) then
+        if (this%bfr%kpernext == kper + 1) then
           readnext = .false.
-      endif
-    endif
+        else if (this%bfr%endoffile) then
+          readnext = .false.
+        end if
+      else if (this%bfr%endoffile) then
+        write(errmsg,'(4x,a)') 'REACHED END OF GWF BUDGET &
+          &FILE BEFORE READING SUFFICIENT BUDGET INFORMATION FOR THIS &
+          &GWT SIMULATION.'
+        call store_error(errmsg)
+        call store_error_unit(this%iubud)
+       end if
+    end if
     !
     ! -- Read the next record
     if (readnext) then
@@ -1093,24 +1101,29 @@ module GwtFmiModule
       do n = 1, this%bfr%nbudterms
         call this%bfr%read_record(success, this%iout)
         if (.not. success) then
-          write(errmsg,'(4x,a)') '***ERROR.  GWF BUDGET READ NOT SUCCESSFUL'
+          write(errmsg,'(4x,a)') 'GWF BUDGET READ NOT SUCCESSFUL'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         endif
         !
         ! -- Ensure kper is same between model and budget file
         if (kper /= this%bfr%kper) then
-          write(errmsg,'(4x,a)') '***ERROR.  PERIOD NUMBER IN BUDGET FILE &
-            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.'
+          write(errmsg,'(4x,a)') 'PERIOD NUMBER IN BUDGET FILE &
+            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         endif
         !
         ! -- if budget file kstp > 1, then kstp must match
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
-          write(errmsg,'(4x,a)') '***ERROR.  IF THERE IS MORE THAN ONE TIME &
-            &STEP IN THE BUDGET FILE, THEN BUDGET FILE TIME STEPS MUST MATCH &
-            &GWT MODEL TIME STEPS ONE-FOR-ONE.'
+          write(errmsg,'(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
+            &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         endif
@@ -1238,18 +1251,26 @@ module GwtFmiModule
       &i0, ' TO BINARY FILE HEADS FROM KSTP ', i0, ' AND KPER ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Do not read heads if the head is at end of file or if the next
-    !    record in the head file is the first timestep of the next stress
-    !    period.
+    ! -- If the latest record read from the head file is from a stress
+    ! -- period with only one time step, reuse that record (do not read a
+    ! -- new record) if the GWT model is still in that same stress period,
+    ! -- or if that record is the last one in the head file.
     readnext = .true.
     if (kstp * kper > 1) then
-      if (this%hfr%endoffile) then
-        readnext = .false.
-      else
-        if (this%hfr%kpernext == kper + 1 .and. this%hfr%kstpnext == 1) &
+      if (this%hfr%kstp == 1) then
+        if (this%hfr%kpernext == kper + 1) then
           readnext = .false.
-      endif
-    endif
+        else if (this%hfr%endoffile) then
+          readnext = .false.
+        end if
+      else if (this%hfr%endoffile) then
+        write(errmsg,'(4x,a)') 'REACHED END OF GWF HEAD &
+          &FILE BEFORE READING SUFFICIENT HEAD INFORMATION FOR THIS &
+          &GWT SIMULATION.'
+        call store_error(errmsg)
+        call store_error_unit(this%iuhds)
+       end if
+    end if
     !
     ! -- Read the next record
     if (readnext) then
@@ -1271,16 +1292,21 @@ module GwtFmiModule
         ! -- Ensure kper is same between model and head file
         if (kper /= this%hfr%kper) then
           write(errmsg,'(4x,a)') 'PERIOD NUMBER IN HEAD FILE &
-            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.'
+            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE HEAD FILE FOR A GIVEN STRESS &
+            &PERIOD, HEAD FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
         endif
         !
         ! -- if head file kstp > 1, then kstp must match
         if (this%hfr%kstp > 1 .and. (kstp /= this%hfr%kstp)) then
-          write(errmsg,'(4x,a)') 'IF THERE IS MORE THAN ONE TIME &
-            &STEP IN THE HEAD FILE, THEN HEAD FILE TIME STEPS MUST MATCH &
-            &GWT MODEL TIME STEPS ONE-FOR-ONE.'
+          write(errmsg,'(4x,a)') 'TIME STEP NUMBER IN HEAD FILE &
+            &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE HEAD FILE FOR A GIVEN STRESS &
+            &PERIOD, HEAD FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
         endif
