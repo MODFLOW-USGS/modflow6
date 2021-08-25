@@ -13,6 +13,8 @@ module GwfNpfModule
   use GwfIcModule,                only: GwfIcType
   use Xt3dModule,                 only: Xt3dType
   use BlockParserModule,          only: BlockParserType
+  use InputOutputModule,          only: GetUnit, openfile
+  use TvkModule,                  only: TvkType, tvk_cr
 
   implicit none
 
@@ -53,6 +55,7 @@ module GwfNpfModule
     real(DP), pointer                               :: wetfct       => null()    !< wetting factor
     real(DP), pointer                               :: hdry         => null()    !< default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    !< confined (0) or convertible (1)
+    integer(I4B), dimension(:), pointer, contiguous:: ithickstartflag => null()  !< array of flags for handling the thickstrt option
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -84,11 +87,18 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    !< edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    !< edge properties (Q, area, nx, ny, distance) 
     !
+    integer(I4B), pointer                           :: intvk        => null()    ! TVK (time-varying K) unit number (0 if unused)
+    type(TvkType), pointer                          :: tvk          => null()    ! TVK object
+    integer(I4B), pointer                           :: kchangeper   => null()    ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer                           :: kchangestp   => null()    ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), dimension(:), pointer, contiguous :: nodekchange  => null()    ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
+    !
   contains
     procedure                               :: npf_df
     procedure                               :: npf_ac
     procedure                               :: npf_mc
     procedure                               :: npf_ar
+    procedure                               :: npf_rp
     procedure                               :: npf_ad
     procedure                               :: npf_cf
     procedure                               :: npf_fc
@@ -112,6 +122,8 @@ module GwfNpfModule
     procedure, private                      :: set_grid_data
     procedure, private                      :: prepcheck
     procedure, private                      :: preprocess_input
+    procedure, private                      :: calc_condsat
+    procedure, private                      :: calc_initial_sat
     procedure, public                       :: rewet_check
     procedure, public                       :: hy_eff
     procedure, public                       :: calc_spdis
@@ -319,9 +331,32 @@ module GwfNpfModule
                              this%inewton, this%icelltype)
     end if
     !
+    ! -- TVK
+    if (this%intvk /= 0) then
+      call this%tvk%ar(this%dis)
+    end if
+    !
     ! -- Return
     return
   end subroutine npf_ar
+
+  !> @brief Read and prepare method for package
+  !!
+  !! Read and prepare NPF stress period data.
+  !!
+  !<
+  subroutine npf_rp(this)
+    implicit none
+    class(GwfNpfType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- TVK
+    if (this%intvk /= 0) then
+      call this%tvk%rp()
+    end if
+    !
+    return
+  end subroutine npf_rp
 
   subroutine npf_ad(this, nodes, hold, hnew, irestore)
 ! ******************************************************************************
@@ -331,6 +366,8 @@ module GwfNpfModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use TdisModule, only: kper, kstp
+    !
     implicit none
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: nodes
@@ -354,6 +391,31 @@ module GwfNpfModule
         if(this%ibound(n) /= 0) cycle
         hnew(n) = DHDRY
       enddo
+    endif
+    !
+    ! -- TVK
+    if(this%intvk /= 0) then
+      call this%tvk%ad()
+    endif
+    !
+    ! -- If any K values have changed, we need to update CONDSAT or XT3D arrays
+    if(this%kchangeper == kper .and. this%kchangestp == kstp) then
+      if(this%ixt3d == 0) then
+        !
+        ! -- Update the saturated conductance for all connections
+        ! -- of the affected nodes
+        do n = 1, this%dis%nodes
+          if(this%nodekchange(n) == 1) then
+            call this%calc_condsat(n, .false.)
+          endif
+        enddo
+      else
+        !
+        ! -- Recompute XT3D coefficients for permanently confined connections
+        if(this%xt3d%lamatsaved .and. .not. this%xt3d%ldispersion) then
+          call this%xt3d%xt3d_fcpc(this%dis%nodes, .true.)
+        endif
+      endif
     endif
     !
     ! -- Return
@@ -965,6 +1027,12 @@ module GwfNpfModule
     class(GwfNpftype) :: this
 ! ------------------------------------------------------------------------------
     !
+    ! -- TVK
+    if (this%intvk /= 0) then
+      call this%tvk%da()
+      deallocate(this%tvk)
+    end if
+    !
     ! -- Strings
     !
     ! -- Scalars
@@ -1000,9 +1068,13 @@ module GwfNpfModule
     call mem_deallocate(this%lastedge)
     call mem_deallocate(this%ik22overk)
     call mem_deallocate(this%ik33overk)
+    call mem_deallocate(this%intvk)
+    call mem_deallocate(this%kchangeper)
+    call mem_deallocate(this%kchangestp)
     !
     ! -- Deallocate arrays
     deallocate(this%aname)
+    call mem_deallocate(this%ithickstartflag)
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
     call mem_deallocate(this%k22, 'K22', trim(this%memoryPath))
@@ -1017,6 +1089,7 @@ module GwfNpfModule
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
     call mem_deallocate(this%spdis)
+    call mem_deallocate(this%nodekchange)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -1074,6 +1147,9 @@ module GwfNpfModule
     call mem_allocate(this%iwetdry, 'IWETDRY', this%memoryPath)
     call mem_allocate(this%nedges, 'NEDGES', this%memoryPath)
     call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
+    call mem_allocate(this%intvk, 'INTVK', this%memoryPath)
+    call mem_allocate(this%kchangeper, 'KCHANGEPER', this%memoryPath)
+    call mem_allocate(this%kchangestp, 'KCHANGESTP', this%memoryPath)
     !
     ! -- set pointer to inewtonur
     call mem_setptr(this%igwfnewtonur, 'INEWTONUR', create_mem_path(this%name_model))
@@ -1110,6 +1186,9 @@ module GwfNpfModule
     this%iwetdry = 0
     this%nedges = 0
     this%lastedge = 0
+    this%intvk = 0
+    this%kchangeper = 0
+    this%kchangestp = 0
     !
     ! -- If newton is on, then NPF creates asymmetric matrix
     this%iasym = this%inewton
@@ -1135,6 +1214,7 @@ module GwfNpfModule
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
+    call mem_allocate(this%ithickstartflag, ncells, 'ITHICKSTARTFLAG', this%memoryPath)
     call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', this%memoryPath)
     call mem_allocate(this%k11, ncells, 'K11', this%memoryPath)
     call mem_allocate(this%sat, ncells, 'SAT', this%memoryPath)
@@ -1168,12 +1248,16 @@ module GwfNpfModule
       call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     endif
     !
+    ! -- Time-varying property flag arrays
+    call mem_allocate(this%nodekchange, ncells, 'NODEKCHANGE', this%memoryPath)
+    !
     ! -- initialize iangle1, iangle2, iangle3, and wetdry
     do n = 1, ncells
       this%angle1(n) = DZERO
       this%angle2(n) = DZERO
       this%angle3(n) = DZERO
       this%wetdry(n) = DZERO
+      this%nodekchange(n) = DZERO
     end do
     !
     ! -- allocate variable names
@@ -1201,7 +1285,7 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword, fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -1305,6 +1389,22 @@ module GwfNpfModule
             write(this%iout,'(4x,a)')                                          &
               'VALUES SPECIFIED FOR K33 ARE ANISOTROPY RATIOS AND ' //         &
               'WILL BE MULTIPLIED BY K BEFORE BEING USED IN CALCULATIONS.'
+          case ('TVK')
+            if (this%intvk /= 0) then
+              errmsg = 'Multiple TVK keywords detected in OPTIONS block. ' // &
+                       'Only one TVK entry allowed.'
+              call store_error(errmsg, terminate=.TRUE.)
+            end if
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'TVK keyword must be followed by "FILEIN" ' // &
+                       'then by filename.'
+              call store_error(errmsg, terminate=.TRUE.)
+            endif
+            call this%parser%GetString(fname)
+            this%intvk = GetUnit()
+            call openfile(this%intvk, this%iout, fname, 'TVK')
+            call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
           !
           ! -- The following are options that are only available in the
           !    development version and are not included in the documentation.
@@ -1959,8 +2059,7 @@ module GwfNpfModule
   use SimModule, only: store_error, count_errors
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local        
-    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
-    integer(I4B) :: n, m, ii, nn, ihc    
+    integer(I4B) :: n, m, ii, nn, ihc
     real(DP) :: hyn, hym
     real(DP) :: csat    
     real(DP) :: fawidth 
@@ -1981,10 +2080,8 @@ module GwfNpfModule
     character(len=*),parameter :: fmttebe = &
     "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
     !
-    ! -- allocate temporary storage to handle thickstart option
-    allocate(ithickstartflag(this%dis%nodes))
     do n = 1, this%dis%nodes
-      ithickstartflag(n) = 0
+      this%ithickstartflag(n) = 0
     end do
     !
     ! -- Insure that each cell has at least one non-zero transmissive parameter
@@ -2057,7 +2154,7 @@ module GwfNpfModule
       if(this%ibound(n) == 0) then
         this%sat(n) = DONE
         if(this%icelltype(n) < 0 .and. this%ithickstrt /= 0) then
-          ithickstartflag(n) = 1
+          this%ithickstartflag(n) = 1
           this%icelltype(n) = 0
         endif
       else
@@ -2072,7 +2169,7 @@ module GwfNpfModule
             write(errmsg, fmtihbe) this%ic%strt(n), botn
             call store_error(errmsg)
           endif
-          ithickstartflag(n) = 1
+          this%ithickstartflag(n) = 1
           this%icelltype(n) = 0
         else
           satn = DONE
@@ -2099,59 +2196,7 @@ module GwfNpfModule
     !    that saturation is 1 (except for case where icelltype was entered
     !    as a negative value and THCKSTRT option in effect)
     do n = 1, this%dis%nodes
-      !
-      topn = this%dis%top(n)
-      !
-      ! -- Go through the connecting cells
-      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        !
-        ! -- Set the m cell number and cycle if lower triangle connection
-        m = this%dis%con%ja(ii)
-        if (m < n) cycle
-        ihc = this%dis%con%ihc(this%dis%con%jas(ii))
-        topm = this%dis%top(m)
-        hyn = this%hy_eff(n, m, ihc, ipos=ii)
-        hym = this%hy_eff(m, n, ihc, ipos=ii)
-        if (ithickstartflag(n) == 0) then
-          hn = topn
-        else
-          hn = this%ic%strt(n)
-        end if
-        if (ithickstartflag(m) == 0) then
-          hm = topm
-        else
-          hm = this%ic%strt(m)
-        end if
-        !
-        ! -- Calculate conductance depending on whether connection is
-        !    vertical (0), horizontal (1), or staggered horizontal (2)
-        if(ihc == 0) then
-          !
-          ! -- Vertical conductance for fully saturated conditions
-          csat =  vcond(1, 1, 1, 1, 0, 1, 1, DONE,                             &
-                        this%dis%bot(n), this%dis%bot(m),                      &
-                        hyn, hym,                                              &
-                        this%sat(n), this%sat(m),                              &
-                        topn, topm,                                            &
-                        this%dis%bot(n), this%dis%bot(m),                      &
-                        this%dis%con%hwva(this%dis%con%jas(ii)))
-        else
-          !
-          ! -- Horizontal conductance for fully saturated conditions
-          fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),                 &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,             &
-                       DONE,                                                   &
-                       hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
-                       topn, topm,                                             &
-                       this%dis%bot(n), this%dis%bot(m),                       &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),                 &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),                 &
-                       fawidth, this%satomega, this%satmin)
-        end if
-        this%condsat(this%dis%con%jas(ii)) = csat
-      enddo
+      call this%calc_condsat(n, .true.)
     enddo
     !
     endif
@@ -2196,13 +2241,129 @@ module GwfNpfModule
     ! -- nullify unneeded gwf pointers
     this%igwfnewtonur => null()
     !
-    ! - clean up local storage
-    deallocate(ithickstartflag)
-    !
     ! -- Return
     return
 
   end subroutine preprocess_input
+
+  !> @brief Calculate CONDSAT array entries for the given node
+  !!
+  !! Calculate saturated conductances for all connections of the given node,
+  !! or optionally for the upper portion of the matrix only.
+  !!
+  !<
+  subroutine calc_condsat(this, node, upperOnly)
+    ! -- dummy variables
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: node
+    logical, intent(in) :: upperOnly
+    ! -- local variables
+    integer(I4B) :: ii, m, n, ihc, jj
+    real(DP) :: topm, topn, topnode, botm, botn, botnode, satm, satn, satnode
+    real(DP) :: hyn, hym, hn, hm, fawidth, csat
+    !
+    satnode = this%calc_initial_sat(node)
+    !
+    topnode = this%dis%top(node)
+    botnode = this%dis%bot(node)
+    !
+    ! -- Go through the connecting cells
+    do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
+      !
+      ! -- Set the m cell number and cycle if lower triangle connection and
+      ! -- we're not updating both upper and lower matrix parts for this node
+      m = this%dis%con%ja(ii)
+      jj = this%dis%con%jas(ii)
+      if(m < node) then
+        if(upperOnly) cycle
+        ! m => node, n => neighbour
+        n = m
+        m = node
+        topm = topnode
+        botm = botnode
+        satm = satnode
+        topn = this%dis%top(n)
+        botn = this%dis%bot(n)
+        satn = this%calc_initial_sat(n)
+      else
+        ! n => node, m => neighbour
+        n = node
+        topn = topnode
+        botn = botnode
+        satn = satnode
+        topm = this%dis%top(m)
+        botm = this%dis%bot(m)
+        satm = this%calc_initial_sat(m)
+      end if
+      !
+      ihc = this%dis%con%ihc(jj)
+      hyn = this%hy_eff(n, m, ihc, ipos=ii)
+      hym = this%hy_eff(m, n, ihc, ipos=ii)
+      if(this%ithickstartflag(n) == 0) then
+        hn = topn
+      else
+        hn = this%ic%strt(n)
+      end if
+      if(this%ithickstartflag(m) == 0) then
+        hm = topm
+      else
+        hm = this%ic%strt(m)
+      end if
+      !
+      ! -- Calculate conductance depending on whether connection is
+      !    vertical (0), horizontal (1), or staggered horizontal (2)
+      if(ihc == 0) then
+        !
+        ! -- Vertical conductance for fully saturated conditions
+        csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE,                               &
+                     botn, botm,                                              &
+                     hyn, hym,                                                &
+                     satn, satm,                                              &
+                     topn, topm,                                              &
+                     botn, botm,                                              &
+                     this%dis%con%hwva(jj))
+      else
+        !
+        ! -- Horizontal conductance for fully saturated conditions
+        fawidth = this%dis%con%hwva(jj)
+        csat = hcond(1, 1, 1, 1, this%inewton, 0,                             &
+                     ihc,                                                     &
+                     this%icellavg, this%iusgnrhc, this%inwtupw,              &
+                     DONE,                                                    &
+                     hn, hm, satn, satm, hyn, hym,                            &
+                     topn, topm,                                              &
+                     botn, botm,                                              &
+                     this%dis%con%cl1(jj),                                    &
+                     this%dis%con%cl2(jj),                                    &
+                     fawidth, this%satomega, this%satmin)
+      end if
+      this%condsat(jj) = csat
+    enddo
+    !
+    return
+  end subroutine calc_condsat
+
+  !> @brief Calculate initial saturation for the given node
+  !!
+  !! Calculate saturation as a fraction of thickness for the given node, used
+  !! for saturated conductance calculations: full thickness by default (1.0) or
+  !! saturation based on initial conditions if the THICKSTRT option is used.
+  !!
+  !<
+  function calc_initial_sat(this, n) result(satn)
+    ! -- dummy variables
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: n
+    ! -- return
+    real(DP) :: satn
+    !
+    satn = DONE
+    if(this%ibound(n) /= 0 .and. this%ithickstartflag(n) /= 0) then
+      call this%thksat(n, this%ic%strt(n), satn)
+    endif
+    !
+    return
+  end function calc_initial_sat
 
   subroutine sgwf_npf_wetdry(this, kiter, hnew)
 ! ******************************************************************************
