@@ -302,7 +302,6 @@ contains
     real(DP) :: rho2old
     real(DP) :: tp
     real(DP) :: bt
-    ! real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: aterm
@@ -332,7 +331,6 @@ contains
       ! -- aquifer elevations and thickness
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
-      ! tthk = tp - bt
       !
       ! -- aquifer saturation
       if (this%iconvert(n) == 0) then
@@ -530,7 +528,6 @@ contains
     real(DP) :: rho2old
     real(DP) :: tp
     real(DP) :: bt
-    ! real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: aterm
@@ -554,7 +551,6 @@ contains
         ! -- aquifer elevations and thickness
         tp = this%dis%top(n)
         bt = this%dis%bot(n)
-        ! tthk = tp - bt
         !
         ! -- aquifer saturation
         if (this%iconvert(n) /= 0) then
