@@ -1,0 +1,31 @@
+BEGIN OPTIONS
+  TS6 FILEIN tvs_cells.ts
+  # Note: Time-series file tvs_cells.ts defines time series cells_sy
+END OPTIONS
+
+# Cell 45 will have its SS value changed to 1e-6 in the first time step of
+# stress period 2, and changed once more to 1e-7 in the first time step of
+# stress period 4.
+#
+# Cells 188 and 291 will have their respective SY values changed according
+# to the time series cells_sy specified in the file tvs_cells.ts. Note that
+# these values may continue to change beyond stress period 2, depending on
+# the duration of the time series cells_sy.
+#
+# No changes are made in stress period 1 due to an absence of a block
+# for that period; cells maintain the initial property values specified in
+# the STO package for the entirety of that period.
+
+BEGIN PERIOD 2
+  45  SS  1e-6
+  188 SY  cells_sy
+  291 SY  cells_sy
+END PERIOD
+
+BEGIN PERIOD 4
+  45  SS  1e-7
+END PERIOD
+
+# After the last specified change (or after the last specified time record,
+# when a time series is used), each affected cell will retain its latest
+# changed value for the remainder of the simulation.
