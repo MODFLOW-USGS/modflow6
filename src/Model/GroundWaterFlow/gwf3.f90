@@ -481,6 +481,7 @@ module GwfModule
     if (.not. readnewdata) return
     !
     ! -- Read and prepare
+    if(this%innpf > 0) call this%npf%npf_rp()
     if(this%inbuy > 0) call this%buy%buy_rp()
     if(this%inhfb > 0) call this%hfb%hfb_rp()
     if(this%inoc > 0)  call this%oc%oc_rp()
