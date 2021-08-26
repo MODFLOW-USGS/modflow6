@@ -2059,12 +2059,9 @@ module GwfNpfModule
   use SimModule, only: store_error, count_errors
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local        
-    integer(I4B) :: n, m, ii, nn, ihc
+    integer(I4B) :: n, m, ii, nn
     real(DP) :: hyn, hym
-    real(DP) :: csat    
-    real(DP) :: fawidth 
-    real(DP) :: satn, topn, topm, botn    
-    real(DP) :: hn, hm
+    real(DP) :: satn, topn, botn    
     integer(I4B) :: nextn
     real(DP) :: minbot, botm    
     logical :: finished

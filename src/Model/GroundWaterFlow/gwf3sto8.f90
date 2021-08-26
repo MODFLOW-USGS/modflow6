@@ -18,7 +18,7 @@ module GwfStoModule
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
-  use GwfStorageUtilsModule, only: SsCapacity, SyCapacity
+  use GwfStorageUtilsModule, only: SsCapacity, SyCapacity, SsTerms, SyTerms
   use InputOutputModule, only: GetUnit, openfile
   use TvsModule, only: TvsType, tvs_cr
 
@@ -302,13 +302,9 @@ contains
     real(DP) :: rho2old
     real(DP) :: tp
     real(DP) :: bt
-    real(DP) :: tthk
-    real(DP) :: zold
-    real(DP) :: znew
+    ! real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss_sat1
-    real(DP) :: ssd0
     real(DP) :: aterm
     real(DP) :: rhsterm
     ! -- formats
@@ -336,7 +332,7 @@ contains
       ! -- aquifer elevations and thickness
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
-      tthk = tp - bt
+      ! tthk = tp - bt
       !
       ! -- aquifer saturation
       if (this%iconvert(n) == 0) then
@@ -347,56 +343,27 @@ contains
         snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
       end if
       !
-      ! -- set saturation used for ss
-      ss_sat1 = snnew
-      ssd0 = hold(n) - tp
-      if (this%iconf_ss /= 0) then
-        if (snold < DONE) then
-          ssd0 = DZERO
-        end if
-        if (snnew < DONE) then
-          ss_sat1 = DZERO
-        end if
-      end if
-      !
       ! -- storage coefficients
       sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
-      rho1 = sc1*tled
+      rho1 = sc1 * tled
       !
       if(this%integratechanges /= 0) then
         ! -- Integration of storage changes (e.g. when using TVS):
-        ! -- separate the old (start of time step) and new (end of time step)
-        ! -- primary storage capacities
+        !    separate the old (start of time step) and new (end of time step)
+        !    primary storage capacities
         sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), &
                             this%oldss(n))
         rho1old = sc1old * tled
       else
         ! -- No integration of storage changes: old and new values are
-        ! -- identical => normal MF6 storage formulation
+        !    identical => normal MF6 storage formulation
         rho1old = rho1
       end if
       !
-      ! -- initialize matrix terms
-      aterm = -rho1 * ss_sat1
-      rhsterm = DZERO
-      !
-      ! -- calculate storage coefficients for amat and rhs
-      ! -- specific storage
-      if (this%iconvert(n) /= 0) then
-        if (this%iorig_ss == 0) then
-          if (this%iconf_ss == 0) then
-            zold = bt + DHALF * tthk * snold
-            znew = bt + DHALF * tthk * snnew
-            rhsterm = -rho1old * snold * (hold(n) - zold) - rho1 * snnew * znew
-          else
-            rhsterm = -rho1old * ssd0 - rho1 * ss_sat1 * tp
-          end if
-        else
-          rhsterm = -rho1old * snold * hold(n)
-        end if
-      else
-        rhsterm = -rho1old * snold * hold(n)
-      end if
+      ! -- calculate specific storage terms
+      call SsTerms(this%iconvert(n), this%iorig_ss, this%iconf_ss, tp, bt, &
+                   rho1, rho1old, snnew, snold, hnew(n), hold(n), &
+                   aterm, rhsterm)
       !
       ! -- add specific storage terms to amat and rhs
       amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
@@ -412,30 +379,23 @@ contains
         !
         if(this%integratechanges /= 0) then
         ! -- Integration of storage changes (e.g. when using TVS):
-        ! -- separate the old (start of time step) and new (end of time step)
-        ! -- secondary storage capacities
+        !    separate the old (start of time step) and new (end of time step)
+        !    secondary storage capacities
           sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
           rho2old = sc2old * tled
         else
         ! -- No integration of storage changes: old and new values are
-        ! -- identical => normal MF6 storage formulation
+        !    identical => normal MF6 storage formulation
           rho2old = rho2
         end if
         !
-        ! -- add specific yield terms to amat at rhs
-        if (snnew < DONE) then
-          if (snnew > DZERO) then
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
-            rhsterm = rho2old * tthk * snold
-            rhsterm = rhsterm + rho2 * bt
-          else
-            rhsterm = -tthk * (DZERO - rho2old * snold)
-          end if
-          ! -- known flow from specific yield
-        else
-          rhsterm = -tthk * (rho2 * snnew - rho2old * snold)
-        end if
-        rhs(n) = rhs(n) - rhsterm
+        ! -- calculate specific storage terms
+        call SyTerms(tp, bt, rho2, rho2old, snnew, snold, &
+                     aterm, rhsterm)
+!
+        ! -- add specific yield terms to amat and rhs
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+        rhs(n) = rhs(n) + rhsterm
       end if
     end do
     !
@@ -570,13 +530,11 @@ contains
     real(DP) :: rho2old
     real(DP) :: tp
     real(DP) :: bt
-    real(DP) :: tthk
+    ! real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ssd0
-    real(DP) :: ssd1
-    real(DP) :: zold
-    real(DP) :: znew
+    real(DP) :: aterm
+    real(DP) :: rhsterm 
     !
     ! -- initialize strg arrays
     do n = 1, this%dis%nodes
@@ -596,7 +554,7 @@ contains
         ! -- aquifer elevations and thickness
         tp = this%dis%top(n)
         bt = this%dis%bot(n)
-        tthk = tp - bt
+        ! tthk = tp - bt
         !
         ! -- aquifer saturation
         if (this%iconvert(n) /= 0) then
@@ -604,51 +562,27 @@ contains
           snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
         end if
         !
-        ! -- calculate heads above full saturation used for confined-only ss
-        ssd0 = hold(n) - tp
-        ssd1 = hnew(n) - tp
-        if (this%iconf_ss /= 0) then
-          if (snold < DONE) then
-            ssd0 = DZERO
-          end if
-          if (snnew < DONE) then
-            ssd1 = DZERO
-          end if
-        end if
         ! -- primary storage coefficient
         sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
         rho1 = sc1*tled
         !
         if(this%integratechanges /= 0) then
           ! -- Integration of storage changes (e.g. when using TVS):
-          ! -- separate the old (start of time step) and new (end of time step)
-          ! -- primary storage capacities
+          !    separate the old (start of time step) and new (end of time step)
+          !    primary storage capacities
           sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), &
                               this%oldss(n))
           rho1old = sc1old * tled
         else
           ! -- No integration of storage changes: old and new values are
-          ! -- identical => normal MF6 storage formulation
+          !    identical => normal MF6 storage formulation
           rho1old = rho1
         end if
         !
-        ! -- specific storage
-        if (this%iconvert(n) /= 0) then
-          if (this%iorig_ss == 0) then
-            if (this%iconf_ss == 0) then
-              zold = bt + DHALF * tthk * snold
-              znew = bt + DHALF * tthk * snnew
-              rate = rho1old * snold * (hold(n) - zold) &
-                     - rho1 * snnew * (hnew(n) - znew)
-            else
-              rate = rho1old * ssd0 - rho1 * ssd1
-            end if
-          else
-            rate = rho1old * snold * hold(n) - rho1 * snnew * hnew(n)
-          end if
-        else
-          rate = rho1old * hold(n) - rho1 * hnew(n)
-        end if
+        ! -- calculate specific storage terms and rate
+        call SsTerms(this%iconvert(n), this%iorig_ss, this%iconf_ss, tp, bt, &
+                      rho1, rho1old, snnew, snold, hnew(n), hold(n), &
+                      aterm, rhsterm, rate)
         !
         ! -- save rate
         this%strgss(n) = rate
@@ -667,18 +601,20 @@ contains
           !
           if(this%integratechanges /= 0) then
             ! -- Integration of storage changes (e.g. when using TVS):
-            ! -- separate the old (start of time step) and new (end of time
-            ! -- step) secondary storage capacities
+            !    separate the old (start of time step) and new (end of time
+            !    step) secondary storage capacities
             sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
             rho2old = sc2old * tled
           else
             ! -- No integration of storage changes: old and new values are
-            ! -- identical => normal MF6 storage formulation
+            !    identical => normal MF6 storage formulation
             rho2old = rho2
           end if
           !
-          ! -- contribution from specific yield
-          rate = rho2old * tthk * snold - rho2 * tthk * snnew
+          ! -- calculate specific yield storage terms and rate
+          call SyTerms(tp, bt, rho2, rho2old, snnew, snold, &
+                       aterm, rhsterm, rate)
+
         end if
         this%strgsy(n) = rate
         !
