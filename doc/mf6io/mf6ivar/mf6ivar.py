@@ -641,10 +641,8 @@ if __name__ == '__main__':
                   'gwf-disu',  # dfn completed  tex updated
                   'gwf-ic',  # dfn completed  tex updated
                   'gwf-npf',  # dfn completed  tex updated
-				  'gwf-tvk',
                   'gwf-buy',  # dfn completed  tex updated
                   'gwf-sto',  # dfn completed  tex updated
-				  'gwf-tvs',
                   'gwf-csub',  # dfn completed  tex updated
                   'gwf-hfb',  # dfn completed  tex updated
                   'gwf-chd',  # dfn completed  tex updated
@@ -688,7 +686,9 @@ if __name__ == '__main__':
                   'utl-obs',
                   'utl-ts',
                   'utl-tas',
-                  'utl-ats']
+                  'utl-ats',
+                  'utl-tvk',
+                  'utl-tvs']
 
     # directories
     dfndir = os.path.join('.', 'dfn')
