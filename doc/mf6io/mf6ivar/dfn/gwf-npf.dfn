@@ -161,7 +161,7 @@ description keyword to indicate that specified K33 is a ratio of K33 divided by 
 
 block options
 name tvk_filerecord
-type record tvk filein tvk_filename
+type record tvk6 filein tvk_filename
 shape
 reader urword
 tagged true
@@ -170,7 +170,7 @@ longname
 description
 
 block options
-name tvk
+name tvk6
 type keyword
 shape
 in_record true

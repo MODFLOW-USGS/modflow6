@@ -26,7 +26,7 @@ description keyword to indicate that specific storage is only calculated when a 
 
 block options
 name tvs_filerecord
-type record tvs filein tvs_filename
+type record tvs6 filein tvs_filename
 shape
 reader urword
 tagged true
@@ -35,7 +35,7 @@ longname
 description
 
 block options
-name tvs
+name tvs6
 type keyword
 shape
 in_record true
