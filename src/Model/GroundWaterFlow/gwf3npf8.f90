@@ -1389,15 +1389,15 @@ module GwfNpfModule
             write(this%iout,'(4x,a)')                                          &
               'VALUES SPECIFIED FOR K33 ARE ANISOTROPY RATIOS AND ' //         &
               'WILL BE MULTIPLIED BY K BEFORE BEING USED IN CALCULATIONS.'
-          case ('TVK')
+          case ('TVK6')
             if (this%intvk /= 0) then
-              errmsg = 'Multiple TVK keywords detected in OPTIONS block. ' // &
-                       'Only one TVK entry allowed.'
+              errmsg = 'Multiple TVK6 keywords detected in OPTIONS block.' // &
+                       ' Only one TVK6 entry allowed.'
               call store_error(errmsg, terminate=.TRUE.)
             end if
             call this%parser%GetStringCaps(keyword)
             if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'TVK keyword must be followed by "FILEIN" ' // &
+              errmsg = 'TVK6 keyword must be followed by "FILEIN" ' // &
                        'then by filename.'
               call store_error(errmsg, terminate=.TRUE.)
             endif

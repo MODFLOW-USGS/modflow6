@@ -1,0 +1,3 @@
+BEGIN OPTIONS
+  [TS6 FILEIN <ts6_filename>]
+END OPTIONS

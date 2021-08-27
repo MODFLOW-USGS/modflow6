@@ -898,15 +898,15 @@ contains
           this%iconf_ss = 1
           this%iorig_ss = 0
           write (this%iout, fmtconfss)
-        case ('TVS')
+        case ('TVS6')
           if (this%intvs /= 0) then
-            errmsg = 'Multiple TVS keywords detected in OPTIONS block. ' // &
-                     'Only one TVS entry allowed.'
+            errmsg = 'Multiple TVS6 keywords detected in OPTIONS block.' // &
+                     ' Only one TVS6 entry allowed.'
             call store_error(errmsg, terminate=.TRUE.)
           end if
           call this%parser%GetStringCaps(keyword)
           if(trim(adjustl(keyword)) /= 'FILEIN') then
-            errmsg = 'TVS keyword must be followed by "FILEIN" ' //          &
+            errmsg = 'TVS6 keyword must be followed by "FILEIN" ' // &
                      'then by filename.'
             call store_error(errmsg, terminate=.TRUE.)
           endif
