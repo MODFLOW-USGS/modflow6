@@ -553,7 +553,10 @@ contains
         bt = this%dis%bot(n)
         !
         ! -- aquifer saturation
-        if (this%iconvert(n) /= 0) then
+        if (this%iconvert(n) == 0) then
+          snold = DONE
+          snnew = DONE
+        else
           snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
           snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
         end if
