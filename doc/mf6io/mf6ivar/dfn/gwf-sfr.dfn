@@ -286,14 +286,6 @@ optional false
 longname maximum number reaches
 description integer value specifying the number of stream reaches.  There must be NREACHES entries in the PACKAGEDATA block.
 
-block dimensions
-name ntables
-type integer
-reader urword
-optional false
-longname number of tables
-description value specifying the number of cross-section tables that will be used to define the station elevation data for reach cross-sections. If NTABLES is not specified, a default value of zero is used.
-
 
 # --------------------- gwf sfr packagedata ---------------------
 
@@ -451,6 +443,61 @@ optional true
 longname well name
 description REPLACE boundname {'{#1}': 'stream reach'}
 
+# --------------------- gwf srf crosssections ---------------------
+
+block crosssections
+name crosssections
+type recarray rno tab6 filein tab6_filename
+shape
+valid
+optional true
+reader urword
+longname
+description
+
+block crosssections
+name rno
+type integer
+shape
+tagged false
+in_record true
+reader urword
+longname reach number for this entry
+description integer value that defines the reach number associated with the specified cross-section table file on the line. RNO must be greater than zero and less than or equal to NREACHES. The program will also terminate with an error if table information for a reach is specified more than once.
+numeric_index true
+
+block crosssections
+name tab6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname head keyword
+description keyword to specify that record corresponds to a cross-section table file.
+
+block crosssections
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block crosssections
+name tab6_filename
+type string
+preserve_case true
+in_record true
+reader urword
+optional false
+tagged false
+longname table file name
+description character string that defines the path and filename for the file containing cross-section table data for the reach. The TAB6\_FILENAME file includes the number of entries in the file and the station elevation data in terms of the fractional width and the reach depth. Instructions for creating the TAB6\_FILENAME input file are provided in SFR Reach Cross-Section Table Input File section.
 
 # --------------------- gwf sfr connectiondata ---------------------
 
@@ -487,59 +534,6 @@ numeric_index true
 support_negative_index true
 
 
-# --------------------- gwf srf tables ---------------------
-
-block tables
-name tables
-type recarray rno tab6 filein tab6_filename
-shape (ntables)
-reader urword
-longname
-description
-
-block tables
-name rno
-type integer
-shape
-tagged false
-in_record true
-reader urword
-longname reach number for this entry
-description integer value that defines the reach number associated with the specified table file on the line. RNO must be greater than zero and less than or equal to NREACHES. The program will also terminate with an error if table information for a reach is specified more than once.
-numeric_index true
-
-block tables
-name tab6
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname head keyword
-description keyword to specify that record corresponds to a table file.
-
-block tables
-name filein
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname file keyword
-description keyword to specify that an input filename is expected next.
-
-block tables
-name tab6_filename
-type string
-preserve_case true
-in_record true
-reader urword
-optional false
-tagged false
-longname table file name
-description character string that defines the path and filename for the file containing cross-section table data for the reach. The TAB6\_FILENAME file includes the number of entries in the file and the station elevation data in terms of the fractional width and the reach depth. Instructions for creating the TAB6\_FILENAME input file are provided in SFR Reach Cross-Section Table Input File section.
 
 # --------------------- gwf sfr diversions ---------------------
 
