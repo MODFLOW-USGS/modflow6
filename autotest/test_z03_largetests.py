@@ -117,7 +117,7 @@ def run_mf6(sim):
 
 def set_make_comparison(test):
     compare_tests = {
-        "test1004_mvlake_laksfr_tr": ("6.2.1",),
+        "test1004_mvlake_laksfr_tr": ("6.2.2",),
         "test1004_mvlake_lak_tr": ("6.2.1",),
         "test1003_MNW2_Fig28": ("6.2.1",),
         "test1001_Peterson": ("6.2.1",),
