@@ -544,7 +544,7 @@ module SfrModule
       call this%define_listlabel()
       !
       ! -- Define default cross-section length
-      this%ncrosspts = 2 * this%maxbound
+      this%ncrosspts = this%maxbound
       !
       ! -- Allocate arrays in package superclass
       call this%sfr_allocate_arrays()
@@ -777,7 +777,6 @@ module SfrModule
       integer(I4B) :: n, ierr, ival
       logical :: isfound, endOfBlock
       integer(I4B) :: i
-      integer(I4B) :: j
       integer(I4B) :: ii
       integer(I4B) :: jj
       integer(I4B) :: iaux
@@ -968,13 +967,9 @@ module SfrModule
       ipos = 1
       this%iacross(1) = ipos
       do i = 1, this%maxbound
-        do j = 1, 2
-          this%station(ipos) = DZERO
-          this%station(ipos + 1) = this%width(i)
-          this%elevation(ipos) = this%strtop(i)
-          this%elevation(ipos + 1) = this%strtop(i)
-        end do
-        ipos = ipos + 2
+        this%station(ipos) = this%width(i)
+        this%elevation(ipos) = this%strtop(i)
+        ipos = ipos + 1
         this%iacross(i+1) = ipos 
       end do
       !
@@ -4878,8 +4873,12 @@ module SfrModule
       i0 = this%iacross(n)
       i1 = this%iacross(n + 1) - 1
       npts = i1 + 1 - i0
-      area_wet = get_cross_section_area(npts, this%station(i0:i1), &
-                                        this%elevation(i0:i1), depth)
+      if (npts > 1) then
+        area_wet = get_cross_section_area(npts, this%station(i0:i1), &
+                                          this%elevation(i0:i1), depth)
+      else
+        area_wet = this%station(i0) * depth
+      end if
       !
       ! -- return
       return
@@ -4907,8 +4906,16 @@ module SfrModule
       i0 = this%iacross(n)
       i1 = this%iacross(n + 1) - 1
       npts = i1 + 1 - i0
-      perimeter_wet = get_wetted_perimeter(npts, this%station(i0:i1), &
-                                           this%elevation(i0:i1), depth)
+      if (npts > 1) then
+        perimeter_wet = get_wetted_perimeter(npts, this%station(i0:i1), &
+                                            this%elevation(i0:i1), depth)
+      else
+        if (depth > DZERO) then
+          perimeter_wet = this%station(i0)
+        else
+          perimeter_wet = DZERO
+        end if
+      end if
       !
       ! -- return
       return
@@ -4935,7 +4942,11 @@ module SfrModule
       i0 = this%iacross(n)
       i1 = this%iacross(n + 1) - 1
       npts = i1 + 1 - i0
-      top_width = get_saturated_topwidth(npts, this%station(i0:i1))
+      if (npts > 1) then
+        top_width = get_saturated_topwidth(npts, this%station(i0:i1))
+      else
+        top_width = this%station(i0)
+      end if
       surface_area = top_width * this%length(n)
       !
       ! -- return
@@ -4988,9 +4999,13 @@ module SfrModule
       i0 = this%iacross(n)
       i1 = this%iacross(n + 1) - 1
       npts = i1 + 1 - i0
-      top_width_wet = get_wetted_topwidth(npts, this%station(i0:i1), &
-                                          this%elevation(i0:i1), depth)
-      top_width_wet = top_width_wet * sat
+      if (npts > 1) then
+        top_width_wet = get_wetted_topwidth(npts, this%station(i0:i1), &
+                                            this%elevation(i0:i1), depth)
+        top_width_wet = top_width_wet * sat
+      else
+        top_width_wet = sat * this%station(i0)
+      end if
       !
       ! -- return
       return
