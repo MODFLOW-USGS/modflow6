@@ -12,7 +12,7 @@ utilities_sources = files(
     'BudgetObject.f90',
     'BudgetTerm.f90',
     'comarg.f90',
-    'compilerversion.f90',
+    'compilerversion.F90',
     'Constants.f90',
     'defmacro.f90',
     'genericutils.f90',
