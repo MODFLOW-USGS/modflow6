@@ -15,6 +15,8 @@ module GwfSfrCrossSectionUtilsModule
 
   implicit none
   private
+  public :: get_saturated_topwidth
+  public :: get_wetted_topwidth
   public :: get_wetted_perimeter
   public :: get_cross_section_area
   public :: SfrCrossSectionType
@@ -27,6 +29,60 @@ module GwfSfrCrossSectionUtilsModule
 
 contains
 
+  !> @brief Calculate the saturated top width for a reach
+  !!
+  !! Function to calculate the saturated top width for a reach using the
+  !! cross-section station data .
+  !!
+  !! @return      w               saturated top width
+  !<
+  function get_saturated_topwidth(npts, x) result(w)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts             !< number of station elevation data for a reach
+    real(DP), dimension(npts), intent(in) :: x   !< cross-section station distances (x-distance)
+    ! -- local variables
+    real(DP) :: w
+    !
+    ! -- calculate the saturated top width
+    w = x(npts) - x(1)
+    !
+    ! -- return
+    return
+  end function get_saturated_topwidth
+
+  !> @brief Calculate the wetted top width for a reach
+  !!
+  !! Function to calculate the wetted top width for a reach using the
+  !! cross-section station elevation data given a passed elevation.
+  !!
+  !! @return      w               wetted top width
+  !<
+  function get_wetted_topwidth(npts, x, z, d) result(w)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts             !< number of station elevation data for a reach
+    real(DP), dimension(npts), intent(in) :: x   !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: z   !< cross-section elevation data
+    real(DP), intent(in) :: d                    !< depth to evaluate cross-section
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: w
+    real(DP), dimension(npts-1) :: widths
+    !
+    ! -- intitialize the wetted perimeter for the reach
+    w = DZERO
+    !
+    ! -- calculate the wetted top width for each line segment
+    call get_wetted_topwidths(npts, x, z, d, widths)
+    !
+    ! -- calculate the wetted top widths
+    do n = 1, npts - 1
+      w = w + widths(n)
+    end do
+    !
+    ! -- return
+    return
+  end function get_wetted_topwidth
+  
   !> @brief Calculate the wetted perimeter for a reach
   !!
   !! Function to calculate the wetted perimeter for a reach using the
@@ -201,10 +257,14 @@ contains
       ! -- calculate the cross-sectional area for the segment
       xlen = x1 - x0
       if (xlen > DZERO) then
+        !
+        ! -- add the area above zmax
         if (e > zmax) then
           a(n) = xlen * (e - zmax)
         end if
-        if (e > zmin) then 
+        !
+        ! -- add the area below zmax
+        if (zmax /= zmin .and. e > zmin) then 
           a(n) = a(n) + DHALF * (e - zmin)
         end if
       end if
@@ -213,6 +273,50 @@ contains
     ! -- return
     return
   end subroutine get_cross_section_areas
+
+  !> @brief Calculate the wetted top widths for each line segment
+  !!
+  !! Subroutine to calculate the wetted top width for each line segment
+  !! that defines the reach using the cross-section station elevation 
+  !! data given a passed elevation.
+  !!
+  !<
+  subroutine get_wetted_topwidths(npts, x, z, d, w)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts             !< number of station elevation data for a reach
+    real(DP), dimension(npts), intent(in) :: x   !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: z   !< cross-section elevation data
+    real(DP), intent(in) :: d                    !< depth to evaluate cross-section
+    real(DP), dimension(npts-1) :: w             !< wetted top widths for each line segment
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: x0
+    real(DP) :: x1
+    real(DP) :: z0
+    real(DP) :: z1
+    real(DP) :: zmax
+    real(DP) :: zmin
+    !
+    ! -- iterate over the station-elevation data
+    do n = 1, npts - 1
+      !
+      ! -- initialize station-elevation data for segment
+      x0 = x(n)
+      x1 = x(n+1)
+      z0 = z(n)
+      z1 = z(n+1)
+      !
+      ! -- get the start and end station position of the wetted segment
+      call get_wetted_station(x0, x1, z0, z1, zmax, zmin, d)
+      !
+      ! -- calculate the wetted top width for the segment
+      w(n) = x1 - x0
+    end do
+    !
+    ! -- return
+    return
+  end subroutine get_wetted_topwidths
+
 
   !> @brief Calculate the station values for the wetted portion of the cross-section 
   !!

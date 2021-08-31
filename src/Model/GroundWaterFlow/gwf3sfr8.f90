@@ -31,7 +31,9 @@ module SfrModule
   use SimModule, only: count_errors, store_error, store_error_unit,              &
                        store_warning
   use SimVariablesModule, only: errmsg, warnmsg
-  use GwfSfrCrossSectionUtilsModule, only: get_wetted_perimeter, &
+  use GwfSfrCrossSectionUtilsModule, only: get_saturated_topwidth, &
+                                           get_wetted_topwidth, &
+                                           get_wetted_perimeter, &
                                            get_cross_section_area
   !
   implicit none
@@ -4873,7 +4875,6 @@ module SfrModule
       integer(I4B) :: npts
       !
       ! -- Calculate wetted area
-      ! area_wet = depth * this%width(n)
       i0 = this%iacross(n)
       i1 = this%iacross(n + 1) - 1
       npts = i1 + 1 - i0
@@ -4903,7 +4904,6 @@ module SfrModule
       integer(I4B) :: npts
       !
       ! -- Calculate wetted perimeter
-      ! perimeter_wet = this%width(n)
       i0 = this%iacross(n)
       i1 = this%iacross(n + 1) - 1
       npts = i1 + 1 - i0
@@ -4925,9 +4925,18 @@ module SfrModule
       ! -- dummy variables
       class(SfrType) :: this         !< SfrType object
       integer(I4B), intent(in) :: n  !< reach number
+      ! -- local variables
+      integer(I4B) :: i0
+      integer(I4B) :: i1
+      integer(I4B) :: npts
+      real(DP) :: top_width
       !
       ! -- Calculate surface area
-      surface_area = this%width(n) * this%length(n)
+      i0 = this%iacross(n)
+      i1 = this%iacross(n + 1) - 1
+      npts = i1 + 1 - i0
+      top_width = get_saturated_topwidth(npts, this%station(i0:i1))
+      surface_area = top_width * this%length(n)
       !
       ! -- return
       return
@@ -4970,10 +4979,18 @@ module SfrModule
       real(DP), intent(in) :: depth  !< reach depth
       ! -- local variables
       real(DP) :: sat
+      integer(I4B) :: i0
+      integer(I4B) :: i1
+      integer(I4B) :: npts
       !
       ! -- Calculate wetted top width
       sat = sCubicSaturation(DEM5, DZERO, depth, DEM5)
-      top_width_wet = this%width(n) * sat
+      i0 = this%iacross(n)
+      i1 = this%iacross(n + 1) - 1
+      npts = i1 + 1 - i0
+      top_width_wet = get_wetted_topwidth(npts, this%station(i0:i1), &
+                                          this%elevation(i0:i1), depth)
+      top_width_wet = top_width_wet * sat
       !
       ! -- return
       return
