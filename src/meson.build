@@ -5,13 +5,12 @@ subdir('Timing')
 subdir('Utilities')
 
 modflow_sources = files(
-    'mf6.f90',
     'mf6core.f90',
     'mf6lists.f90',
     'SimulationCreate.f90'
 )
 
-executable('mf6',
+mf6_lib = static_library('mf6_lib',
     exchange_sources,
     model_geometry_sources, 
     model_groundwaterflow_sources, 
@@ -28,3 +27,5 @@ executable('mf6',
     utilities_sources,
     modflow_sources
 )
+
+executable('mf6', 'mf6.f90', link_with: mf6_lib) 
