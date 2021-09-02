@@ -430,6 +430,13 @@ contains
       call store_error(errmsg)
     end if
 
+    ! GNC not allowed
+    if (exchange%ingnc /= 0) then
+      write(errmsg, '(1x,a)') 'Ghost node correction not supported '//           &
+                              'for interface model'
+      call store_error(errmsg)
+    end if
+
   end subroutine validateGwfExchange
 
   !> @brief Deallocate all resources
