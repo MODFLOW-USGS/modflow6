@@ -3,7 +3,7 @@
 ../../../src/Utilities/BlockParser.f90
 ../../../src/Utilities/Budget.f90
 ../../../src/Utilities/Constants.f90
-../../../src/Utilities/compilerversion.f90
+../../../src/Utilities/compilerversion.F90
 ../../../src/Utilities/genericutils.f90
 ../../../src/Utilities/InputOutput.f90
 ../../../src/Utilities/kind.f90
@@ -14,4 +14,3 @@
 ../../../src/Utilities/Sim.f90
 ../../../src/Utilities/SimVariables.f90
 ../../../src/Utilities/version.f90
-
