@@ -1,0 +1,142 @@
+# Parts of configuration file are based on the examples in this repository:
+# https://github.com/oneapi-src/oneapi-ci
+#
+# Which have the following copyright:
+# SPDX-FileCopyrightText: 2020 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
+name: Intel compiler - meson
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+env:
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17427/l_HPCKit_p_2021.1.0.2684_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17398/m_HPCKit_p_2021.1.0.2681_offline.dmg
+  WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
+  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
+  MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
+  FC: ifort
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+          - os: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2.3.4
+
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v2.2.2
+        with:
+          python-version: 3.8
+
+      - name: cache install ifort on linux
+        if: runner.os == 'Linux'
+        id: cache-install-linux
+        uses: actions/cache@v2
+        with:
+          path: |
+            /opt/intel/oneapi
+          key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
+
+      - name: install ifort on linux
+        if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
+        run: |
+          .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB
+
+      - name: cache install ifort on macos
+        if: runner.os == 'macOS'
+        id: cache-install-macos
+        uses: actions/cache@v2
+        with:
+          path: /opt/intel/oneapi
+          key: install-${{ env.MACOS_HPCKIT_URL }}-${{ env.MACOS_FORTRAN_COMPONENTS }}
+
+      - name: install ifort on macos
+        if: runner.os == 'macOS' && steps.cache-install-macos.outputs.cache-hit != 'true'
+        run: |
+          .github/intel-scripts/install_macos.sh $MACOS_HPCKIT_URL $MACOS_FORTRAN_COMPONENTS
+
+      - name: cache install ifort on windows
+        if: runner.os == 'Windows'
+        id: cache-install-windows
+        uses: actions/cache@v2
+        with:
+          path: C:\Program Files (x86)\Intel\oneAPI
+          key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_windows.sh') }}
+
+      - name: install ifort on windows
+        if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
+        run: |
+          .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
+
+      - name: Install python packages
+        run: |
+          .github/common/install-python-std.sh
+
+      - name: Print python package versions
+        run: |
+          .github/common/python-version.sh
+
+      - name: Set and print branch name
+        run: |
+          .github/common/git-branch-export.sh
+
+      - name: Get regression test files
+        run: |
+          .github/common/get-regression-files.sh
+
+      - name: Check out the correct regression test branch
+        run: |
+          .github/common/checkout-regression-branch.sh
+
+      - name: Update flopy MODFLOW 6 classes
+        run: |
+          .github/common/update-flopy.sh
+
+      - name: Install meson
+        run: pip install meson ninja
+
+      - name: Build MODFLOW 6 (Linux or macOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          meson setup builddir
+          meson compile -C builddir
+      
+      - name: Build MODFLOW 6 (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          "C:/Program Files (x86)/Intel/oneAPI/setvars.bat"
+          meson setup builddir
+          meson compile -C builddir
+
+      - name: exclude unused files from cache on linux
+        if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
+        run: |
+          .github/intel-scripts/cache_exclude_linux.sh
+
+      - name: exclude unused files from cache on windows
+        if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          .github/intel-scripts/cache_exclude_windows.sh
