@@ -80,7 +80,7 @@ jobs:
 
     - name: Setup modflow
       run: |
-        meson setup builddir
+        meson setup builddir --buildtype=release
 
     - name: Build modflow
       run: |

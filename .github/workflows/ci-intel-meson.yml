@@ -119,7 +119,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
           source /opt/intel/oneapi/setvars.sh
-          meson setup builddir
+          meson setup builddir --buildtype=release
           meson compile -C builddir
       
       - name: Build MODFLOW 6 (Windows)
@@ -127,7 +127,7 @@ jobs:
         shell: cmd
         run: |
           "C:/Program Files (x86)/Intel/oneAPI/setvars.bat"
-          meson setup builddir
+          meson setup builddir --buildtype=release
           meson compile -C builddir
 
       - name: exclude unused files from cache on linux
