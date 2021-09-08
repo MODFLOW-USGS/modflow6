@@ -111,7 +111,7 @@ modflow_sources = files(
     'Utilities' / 'comarg.f90',
     'Utilities' / 'compilerversion.F90',
     'Utilities' / 'Constants.f90',
-    'Utilities' / 'defmacro.f90',
+    'Utilities' / 'defmacro.F90',
     'Utilities' / 'genericutils.f90',
     'Utilities' / 'HashTable.f90',
     'Utilities' / 'HeadFileReader.f90',
