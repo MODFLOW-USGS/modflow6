@@ -129,7 +129,7 @@ def get_model(idx, dir):
         iconvert=laytyp[idx],
         ss=ss[idx],
         sy=sy[idx],
-        steady_state={0: True, 2: True},
+        steady_state={0: True, 1: False, 2: True},
         transient={1: True},
     )
 

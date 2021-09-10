@@ -1890,30 +1890,34 @@ module BndModule
           ! -- If cell is no-flow or constant-head, then ignore it.
           rrate = DZERO
           if (node > 0) then
-              !
-              ! -- Use simval, which was calculated in cq()
-              rrate = flow(i)
-              !
-              ! -- Print the individual rates if the budget is being printed
-              !    and PRINT_FLOWS was specified (iprflow < 0)
-              if (ibudfl /= 0) then
-                if (iprflow /= 0) then
+            !
+            ! -- Use simval, which was calculated in cq()
+            rrate = flow(i)
+            !
+            ! -- Print the individual rates if the budget is being printed
+            !    and PRINT_FLOWS was specified (iprflow < 0).  Rates are only
+            !    printed only if ibound > 0.  This is different from budget
+            !    output where entries are written to the binary file even if
+            !    ibound <= 0.
+            if (ibudfl /= 0) then
+              if (iprflow /= 0) then
+                if (ibound(node) > 0) then
                   !
                   ! -- set nodestr and write outputtab table
                   nodeu = dis%get_nodeuser(node)
                   call dis%nodeu_to_string(nodeu, nodestr)
-                  call outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                  call outputtab%print_list_entry(i, trim(adjustl(nodestr)),   &
                                                       rrate, bname)
                 end if
               end if
+            end if
             !
             ! -- If saving cell-by-cell flows in list, write flow
             if (ibinun /= 0) then
               n2 = i
               if (present(imap)) n2 = imap(i)
-              call dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
-                                                  naux, auxvar(:,i),          &
-                                                  olconv2=.FALSE.)
+              call dis%record_mf6_list_entry(ibinun, node, n2, rrate, naux,    &
+                                             auxvar(:,i), olconv2=.FALSE.)
             end if
           end if
           !
