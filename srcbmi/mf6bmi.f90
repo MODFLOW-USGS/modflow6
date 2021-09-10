@@ -439,7 +439,7 @@ contains
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
-    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the integer array
     integer :: bmi_status                                   !< BMI status code
     ! -- local variables
     character(len=LENMEMPATH) :: mem_path
