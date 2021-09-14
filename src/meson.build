@@ -61,6 +61,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'GwfNpfGridData.f90',
     'Model' / 'ModelUtilities' / 'GwfNpfOptions.f90',
     'Model' / 'ModelUtilities' / 'GwfStorageUtils.f90',
+    'Model' / 'ModelUtilities' / 'GwtSsminput.f90',
     'Model' / 'ModelUtilities' / 'Mover.f90',
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
     'Model' / 'ModelUtilities' / 'UzfCellGroup.f90',
