@@ -1,10 +1,10 @@
-!> @brief This module contains the GwtSsmInput Module 
+!> @brief This module contains the GwtSpc Module
 !!
 !! This module contains the code for reading and storing a
 !! generic input file of source and sink concentrations.
 !!
 !<
-module GwtSsmInputModule
+module GwtSpcModule
   
   use KindModule,                   only: DP, LGP, I4B
   use ConstantsModule,              only: LENPACKAGENAME, LENMODELNAME, &
@@ -14,39 +14,45 @@ module GwtSsmInputModule
   use SimModule,                    only: store_error, count_errors
   use MemoryHelperModule,           only: create_mem_path
   use BlockParserModule,            only: BlockParserType
+  use BaseDisModule,                only: DisBaseType
   use TimeSeriesManagerModule,      only: TimeSeriesManagerType, tsmanager_cr
+  use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType, tasmanager_cr
   use TableModule,                  only: TableType, table_cr
 
   implicit none
   private
-  public :: GwtSsmInputType
+  public :: GwtSpcType
 
-  character(len=LENFTYPE)       :: ftype = 'SSMI'
-  character(len=LENPACKAGENAME) :: text  = '       SSM INPUT'
+  character(len=LENFTYPE)       :: ftype = 'SPC'
+  character(len=LENPACKAGENAME) :: text  = 'STRESS PACK CONC'
 
-  !> @brief Derived type for managing SSMI input 
+  !> @brief Derived type for managing SPC input 
   !!
-  !! This derived type will read and process an SSMI input file,
+  !! This derived type will read and process an SPC input file,
   !! make time series interpolations, and provide concentrations to
   !! the SSM package that correspond to an individual GWF stress
   !! package.
   !!
   !<
-  type :: GwtSsmInputType
+  type :: GwtSpcType
     
     character(len=LENMODELNAME)                 :: name_model      = ''         !< the name of the model that contains this package
     character(len=LENPACKAGENAME)               :: packName        = ''         !< name of the package
+    character(len=LENPACKAGENAME)               :: packNameFlow    = ''         !< name of the corresponding flow package
     character(len=LENMEMPATH)                   :: memoryPath      = ''         !< the location in the memory manager where the variables are stored
-    integer(I4B), pointer                       :: id => null()                 !< id number for this ssmi package
+    integer(I4B), pointer                       :: id => null()                 !< id number for this spc package
     integer(I4B), pointer                       :: inunit => null()             !< unit number for input
     integer(I4B), pointer                       :: iout => null()               !< unit number for output
     integer(I4B), pointer                       :: maxbound => null()           !< length of dblvec
     integer(I4B), pointer                       :: ionper => null()             !< stress period for next data
     integer(I4B), pointer                       :: lastonper => null()          !< last value of ionper (for checking)
     integer(I4B), pointer                       :: iprpak => null()             !< flag for printing input
+    logical(LGP), pointer                       :: readasarrays => null()       !< flag for reading concentrations as an array
     real(DP), dimension(:), pointer, contiguous :: dblvec => null()             !< vector of floats read from file
+    class(DisBaseType), pointer                 :: dis => null()                !< model discretization object
     type(BlockParserType)                       :: parser                       !< parser object for reading blocks of information
     type(TimeSeriesManagerType), pointer        :: TsManager => null()          !< time series manager
+    type(TimeArraySeriesManagerType), pointer   :: TasManager => null()         !< time array series manager
     type(TableType), pointer                    :: inputtab => null()           !< input table object 
     
   contains
@@ -58,33 +64,38 @@ module GwtSsmInputModule
     procedure :: allocate_arrays
     procedure :: get_value
     procedure :: set_value
-    procedure :: ssmi_rp
-    procedure :: ssmi_ad
-    procedure :: ssmi_da
+    procedure :: spc_rp
+    procedure :: spc_rp_list
+    procedure :: spc_rp_array
+    procedure :: spc_ad
+    procedure :: spc_da
     procedure :: read_check_ionper
+    procedure :: check_flow_package
     
-  end type GwtSsmInputType
+  end type GwtSpcType
   
   contains
   
-  !> @ brief Initialize the SSMI type
+  !> @ brief Initialize the SPC type
   !!
-  !! Initialize the SSMI object by setting up the parser,
+  !! Initialize the SPC object by setting up the parser,
   !! and time series manager, reading options and dimensions,
   !! and allocating memory.
   !!
   !<
-  subroutine initialize(this, id, inunit, iout, name_model)
+  subroutine initialize(this, dis, id, inunit, iout, name_model, packNameFlow)
     ! -- dummy variables
-    class(GwtSsmInputType) :: this              !<  GwtSsmInputType
-    integer(I4B), intent(in) :: id              !<  id number for this ssmi package
-    integer(I4B), intent(in) :: inunit          !<  unit number for input
-    integer(I4B), intent(in) :: iout            !<  unit number for output
-    character(len=*), intent(in) :: name_model  !<  character string containing model name
+    class(GwtSpcType) :: this                       !<  GwtSpcType
+    class(DisBaseType), pointer, intent(in) :: dis  !< discretization package
+    integer(I4B), intent(in) :: id                  !<  id number for this spc package
+    integer(I4B), intent(in) :: inunit              !<  unit number for input
+    integer(I4B), intent(in) :: iout                !<  unit number for output
+    character(len=*), intent(in) :: name_model      !<  character string containing model name
+    character(len=*), intent(in) :: packNameflow    !<  character string containing name of corresponding flow package
     ! -- local
     !
     ! -- construct the memory path
-    write(this%packName,'(a, i0)') 'SSMI' // '-', id
+    write(this%packName,'(a, i0)') 'SPC' // '-', id
     this%name_model = name_model
     this%memoryPath = create_mem_path(this%name_model, this%packName)
     !
@@ -95,24 +106,34 @@ module GwtSsmInputModule
     this%id = id
     this%inunit = inunit
     this%iout = iout
+    this%packNameFlow = packNameFlow
+    !
+    ! -- set pointers
+    this%dis => dis
     !
     ! -- Setup the parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
     ! -- Setup the time series manager
     call tsmanager_cr(this%TsManager, this%iout)
+    call tasmanager_cr(this%TasManager, dis, this%iout)
     !
     ! -- read options
     call this%read_options()
     !
     ! -- read dimensions
-    call this%read_dimensions()
+    if (this%readasarrays) then
+      this%maxbound = this%dis%get_ncpl()
+    else
+      call this%read_dimensions()
+    end if
     !
     ! -- allocate arrays
     call this%allocate_arrays()
     !
     ! -- Now that time series are read, call define
     call this%tsmanager%tsmanager_df()
+    call this%tasmanager%tasmanager_df()
     !
     ! -- return
     return
@@ -127,7 +148,7 @@ module GwtSsmInputModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(GwtSsmInputType) :: this  !< GwtSsmInputType object
+    class(GwtSpcType) :: this  !< GwtSpcType object
     !
     ! -- allocate scalars in memory manager
     call mem_allocate(this%id, 'ID', this%memoryPath)
@@ -137,9 +158,11 @@ module GwtSsmInputModule
     call mem_allocate(this%ionper, 'IONPER', this%memoryPath)
     call mem_allocate(this%lastonper, 'LASTONPER', this%memoryPath)
     call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+    call mem_allocate(this%readasarrays, 'READASARRAYS', this%memoryPath)
     !
     ! -- allocate special derived types
     allocate(this%TsManager)
+    allocate(this%TasManager)
     !
     ! -- initialize
     this%id = 0
@@ -149,6 +172,7 @@ module GwtSsmInputModule
     this%ionper = 0
     this%lastonper = 0
     this%iprpak = 0
+    this%readasarrays = .false.
     !
     ! -- return
     return
@@ -162,14 +186,17 @@ module GwtSsmInputModule
   subroutine read_options(this)
     ! -- modules
     ! -- dummy
-    class(GwtSsmInputType) :: this
+    class(GwtSpcType) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword, fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtiprpak =                                 &
-      "(4x,'SSMI INFORMATION WILL BE PRINTED TO LISTING FILE.')"
+      "(4x,'SPC INFORMATION WILL BE PRINTED TO LISTING FILE.')"
+    character(len=*), parameter :: fmtreadasarrays =                           &
+      "(4x,'SPC INFORMATION WILL BE READ AS ARRAYS RATHER THAN IN LIST &
+      &FORMAT.')"
     character(len=*), parameter :: fmtts = &
       "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
     !
@@ -179,7 +206,7 @@ module GwtSsmInputModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING SSMI OPTIONS'
+      write(this%iout,'(1x,a)')'PROCESSING SPC OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -188,6 +215,9 @@ module GwtSsmInputModule
           case ('PRINT_INPUT')
             this%iprpak = 1
             write(this%iout, fmtiprpak)
+          case ('READASARRAYS')
+            this%readasarrays = .true.
+            write(this%iout, fmtreadasarrays)
           case ('TS6')
             call this%parser%GetStringCaps(keyword)
             if(trim(adjustl(keyword)) /= 'FILEIN') then
@@ -199,12 +229,12 @@ module GwtSsmInputModule
             write(this%iout,fmtts)trim(fname)
             call this%TsManager%add_tsfile(fname, this%inunit)
           case default
-            write(errmsg,'(4x,a,a)') 'UNKNOWN SSMI OPTION: ', trim(keyword)
+            write(errmsg,'(4x,a,a)') 'UNKNOWN SPC OPTION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF SSMI OPTIONS'
+      write(this%iout,'(1x,a)')'END OF SPC OPTIONS'
     end if
     !
     ! -- Return
@@ -218,7 +248,7 @@ module GwtSsmInputModule
   !<
   subroutine read_dimensions(this)
     ! -- dummy variables
-    class(GwtSsmInputType),intent(inout) :: this  !< BndType object
+    class(GwtSpcType), intent(inout) :: this  !< GwtSpcType object
     ! -- local variables
     character(len=LINELENGTH) :: keyword
     logical(LGP) :: isfound
@@ -278,7 +308,7 @@ module GwtSsmInputModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(GwtSsmInputType) :: this      !< GwtSsmInputType object
+    class(GwtSpcType) :: this      !< GwtSpcType object
     ! -- local
     integer(I4B) :: i
     !
@@ -300,7 +330,7 @@ module GwtSsmInputModule
   !!
   !<
   function get_value(this, ientry) result(value)
-    class(GwtSsmInputType) :: this      !< GwtSsmInputType object
+    class(GwtSpcType) :: this           !< GwtSpcType object
     integer(I4B), intent(in) :: ientry  !< index of the data to return
     real(DP) :: value
     value = this%dblvec(ientry)
@@ -313,19 +343,15 @@ module GwtSsmInputModule
   !!  if the next period block corresponds to this time step. 
   !!
   !<
-  subroutine ssmi_rp(this)
+  subroutine spc_rp(this)
     ! -- modules
     use TdisModule, only: kper, nper
     ! -- dummy
-    class(GwtSsmInputType),intent(inout) :: this  !< GwtSsmInputType object
+    class(GwtSpcType), intent(inout) :: this  !< GwtSpcType object
     ! -- local
-    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: tabletext
     logical :: isfound
-    logical :: endOfBlock
     integer(I4B) :: ierr
-    integer(I4B) :: ival
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -369,49 +395,11 @@ module GwtSsmInputModule
       !    Do not reset as we are using a "settings" approach here in which the
       !    settings remain the same until the user changes them.
       ! call this%TsManager%Reset(this%packName)
-      !
-      ! -- setup table for period data
-      if (this%iprpak /= 0) then
-        !
-        ! -- reset the input table object
-        title = trim(adjustl(text)) // ' PACKAGE (' //                      &
-                'SSMI' //') DATA FOR PERIOD'
-        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
-        call table_cr(this%inputtab, ftype, title)
-        call this%inputtab%table_df(1, 3, this%iout, finalize=.FALSE.)
-        tabletext = 'NUMBER'
-        call this%inputtab%initialize_column(tabletext, 10, alignment=TABCENTER)
-        tabletext = 'DATA TYPE'
-        call this%inputtab%initialize_column(tabletext, 20, alignment=TABLEFT)
-        write(tabletext, '(a,1x,i6)') 'VALUE'
-        call this%inputtab%initialize_column(tabletext, 15, alignment=TABCENTER)
-      end if
-      !
-      ! -- read data
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-
-        ival = this%parser%GetInteger()
-        if (ival < 1 .or. ival > this%maxbound) then
-          write(errmsg,'(2(a,1x),i0,a)')                                        &
-            'IVAL must be greater than 0 and',                                  &
-            'less than or equal to ', this%maxbound, '.'
-          call store_error(errmsg)
-          cycle
-        end if
-        !
-        ! -- set stress period data
-        call this%set_value(ival)
-        !
-        ! -- write line to table
-        if (this%iprpak /= 0) then
-          call this%parser%GetCurrentLine(line)
-          call this%inputtab%line_to_columns(line)
-        end if
-      end do
-      if (this%iprpak /= 0) then
-        call this%inputtab%finalize_table()
+      call this%TasManager%Reset(this%packName)
+      if (this%readasarrays) then
+        call this%spc_rp_array(line)
+      else
+        call this%spc_rp_list()
       end if
     !
     ! -- using data from the last stress period
@@ -426,7 +414,158 @@ module GwtSsmInputModule
     !
     ! -- return
     return
-  end subroutine ssmi_rp
+  end subroutine spc_rp
+  
+  !> @ brief spc_rp_list
+  !!
+  !!  Read the stress period data in list format
+  !!
+  !<
+  subroutine spc_rp_list(this)
+    ! -- modules
+    use TdisModule, only: kper
+    ! -- dummy
+    class(GwtSpcType), intent(inout) :: this  !< GwtSpcType object
+    ! -- local
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tabletext
+    logical :: endOfBlock
+    integer(I4B) :: ival
+    !
+    !
+    ! -- setup table for period data
+    if (this%iprpak /= 0) then
+      !
+      ! -- reset the input table object
+      title = trim(adjustl(text)) // ' PACKAGE (' //                      &
+              'SPC' //') DATA FOR PERIOD'
+      write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+      call table_cr(this%inputtab, ftype, title)
+      call this%inputtab%table_df(1, 3, this%iout, finalize=.FALSE.)
+      tabletext = 'NUMBER'
+      call this%inputtab%initialize_column(tabletext, 10, alignment=TABCENTER)
+      tabletext = 'DATA TYPE'
+      call this%inputtab%initialize_column(tabletext, 20, alignment=TABLEFT)
+      write(tabletext, '(a,1x,i6)') 'VALUE'
+      call this%inputtab%initialize_column(tabletext, 15, alignment=TABCENTER)
+    end if
+    !
+    ! -- read data
+    do
+      call this%parser%GetNextLine(endOfBlock)
+      if (endOfBlock) exit
+
+      ival = this%parser%GetInteger()
+      if (ival < 1 .or. ival > this%maxbound) then
+        write(errmsg,'(2(a,1x),i0,a)')                                        &
+          'IVAL must be greater than 0 and',                                  &
+          'less than or equal to ', this%maxbound, '.'
+        call store_error(errmsg)
+        cycle
+      end if
+      !
+      ! -- set stress period data
+      call this%set_value(ival)
+      !
+      ! -- write line to table
+      if (this%iprpak /= 0) then
+        call this%parser%GetCurrentLine(line)
+        call this%inputtab%line_to_columns(line)
+      end if
+    end do
+    !
+    ! -- finalize the table
+    if (this%iprpak /= 0) then
+      call this%inputtab%finalize_table()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine spc_rp_list
+    
+  !> @ brief spc_rp_list
+  !!
+  !!  Read the stress period data in list format
+  !!
+  !<
+  subroutine spc_rp_array(this, line)
+    use ConstantsModule, only: LENTIMESERIESNAME
+    use SimModule, only: store_error
+    use ArrayHandlersModule, only: ifind
+    ! -- dummy
+    class(GwtSpcType),    intent(inout) :: this  !< GwtSpcType object
+    character(len=LINELENGTH), intent(inout) :: line
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: ncolbnd
+    integer(I4B) :: jauxcol, ivarsread
+    integer(I4B), dimension(:), allocatable, target :: nodelist
+    character(len=LENTIMESERIESNAME) :: tasName
+    character(len=24), dimension(1) :: aname
+    character(len=LINELENGTH) :: keyword
+    logical :: endOfBlock
+    logical :: convertFlux
+    !
+    ! -- these time array series pointers need to be non-contiguous
+    !    beacuse a slice of bound is passed
+    real(DP), dimension(:), pointer :: bndArrayPtr => null()
+    ! -- formats
+    ! -- data
+    data aname(1) /'           CONCENTRATION'/
+    !
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    jauxcol = 0
+    ivarsread = 0
+    ncolbnd = 1
+    allocate(nodelist(this%maxbound))
+    do n = 1, size(nodelist)
+      nodelist(n) = n
+    end do
+    !
+    ! -- Read CONCENTRATION variables as arrays
+    call this%parser%GetNextLine(endOfBlock)
+    if (endOfBlock) then
+      call store_error('LOOKING FOR CONCENTRATION.  FOUND: ' // trim(line))
+      call this%parser%StoreErrorUnit()
+    end if
+    call this%parser%GetStringCaps(keyword)
+    !
+    ! -- Parse the keywords
+    select case (keyword)
+    case ('CONCENTRATION')
+      !
+      ! -- Look for keyword TIMEARRAYSERIES and time-array series
+      !    name on line, following RECHARGE
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'TIMEARRAYSERIES') then
+        ! -- Get time-array series name
+        call this%parser%GetStringCaps(tasName)
+        bndArrayPtr => this%dblvec(:)
+        ! Make a time-array-series link and add it to the list of links
+        ! contained in the TimeArraySeriesManagerType object.
+        convertflux = .false.
+        call this%TasManager%MakeTasLink(this%packName, bndArrayPtr,           &
+                                this%iprpak, tasName, 'CONCENTRATION',         &
+                                convertFlux, nodelist,                         &
+                                this%parser%iuactive)
+      else
+        !
+        ! -- Read the concentration array
+        call this%dis%read_layer_array(nodelist, this%dblvec, &
+          ncolbnd, this%maxbound, 1, aname(1), this%parser%iuactive, &
+          this%iout)
+      endif
+      !
+    case default
+      call store_error('LOOKING FOR CONCENTRATION.  FOUND: ' // trim(line))
+      call this%parser%StoreErrorUnit()
+    end select
+    !
+    return
+  end subroutine spc_rp_array
 
   !> @ brief Advance
   !!
@@ -434,29 +573,35 @@ module GwtSsmInputModule
   !!  are interpolated and entered into dblvec
   !!
   !<
-  subroutine ssmi_ad(this)
+  subroutine spc_ad(this, nbound_flowpack, budtxt)
     ! -- modules
     ! -- dummy
-    class(GwtSsmInputType),intent(inout) :: this  !< GwtSsmInputType object
+    class(GwtSpcType),intent(inout) :: this  !< GwtSpcType object
+    integer(I4B), intent(in) :: nbound_flowpack
+    character(len=*), intent(in) :: budtxt
     ! -- local
     !
     ! -- Advance the time series
     call this%TsManager%ad()
+    call this%TasManager%ad()
+    !
+    ! -- Check flow package consistency
+    call this%check_flow_package(nbound_flowpack, budtxt)
     !
     ! -- return
     return
-  end subroutine ssmi_ad
+  end subroutine spc_ad
     
   !> @ brief Deallocate variables
   !!
   !!  Deallocate and nullify package variables. 
   !!
   !<
-  subroutine ssmi_da(this)
+  subroutine spc_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(GwtSsmInputType) :: this  !< GwtSsmInputType object
+    class(GwtSpcType) :: this  !< GwtSpcType object
     !
     ! -- deallocate arrays in memory manager
     call mem_deallocate(this%dblvec)
@@ -469,6 +614,7 @@ module GwtSsmInputModule
     call mem_deallocate(this%ionper)
     call mem_deallocate(this%lastonper)
     call mem_deallocate(this%iprpak)
+    call mem_deallocate(this%readasarrays)
     !
     ! -- deallocate derived types
     call this%TsManager%da()
@@ -477,7 +623,7 @@ module GwtSsmInputModule
     !
     ! -- return
     return
-  end subroutine ssmi_da
+  end subroutine spc_da
 
   !> @ brief Check ionper
   !!
@@ -491,7 +637,7 @@ module GwtSsmInputModule
     ! -- modules
     use TdisModule, only: kper
     ! -- dummy variables
-    class(GwtSsmInputType), intent(inout) :: this  !< GwtSsmInputType object
+    class(GwtSpcType), intent(inout) :: this  !< GwtSpcType object
     !
     ! -- save last value and read period number
     this%lastonper = this%ionper
@@ -525,7 +671,7 @@ module GwtSsmInputModule
     ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtSsmInputType), intent(inout) :: this  !< GwtSsmInputType object
+    class(GwtSpcType), intent(inout) :: this  !< GwtSpcType object
     integer(I4B), intent(in) :: ival
     ! -- local
     character(len=LINELENGTH) :: keyword
@@ -547,5 +693,72 @@ module GwtSsmInputModule
     return
   end subroutine set_value
 
+  !> @ brief check_flow_package
+  !!
+  !!  Check to make sure that flow package information is consistent
+  !!  with this SPC information.
+  !!
+  !<
+  subroutine check_flow_package(this, nbound_flowpack, budtxt)
+    ! -- modules
+    ! -- dummy
+    class(GwtSpcType),intent(inout) :: this  !< GwtSpcType object
+    integer(I4B), intent(in) :: nbound_flowpack
+    character(len=*), intent(in) :: budtxt
+    ! -- local
+    !
+    ! -- Check and make sure MAXBOUND is not less than nbound_flowpack
+    if (this%maxbound < nbound_flowpack) then
+      write(errmsg, '(a, a, a, i0, a, i0, a)') &
+            'The SPC Package corresponding to flow package ', &
+            trim(this%packNameFlow), &
+            ' has MAXBOUND set less than the number of boundaries &
+            &active in this package.  Found MAXBOUND equal ', &
+            this%maxbound, &
+            ' and number of flow boundaries (NBOUND) equal ', &
+            nbound_flowpack, &
+            '. Increase MAXBOUND in the SPC input file for this package.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    end if
+    !
+    ! -- If budtxt is RCHA or EVTA, then readasarrays must be used, otherwise
+    !    readasarrays cannot be used
+    select case(trim(adjustl(budtxt)))
+    case('RCHA')
+      if (.not. this%readasarrays) then
+        write(errmsg, '(a, a, a)') &
+          'Array-based recharge must be used with array-based stress package &
+          &concentrations.  GWF Package ', trim(this%packNameFlow), ' is being &
+          &used with list-based SPC6 input.  Use array-based SPC6 input instead.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+    case('EVTA')
+      if (.not. this%readasarrays) then
+        write(errmsg, '(a, a, a)') &
+          'Array-based evapotranspiration must be used with array-based stress &
+          &package concentrations.  GWF Package ', trim(this%packNameFlow), &
+          &' is being used with list-based SPC6 input.  Use array-based SPC6 &
+          &input instead.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+    case default
+      if (this%readasarrays) then
+        write(errmsg, '(a, a, a)') &
+          'List-based packages must be used with list-based stress &
+          &package concentrations.  GWF Package ', trim(this%packNameFlow), &
+          &' is being used with array-based SPC6 input.  Use list-based SPC6 &
+          &input instead.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+    end select
+    !
+    ! -- return
+    return
+  end subroutine check_flow_package
+    
   
-end module GwtSsmInputModule
+end module GwtSpcModule

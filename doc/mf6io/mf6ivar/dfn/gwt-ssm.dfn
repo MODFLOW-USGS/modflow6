@@ -61,7 +61,7 @@ description name of the auxiliary variable in the package PNAME.  This auxiliary
 
 block fileinput
 name fileinput
-type recarray pname ssmi6 filein ssmi6_filename mixed
+type recarray pname spc6 filein spc6_filename mixed
 reader urword
 longname
 description
@@ -73,11 +73,11 @@ type string
 tagged false
 reader urword
 longname package name
-description name of the flow package for which an SSMI6 input file contains a source concentration.  If this flow package is represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM terms specified here.
+description name of the flow package for which an SPC6 input file contains a source concentration.  If this flow package is represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM terms specified here.
 
 
 block fileinput
-name ssmi6
+name spc6
 type keyword
 shape
 in_record true
@@ -99,15 +99,15 @@ longname file keyword
 description keyword to specify that an input filename is expected next.
 
 block fileinput
-name ssmi6_filename
+name spc6_filename
 type string
 preserve_case true
 in_record true
 reader urword
 optional false
 tagged false
-longname ssmi file name
-description character string that defines the path and filename for the file containing source and sink input data for the flow package. The SSMI6\_FILENAME file is a flexible input file that allows concentrations to be specified by stress period and with time series. Instructions for creating the SSMI6\_FILENAME input file are provided in the next section on file input for boundary concentrations.
+longname spc file name
+description character string that defines the path and filename for the file containing source and sink input data for the flow package. The SPC6\_FILENAME file is a flexible input file that allows concentrations to be specified by stress period and with time series. Instructions for creating the SPC6\_FILENAME input file are provided in the next section on file input for boundary concentrations.
 
 block fileinput
 name mixed

@@ -18,6 +18,7 @@ module RchModule
   !
   character(len=LENFTYPE)       :: ftype = 'RCH'
   character(len=LENPACKAGENAME) :: text  = '             RCH'
+  character(len=LENPACKAGENAME) :: texta  = '            RCHA'
   !
   type, extends(BndType) :: RchType
     integer(I4B), pointer :: inirch => NULL()
@@ -160,6 +161,7 @@ module RchModule
     case ('READASARRAYS')
       if (this%dis%supports_layers()) then
         this%read_as_arrays = .true.
+        this%text = texta
       else
         ermsg = 'READASARRAYS option is not compatible with selected' // &
                 ' discretization type.'

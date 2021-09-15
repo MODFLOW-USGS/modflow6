@@ -21,13 +21,13 @@
 \item \textbf{Block: FILEINPUT}
 
 \begin{description}
-\item \texttt{pname}---name of the flow package for which an SSMI6 input file contains a source concentration.  If this flow package is represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM terms specified here.
+\item \texttt{pname}---name of the flow package for which an SPC6 input file contains a source concentration.  If this flow package is represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM terms specified here.
 
-\item \texttt{SSMI6}---keyword to specify that record corresponds to a source sink mixing input file.
+\item \texttt{SPC6}---keyword to specify that record corresponds to a source sink mixing input file.
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
 
-\item \texttt{ssmi6\_filename}---character string that defines the path and filename for the file containing source and sink input data for the flow package. The SSMI6\_FILENAME file is a flexible input file that allows concentrations to be specified by stress period and with time series. Instructions for creating the SSMI6\_FILENAME input file are provided in the next section on file input for boundary concentrations.
+\item \texttt{spc6\_filename}---character string that defines the path and filename for the file containing source and sink input data for the flow package. The SPC6\_FILENAME file is a flexible input file that allows concentrations to be specified by stress period and with time series. Instructions for creating the SPC6\_FILENAME input file are provided in the next section on file input for boundary concentrations.
 
 \item \texttt{MIXED}---keyword to specify that these stress package boundaries will have the mixed condition.  The MIXED condition is described in the SOURCES block for AUXMIXED.  The MIXED condition allows for water to be withdrawn at a concentration that is less than the cell concentration.  It is intended primarily for representing evapotranspiration.
 

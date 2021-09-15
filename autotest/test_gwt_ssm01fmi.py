@@ -267,14 +267,14 @@ def run_transport_model():
     ]
 
     fileinput = [
-        ("WEL-1", f"{gwtname}.wel1.ssmi"),
+        ("WEL-1", f"{gwtname}.wel1.spc"),
     ]
     ssm = flopy.mf6.ModflowGwtssm(
         gwt, print_flows=True, sources=sourcerecarray, fileinput=fileinput,
     )
     pd = [(i, "concentration", 100.0) for i in range(nrow)]
-    ssmi = flopy.mf6.ModflowUtlssmi(
-        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.wel1.ssmi"
+    spc = flopy.mf6.ModflowUtlspc(
+        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.wel1.spc"
     )
 
     pd = [

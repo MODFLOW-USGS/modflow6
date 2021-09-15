@@ -5,7 +5,7 @@ The SSM Package is used to add or remove solute mass from GWT model cells based 
 \begin{itemize}
 \item The default condition is that sources have a concentration of zero and sinks withdraw water at the calculated concentration of the cell.  This default condition is assigned to any GWF stress package that is not included in a SOURCES block or FILEINPUT block.
 \item A second option is to assign auxiliary variables in the GWF model and include a concentration for each stress boundary.  In this case, the user provides the name of the package and the name of the auxiliary variable containing concentration values for each boundary.  As described below for srctype, there are multiple options for defining this behavior.
-\item A third option is to prepare an SSMI6 file for any desired GWF stress package.  This SSMI6 file allows users to change concentrations by stress period, or to use the time-series option to interpolate concentrations by time step.  This third option was introduced in MODFLOW version 6.3.0.  Information for this approach is entered in an optional FILEINPUT block below.
+\item A third option is to prepare an SPC6 file for any desired GWF stress package.  This SPC6 file allows users to change concentrations by stress period, or to use the time-series option to interpolate concentrations by time step.  This third option was introduced in MODFLOW version 6.3.0.  Information for this approach is entered in an optional FILEINPUT block below.
 \end{itemize}
 
 \noindent The auxiliary method and the file input method can both be used for a GWT model, but only one approach can be assigned per GWF stress package.   If a flow package specified in the SOURCES or FILEINPUT blocks is also represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM calculations for that package.
@@ -29,8 +29,10 @@ The SSM Package is used to add or remove solute mass from GWT model cells based 
 % when obs are ready, they should go here
 
 \newpage
-\subsection{File Input for Boundary Concentrations (SSMI)}
-An SSMI6 file can be prepared to provide user-specified SSM concentrations for a GWF stress package, such a Well or General-Head Boundary Package, for example.  One SSMI6 file applies to one GWF stress package.  The format of the SSMI6 file is described here.
+\subsection{Stress Package Concentrations (SPC) -- List-Based Input}
+An SPC6 file can be prepared to provide user-specified concentrations for a GWF stress package, such a Well or General-Head Boundary Package, for example.  One SPC6 file applies to one GWF stress package.  Names for the SPC6 input files are provided in the FILEINPUT block of the SSM Package.  SPC6 entries cannot be specified in the GWT name file.  Use of the SPC6 input file is an alternative to specifying stress package concentrations as auxiliary variables in the flow model stress package.  
+
+Stress package concentrations can be specified in the SPC6 input file using lists or arrays.  List-based input is used by default, and is described here.  Array-based concentration input can be specified for the Recharge and Evapotranspiration Packages, but only if those packages use the READASARRAYS option.  Instructions for specifying array-based stress package concentrations are described in the next section.
 
 The boundary number in the PERIOD block corresponds to the boundary number in the GWF stress period package.  Assignment of the boundary number is straightforward for the advanced packages (SFR, LAK, MAW, and UZF) because the features in these advanced packages are defined once at the beginning of the simulation and they do not change.  For the other stress packages, however, the order of boundaries may change between stress periods.  Consider the following Well Package input file, for example:
 
@@ -38,7 +40,7 @@ The boundary number in the PERIOD block corresponds to the boundary number in th
 # This is an example of a GWF Well Package
 # in which the order of the wells changes from
 # stress period 1 to 2.  This must be explicitly
-# handled by the user if using the SSMI6 input
+# handled by the user if using the SPC6 input
 # for a GWT model.
 BEGIN options
 END options
@@ -68,17 +70,43 @@ END period
 \vspace{5mm}
 
 \noindent \textit{FOR EACH SIMULATION}
-\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-ssmi-options.dat}
-\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-ssmi-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-spc-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-spc-dimensions.dat}
 \vspace{5mm}
 \noindent \textit{FOR ANY STRESS PERIOD}
-\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-ssmi-period.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-spc-period.dat}
 
 \vspace{5mm}
 \subsubsection{Explanation of Variables}
 \begin{description}
-\input{./mf6ivar/tex/utl-ssmi-desc.tex}
+\input{./mf6ivar/tex/utl-spc-desc.tex}
 \end{description}
 
 \subsubsection{Example Input File}
-\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-ssmi-example.dat}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-spc-example.dat}
+
+% SPC array based
+\newpage
+\subsection{Stress Package Concentrations (SPC) -- Array-Based Input}
+
+TODO!!
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-spca-options.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-spca-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/utl-spca-desc.tex}
+\end{description}
+
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-spca-example.dat}
+

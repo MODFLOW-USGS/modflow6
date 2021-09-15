@@ -19,14 +19,23 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["ssm03"]
+ex = ["ssm04"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
+nlay, nrow, ncol = 3, 5, 5
+idomain_lay0 = [
+    [1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 1],
+    [1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1],
+    ]
+idomain = np.ones((nlay, nrow, ncol), dtype=int)
+idomain[0, :, :] = np.array(idomain_lay0)
 
 def get_model(idx, dir):
-    nlay, nrow, ncol = 3, 5, 5
     perlen = [5.0]
     nstp = [5]
     tsmult = [1.0]
@@ -93,7 +102,7 @@ def get_model(idx, dir):
         delc=delc,
         top=top,
         botm=botm,
-        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        idomain=idomain,
     )
 
     # initial conditions
@@ -108,8 +117,8 @@ def get_model(idx, dir):
     )
 
     # chd files
-    spd = [[(0, 0, 0), 4.]]
-    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
+    spd = [[(nlay - 1, nrow - 1, ncol - 1), 4.]]
+    chd = flopy.mf6.modflow.ModflowGwfchd(
         gwf,
         print_flows=True,
         maxbound=len(spd),
@@ -117,14 +126,26 @@ def get_model(idx, dir):
         pname="CHD-1",
     )
 
-    # wel files
-    spd = [[(0, nrow - 1, ncol - 1), 1.]]
-    wel = flopy.mf6.ModflowGwfwel(
+    # list based recharge
+    idxrow, idxcol = np.where(idomain[0] == 1)
+    recharge_rate = np.arange(nrow * ncol).reshape((nrow, ncol))
+    spd = []
+    for i, j in zip(idxrow, idxcol):
+        spd.append([(0, i, j), recharge_rate[i, j]])
+    rch1 = flopy.mf6.modflow.ModflowGwfrch(
         gwf,
         print_flows=True,
         maxbound=len(spd),
         stress_period_data=spd,
-        pname="WEL-1",
+        pname="RCH-1",
+    )
+
+    # array-based rch files
+    rch2 = flopy.mf6.ModflowGwfrcha(
+        gwf,
+        print_flows=True,
+        recharge= recharge_rate,
+        pname="RCH-2",
     )
 
     # output control
@@ -174,7 +195,7 @@ def get_model(idx, dir):
         delc=delc,
         top=top,
         botm=botm,
-        idomain=1,
+        idomain=idomain,
     )
 
     # initial conditions
@@ -186,17 +207,35 @@ def get_model(idx, dir):
     # mass storage and transfer
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1)
 
-    # sources
-    pd = [(0, "concentration", 100.0)]
-    spc = flopy.mf6.ModflowUtlspc(
-        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.wel1.spc"
-    )
+    # ssm package
     sourcerecarray = [()]
-    fileinput = [("WEL-1", f"{gwtname}.wel1.spc"),]
+    fileinput = [("RCH-1", f"{gwtname}.rch1.spc"),
+                 ("RCH-2", f"{gwtname}.rch2.spc"),]
     ssm = flopy.mf6.ModflowGwtssm(gwt,
                                   print_flows=True,
                                   sources=sourcerecarray,
                                   fileinput=fileinput)
+
+    # spc package for RCH-1
+    idxrow, idxcol = np.where(idomain[0] == 1)
+    recharge_concentration = np.arange(nrow * ncol).reshape((nrow, ncol))
+    pd = []
+    for ipos, (i, j) in enumerate (zip(idxrow, idxcol)):
+        pd.append([ipos, "CONCENTRATION", recharge_concentration[i, j]])
+    spc1 = flopy.mf6.ModflowUtlspc(
+        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.rch1.spc",
+    )
+
+    # spc package for RCH-2
+    idxrow, idxcol = np.where(idomain[0] == 1)
+    recharge_concentration = np.arange(nrow * ncol).reshape((nrow, ncol))
+    pd = []
+    for ipos, (i, j) in enumerate (zip(idxrow, idxcol)):
+        pd.append([ipos, "CONCENTRATION", recharge_concentration[i, j]])
+    spc2 = flopy.mf6.ModflowUtlspca(
+        gwt, concentration=recharge_concentration,
+        filename=f"{gwtname}.rch2.spc",
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
@@ -213,7 +252,7 @@ def get_model(idx, dir):
     obs_data = {
         f"{gwtname}.obs.csv": [
             ("(1-1-1)", "CONCENTRATION", (0, 0, 0)),
-            ("(1-5-5)", "CONCENTRATION", (0, 4, 4)),
+            ("(1-5-5)", "CONCENTRATION", (nlay - 1, nrow - 1, ncol - 1)),
         ],
     }
 
@@ -270,6 +309,7 @@ def eval_transport(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     ssmbudall = bobj.get_data(text="SOURCE-SINK MIX")
+    print(ssmbudall)
     for ssmbud in ssmbudall:
 
         node, node2, q = ssmbud[0]

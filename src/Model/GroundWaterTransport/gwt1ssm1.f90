@@ -11,13 +11,13 @@ module GwtSsmModule
   use ConstantsModule,        only: DONE, DZERO, LENAUXNAME, LENFTYPE,         &
                                     LENPACKAGENAME, LINELENGTH,                &
                                     TABLEFT, TABCENTER
-  use SimModule,              only: store_error, count_errors
+  use SimModule,              only: store_error, count_errors, store_error_unit
   use SimVariablesModule,     only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
   use TableModule,            only: TableType, table_cr
-  use GwtSsmInputModule,      only: GwtSsmInputType
+  use GwtSpcModule,           only: GwtSpcType
   
   implicit none
   public :: GwtSsmType
@@ -42,7 +42,7 @@ module GwtSsmModule
     real(DP), dimension(:), pointer, contiguous        :: cnew => null()        !< pointer to gwt%x
     type(GwtFmiType), pointer                          :: fmi => null()         !< pointer to fmi object
     type(TableType), pointer                           :: outputtab => null()   !< output table object
-    type(GwtSsmInputType), dimension(:), pointer       :: ssmivec => null()     !< array of ssm input objects
+    type(GwtSpcType), dimension(:), pointer            :: ssmivec => null()     !< array of stress package concentration objects
     
   contains
   
@@ -182,7 +182,7 @@ module GwtSsmModule
   !> @ brief Read and prepare this SSM Package
   !!
   !! This routine is called from gwt_rp().  It is called at the beginning of
-  !! each stress period.  If any SSMI input files are used to provide source
+  !! each stress period.  If any SPC input files are used to provide source
   !! and sink concentrations, then period blocks for the current stress period
   !! are read.
   !!
@@ -193,7 +193,7 @@ module GwtSsmModule
     class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSsmInputType), pointer :: ssmiptr
+    type(GwtSpcType), pointer :: ssmiptr
     ! -- formats
     !
     ! -- Call the rp method on any ssm input files
@@ -201,7 +201,7 @@ module GwtSsmModule
       if (this%fmi%iatp(ip) /= 0) cycle
       if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
         ssmiptr => this%ssmivec(ip)
-        call ssmiptr%ssmi_rp()
+        call ssmiptr%spc_rp()
       end if
     end do
     !
@@ -213,7 +213,7 @@ module GwtSsmModule
   !!
   !! This routine is called from gwt_ad().  It is called at the beginning of
   !! each time step.  The total number of flow boundaries is counted and stored
-  !! in this%nbound.  Also, if any SSMI input files are used to provide source
+  !! in this%nbound.  Also, if any SPC input files are used to provide source
   !! and sink concentrations and time series are referenced in those files,
   !! then ssm concenrations must be interpolated for the time step.
   !!
@@ -224,7 +224,7 @@ module GwtSsmModule
     class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSsmInputType), pointer :: ssmiptr
+    type(GwtSpcType), pointer :: ssmiptr
     !
     ! -- Calculate total number of flow boundaries
     this%nbound = 0
@@ -239,7 +239,8 @@ module GwtSsmModule
       if (this%fmi%iatp(ip) /= 0) cycle
       if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
         ssmiptr => this%ssmivec(ip)
-        call ssmiptr%ssmi_ad()
+        call ssmiptr%spc_ad(this%fmi%gwfpackages(ip)%nbound,                   &
+                            this%fmi%gwfpackages(ip)%budtxt)
       end if
     end do
     !
@@ -345,7 +346,7 @@ module GwtSsmModule
   !> @ brief Provide bound concentration and mixed flag
   !!
   !! SSM concentrations can be provided in auxiliary variables or
-  !! through separate SSMI files.  If not provided, the default
+  !! through separate SPC files.  If not provided, the default
   !! concentration is zero.  This single routine provides the SSM
   !! bound concentration based on these different approaches.
   !! The mixed flag indicates whether or not 
@@ -661,14 +662,14 @@ module GwtSsmModule
     class(GwtSsmType) :: this  !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSsmInputType), pointer :: ssmiptr
+    type(GwtSpcType), pointer :: ssmiptr
     !
     ! -- Deallocate the ssmi objects if package was active
     if(this%inunit > 0) then
       do ip = 1, size(this%ssmivec)
         if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
           ssmiptr => this%ssmivec(ip)
-          call ssmiptr%ssmi_da()
+          call ssmiptr%spc_da()
         end if
       end do
       deallocate(this%ssmivec)
@@ -931,7 +932,7 @@ module GwtSsmModule
   !> @ brief Read FILEINPUT block
   !!
   !! Read optional FILEINPUT block and initialize an
-  !! ssmi input file reader for each entry.
+  !! SPC input file reader for each entry.
   !!
   !<
   subroutine read_sources_fileinput(this)
@@ -996,14 +997,14 @@ module GwtSsmModule
         ! -- read the source type
         call this%parser%GetStringCaps(srctype)
         select case(srctype)
-        case('SSMI6')
-          write(this%iout,'(1x,a)') 'SSMI6 SOURCE DETECTED.'
+        case('SPC6')
+          write(this%iout,'(1x,a)') 'SPC6 SOURCE DETECTED.'
           isrctype = 3
           !
           ! verify filein is next
           call this%parser%GetStringCaps(keyword2)
           if(trim(adjustl(keyword2)) /= 'FILEIN') then
-            errmsg = 'SSMI6 keyword must be followed by "FILEIN" ' //           &
+            errmsg = 'SPC6 keyword must be followed by "FILEIN" ' //           &
                       'then by filename and optionally by <MIXED>.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -1013,7 +1014,7 @@ module GwtSsmModule
           !    ssmi file object
           call this%set_ssmivec(ip, trim(keyword))
           !
-          ! check for optional MIXED keyword and set isrctype to 4 if found
+          ! -- check for optional MIXED keyword and set isrctype to 4 if found
           call this%parser%GetStringCaps(keyword2)
           if (trim(keyword2) == 'MIXED') then
             isrctype = 4
@@ -1022,7 +1023,7 @@ module GwtSsmModule
           end if
         case default
           write(errmsg,'(1x, a, a)')                                          &
-            'SRCTYPE MUST BE SSMI6.  FOUND: ', trim(srctype)
+            'SRCTYPE MUST BE SPC6.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -1095,7 +1096,7 @@ module GwtSsmModule
   !!
   !!  The next call to parser will return the input file name for
   !!  package ip in the SSM SOURCES block.  The routine then
-  !!  initializes the ssmi input file.
+  !!  initializes the SPC input file.
   !!
   !<
   subroutine set_ssmivec(this, ip, packname)
@@ -1107,19 +1108,20 @@ module GwtSsmModule
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
     character(len=LINELENGTH) :: filename
-    type(GwtSsmInputType), pointer :: ssmiptr
+    type(GwtSpcType), pointer :: ssmiptr
     integer(I4B) :: inunit
     !
     ! -- read file name
     call this%parser%GetString(filename)
     inunit = getunit()
-    call openfile(inunit, this%iout, filename, 'SSMI', filstat_opt='OLD')
+    call openfile(inunit, this%iout, filename, 'SPC', filstat_opt='OLD')
     
-    ! -- Create the ssmi file object
+    ! -- Create the SPC file object
     ssmiptr => this%ssmivec(ip)
-    call ssmiptr%initialize(ip, inunit, this%iout, this%name_model)
+    call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model,  &
+                            trim(packname))
     
-    write(this%iout, '(4x, a, a, a, a)') 'USING SSMI INPUT FILE ',             &
+    write(this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ',              &
       trim(filename), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(packname)
     !
     ! -- return

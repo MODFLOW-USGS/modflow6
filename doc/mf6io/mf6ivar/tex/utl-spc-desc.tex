@@ -3,7 +3,7 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{PRINT\_INPUT}---keyword to indicate that the list of ssmi information will be written to the listing file immediately after it is read.
+\item \texttt{PRINT\_INPUT}---keyword to indicate that the list of spc information will be written to the listing file immediately after it is read.
 
 \item \texttt{TS6}---keyword to specify that record corresponds to a time-series file.
 
@@ -15,7 +15,7 @@
 \item \textbf{Block: DIMENSIONS}
 
 \begin{description}
-\item \texttt{maxbound}---integer value specifying the maximum number of ssmi cells that will be specified for use during any stress period.
+\item \texttt{maxbound}---integer value specifying the maximum number of spc cells that will be specified for use during any stress period.
 
 \end{description}
 \item \textbf{Block: PERIOD}
@@ -25,7 +25,7 @@
 
 \item \texttt{bndno}---integer value that defines the boundary package feature number associated with the specified PERIOD data on the line. BNDNO must be greater than zero and less than or equal to MAXBOUND.
 
-\item \texttt{ssmisetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the MAWSETTING string include: CONCENTRATION.
+\item \texttt{spcsetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the MAWSETTING string include: CONCENTRATION.
 
 \begin{lstlisting}[style=blockdefinition]
 CONCENTRATION <@concentration@>

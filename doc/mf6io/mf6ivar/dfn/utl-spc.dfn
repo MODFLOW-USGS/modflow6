@@ -1,4 +1,4 @@
-# --------------------- ssm ssmi options ---------------------
+# --------------------- ssm spc options ---------------------
 
 block options
 name print_input
@@ -6,7 +6,7 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'ssmi'}
+description REPLACE print_input {'{#1}': 'spc'}
 
 block options
 name ts_filerecord
@@ -51,7 +51,7 @@ tagged false
 longname file name of time series information
 description REPLACE timeseriesfile {}
 
-# --------------------- ssm ssmi dimensions ---------------------
+# --------------------- ssm spc dimensions ---------------------
 
 block dimensions
 name maxbound
@@ -59,9 +59,9 @@ type integer
 reader urword
 optional false
 longname maximum number of ssm entries
-description REPLACE maxbound {'{#1}': 'ssmi'}
+description REPLACE maxbound {'{#1}': 'spc'}
 
-# --------------------- ssm ssmi period ---------------------
+# --------------------- ssm spc period ---------------------
 
 block period
 name iper
@@ -78,7 +78,7 @@ description REPLACE iper {}
 
 block period
 name perioddata
-type recarray bndno ssmisetting
+type recarray bndno spcsetting
 shape
 reader urword
 longname
@@ -96,7 +96,7 @@ description integer value that defines the boundary package feature number assoc
 numeric_index true
 
 block period
-name ssmisetting
+name spcsetting
 type keystring concentration
 shape
 tagged false
