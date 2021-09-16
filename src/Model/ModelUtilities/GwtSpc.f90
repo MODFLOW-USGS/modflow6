@@ -484,9 +484,9 @@ module GwtSpcModule
     return
   end subroutine spc_rp_list
     
-  !> @ brief spc_rp_list
+  !> @ brief spc_rp_array
   !!
-  !!  Read the stress period data in list format
+  !!  Read the stress period data in array format
   !!
   !<
   subroutine spc_rp_array(this, line)

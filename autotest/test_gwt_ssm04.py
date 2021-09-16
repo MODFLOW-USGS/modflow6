@@ -311,16 +311,9 @@ def eval_transport(sim):
     ssmbudall = bobj.get_data(text="SOURCE-SINK MIX")
     print(ssmbudall)
     for ssmbud in ssmbudall:
-
-        node, node2, q = ssmbud[0]
-        assert node == 25, "node location for well must be 25 (GWT cell 25)"
-        assert node2 == 1, "node2 location for well must be 1 (first well)"
-        assert q == 100., "mass flux for well must be 100."
-
-        node, node2, q = ssmbud[1]
-        assert node == 1, "node location for chd must be 1 (first GWT cell)"
-        assert node2 == 1, "node2 location for chd must be 1 (first chd)"
-        assert q < 0., "mass flux for chd must be less than zero"
+        for row in ssmbud:
+            id1, id2, q = row
+            print(id1, id2, q)
 
     return
 

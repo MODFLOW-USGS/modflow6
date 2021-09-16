@@ -18,6 +18,7 @@ module EvtModule
   !
   character(len=LENFTYPE)       :: ftype = 'EVT'
   character(len=LENPACKAGENAME) :: text  = '             EVT'
+  character(len=LENPACKAGENAME) :: texta  = '           EVTA'
   !
   type, extends(BndType) :: EvtType
     ! -- logicals
@@ -192,6 +193,7 @@ module EvtModule
     case ('READASARRAYS')
       if (this%dis%supports_layers()) then
         this%read_as_arrays = .true.
+        this%text = texta
       else
         ermsg = 'READASARRAYS option is not compatible with selected' // &
                 ' discretization type.'

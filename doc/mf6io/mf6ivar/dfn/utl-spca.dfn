@@ -62,16 +62,6 @@ longname file name of time series information
 description defines a time-array-series file defining a time-array series that can be used to assign time-varying values. See the Time-Variable Input section for instructions on using the time-array series capability.
 
 
-# --------------------- ssm spca dimensions ---------------------
-
-block dimensions
-name maxbound
-type integer
-reader urword
-optional false
-longname maximum number of ssm entries
-description REPLACE maxbound {'{#1}': 'spc'}
-
 # --------------------- ssm spca period ---------------------
 
 block period
