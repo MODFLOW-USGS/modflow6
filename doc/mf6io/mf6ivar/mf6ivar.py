@@ -616,6 +616,9 @@ def write_appendix(texdir, allblocks):
         oc = 'yes'
         if 'griddata' in blockname.lower():
             oc = 'no'
+        if 'utl' in component.lower() and \
+                'tas' in ftype.lower() and 'time' in blockname.lower():
+            oc = 'no'
         s = '{} & {} & {} & {} \\\\ \n'.format(component.upper(),
                                                ftype.upper(),
                                                blockname.upper(), oc)

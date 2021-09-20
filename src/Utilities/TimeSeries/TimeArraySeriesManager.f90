@@ -1,7 +1,6 @@
 module TimeArraySeriesManagerModule
 
   use KindModule, only: DP, I4B
-  use BlockParserModule,         only: BlockParserType
   use ConstantsModule,           only: DZERO, LENTIMESERIESNAME, LINELENGTH, &
                                        MAXCHARLEN, LENHUGELINE
   use InputOutputModule,         only: GetUnit, openfile

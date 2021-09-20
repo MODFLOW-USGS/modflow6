@@ -199,6 +199,8 @@ module GwtSpcModule
       &FORMAT.')"
     character(len=*), parameter :: fmtts = &
       "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
+    character(len=*), parameter :: fmttas = &
+      "(4x, 'TIME-ARRAY SERIES DATA WILL BE READ FROM FILE: ', a)"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -228,6 +230,17 @@ module GwtSpcModule
             call this%parser%GetString(fname)
             write(this%iout,fmtts)trim(fname)
             call this%TsManager%add_tsfile(fname, this%inunit)
+          case ('TAS6')
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'TAS6 keyword must be followed by "FILEIN" ' //         &
+                      'then by filename.'
+              call store_error(errmsg)
+              call this%parser%StoreErrorUnit()
+            endif
+            call this%parser%GetString(fname)
+            write(this%iout,fmttas)trim(fname)
+            call this%TasManager%add_tasfile(fname)
           case default
             write(errmsg,'(4x,a,a)') 'UNKNOWN SPC OPTION: ', trim(keyword)
             call store_error(errmsg)

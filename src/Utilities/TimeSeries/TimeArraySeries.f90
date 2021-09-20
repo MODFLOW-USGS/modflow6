@@ -406,7 +406,7 @@ contains
       ! -- read a time and an array from the input file
       ! -- Get a TIME block and read the time
       call this%parser%GetBlock('TIME', isFound, ierr, &
-        supportOpenClose=.true.)
+        supportOpenClose=.false.)
       if (isFound) then
         ta%taTime = this%parser%GetDouble()
         ! -- Read the array
