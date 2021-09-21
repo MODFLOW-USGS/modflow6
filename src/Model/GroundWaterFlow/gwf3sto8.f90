@@ -735,11 +735,11 @@ contains
       call mem_deallocate(this%strgsy)
       !
       ! -- deallocate TVS arrays
-      if (this%integratechanges /= 0) then
+      if(associated(this%oldss)) then
         call mem_deallocate(this%oldss)
-        if (this%iusesy /= 0) then
-          call mem_deallocate(this%oldsy)
-        end if
+      end if
+      if(associated(this%oldsy)) then
+        call mem_deallocate(this%oldsy)
       end if
     end if
     !
@@ -818,14 +818,6 @@ contains
     call mem_allocate(this%sy, nodes, 'SY', this%memoryPath)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
-    !
-    ! -- allocate TVS arrays
-    if (this%integratechanges /= 0) then
-      call mem_allocate(this%oldss, nodes, 'OLDSS', this%memoryPath)
-      if (this%iusesy /= 0) then
-        call mem_allocate(this%oldsy, nodes, 'OLDSY', this%memoryPath)
-      end if
-    end if
     !
     ! -- Initialize arrays
     this%iss = 0
@@ -1085,10 +1077,20 @@ contains
   !!
   !<
   subroutine save_old_ss_sy(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(GwfStoType) :: this  !< GwfStoType object
     ! -- local variables
     integer(I4B) :: n
+    !
+    ! -- Allocate TVS arrays if needed
+    if(.not. associated(this%oldss)) then
+      call mem_allocate(this%oldss, this%dis%nodes, 'OLDSS', this%memoryPath)
+    end if
+    if(this%iusesy == 1 .and. .not. associated(this%oldsy)) then
+      call mem_allocate(this%oldsy, this%dis%nodes, 'OLDSY', this%memoryPath)
+    end if
     !
     ! -- Save current specific storage
     do n = 1, this%dis%nodes
