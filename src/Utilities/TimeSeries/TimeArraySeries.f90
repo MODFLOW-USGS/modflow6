@@ -3,7 +3,7 @@ module TimeArraySeriesModule
   use ArrayReadersModule, only: ReadArray
   use BlockParserModule,  only: BlockParserType
   use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR,        &
-                                LENTIMESERIESNAME, LENBIGLINE, DZERO, DONE
+                                LENTIMESERIESNAME, DZERO, DONE
   use GenericUtilitiesModule,   only: is_same
   use InputOutputModule,  only: GetUnit, openfile
   use KindModule,         only: DP, I4B
@@ -406,7 +406,7 @@ contains
       ! -- read a time and an array from the input file
       ! -- Get a TIME block and read the time
       call this%parser%GetBlock('TIME', isFound, ierr, &
-        supportOpenClose=.true.)
+        supportOpenClose=.false.)
       if (isFound) then
         ta%taTime = this%parser%GetDouble()
         ! -- Read the array

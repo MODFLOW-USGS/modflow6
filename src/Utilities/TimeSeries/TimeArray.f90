@@ -1,7 +1,6 @@
 module TimeArrayModule
 
   use BaseDisModule,      only: DisBaseType
-  use ConstantsModule,    only: LINELENGTH
   use KindModule,         only: DP, I4B
   use ListModule,         only: ListType
   use SimVariablesModule, only: errmsg
