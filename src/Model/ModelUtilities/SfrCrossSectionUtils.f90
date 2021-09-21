@@ -44,7 +44,11 @@ contains
     real(DP) :: w
     !
     ! -- calculate the saturated top width
-    w = x(npts) - x(1)
+    if (npts > 1) then
+      w = x(npts) - x(1)
+    else
+      w = x(1)
+    end if
     !
     ! -- return
     return

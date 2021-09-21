@@ -2866,6 +2866,7 @@ module SfrModule
       integer(I4B) :: iic4
       integer(I4B) :: ibflg
       real(DP) :: hgwf
+      real(DP) :: sa
       real(DP) :: qu
       real(DP) :: qi
       real(DP) :: qr
@@ -2948,9 +2949,10 @@ module SfrModule
       end do
       this%usflow(n) = qu
       ! -- calculate remaining terms
+      sa = surface_area(n)
       qi = this%inflow(n)
-      qr = this%rain(n) * this%width(n) * this%length(n)
-      qe = this%evap(n) * this%width(n) * this%length(n)
+      qr = this%rain(n) * sa
+      qe = this%evap(n) * sa
       qro = this%runoff(n)
       !
       ! -- Water mover term; assume that it goes in at the upstream end of the reach
@@ -3678,17 +3680,30 @@ module SfrModule
       real(DP), intent(in) :: q1      !< streamflow
       real(DP), intent(inout) :: d1   !< stream depth at midpoint of reach
       ! -- local variables
+      integer(I4B) :: i0
+      integer(I4B) :: i1
+      integer(I4B) :: npts
       real(DP) :: w
       real(DP) :: s
       real(DP) :: r
       real(DP) :: qconst
       !
-      ! -- calculate stream depth at the midpoint
-      w = this%width(n)
+      ! 
+      i0 = this%iacross(n)
+      i1 = this%iacross(n + 1) - 1
+      npts = i1 + 1 - i0
+      !
+      ! -- 
       s = this%slope(n)
       r = this%rough(n)
-      qconst = this%unitconv * w * sqrt(s) / r
-      d1 = (q1 / qconst)**DP6
+      !
+      ! -- calculate stream depth at the midpoint
+      if (npts > 1) then
+      else:
+        w = this%station(i0)
+        qconst = this%unitconv * w * sqrt(s) / r
+        d1 = (q1 / qconst)**DP6
+      end if
       if (d1 < DEM30) d1 = DZERO
       !
       ! -- return
@@ -4618,6 +4633,7 @@ module SfrModule
       real(DP) :: q
       real(DP) :: qt
       real(DP) :: d
+      real(DP) :: ca
       real(DP) :: a
       !
       ! -- initialize counter
@@ -4646,7 +4662,8 @@ module SfrModule
           end if
           ! calculate flow area
           call this%sfr_rectch_depth(n, qt, d)
-          this%qauxcbc(1) = d * this%width(n)
+          ca = this%area_wet(n, d)
+          this%qauxcbc(1) = ca
           call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
         end do
       end do
@@ -4657,7 +4674,8 @@ module SfrModule
       do n = 1, this%maxbound
         n2 = this%igwfnode(n)
         if (n2 > 0) then
-          this%qauxcbc(1) = this%width(n) * this%length(n)
+          a = this%surface_area(n)
+          this%qauxcbc(1) = a
           q = -this%gwflow(n)
           call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
         end if
@@ -4724,7 +4742,7 @@ module SfrModule
       do n = 1, this%maxbound
         q = DZERO
         d = this%depth(n)
-        a = this%width(n) * this%length(n)
+        a = this%surface_area_wet(n, d)
         this%qauxcbc(1) = a * d
         call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
       end do
