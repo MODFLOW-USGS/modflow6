@@ -4,10 +4,19 @@ project('Modflow 6', 'fortran',
 
 fc = meson.get_compiler('fortran')
 
-if fc.get_id() == 'intel-cl'
+if fc.get_id() == 'intel-cl' # windows
   add_project_arguments(
     fc.get_supported_arguments([
       '/fpp',
+      '/static'
+     ]),
+     language: 'fortran'
+  )
+elif fc.get_id() == 'intel' # linux and mac
+  add_project_arguments(
+    fc.get_supported_arguments([
+      '-fpp',
+      '-static'
      ]),
      language: 'fortran'
   )
