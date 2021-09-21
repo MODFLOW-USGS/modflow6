@@ -159,8 +159,6 @@ def eval_model(sim):
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="rch")[0]
 
-    errmsg1 = "node not equal to index"
-    errmsg2 = "node2 not equal to recharge"
     for i, (node, node2, q) in enumerate(records):
         print(f"Checking: index={i+1}; node={node}; node2={node2}; q={q}")
 
@@ -168,7 +166,7 @@ def eval_model(sim):
     errmsg = f"node must be {answer}.  found {records['node']}"
     assert np.allclose(records['node'], answer), errmsg
 
-    answer = [1, 2, 3, 4, 5, 6]
+    answer = [1, 7, 8, 12, 13, 14]
     errmsg = f"node2 must be {answer}.  found {records['node2']}"
     assert np.allclose(records['node2'], answer), errmsg
 

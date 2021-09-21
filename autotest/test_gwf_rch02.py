@@ -150,8 +150,8 @@ def eval_model(sim):
     errmsg = "Recharge rate is not the same as the node number."
     assert np.allclose(records['node'].astype(float), records['q']), errmsg
 
-    errmsg = "node2 numbers must be the same as the position number in array."
-    assert np.allclose(records['node2'], np.arange(nrecords) + 1), errmsg
+    errmsg = "node2 numbers must be the same as node."
+    assert np.allclose(records['node2'], records['node']), errmsg
 
     fpth = os.path.join(sim.simpath, "rch.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
