@@ -176,13 +176,22 @@ module GwtSsmModule
     class(GwtSsmType) :: this
     ! -- local
     integer(I4B) :: ip
+    integer(I4B) :: i
+    integer(I4B) :: node
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate total number of flow boundaries
+    ! -- Calculate total number of exising flow boundaries. It is possible
+    !    that a node may equal zero.  In this case, the bound should be
+    !    skipped and not written to ssm output.
     this%nbound = 0
     do ip = 1, this%fmi%nflowpack
-      if (this%fmi%iatp(ip) /= 0) cycle 
-      this%nbound = this%nbound + this%fmi%gwfpackages(ip)%nbound
+      if (this%fmi%iatp(ip) /= 0) cycle
+      do i = 1, this%fmi%gwfpackages(ip)%nbound
+        node = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (node > 0) then
+          this%nbound = this%nbound + 1
+        end if
+      end do
     end do
     !
     ! -- Return
@@ -219,60 +228,66 @@ module GwtSsmModule
     ctmp = DZERO
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
     !
-    ! -- If cell is active (ibound > 0) then calculate values
-    if (this%ibound(n) > 0) then
+    ! -- If node number is valid, then calculate terms
+    if (n > 0) then
       !
-      ! -- retrieve qbnd and iauxpos
-      qbnd = this%fmi%gwfpackages(ipackage)%get_flow(ientry)
-      iauxpos = this%iauxpak(ipackage)
-      !
-      ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
-      !    of hcof, rhs, and rate    
-      if(iauxpos >= 0) then
+      ! -- If cell is active (ibound > 0) then calculate values
+      if (this%ibound(n) > 0) then
         !
-        ! -- concentration is zero or stored in auxiliary variable; if
-        !    qbnd is positive, then concentration represents the inflow 
-        !    concentration.  If qbnd is negative, then the outflow concentration
-        !    is set equal to the simulated cell concentration
-        if (qbnd >= DZERO) then
-          if (iauxpos > 0) then
-            ctmp = this%fmi%gwfpackages(ipackage)%auxvar(iauxpos, ientry)
+        ! -- retrieve qbnd and iauxpos
+        qbnd = this%fmi%gwfpackages(ipackage)%get_flow(ientry)
+        iauxpos = this%iauxpak(ipackage)
+        !
+        ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
+        !    of hcof, rhs, and rate    
+        if(iauxpos >= 0) then
+          !
+          ! -- concentration is zero or stored in auxiliary variable; if
+          !    qbnd is positive, then concentration represents the inflow 
+          !    concentration.  If qbnd is negative, then the outflow concentration
+          !    is set equal to the simulated cell concentration
+          if (qbnd >= DZERO) then
+            if (iauxpos > 0) then
+              ctmp = this%fmi%gwfpackages(ipackage)%auxvar(iauxpos, ientry)
+            else
+              ctmp = DZERO
+            end if
+            omega = DZERO  ! rhs
           else
-            ctmp = DZERO
+            ctmp = this%cnew(n)
+            omega = DONE  ! lhs
           end if
-          omega = DZERO  ! rhs
-        else
-          ctmp = this%cnew(n)
-          omega = DONE  ! lhs
-        end if
-      else if (iauxpos < 0) then
-        !
-        ! -- concentration stored in auxiliary variable; negative iauxpos value
-        !    indicates that this is a mixed sink type where the concentration
-        !    value represents the injected concentration if qbnd is positive.
-        !    If qbnd is negative, then the withdrawn water is equal to the
-        !    minimum of the aux concentration and the cell concentration.
-        ctmp = this%fmi%gwfpackages(ipackage)%auxvar(-iauxpos, ientry)
-        if (qbnd >= DZERO) then
-          omega = DZERO  ! rhs (ctmp is aux value)
-        else
-          if (ctmp < this%cnew(n)) then
+        else if (iauxpos < 0) then
+          !
+          ! -- concentration stored in auxiliary variable; negative iauxpos value
+          !    indicates that this is a mixed sink type where the concentration
+          !    value represents the injected concentration if qbnd is positive.
+          !    If qbnd is negative, then the withdrawn water is equal to the
+          !    minimum of the aux concentration and the cell concentration.
+          ctmp = this%fmi%gwfpackages(ipackage)%auxvar(-iauxpos, ientry)
+          if (qbnd >= DZERO) then
             omega = DZERO  ! rhs (ctmp is aux value)
           else
-            omega = DONE ! lhs (ctmp is cell concentration)
-            ctmp = this%cnew(n)
+            if (ctmp < this%cnew(n)) then
+              omega = DZERO  ! rhs (ctmp is aux value)
+            else
+              omega = DONE ! lhs (ctmp is cell concentration)
+              ctmp = this%cnew(n)
+            end if
           end if
-        end if
-      endif
-      !
-      ! -- Add terms based on qbnd sign
-      if(qbnd <= DZERO) then
-        hcoftmp = qbnd * omega
-      else
-        rhstmp = -qbnd * ctmp * (DONE - omega)
-      endif
-      !
-      ! -- end of active ibound
+        endif
+        !
+        ! -- Add terms based on qbnd sign
+        if(qbnd <= DZERO) then
+          hcoftmp = qbnd * omega
+        else
+          rhstmp = -qbnd * ctmp * (DONE - omega)
+        endif
+        !
+        ! -- end of active ibound
+      end if
+    !
+    ! -- end of valid node
     end if
     !
     ! -- set requested values
@@ -317,6 +332,7 @@ module GwtSsmModule
       nbound = this%fmi%gwfpackages(ip)%nbound
       do i = 1, nbound
         n = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (n <= 0) cycle
         call this%ssm_term(ip, i, rhsval=rhsval, hcofval=hcofval)
         idiag = idxglo(this%dis%con%ia(n))
         amatsln(idiag) = amatsln(idiag) + hcofval
@@ -358,6 +374,7 @@ module GwtSsmModule
       ! -- do for each boundary
       do i = 1, this%fmi%gwfpackages(ip)%nbound
         n = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (n <= 0) cycle
         call this%ssm_term(ip, i, rrate=rate)
         idiag = this%dis%con%ia(n)
         flowja(idiag) = flowja(idiag) + rate
@@ -518,29 +535,31 @@ module GwtSsmModule
           !
           ! -- Calculate rate for this entry
           node = this%fmi%gwfpackages(ip)%nodelist(i)
-          call this%ssm_term(ip, i, rrate=rrate)
-          !
-          ! -- Print the individual rates if the budget is being printed
-          !    and PRINT_FLOWS was specified (this%iprflow<0)
-          if (ibudfl /= 0) then
-            if (this%iprflow /= 0) then
-              !
-              ! -- set nodestr and write outputtab table
-              nodeu = this%dis%get_nodeuser(node)
-              call this%dis%nodeu_to_string(node, nodestr)
-              bname = this%fmi%gwfpackages(ip)%name
-              call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
-                                                   rrate, bname)
+          if (node > 0) then
+            call this%ssm_term(ip, i, rrate=rrate)
+            !
+            ! -- Print the individual rates if the budget is being printed
+            !    and PRINT_FLOWS was specified (this%iprflow<0)
+            if (ibudfl /= 0) then
+              if (this%iprflow /= 0) then
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(node, nodestr)
+                bname = this%fmi%gwfpackages(ip)%name
+                call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                     rrate, bname)
+              end if
             end if
-          end if
-          !
-          ! -- If saving cell-by-cell flows in list, write flow
-          if (ibinun /= 0) then
-            n2 = i
-            if (present(imap)) n2 = imap(i)
-            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,       &
-                                                    naux, auxvar(:,i),         &
-                                                    olconv2=.FALSE.)
+            !
+            ! -- If saving cell-by-cell flows in list, write flow
+            if (ibinun /= 0) then
+              n2 = i
+              if (present(imap)) n2 = imap(i)
+              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,       &
+                                                      naux, auxvar(:,i),         &
+                                                      olconv2=.FALSE.)
+            end if
           end if
           !
         enddo
@@ -644,6 +663,7 @@ module GwtSsmModule
           !
           ! -- Calculate rate for this entry
           node = this%fmi%gwfpackages(ip)%nodelist(i)
+          if (node <= 0) cycle
           call this%ssm_term(ip, i, rrate=rrate)
           !
           ! -- Print the individual rates if the budget is being printed
