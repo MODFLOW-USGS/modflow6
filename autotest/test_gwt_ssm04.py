@@ -429,6 +429,8 @@ def eval_transport(sim):
             print(f"  Checking records for recharge package {irchpak + 1}")
             istop = istart + 23
 
+            print(ssmbud[istart:istop])
+
             print("    Checking id1")
             id1 = ssmbud[istart:istop]['node']
             id1a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 19,
@@ -437,7 +439,10 @@ def eval_transport(sim):
 
             print("    Checking id2")
             id2 = ssmbud[istart:istop]['node2']
-            id2a = list(range(1, 24))
+            if irchpak in [0, 2]:
+                id2a = np.arange(23) + 1
+            elif irchpak in [1, 3]:
+                id2a = id1a
             assert np.allclose(id2, id2a), f"{id2} /= {id2a}"
 
             print("    Checking q")

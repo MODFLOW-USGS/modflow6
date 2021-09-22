@@ -372,7 +372,9 @@ module RchModule
     if(inrech == 1) then
       do n = 1, this%nbound
         node = this%nodelist(n)
-        this%bound(1, n) = this%bound(1, n) * this%dis%get_area(node)
+        if (node > 0) then
+          this%bound(1, n) = this%bound(1, n) * this%dis%get_area(node)
+        end if
       enddo
     endif
     !
@@ -661,6 +663,17 @@ module RchModule
         node = this%nodelist(i)
       else
         node = this%nodesontop(i)
+      end if
+      !
+      ! -- cycle if nonexistent bound
+      if (node <= 0) then
+        this%hcof(i) = DZERO
+        this%rhs(i) = DZERO
+        cycle
+      end if
+      !
+      ! -- reset nodelist to highest active
+      if (.not. this%fixed_cell) then
         if(this%ibound(node) == 0) &
           call this%dis%highest_active(node, this%ibound)
         this%nodelist(i) = node
@@ -703,6 +716,7 @@ module RchModule
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
       n = this%nodelist(i)
+      if (n <= 0) cycle
       ! -- reset hcof and rhs for excluded cells
       if (this%ibound(n) == 10000) then
         this%hcof(i) = DZERO
@@ -814,10 +828,8 @@ module RchModule
       do ic = 1, ncol
         nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
         noder = this%dis%get_nodenumber(nodeu, 0)
-        if(noder > 0) then
-          this%nodelist(ipos) = noder
-          ipos = ipos + 1
-        endif
+        this%nodelist(ipos) = noder
+        ipos = ipos + 1
       enddo
     enddo
     !

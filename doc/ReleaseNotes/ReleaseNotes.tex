@@ -155,10 +155,11 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 \begin{itemize}
 	\item Version mf6.3.0--Month, Day, Year
+	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 	        \item The option already existed to provide binary budget and head file information from a GWF simulation for only the first time step of a given stress period, in which case that information will be used for all time steps in that stress period in a GWT simulation that reads from those files. The behavior of this option has been extended such that if the binary budget and head file information provided for the final stress period of the GWF simulation is for only one time step, that information will be used for any subsequent time steps and stress periods in the GWT simulation. This extended behavior includes as a special case the use of binary budget and head file information from only one time step in only one stress period (for example, a single steady-state GWF stress period) for all time steps in all stress periods in a GWT simulation.
-	        \item Added new file-based input capability for the GWT Source and Sink Mixing (SSM) Package.  The SSM Package previously required that all source and sink concentrations be provided as auxiliary variables for corresponding GWF stress packages.  The SSM Package now supports an optional new FILEINPUT block, which can be provided with package names and file names.  Files referenced in the FILEINPUT block can be used to provide time-varying source and sink concentrations.  A description of this new SSM Input (SSMI) file is described in the input and output guide under a new section titled ``File Input for Boundary Concentrations.''  If used, a single SSMI file can be provided for a corresponding GWF stress package.  Either an SSMI file or the auxiliary variable approach can be used to supply concentrations for a single GWF stress package, but not both.
+	        \item Added new file-based input capability for the GWT Source and Sink Mixing (SSM) Package.  The SSM Package previously required that all source and sink concentrations be provided as auxiliary variables for corresponding GWF stress packages.  The SSM Package now supports an optional new FILEINPUT block, which can be provided with package names and file names.  Files referenced in the FILEINPUT block can be used to provide time-varying source and sink concentrations.  A description of this new Stress Package Concentration (SPC) Input file is described in the input and output guide under a new section titled ``File Input for Boundary Concentrations.''  If used, a single SSMI file can be provided for a corresponding GWF stress package.  Either an SPC file or the auxiliary variable approach can be used to supply concentrations for a single GWF stress package, but not both.
 	\end{itemize}
 	
 	\underline{EXAMPLES}
@@ -172,12 +173,12 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	        \item Fixed a bug that caused the last binary budget and head file information provided by a GWF simulation in a given stress period to be used for all subsequent GWT simulation time steps in that stress period, even if binary budget and head file information was provided for more than one time step in that stress period. In that situation, the GWF time steps must match the GWT time steps one-for-one.
 	\end{itemize}
 
-%	\underline{STRESS PACKAGES}
-%	\begin{itemize}
-%	        \item xxx  
-%	        \item xxx  
-%	        \item xxx  
-%	\end{itemize}
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+	        \item Fixed a bug in the Recharge (RCH) and Evapotranspiration (EVT) Packages that would occur with array-based input (READASARRAYS) combined with the Time-Array Series (TAS) functionality.  Because the TAS functionality only works for DIS and DISU models, this fix does not have any effect on models that use DISU discretization.  The bug would occur when one or more cells in the upper layer were removed using the IDOMAIN capability.  In this special case, the time-array series values did not carry over to the correct locations in the RCH and EVT arrays.  This error would be difficult to identify for complex models, because the model would run to completion without any errors.  The RCH and EVT Packages were modified to maintain direct correspondence between the \texttt{nodelist} and \texttt{bound} arrays with the arrays provided to the TAS utility.  A small and intended consequence of this fix is that the ID2 value written to the binary budget file for array-based RCH and EVT Packages will correspond to the consecutive cell number in the top layer.  
+	        \item Recharge and evapotranspiration flows that are written to the GWF Model binary budget file are marked with the text headers ``RCH'' and ``EVT'', respectively.  In order to support the array-based input for SSM concentrations, these text headers are marked as ``RCHA'' and ``EVTA'', respectively, if the READASARRAYS option is specified for the package.  This change will have no effect on simulation results; however, post processing capabilities may need to be adjusted to account for this minor renaming convention.
+	        \item xxx  
+	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}

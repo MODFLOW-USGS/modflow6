@@ -1900,10 +1900,10 @@ module GwfDisvModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, ipos, noder, nodeu
-    logical :: found
+    integer(I4B) :: ir, ic, ncol, nrow, nlay, nval, ipos, nodeu
 ! ------------------------------------------------------------------------------
     !
+    ! -- set variables
     nlay = this%mshape(1)
     nrow = 1
     ncol = this%mshape(2)
@@ -1912,31 +1912,17 @@ module GwfDisvModule
     nval = ncol * nrow
     call ReadArray(inunit, this%dbuff, aname, this%ndim, nval, iout, 0)
     !
-    ! -- Copy array into bound
+    ! -- Copy array into bound.  Note that this routine was substantially
+    !    changed on 9/21/2021 to support changes to READASARRAYS input
+    !    for recharge and evapotranspiration.  nodelist and bound are of
+    !    size nrow * ncol and correspond directly to dbuff.
     ipos = 1
     do ir = 1, nrow
-      columnloop: do ic = 1, ncol
-        !
-        ! -- look down through all layers and see if nodeu == nodelist(ipos)
-        !    cycle if not, because node must be inactive or pass through
-        found = .false.
-        layerloop: do il = 1, nlay
-          nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
-          noder = this%get_nodenumber(nodeu, 0)
-          if(noder == 0) cycle layerloop
-          if(noder == nodelist(ipos)) then
-            found = .true.
-            exit layerloop
-          endif
-        enddo layerloop
-        if(.not. found) cycle columnloop
-        !
-        ! -- Assign the array value to darray
+      do ic = 1, ncol
         nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
         darray(icolbnd, ipos) = this%dbuff(nodeu)
         ipos = ipos + 1
-        !
-      enddo columnloop
+      enddo
     enddo
     !
     ! -- return
@@ -2138,14 +2124,12 @@ module GwfDisvModule
         endif
         nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
         noder = this%get_nodenumber(nodeu, 0)
-        if(noder > 0) then
-          if(ipos > maxbnd) then
-            ierr = ipos
-          else
-            nodelist(ipos) = noder
-          endif
-          ipos = ipos + 1
+        if(ipos > maxbnd) then
+          ierr = ipos
+        else
+          nodelist(ipos) = noder
         endif
+        ipos = ipos + 1
       enddo
     enddo
     !

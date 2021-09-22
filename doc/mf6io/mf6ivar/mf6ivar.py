@@ -686,6 +686,7 @@ if __name__ == '__main__':
                   'gwt-mvt',
                   'gwt-api',
                   'utl-lak-tab',
+                  'utl-sfr-tab',
                   'utl-spc',
                   'utl-spca',
                   'utl-obs',

@@ -225,12 +225,22 @@ module GwtSsmModule
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
+    integer(I4B) :: i
+    integer(I4B) :: node
+! ------------------------------------------------------------------------------
     !
-    ! -- Calculate total number of flow boundaries
+    ! -- Calculate total number of exising flow boundaries. It is possible
+    !    that a node may equal zero.  In this case, the bound should be
+    !    skipped and not written to ssm output.
     this%nbound = 0
     do ip = 1, this%fmi%nflowpack
-      if (this%fmi%iatp(ip) /= 0) cycle 
-      this%nbound = this%nbound + this%fmi%gwfpackages(ip)%nbound
+      if (this%fmi%iatp(ip) /= 0) cycle
+      do i = 1, this%fmi%gwfpackages(ip)%nbound
+        node = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (node > 0) then
+          this%nbound = this%nbound + 1
+        end if
+      end do
     end do
     !
     ! -- Call the ad method on any ssm input files so that values for 
@@ -412,6 +422,7 @@ module GwtSsmModule
       nbound = this%fmi%gwfpackages(ip)%nbound
       do i = 1, nbound
         n = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (n <= 0) cycle
         call this%ssm_term(ip, i, rhsval=rhsval, hcofval=hcofval)
         idiag = idxglo(this%dis%con%ia(n))
         amatsln(idiag) = amatsln(idiag) + hcofval
@@ -453,6 +464,7 @@ module GwtSsmModule
       ! -- do for each boundary
       do i = 1, this%fmi%gwfpackages(ip)%nbound
         n = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (n <= 0) cycle
         call this%ssm_term(ip, i, rrate=rate)
         idiag = this%dis%con%ia(n)
         flowja(idiag) = flowja(idiag) + rate
@@ -483,6 +495,7 @@ module GwtSsmModule
     character(len=LENPACKAGENAME) :: rowlabel  = 'SSM'
     integer(I4B) :: ip
     integer(I4B) :: i
+    integer(I4B) :: n
     real(DP) :: rate
     real(DP) :: rin
     real(DP) :: rout
@@ -500,6 +513,8 @@ module GwtSsmModule
       !
       ! -- do for each boundary
       do i = 1, this%fmi%gwfpackages(ip)%nbound
+        n = this%fmi%gwfpackages(ip)%nodelist(i)
+        if (n <= 0) cycle
         call this%ssm_term(ip, i, rrate=rate)
         if(rate < DZERO) then
           rout = rout - rate
@@ -607,6 +622,7 @@ module GwtSsmModule
           !
           ! -- Calculate rate for this entry
           node = this%fmi%gwfpackages(ip)%nodelist(i)
+          if (node <= 0) cycle
           call this%ssm_term(ip, i, rrate=rrate, qssm=qssm, cssm=cssm)
           !
           ! -- Print the individual rates if the budget is being printed

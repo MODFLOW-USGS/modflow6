@@ -64,6 +64,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'GwtSpc.f90',
     'Model' / 'ModelUtilities' / 'Mover.f90',
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
+    'Model' / 'ModelUtilities' / 'SfrCrossSectionUtils.f90',
     'Model' / 'ModelUtilities' / 'UzfCellGroup.f90',
     'Model' / 'ModelUtilities' / 'Xt3dAlgorithm.f90',
     'Model' / 'ModelUtilities' / 'Xt3dInterface.f90',
@@ -142,4 +143,4 @@ modflow_sources = files(
 
 mf6_internal_lib = static_library('mf6_internal_lib', modflow_sources)
 
-executable('mf6', 'mf6.f90', link_with: mf6_internal_lib) 
+executable('mf6', 'mf6.f90', link_with: mf6_internal_lib)

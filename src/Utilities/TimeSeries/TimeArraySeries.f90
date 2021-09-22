@@ -3,7 +3,7 @@ module TimeArraySeriesModule
   use ArrayReadersModule, only: ReadArray
   use BlockParserModule,  only: BlockParserType
   use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR,        &
-                                LENTIMESERIESNAME, LENBIGLINE, DZERO, DONE
+                                LENTIMESERIESNAME, DZERO, DONE
   use GenericUtilitiesModule,   only: is_same
   use InputOutputModule,  only: GetUnit, openfile
   use KindModule,         only: DP, I4B

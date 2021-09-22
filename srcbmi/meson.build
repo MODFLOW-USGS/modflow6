@@ -7,4 +7,4 @@ bmi_sources = files(
     'mf6xmi.f90',
 )
 
-library('mf6', bmi_sources, link_with: mf6_internal_lib)
+library('mf6', bmi_sources, link_with: mf6_internal_lib, name_prefix: 'lib')
