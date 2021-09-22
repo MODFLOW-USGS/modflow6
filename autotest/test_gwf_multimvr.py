@@ -21,7 +21,7 @@ mf6exe = os.path.abspath(targets.target_dict["mf6"])
 name = "gwf"
 mvr_scens = ["mltmvr", "mltmvr5050", "mltmvr7525"]
 ws = os.path.join("temp", name)
-exdirs = [ws]
+exdirs = [f"{ws}-{s}" for s in mvr_scens]
 sim_workspaces = []
 gwf_names = []
 
@@ -572,17 +572,16 @@ def generate_childmod_sfr_input():
     return pkdatc
 
 
-def instantiate_base_simulation(scen_nam, gwfname, gwfnamec):
+def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
     # All pckgs between 3 test models the same except for parent model SFR input
     # static model data
-    scen_ws = ws + "-" + scen_nam
-    sim_workspaces.append(scen_ws)
+    sim_workspaces.append(sim_ws)
     gwf_names.append(gwfname)
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name=mf6exe,
-        sim_ws=scen_ws,
+        sim_ws=sim_ws,
         continue_=False,
     )
 
@@ -657,10 +656,7 @@ def instantiate_base_simulation(scen_nam, gwfname, gwfnamec):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
@@ -801,10 +797,7 @@ def instantiate_base_simulation(scen_nam, gwfname, gwfnamec):
     # output control
     occ = flopy.mf6.ModflowGwfoc(
         gwfc,
-        budget_filerecord="{}.bud".format(gwfnamec),
-        head_filerecord="{}.hds".format(gwfnamec),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
@@ -856,8 +849,6 @@ def add_parent_sfr(gwf, gwfname, conns):
         gwf,
         print_stage=False,
         print_flows=True,
-        budget_filerecord=gwfname + ".sfr.bud",
-        save_flows=True,
         mover=True,
         pname="SFR-parent",
         unit_conversion=86400.00,
@@ -878,8 +869,6 @@ def add_child_sfr(gwfc, gwfnamec):
         gwfc,
         print_stage=False,
         print_flows=True,
-        budget_filerecord=gwfnamec + ".sfr.bud",
-        save_flows=True,
         mover=True,
         pname="SFR-child",
         unit_conversion=86400.00,
@@ -902,7 +891,6 @@ def add_parent_mvr(gwf, gwfname, frac):
         maxpackages=maxpackages,
         packages=mvrpack,
         perioddata=mvrspd,
-        budget_filerecord=gwfname + ".mvr.bud",
         filename="{}.mvr".format(gwfname),
     )
 
@@ -915,7 +903,6 @@ def add_child_mvr(gwfc, gwfnamec):
         maxpackages=maxpackagesc,
         packages=mvrpackc,
         perioddata=mvrspdc,
-        budget_filerecord=gwfnamec + ".mvr.bud",
         filename="{}.mvr".format(gwfnamec),
     )
 
@@ -997,96 +984,92 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
     )
 
 
-def build_and_run_simulations():
-    for idx, (scen_nm, conns, frac) in enumerate(
-        zip(mvr_scens, scen_conns, parent_mvr_frac)
-    ):
-        scen_nm_parent = name + "_" + scen_nm + "_p"
-        scen_nm_child = name + "_" + scen_nm + "_c"
-        sim, gwf, gwfc = instantiate_base_simulation(
-            mvr_scens[idx], scen_nm_parent, scen_nm_child
-        )
-        # add the sfr packages
-        add_parent_sfr(gwf, scen_nm_parent, conns)
-        add_child_sfr(gwfc, scen_nm_child)
-        # add the mover packages (simulation level and gwf level)
-        add_parent_mvr(gwf, scen_nm_parent, frac)
-        add_child_mvr(gwfc, scen_nm_child)
-        if frac is not None:
-            add_sim_mvr(sim, scen_nm_parent, scen_nm_child, 1 - frac)
-        else:
-            add_sim_mvr(sim, scen_nm_parent, scen_nm_child)
+def build_model(idx, sim_ws):
 
-        sim.write_simulation()
+    scen_nm, conns, frac = (
+        mvr_scens[idx],
+        scen_conns[idx],
+        parent_mvr_frac[idx],
+    )
+    scen_nm_parent = name + "_" + scen_nm + "_p"
+    scen_nm_child = name + "_" + scen_nm + "_c"
+    sim, gwf, gwfc = instantiate_base_simulation(
+        sim_ws, scen_nm_parent, scen_nm_child
+    )
+    # add the sfr packages
+    add_parent_sfr(gwf, scen_nm_parent, conns)
+    add_child_sfr(gwfc, scen_nm_child)
+    # add the mover packages (simulation level and gwf level)
+    add_parent_mvr(gwf, scen_nm_parent, frac)
+    add_child_mvr(gwfc, scen_nm_child)
+    if frac is not None:
+        add_sim_mvr(sim, scen_nm_parent, scen_nm_child, 1.0 - frac)
+    else:
+        add_sim_mvr(sim, scen_nm_parent, scen_nm_child)
 
-        # Run the simulation
-        success, buff = sim.run_simulation(silent=False)
-        if not success:
-            print(buff)
-
-    return success
+    return sim, None
 
 
-def check_simulation_output():
-    parent_sfr_last_reach_flow = []
-    parent_sfr_mvr_amount = []
-    sim_mvr_amount = []
+def check_simulation_output(sim):
+    idx = sim.idxsim
+
     gwf_srch_str1 = (
         " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
     )
     gwf_srch_str2 = " WATER MOVER PACKAGE (MVR) FLOW RATES   "
     sim_srch_str = " WATER MOVER PACKAGE (MVR) FLOW RATES "
-    for idx, (cur_ws, gwfparent) in enumerate(zip(sim_workspaces, gwf_names)):
-        with open(
-            os.path.join(cur_ws, gwfparent + ".lst"), "r"
-        ) as gwf_lst, open(os.path.join(cur_ws, "mfsim.lst"), "r") as sim_lst:
-            gwf_lst_lines = gwf_lst.readlines()
-            sim_lst_lines = sim_lst.readlines()
 
-        # Convert lists of lines to iterable objects
-        gwf_lst = iter(gwf_lst_lines)
-        sim_lst = iter(sim_lst_lines)
+    cur_ws, gwfparent = exdirs[idx], gwf_names[idx]
+    with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
+        os.path.join(cur_ws, "mfsim.lst"), "r"
+    ) as sim_lst:
+        gwf_lst_lines = gwf_lst.readlines()
+        sim_lst_lines = sim_lst.readlines()
 
-        # Peel mvr values from gwf lst file to be compared between scenarios
-        done = False
-        for line in gwf_lst:
-            # adv file pointer to search line
-            if gwf_srch_str1 in line:
-                # once at the identified line, continue searching until sfr obj 17 queued
+    # Convert lists of lines to iterable objects
+    gwf_lst = iter(gwf_lst_lines)
+    sim_lst = iter(sim_lst_lines)
+
+    # Peel mvr values from gwf lst file to be compared between scenarios
+    done = False
+    for line in gwf_lst:
+        # adv file pointer to search line
+        if gwf_srch_str1 in line:
+            # once at the identified line, continue searching until sfr obj 17 queued
+            while True:
+                line = next(gwf_lst)
+                m_arr = line.strip().split()
+                if m_arr[0] == "18":
+                    # store the 3rd value on the line (it should be the same across all scenarios
+                    parent_sfr_last_reach_flow = float(m_arr[2])
+                    break
+
+        # the second search string will only appear in the 50/50 and 75/25 scenarios
+        if gwf_srch_str2 in line and idx > 0:
+            # once at srch_str2, continue searching until 2nd mvr connection queued
+            while True:
+                line = next(gwf_lst)
+                m_arr = line.strip().split()
+                if m_arr[0] == "2":
+                    parent_sfr_mvr_amount = float(m_arr[4])
+                    done = True
+                    break
+
+        if done:
+            break
+
+    # now cycle through the simulation lst file
+    # only the 50/50 and 75/25 scenarios will have the desired line
+    if idx > 0:
+        for line in sim_lst:
+            if sim_srch_str in line:
                 while True:
-                    line = next(gwf_lst)
+                    line = next(sim_lst)
                     m_arr = line.strip().split()
-                    if m_arr[0] == "18":
-                        # store the 3rd value on the line (it should be the same across all scenarios
-                        parent_sfr_last_reach_flow.append(float(m_arr[2]))
-                        break
-
-            # the second search string will only appear in the 50/50 and 75/25 scenarios
-            if gwf_srch_str2 in line and idx > 0:
-                # once at srch_str2, continue searching until 2nd mvr connection queued
-                while True:
-                    line = next(gwf_lst)
-                    m_arr = line.strip().split()
-                    if m_arr[0] == "2":
-                        parent_sfr_mvr_amount.append(float(m_arr[4]))
+                    if m_arr[0] == "3":
+                        sim_mvr_amount = float(m_arr[4])
                         done = True
                         break
-
-            if done:
-                break
-
-        # now cycle through the simulation lst file
-        # only the 50/50 and 75/25 scenarios will have the descired line
-        if idx > 0:
-            for line in sim_lst:
-                if sim_srch_str in line:
-                    while True:
-                        line = next(sim_lst)
-                        m_arr = line.strip().split()
-                        if m_arr[0] == "3":
-                            sim_mvr_amount.append(float(m_arr[4]))
-                            done = True
-                            break
 
     # perform the comparisons:
     #  o check flow entering last reach of parent model
@@ -1096,64 +1079,76 @@ def check_simulation_output():
     #    simulation-level mvrs
     #    - 50/50: ~107 units of flow in each
     #    - 75/25: 75% goes through the gwf mvr, 25% through the simulation mvr
-    for i in np.arange(len(parent_sfr_mvr_amount) - 1):
-        assert math.isclose(
-            parent_sfr_last_reach_flow[i],
-            parent_sfr_last_reach_flow[i + 1],
-            rel_tol=0.1,
-        ), (
-            "Flow in the last reach of scenario "
-            + mvr_scens[i]
-            + " = "
-            + str(parent_sfr_last_reach_flow[i])
-            + ", whereas the flow in scenario "
-            + mvr_scens[i + 1]
-            + " = "
-            + str(parent_sfr_last_reach_flow[i + 1])
-            + ".  Something changed, quitting."
-        )
+    q_target = 214.25
+    assert math.isclose(parent_sfr_last_reach_flow, q_target, rel_tol=0.1,), (
+        "Flow in the last reach of scenario "
+        + mvr_scens[idx]
+        + " = "
+        + str(parent_sfr_last_reach_flow)
+        + ", whereas the target flow "
+        + " = "
+        + str(q_target)
+        + ".  Something changed, quitting."
+    )
 
     # 50/50
-    gwf_transferred_50 = parent_sfr_mvr_amount[0] / (
-        parent_sfr_mvr_amount[0] + sim_mvr_amount[0]
-    )
-    sim_transferred_50 = sim_mvr_amount[0] / (
-        parent_sfr_mvr_amount[0] + sim_mvr_amount[0]
-    )
-    assert np.allclose(
-        np.array([gwf_transferred_50, sim_transferred_50]),
-        np.array([0.5, 0.5]),
-        rtol=0.1,
-    ), "There should be a 50/50 split in the amount of water transferred by the GWF- and simulation-level MVRs."
+    if idx == 1:
+        gwf_transferred_50 = parent_sfr_mvr_amount / (
+            parent_sfr_mvr_amount + sim_mvr_amount
+        )
+        sim_transferred_50 = sim_mvr_amount / (
+            parent_sfr_mvr_amount + sim_mvr_amount
+        )
+        assert np.allclose(
+            np.array([gwf_transferred_50, sim_transferred_50]),
+            np.array([0.5, 0.5]),
+            rtol=0.1,
+        ), (
+            "There should be a 50/50 split in the amount "
+            "of water transferred by the GWF- and simulation-level MVRs."
+        )
 
     # 75/25
-    gwf_transferred_75 = parent_sfr_mvr_amount[1] / (
-        parent_sfr_mvr_amount[1] + sim_mvr_amount[1]
-    )
-    sim_transferred_75 = sim_mvr_amount[1] / (
-        parent_sfr_mvr_amount[1] + sim_mvr_amount[1]
-    )
-    assert np.allclose(
-        np.array([gwf_transferred_75, sim_transferred_75]),
-        np.array([0.75, 0.25]),
-        rtol=0.1,
-    ), "There should be a 75/25 split in the amount of water transferred by the GWF- and simulation-level MVRs."
+    elif idx == 2:
+        gwf_transferred_75 = parent_sfr_mvr_amount / (
+            parent_sfr_mvr_amount + sim_mvr_amount
+        )
+        sim_transferred_75 = sim_mvr_amount / (
+            parent_sfr_mvr_amount + sim_mvr_amount
+        )
+        assert np.allclose(
+            np.array([gwf_transferred_75, sim_transferred_75]),
+            np.array([0.75, 0.25]),
+            rtol=0.1,
+        ), (
+            "There should be a 75/25 split in the amount of water "
+            "transferred by the GWF- and simulation-level MVRs."
+        )
 
 
 # - No need to change any code below
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim, mc = build_model(idx, dir)
+        sim.write_simulation()
+        if mc is not None:
+            mc.write_simulation()
+    return
+
+
 def test_mf6model():
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    build_and_run_simulations()
+    build_models()
 
-    # Check scenario output
-    # evaluate list file output to ensure total flows are similar
-    # no matter what the mvr connection setup is (i.e., simulation-level
-    # mvr vs gwf-level mvr) or what the relative fraction between the
-    # different level mvrs is.
-    check_simulation_output()
+    for idx, exdir in enumerate(exdirs):
+        yield test.run_mf6, Simulation(
+            exdir,
+            exfunc=check_simulation_output,
+            idxsim=idx,
+        )
 
     return
 
@@ -1163,14 +1158,15 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_and_run_simulations()
+    build_models()
 
-    # Check scenario output
-    # evaluate list file output to ensure total flows are similar
-    # no matter what the mvr connection setup is (i.e., simulation-level
-    # mvr vs gwf-level mvr) or what the relative fraction between the
-    # different level mvrs is.
-    check_simulation_output()
+    for idx, exdir in enumerate(exdirs):
+        sim = Simulation(
+            exdir,
+            exfunc=check_simulation_output,
+            idxsim=idx,
+        )
+        test.run_mf6(sim)
 
     return
 
