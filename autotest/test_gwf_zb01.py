@@ -36,8 +36,8 @@ bud_lst = [
     "STO-SS_OUT",
     "STO-SY_IN",
     "STO-SY_OUT",
-    "RCH_IN",
-    "RCH_OUT",
+    "RCHA_IN",
+    "RCHA_OUT",
     "CHD_IN",
     "CHD_OUT",
     "WEL_IN",
@@ -327,7 +327,7 @@ def eval_zb6(sim):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = ["STO-SS", "STO-SY", "RCH", "CHD", "WEL"]
+    cbc_bud = ["STO-SS", "STO-SY", "RCHA", "CHD", "WEL"]
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0

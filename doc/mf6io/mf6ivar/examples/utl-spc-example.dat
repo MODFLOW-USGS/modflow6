@@ -1,0 +1,28 @@
+BEGIN options
+  PRINT_INPUT
+  TS6 FILEIN transport.wel1.ts
+END options
+
+BEGIN DIMENSIONS
+  MAXBOUND 10
+END DIMENSIONS
+
+BEGIN PERIOD 1
+  1 concentration myconc1ts
+  2 concentration 100.
+  3 concentration 100.
+  4 concentration 100.
+  5 concentration 100.
+  6 concentration 100.
+  7 concentration 100.
+  8 concentration 100.
+  9 concentration 100.
+  10 concentration 100.
+END period
+
+# Change boundary 1 and 2 concentrations to zero
+# and leave boundaries 3 through 10 at 100.0
+BEGIN PERIOD 3
+  1 concentration 0.
+  2 concentration 0.
+END period

@@ -451,6 +451,7 @@ module GwtModule
     !
     ! -- Read and prepare
     if(this%inoc > 0)  call this%oc%oc_rp()
+    if(this%inssm > 0) call this%ssm%ssm_rp()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_rp()

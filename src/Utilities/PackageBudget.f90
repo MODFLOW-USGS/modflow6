@@ -10,17 +10,18 @@ module PackageBudgetModule
   
   type :: PackageBudgetType
     
-    character(len=LENPACKAGENAME) :: name = ''                                   !name of the package
-    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !auxiliary variable names
-    integer(I4B) :: naux                                                         !number of auxiliary variables
-    integer(I4B), pointer :: nbound => null()                                    !number of boundaries for current stress period
-    integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !vector of reduced node numbers
-    real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !array of package specific boundary numbers
-    real(DP), dimension(:), pointer, contiguous :: hcof => null()                !diagonal contribution
-    real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !right-hand side contribution
-    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
-    real(DP), dimension(:), pointer, contiguous :: flow => null()                !calculated flow
-    real(DP), dimension(:), pointer, contiguous :: xnew => null()                !dependent variable (head) for this time step
+    character(len=LENPACKAGENAME) :: name = ''                                   !< name of the package
+    character(len=LENPACKAGENAME) :: budtxt = ''                                 !< type of flow (CHD, RCH, RCHA, ...)
+    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !< auxiliary variable names
+    integer(I4B) :: naux                                                         !< number of auxiliary variables
+    integer(I4B), pointer :: nbound => null()                                    !< number of boundaries for current stress period
+    integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !< vector of reduced node numbers
+    real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !< array of package specific boundary numbers
+    real(DP), dimension(:), pointer, contiguous :: hcof => null()                !< diagonal contribution
+    real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !< right-hand side contribution
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !< auxiliary variable array
+    real(DP), dimension(:), pointer, contiguous :: flow => null()                !< calculated flow
+    real(DP), dimension(:), pointer, contiguous :: xnew => null()                !< dependent variable (head) for this time step
     
   contains
   
@@ -53,10 +54,11 @@ module PackageBudgetModule
     end if
   end subroutine set_auxname
   
-  subroutine set_pointers(this, name, auxname, nbound, naux, nodelist, &
+  subroutine set_pointers(this, name, budtxt, auxname, nbound, naux, nodelist, &
                            hcof, rhs, auxvar, xnew)
     class(PackageBudgetType) :: this
     character(len=LENPACKAGENAME) :: name
+    character(len=LENPACKAGENAME) :: budtxt
     character(len=LENAUXNAME), contiguous, dimension(:), intent(in) :: auxname 
     integer(I4B), target, intent(in) :: nbound
     integer(I4B), target, intent(in) :: naux
@@ -66,6 +68,7 @@ module PackageBudgetModule
     real(DP), dimension(:,:), target, contiguous, intent(in) :: auxvar
     real(DP), dimension(:), target, contiguous, intent(in) :: xnew
     this%name = name
+    this%budtxt = budtxt
     this%naux = naux
     if (naux > 0) then
       if (.not. allocated(this%auxname)) then
@@ -81,10 +84,11 @@ module PackageBudgetModule
     this%xnew => xnew
   end subroutine set_pointers
 
-  subroutine copy_values(this, name, auxname, nbound, naux, &
+  subroutine copy_values(this, name, budtxt, auxname, nbound, naux, &
                          nodelist, flow, auxvar)
     class(PackageBudgetType) :: this
     character(len=LENPACKAGENAME), intent(in) :: name
+    character(len=LENPACKAGENAME), intent(in) :: budtxt
     character(len=LENAUXNAME), contiguous, dimension(:), intent(in) :: auxname
     integer(I4B), intent(in) :: nbound
     integer(I4B), intent(in) :: naux
@@ -93,6 +97,7 @@ module PackageBudgetModule
     real(DP), dimension(:,:), contiguous, intent(in) :: auxvar
     integer(I4B) :: i
     this%name = name
+    this%budtxt = budtxt
     if (.not. allocated(this%auxname)) allocate(this%auxname(naux))
     this%auxname(:) = auxname(:)
     this%naux = naux

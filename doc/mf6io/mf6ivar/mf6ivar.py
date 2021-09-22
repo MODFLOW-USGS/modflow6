@@ -616,6 +616,9 @@ def write_appendix(texdir, allblocks):
         oc = 'yes'
         if 'griddata' in blockname.lower():
             oc = 'no'
+        if 'utl' in component.lower() and \
+                'tas' in ftype.lower() and 'time' in blockname.lower():
+            oc = 'no'
         s = '{} & {} & {} & {} \\\\ \n'.format(component.upper(),
                                                ftype.upper(),
                                                blockname.upper(), oc)
@@ -682,8 +685,10 @@ if __name__ == '__main__':
                   'gwt-fmi',
                   'gwt-mvt',
                   'gwt-api',
-                  'utl-lak-tab',  # dfn completed  tex updated
+                  'utl-lak-tab',
                   'utl-sfr-tab',
+                  'utl-spc',
+                  'utl-spca',
                   'utl-obs',
                   'utl-ts',
                   'utl-tas',
