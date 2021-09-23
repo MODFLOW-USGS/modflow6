@@ -1,8 +1,6 @@
 import os
 import pytest
 import numpy as np
-import shutil
-from nose.tools import *
 
 try:
     import flopy

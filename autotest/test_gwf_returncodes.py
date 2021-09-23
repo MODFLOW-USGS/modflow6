@@ -3,8 +3,6 @@ import pytest
 import sys
 import shutil
 import subprocess
-from nose.tools import raises
-
 try:
     import flopy
 except:
@@ -173,42 +171,39 @@ def test_converge_fail_continue():
     return
 
 
-@raises(RuntimeError)
 def converge_fail_nocontinue():
-    # get the simulation
-    sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
+    with pytest.raises(RuntimeError):
+        # get the simulation
+        sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
 
-    # write the input files
-    sim.write_simulation()
+        # write the input files
+        sim.write_simulation()
 
-    # run the simulation
-    returncode, buff = run_mf6([mf6_exe], ws)
-    msg = "This run should fail with a returncode of 1"
-    if returncode == 1:
-        raise RuntimeError(msg)
-
-    return
-
-@raises(RuntimeError)
-def idomain_runtime_error():
-    # get the simulation
-    sim = get_sim(ws, idomain=0)
-
-    # write the input files
-    sim.write_simulation()
-
-    # run the simulation
-    returncode, buff = run_mf6([mf6_exe], ws)
-    msg = "could not run {}".format(sim.name)
-    if returncode != 0:
-        err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
-        err = any(err_str in s for s in buff)
-        if err:
+        # run the simulation
+        returncode, buff = run_mf6([mf6_exe], ws)
+        msg = "This run should fail with a returncode of 1"
+        if returncode == 1:
             raise RuntimeError(msg)
-        else:
-            msg += " but IDOMAIN ARRAY ERROR not returned"
-            raise ValueError(msg)
-    return
+
+def idomain_runtime_error():
+    with pytest.raises(RuntimeError):
+        # get the simulation
+        sim = get_sim(ws, idomain=0)
+
+        # write the input files
+        sim.write_simulation()
+
+        # run the simulation
+        returncode, buff = run_mf6([mf6_exe], ws)
+        msg = "could not run {}".format(sim.name)
+        if returncode != 0:
+            err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
+            err = any(err_str in s for s in buff)
+            if err:
+                raise RuntimeError(msg)
+            else:
+                msg += " but IDOMAIN ARRAY ERROR not returned"
+                raise ValueError(msg)
 
 
 def test_converge_fail_nocontinue():
@@ -221,18 +216,18 @@ def test_mf6_idomain_error():
     idomain_runtime_error()
 
 
-@raises(RuntimeError)
 def test_unknown_keyword_error():
-    returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
-    msg = "could not run {}".format("unknown_keyword")
-    if returncode != 0:
-        err_str = "{}: illegal option".format(app)
-        err = any(err_str in s for s in buff)
-        if err:
-            raise RuntimeError(msg)
-        else:
-            msg += " but {} not returned".format(err_str)
-            raise ValueError(msg)
+    with pytest.raises(RuntimeError):
+        returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
+        msg = "could not run {}".format("unknown_keyword")
+        if returncode != 0:
+            err_str = "{}: illegal option".format(app)
+            err = any(err_str in s for s in buff)
+            if err:
+                raise RuntimeError(msg)
+            else:
+                msg += " but {} not returned".format(err_str)
+                raise ValueError(msg)
 
 
 def run_argv(arg, return_str):

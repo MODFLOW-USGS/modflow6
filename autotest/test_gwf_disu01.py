@@ -9,7 +9,6 @@ import pytest
 import shutil
 import subprocess
 import numpy as np
-from nose.tools import raises
 
 try:
     import flopy
