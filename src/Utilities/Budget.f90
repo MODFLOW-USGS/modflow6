@@ -684,11 +684,11 @@ module BudgetModule
     this%ibudcsv = ibudcsv
   end subroutine set_ibudcsv
   
-  subroutine writecsv(this)
+  subroutine writecsv(this, totim)
     ! -- modules
-    use TdisModule, only: totim
     ! -- dummy
     class(BudgetType) :: this
+    real(DP), intent(in) :: totim
     ! -- local
     integer(I4B) :: i
     real(DP) :: totrin

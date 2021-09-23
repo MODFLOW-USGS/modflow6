@@ -1192,7 +1192,7 @@ module GwfModule
   end subroutine gwf_ot_dv
   
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
@@ -1218,7 +1218,7 @@ module GwfModule
     end if
     
     ! -- Write to budget csv
-    call this%budget%writecsv()
+    call this%budget%writecsv(totim)
     
   end subroutine gwf_ot_bdsummary
   
