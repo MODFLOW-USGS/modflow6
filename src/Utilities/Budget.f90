@@ -1,21 +1,22 @@
-!Module for storing and printing a model budget.
-!
-!New entries can be added for each time step, however, the same number of
-!entries must be provided, and they must be provided in the same order.  If not,
-!the module will terminate with an error.
-!
-!Maxsize is required as part of the df method and the arrays will be allocated
-!to maxsize.  If additional entries beyond maxsize are added, the arrays
-!will dynamically increase in size, however, to avoid allocation and copying,
-!it is best to set maxsize large enough up front.
-!
-!vbvl(1, :) contains cumulative rate in
-!vbvl(2, :) contains cumulative rate out
-!vbvl(3, :) contains rate in
-!vbvl(4, :) contains rate out
-!vbnm(:)    contains a LENPACKAGENAME character text string for each entry
-!rowlabel(:) contains a LENPACKAGENAME character text string to write as a label for each entry
-
+!> @brief This module contains the BudgetModule 
+!!
+!! New entries can be added for each time step, however, the same number of
+!! entries must be provided, and they must be provided in the same order.  If not,
+!! the module will terminate with an error.
+!! 
+!! Maxsize is required as part of the df method and the arrays will be allocated
+!! to maxsize.  If additional entries beyond maxsize are added, the arrays
+!! will dynamically increase in size, however, to avoid allocation and copying,
+!! it is best to set maxsize large enough up front.
+!! 
+!! vbvl(1, :) contains cumulative rate in
+!! vbvl(2, :) contains cumulative rate out
+!! vbvl(3, :) contains rate in
+!! vbvl(4, :) contains rate out
+!! vbnm(:)    contains a LENPACKAGENAME character text string for each entry
+!! rowlabel(:) contains a LENPACKAGENAME character text string to write as a label for each entry
+!!
+!<
 module BudgetModule
 
   use KindModule, only: DP, I4B
@@ -29,6 +30,12 @@ module BudgetModule
   public :: budget_cr
   public :: rate_accumulator
 
+  !> @brief Derived type for the Budget object 
+  !!
+  !! This derived type stores and prints information about a 
+  !! model budget.  
+  !!
+  !<
   type BudgetType
     integer(I4B), pointer :: msum => null()
     integer(I4B), pointer :: maxsize => null()
@@ -66,17 +73,16 @@ module BudgetModule
 
   contains
 
+  !> @ brief Create a new budget object
+  !!
+  !!  Create a new budget object. 
+  !!
+  !<
   subroutine budget_cr(this, name_model)
-! ******************************************************************************
-! budget_cr -- Create a new budget object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    type(BudgetType), pointer :: this
-    character(len=*), intent(in) :: name_model
+    type(BudgetType), pointer :: this           !< BudgetType object
+    character(len=*), intent(in) :: name_model  !< name of the model
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -89,20 +95,18 @@ module BudgetModule
     return
   end subroutine budget_cr
 
+  !> @ brief Define information for this object
+  !!
+  !!  Allocate arrays and set member variables 
+  !!
+  !<
   subroutine budget_df(this, maxsize, bdtype, bddim, labeltitle, bdzone)
-! ******************************************************************************
-! budget_df -- Define the Budget Object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BudgetType) :: this
-    integer(I4B), intent(in) :: maxsize
-    character(len=*), optional :: bdtype
-    character(len=*), optional :: bddim
-    character(len=*), optional :: labeltitle
-    character(len=*), optional :: bdzone
-! ------------------------------------------------------------------------------
+    class(BudgetType) :: this                    !< BudgetType object
+    integer(I4B), intent(in) :: maxsize          !< maximum size of budget arrays
+    character(len=*), optional :: bdtype         !< type of budget, default is VOLUME
+    character(len=*), optional :: bddim          !< dimensions of terms, default is L**3
+    character(len=*), optional :: labeltitle     !< budget label, default is PACKAGE NAME
+    character(len=*), optional :: bdzone         !< corresponding zone, default is ENTIRE MODEL
     !
     ! -- Set values
     this%maxsize = maxsize
@@ -142,20 +146,18 @@ module BudgetModule
     return
   end subroutine budget_df
   
+  !> @ brief Convert a number to a string
+  !!
+  !!  This is sometimes needed to avoid numbers that do not fit 
+  !!  correctly into a text string
+  !!
+  !<
   subroutine value_to_string(val, string, big, small)
-! ******************************************************************************
-! value_to_string -- Convert the specified numeric value into a printable
-!                    string that looks good in the budget table
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    real(DP), intent(in) :: val
-    character(len=*), intent(out) :: string
-    real(DP), intent(in) :: big
-    real(DP), intent(in) :: small
+    real(DP), intent(in) :: val                 !< value to convert
+    character(len=*), intent(out) :: string     !< string to fill
+    real(DP), intent(in) :: big                 !< big value
+    real(DP), intent(in) :: small               !< small value
     real(DP) :: absval
-! ------------------------------------------------------------------------------
     !
     absval = abs(val)
     if (val /= DZERO .and. (absval >= big .or. absval < small)) then
@@ -173,23 +175,22 @@ module BudgetModule
     return
   end subroutine value_to_string
 
+  !> @ brief Output the budget table
+  !!
+  !!  Write the budget table for the current set of budget
+  !!  information.
+  !!
+  !<
   subroutine budget_ot(this, kstp, kper, iout)
-! ******************************************************************************
-! budget_ot -- Output the Budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BudgetType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
+    class(BudgetType) :: this            !< BudgetType object
+    integer(I4B), intent(in) :: kstp     !< time step
+    integer(I4B), intent(in) :: kper     !< stress period
+    integer(I4B), intent(in) :: iout     !< output unit number
     character(len=17) :: val1, val2
     integer(I4B) :: msum1, l
     real(DP) :: two, hund, bigvl1, bigvl2, small,                              &
                 totrin, totrot, totvin, totvot, diffr, adiffr,                 &
                 pdiffr, pdiffv, avgrat, diffv, adiffv, avgvol
-! ------------------------------------------------------------------------------
     !
     ! -- Set constants
     two = 2.d0
@@ -315,15 +316,13 @@ module BudgetModule
     return
   end subroutine budget_ot
 
+  !> @ brief Deallocate memory
+  !!
+  !!  Deallocate budget memory
+  !!
+  !<
   subroutine budget_da(this)
-! ******************************************************************************
-! budget_da -- Deallocate budget variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BudgetType) :: this
-! ------------------------------------------------------------------------------
+    class(BudgetType) :: this      !< BudgetType object
     !
     ! -- Scalars
     deallocate(this%msum)
@@ -345,20 +344,17 @@ module BudgetModule
     return
   end subroutine budget_da
 
+  !> @ brief Reset the budget object
+  !!
+  !!  Reset the budget object in preparation for next set of entries
+  !!
+  !<
   subroutine reset(this)
-! ******************************************************************************
-! initialize -- Reset all of the budget rates to zero, and set msum to 1.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO
     ! -- dummy
-    class(BudgetType) :: this
+    class(BudgetType) :: this     !< BudgetType object
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     this%msum = 1
     !
@@ -371,38 +367,36 @@ module BudgetModule
     return
   end subroutine reset
 
+  !> @ brief Add a single row of information 
+  !!
+  !!  Add information corresponding to one row in the budget table
+  !!    rin the inflow rate
+  !!    rout is the outflow rate
+  !!    delt is the time step length
+  !!    text is the name of the entry
+  !!    isupress_accumulate is an optional flag.  If specified as 1, then
+  !!      the volume is NOT added to the accumulators on vbvl(1, :) and vbvl(2, :).
+  !!    rowlabel is a LENPACKAGENAME character text entry that is written to the 
+  !!      right of the table.  It can be used for adding package names to budget 
+  !!      entries.
+  !!
+  !<
   subroutine add_single_entry(this, rin, rout, delt, text,                     &
                               isupress_accumulate, rowlabel)
-! ******************************************************************************
-! add_single_entry -- Add Budget Entry
-!    rin the inflow rate
-!    rout is the outflow rate
-!    delt is the time step length
-!    text is the name of the entry
-!    isupress_accumulate is an optional flag.  If specified as 1, then
-!      the volume is NOT added to the accumulators on vbvl(1, :) and vbvl(2, :).
-!    rowlabel is a LENPACKAGENAME character text entry that is written to the 
-!      right of the table.  It can be used for adding package names to budget 
-!      entries.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(BudgetType) :: this
-    real(DP), intent(in) :: rin
-    real(DP), intent(in) :: rout
-    real(DP), intent(in) :: delt
-    character(len=LENBUDTXT), intent(in) :: text
-    integer(I4B), optional, intent(in) :: isupress_accumulate
-    character(len=LENPACKAGENAME), optional, intent(in) :: rowlabel
+    class(BudgetType) :: this                                         !< BudgetType object
+    real(DP), intent(in) :: rin                                       !< inflow rate
+    real(DP), intent(in) :: rout                                      !< outflow rate
+    real(DP), intent(in) :: delt                                      !< time step length
+    character(len=LENBUDTXT), intent(in) :: text                      !< name of the entry
+    integer(I4B), optional, intent(in) :: isupress_accumulate         !< accumulate flag
+    character(len=LENPACKAGENAME), optional, intent(in) :: rowlabel   !< row label
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmtbuderr = &
       "('Error in MODFLOW 6.', 'Entries do not match: ', (a), (a) )"
     integer(I4B) :: iscv
     integer(I4B) :: maxsize
-! ------------------------------------------------------------------------------
     !
     iscv = 0
     if(present(isupress_accumulate)) then
@@ -443,37 +437,35 @@ module BudgetModule
     return
   end subroutine add_single_entry
 
+  !> @ brief Add multiple rows of information 
+  !!
+  !!  Add information corresponding to one multiple rows in the budget table
+  !!    budterm is an array with inflow in column 1 and outflow in column 2
+  !!    delt is the time step length
+  !!    budtxt is the name of the entries.  It should have one entry for each
+  !!      row in budterm
+  !!    isupress_accumulate is an optional flag.  If specified as 1, then
+  !!      the volume is NOT added to the accumulators on vbvl(1, :) and vbvl(2, :).
+  !!    rowlabel is a LENPACKAGENAME character text entry that is written to the 
+  !!      right of the table.  It can be used for adding package names to budget 
+  !!      entries. For multiple entries, the same rowlabel is used for each entry.
+  !!
+  !<
   subroutine add_multi_entry(this, budterm, delt, budtxt,                     &
                              isupress_accumulate, rowlabel)
-! ******************************************************************************
-! add_multi_entry -- Add multiple budget entries
-!    budterm is an array with inflow in column 1 and outflow in column 2
-!    delt is the time step length
-!    budtxt is the name of the entries.  It should have one entry for each
-!      row in budterm
-!    isupress_accumulate is an optional flag.  If specified as 1, then
-!      the volume is NOT added to the accumulators on vbvl(1, :) and vbvl(2, :).
-!    rowlabel is a LENPACKAGENAME character text entry that is written to the 
-!      right of the table.  It can be used for adding package names to budget 
-!      entries. For multiple entries, the same rowlabel is used for each entry.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(BudgetType) :: this
-    real(DP), dimension(:, :), intent(in) :: budterm
-    real(DP), intent(in) :: delt
-    character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt
-    integer(I4B), optional, intent(in) :: isupress_accumulate
-    character(len=LENPACKAGENAME), optional, intent(in) :: rowlabel
+    class(BudgetType) :: this                                          !< BudgetType object
+    real(DP), dimension(:, :), intent(in) :: budterm                   !< array of budget terms
+    real(DP), intent(in) :: delt                                       !< time step length
+    character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt       !< name of the entries
+    integer(I4B), optional, intent(in) :: isupress_accumulate          !< suppress accumulate
+    character(len=LENPACKAGENAME), optional, intent(in) :: rowlabel    !< row label
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmtbuderr = &
       "('Error in MODFLOW 6.', 'Entries do not match: ', (a), (a) )"
     integer(I4B) :: iscv, i
     integer(I4B) :: nbudterms, maxsize
-! ------------------------------------------------------------------------------
     !
     iscv = 0
     if(present(isupress_accumulate)) then
@@ -526,16 +518,16 @@ module BudgetModule
     return
   end subroutine add_multi_entry
 
+  !> @ brief allocate scalar variables
+  !!
+  !!  Allocate scalar variables of this budget object
+  !!
+  !<
   subroutine allocate_scalars(this, name_model)
-! ******************************************************************************
-! allocate_scalars -- allocate budget scalar variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(BudgetType) :: this
-    character(len=*), intent(in) :: name_model
-! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetType) :: this                      !< BudgetType object
+    character(len=*), intent(in) :: name_model     !< name of the model
     !
     allocate(this%msum)
     allocate(this%maxsize)
@@ -564,18 +556,15 @@ module BudgetModule
     return
   end subroutine allocate_scalars
 
+  !> @ brief allocate array variables
+  !!
+  !!  Allocate array variables of this budget object
+  !!
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- allocate budget arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO
     ! -- dummy
-    class(BudgetType) :: this
-! ------------------------------------------------------------------------------
+    class(BudgetType) :: this           !< BudgetType object
     !
     ! -- If redefining, then need to deallocate/reallocate
     if(associated(this%vbvl)) then
@@ -604,23 +593,22 @@ module BudgetModule
     return
   end subroutine allocate_arrays
   
+  !> @ brief Resize the budget object
+  !!
+  !!  If the size wasn't allocated to be large enough, then the budget object
+  !!  we reallocate itself to a larger size.
+  !!
+  !<
   subroutine resize(this, maxsize)
-! ******************************************************************************
-! resize -- resize budget arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(BudgetType) :: this
-    integer(I4B), intent(in) :: maxsize
+    class(BudgetType) :: this              !< BudgetType object
+    integer(I4B), intent(in) :: maxsize    !< maximum size
     ! -- local
     real(DP), dimension(:, :), allocatable :: vbvl
     character(len=LENBUDTXT), dimension(:), allocatable :: vbnm
     character(len=LENPACKAGENAME), dimension(:), allocatable :: rowlabel
     integer(I4B) :: maxsizeold
-! ------------------------------------------------------------------------------
     !
     ! -- allocate and copy into local storage
     maxsizeold = this%maxsize
@@ -649,21 +637,19 @@ module BudgetModule
     return
   end subroutine resize
   
+  !> @ brief Rate accumulator subroutine
+  !!
+  !!  Routing for tallying inflows and outflows of an array
+  !!
+  !<
   subroutine rate_accumulator(flow, rin, rout)
-! ******************************************************************************
-! rate_accumulator -- calculate the total rate in and rate out for a vector of
-!   flows.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    real(DP), dimension(:), contiguous, intent(in) :: flow
-    real(DP), intent(out) :: rin
-    real(DP), intent(out) :: rout
+    real(DP), dimension(:), contiguous, intent(in) :: flow  !< array of flows
+    real(DP), intent(out) :: rin                            !< calculated sum of inflows
+    real(DP), intent(out) :: rout                           !< calculated sum of outflows
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
+    !
     rin = DZERO
     rout = DZERO
     do n = 1, size(flow)
@@ -676,19 +662,33 @@ module BudgetModule
     return
   end subroutine rate_accumulator
   
+  !> @ brief Set unit number for csv output file
+  !!
+  !!  This routine can be used to activate csv output
+  !!  by passing in a valid unit number opened for output
+  !!
+  !<
   subroutine set_ibudcsv(this, ibudcsv)
     ! -- modules
     ! -- dummy
-    class(BudgetType) :: this
-    integer(I4B), intent(in) :: ibudcsv
+    class(BudgetType) :: this               !< BudgetType object
+    integer(I4B), intent(in) :: ibudcsv     !< unit number for csv budget output
     this%ibudcsv = ibudcsv
+    return
   end subroutine set_ibudcsv
   
+  !> @ brief Write csv output
+  !!
+  !!  This routine will write a row of output to the
+  !!  csv file, if it is available for output.  Upon first
+  !!  call, it will write the csv header.
+  !!
+  !<
   subroutine writecsv(this, totim)
     ! -- modules
     ! -- dummy
-    class(BudgetType) :: this
-    real(DP), intent(in) :: totim
+    class(BudgetType) :: this        !< BudgetType object
+    real(DP), intent(in) :: totim    !< time corresponding to this data
     ! -- local
     integer(I4B) :: i
     real(DP) :: totrin
@@ -730,10 +730,17 @@ module BudgetModule
     return
   end subroutine writecsv
   
+  !> @ brief Write csv header
+  !!
+  !!  This routine will write the csv header based on the
+  !!  names in vbnm
+  !!
+  !<
   subroutine write_csv_header(this)
     ! -- modules
     ! -- dummy
-    class(BudgetType) :: this
+    class(BudgetType) :: this    !< BudgetType object
+    ! -- local
     integer(I4B) :: l
     character(len=LINELENGTH) :: txt, txtl
     write(this%ibudcsv, '(a)', advance='NO') 'time,'
