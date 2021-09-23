@@ -211,7 +211,7 @@ def test_mf6model(idx, dir):
         dir,
         mf6_regression=set_mf6_regression(),
         cmp_verbose=False,
-        make_comparison=set_make_comparison(on_dir),
+        make_comparison=set_make_comparison(dir),
     ))
 
 
