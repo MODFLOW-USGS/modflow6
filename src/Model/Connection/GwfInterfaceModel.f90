@@ -156,7 +156,7 @@ contains
     call disu%allocate_arrays_mem()
     
     ! fill data
-    do icell = 1, nrOfCells      
+    do icell = 1, nrOfCells
       idx = this%gridConnection%idxToGlobal(icell)%index
       model => this%gridConnection%idxToGlobal(icell)%model
       
@@ -167,7 +167,7 @@ contains
      
     ! grid connections follow from GridConnection:
     this%dis%con => this%gridConnection%connections
-    this%dis%njas =  this%dis%con%njas        
+    this%dis%njas =  this%dis%con%njas
     
     ! copy cell x,y
     do icell = 1, nrOfCells

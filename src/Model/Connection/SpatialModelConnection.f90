@@ -26,7 +26,8 @@ module SpatialModelConnectionModule
 
     class(NumericalModelType), pointer  :: owner => null()            !< the model whose connection this is    
     integer(I4B), pointer               :: nrOfConnections => null()  !< total nr. of connected cells (primary)
-    type(ListType), pointer             :: localExchanges => null()   !< aggregation, all exchanges which directly connect with our model
+    type(ListType), pointer             :: localExchanges => null()   !< all exchanges which directly connect with our model,
+                                                                      !! (we own all that have our owning model as model 1)
     type(ListType)                      :: globalExchanges            !< all exchanges in the same solution
     integer(I4B), pointer               :: intStencilDepth => null()  !< size of the computational stencil for the interior
                                                                       !! default = 1, xt3d = 2, tvd = ...

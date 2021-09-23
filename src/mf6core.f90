@@ -538,9 +538,11 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       character(len=LINELENGTH) :: line
       character(len=LINELENGTH) :: fmt
       integer(I4B) :: im
+      integer(I4B) :: ix
       integer(I4B) :: ic
       integer(I4B) :: is
       !
@@ -567,10 +569,16 @@ module Mf6CoreModule
           enddo
           !
           ! -- Write output for each exchange
-          do ic = 1, baseexchangelist%Count()
-            ep => GetBaseExchangeFromList(baseexchangelist, ic)
+          do ix = 1, baseexchangelist%Count()
+            ep => GetBaseExchangeFromList(baseexchangelist, ix)
             call ep%exg_ot()
           enddo
+          !
+          ! -- Write output for each connection
+          do ic = 1, baseconnectionlist%Count()
+            mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+            call mc%exg_ot()
+          end do
           !
           ! -- Write output for each solution
           do is=1,basesolutionlist%Count()

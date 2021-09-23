@@ -5,6 +5,7 @@ module ConnectionBuilderModule
   use ListModule, only: ListType, arePointersEqual, isEqualIface, ListNodeType
   use BaseSolutionModule, only: BaseSolutionType
   use NumericalSolutionModule, only: NumericalSolutionType
+  use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
   use DisConnExchangeModule, only: DisConnExchangeType,               &
                                 GetDisConnExchangeFromList
   use NumericalModelModule, only: NumericalModelType
@@ -78,14 +79,19 @@ module ConnectionBuilderModule
   !! list, and return them in @param newConnections
   !<
   subroutine processExchanges(this, exchanges, newConnections)
-    use ListsModule, only: baseconnectionlist
+    use ListsModule, only: baseconnectionlist, baseexchangelist
     class(ConnectionBuilderType) :: this              !< the connection builder object
     type(ListType), pointer, intent(in) :: exchanges  !< the list of exchanges to process
     type(ListType), intent(inout) :: newConnections   !< the newly created connections
     ! local
     class(DisConnExchangeType), pointer :: conEx
-    integer(I4B) :: iex
+    class(BaseExchangeType), pointer :: baseEx
+    integer(I4B) :: iex, ibasex
     class(SpatialModelConnectionType), pointer :: modelConnection
+    logical(LGP) :: alwaysInterfaceModel
+
+    ! TODO_MJR: for debugging, remove...
+    inquire(file="always.im", exist=alwaysInterfaceModel)
 
     do iex = 1, exchanges%Count()
       conEx => GetDisConnExchangeFromList(exchanges, iex)
@@ -95,8 +101,8 @@ module ConnectionBuilderModule
       end if
     
       ! for now, if we have XT3D on the interface, we use a connection,
-      ! (this will be more generic in the future)
-      if (conEx%ixt3d > 0) then
+      ! (this will be more generic in the future)      
+      if (conEx%ixt3d > 0 .or. alwaysInterfaceModel) then
 
         ! fetch connection for model 1:
         modelConnection => lookupConnection(conEx%model1, conEx%typename)
@@ -122,6 +128,15 @@ module ConnectionBuilderModule
         ! add exchange to connection
         call modelConnection%addExchange(conEx)
 
+        ! remove this exchange from the base list, ownership
+        ! now lies with the connection
+        do ibasex = 1, baseexchangelist%Count()
+          baseEx => GetBaseExchangeFromList(baseexchangelist, ibasex)
+          if (conEx%id == baseEx%id) then
+            call baseexchangelist%RemoveNode(ibasex, .false.)
+          end if
+        end do
+        
       end if
     end do
 

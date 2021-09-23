@@ -89,7 +89,7 @@ module GwfGwfExchangeModule
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
-    procedure, private :: gwf_gwf_bdsav
+    procedure          :: gwf_gwf_bdsav
     procedure, private :: gwf_gwf_df_obs
     procedure, private :: gwf_gwf_rp_obs
     procedure, public  :: gwf_gwf_save_simvals

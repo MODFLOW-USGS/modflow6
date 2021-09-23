@@ -237,6 +237,7 @@ def get_model(idx, dir):
         exgmnameb=child_name,
         exchangedata=exgdata,
         xt3d=useXT3D,
+        print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
     )
 
@@ -396,7 +397,7 @@ def eval_heads(sim):
             res.min(), res.max()
         )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
-    
+
     return
 
 

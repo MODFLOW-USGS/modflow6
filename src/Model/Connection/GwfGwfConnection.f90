@@ -39,11 +39,13 @@ module GwfGwfConnectionModule
     procedure, pass(this) :: exg_ar => gwfgwfcon_ar
     procedure, pass(this) :: exg_df => gwfgwfcon_df 
     procedure, pass(this) :: exg_ac => gwfgwfcon_ac
+    procedure, pass(this) :: exg_rp => gwfgwfcon_rp
     procedure, pass(this) :: exg_cf => gwfgwfcon_cf
     procedure, pass(this) :: exg_fc => gwfgwfcon_fc
     procedure, pass(this) :: exg_da => gwfgwfcon_da
     procedure, pass(this) :: exg_cq => gwfgwfcon_cq
     procedure, pass(this) :: exg_bd => gwfgwfcon_bd
+    procedure, pass(this) :: exg_ot => gwfgwfcon_ot
 
     ! overriding 'protected'
     procedure, pass(this) :: validateConnection
@@ -54,6 +56,7 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchanges
+    procedure, pass(this), private :: printExchangeFlow
     
   end type GwfGwfConnectionType
 
@@ -222,8 +225,10 @@ contains
     ! local    
     integer(I4B) :: icell, idx, localIdx
     class(NumericalModelType), pointer :: model
-    type(GridConnectionType), pointer :: gc !< pointer to the grid connection
-    
+    type(GridConnectionType), pointer :: gc !< pointer to the grid connection    
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
+
     ! check if we can construct an interface model
     ! NB: only makes sense after the models' allocate&read have been
     ! called, which is why we do it here
@@ -250,10 +255,64 @@ contains
                                     gc%idxToGlobal(localIdx)%model%moffset
     end do
 
-    ! TODO_MJR: movers and observations
-    
+    ! loop over exchanges and AR the movers and obs
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        if (gwfEx%inmvr > 0) then
+          call gwfEx%mvr%mvr_ar()
+        end if
+        if (gwfEx%inobs > 0) then
+          call gwfEx%obs%obs_ar()
+        end if
+      end if
+    end do
   end subroutine gwfgwfcon_ar
+
+  !> @brief Read time varying data when required
+  !<
+  subroutine gwfgwfcon_rp(this)
+    use TdisModule, only: readnewdata
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
+    
+    if (.not. readnewdata) return
+
+    ! loop over exchanges and RP the movers
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        if (gwfEx%inmvr > 0) then
+          call gwfEx%mvr%mvr_rp()
+        end if
+      end if
+    end do
+
+    return
+  end subroutine gwfgwfcon_rp
      
+  !> @brief Advance the connection to the new time
+  !<
+  subroutine gwfgwfcon_ad(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
+
+    ! loop over exchanges and RP the movers
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        if (gwfEx%inmvr > 0) then
+          call gwfEx%mvr%mvr_ad()
+        end if
+      end if
+    end do
+
+  end subroutine gwfgwfcon_ad
+
   !> @brief Add connections, handled by the interface model,
   !< to the global system's sparse
   subroutine gwfgwfcon_ac(this, sparse)        
@@ -334,7 +393,8 @@ contains
     real(DP), dimension(:), intent(inout) ::rhssln    !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag    !< newton-raphson flag
     ! local
-    integer(I4B) :: n, ipos, nglo
+    integer(I4B) :: n, ipos, nglo, iex
+    class(GwfExchangeType), pointer :: gwfEx
     
     ! fill (and add to...) coefficients for interface
     call this%interfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
@@ -356,6 +416,17 @@ contains
         amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
       end do
     end do
+
+    ! loop over exchanges and FC the movers
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        if (gwfEx%inmvr > 0) then
+          call gwfEx%mvr%mvr_fc()
+        end if
+      end if
+    end do
+
   end subroutine gwfgwfcon_fc
 
   !> @brief Validate this connection
@@ -444,7 +515,10 @@ contains
   subroutine gwfgwfcon_da(this)    
     use KindModule, only: LGP
     class(GwfGwfConnectionType) :: this !< this connection
-    logical(LGP) :: isOpen
+    ! local
+    logical(LGP) :: isOpen    
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
 
     call mem_deallocate(this%iXt3dOnExchange)
     
@@ -457,6 +531,14 @@ contains
     if (isOpen) then
       close(this%iout)
     end if
+
+    ! we need to deallocate the baseexchange we own:
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        call gwfEx%exg_da()
+      end if
+    end do
     
   end subroutine gwfgwfcon_da
 
@@ -589,7 +671,7 @@ contains
   end subroutine setFlowToExchanges
 
   !> @brief Calculate the budget terms for this connection, this is
-  !< dispatched to the GWF-GWF exchanges
+  !! dispatched to the GWF-GWF exchanges.
   subroutine gwfgwfcon_bd(this, icnvg, isuppress_output, isolnid)
     class(GwfGwfConnectionType) :: this           !< this connection
     integer(I4B), intent(inout) :: icnvg          !< convergence flag
@@ -601,7 +683,8 @@ contains
 
     ! call exchange budget routine, and only call
     ! it once, remember we have 2 interface models
-    ! per 1 GWF-GWF exchange
+    ! per 1 GWF-GWF exchange. This also calls bd
+    ! for movers.
     do iex=1, this%localExchanges%Count()
       gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
       if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
@@ -610,6 +693,57 @@ contains
     end do
     
   end subroutine gwfgwfcon_bd
+
+  !> @brief Write output for exchanges (and calls
+  !< save on the budget)
+  subroutine gwfgwfcon_ot(this)
+    class(GwfGwfConnectionType) :: this           !< this connection
+    ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
+    
+    ! we don't call gwf_gwf_ot here, but
+    ! we do want to save the budget
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
+        
+        call gwfEx%gwf_gwf_bdsav()
+        
+        if (gwfEx%iprflow /= 0) then
+          call this%printExchangeFlow(gwfEx)
+        end if
+
+        if(gwfEx%inmvr > 0) then
+          call gwfEx%mvr%mvr_ot_bdsummary()
+        end if
+      end if
+    end do
+
+  end subroutine gwfgwfcon_ot
+
+  !> @brief Print realized exchanged flow for this GWF-GWF
+  !< Exchange to screen
+  subroutine printExchangeFlow(this, gwfEx)
+    use SimVariablesModule, only: iout
+    class(GwfGwfConnectionType) :: this      !< this connection
+    class(GwfExchangeType), pointer :: gwfEx !< the exchange for printing
+    ! local
+    integer(I4B) :: i
+    character(len=*), parameter :: fmtheader =                                   &
+      "(/1x, 'Exchange rates for connection between models ', a, ' and ', a)"
+    character(len=*), parameter :: fmtbody = "(/1x, 2a16, f16.5)"
+    character(len=LINELENGTH) :: node1str, node2str
+
+    write(iout, fmtheader) trim(gwfEx%model1%name), trim(gwfEx%model2%name)
+    do i = 1, gwfEx%nexg
+      call gwfEx%model1%dis%noder_to_string(gwfEx%nodem1(i), node1str)
+      call gwfEx%model2%dis%noder_to_string(gwfEx%nodem2(i), node2str)
+      write(iout, fmtbody) trim(node1str), trim(node2str), gwfEx%simvals(i)
+    end do
+    
+  end subroutine printExchangeFlow
+
   
   !> @brief Cast NumericalModelType to GwfModelType
   !<
