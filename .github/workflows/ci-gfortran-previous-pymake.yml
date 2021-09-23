@@ -1,4 +1,4 @@
-name: gfortran - latest version
+name: gfortran - previous versions
 
 on:
   push:
@@ -14,7 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-18.04]
+        GCC_V: [5, 6, 7, 8]
     defaults:
       run:
         shell: bash
@@ -29,26 +30,20 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: Setup symbolic links on Linux
-      if: runner.os == 'Linux'
+    - name: Set up gfortran ${{ matrix.GCC_V }}
       run: |
-        sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
-        sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
-        sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
-
-    - name: Setup symbolic link to gfortran on macOS
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        sudo ln -fs /usr/local/bin/gfortran-10 /usr/local/bin/gfortran
-        sudo ln -fs /usr/local/bin/gcc-10 /usr/local/bin/gcc
-        sudo ln -fs /usr/local/bin/g++-10 /usr/local/bin/g++
+        sudo apt-get install -y --no-install-recommends gcc-${{ matrix.GCC_V }} g++-${{ matrix.GCC_V }} gfortran-${{ matrix.GCC_V }}
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.GCC_V }} 100 \
+        --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.GCC_V }} \
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.GCC_V }} \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.GCC_V }}
 
     - name: Print GNU compiler versions
       run: |
-        gfortran --version
         gcc --version
+        gfortran --version
         g++ --version
+        gcov --version
 
     - name: Install python packages
       run: |
@@ -75,9 +70,11 @@ jobs:
         .github/common/update-flopy.sh
 
     - name: Build applications
+      working-directory: autotest
       run: |
-        nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
-
+        pytest get_build_exes.py
+        
     - name: Test applications
+      working-directory: autotest
       run: |
-        nosetests -v --with-id --with-timer -w ./autotest
+        pytest

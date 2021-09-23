@@ -119,9 +119,14 @@ jobs:
         run: |
           .github/intel-scripts/${{ matrix.build_script }}
 
-      - name: Test applications
+      - name: Build applications
+        working-directory: autotest
         run: |
-          cd autotest
+          pytest get_build_exes.py
+          
+      - name: Test applications
+        working-directory: autotest
+        run: |
           pytest
 
       - name: exclude unused files from cache on linux
