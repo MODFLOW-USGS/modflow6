@@ -121,7 +121,8 @@ jobs:
 
       - name: Test applications
         run: |
-          nosetests -v --with-id --with-timer -w ./autotest
+          cd autotest
+          pytest
 
       - name: exclude unused files from cache on linux
         if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
