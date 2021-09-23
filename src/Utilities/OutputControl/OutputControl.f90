@@ -12,7 +12,8 @@ module OutputControlModule
   use SimVariablesModule,      only: errmsg
   use OutputControlDataModule, only: OutputControlDataType, ocd_cr
   use BlockParserModule,       only: BlockParserType
-
+  use InputOutputModule, only: GetUnit, openfile
+  
   implicit none
   private
   public OutputControlType, oc_cr
@@ -26,6 +27,7 @@ module OutputControlModule
     character(len=LENMODELNAME), pointer                :: name_model => null()             !< name of the model
     integer(I4B), pointer                               :: inunit     => null()             !< unit number for input file
     integer(I4B), pointer                               :: iout       => null()             !< unit number for output file
+    integer(I4B), pointer                               :: ibudcsv    => null()             !< unit number for budget csv output file
     integer(I4B), pointer                               :: iperoc     => null()             !< stress period number for next output control
     integer(I4B), pointer                               :: iocrep     => null()             !< output control repeat flag (period 0 step 0)
     type(OutputControlDataType), dimension(:), pointer, contiguous  :: ocdobj     => null() !< output control objects
@@ -279,6 +281,7 @@ module OutputControlModule
     deallocate(this%name_model)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
+    call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%iperoc)
     call mem_deallocate(this%iocrep)
     !
@@ -304,12 +307,14 @@ module OutputControlModule
     allocate(this%name_model)    
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%iperoc, 'IPEROC', this%memoryPath)
     call mem_allocate(this%iocrep, 'IOCREP', this%memoryPath)
     !
     this%name_model = name_model
     this%inunit = 0
     this%iout = 0
+    this%ibudcsv = 0
     this%iperoc = 0
     this%iocrep = 0
     !
@@ -330,6 +335,8 @@ module OutputControlModule
     class(OutputControlType) :: this  !< OutputControlType object
     ! -- local
     character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: keyword2
+    character(len=LINELENGTH) :: fname
     character(len=:), allocatable :: line
     integer(I4B) :: ierr
     integer(I4B) :: ipos
@@ -348,20 +355,36 @@ module OutputControlModule
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         found = .false.
-        do ipos = 1, size(this%ocdobj)
-          ocdobjptr => this%ocdobj(ipos)
-          if(keyword == trim(ocdobjptr%cname)) then
-            found = .true.
-            exit
-          endif
-        enddo
+        if (keyword == 'BUDGETCSV') then
+          call this%parser%GetStringCaps(keyword2)
+          if (keyword2 /= 'FILEOUT') then
+            errmsg = "BUDGETCSV must be followed by FILEOUT and then budget &
+              &csv file name.  Found '" // trim(keyword2) // "'."
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          end if
+          call this%parser%GetString(fname)
+          this%ibudcsv = GetUnit()
+          call openfile(this%ibudcsv, this%iout, fname, 'CSV', filstat_opt='REPLACE')
+          found = .true.
+        end if
+        
         if (.not. found) then
-          errmsg = "UNKNOWN OC OPTION '" // trim(keyword) // "'."
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        endif
-        call this%parser%GetRemainingLine(line)
-        call ocdobjptr%set_option(line, this%parser%iuactive, this%iout)
+          do ipos = 1, size(this%ocdobj)
+            ocdobjptr => this%ocdobj(ipos)
+            if(keyword == trim(ocdobjptr%cname)) then
+              found = .true.
+              exit
+            endif
+          enddo
+          if (.not. found) then
+            errmsg = "UNKNOWN OC OPTION '" // trim(keyword) // "'."
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          endif
+          call this%parser%GetRemainingLine(line)
+          call ocdobjptr%set_option(line, this%parser%iuactive, this%iout)
+        end if
       end do
       write(this%iout,'(1x,a)') 'END OF OC OPTIONS'
     end if

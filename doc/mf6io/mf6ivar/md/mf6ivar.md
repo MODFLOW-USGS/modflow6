@@ -718,6 +718,8 @@
 | GWF | OC | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWF | OC | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWF | OC | OPTIONS | BUDGETFILE | STRING | name of the output file to write budget information. |
+| GWF | OC | OPTIONS | BUDGETCSV | KEYWORD | keyword to specify that record corresponds to the budget CSV. |
+| GWF | OC | OPTIONS | BUDGETCSVFILE | STRING | name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation. |
 | GWF | OC | OPTIONS | HEAD | KEYWORD | keyword to specify that record corresponds to head. |
 | GWF | OC | OPTIONS | HEADFILE | STRING | name of the output file to write head information. |
 | GWF | OC | OPTIONS | PRINT_FORMAT | KEYWORD | keyword to specify format for printing to the listing file. |
@@ -840,6 +842,8 @@
 | GWT | OC | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWT | OC | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWT | OC | OPTIONS | BUDGETFILE | STRING | name of the output file to write budget information. |
+| GWT | OC | OPTIONS | BUDGETCSV | KEYWORD | keyword to specify that record corresponds to the budget CSV. |
+| GWT | OC | OPTIONS | BUDGETCSVFILE | STRING | name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation. |
 | GWT | OC | OPTIONS | CONCENTRATION | KEYWORD | keyword to specify that record corresponds to concentration. |
 | GWT | OC | OPTIONS | CONCENTRATIONFILE | STRING | name of the output file to write conc information. |
 | GWT | OC | OPTIONS | PRINT_FORMAT | KEYWORD | keyword to specify format for printing to the listing file. |
