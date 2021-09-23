@@ -20,7 +20,8 @@ module BudgetModule
 
   use KindModule, only: DP, I4B
   use SimModule,  only: store_error, count_errors
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, DZERO
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, DZERO, &
+                             DTWO, DHUNDRED
   
   implicit none
   private
@@ -41,18 +42,26 @@ module BudgetModule
     character(len=16), pointer :: labeltitle => null()
     character(len=20), pointer :: bdzone => null()
     logical, pointer :: labeled => null()
+    !
+    ! -- csv output
+    integer(I4B), pointer :: ibudcsv => null()
+    integer(I4B), pointer :: icsvheader => null()
+    
   contains
     procedure :: budget_df
     procedure :: budget_ot
     procedure :: budget_da
+    procedure :: set_ibudcsv
     procedure :: reset
     procedure :: add_single_entry
     procedure :: add_multi_entry
     generic :: addentry => add_single_entry, add_multi_entry
+    procedure :: writecsv
     ! -- private
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: resize
+    procedure, private :: write_csv_header
   end type BudgetType
 
   contains
@@ -537,6 +546,8 @@ module BudgetModule
     allocate(this%bddim)
     allocate(this%labeltitle)
     allocate(this%bdzone)
+    allocate(this%ibudcsv)
+    allocate(this%icsvheader)
     !
     ! -- Initialize values
     this%msum = 0
@@ -547,6 +558,8 @@ module BudgetModule
     this%bddim = ''
     this%labeltitle = ''
     this%bdzone = ''
+    this%ibudcsv = 0
+    this%icsvheader = 0
     !
     return
   end subroutine allocate_scalars
@@ -661,6 +674,93 @@ module BudgetModule
       end if
     end do
     return
-  end subroutine rate_accumulator  
+  end subroutine rate_accumulator
+  
+  subroutine set_ibudcsv(this, ibudcsv)
+    ! -- modules
+    ! -- dummy
+    class(BudgetType) :: this
+    integer(I4B), intent(in) :: ibudcsv
+    this%ibudcsv = ibudcsv
+  end subroutine set_ibudcsv
+  
+  subroutine writecsv(this)
+    ! -- modules
+    use TdisModule, only: totim
+    ! -- dummy
+    class(BudgetType) :: this
+    ! -- local
+    integer(I4B) :: i
+    real(DP) :: totrin
+    real(DP) :: totrout
+    real(DP) :: diffr
+    real(DP) :: pdiffr
+    real(DP) :: avgrat
+    !
+    if (this%ibudcsv > 0) then
+      !
+      ! -- write header
+      if (this%icsvheader == 0) then
+        call this%write_csv_header()
+        this%icsvheader = 1
+      end if
+      !
+      ! -- Calculate in and out
+      totrin = DZERO
+      totrout = DZERO
+      do i = 1, this%msum - 1
+        totrin = totrin + this%vbvl(3, i)
+        totrout = totrout + this%vbvl(4, i)
+      end do
+      !
+      ! -- calculate percent difference
+      diffr = totrin - totrout
+      pdiffr = DZERO
+      avgrat = (totrin + totrout) / DTWO
+      if (avgrat /= DZERO) then
+        pdiffr = DHUNDRED * diffr / avgrat
+      end if
+      !
+      ! -- write data
+      write(this%ibudcsv, '(*(G0,:,","))') totim,                              &
+                                           (this%vbvl(3, i), i=1,this%msum-1), &
+                                           (this%vbvl(4, i), i=1,this%msum-1), &
+                                           totrin, totrout, pdiffr
+    end if
+    return
+  end subroutine writecsv
+  
+  subroutine write_csv_header(this)
+    ! -- modules
+    ! -- dummy
+    class(BudgetType) :: this
+    integer(I4B) :: l
+    character(len=LINELENGTH) :: txt, txtl
+    write(this%ibudcsv, '(a)', advance='NO') 'time,'
+    !
+    ! -- first write IN
+    do l = 1, this%msum - 1
+      txt = this%vbnm(l)
+      txtl = ''
+      if (this%labeled) then
+        txtl = '(' // trim(adjustl(this%rowlabel(l))) // ')'
+      end if
+      txt = trim(adjustl(txt)) // trim(adjustl(txtl)) // '_IN,'
+      write(this%ibudcsv, '(a)', advance='NO') trim(adjustl(txt))
+    end do
+    !
+    ! -- then write OUT
+    do l = 1, this%msum - 1
+      txt = this%vbnm(l)
+      txtl = ''
+      if (this%labeled) then
+        txtl = '(' // trim(adjustl(this%rowlabel(l))) // ')'
+      end if
+      txt = trim(adjustl(txt)) // trim(adjustl(txtl)) // '_OUT,'
+      write(this%ibudcsv, '(a)', advance='NO') trim(adjustl(txt))
+    end do
+    write(this%ibudcsv, '(a)') 'TOTAL_IN,TOTAL_OUT,PERCENT_DIFFERENCE'
+    return
+  end subroutine write_csv_header
 
 end module BudgetModule

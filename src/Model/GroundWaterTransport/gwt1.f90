@@ -411,6 +411,7 @@ module GwtModule
     !
     ! -- set up output control
     call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
     do ip=1,this%bndlist%Count()
@@ -943,6 +944,9 @@ module GwtModule
       ! -- model budget summary
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
+    
+    ! -- Write to budget csv
+    call this%budget%writecsv()
     
   end subroutine gwt_ot_bdsummary
   
