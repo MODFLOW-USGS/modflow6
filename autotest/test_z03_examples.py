@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 
 try:
@@ -40,6 +41,12 @@ def get_mf6_models():
     """
     Get a list of test models
     """
+
+    # determine if largetest directory exists
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
+        return []
+
     # determine if running on travis
     is_CI = "CI" in os.environ
 
@@ -137,25 +144,17 @@ def set_make_comparison(test):
     return make_comparison
 
 
-def test_mf6model():
-    # determine if largetest directory exists
-    dir_available = is_directory_available(example_basedir)
-    if not dir_available:
-        return
-
-    # get a list of test models to run
-    example_dirs = get_mf6_models()
-
-    # run the test models
-    for on_dir in example_dirs:
-        yield run_mf6, Simulation(
-            on_dir,
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(get_mf6_models())),
+)
+def test_mf6model(idx, dir):
+    # run the test model
+    run_mf6(Simulation(
+            dir,
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=set_make_comparison(on_dir),
-        )
-
-    return
+            make_comparison=set_make_comparison(dir)))
 
 
 def main():
@@ -164,15 +163,10 @@ def main():
     msg = "Running {} test".format(tnam)
     print(msg)
 
-    # determine if largetest directory exists
-    dir_available = is_directory_available(example_basedir)
-    if not dir_available:
-        return
-
     # get a list of test models to run
     example_dirs = get_mf6_models()
 
-    # run the test models
+    # run the test model
     for on_dir in example_dirs:
         sim = Simulation(
             on_dir,

@@ -262,7 +262,7 @@ def test_mf6model(idx, dir):
     if is_CI and not continuous_integration[idx]:
         return
 
-    # run the test models
+    # run the test model
     test.run_mf6(Simulation(dir, mf6_regression=True))
 
     return
@@ -275,7 +275,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for dir in exdirs:
         sim = Simulation(
             dir,

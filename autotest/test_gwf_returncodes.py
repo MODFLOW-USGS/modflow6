@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 import shutil
 import subprocess
@@ -211,17 +212,13 @@ def idomain_runtime_error():
 
 
 def test_converge_fail_nocontinue():
-    # run the test models
-    yield converge_fail_nocontinue
-
-    return
+    # run the test model
+    converge_fail_nocontinue()
 
 
 def test_mf6_idomain_error():
-    # run the test models
-    yield idomain_runtime_error
-
-    return
+    # run the test model
+    idomain_runtime_error()
 
 
 @raises(RuntimeError)
@@ -249,33 +246,38 @@ def run_argv(arg, return_str):
         msg = "could not run with command line argument {}".format(arg)
         raise RuntimeError(msg)
 
-
-def test_help_argv():
-    argv = ["-h", "--help", "-?"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-h", "--help", "-?"],
+)
+def test_help_argv(arg):
     return_str = "{} [options]     retrieve program information".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
 
-def test_version_argv():
-    argv = ["-v", "--version"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-v", "--version"],
+)
+def test_version_argv(arg):
     return_str = "{}: 6".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
-
-def test_develop_argv():
-    argv = ["-dev", "--develop"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-dev", "--develop"],
+)
+def test_develop_argv(arg):
     return_str = "{}: develop version".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
-
-def test_compiler_argv():
-    argv = ["-c", "--compiler"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-c", "--compiler"],
+)
+def test_compiler_argv(arg):
     return_str = "{}: MODFLOW 6 compiled".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
 
 def test_clean_sim():

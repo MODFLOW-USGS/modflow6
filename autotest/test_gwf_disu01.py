@@ -5,6 +5,7 @@ Test to make sure that disu is working correctly
 """
 
 import os
+import pytest
 import shutil
 import subprocess
 import numpy as np

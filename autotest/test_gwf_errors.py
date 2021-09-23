@@ -7,6 +7,7 @@ very easily and tested with different options to succeed or fail correctly.
 """
 
 import os
+import pytest
 import shutil
 import subprocess
 import numpy as np

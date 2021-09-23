@@ -4,6 +4,7 @@
 # be 100.
 
 import os
+import pytest
 import shutil
 import numpy as np
 
