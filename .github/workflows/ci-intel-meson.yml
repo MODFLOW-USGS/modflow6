@@ -126,7 +126,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          "C:/Program Files (x86)/Intel/oneAPI/setvars.bat"
+          call ".github/intel-scripts/ifortvars_windows.bat"
           meson setup builddir --buildtype=release
           meson compile -C builddir
 

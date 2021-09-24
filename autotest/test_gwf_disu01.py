@@ -23,8 +23,7 @@ import targets
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "gwf_disu01"
 testdir = os.path.join("temp", testname)
-if not os.path.isdir(testdir):
-    os.mkdir(testdir)
+os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 
