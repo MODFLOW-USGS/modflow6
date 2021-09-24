@@ -544,7 +544,6 @@ module GwtSsmModule
     ! -- modules
     use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
-    use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtSsmType) :: this            !< GwtSsmType object
     integer(I4B), intent(in) :: icbcfl   !< flag for writing binary budget terms

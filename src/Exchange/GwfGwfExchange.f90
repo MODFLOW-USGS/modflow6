@@ -1166,6 +1166,7 @@ contains
     class(GwfExchangeType) :: this
     ! -- local
     integer(I4B) :: iexg, n1, n2
+    integer(I4B) :: ibudfl
     real(DP) :: flow, deltaqgnc
     character(len=LINELENGTH) :: node1str, node2str
     ! -- format
@@ -1217,7 +1218,8 @@ contains
     endif
     !
     ! -- Mover budget output
-    if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary()
+    ibudfl = 1
+    if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary(ibudfl)
     !
     ! -- OBS output
     call this%obs%obs_ot()

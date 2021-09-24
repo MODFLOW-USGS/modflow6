@@ -9,6 +9,7 @@ BEGIN OPTIONS
   [SAVE_FLOWS]
   [CONCENTRATION FILEOUT <concfile>]
   [BUDGET FILEOUT <budgetfile>]
+  [BUDGETCSV FILEOUT <budgetcsvfile>]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS
