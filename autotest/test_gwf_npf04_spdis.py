@@ -217,7 +217,7 @@ def eval_mf6(sim):
     qxb, qyb, qzb = qxqyqz(fname, nlayb, nrowb, ncolb)
     msg = "qx should be the same {} {}".format(qxa[0, 2, 1], qxb[0, 0, 0])
     assert np.allclose(qxa[0, 2, 1], qxb[0, 0, 0]), msg
-    
+
     cbcpth = os.path.join(sim.simpath, "{}.cbc".format(namea))
     grdpth = os.path.join(sim.simpath, "{}.dis.grb".format(namea))
     grb = flopy.mf6.utils.MfGrdFile(grdpth)

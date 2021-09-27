@@ -271,7 +271,10 @@ def run_transport_model():
         ("WEL-1", f"{gwtname}.wel1.spc"),
     ]
     ssm = flopy.mf6.ModflowGwtssm(
-        gwt, print_flows=True, sources=sourcerecarray, fileinput=fileinput,
+        gwt,
+        print_flows=True,
+        sources=sourcerecarray,
+        fileinput=fileinput,
     )
     pd = [(i, "concentration", 100.0) for i in range(nrow)]
     spc = flopy.mf6.ModflowUtlspc(
@@ -334,7 +337,7 @@ def test_ssm01fmi():
     run_transport_model()
     d = os.path.join(testdir, testgroup)
     if os.path.isdir(d):
-       shutil.rmtree(d)
+        shutil.rmtree(d)
     return
 
 

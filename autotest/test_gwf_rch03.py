@@ -37,7 +37,7 @@ for s in ex:
 def get_model(idx, dir):
 
     nlay, nrow, ncol = 2, 4, 5
-    perlen = [1.]
+    perlen = [1.0]
     nper = len(perlen)
     nstp = nper * [1]
     tsmult = nper * [1.0]
@@ -89,14 +89,18 @@ def get_model(idx, dir):
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
     idomain = [
-        [[0, 0, 0, 0, 0],
-        [0, -1, 1, -1, 0],
-        [0, -1, 1, -1, 0],
-        [0, 0, 0, 0, 0]],
-        [[1, 1, 1, 1, 1],
-         [1, 1, 1, -1, 1],
-         [1, 1, 1, 1, 1],
-         [1, 1, 1, 1, 1],],
+        [
+            [0, 0, 0, 0, 0],
+            [0, -1, 1, -1, 0],
+            [0, -1, 1, -1, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        [
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, -1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+        ],
     ]
     idomain = np.array(idomain, dtype=int)
 
@@ -113,24 +117,25 @@ def get_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=100.)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=100.0)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=0, k=1.0)
 
     # chd
-    chdspd = [[(1, 0, 0), 100.]]
+    chdspd = [[(1, 0, 0), 100.0]]
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdspd)
 
-    recharge = np.arange(nrow * ncol).reshape(nrow, ncol) + 1.
+    recharge = np.arange(nrow * ncol).reshape(nrow, ncol) + 1.0
     irch = [
         [1, 0, 0, 0, 0],
         [0, 1, 0, 1, 0],
         [0, 1, 0, 1, 0],
         [0, 0, 0, 0, 0],
-            ]
-    rch = flopy.mf6.ModflowGwfrcha(gwf, print_flows=True, recharge=recharge,
-                                   irch=irch)
+    ]
+    rch = flopy.mf6.ModflowGwfrcha(
+        gwf, print_flows=True, recharge=recharge, irch=irch
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -165,15 +170,15 @@ def eval_model(sim):
 
     answer = [21, 27, 8, 32, 13, 34]
     errmsg = f"node must be {answer}.  found {records['node']}"
-    assert np.allclose(records['node'], answer), errmsg
+    assert np.allclose(records["node"], answer), errmsg
 
     answer = [1, 7, 8, 12, 13, 14]
     errmsg = f"node2 must be {answer}.  found {records['node2']}"
-    assert np.allclose(records['node2'], answer), errmsg
+    assert np.allclose(records["node2"], answer), errmsg
 
-    answer = [0., 7., 8., 12., 13., 14.]
+    answer = [0.0, 7.0, 8.0, 12.0, 13.0, 14.0]
     errmsg = f"rech q must be {answer}.  found {records['q']}"
-    assert np.allclose(records['q'], answer), errmsg
+    assert np.allclose(records["q"], answer), errmsg
 
     fpth = os.path.join(sim.simpath, "rch.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")

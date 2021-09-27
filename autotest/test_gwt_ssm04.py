@@ -38,9 +38,10 @@ idomain_lay0 = [
     [1, 1, 0, 1, 1],
     [1, 1, 0, 1, 1],
     [1, 1, 1, 1, 1],
-    ]
+]
 idomain = np.ones((nlay, nrow, ncol), dtype=int)
 idomain[0, :, :] = np.array(idomain_lay0)
+
 
 def get_model(idx, dir):
     perlen = [5.0]
@@ -50,7 +51,7 @@ def get_model(idx, dir):
     delr = 1.0
     delc = 1.0
     top = 4.0
-    botm = [3., 2., 1.]
+    botm = [3.0, 2.0, 1.0]
     strt = 4.0
     hk = 1.0
     laytyp = 0
@@ -124,7 +125,7 @@ def get_model(idx, dir):
     )
 
     # chd files
-    spd = [[(nlay - 1, nrow - 1, ncol - 1), 4.]]
+    spd = [[(nlay - 1, nrow - 1, ncol - 1), 4.0]]
     chd = flopy.mf6.modflow.ModflowGwfchd(
         gwf,
         print_flows=True,
@@ -152,7 +153,7 @@ def get_model(idx, dir):
     rch2 = flopy.mf6.ModflowGwfrcha(
         gwf,
         print_flows=True,
-        recharge= recharge_rate,
+        recharge=recharge_rate,
         pname="RCH-2",
         filename=f"{gwfname}.rch2",
     )
@@ -172,10 +173,12 @@ def get_model(idx, dir):
     for t in [0, perlen[0]]:
         ts = tuple([float(t)] + list(range(0, nrow * ncol)))
         ts_data.append(ts)
-    ts_dict = {'timeseries':ts_data,
-               'time_series_namerecord': tsnames,
-               'interpolation_methodrecord': [nrow * ncol * ("linear",)],
-               'filename': f'{gwfname}.rch3.ts'}
+    ts_dict = {
+        "timeseries": ts_data,
+        "time_series_namerecord": tsnames,
+        "interpolation_methodrecord": [nrow * ncol * ("linear",)],
+        "filename": f"{gwfname}.rch3.ts",
+    }
 
     rch3 = flopy.mf6.modflow.ModflowGwfrch(
         gwf,
@@ -184,30 +187,35 @@ def get_model(idx, dir):
         stress_period_data=spd,
         pname="RCH-3",
         filename=f"{gwfname}.rch3",
-        timeseries=ts_dict
+        timeseries=ts_dict,
     )
 
     # array-based rch files
     rch4 = flopy.mf6.ModflowGwfrcha(
         gwf,
         print_flows=True,
-        recharge= "TIMEARRAYSERIES rcharray",
+        recharge="TIMEARRAYSERIES rcharray",
         pname="RCH-4",
         filename=f"{gwfname}.rch4",
     )
     filename = f"{gwfname}.rch4.tas"
     # for now write the recharge concentration to a dat file because there
     # is a bug in flopy that will not correctly write this array as internal
-    tas_array = {0.: f"{gwfname}.rch4.tas.dat", perlen[0]: f"{gwfname}.rch4.tas.dat"}
-    time_series_namerecord = 'rcharray'
-    interpolation_methodrecord = 'linear'
-    rch4.tas.initialize(filename=filename,
-                        tas_array=tas_array,
-                        time_series_namerecord=time_series_namerecord,
-                        interpolation_methodrecord=interpolation_methodrecord)
-    np.savetxt(os.path.join(ws, f"{gwfname}.rch4.tas.dat"),
-               recharge_rate, fmt="%7.1f")
-
+    tas_array = {
+        0.0: f"{gwfname}.rch4.tas.dat",
+        perlen[0]: f"{gwfname}.rch4.tas.dat",
+    }
+    time_series_namerecord = "rcharray"
+    interpolation_methodrecord = "linear"
+    rch4.tas.initialize(
+        filename=filename,
+        tas_array=tas_array,
+        time_series_namerecord=time_series_namerecord,
+        interpolation_methodrecord=interpolation_methodrecord,
+    )
+    np.savetxt(
+        os.path.join(ws, f"{gwfname}.rch4.tas.dat"), recharge_rate, fmt="%7.1f"
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -270,41 +278,45 @@ def get_model(idx, dir):
 
     # ssm package
     sourcerecarray = [()]
-    fileinput = [("RCH-1", f"{gwtname}.rch1.spc"),
-                 ("RCH-2", f"{gwtname}.rch2.spc"),
-                 ("RCH-3", f"{gwtname}.rch3.spc"),
-                 ("RCH-4", f"{gwtname}.rch4.spc"),
-                 ]
-    ssm = flopy.mf6.ModflowGwtssm(gwt,
-                                  print_flows=True,
-                                  sources=sourcerecarray,
-                                  fileinput=fileinput)
+    fileinput = [
+        ("RCH-1", f"{gwtname}.rch1.spc"),
+        ("RCH-2", f"{gwtname}.rch2.spc"),
+        ("RCH-3", f"{gwtname}.rch3.spc"),
+        ("RCH-4", f"{gwtname}.rch4.spc"),
+    ]
+    ssm = flopy.mf6.ModflowGwtssm(
+        gwt, print_flows=True, sources=sourcerecarray, fileinput=fileinput
+    )
 
     # spc package for RCH-1
     idxrow, idxcol = np.where(idomain[0] == 1)
     recharge_concentration = np.arange(nrow * ncol).reshape((nrow, ncol))
     pd = []
-    for ipos, (i, j) in enumerate (zip(idxrow, idxcol)):
+    for ipos, (i, j) in enumerate(zip(idxrow, idxcol)):
         pd.append([ipos, "CONCENTRATION", recharge_concentration[i, j]])
     spc1 = flopy.mf6.ModflowUtlspc(
-        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.rch1.spc",
+        gwt,
+        perioddata=pd,
+        maxbound=len(pd),
+        filename=f"{gwtname}.rch1.spc",
     )
 
     # spc package for RCH-2
     idxrow, idxcol = np.where(idomain[0] == 1)
     recharge_concentration = np.arange(nrow * ncol).reshape((nrow, ncol))
     pd = []
-    for ipos, (i, j) in enumerate (zip(idxrow, idxcol)):
+    for ipos, (i, j) in enumerate(zip(idxrow, idxcol)):
         pd.append([ipos, "CONCENTRATION", recharge_concentration[i, j]])
     spc2 = flopy.mf6.ModflowUtlspca(
-        gwt, concentration=recharge_concentration,
+        gwt,
+        concentration=recharge_concentration,
         filename=f"{gwtname}.rch2.spc",
     )
 
     # spc package for RCH-3
     idxrow, idxcol = np.where(idomain[0] == 1)
     pd = []
-    for ipos, (i, j) in enumerate (zip(idxrow, idxcol)):
+    for ipos, (i, j) in enumerate(zip(idxrow, idxcol)):
         tsname = f"rch-{i + 1}-{j + 1}"
         pd.append([ipos, "CONCENTRATION", tsname])
 
@@ -312,38 +324,51 @@ def get_model(idx, dir):
     for i in range(nrow):
         for j in range(ncol):
             tsnames.append(f"rch-{i + 1}-{j + 1}")
-    ts_data = [tuple([0.] + nrow * ncol * [0.])]
+    ts_data = [tuple([0.0] + nrow * ncol * [0.0])]
     for t in perlen:
         ts = tuple([float(t)] + list(range(0, nrow * ncol)))
         ts_data.append(ts)
-    ts_dict = {'timeseries':ts_data,
-               'time_series_namerecord': tsnames,
-               'interpolation_methodrecord': [nrow * ncol * ("linear",)],
-               'sfacrecord': [nrow * ncol * (1.0,)],
-               'filename': f'{gwtname}.rch3.spc.ts'}
+    ts_dict = {
+        "timeseries": ts_data,
+        "time_series_namerecord": tsnames,
+        "interpolation_methodrecord": [nrow * ncol * ("linear",)],
+        "sfacrecord": [nrow * ncol * (1.0,)],
+        "filename": f"{gwtname}.rch3.spc.ts",
+    }
     spc3 = flopy.mf6.ModflowUtlspc(
-        gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.rch3.spc",
-        timeseries=ts_dict, print_input=True,
+        gwt,
+        perioddata=pd,
+        maxbound=len(pd),
+        filename=f"{gwtname}.rch3.spc",
+        timeseries=ts_dict,
+        print_input=True,
     )
 
     # spc package for RCH-4
     spc4 = flopy.mf6.ModflowUtlspca(
-        gwt, concentration="TIMEARRAYSERIES carray",
-        filename=f"{gwtname}.rch4.spc", print_input=True,
+        gwt,
+        concentration="TIMEARRAYSERIES carray",
+        filename=f"{gwtname}.rch4.spc",
+        print_input=True,
     )
     filename = f"{gwtname}.rch4.spc.tas"
     # for now write the recharge concentration to a dat file because there
     # is a bug in flopy that will not correctly write this array as internal
-    tas_array = {0.: 0., perlen[0]: f"{gwtname}.rch4.spc.tas.dat"}
-    time_series_namerecord = 'carray'
-    interpolation_methodrecord = 'linear'
-    spc4.tas.initialize(filename=filename,
-                        tas_array=tas_array,
-                        time_series_namerecord=time_series_namerecord,
-                        interpolation_methodrecord=interpolation_methodrecord)
+    tas_array = {0.0: 0.0, perlen[0]: f"{gwtname}.rch4.spc.tas.dat"}
+    time_series_namerecord = "carray"
+    interpolation_methodrecord = "linear"
+    spc4.tas.initialize(
+        filename=filename,
+        tas_array=tas_array,
+        time_series_namerecord=time_series_namerecord,
+        interpolation_methodrecord=interpolation_methodrecord,
+    )
     recharge_concentration = np.arange(nrow * ncol).reshape((nrow, ncol))
-    np.savetxt(os.path.join(ws, f"{gwtname}.rch4.spc.tas.dat"),
-               recharge_concentration, fmt="%7.1f")
+    np.savetxt(
+        os.path.join(ws, f"{gwtname}.rch4.spc.tas.dat"),
+        recharge_concentration,
+        fmt="%7.1f",
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
@@ -411,7 +436,8 @@ def eval_transport(sim):
     fpth = os.path.join(sim.simpath, "{}.cbc".format(gwtname))
     try:
         bobj = flopy.utils.CellBudgetFile(
-            fpth, precision="double",
+            fpth,
+            precision="double",
         )
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -433,13 +459,36 @@ def eval_transport(sim):
             print(ssmbud[istart:istop])
 
             print("    Checking id1")
-            id1 = ssmbud[istart:istop]['node']
-            id1a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 19,
-                    20, 21, 22, 23, 24, 25]
+            id1 = ssmbud[istart:istop]["node"]
+            id1a = [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                14,
+                15,
+                16,
+                17,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+            ]
             assert np.allclose(id1, id1a), f"{id1} /= {id1a}"
 
             print("    Checking id2")
-            id2 = ssmbud[istart:istop]['node2']
+            id2 = ssmbud[istart:istop]["node2"]
             if irchpak in [0, 2]:
                 id2a = np.arange(23) + 1
             elif irchpak in [1, 3]:
@@ -447,9 +496,9 @@ def eval_transport(sim):
             assert np.allclose(id2, id2a), f"{id2} /= {id2a}"
 
             print("    Checking q")
-            q = ssmbud[istart:istop]['q']
+            q = ssmbud[istart:istop]["q"]
             if irchpak in [2, 3]:
-                frac = (totim - 0.5) / 5.
+                frac = (totim - 0.5) / 5.0
                 qa = [float(a - 1) * frac * (a - 1) for a in id1a]
             else:
                 qa = [float(a - 1) ** 2 for a in id1a]

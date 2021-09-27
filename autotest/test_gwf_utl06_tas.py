@@ -19,11 +19,12 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["utl06_tas_a",
-      "utl06_tas_b",
-      "utl06_tas_c",
-      "utl06_tas_d",
-      ]
+ex = [
+    "utl06_tas_a",
+    "utl06_tas_b",
+    "utl06_tas_c",
+    "utl06_tas_d",
+]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -35,19 +36,20 @@ idomain_lay0 = [
     [1, 1, 0, 1, 1],
     [1, 1, 0, 1, 1],
     [1, 1, 1, 1, 1],
-    ]
+]
 idomain = np.ones((nlay, nrow, ncol), dtype=int)
 idomain[0, :, :] = np.array(idomain_lay0)
+
 
 def get_model(idx, dir):
     perlen = [5.0]
     nstp = [5]
     tsmult = [1.0]
     nper = len(perlen)
-    delr = [1., 2., 3., 4., 5.]
-    delc = [1., 2., 3., 4., 5.]
+    delr = [1.0, 2.0, 3.0, 4.0, 5.0]
+    delc = [1.0, 2.0, 3.0, 4.0, 5.0]
     top = 4.0
-    botm = [3., 2., 1.]
+    botm = [3.0, 2.0, 1.0]
     strt = 4.0
     hk = 1.0
     laytyp = 0
@@ -121,7 +123,7 @@ def get_model(idx, dir):
     )
 
     # chd files
-    spd = [[(nlay - 1, nrow - 1, ncol - 1), 4.]]
+    spd = [[(nlay - 1, nrow - 1, ncol - 1), 4.0]]
     chd = flopy.mf6.modflow.ModflowGwfchd(
         gwf,
         print_flows=True,
@@ -170,16 +172,20 @@ def get_model(idx, dir):
         filename = f"{gwfname}.rch4.tas"
         # for now write the recharge concentration to a dat file because there
         # is a bug in flopy that will not correctly write this array as internal
-        tas_array = {0.: 0., perlen[0]: f"{gwfname}.rch4.tas.dat"}
-        time_series_namerecord = 'rcharray'
-        interpolation_methodrecord = 'linear'
-        rch4.tas.initialize(filename=filename,
-                            tas_array=tas_array,
-                            time_series_namerecord=time_series_namerecord,
-                            interpolation_methodrecord=interpolation_methodrecord)
-        np.savetxt(os.path.join(ws, f"{gwfname}.rch4.tas.dat"),
-                   recharge_rate, fmt="%7.1f")
-
+        tas_array = {0.0: 0.0, perlen[0]: f"{gwfname}.rch4.tas.dat"}
+        time_series_namerecord = "rcharray"
+        interpolation_methodrecord = "linear"
+        rch4.tas.initialize(
+            filename=filename,
+            tas_array=tas_array,
+            time_series_namerecord=time_series_namerecord,
+            interpolation_methodrecord=interpolation_methodrecord,
+        )
+        np.savetxt(
+            os.path.join(ws, f"{gwfname}.rch4.tas.dat"),
+            recharge_rate,
+            fmt="%7.1f",
+        )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -190,7 +196,6 @@ def get_model(idx, dir):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
-
 
     return sim
 
@@ -211,9 +216,7 @@ def eval_transport(sim):
     # load concentration file
     fpth = os.path.join(sim.simpath, "{}.hds".format(gwfname))
     try:
-        hobj = flopy.utils.HeadFile(
-            fpth, precision="double"
-        )
+        hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -222,7 +225,8 @@ def eval_transport(sim):
     fpth = os.path.join(sim.simpath, "{}.cbc".format(gwfname))
     try:
         bobj = flopy.utils.CellBudgetFile(
-            fpth, precision="double",
+            fpth,
+            precision="double",
         )
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -241,46 +245,134 @@ def eval_transport(sim):
 
         # id1 is the GWF user-based cell number
         print("    Checking id1")
-        id1 = rchbud['node']
+        id1 = rchbud["node"]
         if idx in [0, 2]:
-            id1a = [ 1,  2,  3,  4,  5,
-                     6,  7,  8,  9, 10,
-                    11, 12,     14, 15,
-                    16, 17,     19, 20,
-                    21, 22, 23, 24, 25]
+            id1a = [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                14,
+                15,
+                16,
+                17,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+            ]
         elif idx in [1, 3]:
-            id1a = [ 1,  2,  3,  4,  5,
-                     6,  7,  8,  9, 10,
-                    11, 12, 38, 14, 15,
-                    16, 17,     19, 20,
-                    21, 22, 23, 24, 25]
+            id1a = [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                38,
+                14,
+                15,
+                16,
+                17,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+            ]
         assert np.allclose(id1, id1a), f"{id1} /= {id1a}"
 
         # id2 is the recharge package bound number
         print("    Checking id2")
-        id2 = rchbud['node2']
+        id2 = rchbud["node2"]
         if idx in [0, 2]:
-            id2a = [ 1,  2,  3,  4,  5,
-                     6,  7,  8,  9, 10,
-                     11, 12,     14, 15,
-                     16, 17,     19, 20,
-                     21, 22, 23, 24, 25]
+            id2a = [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                14,
+                15,
+                16,
+                17,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+            ]
         elif idx in [1, 3]:
-            id2a = [ 1,  2,  3,  4,  5,
-                     6,  7,  8,  9, 10,
-                     11, 12, 13, 14, 15,
-                     16, 17,     19, 20,
-                     21, 22, 23, 24, 25]
+            id2a = [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+            ]
         assert np.allclose(id2, id2a), f"{id2} /= {id2a}"
 
         print("    Checking q")
-        q = rchbud['q']
+        q = rchbud["q"]
         if idx in [2, 3]:
             # time array series
-            frac = (totim - 0.5) / 5.
+            frac = (totim - 0.5) / 5.0
         else:
             frac = 1.0
-        area = np.zeros((5, 5,), dtype=float)
+        area = np.zeros(
+            (
+                5,
+                5,
+            ),
+            dtype=float,
+        )
         for i in range(5):
             for j in range(5):
                 area[i, j] = float((i + 1) * (j + 1))

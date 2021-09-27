@@ -31,6 +31,7 @@ def dir_avail():
         print("no need to run {}".format(os.path.basename(__file__)))
     return avail
 
+
 def get_mf6_models():
     """
     Get a list of test models

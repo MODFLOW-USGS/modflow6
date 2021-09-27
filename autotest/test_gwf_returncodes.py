@@ -3,6 +3,7 @@ import pytest
 import sys
 import shutil
 import subprocess
+
 try:
     import flopy
 except:
@@ -117,10 +118,12 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
         ccol = [1, ncol - 1]
         for j in ccol:
             c6.append([(0, nrow - 1, j), strt])
-        c6 = [[0, 0, 0, 1.], [0, nrow - 1, ncol - 1, 0.]]
+        c6 = [[0, 0, 0, 1.0], [0, nrow - 1, ncol - 1, 0.0]]
         cd6 = {0: c6}
         maxchd = len(cd6[0])
-        chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=cd6, maxbound=maxchd)
+        chd = flopy.mf6.ModflowGwfchd(
+            gwf, stress_period_data=cd6, maxbound=maxchd
+        )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -148,8 +151,10 @@ def test_normal_termination():
     returncode, buff = run_mf6([mf6_exe], ws)
     msg = "could not run {}".format(sim.name)
     if returncode != 0:
-        msg = ("The run should have been successful but it terminated "
-               "with non-zero returncode")
+        msg = (
+            "The run should have been successful but it terminated "
+            "with non-zero returncode"
+        )
         raise ValueError(msg)
 
     return
@@ -164,9 +169,11 @@ def test_converge_fail_continue():
 
     # run the simulation
     returncode, buff = run_mf6([mf6_exe], ws)
-    msg = ("The run should have been successful even though it failed, because"
-           " the continue flag was set.  But a non-zero error code was "
-           "found: {}".format(returncode))
+    msg = (
+        "The run should have been successful even though it failed, because"
+        " the continue flag was set.  But a non-zero error code was "
+        "found: {}".format(returncode)
+    )
     assert returncode == 0, msg
     return
 
@@ -184,6 +191,7 @@ def converge_fail_nocontinue():
         msg = "This run should fail with a returncode of 1"
         if returncode == 1:
             raise RuntimeError(msg)
+
 
 def idomain_runtime_error():
     with pytest.raises(RuntimeError):
@@ -241,6 +249,7 @@ def run_argv(arg, return_str):
         msg = "could not run with command line argument {}".format(arg)
         raise RuntimeError(msg)
 
+
 @pytest.mark.parametrize(
     "arg",
     ["-h", "--help", "-?"],
@@ -258,6 +267,7 @@ def test_version_argv(arg):
     return_str = "{}: 6".format(app)
     run_argv(arg, return_str)
 
+
 @pytest.mark.parametrize(
     "arg",
     ["-dev", "--develop"],
@@ -265,6 +275,7 @@ def test_version_argv(arg):
 def test_develop_argv(arg):
     return_str = "{}: develop version".format(app)
     run_argv(arg, return_str)
+
 
 @pytest.mark.parametrize(
     "arg",

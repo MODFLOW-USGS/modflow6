@@ -1,8 +1,6 @@
 import os
-import sys
 import numpy as np
-import shutil
-import subprocess
+import pytest
 
 try:
     import flopy
@@ -15,13 +13,14 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-import targets
-
 paktest = "sfr"
 
 ex = [
     "sfr_npt01",
     "sfr_npt02",
+    "sfr_npt03",
+    "sfr_npt04",
+    "sfr_npt05",
 ]
 exdirs = [os.path.join("temp", s) for s in ex]
 
@@ -70,6 +69,10 @@ np_data = {
     xsect_types[3]: {
         "x": np.array([0.0, rwid], dtype=float),
         "d": np.array([0.0, 1.0], dtype=float),
+    },
+    xsect_types[4]: {
+        "x": np.array([0.0, 0.0, rwid, rwid], dtype=float),
+        "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
     },
 }
 
@@ -270,7 +273,10 @@ def get_model(idx, ws):
     # build MODFLOW 6 files
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws,
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
+        sim_ws=ws,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -409,8 +415,9 @@ def get_model(idx, ws):
         stations = np_data[xsect_type]["x"] / rwid
         depths = np_data[xsect_type]["d"]
         table = [[x, d] for x, d in zip(stations, depths)]
-        flopy.mf6.ModflowUtlsfrtab(gwf, nrow=stations.shape[0], ncol=2,
-                                   table=table, filename=sfr_tab)
+        flopy.mf6.ModflowUtlsfrtab(
+            gwf, nrow=stations.shape[0], ncol=2, table=table, filename=sfr_tab
+        )
 
     # output control
     budpth = f"{name}.cbc"
@@ -468,7 +475,11 @@ def build_models():
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, exdir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
@@ -476,15 +487,14 @@ def test_mf6model():
     build_models()
 
     # run the test models
-    for idx, exdir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(
+    test.run_mf6(
+        Simulation(
             exdir,
             exfunc=eval_npointq,
             idxsim=idx,
             mf6_regression=False,
         )
-
-    return
+    )
 
 
 def main():

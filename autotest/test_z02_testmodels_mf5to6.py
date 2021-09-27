@@ -215,18 +215,21 @@ def set_make_comparison(test):
             make_comparison = False
     return make_comparison
 
+
 @pytest.mark.parametrize(
     "idx, dir",
     list(enumerate(get_mf5to6_models())),
 )
 def test_model(idx, dir):
     # run the test model
-    run_mf5to6(Simulation(
-        dir,
-        mf6_regression=set_mf6_regression(),
-        cmp_verbose=False,
-        make_comparison=set_make_comparison(dir),
-    ))
+    run_mf5to6(
+        Simulation(
+            dir,
+            mf6_regression=set_mf6_regression(),
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(dir),
+        )
+    )
 
     return
 

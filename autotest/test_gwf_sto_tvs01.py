@@ -54,7 +54,7 @@ def get_model(idx, dir):
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
-        
+
     transient = {}
     for i in range(nper):
         transient[i] = True
@@ -80,7 +80,7 @@ def get_model(idx, dir):
         model_nam_file="{}.nam".format(gwfname),
     )
     gwf.name_file.save_flows = False
-    gwf.name_file.newtonoptions="NEWTON UNDER_RELAXATION"
+    gwf.name_file.newtonoptions = "NEWTON UNDER_RELAXATION"
 
     # create iterative model solution and register the gwf model with it
     imsgwf = flopy.mf6.ModflowIms(
@@ -127,12 +127,7 @@ def get_model(idx, dir):
     )
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        icelltype=laytyp,
-        k=hk,
-        k33=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=laytyp, k=hk, k33=hk)
 
     # storage
     tvs_filename = f"{gwfname}.sto.tvs"
@@ -143,7 +138,7 @@ def get_model(idx, dir):
         ss=ss,
         sy=sy,
         transient=transient,
-        tvs_filerecord=[tvs_filename]
+        tvs_filerecord=[tvs_filename],
     )
 
     # TVS
@@ -175,8 +170,10 @@ def get_model(idx, dir):
     spd.append([cellid1, "SS", 1e-6])
     spd.append([cellid1, "SY", 0.01])
     tvsspd[kper - 1] = spd
-    
-    tvs = flopy.mf6.ModflowUtltvs(gwf, perioddata=tvsspd, filename=tvs_filename)
+
+    tvs = flopy.mf6.ModflowUtltvs(
+        gwf, perioddata=tvsspd, filename=tvs_filename
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -213,11 +210,15 @@ def eval_model(sim):
 
     # Check against manually calculated results
     expected_results = []
-    expected_results.append(0.8)        # TVS SP1: No changes. Check initial solution.
-    expected_results.append(3000.823)   # TVS SP2: Decrease SY1.
-    expected_results.append(300.5323)   # TVS SP3: Increase SS1.
-    expected_results.append(0.399976)   # TVS SP4: Increase SY1.
-    expected_results.append(0.8)        # TVS SP5: Revert SS1 and SY1. Check that solution returns to original.
+    expected_results.append(
+        0.8
+    )  # TVS SP1: No changes. Check initial solution.
+    expected_results.append(3000.823)  # TVS SP2: Decrease SY1.
+    expected_results.append(300.5323)  # TVS SP3: Increase SS1.
+    expected_results.append(0.399976)  # TVS SP4: Increase SY1.
+    expected_results.append(
+        0.8
+    )  # TVS SP5: Revert SS1 and SY1. Check that solution returns to original.
     nper = len(expected_results)
     ex_lay = 1
     ex_row = 1
@@ -225,10 +226,12 @@ def eval_model(sim):
 
     for kper, expected_result in enumerate(expected_results):
         h = head[kper, ex_lay - 1, ex_row - 1, ex_col - 1]
-        
+
         print(kper, h, expected_result)
 
-        errmsg = f"Expected head {expected_result} in period {kper} but found {h}"
+        errmsg = (
+            f"Expected head {expected_result} in period {kper} but found {h}"
+        )
         assert np.isclose(h, expected_result)
 
     # comment when done testing
