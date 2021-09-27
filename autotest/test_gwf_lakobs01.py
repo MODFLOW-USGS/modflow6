@@ -6,6 +6,7 @@
 
 
 import os
+import pytest
 import sys
 import numpy as np
 
@@ -225,7 +226,11 @@ def build_models():
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 

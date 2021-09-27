@@ -445,6 +445,7 @@ module GwfModule
     !
     ! -- set up output control
     call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
+    call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
     do ip = 1,this%bndlist%Count()
@@ -1191,7 +1192,7 @@ module GwfModule
   end subroutine gwf_ot_dv
   
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
@@ -1215,6 +1216,9 @@ module GwfModule
       ! -- model budget summary
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
+    
+    ! -- Write to budget csv
+    call this%budget%writecsv(totim)
     
   end subroutine gwf_ot_bdsummary
   

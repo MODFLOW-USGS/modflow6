@@ -112,7 +112,9 @@ module BudgetFileReaderModule
       this%imetharray(ibudterm) = this%imeth
       this%dstpackagenamearray(ibudterm) = this%dstpackagename
       this%nauxarray(ibudterm) = this%naux
-      this%auxtxtarray(1:this%naux, ibudterm) = this%auxtxt(:)
+      if (this%naux > 0) then
+        this%auxtxtarray(1:this%naux, ibudterm) = this%auxtxt(:)
+      end if
       if (this%srcmodelname == this%dstmodelname) then
         if(allocated(this%nodesrc)) ncrbud = max(ncrbud, maxval(this%nodesrc))
       endif

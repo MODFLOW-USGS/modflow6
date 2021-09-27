@@ -411,6 +411,7 @@ module GwtModule
     !
     ! -- set up output control
     call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
     do ip=1,this%bndlist%Count()
@@ -451,6 +452,7 @@ module GwtModule
     !
     ! -- Read and prepare
     if(this%inoc > 0)  call this%oc%oc_rp()
+    if(this%inssm > 0) call this%ssm%ssm_rp()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_rp()
@@ -918,7 +920,7 @@ module GwtModule
   end subroutine gwt_ot_dv
   
   subroutine gwt_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
@@ -942,6 +944,9 @@ module GwtModule
       ! -- model budget summary
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
+    
+    ! -- Write to budget csv
+    call this%budget%writecsv(totim)
     
   end subroutine gwt_ot_bdsummary
   

@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 import shutil
 import math
@@ -1136,21 +1137,22 @@ def build_models():
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
     build_models()
 
-    for idx, exdir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(
-            exdir,
-            exfunc=check_simulation_output,
-            idxsim=idx,
-        )
-
-    return
+    test.run_mf6, Simulation(
+        dir,
+        exfunc=check_simulation_output,
+        idxsim=idx,
+    )
 
 
 def main():

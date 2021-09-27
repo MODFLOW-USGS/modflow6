@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 
 try:
@@ -23,10 +24,23 @@ exdir = os.path.join("..", "tmp_simulations")
 testpaths = os.path.join("..", exdir)
 
 
+def dir_avail():
+    avail = os.path.isdir(exdir)
+    if not avail:
+        print('"{}" does not exist'.format(exdir))
+        print("no need to run {}".format(os.path.basename(__file__)))
+    return avail
+
 def get_mf6_models():
     """
     Get a list of test models
     """
+
+    # determine if test directory exists
+    dirtest = dir_avail()
+    if not dirtest:
+        return []
+
     # tuple of example files to exclude
     exclude = ("test006_03models", "test018_NAC", "test051_uzf1d_a")
 
@@ -111,28 +125,13 @@ def run_mf6(sim):
     sim.teardown()
 
 
-def test_mf6model():
-    # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
-        return
-
-    # get a list of test models to run
-    dirs = get_mf6_models()
-
-    # run the test models
-    for dir in dirs:
-        yield run_mf6, Simulation(dir)
-
-    return
-
-
-def dir_avail():
-    avail = os.path.isdir(exdir)
-    if not avail:
-        print('"{}" does not exist'.format(exdir))
-        print("no need to run {}".format(os.path.basename(__file__)))
-    return avail
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(get_mf6_models())),
+)
+def test_mf6model(idx, dir):
+    # run the test model
+    run_mf6(Simulation(dir))
 
 
 def main():
@@ -141,15 +140,10 @@ def main():
     msg = "Running {} test".format(tnam)
     print(msg)
 
-    # determine if test directory exists
-    dirtest = dir_avail()
-    if not dirtest:
-        return
-
     # get a list of test models to run
     dirs = get_mf6_models()
 
-    # run the test models
+    # run the test model
     for dir in dirs:
         sim = Simulation(dir)
         run_mf6(sim)

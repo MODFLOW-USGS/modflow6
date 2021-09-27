@@ -713,18 +713,25 @@ class Simulation(object):
             )
 
             # build list of cbc data to retrieve
-            avail = cbc0.get_unique_record_names()
+            avail0 = cbc0.get_unique_record_names()
+            avail1 = cbc1.get_unique_record_names()
+            avail0 = [t.decode().strip() for t in avail0]
+            avail1 = [t.decode().strip() for t in avail1]
 
             # initialize list for storing totals for each budget term terms
-            cbc_keys = []
-            for t in avail:
-                if isinstance(t, bytes):
-                    t = t.decode()
-                t = t.strip()
-                # remove these checks once v6.2.2 is released
-                if t.startswith("FLOW-JA-FACE") or t.startswith("UZF-GWRCH"):
-                    continue
-                cbc_keys.append(t)
+            cbc_keys0 = []
+            cbc_keys1 = []
+            for t in avail0:
+                t1 = t
+                if t not in avail1:
+                    # check if RCHA or EVTA is available and use that instead
+                    # should be able to remove this once v6.3.0 is released
+                    if t[:-1] in avail1:
+                        t1 = t[:-1]
+                    else:
+                        raise Exception(f"Could not find {t} in {fpth1}")
+                cbc_keys0.append(t)
+                cbc_keys1.append(t1)
 
             # get list of times and kstpkper
             kk = cbc0.get_kstpkper()
@@ -732,10 +739,10 @@ class Simulation(object):
 
             # process data
             success_tst = True
-            for key in cbc_keys:
+            for key, key1 in zip(cbc_keys0, cbc_keys1):
                 for idx, (k, t) in enumerate(zip(kk, times)):
                     v0 = cbc0.get_data(kstpkper=k, text=key)[0]
-                    v1 = cbc1.get_data(kstpkper=k, text=key)[0]
+                    v1 = cbc1.get_data(kstpkper=k, text=key1)[0]
                     if v0.dtype.names is not None:
                         v0 = v0["q"]
                         v1 = v1["q"]

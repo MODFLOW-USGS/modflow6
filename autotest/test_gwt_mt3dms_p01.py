@@ -20,6 +20,7 @@ dispersion, and reaction (sorption and decay):
 """
 
 import os
+import pytest
 import shutil
 import sys
 import numpy as np

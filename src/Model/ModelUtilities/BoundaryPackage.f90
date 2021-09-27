@@ -1,4 +1,4 @@
-!> @brief This module contains the base model package 
+!> @brief This module contains the base boundary package 
 !!
 !! This module contains the base model boundary package class that is 
 !! extended by all model boundary packages. The base model boundary 
@@ -38,6 +38,11 @@ module BndModule
   public :: save_print_model_flows
   private :: CastAsBndClass
 
+  !> @ brief BndType
+  !!
+  !!  Generic boundary package type.  This derived type can be overriden to
+  !!  become concrete boundary package types.
+  !<
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
     character(len=LENLISTLABEL), pointer :: listlabel  => null()                 !< title of table written for RP
@@ -1835,9 +1840,7 @@ module BndModule
         do i = 1, nbound
           node = nodelist(i)
           if (node > 0) then
-            if (ibound(node) > 0) then
-              maxrows = maxrows + 1
-            end if
+            maxrows = maxrows + 1
           end if
         end do
         if (maxrows > 0) then
@@ -1895,20 +1898,16 @@ module BndModule
             rrate = flow(i)
             !
             ! -- Print the individual rates if the budget is being printed
-            !    and PRINT_FLOWS was specified (iprflow < 0).  Rates are only
-            !    printed only if ibound > 0.  This is different from budget
-            !    output where entries are written to the binary file even if
-            !    ibound <= 0.
+            !    and PRINT_FLOWS was specified (iprflow < 0).  Rates are 
+            !    printed even if ibound < 1.
             if (ibudfl /= 0) then
               if (iprflow /= 0) then
-                if (ibound(node) > 0) then
-                  !
-                  ! -- set nodestr and write outputtab table
-                  nodeu = dis%get_nodeuser(node)
-                  call dis%nodeu_to_string(nodeu, nodestr)
-                  call outputtab%print_list_entry(i, trim(adjustl(nodestr)),   &
-                                                      rrate, bname)
-                end if
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = dis%get_nodeuser(node)
+                call dis%nodeu_to_string(nodeu, nodestr)
+                call outputtab%print_list_entry(i, trim(adjustl(nodestr)),     &
+                                                    rrate, bname)
               end if
             end if
             !

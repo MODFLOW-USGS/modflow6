@@ -7,6 +7,7 @@ on test_gwf_uzf03.py.  Infiltration is assigned a concentration of 100.  The
 """
 
 import os
+import pytest
 import numpy as np
 
 try:
@@ -498,18 +499,19 @@ def eval_flow(sim):
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, exfunc=eval_flow, idxsim=idx)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
 
 
 def main():
@@ -519,7 +521,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
         test.run_mf6(sim)

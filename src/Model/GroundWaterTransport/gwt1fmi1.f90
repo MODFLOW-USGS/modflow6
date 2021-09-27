@@ -1180,6 +1180,7 @@ module GwtFmiModule
           case default
             call this%gwfpackages(ip)%copy_values( &
                                                  this%bfr%dstpackagename, &
+                                                 this%bfr%budtxt, &
                                                  this%bfr%auxtxt, &
                                                  this%bfr%nlist, &
                                                  this%bfr%naux, &

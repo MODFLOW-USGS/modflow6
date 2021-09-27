@@ -348,6 +348,7 @@ module GwfGwtExchangeModule
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
       call gwtmodel%fmi%gwfpackages(ip)%set_pointers( &
                            packobj%packName, &
+                           packobj%text, &
                            packobj%auxname, &
                            packobj%nbound, &
                            packobj%naux, &
