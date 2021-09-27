@@ -450,7 +450,7 @@ name crosssections
 type recarray rno tab6 filein tab6_filename
 shape
 valid
-optional true
+optional false
 reader urword
 longname
 description
