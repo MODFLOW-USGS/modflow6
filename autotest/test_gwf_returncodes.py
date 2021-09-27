@@ -1,9 +1,8 @@
 import os
+import pytest
 import sys
 import shutil
 import subprocess
-from nose.tools import raises
-
 try:
     import flopy
 except:
@@ -172,70 +171,63 @@ def test_converge_fail_continue():
     return
 
 
-@raises(RuntimeError)
 def converge_fail_nocontinue():
-    # get the simulation
-    sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
+    with pytest.raises(RuntimeError):
+        # get the simulation
+        sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
 
-    # write the input files
-    sim.write_simulation()
+        # write the input files
+        sim.write_simulation()
 
-    # run the simulation
-    returncode, buff = run_mf6([mf6_exe], ws)
-    msg = "This run should fail with a returncode of 1"
-    if returncode == 1:
-        raise RuntimeError(msg)
-
-    return
-
-@raises(RuntimeError)
-def idomain_runtime_error():
-    # get the simulation
-    sim = get_sim(ws, idomain=0)
-
-    # write the input files
-    sim.write_simulation()
-
-    # run the simulation
-    returncode, buff = run_mf6([mf6_exe], ws)
-    msg = "could not run {}".format(sim.name)
-    if returncode != 0:
-        err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
-        err = any(err_str in s for s in buff)
-        if err:
+        # run the simulation
+        returncode, buff = run_mf6([mf6_exe], ws)
+        msg = "This run should fail with a returncode of 1"
+        if returncode == 1:
             raise RuntimeError(msg)
-        else:
-            msg += " but IDOMAIN ARRAY ERROR not returned"
-            raise ValueError(msg)
-    return
+
+def idomain_runtime_error():
+    with pytest.raises(RuntimeError):
+        # get the simulation
+        sim = get_sim(ws, idomain=0)
+
+        # write the input files
+        sim.write_simulation()
+
+        # run the simulation
+        returncode, buff = run_mf6([mf6_exe], ws)
+        msg = "could not run {}".format(sim.name)
+        if returncode != 0:
+            err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
+            err = any(err_str in s for s in buff)
+            if err:
+                raise RuntimeError(msg)
+            else:
+                msg += " but IDOMAIN ARRAY ERROR not returned"
+                raise ValueError(msg)
 
 
 def test_converge_fail_nocontinue():
-    # run the test models
-    yield converge_fail_nocontinue
-
-    return
+    # run the test model
+    converge_fail_nocontinue()
 
 
 def test_mf6_idomain_error():
-    # run the test models
-    yield idomain_runtime_error
-
-    return
+    # run the test model
+    idomain_runtime_error()
 
 
-@raises(RuntimeError)
 def test_unknown_keyword_error():
-    returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
-    msg = "could not run {}".format("unknown_keyword")
-    if returncode != 0:
-        err_str = "{}: illegal option".format(app)
-        err = any(err_str in s for s in buff)
-        if err:
-            raise RuntimeError(msg)
-        else:
-            msg += " but {} not returned".format(err_str)
-            raise ValueError(msg)
+    with pytest.raises(RuntimeError):
+        returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
+        msg = "could not run {}".format("unknown_keyword")
+        if returncode != 0:
+            err_str = "{}: illegal option".format(app)
+            err = any(err_str in s for s in buff)
+            if err:
+                raise RuntimeError(msg)
+            else:
+                msg += " but {} not returned".format(err_str)
+                raise ValueError(msg)
 
 
 def run_argv(arg, return_str):
@@ -249,33 +241,38 @@ def run_argv(arg, return_str):
         msg = "could not run with command line argument {}".format(arg)
         raise RuntimeError(msg)
 
-
-def test_help_argv():
-    argv = ["-h", "--help", "-?"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-h", "--help", "-?"],
+)
+def test_help_argv(arg):
     return_str = "{} [options]     retrieve program information".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
 
-def test_version_argv():
-    argv = ["-v", "--version"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-v", "--version"],
+)
+def test_version_argv(arg):
     return_str = "{}: 6".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
-
-def test_develop_argv():
-    argv = ["-dev", "--develop"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-dev", "--develop"],
+)
+def test_develop_argv(arg):
     return_str = "{}: develop version".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
-
-def test_compiler_argv():
-    argv = ["-c", "--compiler"]
+@pytest.mark.parametrize(
+    "arg",
+    ["-c", "--compiler"],
+)
+def test_compiler_argv(arg):
     return_str = "{}: MODFLOW 6 compiled".format(app)
-    for arg in argv:
-        yield run_argv, arg, return_str
+    run_argv(arg, return_str)
 
 
 def test_clean_sim():

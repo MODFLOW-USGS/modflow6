@@ -114,12 +114,14 @@ jobs:
 
       - name: Build gfortran applications
         if: matrix.FC == 'gfortran'
+        working-directory: autotest
         run: |
-          nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
+          pytest get_build_exes.py
 
       - name: Test applications
+        working-directory: autotest
         run: |
-          nosetests -v --with-id --with-timer -w ./autotest test_z03_${{ matrix.test_script }}.py
+          pytest -v --durations=0 test_z03_${{ matrix.test_script }}.py
 
       - name: exclude unused files from cache on linux
         if: matrix.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'

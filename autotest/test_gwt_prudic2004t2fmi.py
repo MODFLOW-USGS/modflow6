@@ -1,6 +1,7 @@
 # tests to ability to run flow model first followed by transport model
 
 import os
+import pytest
 import shutil
 import numpy as np
 

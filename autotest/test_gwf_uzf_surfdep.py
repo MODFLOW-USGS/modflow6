@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 import numpy as np
 import shutil
@@ -25,8 +26,7 @@ import targets
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "uzf_3lay_srfdchk"
 testdir = os.path.join("temp", testname)
-if not os.path.isdir(testdir):
-    os.mkdir(testdir)
+os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 iuz_cell_dict = {}

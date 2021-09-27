@@ -7,10 +7,10 @@ very easily and tested with different options to succeed or fail correctly.
 """
 
 import os
+import pytest
 import shutil
 import subprocess
 import numpy as np
-from nose.tools import raises
 
 try:
     import flopy
@@ -25,8 +25,7 @@ import targets
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "gwf_errors"
 testdir = os.path.join("temp", testname)
-if not os.path.isdir(testdir):
-    os.mkdir(testdir)
+os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 
@@ -141,101 +140,87 @@ def test_simple_model_success():
     return
 
 
-@raises(RuntimeError)
-def test_raises_error():
-    # verify that the @raises decorator is working properly
-    msg = "Raising runtime error"
-    raise RuntimeError(msg)
-    return
 
-
-@raises(RuntimeError)
 def test_empty_folder():
-    # make sure mf6 fails when there is no simulation name file
-    err_str = "mf6: mfsim.nam is not present in working directory."
-    run_mf6_error(testdir, err_str)
-    return
+    with pytest.raises(RuntimeError):
+        # make sure mf6 fails when there is no simulation name file
+        err_str = "mf6: mfsim.nam is not present in working directory."
+        run_mf6_error(testdir, err_str)
 
 
-@raises(RuntimeError)
 def test_sim_errors():
-    # verify that the correct number of errors are reported
-    ws = os.path.join(testdir, "sim1")
-    chdkwargs = {}
-    chdkwargs["stress_period_data"] = {
-        0: [[(0, 0, 0), 0.0] for i in range(10)]
-    }
-    sim = get_minimal_gwf_simulation(ws, chdkwargs=chdkwargs)
-    sim.write_simulation()
-    err_str = ["1. Cell is already a constant head ((1,1,1))."]
-    run_mf6_error(ws, err_str)
-    return
+    with pytest.raises(RuntimeError):
+        # verify that the correct number of errors are reported
+        ws = os.path.join(testdir, "sim1")
+        chdkwargs = {}
+        chdkwargs["stress_period_data"] = {
+            0: [[(0, 0, 0), 0.0] for i in range(10)]
+        }
+        sim = get_minimal_gwf_simulation(ws, chdkwargs=chdkwargs)
+        sim.write_simulation()
+        err_str = ["1. Cell is already a constant head ((1,1,1))."]
+        run_mf6_error(ws, err_str)
 
 
-@raises(RuntimeError)
 def test_sim_maxerrors():
-    # verify that the maxerrors keyword gives the correct error output
-    ws = os.path.join(testdir, "sim2")
-    simnamefilekwargs = {}
-    simnamefilekwargs["maxerrors"] = 5
-    chdkwargs = {}
-    chdkwargs["stress_period_data"] = {
-        0: [[(0, 0, 0), 0.0] for i in range(10)]
-    }
-    sim = get_minimal_gwf_simulation(
-        ws, simnamefilekwargs=simnamefilekwargs, chdkwargs=chdkwargs
-    )
-    sim.write_simulation()
-    err_str = [
-        "5. Cell is already a constant head ((1,1,1)).",
-        "5 additional errors detected but not printed.",
-        "UNIT ERROR REPORT:",
-        "1. ERROR OCCURRED WHILE READING FILE 'test.chd'",
-    ]
-    run_mf6_error(ws, err_str)
-    return
+    with pytest.raises(RuntimeError):
+        # verify that the maxerrors keyword gives the correct error output
+        ws = os.path.join(testdir, "sim2")
+        simnamefilekwargs = {}
+        simnamefilekwargs["maxerrors"] = 5
+        chdkwargs = {}
+        chdkwargs["stress_period_data"] = {
+            0: [[(0, 0, 0), 0.0] for i in range(10)]
+        }
+        sim = get_minimal_gwf_simulation(
+            ws, simnamefilekwargs=simnamefilekwargs, chdkwargs=chdkwargs
+        )
+        sim.write_simulation()
+        err_str = [
+            "5. Cell is already a constant head ((1,1,1)).",
+            "5 additional errors detected but not printed.",
+            "UNIT ERROR REPORT:",
+            "1. ERROR OCCURRED WHILE READING FILE 'test.chd'",
+        ]
+        run_mf6_error(ws, err_str)
 
 
-@raises(RuntimeError)
 def test_disu_errors():
-    from disu_util import get_disu_kwargs
+    with pytest.raises(RuntimeError):
+        from disu_util import get_disu_kwargs
 
-    ws = os.path.join(testdir, "sim3")
-    disukwargs = get_disu_kwargs(
-        3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3]
-    )
-    top = disukwargs["top"]
-    bot = disukwargs["bot"]
-    top[9] = 2.0
-    bot[9] = 1.0
-    sim = get_minimal_gwf_simulation(
-        ws, disukwargs=disukwargs, chdkwargs={"stress_period_data": [[]]}
-    )
-    sim.write_simulation()
-    err_str = [
-        "1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (",
-        "-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be",
-        "below cell 1.",
-        "*  ERROR OCCURRED WHILE READING FILE 'test.disu'",
-    ]
-    run_mf6_error(ws, err_str)
-    return
+        ws = os.path.join(testdir, "sim3")
+        disukwargs = get_disu_kwargs(
+            3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3]
+        )
+        top = disukwargs["top"]
+        bot = disukwargs["bot"]
+        top[9] = 2.0
+        bot[9] = 1.0
+        sim = get_minimal_gwf_simulation(
+            ws, disukwargs=disukwargs, chdkwargs={"stress_period_data": [[]]}
+        )
+        sim.write_simulation()
+        err_str = [
+            "1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (",
+            "-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be",
+            "below cell 1.",
+            "*  ERROR OCCURRED WHILE READING FILE 'test.disu'",
+        ]
+        run_mf6_error(ws, err_str)
 
-
-@raises(RuntimeError)
 def test_solver_fail():
-    # test failed to converge
-    ws = os.path.join(testdir, "sim4")
-    imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
-    sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs)
-    sim.write_simulation()
-    err_str = [
-        "Simulation convergence failure occurred 1 time(s).",
-        "Premature termination of simulation.",
-    ]
-    run_mf6_error(ws, err_str)
-    return
-
+    with pytest.raises(RuntimeError):
+        # test failed to converge
+        ws = os.path.join(testdir, "sim4")
+        imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
+        sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs)
+        sim.write_simulation()
+        err_str = [
+            "Simulation convergence failure occurred 1 time(s).",
+            "Premature termination of simulation.",
+        ]
+        run_mf6_error(ws, err_str)
 
 def test_fail_continue_success():
     # test continue but failed to converge
@@ -269,7 +254,6 @@ if __name__ == "__main__":
     # print message
     print("standalone run of {}".format(os.path.basename(__file__)))
 
-    test_raises_error()
     test_empty_folder()
     test_simple_model_success()
     test_sim_errors()

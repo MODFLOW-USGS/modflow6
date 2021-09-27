@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 import numpy as np
 import shutil
@@ -22,8 +23,7 @@ mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 paktest = "sfr"
 testname = "ts_sfr01"
 testdir = os.path.join("temp", testname)
-if not os.path.isdir(testdir):
-    os.mkdir(testdir)
+os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 
