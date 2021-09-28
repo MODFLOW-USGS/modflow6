@@ -117,16 +117,21 @@ module sfrCrossSectionManager
     return
   end subroutine initialize
 
+  !> @brief Read a cross-section table
+  !!
+  !! Subroutine to read a cross-section table file for a reach.
+  !!
+  !<
   subroutine read_table(this, irch, width, filename)
     use ConstantsModule, only: LINELENGTH, IUOC
     use InputOutputModule, only: openfile
     use SimModule, only: store_error, count_errors
     use BlockParserModule, only: BlockParserType
     ! -- dummy variables
-    class(SfrCrossSection) :: this
-    integer(I4B), intent(in) :: irch
-    real(DP), intent(in) :: width
-    character(len=*), intent(in) :: filename
+    class(SfrCrossSection) :: this             !< SfrCrossSection object
+    integer(I4B), intent(in) :: irch           !< current reach
+    real(DP), intent(in) :: width              !< reach width
+    character(len=*), intent(in) :: filename   !< table file with station depth data
     ! -- local variables
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: keyword
@@ -276,6 +281,12 @@ module sfrCrossSectionManager
     return
   end subroutine read_table
 
+  !> @brief Get the total number of cross-section points
+  !!
+  !! Function to get the total number of cross-section points to
+  !! get the new size of the station xsdepth data for all reaches.
+  !!
+  !<
   function get_ncrossptstot(this) result(nptstot)
     ! -- dummy variables
     class(SfrCrossSection) :: this
@@ -330,9 +341,14 @@ module sfrCrossSectionManager
     return
   end subroutine pack
 
+  !> @brief Deallocate the cross-section object
+  !!
+  !! Subroutine to deallocate the cross-section object.
+  !!
+  !<
   subroutine destroy(this)
     ! -- dummy variables
-    class(SfrCrossSection) :: this
+    class(SfrCrossSection) :: this   !< SfrCrossSection object
     ! -- local variables
     integer(I4B) :: n
     !

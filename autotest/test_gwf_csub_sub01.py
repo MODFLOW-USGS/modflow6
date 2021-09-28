@@ -419,17 +419,22 @@ def cbc_compare(sim):
 def build_models():
     for idx, dir in enumerate(exdirs):
         sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
+        write_model(sim, mc)
+    return
+
+
+def write_model(sim, mc):
+    sim.write_simulation()
+    if mc is not None:
+        mc.write_simulation()
     return
 
 
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, exdir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, exdir):
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
     r_exe = None
@@ -441,7 +446,8 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    sim, mc = get_model(idx, exdir)
+    write_model(sim, mc)
 
     # run the test model
 
@@ -449,7 +455,7 @@ def test_mf6model(idx, dir):
         return
     test.run_mf6(
         Simulation(
-            dir,
+            exdir,
             exfunc=eval_sub,
             exe_dict=r_exe,
             idxsim=idx,

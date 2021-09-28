@@ -16,11 +16,14 @@ from simulation import Simulation
 paktest = "sfr"
 
 ex = [
-    "sfr_npt01",
-    "sfr_npt02",
-    "sfr_npt03",
-    "sfr_npt04",
-    "sfr_npt05",
+    "sfr_npt01a",
+    "sfr_npt01b",
+    "sfr_npt01c",
+    "sfr_npt01d",
+    "sfr_npt01e",
+    "sfr_npt01f",
+    "sfr_npt01g",
+    "sfr_npt01h",
 ]
 exdirs = [os.path.join("temp", s) for s in ex]
 
@@ -73,6 +76,18 @@ np_data = {
     xsect_types[4]: {
         "x": np.array([0.0, 0.0, rwid, rwid], dtype=float),
         "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
+    },
+    xsect_types[5]: {
+        "x": np.array([0.0, 0.4, 0.6, rwid], dtype=float),
+        "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
+    },
+    xsect_types[6]: {
+        "x": np.array([0.0, 0.5, rwid], dtype=float),
+        "d": np.array([1.0, 0.0, 1.0], dtype=float),
+    },
+    xsect_types[7]: {
+        "x": np.array([0.0, 0.2, 0.5, 0.7, rwid], dtype=float),
+        "d": np.array([1.0, 0.0, 0.5, 0.0, 1.0], dtype=float),
     },
 }
 
@@ -259,7 +274,7 @@ def qtodepth(
 
 
 #
-def get_model(idx, ws):
+def build_model(idx, ws):
 
     xsect_type = xsect_types[idx]
 
@@ -468,10 +483,17 @@ def eval_npointq(sim):
 # - No need to change any code below
 def build_models():
     for idx, exdir in enumerate(exdirs):
-        sim, mc = get_model(idx, exdir)
+        sim, mc = build_model(idx, exdir)
         sim.write_simulation()
         if mc is not None:
             mc.write_simulation()
+    return
+
+
+def write_model(sim, mc):
+    sim.write_simulation()
+    if mc is not None:
+        mc.write_simulation()
     return
 
 
@@ -483,8 +505,9 @@ def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    sim, mc = build_model(idx, exdir)
+    write_model(sim, mc)
 
     # run the test models
     test.run_mf6(
@@ -492,7 +515,6 @@ def test_mf6model(idx, exdir):
             exdir,
             exfunc=eval_npointq,
             idxsim=idx,
-            mf6_regression=False,
         )
     )
 
@@ -510,7 +532,6 @@ def main():
             exdir,
             exfunc=eval_npointq,
             idxsim=idx,
-            mf6_regression=False,
         )
         test.run_mf6(sim)
     return
