@@ -481,22 +481,6 @@ def eval_npointq(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, exdir in enumerate(exdirs):
-        sim, mc = build_model(idx, exdir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
-
-
-def write_model(sim, mc):
-    sim.write_simulation()
-    if mc is not None:
-        mc.write_simulation()
-    return
-
-
 @pytest.mark.parametrize(
     "idx, exdir",
     list(enumerate(exdirs)),
@@ -506,8 +490,7 @@ def test_mf6model(idx, exdir):
     test = testing_framework()
 
     # build the model
-    sim, mc = build_model(idx, exdir)
-    write_model(sim, mc)
+    test.build_mf6_models(build_model, idx, exdir)
 
     # run the test models
     test.run_mf6(
@@ -523,11 +506,10 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test models
     for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
+
         sim = Simulation(
             exdir,
             exfunc=eval_npointq,
