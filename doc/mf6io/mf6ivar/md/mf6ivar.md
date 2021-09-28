@@ -1117,16 +1117,16 @@
 | UTL | OBS | CONTINUOUS | OBSTYPE | STRING | a string of characters used to identify the observation type. |
 | UTL | OBS | CONTINUOUS | ID | STRING | Text identifying cell where observation is located. For packages other than NPF, if boundary names are defined in the corresponding package input file, ID can be a boundary name. Otherwise ID is a cellid. If the model discretization is type DIS, cellid is three integers (layer, row, column). If the discretization is DISV, cellid is two integers (layer, cell number). If the discretization is DISU, cellid is one integer (node number). |
 | UTL | OBS | CONTINUOUS | ID2 | STRING | Text identifying cell adjacent to cell identified by ID. The form of ID2 is as described for ID. ID2 is used for intercell-flow observations of a GWF model, for three observation types of the LAK Package, for two observation types of the MAW Package, and one observation type of the UZF Package. |
-| UTL | SFR | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the reach cross-section table. There must be NROW rows of data in the TABLE block. |
-| UTL | SFR | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of columns in the reach cross-section table. There must be NCOL columns of data in the TABLE block. Currently, NCOL must be equal to 2. |
-| UTL | SFR | TABLE | XFRACTION | DOUBLE PRECISION | real value that defines the station (x) data for the cross-section as a fraction of the width (RWID) of the reach. |
-| UTL | SFR | TABLE | DEPTH | DOUBLE PRECISION | real value that defines the elevation (z) data for the cross-section as a depth relative to the top elevation of the reach (RTP) and corresponding to the station data on the same line. |
-| UTL | LAK | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the lake table. There must be NROW rows of data in the TABLE block. |
-| UTL | LAK | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of columns in the lake table. There must be NCOL columns of data in the TABLE block. For lakes with HORIZONTAL and/or VERTICAL CTYPE connections, NCOL must be equal to 3. For lakes with EMBEDDEDH or EMBEDDEDV CTYPE connections, NCOL must be equal to 4. |
-| UTL | LAK | TABLE | STAGE | DOUBLE PRECISION | real value that defines the stage corresponding to the remaining data on the line. |
-| UTL | LAK | TABLE | VOLUME | DOUBLE PRECISION | real value that defines the lake volume corresponding to the stage specified on the line. |
-| UTL | LAK | TABLE | SAREA | DOUBLE PRECISION | real value that defines the lake surface area corresponding to the stage specified on the line. |
-| UTL | LAK | TABLE | BAREA | DOUBLE PRECISION | real value that defines the lake-GWF exchange area corresponding to the stage specified on the line. BAREA is only specified if the CLAKTYPE for the lake is EMBEDDEDH or EMBEDDEDV. |
+| UTL | LAKTAB | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the lake table. There must be NROW rows of data in the TABLE block. |
+| UTL | LAKTAB | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of columns in the lake table. There must be NCOL columns of data in the TABLE block. For lakes with HORIZONTAL and/or VERTICAL CTYPE connections, NCOL must be equal to 3. For lakes with EMBEDDEDH or EMBEDDEDV CTYPE connections, NCOL must be equal to 4. |
+| UTL | LAKTAB | TABLE | STAGE | DOUBLE PRECISION | real value that defines the stage corresponding to the remaining data on the line. |
+| UTL | LAKTAB | TABLE | VOLUME | DOUBLE PRECISION | real value that defines the lake volume corresponding to the stage specified on the line. |
+| UTL | LAKTAB | TABLE | SAREA | DOUBLE PRECISION | real value that defines the lake surface area corresponding to the stage specified on the line. |
+| UTL | LAKTAB | TABLE | BAREA | DOUBLE PRECISION | real value that defines the lake-GWF exchange area corresponding to the stage specified on the line. BAREA is only specified if the CLAKTYPE for the lake is EMBEDDEDH or EMBEDDEDV. |
+| UTL | SFRTAB | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the reach cross-section table. There must be NROW rows of data in the TABLE block. |
+| UTL | SFRTAB | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of columns in the reach cross-section table. There must be NCOL columns of data in the TABLE block. Currently, NCOL must be equal to 2. |
+| UTL | SFRTAB | TABLE | XFRACTION | DOUBLE PRECISION | real value that defines the station (x) data for the cross-section as a fraction of the width (RWID) of the reach. |
+| UTL | SFRTAB | TABLE | DEPTH | DOUBLE PRECISION | real value that defines the elevation (z) data for the cross-section as a depth relative to the top elevation of the reach (RTP) and corresponding to the station data on the same line. |
 | UTL | TS | ATTRIBUTES | NAMES | KEYWORD | xxx |
 | UTL | TS | ATTRIBUTES | TIME_SERIES_NAMES | STRING ANY1D | Name by which a package references a particular time-array series. The name must be unique among all time-array series used in a package. |
 | UTL | TS | ATTRIBUTES | METHODS | KEYWORD | xxx |

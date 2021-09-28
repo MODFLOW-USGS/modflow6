@@ -431,7 +431,11 @@ def build_model(idx, ws):
         depths = np_data[xsect_type]["d"]
         table = [[x, d] for x, d in zip(stations, depths)]
         flopy.mf6.ModflowUtlsfrtab(
-            gwf, nrow=stations.shape[0], ncol=2, table=table, filename=sfr_tab
+            gwf,
+            nrow=stations.shape[0],
+            ncol=2,
+            table=table,
+            filename=sfr_tab,
         )
 
     # output control
