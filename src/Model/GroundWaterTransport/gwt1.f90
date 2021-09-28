@@ -927,21 +927,21 @@ module GwtModule
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 
+    !
+    ! -- Package budget summary
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
+    enddo
+      
+    ! -- mover budget summary
+    if(this%inmvt > 0) then
+      call this%mvt%mvt_ot_bdsummary(ibudfl)
+    end if
+      
+    ! -- model budget summary
     if (ibudfl /= 0) then
       ipflag = 1
-      !
-      ! -- Package budget summary
-      do ip = 1, this%bndlist%Count()
-        packobj => GetBndFromList(this%bndlist, ip)
-        call packobj%bnd_ot_bdsummary(kstp, kper, this%iout)
-      enddo
-      
-      ! -- mover budget summary
-      if(this%inmvt > 0) then
-        call this%mvt%mvt_ot_bdsummary()
-      end if
-      
-      ! -- model budget summary
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
     

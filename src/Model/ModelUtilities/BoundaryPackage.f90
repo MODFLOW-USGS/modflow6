@@ -796,12 +796,13 @@ module BndModule
     !!  to the model listing file.
     !!
     !<
-    subroutine bnd_ot_bdsummary(this, kstp, kper, iout)
+    subroutine bnd_ot_bdsummary(this, kstp, kper, iout, ibudfl)
       ! -- dummy variables
-      class(BndType) :: this            !< BndType object
-      integer(I4B), intent(in) :: kstp  !< time step number
-      integer(I4B), intent(in) :: kper  !< period number
-      integer(I4B), intent(in) :: iout  !< flag and unit number for the model listing file
+      class(BndType) :: this              !< BndType object
+      integer(I4B), intent(in) :: kstp    !< time step number
+      integer(I4B), intent(in) :: kper    !< period number
+      integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+      integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
       !
       ! -- override for advanced packages
       !

@@ -25,6 +25,10 @@
 
 \item \texttt{budgetfile}---name of the binary output file to write budget information.
 
+\item \texttt{BUDGETCSV}---keyword to specify that record corresponds to the budget CSV.
+
+\item \texttt{budgetcsvfile}---name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation.
+
 \item \texttt{NO\_WELL\_STORAGE}---keyword that deactivates inclusion of well storage contributions to the multi-aquifer well package continuity equation.
 
 \item \texttt{FLOW\_CORRECTION}---keyword that activates flow corrections in cases where the head in a multi-aquifer well is below the bottom of the screen for a connection or the head in a convertible cell connected to a multi-aquifer well is below the cell bottom. When flow corrections are activated, unit head gradients are used to calculate the flow between a multi-aquifer well and a connected GWF cell. By default, flow corrections are not made.

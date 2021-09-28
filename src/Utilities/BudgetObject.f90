@@ -109,7 +109,8 @@ module BudgetObjectModule
   end subroutine budgetobject_cr
 
   subroutine budgetobject_df(this, ncv, nbudterm, iflowja, nsto, &
-                             bddim_opt, labeltitle_opt, bdzone_opt)
+                             bddim_opt, labeltitle_opt, bdzone_opt, &
+                             ibudcsv)
 ! ******************************************************************************
 ! budgetobject_df -- Define the new budget object
 ! ******************************************************************************
@@ -126,6 +127,7 @@ module BudgetObjectModule
     character(len=*), optional :: bddim_opt
     character(len=*), optional :: labeltitle_opt
     character(len=*), optional :: bdzone_opt
+    integer(I4B), intent(in), optional :: ibudcsv
     ! -- local
     character(len=20) :: bdtype
     character(len=5) :: bddim
@@ -168,6 +170,11 @@ module BudgetObjectModule
     !
     ! -- setup the budget table object
     call this%budtable%budget_df(nbudterm, bdtype, bddim, labeltitle, bdzone)
+    !
+    ! -- Trigger csv output
+    if (present(ibudcsv)) then
+      call this%budtable%set_ibudcsv(ibudcsv)
+    end if
     !
     ! -- Return
     return
@@ -480,7 +487,7 @@ module BudgetObjectModule
     return
   end subroutine write_flowtable
 
-  subroutine write_budtable(this, kstp, kper, iout)
+  subroutine write_budtable(this, kstp, kper, iout, ibudfl, totim)
 ! ******************************************************************************
 ! write_budtable -- Write the budget table
 ! ******************************************************************************
@@ -493,11 +500,16 @@ module BudgetObjectModule
     integer(I4B),intent(in) :: kstp
     integer(I4B),intent(in) :: kper
     integer(I4B),intent(in) :: iout
+    integer(I4B),intent(in) :: ibudfl
+    real(DP),intent(in) :: totim
     ! -- dummy
 ! ------------------------------------------------------------------------------
     !
     ! -- write the table
-    call this%budtable%budget_ot(kstp, kper, iout)
+    if (ibudfl /= 0) then
+      call this%budtable%budget_ot(kstp, kper, iout)
+    end if
+    call this%budtable%writecsv(totim)
     !
     ! -- return
     return
