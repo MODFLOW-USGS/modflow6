@@ -57,6 +57,7 @@ module SfrModule
     integer(I4B), pointer :: iprhed => null()                                     !< flag for printing stages to listing file
     integer(I4B), pointer :: istageout => null()                                  !< flag and unit number for binary stage output
     integer(I4B), pointer :: ibudgetout => null()                                 !< flag and unit number for binary sfr budget output
+    integer(I4B), pointer :: ibudcsv => null()                                    !< unit number for csv budget output file
     integer(I4B), pointer :: ipakcsv => null()                                    !< flag and unit number for package convergence information
     integer(I4B), pointer :: idiversions => null()                                !< flag indicating if there are any diversions
     integer(I4B), pointer :: nconn => NULL()                                      !< number of reach connections
@@ -273,6 +274,7 @@ module SfrModule
       call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
       call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
       call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+      call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
       call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
       call mem_allocate(this%idiversions, 'IDIVERSIONS', this%memoryPath)
       call mem_allocate(this%maxsfrpicard, 'MAXSFRPICARD', this%memoryPath)
@@ -296,6 +298,7 @@ module SfrModule
       this%iprhed = 0
       this%istageout = 0
       this%ibudgetout = 0
+      this%ibudcsv = 0
       this%ipakcsv = 0
       this%idiversions = 0
       this%maxsfrpicard = 100
@@ -604,7 +607,7 @@ module SfrModule
         "(4x, 'MAXIMUM DEPTH CHANGE VALUE (',g0,') SPECIFIED.')"
       character(len=*),parameter :: fmtsfrbin = &
         "(4x, 'SFR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x,               &
-      &'OPENED ON UNIT: ', I7)"
+      &'OPENED ON UNIT: ', I0)"
       !
       ! -- Check for SFR options
       select case (option)
@@ -637,6 +640,18 @@ module SfrModule
           else
             call store_error('Optional budget keyword must be ' //                 &
                             'followed by fileout.')
+          end if
+        case('BUDGETCSV')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ibudcsv = getunit()
+            call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+              filstat_opt='REPLACE')
+            write(this%iout,fmtsfrbin) 'BUDGET CSV', fname, this%ibudcsv
+          else
+            call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+              &FILEOUT')
           end if
         case('PACKAGE_CONVERGENCE')
           call this%parser%GetStringCaps(keyword)
@@ -2317,15 +2332,17 @@ module SfrModule
     !!  Output SFR package budget summary.
     !!
     !<
-    subroutine sfr_ot_bdsummary(this, kstp, kper, iout)
-      ! -- dummy variables
-      class(SfrType) :: this             !< SfrType object
-      integer(I4B), intent(in) :: kstp   !< time step number
-      integer(I4B), intent(in) :: kper   !< period number
-      integer(I4B), intent(in) :: iout   !< flag and unit number for the model listing file
+    subroutine sfr_ot_bdsummary(this, kstp, kper, iout, ibudfl)
+      ! -- module
+      use TdisModule, only: totim
+      ! -- dummy
+      class(SfrType) :: this              !< SfrType object
+      integer(I4B), intent(in) :: kstp    !< time step number
+      integer(I4B), intent(in) :: kper    !< period number
+      integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+      integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
       !
-      ! -- write budget table
-      call this%budobj%write_budtable(kstp, kper, iout)
+      call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
       !
       ! -- return
       return
@@ -2430,6 +2447,7 @@ module SfrModule
       call mem_deallocate(this%iprhed)
       call mem_deallocate(this%istageout)
       call mem_deallocate(this%ibudgetout)
+      call mem_deallocate(this%ibudcsv)
       call mem_deallocate(this%ipakcsv)
       call mem_deallocate(this%idiversions)
       call mem_deallocate(this%maxsfrpicard)
@@ -4634,7 +4652,8 @@ module SfrModule
       !
       ! -- set up budobj
       call budgetobject_cr(this%budobj, this%packName)
-      call this%budobj%budgetobject_df(this%maxbound, nbudterm, 0, 0)
+      call this%budobj%budgetobject_df(this%maxbound, nbudterm, 0, 0, &
+                                       ibudcsv=this%ibudcsv)
       idx = 0
       !
       ! -- Go through and set up each budget term

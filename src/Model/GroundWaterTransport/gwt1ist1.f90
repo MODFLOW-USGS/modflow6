@@ -52,6 +52,8 @@ module GwtIstModule
     type(GwtMstType), pointer                        :: mst => null()           !< pointer to mst object
     
     integer(I4B), pointer                            :: icimout => null()       !< unit number for binary cim output
+    integer(I4B), pointer                            :: ibudgetout => null()    !< binary budget output file
+    integer(I4B), pointer                            :: ibudcsv => null()       !< unit number for csv budget output file
     integer(I4B), pointer                            :: idcy => null()          !< order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer                            :: isrb => null()          !< sorption active flag (0:off, 1:on)
     integer(I4B), pointer                            :: kiter => null()         !< picard iteration counter
@@ -191,6 +193,7 @@ module GwtIstModule
     ! -- setup the immobile domain budget
     call budget_cr(this%budget, this%memoryPath)
     call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%packName)
+    call this%budget%set_ibudcsv(this%ibudcsv)
     !
     ! -- Perform a check to ensure that sorption and decay are set 
     !    consistently between the MST and IST packages.
@@ -623,20 +626,29 @@ module GwtIstModule
   !!  to the model listing file.
   !!
   !<
-  subroutine ist_ot_bdsummary(this, kstp, kper, iout)
+  subroutine ist_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- modules
-    use TdisModule, only: delt
+    use TdisModule, only: delt, totim
     ! -- dummy variables
-    class(GwtIstType) :: this         !< GwtIstType object
-    integer(I4B), intent(in) :: kstp  !< time step number
-    integer(I4B), intent(in) :: kper  !< period number
-    integer(I4B), intent(in) :: iout  !< flag and unit number for the model listing file
+    class(GwtIstType) :: this           !< GwtIstType object
+    integer(I4B), intent(in) :: kstp    !< time step number
+    integer(I4B), intent(in) :: kper    !< period number
+    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    ! -- local
     integer(I4B) :: isuppress_output = 0
     !
-    ! -- Write budget to list file
+    ! -- Fill budget terms
     call this%budget%reset()
     call this%budget%addentry(this%budterm, delt, budtxt, isuppress_output)
-    call this%budget%budget_ot(kstp, kper, iout)
+    !
+    ! -- Write budget to list file
+    if (ibudfl /= 0) then
+      call this%budget%budget_ot(kstp, kper, iout)
+    end if
+    !
+    ! -- Write budget csv
+    call this%budget%writecsv(totim)
     return
   end subroutine ist_ot_bdsummary
   
@@ -654,6 +666,8 @@ module GwtIstModule
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
       call mem_deallocate(this%icimout)
+      call mem_deallocate(this%ibudgetout)
+      call mem_deallocate(this%ibudcsv)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%isrb)
       call mem_deallocate(this%kiter)
@@ -706,12 +720,16 @@ module GwtIstModule
     !
     ! -- Allocate
     call mem_allocate(this%icimout, 'ICIMOUT', this%memoryPath)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     call mem_allocate(this%kiter, 'KITER', this%memoryPath)
     !
     ! -- Initialize
     this%icimout = 0
+    this%ibudgetout = 0
+    this%ibudcsv = 0
     this%isrb = 0
     this%idcy = 0
     this%kiter = 0
@@ -804,15 +822,19 @@ module GwtIstModule
   !<
   subroutine read_options(this)
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
+    use ConstantsModule,   only: LINELENGTH, MNORMAL
     use SimModule,         only: store_error
+    use OpenSpecModule,    only: access, form
+    use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(GwtIstType), intent(inout) :: this  !< GwtIstType object
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: fname
     character(len=:), allocatable :: keyword2
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+    logical :: found
     ! -- formats
     character(len=*), parameter :: fmtisvflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
@@ -823,6 +845,8 @@ module GwtIstModule
       "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 =                                  &
       "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
+    character(len=*),parameter :: fmtistbin = &
+      "(4x, 'IST ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -843,6 +867,30 @@ module GwtIstModule
           case('CIM')
             call this%parser%GetRemainingLine(keyword2)
             call this%ocd%set_option(keyword2, this%inunit, this%iout)
+          case('BUDGET')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ibudgetout = getunit()
+              call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
+                            form, access, 'REPLACE', mode_opt=MNORMAL)
+              write(this%iout,fmtistbin) 'BUDGET', fname, this%ibudgetout
+              found = .true.
+            else
+              call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+            end if
+          case('BUDGETCSV')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ibudcsv = getunit()
+              call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                filstat_opt='REPLACE')
+              write(this%iout,fmtistbin) 'BUDGET CSV', fname, this%ibudcsv
+            else
+              call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+                &FILEOUT')
+            end if
           case ('SORBTION', 'SORPTION')
             this%isrb = 1
             write(this%iout, fmtisrb)

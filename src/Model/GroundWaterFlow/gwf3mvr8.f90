@@ -123,6 +123,7 @@ module GwfMvrModule
 
   type, extends(NumericalPackageType) :: GwfMvrType
     integer(I4B), pointer                            :: ibudgetout => null()     !< binary budget output file
+    integer(I4B), pointer                            :: ibudcsv => null()        !< unit number for csv budget output file
     integer(I4B), pointer                            :: maxmvr => null()         !< max number of movers to be specified
     integer(I4B), pointer                            :: maxpackages => null()    !< max number of packages to be specified
     integer(I4B), pointer                            :: maxcomb => null()        !< max number of combination of packages
@@ -252,6 +253,7 @@ module GwfMvrModule
     !
     ! -- Define the budget object to be the size of package names
     call this%budget%budget_df(this%maxpackages, 'WATER MOVER')
+    call this%budget%set_ibudcsv(this%ibudcsv)
     !
     ! -- setup the budget object
     call this%mvr_setup_budobj()
@@ -612,7 +614,7 @@ module GwfMvrModule
     return
   end subroutine mvr_ot_printflow
 
-  subroutine mvr_ot_bdsummary(this)
+  subroutine mvr_ot_bdsummary(this, ibudfl)
 ! ******************************************************************************
 ! mvr_ot -- Write mover budget to listing file
 ! ******************************************************************************
@@ -620,10 +622,11 @@ module GwfMvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt
+    use TdisModule, only: kstp, kper, delt, totim
     use ArrayHandlersModule, only: ifind, expandarray
     ! -- dummy
     class(GwfMvrType) :: this
+    integer(I4B), intent(in) :: ibudfl
     ! -- locals
     character(len=LENMEMPATH) :: pckMemPath
     integer(I4B) :: i, j
@@ -661,7 +664,12 @@ module GwfMvrModule
     enddo
     !
     ! -- Write the budget
-    call this%budget%budget_ot(kstp, kper, this%iout)
+    if (ibudfl /= 0) then
+      call this%budget%budget_ot(kstp, kper, this%iout)
+    end if
+    !
+    ! -- Write budget csv
+    call this%budget%writecsv(totim)
     !
     ! -- Deallocate
     deallocate(ratin, ratout)
@@ -718,6 +726,7 @@ module GwfMvrModule
     !
     ! -- Scalars
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%maxmvr)
     call mem_deallocate(this%maxpackages)
     call mem_deallocate(this%maxcomb)
@@ -753,7 +762,8 @@ module GwfMvrModule
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*),parameter :: fmtmvrbin = &
-      "(4x, 'MVR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, 'MVR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON &
+      &UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -778,6 +788,18 @@ module GwfMvrModule
               write(this%iout,fmtmvrbin) 'BUDGET', fname, this%ibudgetout
             else
               call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+            end if
+          case('BUDGETCSV')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ibudcsv = getunit()
+              call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                filstat_opt='REPLACE')
+              write(this%iout,fmtmvrbin) 'BUDGET CSV', fname, this%ibudcsv
+            else
+              call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+                &FILEOUT')
             end if
           case ('PRINT_INPUT')
             this%iprpak = 1
@@ -1089,6 +1111,7 @@ module GwfMvrModule
     !
     ! -- Allocate
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%maxmvr, 'MAXMVR', this%memoryPath)
     call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
     call mem_allocate(this%maxcomb, 'MAXCOMB', this%memoryPath)
@@ -1098,6 +1121,7 @@ module GwfMvrModule
     !
     ! -- Initialize
     this%ibudgetout = 0
+    this%ibudcsv = 0
     this%maxmvr = -1
     this%maxpackages = -1
     this%maxcomb = 0

@@ -1036,7 +1036,7 @@ C
 *c            control=1 no setup reuse
 *c            control=2 automatic setup reuse
 *!             control=1
-*c            iout  Controls print output related to SAMG’s solution phase.
+*c            iout  Controls print output related to SAMGï¿½s solution phase.
 *c                <0 No printout, except for warnings and errors24.
 *c                =0 Minimal output on results and timings.
 *c                >0 Additional print output specified by the individual digits:

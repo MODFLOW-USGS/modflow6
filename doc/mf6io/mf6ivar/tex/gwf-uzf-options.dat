@@ -7,6 +7,7 @@ BEGIN OPTIONS
   [SAVE_FLOWS]
   [WATER_CONTENT FILEOUT <wcfile>]
   [BUDGET FILEOUT <budgetfile>]
+  [BUDGETCSV FILEOUT <budgetcsvfile>]
   [PACKAGE_CONVERGENCE FILEOUT <package_convergence_filename>]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]

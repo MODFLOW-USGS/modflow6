@@ -22,13 +22,14 @@ module GwtMvtModule
   public :: mvt_cr
   
   type, extends(NumericalPackageType) :: GwtMvtType
-    integer(I4B), pointer                              :: maxpackages           ! max number of packages
-    integer(I4B), pointer                              :: ibudgetout => null()  ! unit number for budget output file
-    type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
-    type(BudgetType), pointer                          :: budget => null()      ! mover budget object (used to write balance table)
-    type(BudgetObjectType), pointer                    :: budobj => null()      ! budget container (used to write binary file)
+    integer(I4B), pointer                              :: maxpackages           !< max number of packages
+    integer(I4B), pointer                              :: ibudgetout => null()  !< unit number for budget output file
+    integer(I4B), pointer                              :: ibudcsv => null()     !< unit number for csv budget output file
+    type(GwtFmiType), pointer                          :: fmi => null()         !< pointer to fmi object
+    type(BudgetType), pointer                          :: budget => null()      !< mover budget object (used to write balance table)
+    type(BudgetObjectType), pointer                    :: budobj => null()      !< budget container (used to write binary file)
     character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous                :: paknames => null()       !array of package names
+      dimension(:), pointer, contiguous                :: paknames => null()    !< array of package names
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
@@ -169,6 +170,7 @@ module GwtMvtModule
       !
       ! -- Define the budget object to be the size of maxpackages
       call this%budget%budget_df(this%maxpackages, 'TRANSPORT MOVER', bddim='M')
+      call this%budget%set_ibudcsv(this%ibudcsv)
     end if
     !
     ! -- Return
@@ -375,7 +377,7 @@ module GwtMvtModule
     return
   end subroutine mvt_ot_printflow
 
-  subroutine mvt_ot_bdsummary(this)
+  subroutine mvt_ot_bdsummary(this, ibudfl)
 ! ******************************************************************************
 ! mvt_ot_bdsummary -- Write mover budget to listing file
 ! ******************************************************************************
@@ -383,10 +385,11 @@ module GwtMvtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt
+    use TdisModule, only: kstp, kper, delt, totim
     use ArrayHandlersModule, only: ifind, expandarray
     ! -- dummy
     class(GwtMvtType) :: this
+    integer(I4B), intent(in) :: ibudfl
     ! -- locals
     integer(I4B) :: i, j, n
     real(DP), allocatable, dimension(:) :: ratin, ratout
@@ -431,7 +434,12 @@ module GwtMvtModule
     enddo
     !
     ! -- Write the budget
-    call this%budget%budget_ot(kstp, kper, this%iout)
+    if (ibudfl /= 0) then
+      call this%budget%budget_ot(kstp, kper, this%iout)
+    end if
+    !
+    ! -- Write budget csv
+    call this%budget%writecsv(totim)
     !
     ! -- Deallocate
     deallocate(ratin, ratout)
@@ -487,6 +495,7 @@ module GwtMvtModule
     this%fmi => null()
     call mem_deallocate(this%maxpackages)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ibudcsv)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%NumericalPackageType%da()
@@ -515,10 +524,12 @@ module GwtMvtModule
     ! -- Allocate
     call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     !
     ! -- Initialize
     this%maxpackages = 0
     this%ibudgetout = 0
+    this%ibudcsv = 0
     !
     ! -- Return
     return
@@ -542,7 +553,7 @@ module GwtMvtModule
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     character(len=*),parameter :: fmtflow = &
-      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
     character(len=*),parameter :: fmtflow2 = &
       "(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE')"
 ! ------------------------------------------------------------------------------
@@ -579,6 +590,18 @@ module GwtMvtModule
               write(this%iout,fmtflow) 'MVT', 'BUDGET', fname, this%ibudgetout
             else
               call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+            end if
+          case('BUDGETCSV')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ibudcsv = getunit()
+              call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                filstat_opt='REPLACE')
+              write(this%iout,fmtflow) 'MVT', 'BUDGET CSV', fname, this%ibudcsv
+            else
+              call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+                &FILEOUT')
             end if
           case default
             write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN MVT OPTION: ', &

@@ -55,6 +55,7 @@ module LakModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ibudcsv => null()
     integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: nlakes => NULL()
@@ -334,6 +335,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
     call mem_allocate(this%nlakes, 'NLAKES', this%memoryPath)
     call mem_allocate(this%noutlets, 'NOUTLETS', this%memoryPath)
@@ -356,6 +358,7 @@ contains
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
+    this%ibudcsv = 0
     this%ipakcsv = 0
     this%nlakes = 0
     this%noutlets = 0
@@ -3379,7 +3382,7 @@ contains
     character(len=*),parameter :: fmtlakeopt = &
       "(4x, 'LAKE ', a, ' VALUE (',g15.7,') SPECIFIED.')"
     character(len=*),parameter :: fmtlakbin = &
-      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
@@ -3411,6 +3414,18 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('BUDGETCSV')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ibudcsv = getunit()
+          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+            filstat_opt='REPLACE')
+          write(this%iout,fmtlakbin) 'BUDGET CSV', fname, this%ibudcsv
+        else
+          call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+            &FILEOUT')
         end if
       case('PACKAGE_CONVERGENCE')
         call this%parser%GetStringCaps(keyword)
@@ -4388,12 +4403,19 @@ contains
     
   end subroutine lak_ot_dv
   
-  subroutine lak_ot_bdsummary(this, kstp, kper, iout)
-    class(LakType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    call this%budobj%write_budtable(kstp, kper, iout)
+  subroutine lak_ot_bdsummary(this, kstp, kper, iout, ibudfl)
+    ! -- module
+    use TdisModule, only: totim
+    ! -- dummy
+    class(LakType) :: this              !< LakType object
+    integer(I4B), intent(in) :: kstp    !< time step number
+    integer(I4B), intent(in) :: kper    !< period number
+    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    !
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    !
+    return
   end subroutine lak_ot_bdsummary
   
   subroutine lak_da(this)
@@ -4467,6 +4489,7 @@ contains
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%noutlets)
@@ -5830,7 +5853,8 @@ contains
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
-    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0, &
+                                     ibudcsv=this%ibudcsv)
     idx = 0
     !
     ! -- Go through and set up each budget term
