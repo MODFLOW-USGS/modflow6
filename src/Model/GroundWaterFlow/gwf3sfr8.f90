@@ -5242,9 +5242,10 @@ module SfrModule
       i1 = this%iacross(n + 1) - 1
       sat = sCubicSaturation(DEM5, DZERO, depth, DEM5)
       if (npts > 1) then
-        calc_top_width_wet = get_wetted_topwidth(npts, this%station(i0:i1), &
-                                                 this%depth(i0:i1), depth)
-        calc_top_width_wet = calc_top_width_wet * sat
+        calc_top_width_wet = sat * get_wetted_topwidth(npts, &
+                                                       this%station(i0:i1), &
+                                                       this%xsdepths(i0:i1), &
+                                                       depth)        
       else
         calc_top_width_wet = sat * this%station(i0)
       end if
