@@ -700,6 +700,7 @@ contains
     class(GwfGwfConnectionType) :: this           !< this connection
     ! local
     integer(I4B) :: iex
+    integer(I4B) :: ibudfl
     class(GwfExchangeType), pointer :: gwfEx
     
     ! we don't call gwf_gwf_ot here, but
@@ -715,7 +716,8 @@ contains
         end if
 
         if(gwfEx%inmvr > 0) then
-          call gwfEx%mvr%mvr_ot_bdsummary()
+          ibudfl = 1
+          call gwfEx%mvr%mvr_ot_bdsummary(ibudfl)
         end if
       end if
     end do

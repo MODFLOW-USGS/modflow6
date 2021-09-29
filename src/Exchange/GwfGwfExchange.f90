@@ -380,8 +380,7 @@ contains
       write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //               &
                            'specified as an auxiliary variable because ' //      &
                            'XT3D is enabled on the exchange.'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     ! -- Go through each connection and calculate the saturated conductance
     do iexg = 1, this%nexg

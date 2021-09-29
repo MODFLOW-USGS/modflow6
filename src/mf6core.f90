@@ -171,7 +171,7 @@ module Mf6CoreModule
       ! -- Deallocate for each connection
       do ic = 1, baseconnectionlist%Count()
         mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
-        call mc%mc_da()
+        call mc%exg_da()
         deallocate(mc)
       enddo
       !
@@ -252,7 +252,7 @@ module Mf6CoreModule
       ! -- Define each connection
       do ic = 1, baseconnectionlist%Count()
         mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
-        call mc%mc_df()
+        call mc%exg_df()
       enddo
       !
       ! -- Define each solution
@@ -262,7 +262,6 @@ module Mf6CoreModule
       enddo
     
     end subroutine simulation_df
-    class(SpatialModelConnectionType), pointer :: mc => null()
     
     !> @brief Simulation allocate and read
     !!
@@ -298,7 +297,7 @@ module Mf6CoreModule
       ! -- Allocate and read all model connections
       do ic = 1, baseconnectionlist%Count()
         mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
-        call mc%mc_ar()
+        call mc%exg_ar()
       enddo
       !
       ! -- Allocate and read each solution
