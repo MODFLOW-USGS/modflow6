@@ -64,6 +64,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'GwtSpc.f90',
     'Model' / 'ModelUtilities' / 'Mover.f90',
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
+    'Model' / 'ModelUtilities' / 'SfrCrossSectionManager.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionUtils.f90',
     'Model' / 'ModelUtilities' / 'UzfCellGroup.f90',
     'Model' / 'ModelUtilities' / 'Xt3dAlgorithm.f90',

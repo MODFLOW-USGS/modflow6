@@ -30,11 +30,12 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
 
-time_varying_k = [1., 10.]
+time_varying_k = [1.0, 10.0]
+
 
 def get_model(idx, dir):
     nlay, nrow, ncol = 3, 3, 3
-    perlen = [100., 100.]
+    perlen = [100.0, 100.0]
     nper = len(perlen)
     nstp = nper * [1]
     tsmult = nper * [1.0]
@@ -42,7 +43,7 @@ def get_model(idx, dir):
     delc = 1.0
     top = 1.0
     laytyp = 0
-    botm = [0.0, -1., -2.]
+    botm = [0.0, -1.0, -2.0]
     strt = 1.0
     hk = 0.1
 
@@ -114,8 +115,12 @@ def get_model(idx, dir):
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_specific_discharge=True, icelltype=laytyp, k=hk, k33=hk,
-        tvk_filerecord=[tvk_filename]
+        gwf,
+        save_specific_discharge=True,
+        icelltype=laytyp,
+        k=hk,
+        k33=hk,
+        tvk_filerecord=[tvk_filename],
     )
 
     # tvk
@@ -128,7 +133,9 @@ def get_model(idx, dir):
                 for j in range(ncol):
                     spd.append([(k, i, j), "K", hydraulic_conductivity])
         tvkspd[kper] = spd
-    tvk = flopy.mf6.ModflowUtltvk(gwf, perioddata=tvkspd, filename=tvk_filename)
+    tvk = flopy.mf6.ModflowUtltvk(
+        gwf, perioddata=tvkspd, filename=tvk_filename
+    )
 
     # chd files
     chdspd = []
@@ -188,10 +195,10 @@ def eval_model(sim):
 
     # This is the answer to this problem.
     hk = time_varying_k[sim.idxsim]
-    delc = 1.
-    delr = 1.
-    delz = 1.
-    dh = 1.
+    delc = 1.0
+    delr = 1.0
+    delz = 1.0
+    dh = 1.0
     dl = 2 * delr
 
     for kper, bud in enumerate(bud_allspd):

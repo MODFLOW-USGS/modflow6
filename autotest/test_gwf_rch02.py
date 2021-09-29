@@ -37,7 +37,7 @@ for s in ex:
 def get_model(idx, dir):
 
     nlay, nrow, ncol = 2, 4, 5
-    perlen = [1.]
+    perlen = [1.0]
     nper = len(perlen)
     nstp = nper * [1]
     tsmult = nper * [1.0]
@@ -103,16 +103,16 @@ def get_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=100.)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=100.0)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=0, k=1.0)
 
     # chd
-    chdspd = [[(1, 0, 0), 100.]]
+    chdspd = [[(1, 0, 0), 100.0]]
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdspd)
 
-    recharge = np.arange(nrow * ncol).reshape(nrow, ncol) + 1.
+    recharge = np.arange(nrow * ncol).reshape(nrow, ncol) + 1.0
     rch = flopy.mf6.ModflowGwfrcha(gwf, print_flows=True, recharge=recharge)
 
     # output control
@@ -149,10 +149,10 @@ def eval_model(sim):
     print(records)
 
     errmsg = "Recharge rate is not the same as the node number."
-    assert np.allclose(records['node'].astype(float), records['q']), errmsg
+    assert np.allclose(records["node"].astype(float), records["q"]), errmsg
 
     errmsg = "node2 numbers must be the same as node."
-    assert np.allclose(records['node2'], records['node']), errmsg
+    assert np.allclose(records["node2"], records["node"]), errmsg
 
     fpth = os.path.join(sim.simpath, "rch.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")

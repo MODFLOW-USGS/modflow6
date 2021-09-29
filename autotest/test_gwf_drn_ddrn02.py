@@ -231,9 +231,9 @@ def test_mf6model(idx, dir):
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(Simulation(
-        dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx
-    ))
+    test.run_mf6(
+        Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx)
+    )
 
 
 def main():

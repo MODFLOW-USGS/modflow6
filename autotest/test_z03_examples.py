@@ -150,11 +150,14 @@ def set_make_comparison(test):
 )
 def test_mf6model(idx, dir):
     # run the test model
-    run_mf6(Simulation(
+    run_mf6(
+        Simulation(
             dir,
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=set_make_comparison(dir)))
+            make_comparison=set_make_comparison(dir),
+        )
+    )
 
 
 def main():

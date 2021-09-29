@@ -110,7 +110,8 @@ jobs:
       - name: activate ifort and build applications
         if: matrix.FC == 'ifort'
         run: |
-          .github/intel-scripts/ifortvars_linux.sh
+          source /opt/intel/oneapi/setvars.sh
+          pytest get_build_exes.py
 
       - name: Build gfortran applications
         if: matrix.FC == 'gfortran'

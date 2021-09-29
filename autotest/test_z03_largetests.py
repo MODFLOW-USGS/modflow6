@@ -40,7 +40,7 @@ def get_mf6_models():
     """
     Get a list of test models
     """
-    
+
     # determine if largetest directory exists
     dir_available = is_directory_available(example_basedir)
     if not dir_available:
@@ -146,12 +146,14 @@ def set_make_comparison(test):
 )
 def test_mf6model(idx, dir):
     # run the test model
-    run_mf6(Simulation(
+    run_mf6(
+        Simulation(
             dir,
             mf6_regression=set_mf6_regression(),
             cmp_verbose=False,
             make_comparison=set_make_comparison(dir),
-        ))
+        )
+    )
 
 
 def main():

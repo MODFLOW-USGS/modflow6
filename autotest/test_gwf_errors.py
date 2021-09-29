@@ -140,7 +140,6 @@ def test_simple_model_success():
     return
 
 
-
 def test_empty_folder():
     with pytest.raises(RuntimeError):
         # make sure mf6 fails when there is no simulation name file
@@ -209,6 +208,7 @@ def test_disu_errors():
         ]
         run_mf6_error(ws, err_str)
 
+
 def test_solver_fail():
     with pytest.raises(RuntimeError):
         # test failed to converge
@@ -221,6 +221,7 @@ def test_solver_fail():
             "Premature termination of simulation.",
         ]
         run_mf6_error(ws, err_str)
+
 
 def test_fail_continue_success():
     # test continue but failed to converge

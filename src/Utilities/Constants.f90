@@ -42,6 +42,7 @@ module ConstantsModule
   integer(I4B), parameter :: IZERO = 0                                                  !< integer constant zero
   !
   ! -- file constants
+  integer(I4B), parameter :: IUOC = 999                                                 !< open/close file unit number
   integer(I4B), parameter :: IUSTART = 1000                                             !< starting file unit number
   integer(I4B), parameter :: IULAST = 10000                                             !< maximum file unit number (this allows for 9000 open files)
   !

@@ -35,7 +35,7 @@ def get_model(idx, dir):
     delr = 1.0
     delc = 1.0
     top = 4.0
-    botm = [3., 2., 1.]
+    botm = [3.0, 2.0, 1.0]
     strt = 4.0
     hk = 1.0
     laytyp = 0
@@ -109,7 +109,7 @@ def get_model(idx, dir):
     )
 
     # chd files
-    spd = [[(0, 0, 0), 4.]]
+    spd = [[(0, 0, 0), 4.0]]
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
         gwf,
         print_flows=True,
@@ -119,7 +119,7 @@ def get_model(idx, dir):
     )
 
     # wel files
-    spd = [[(0, nrow - 1, ncol - 1), 1.]]
+    spd = [[(0, nrow - 1, ncol - 1), 1.0]]
     wel = flopy.mf6.ModflowGwfwel(
         gwf,
         print_flows=True,
@@ -193,11 +193,12 @@ def get_model(idx, dir):
         gwt, perioddata=pd, maxbound=len(pd), filename=f"{gwtname}.wel1.spc"
     )
     sourcerecarray = [()]
-    fileinput = [("WEL-1", f"{gwtname}.wel1.spc"),]
-    ssm = flopy.mf6.ModflowGwtssm(gwt,
-                                  print_flows=True,
-                                  sources=sourcerecarray,
-                                  fileinput=fileinput)
+    fileinput = [
+        ("WEL-1", f"{gwtname}.wel1.spc"),
+    ]
+    ssm = flopy.mf6.ModflowGwtssm(
+        gwt, print_flows=True, sources=sourcerecarray, fileinput=fileinput
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
@@ -265,7 +266,8 @@ def eval_transport(sim):
     fpth = os.path.join(sim.simpath, "{}.cbc".format(gwtname))
     try:
         bobj = flopy.utils.CellBudgetFile(
-            fpth, precision="double",
+            fpth,
+            precision="double",
         )
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -276,12 +278,12 @@ def eval_transport(sim):
         node, node2, q = ssmbud[0]
         assert node == 25, "node location for well must be 25 (GWT cell 25)"
         assert node2 == 1, "node2 location for well must be 1 (first well)"
-        assert q == 100., "mass flux for well must be 100."
+        assert q == 100.0, "mass flux for well must be 100."
 
         node, node2, q = ssmbud[1]
         assert node == 1, "node location for chd must be 1 (first GWT cell)"
         assert node2 == 1, "node2 location for chd must be 1 (first chd)"
-        assert q < 0., "mass flux for chd must be less than zero"
+        assert q < 0.0, "mass flux for chd must be less than zero"
 
     return
 

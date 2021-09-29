@@ -436,9 +436,11 @@ def test_mf6model(idx, dir):
     build_models()
 
     # run the test model
-    test.run_mf6(Simulation(
+    test.run_mf6(
+        Simulation(
             dir, exfunc=eval_comp, exe_dict=r_exe, htol=htol, idxsim=idx
-        ))
+        )
+    )
 
 
 def main():

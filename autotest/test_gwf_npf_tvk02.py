@@ -115,11 +115,7 @@ def get_model(idx, dir):
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        icelltype=laytyp,
-        k=hk,
-        k33=hk,
-        tvk_filerecord=[tvk_filename]
+        gwf, icelltype=laytyp, k=hk, k33=hk, tvk_filerecord=[tvk_filename]
     )
 
     # TVK
@@ -159,8 +155,10 @@ def get_model(idx, dir):
     spd = []
     spd.append([cellid3, "K", 1.0])
     tvkspd[kper - 1] = spd
-    
-    tvk = flopy.mf6.ModflowUtltvk(gwf, perioddata=tvkspd, filename=tvk_filename)
+
+    tvk = flopy.mf6.ModflowUtltvk(
+        gwf, perioddata=tvkspd, filename=tvk_filename
+    )
 
     # chd files
     chdspd = []
@@ -209,13 +207,19 @@ def eval_model(sim):
 
     # Check against manually calculated results
     expected_results = []
-    expected_results.append(0.5)    # TVK SP1: No changes. Check initial solution.
-    expected_results.append(0.4)    # TVK SP2: Increase K1.
-    expected_results.append(0.75)   # TVK SP3: Decrease K1.
-    expected_results.append(0.6)    # TVK SP4: Revert K1 and increase K3.
-    expected_results.append(0.25)   # TVK SP5: Decrease K3.
-    expected_results.append(0.25)   # TVK SP6: No changes. Check that solution remains as per SP5.
-    expected_results.append(0.5)    # TVK SP7: Revert K3. Check that solution returns to original.
+    expected_results.append(
+        0.5
+    )  # TVK SP1: No changes. Check initial solution.
+    expected_results.append(0.4)  # TVK SP2: Increase K1.
+    expected_results.append(0.75)  # TVK SP3: Decrease K1.
+    expected_results.append(0.6)  # TVK SP4: Revert K1 and increase K3.
+    expected_results.append(0.25)  # TVK SP5: Decrease K3.
+    expected_results.append(
+        0.25
+    )  # TVK SP6: No changes. Check that solution remains as per SP5.
+    expected_results.append(
+        0.5
+    )  # TVK SP7: Revert K3. Check that solution returns to original.
     nper = len(expected_results)
     ex_lay = 1
     ex_row = 1
@@ -223,10 +227,12 @@ def eval_model(sim):
 
     for kper, expected_result in enumerate(expected_results):
         h = head[kper, ex_lay - 1, ex_row - 1, ex_col - 1]
-        
+
         print(kper, h, expected_result)
 
-        errmsg = f"Expected head {expected_result} in period {kper} but found {h}"
+        errmsg = (
+            f"Expected head {expected_result} in period {kper} but found {h}"
+        )
         assert np.isclose(h, expected_result)
 
     # comment when done testing

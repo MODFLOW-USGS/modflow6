@@ -276,13 +276,15 @@ def test_mf6model(idx, dir):
     build_models()
 
     # run the test model
-    test.run_mf6(Simulation(
-        dir,
-        idxsim=idx,
-        mf6_regression=True,
-        cmp_verbose=False,
-        make_comparison=set_make_comparison(),
-    ))
+    test.run_mf6(
+        Simulation(
+            dir,
+            idxsim=idx,
+            mf6_regression=True,
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(),
+        )
+    )
 
 
 def main():

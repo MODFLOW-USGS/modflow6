@@ -518,14 +518,16 @@ def test_mf6model(idx, dir):
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(Simulation(
-        dir,
-        exfunc=eval_comp,
-        exe_dict=r_exe,
-        htol=htol[idx],
-        idxsim=idx,
-        mf6_regression=True,
-    ))
+    test.run_mf6(
+        Simulation(
+            dir,
+            exfunc=eval_comp,
+            exe_dict=r_exe,
+            htol=htol[idx],
+            idxsim=idx,
+            mf6_regression=True,
+        )
+    )
 
     return
 
