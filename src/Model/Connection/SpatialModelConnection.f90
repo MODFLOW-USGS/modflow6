@@ -24,15 +24,15 @@ module SpatialModelConnectionModule
   !< values for the exchange.
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
-    class(NumericalModelType), pointer  :: owner => null()            !< the model whose connection this is    
-    integer(I4B), pointer               :: nrOfConnections => null()  !< total nr. of connected cells (primary)
-    type(ListType), pointer             :: localExchanges => null()   !< all exchanges which directly connect with our model,
-                                                                      !! (we own all that have our owning model as model 1)
-    type(ListType)                      :: globalExchanges            !< all exchanges in the same solution
-    integer(I4B), pointer               :: intStencilDepth => null()  !< size of the computational stencil for the interior
-                                                                      !! default = 1, xt3d = 2, tvd = ...
-    integer(I4B), pointer               :: extStencilDepth => null()  !< size of the computational stencil at the interface
-                                                                      !! default = 1, xt3d = 2, tvd = ...
+    class(NumericalModelType), pointer  :: owner => null()                !< the model whose connection this is    
+    integer(I4B), pointer               :: nrOfConnections => null()      !< total nr. of connected cells (primary)
+    type(ListType), pointer             :: localExchanges => null()       !< all exchanges which directly connect with our model,
+                                                                          !! (we own all that have our owning model as model 1)
+    type(ListType)                      :: globalExchanges                !< all exchanges in the same solution
+    integer(I4B), pointer               :: internalStencilDepth => null() !< size of the computational stencil for the interior
+                                                                          !! default = 1, xt3d = 2, ...
+    integer(I4B), pointer               :: exchangeStencilDepth => null() !< size of the computational stencil at the interface
+                                                                          !! default = 1, xt3d = 2, ...
     
     
     ! The following variables are equivalent to those in Numerical Solution:
@@ -99,8 +99,8 @@ contains ! module procedures
     allocate(this%gridConnection)
     call this%allocateScalars()
 
-    this%intStencilDepth = 1
-    this%extStencilDepth = 1
+    this%internalStencilDepth = 1
+    this%exchangeStencilDepth = 1
     this%nrOfConnections = 0
         
   end subroutine spatialConnection_ctor
@@ -126,8 +126,8 @@ contains ! module procedures
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
     call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
-    this%gridConnection%intStencilDepth = this%intStencilDepth
-    this%gridConnection%extStencilDepth = this%extStencilDepth
+    this%gridConnection%internalStencilDepth = this%internalStencilDepth
+    this%gridConnection%exchangeStencilDepth = this%exchangeStencilDepth
     call this%setupGridConnection()
     
     this%neq = this%gridConnection%nrOfCells
@@ -176,8 +176,8 @@ contains ! module procedures
   
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
-    call mem_deallocate(this%intStencilDepth)
-    call mem_deallocate(this%extStencilDepth)
+    call mem_deallocate(this%internalStencilDepth)
+    call mem_deallocate(this%exchangeStencilDepth)
     call mem_deallocate(this%nrOfConnections)
 
     call mem_deallocate(this%ia)
@@ -262,8 +262,8 @@ contains ! module procedures
     
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
-    call mem_allocate(this%intStencilDepth, 'INTSTDEPTH', this%memoryPath)
-    call mem_allocate(this%extStencilDepth, 'EXTSTDEPTH', this%memoryPath)
+    call mem_allocate(this%internalStencilDepth, 'INTSTDEPTH', this%memoryPath)
+    call mem_allocate(this%exchangeStencilDepth, 'EXGSTDEPTH', this%memoryPath)
     call mem_allocate(this%nrOfConnections, 'NROFCONNS', this%memoryPath)
     
   end subroutine allocateScalars

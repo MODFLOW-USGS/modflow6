@@ -115,10 +115,10 @@ contains
     satOmega = this%gwfModel%npf%satomega
 
     if (this%gwfModel%npf%ixt3d > 0) then
-      this%intStencilDepth = 2
+      this%internalStencilDepth = 2
     end if
     if (this%iXt3dOnExchange > 0) then
-      this%extStencilDepth = 2
+      this%exchangeStencilDepth = 2
     end if
 
     ! this sets up the GridConnection

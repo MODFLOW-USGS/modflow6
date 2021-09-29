@@ -43,8 +43,8 @@ module GridConnectionModule
   type, public :: GridConnectionType
 
     character(len=LENMEMPATH) :: memoryPath
-    integer(I4B) :: intStencilDepth !< stencil size for the interior
-    integer(I4B) :: extStencilDepth !< stencil size for the exterior
+    integer(I4B) :: internalStencilDepth !< stencil size for the interior
+    integer(I4B) :: exchangeStencilDepth !< stencil size at the interface
 
     class(NumericalModelType), pointer :: model => null()
     
@@ -135,8 +135,8 @@ module GridConnectionModule
     this%linkCapacity = nCapacity
     this%nrOfBoundaryCells = 0
 
-    this%intStencilDepth = 1
-    this%extStencilDepth = 1
+    this%internalStencilDepth = 1
+    this%exchangeStencilDepth = 1
 
   end subroutine construct
   
@@ -187,7 +187,7 @@ module GridConnectionModule
     class(DisConnExchangeType), pointer     :: connEx !< the exchange data coupling 2 models
     ! local
         
-    call this%connectModels(this%modelWithNbrs, connEx, this%extStencilDepth)
+    call this%connectModels(this%modelWithNbrs, connEx, this%exchangeStencilDepth)
     
   end subroutine addModelLink
   
@@ -284,8 +284,11 @@ module GridConnectionModule
     class(NumericalModelType), pointer :: numModel
    
     ! we need (stencildepth-1) extra cells for the interior
-    remoteDepth = this%extStencilDepth
-    localDepth = 2*this%intStencilDepth - 1
+    remoteDepth = this%exchangeStencilDepth
+    localDepth = 2*this%internalStencilDepth - 1
+    if (localDepth < remoteDepth) then
+      localDepth = remoteDepth
+    end if
     
     ! first add the neighbors for the interior, localOnly because 
     ! connections crossing model boundary will be added anyway
@@ -925,7 +928,7 @@ module GridConnectionModule
       do ipos = this%connections%ia(n) + 1, this%connections%ia(n + 1) - 1
         newMask = 0
         if (this%connections%mask(ipos) > 0) then
-          if (this%connections%mask(ipos) < this%intStencilDepth + 1) then
+          if (this%connections%mask(ipos) < this%internalStencilDepth + 1) then
             newMask = 1
           end if
         end if        
