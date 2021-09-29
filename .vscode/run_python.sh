@@ -1,11 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-echo "Current working directory: $PWD"
-cd ./pymake
+if [[ "$3" == "ifort" ]];
+then
+    source /opt/intel/oneapi/setvars.sh
+fi
 
-# build with pymake
-echo "Running command: python $1 $2 $3 $4 $5"
-python $1 $2 $3 $4 $5
-
-# ... and back again (BB)
-cd ..
+# run python script
+$1 $2 $3 $4
