@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            /opt/intel/oneapi/compiler
+            /opt/intel/oneapi
           key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
 
       - name: install ifort on linux
