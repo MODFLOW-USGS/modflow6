@@ -6,4 +6,4 @@ then
 fi
 
 # run python script
-python3 $1 $2 $3 $4
+$1 $2 $3 $4 $5

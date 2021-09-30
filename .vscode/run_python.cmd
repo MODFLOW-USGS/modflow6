@@ -1,11 +1,9 @@
 @echo off
 
-if "%3" == "ifort" (
+if "%4" == "ifort" (
  call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
 )
 
 
-call C:\Users\hofer_jn\Anaconda3\condabin\conda.bat activate modflow
-
 rem run python script
-python %1 %2 %3 %4
+%1 %2 %3 %4 %5

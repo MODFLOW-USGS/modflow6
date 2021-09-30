@@ -9,6 +9,7 @@
             "windows": {
                 "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
+                    "${config:python.defaultInterpreterPath}",
                     "${workspaceFolder}/.vscode/build_vscode.py",
                     "--compiler",
                     "ifort",
@@ -17,6 +18,7 @@
                 "problemMatcher": "$msCompile"
             },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
                 "--compiler",
                 "ifort",
@@ -31,6 +33,7 @@
             "windows": {
                 "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
+                    "${config:python.defaultInterpreterPath}",
                     "${workspaceFolder}/.vscode/build_vscode.py",
                     "--compiler",
                     "ifort",
@@ -39,6 +42,7 @@
                 "problemMatcher": "$msCompile",
             },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
                 "--compiler",
                 "ifort",
@@ -53,6 +57,7 @@
             "windows": {
                 "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
+                    "${config:python.defaultInterpreterPath}",
                     "${workspaceFolder}/.vscode/build_vscode.py",
                     "--compiler",
                     "gfortran",
@@ -61,6 +66,7 @@
                 "problemMatcher": "$msCompile"
             },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
                 "--compiler",
                 "gfortran",
@@ -75,6 +81,7 @@
             "windows": {
                 "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
+                    "${config:python.defaultInterpreterPath}",
                     "${workspaceFolder}/.vscode/build_vscode.py",
                     "--compiler",
                     "gfortran",
@@ -83,6 +90,7 @@
                 "problemMatcher": "$msCompile",
             },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
                 "--compiler",
                 "gfortran",
