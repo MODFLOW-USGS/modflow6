@@ -3,7 +3,7 @@
 VSCode is a free integrated development environment for Windows, Linux, and
 MacOS. There are two major advantages over Visual Studio:
 
-* VSCode is free.
+* Most of VSCode's source code is open-source and the releases are (proprietary) freeware.
 * VSCode runs on Linux.
 
 ## Brief instructions
