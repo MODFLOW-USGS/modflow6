@@ -7,11 +7,11 @@
 # SPDX-License-Identifier: MIT
 
 
-# # add this back in to on: if there is a need to debug the large tests
-#
-#  pull_request:
-#    branches:
-#      - develop
+# add this back in to on: if there is a need to debug the large tests
+
+pull_request:
+  branches:
+    - develop
 
 
 name: Large tests
@@ -21,11 +21,11 @@ on:
     - cron: '0 6 * * *' # run at 6 AM UTC every day
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17427/l_HPCKit_p_2021.1.0.2684_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17398/m_HPCKit_p_2021.1.0.2681_offline.dmg
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17940/w_HPCKit_p_2021.3.0.3227_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17912/l_HPCKit_p_2021.3.0.3230_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17890/m_HPCKit_p_2021.3.0.3226_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
+  LINUX_FORTRAN_COMPONENTS_WEB: intel-oneapi-compiler-fortran
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
 
 jobs:

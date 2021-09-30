@@ -17,11 +17,11 @@ on:
       - develop
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17427/l_HPCKit_p_2021.1.0.2684_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17398/m_HPCKit_p_2021.1.0.2681_offline.dmg
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17940/w_HPCKit_p_2021.3.0.3227_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17912/l_HPCKit_p_2021.3.0.3230_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17890/m_HPCKit_p_2021.3.0.3226_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
+  LINUX_FORTRAN_COMPONENTS_WEB: intel-oneapi-compiler-fortran
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
   FC: ifort
 
@@ -113,7 +113,7 @@ jobs:
           .github/common/update-flopy.sh
 
       - name: Build applications
-        if: runner.os == 'Linux' || runner.os == 'macOS'         
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: autotest
         run: |
           source /opt/intel/oneapi/setvars.sh
@@ -121,12 +121,12 @@ jobs:
 
       - name: Build applications
         if: runner.os == 'Windows'
-        shell: cmd         
+        shell: cmd
         run: |
           call ".github/intel-scripts/ifortvars_windows.bat"
           cd autotest
-          pytest -v --durations=0 get_build_exes.py            
-          
+          pytest -v --durations=0 get_build_exes.py
+
       - name: Test applications
         working-directory: autotest
         run: |
