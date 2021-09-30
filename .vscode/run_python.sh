@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ "$3" == "ifort" ]];
+if [[ "$4" == "ifort" ]];
 then
     source /opt/intel/oneapi/setvars.sh
 fi
