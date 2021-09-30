@@ -10,7 +10,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/mf6d.exe",
+            "program": "${workspaceFolder}/bin/mf6.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "/path/to/your/modflow6/model",
