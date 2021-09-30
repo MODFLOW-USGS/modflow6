@@ -85,3 +85,12 @@ jobs:
     - name: Build modflow
       run: |
         meson compile -C builddir 
+
+    - name: Install modflow
+      run: |
+        meson install -C builddir --destdir $(pwd)
+
+    - name: Test applications
+      working-directory: autotest
+      run: |
+        pytest -v --durations=0

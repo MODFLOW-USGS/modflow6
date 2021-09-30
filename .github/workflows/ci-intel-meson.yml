@@ -130,6 +130,16 @@ jobs:
           meson setup builddir --buildtype=release
           meson compile -C builddir
 
+      - name: Install modflow
+        run: |
+          meson install -C builddir --destdir $(pwd)
+
+      - name: Test applications
+        working-directory: autotest
+        run: |
+          pytest -v --durations=0
+
+
       - name: exclude unused files from cache on linux
         if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
         run: |
