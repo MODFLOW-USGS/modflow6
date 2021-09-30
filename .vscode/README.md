@@ -15,6 +15,7 @@ At the moment they are used for building and debugging MODFLOW 6.
 
 - Install VSCode: https://code.visualstudio.com/
 - Install Meson and assure it is in your PATH: https://mesonbuild.com/Getting-meson.html
+- Python, for example via miniconda: https://docs.conda.io/en/latest/miniconda.html
 - You also need to either install `intel fortran` or `gfortran` as described below
 
 
@@ -25,12 +26,10 @@ Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us
 
 ### gfortran
 
-Install with your package manager
-
 #### Linux
 
+- `dnf install gcc-gfortran` on fedora-based distros
 - `apt install gfortran`
-- `dnf install gcc-gfortran`
 
 #### macOS
 
@@ -53,28 +52,24 @@ Install with your package manager
 
 Install the following VSCode extensions:
 
-* Modern Fortran:
+- Modern Fortran:
   https://marketplace.visualstudio.com/items?itemName=krvajalm.linter-gfortran
-* C/C++: https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools
-* Fortran Breakpoint Support:
-  https://marketplace.visualstudio.com/items?itemName=ekibun.fortranbreaker 
-  
+- FORTRAN IntelliSense: https://marketplace.visualstudio.com/items?itemName=hansec.fortran-ls
+- C/C++: https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools
+- Fortran Breakpoint Support:
+  https://marketplace.visualstudio.com/items?itemName=ekibun.fortranbreaker
+
+You will need a Python installation.
 Install a conda Python installation if you do not have one yet.
 Grab a miniconda installer from: https://docs.conda.io/en/latest/miniconda.html
 
 Now, configure the VSCode files for the modflow6 directory. Open the `modflow6`
-directory in VSCode. Find `run_python.cmd` in the `.vscode` directory, and change
-the following line:
+directory in VSCode. Make sure that this setting points toward your Python executable.
 
-```
-call /path/to/your/conda.bat activate your_conda_env
-```
-
-If conda has been added to your path and your base environment Python is
-modern, the following suffices: 
-
-```
-call conda.bat activate base
+```json
+{
+    "python.defaultInterpreterPath": "/path/to/python",
+}
 ```
 
 To debug, change the following two lines in `launch.json`:
@@ -104,22 +99,3 @@ Now everything is ready to go.
 
 * Set a breakpoint somewhere in the source code.
 * Press `Cntrl + F5` to start debugging.
-
-
-
-## dasfsad
-
-You'll want to change the following files:
-
-    launch.json
-
-which contains the gdb debug configuration settings. You will need to put 
-in the path to your gdb and the working directory of the MODFLOW 6 model 
-you are trying to debug. And,
-
-    run_python.cmd
-    
-where you need to specify the proper conda environment to be able to build the 
-code with pymake.
-
-After that, you should be good to go...
