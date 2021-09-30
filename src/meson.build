@@ -11,7 +11,6 @@ modflow_sources = files(
     'Model' / 'Connection' / 'GridSorting.f90',
     'Model' / 'Connection' / 'GwfGwfConnection.f90',
     'Model' / 'Connection' / 'GwfInterfaceModel.f90',
-    'Model' / 'Connection' / 'qsort_inline.inc',
     'Model' / 'Connection' / 'SpatialModelConnection.f90',
     'Model' / 'Connection' / 'Topology.f90',
     'Model' / 'Geometry' / 'BaseGeometry.f90',

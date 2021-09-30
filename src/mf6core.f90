@@ -368,10 +368,12 @@ module Mf6CoreModule
       ! -- local variables
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       class(BaseSolutionType), pointer :: sp => null()
       character(len=LINELENGTH) :: line
       character(len=LINELENGTH) :: fmt
       integer(I4B) :: im
+      integer(I4B) :: ie
       integer(I4B) :: ic
       integer(I4B) :: is
       !
@@ -401,9 +403,15 @@ module Mf6CoreModule
       enddo
       !
       ! -- Read and prepare each exchange
-      do ic = 1, baseexchangelist%Count()
-        ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      do ie = 1, baseexchangelist%Count()
+        ep => GetBaseExchangeFromList(baseexchangelist, ie)
         call ep%exg_rp()
+      enddo
+      !
+      ! -- Read and prepare each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_rp()
       enddo
       !
       ! -- reset simulation convergence flag
@@ -416,9 +424,15 @@ module Mf6CoreModule
       enddo
       !
       ! -- time update for each exchange
-      do ic = 1, baseexchangelist%Count()
-        ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      do ie = 1, baseexchangelist%Count()
+        ep => GetBaseExchangeFromList(baseexchangelist, ie)
         call ep%exg_calculate_delt()
+      enddo
+      !
+      ! -- time update for each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_calculate_delt()
       enddo
       !
       ! -- time update for each solution

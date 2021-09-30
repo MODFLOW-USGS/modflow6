@@ -91,7 +91,10 @@ module ConnectionBuilderModule
     logical(LGP) :: alwaysInterfaceModel
 
     ! TODO_MJR: for debugging, remove...
-    inquire(file="always.im", exist=alwaysInterfaceModel)
+    inquire(file="d:\always.im", exist=alwaysInterfaceModel)
+    if (alwaysInterfaceModel) then
+      write(*,'(a,/)') "### DEBUG: always use interface model ###"
+    end if
 
     do iex = 1, exchanges%Count()
       conEx => GetDisConnExchangeFromList(exchanges, iex)
