@@ -13,9 +13,9 @@ if fc.get_id() == 'intel-cl' # windows
      language: 'fortran'
   )
 elif fc.get_id() == 'intel' # linux and mac
-  add_project_arguments(
+  add_project_link_arguments(
     fc.get_supported_arguments([
-      '-fpp',
+      '-static-intel',
      ]),
      language: 'fortran'
   )
