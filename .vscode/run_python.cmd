@@ -8,4 +8,4 @@ if "%3" == "ifort" (
 call C:\Users\hofer_jn\Anaconda3\condabin\conda.bat activate modflow
 
 rem run python script
-%1 %2 %3 %4
+python %1 %2 %3 %4

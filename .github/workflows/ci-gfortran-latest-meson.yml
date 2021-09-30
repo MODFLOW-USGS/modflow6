@@ -80,7 +80,7 @@ jobs:
 
     - name: Setup modflow
       run: |
-        meson setup builddir --buildtype=release
+        meson setup builddir --buildtype=release --prefix=$(pwd) --libdir=bin
 
     - name: Build modflow
       run: |
@@ -88,7 +88,7 @@ jobs:
 
     - name: Install modflow
       run: |
-        meson install -C builddir --destdir $(pwd)
+        meson install -C builddir
 
     - name: Test applications
       working-directory: autotest

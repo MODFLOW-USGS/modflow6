@@ -12,7 +12,7 @@ os.environ["FC"] = args.compiler
 
 builddir = f"builddir_{args.compiler}"
 
-subprocess.run(["meson", "setup", builddir], check=True)
+subprocess.run(["meson", "setup", builddir, "--prefix", os.getcwd(), "--libdir", "bin"], check=True)
 
 if args.action == "build":
     subprocess.run(["meson", "compile", "-C", builddir], check=True)
@@ -25,8 +25,6 @@ subprocess.run(
         "install",
         "-C",
         builddir,
-        "--destdir",
-        os.getcwd(),
     ],
     check=True,
 )

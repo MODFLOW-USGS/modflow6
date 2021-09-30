@@ -119,7 +119,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
           source /opt/intel/oneapi/setvars.sh
-          meson setup builddir --buildtype=release
+          meson setup builddir --buildtype=release --prefix=$(pwd) --libdir=bin
           meson compile -C builddir
 
       - name: Build MODFLOW 6 (Windows)
@@ -127,12 +127,12 @@ jobs:
         shell: cmd
         run: |
           call ".github/intel-scripts/ifortvars_windows.bat"
-          meson setup builddir --buildtype=release
+          meson setup builddir --buildtype=release --prefix=%CD% --libdir=bin
           meson compile -C builddir
 
       - name: Install modflow
         run: |
-          meson install -C builddir --destdir $(pwd)
+          meson install -C builddir
 
       - name: Test applications
         working-directory: autotest
