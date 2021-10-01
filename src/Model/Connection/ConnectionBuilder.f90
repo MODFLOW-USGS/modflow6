@@ -137,6 +137,7 @@ module ConnectionBuilderModule
           baseEx => GetBaseExchangeFromList(baseexchangelist, ibasex)
           if (conEx%id == baseEx%id) then
             call baseexchangelist%RemoveNode(ibasex, .false.)
+            exit
           end if
         end do
         
