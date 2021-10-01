@@ -13,10 +13,10 @@ chmod +x webimage.sh
 rm -rf webimage.sh
 WEBIMAGE_NAME=$(ls -1 webimage_extracted/)
 if [ -z "$COMPONENTS" ]; then
-  sudo webimage_extracted/"$WEBIMAGE_NAME"/bootstrapper -s --action install --eula=accept --continue-with-optional-error=yes --log-dir=.
+  sudo webimage_extracted/"$WEBIMAGE_NAME"/bootstrapper -s --action install --eula=accept --log-dir=.
   installer_exit_code=$?
 else
-  sudo webimage_extracted/"$WEBIMAGE_NAME"/bootstrapper -s --action install --components="$COMPONENTS" --eula=accept --continue-with-optional-error=yes --log-dir=.
+  sudo webimage_extracted/"$WEBIMAGE_NAME"/bootstrapper -s --action install --components="$COMPONENTS" --eula=accept --log-dir=.
   installer_exit_code=$?
 fi
 rm -rf webimage_extracted
