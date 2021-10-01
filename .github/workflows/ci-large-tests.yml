@@ -25,7 +25,7 @@ env:
   LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18211/l_HPCKit_p_2021.4.0.3347_offline.sh
   MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18242/m_HPCKit_p_2021.4.0.3389_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  LINUX_FORTRAN_COMPONENTS_WEB: intel-oneapi-compiler-fortran
+  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
 
 jobs:
