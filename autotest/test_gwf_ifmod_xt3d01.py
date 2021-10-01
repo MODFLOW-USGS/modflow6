@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -244,11 +245,9 @@ def get_model(idx, dir):
     return sim
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+def build_model(idx, exdir):
+    sim = get_model(idx, exdir)
+    return sim, None
 
 
 def qxqyqz(fname, nlay, nrow, ncol):
@@ -323,7 +322,9 @@ def eval_heads(sim):
                     "head difference in parent model {}"
                     " exceeds solver tolerance (x10) {}"
                     " for row {} and col {}\n"
-                    "(should be {}, was {})".format(diff, 10 * hclose, irow, icol,exact(xc), h)
+                    "(should be {}, was {})".format(
+                        diff, 10 * hclose, irow, icol, exact(xc), h
+                    )
                 )
 
     for irow in range(mg.nrow):
@@ -382,52 +383,48 @@ def eval_heads(sim):
                     cumul_balance_error, mname
                 )
 
-
     # Check on residual, which is stored in diagonal position of
     # flow-ja-face.  Residual should be less than convergence tolerance,
     # or this means the residual term is not added correctly.
     fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
     cbb = flopy.utils.CellBudgetFile(fpth)
     flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
-    ia = grb._datadict["IA"] - 1    
+    ia = grb._datadict["IA"] - 1
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
+        errmsg = "min or max residual too large {} {}".format(res.min(), res.max())
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, exdir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, exdir)
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, exfunc=eval_heads, idxsim=idx)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(exdir, exfunc=eval_heads, idxsim=idx))
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test models
-    for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, exfunc=eval_heads, idxsim=idx)
-        test.run_mf6(sim)
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
 
+        sim = Simulation(exdir, exfunc=eval_heads, idxsim=idx)
+        test.run_mf6(sim)
     return
 
 

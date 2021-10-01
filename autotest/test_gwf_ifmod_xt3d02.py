@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -292,11 +293,9 @@ def get_model(idx, dir):
     return sim
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+def build_model(idx, exdir):
+    sim = get_model(idx, exdir)
+    return sim, None
 
 
 def qxqyqz(fname, nlay, nrow, ncol):
@@ -424,32 +423,31 @@ def compare_to_ref(sim):
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, exdir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, exdir)
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, exfunc=compare_to_ref, idxsim=idx)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(exdir, exfunc=compare_to_ref, idxsim=idx))
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test models
-    for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, exfunc=compare_to_ref, idxsim=idx)
-        test.run_mf6(sim)
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
 
+        sim = Simulation(exdir, exfunc=compare_to_ref, idxsim=idx)
+        test.run_mf6(sim)
     return
 
 

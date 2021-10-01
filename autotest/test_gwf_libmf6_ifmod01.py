@@ -15,6 +15,7 @@ not present in any of the output. The setup is two coupled
 import os
 import numpy as np
 from modflowapi import ModflowApi
+import pytest
 
 try:
     import pymake
@@ -209,27 +210,7 @@ def build_model(idx, dir):
         xt3d=useXT3D,
     )
 
-    return sim
-
-
-def get_model(idx, dir):
-    # build MODFLOW 6 files
-    ws = dir
-    sim = build_model(idx, ws)
-
-    # build comparison model
-    ws = os.path.join(dir, "libmf6")
-    mc = build_model(idx, ws)
-
-    return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_simulation()
-    return
+    return sim, None
 
 
 def api_func(exe, idx, model_ws=None):
@@ -335,32 +316,31 @@ def check_interface_models(mf6):
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, exdir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, exdir)
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, idxsim=idx, api_func=api_func)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(exdir, idxsim=idx, api_func=api_func))
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test models
-    for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, idxsim=idx, api_func=api_func)
-        test.run_mf6(sim)
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
 
+        sim = Simulation(exdir, idxsim=idx, api_func=api_func)
+        test.run_mf6(sim)
     return
 
 
