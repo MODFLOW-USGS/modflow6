@@ -117,7 +117,8 @@ jobs:
         working-directory: autotest
         run: |
           source /opt/intel/oneapi/setvars.sh
-          pytest get_build_exes.py
+          pytest -v --durations=0 get_exes.py
+          pytest -v --durations=0 build_exes.py   
 
       - name: Build applications
         if: runner.os == 'Windows'
