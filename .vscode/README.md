@@ -10,32 +10,23 @@ This folder contains the configuration files for using VSCode for MODFLOW 6
 development.
 At the moment they are used for building and debugging MODFLOW 6.
 
-## Preparation
-
-
-- Install VSCode: https://code.visualstudio.com/
-- Install Meson and assure it is in your PATH: https://mesonbuild.com/Getting-meson.html
-- Python, for example via miniconda: https://docs.conda.io/en/latest/miniconda.html
-- You also need to either install `intel fortran` or `gfortran` as described below
-
-
-### Intel fortran
+## ifort
 
 Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
 
 
-### gfortran
+## gfortran
 
-#### Linux
+### Linux
 
-- `dnf install gcc-gfortran` on fedora-based distros
-- `apt install gfortran`
+- fedora-based: `dnf install gcc-gfortran`
+- debian-based: `apt install gfortran`
 
-#### macOS
+### macOS
 
 - `brew install gcc`
 
-#### Windows
+### Windows
 
 - Down the Minimalist GNU for Windows (MinGW) installer from Source Forge:
   https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe
@@ -48,7 +39,19 @@ Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us
   and enter the location of the `mingw64/bin` directory.
 
 
-### VSCode extensions
+## Meson
+
+Install Meson and assure it is in your PATH: https://mesonbuild.com/Getting-meson.html
+
+## Python
+
+Install Python, for example via miniconda: https://docs.conda.io/en/latest/miniconda.html
+
+## Visual Studio Code
+
+Install VSCode from https://code.visualstudio.com/
+
+### Extensions
 
 Install the following VSCode extensions:
 
@@ -59,10 +62,6 @@ Install the following VSCode extensions:
 - Fortran Breakpoint Support:
   https://marketplace.visualstudio.com/items?itemName=ekibun.fortranbreaker
 
-You will need a Python installation.
-Install a conda Python installation if you do not have one yet.
-Grab a miniconda installer from: https://docs.conda.io/en/latest/miniconda.html
-
 Now, configure the VSCode files for the modflow6 directory. Open the `modflow6`
 directory in VSCode. Make sure that this setting points toward your Python executable.
 
@@ -72,30 +71,89 @@ directory in VSCode. Make sure that this setting points toward your Python execu
 }
 ```
 
-To debug, change the following two lines in `launch.json`:
+In order to compile run:
+
+* Press `Ctrl + Shift + P` in VSCode.
+* Type `Tasks`.
+* Select `Run Tasks` (press Enter).
+* Select the suitable task for your situation.
+
+
+### Language Server
+
+1. Install the fortran language server via:
+
+```bash
+pip install -U fortran-language-server
+```
+
+2. Find out where the executable is
+
+- bash: `which fortls`
+- cmd: `where fortls`
+- PowerShell: `Get-Command fortls`
+
+3. Add this to `.vscode/settings.json`. In case this file does not exist yet, create a new one. Also remember to adapt `fortran-ls.executablePath` to the path you get in the step before.
+
+
+```json
+    "fortran-ls.executablePath": "/path/to/fortls",
+    "fortran-ls.hoverSignature": true,
+    "fortran-ls.lowercaseIntrinsics": true,
+    "fortran-ls.notifyInit": true,
+    "fortran-ls.variableHover": true,    
+    "editor.acceptSuggestionOnEnter": "off",
+    "fortran.linterEnabled": false,
+    "fortran.provideHover": false,
+    "fortran.provideCompletion": false,
+    "fortran.provideSymbols": false,
+```
+
+
+
+### Debugging
+
+Add a `launch.json` in `.vscode` similar to this.
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Modflow Model",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/mf6.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/path/to/modflow6/model",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/path/to/gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
+````
+
+Also remember to adapt the following two lines in `launch.json` according to your setup:
 
 ```json
 "cwd": "/path/to/your/modflow6/model",
 ```
 
 ```json
-"miDebuggerPath": "/path/to/your/gdb.exe",
+"miDebuggerPath": "/path/to/gdb",
 ```
 
-If you've added the `mingw64/bin` directory to your PATH, the following suffices:
+After building modflow, you can start debugging.
 
-```json
-"miDebuggerPath": "gdb.exe"
-```
-
-To debug, compile a debug version first:
-
-* Press `Cntrl + Shift + P` in VSCode.
-* Type `Tasks`.
-* Select `Run Tasks` (press Enter).
-* Select `Build MF6 (Debug)`.
-
-Now everything is ready to go.
-
-* Set a breakpoint somewhere in the source code.
-* Press `Cntrl + F5` to start debugging.
+- Set a breakpoint somewhere in the source code.
+- Press `Ctrl + F5` to start debugging.
