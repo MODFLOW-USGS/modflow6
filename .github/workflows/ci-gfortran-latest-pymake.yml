@@ -77,7 +77,8 @@ jobs:
     - name: Build applications
       working-directory: autotest
       run: |
-        pytest -v --durations=0 get_build_exes.py
+        pytest -v --durations=0 get_exes.py
+        pytest -v --durations=0 build_exes.py
         
     - name: Test applications
       working-directory: autotest

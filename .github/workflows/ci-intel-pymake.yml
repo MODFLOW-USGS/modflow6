@@ -121,12 +121,13 @@ jobs:
 
       - name: Build applications
         if: runner.os == 'Windows'
-        shell: cmd
+        working-directory: autotest
+        shell: cmd         
         run: |
-          call ".github/intel-scripts/ifortvars_windows.bat"
-          cd autotest
-          pytest -v --durations=0 get_build_exes.py
-
+          call "../.github/intel-scripts/ifortvars_windows.bat"
+          pytest -v --durations=0 get_exes.py
+          pytest -v --durations=0 build_exes.py           
+          
       - name: Test applications
         working-directory: autotest
         run: |

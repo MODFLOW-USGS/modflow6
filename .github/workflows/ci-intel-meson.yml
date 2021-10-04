@@ -133,6 +133,11 @@ jobs:
       - name: Install modflow
         run: |
           meson install -C builddir
+      
+      - name: Get executables
+        working-directory: autotest
+        run: |
+          pytest -v --durations=0 get_exes.py
 
       - name: Test applications
         working-directory: autotest

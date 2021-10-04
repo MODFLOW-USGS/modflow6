@@ -111,13 +111,15 @@ jobs:
         if: matrix.FC == 'ifort'
         run: |
           source /opt/intel/oneapi/setvars.sh
-          pytest get_build_exes.py
+          pytest -v --durations=0 get_exes.py
+          pytest -v --durations=0 build_exes.py
 
       - name: Build gfortran applications
         if: matrix.FC == 'gfortran'
         working-directory: autotest
         run: |
-          pytest get_build_exes.py
+          pytest -v --durations=0 get_exes.py
+          pytest -v --durations=0 build_exes.py
 
       - name: Test applications
         working-directory: autotest
