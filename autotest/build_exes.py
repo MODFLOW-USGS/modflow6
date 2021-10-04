@@ -1,10 +1,10 @@
-# Get executables and build targets
+# Build targets
 
 # to use ifort on windows, run this
-# python get_build_exes.py -fc ifort
+# python build_exes.py -fc ifort
 
 # can compile only mf6 directly using this command:
-#  python -c "import get_build_exes; get_build_exes.test_build_modflow6()"
+#  python -c "import build_exes; build_exes.test_build_modflow6()"
 
 import os
 import sys
@@ -18,9 +18,7 @@ if running_on_CI():
     os.environ["PYMAKE_DOUBLE"] = "1"
 
 # paths to executables for previous versions of MODFLOW
-ebindir = os.path.abspath(
-    os.path.join(os.path.expanduser("~"), ".local", "bin")
-)
+ebindir = os.path.abspath(os.path.join(os.path.expanduser("~"), ".local", "bin"))
 if not os.path.exists(ebindir):
     os.makedirs(ebindir)
 
@@ -86,9 +84,7 @@ def rebuild_mf6_release():
     pm.download_target(pm.target, download_path=download_pth, verify=False)
 
     # Set MODFLOW 6 to compile develop version of the release
-    srcpth = os.path.join(
-        download_pth, target_dict["dirname"], target_dict["srcdir"]
-    )
+    srcpth = os.path.join(download_pth, target_dict["dirname"], target_dict["srcdir"])
     fpth = os.path.join(srcpth, "Utilities", "version.f90")
     with open(fpth) as f:
         lines = f.read().splitlines()
@@ -194,9 +190,7 @@ def build_mf5to6():
     srcdir = os.path.join("..", "utils", "mf5to6", "src")
     target = os.path.join("..", "bin", "mf5to6")
     target += eext
-    extrafiles = os.path.join(
-        "..", "utils", "mf5to6", "pymake", "extrafiles.txt"
-    )
+    extrafiles = os.path.join("..", "utils", "mf5to6", "pymake", "extrafiles.txt")
 
     # build modflow 5 to 6 converter
     pymake.main(
@@ -248,17 +242,6 @@ def test_create_dirs():
     return
 
 
-def test_getmfexes(verify=True):
-    pymake.getmfexes(mfexe_pth, verify=verify)
-    for target in os.listdir(mfexe_pth):
-        srcpth = os.path.join(mfexe_pth, target)
-        if os.path.isfile(srcpth):
-            dstpth = os.path.join(ebindir, target)
-            print("copying {} -> {}".format(srcpth, dstpth))
-            shutil.copy(srcpth, dstpth)
-    return
-
-
 def test_rebuild_mf6_release():
     rebuild_mf6_release()
 
@@ -281,7 +264,6 @@ def test_build_zbud6():
 
 if __name__ == "__main__":
     test_create_dirs()
-    test_getmfexes(verify=False)
     test_rebuild_mf6_release()
     test_build_modflow6()
     test_build_modflow6_so()
