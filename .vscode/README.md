@@ -102,7 +102,6 @@ pip install -U fortran-language-server
     "fortran-ls.lowercaseIntrinsics": true,
     "fortran-ls.notifyInit": true,
     "fortran-ls.variableHover": true,    
-    "editor.acceptSuggestionOnEnter": "off",
     "fortran.linterEnabled": false,
     "fortran.provideHover": false,
     "fortran.provideCompletion": false,

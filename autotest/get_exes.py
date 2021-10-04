@@ -20,13 +20,9 @@ mfexe_pth = "temp/mfexes"
 
 
 def create_dir(pth):
-    # remove pth directory if it exists
-    if os.path.exists(pth):
-        print("removing... {}".format(os.path.abspath(pth)))
-        shutil.rmtree(pth)
     # create pth directory
-    print("creating... {}".format(os.path.abspath(pth)))
-    os.makedirs(pth)
+    print(f"creating... {os.path.abspath(pth)}")
+    os.makedirs(pth, exist_ok=True)
 
     msg = "could not create... {}".format(os.path.abspath(pth))
     assert os.path.exists(pth), msg

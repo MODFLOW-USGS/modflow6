@@ -52,18 +52,12 @@ def relpath_fallback(pth):
 
 
 def create_dir(pth):
-    # remove pth directory if it exists
-    if os.path.exists(pth):
-        print("removing... {}".format(os.path.abspath(pth)))
-        shutil.rmtree(pth)
     # create pth directory
-    print("creating... {}".format(os.path.abspath(pth)))
-    os.makedirs(pth)
+    print(f"creating... {os.path.abspath(pth)}")
+    os.makedirs(pth, exist_ok=True)
 
-    msg = "could not create... {}".format(os.path.abspath(pth))
+    msg = f"could not create... {os.path.abspath(pth)}"
     assert os.path.exists(pth), msg
-
-    return
 
 
 def get_compiler_envvar(fc):
