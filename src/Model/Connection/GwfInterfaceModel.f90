@@ -80,6 +80,7 @@ contains
       end select
     
     this%inewton = this%owner%inewton
+    this%inewtonur = this%owner%inewtonur
       
     ! create discretization and packages
     call this%buildDiscretization()

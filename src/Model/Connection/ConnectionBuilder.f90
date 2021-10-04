@@ -88,6 +88,7 @@ module ConnectionBuilderModule
     class(BaseExchangeType), pointer :: baseEx
     integer(I4B) :: iex, ibasex
     class(SpatialModelConnectionType), pointer :: modelConnection
+    logical(LGP) :: isNotPeriodic
     logical(LGP) :: alwaysInterfaceModel
 
     ! TODO_MJR: for debugging, remove...
@@ -118,18 +119,20 @@ module ConnectionBuilderModule
           
         ! add exchange to connection
         call modelConnection%addExchange(conEx)
-        
-        ! and fetch for model 2
-        modelConnection => lookupConnection(conEx%model2, conEx%typename)
-        if (.not. associated(modelConnection)) then
-          ! create new model connection
-          modelConnection => createModelConnection(conEx%model2, conEx%typename)
-          call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-          call AddSpatialModelConnectionToList(newConnections, modelConnection)
-        end if
 
-        ! add exchange to connection
-        call modelConnection%addExchange(conEx)
+        ! and fetch for model 2, unless periodic
+        isNotPeriodic = .not. associated(conEx%model1, conEx%model2)
+        if (isNotPeriodic) then
+          modelConnection => lookupConnection(conEx%model2, conEx%typename)
+          if (.not. associated(modelConnection)) then
+            ! create new model connection
+            modelConnection => createModelConnection(conEx%model2, conEx%typename)
+            call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
+            call AddSpatialModelConnectionToList(newConnections, modelConnection)
+          end if
+          ! add exchange to connection
+          call modelConnection%addExchange(conEx)
+        end if
 
         ! remove this exchange from the base list, ownership
         ! now lies with the connection
