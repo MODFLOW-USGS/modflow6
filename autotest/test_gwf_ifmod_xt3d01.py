@@ -292,11 +292,11 @@ def eval_heads(sim):
     qxb_c, qyb_c, qzb_c = qxqyqz(fpth, nlay, nrow, ncol)
 
     fpth = os.path.join(sim.simpath, "{}.dis.grb".format(parent_name))
-    grb = flopy.utils.MfGrdFile(fpth)
+    grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.get_modelgrid()
 
     fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
-    grb_c = flopy.utils.MfGrdFile(fpth)
+    grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.get_modelgrid()
 
     xyc = mg.xycenters
