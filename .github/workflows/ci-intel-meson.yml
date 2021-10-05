@@ -132,6 +132,7 @@ jobs:
           call ".github/intel-scripts/ifortvars_windows.bat"
           meson setup builddir --buildtype=release --prefix=%CD% --libdir=bin
           meson compile -C builddir
+          meson install -C builddir
           cd autotest
           pytest -v --durations=0 get_exes.py
 
