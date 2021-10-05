@@ -94,7 +94,7 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
-    use SimModule, only: store_error, store_error_unit, ustop
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GhostNodeType) :: this
     class(NumericalModelType), target :: m1
@@ -135,7 +135,6 @@ module GhostNodeModule
                              'different solutions.'
         call store_error(errmsg)
         call store_error_unit(this%inunit)
-        call ustop()
       endif
     endif
     !
@@ -197,7 +196,7 @@ module GhostNodeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error, store_error_unit, count_errors
+    use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
@@ -259,7 +258,6 @@ module GhostNodeModule
     ! -- Stop if errors
     if(count_errors() > 0) then
       call store_error_unit(this%inunit)
-      call ustop()
     endif
     !
     ! -- find locations of j in rows n and row m of global solution
@@ -774,7 +772,7 @@ module GhostNodeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
@@ -815,7 +813,6 @@ module GhostNodeModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF GNC OPTIONS'
@@ -837,7 +834,7 @@ module GhostNodeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
@@ -869,13 +866,11 @@ module GhostNodeModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END OF GNC DIMENSIONS'
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-      call ustop()
+      call store_error('Required DIMENSIONS block not found.', terminate=.TRUE.)
     end if
     !
     ! -- return
@@ -891,7 +886,7 @@ module GhostNodeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
@@ -1004,7 +999,6 @@ module GhostNodeModule
       if(nerr > 0) then
         call store_error('Errors encountered in GNC input file.')
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       write(this%iout,'(1x,a)')'END OF GNCDATA'
@@ -1012,7 +1006,6 @@ module GhostNodeModule
       write(errmsg, '(1x,a)')'ERROR.  REQUIRED GNCDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- deallocate nodesuj array

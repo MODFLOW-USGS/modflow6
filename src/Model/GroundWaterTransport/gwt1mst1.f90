@@ -1,16 +1,18 @@
-! -- Mobile Storage and Transfer (MST) Module
-!    GwtMstType is responsible for adding the effects of
-!      1. Changes in dissolved solute mass
-!      2. Decay of dissolved solute mass
-!      3. Sorption
-!      4. Decay of sorbed solute mass
-
+!> -- @ brief Mobile Storage and Transfer (MST) Module
+!!
+!!    The GwtMstModule is contains the GwtMstType, which is the 
+!!    derived type responsible for adding the effects of
+!!      1. Changes in dissolved solute mass
+!!      2. Decay of dissolved solute mass
+!!      3. Sorption
+!!      4. Decay of sorbed solute mass
+!<
 module GwtMstModule
   
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
   use SimVariablesModule,     only: errmsg, warnmsg
-  use SimModule,              only: ustop, store_error, count_errors,          &
+  use SimModule,              only: store_error, count_errors,          &
                                     store_warning
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
@@ -25,30 +27,38 @@ module GwtMstModule
   data budtxt / ' STORAGE-AQUEOUS', '   DECAY-AQUEOUS', &
                 '  STORAGE-SORBED', '    DECAY-SORBED' /
 
+  !> @ brief Mobile storage and transfer
+  !!
+  !!  Data and methods for handling changes in solute storage,
+  !!  decay of dissolved solute mass, sorption, and decay of
+  !!  sorbed mass.
+  !<
   type, extends(NumericalPackageType) :: GwtMstType
     !
     ! -- storage
-    real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! porosity
-    real(DP), dimension(:), pointer, contiguous      :: prsity2 => null()       ! sum of immobile porosity
-    real(DP), dimension(:), pointer, contiguous      :: ratesto => null()       ! rate of mobile storage
+    real(DP), dimension(:), pointer, contiguous      :: porosity => null()      !< porosity
+    real(DP), dimension(:), pointer, contiguous      :: prsity2 => null()       !< sum of immobile porosity
+    real(DP), dimension(:), pointer, contiguous      :: ratesto => null()       !< rate of mobile storage
     !
     ! -- decay
-    integer(I4B), pointer                            :: idcy => null()          ! order of decay rate (0:none, 1:first, 2:zero)
-    real(DP), dimension(:), pointer, contiguous      :: decay => null()         ! first or zero order decay rate (aqueous)
-    real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  ! first or zero order decay rate (sorbed)
-    real(DP), dimension(:), pointer, contiguous      :: ratedcy => null()       ! rate of decay
+    integer(I4B), pointer                            :: idcy => null()          !< order of decay rate (0:none, 1:first, 2:zero)
+    real(DP), dimension(:), pointer, contiguous      :: decay => null()         !< first or zero order decay rate (aqueous)
+    real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  !< first or zero order decay rate (sorbed)
+    real(DP), dimension(:), pointer, contiguous      :: ratedcy => null()       !< rate of decay
+    real(DP), dimension(:), pointer, contiguous      :: decaylast => null()     !< decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous      :: decayslast => null()    !< sorbed decay rate used for last iteration (needed for zero order decay)
     !
     ! -- sorption
-    integer(I4B), pointer                            :: isrb => null()          ! sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
-    real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  ! bulk density
-    real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! kd distribution coefficient
-    real(DP), dimension(:), pointer, contiguous      :: sp2 => null()           ! second sorption parameter
-    real(DP), dimension(:), pointer, contiguous      :: ratesrb => null()       ! rate of sorption
-    real(DP), dimension(:), pointer, contiguous      :: ratedcys => null()      ! rate of sorbed mass decay
+    integer(I4B), pointer                            :: isrb => null()          !< sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
+    real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  !< bulk density
+    real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      !< kd distribution coefficient
+    real(DP), dimension(:), pointer, contiguous      :: sp2 => null()           !< second sorption parameter
+    real(DP), dimension(:), pointer, contiguous      :: ratesrb => null()       !< rate of sorption
+    real(DP), dimension(:), pointer, contiguous      :: ratedcys => null()      !< rate of sorbed mass decay
     !
     ! -- misc
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        !< pointer to model ibound
+    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
 
   contains
   
@@ -78,20 +88,18 @@ module GwtMstModule
   
   contains
   
+  !> @ brief Create a new package object
+  !!
+  !!  Create a new MST object
+  !!
+  !<
   subroutine mst_cr(mstobj, name_model, inunit, iout, fmi)
-! ******************************************************************************
-! mst_cr -- Create a new object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtMstType), pointer :: mstobj
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
-! ------------------------------------------------------------------------------
+    type(GwtMstType), pointer :: mstobj            !< unallocated new mst object to create
+    character(len=*), intent(in) :: name_model     !< name of the model
+    integer(I4B), intent(in) :: inunit             !< unit number of WEL package input file
+    integer(I4B), intent(in) :: iout               !< unit number of model listing file
+    type(GwtFmiType), intent(in), target :: fmi    !< fmi package for this GWT model
     !
     ! -- Create the object
     allocate(mstobj)
@@ -114,24 +122,22 @@ module GwtMstModule
     return
   end subroutine mst_cr
 
+  !> @ brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the package.
+  !!
+  !<
   subroutine mst_ar(this, dis, ibound)
-! ******************************************************************************
-! mst_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMstType), intent(inout) :: this
-    class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    class(GwtMstType), intent(inout) :: this                    !< GwtMstType object
+    class(DisBaseType), pointer, intent(in) :: dis              !< pointer to dis package
+    integer(I4B), dimension(:), pointer, contiguous :: ibound   !< pointer to GWT ibound array
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtmst =                                    &
       "(1x,/1x,'MST -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
       &7/29/2020 INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the immobile domain package.
     write(this%iout, fmtmst) this%inunit
@@ -153,33 +159,34 @@ module GwtMstModule
     return
   end subroutine mst_ar
   
-  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, rhs)
-! ******************************************************************************
-! mst_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Fill coefficient method for package
+  !!
+  !!  Method to calculate and fill coefficients for the package.
+  !!
+  !<
+  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, &
+                    rhs, kiter)
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    real(DP), intent(in), dimension(nodes) :: cnew
+    class(GwtMstType) :: this                                       !< GwtMstType object
+    integer, intent(in) :: nodes                                    !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                  !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                                 !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                              !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln           !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo              !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs                !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew                  !< concentration at end of this time step
+    integer(I4B), intent(in) :: kiter                               !< solution outer iteration number
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- storage contribution
     call this%mst_fc_sto(nodes, cold, nja, njasln, amatsln, idxglo, rhs)
     !
     ! -- decay contribution
     if (this%idcy /= 0) then
-      call this%mst_fc_dcy(nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+      call this%mst_fc_dcy(nodes, cold, cnew, nja, njasln, amatsln, idxglo, &
+                           rhs, kiter)
     end if
     !
     ! -- sorption contribution
@@ -190,37 +197,35 @@ module GwtMstModule
     ! -- decay sorbed contribution
     if (this%isrb /= 0 .and. this%idcy /= 0) then
       call this%mst_fc_dcy_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, &
-                               cnew)
+                               cnew, kiter)
     end if
     !
     ! -- Return
     return
   end subroutine mst_fc
   
+  !> @ brief Fill storage coefficient method for package
+  !!
+  !!  Method to calculate and fill storage coefficients for the package.
+  !!
+  !<
   subroutine mst_fc_sto(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
-! ******************************************************************************
-! mst_fc_sto -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
+    class(GwtMstType) :: this                                !< GwtMstType object
+    integer, intent(in) :: nodes                             !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold           !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                          !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                       !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln    !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo       !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs         !< right-hand side vector for model
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
     real(DP) :: hhcof, rrhs
     real(DP) :: vnew, vold
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     tled = DONE / delt
@@ -250,29 +255,32 @@ module GwtMstModule
     return
   end subroutine mst_fc_sto
   
-  subroutine mst_fc_dcy(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
-! ******************************************************************************
-! mst_fc_dcy -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Fill decay coefficient method for package
+  !!
+  !!  Method to calculate and fill decay coefficients for the package.
+  !!
+  !<
+  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, njasln, amatsln,         &
+                        idxglo, rhs, kiter)
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer, intent(in) :: nodes                                   !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    integer(I4B), intent(in) :: nja                                !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                             !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln          !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo             !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs               !< right-hand side vector for model
+    integer(I4B), intent(in) :: kiter                              !< solution outer iteration number
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: hhcof, rrhs
     real(DP) :: swtpdt
     real(DP) :: vcell
-! ------------------------------------------------------------------------------
+    real(DP) :: decay_rate
     !
     ! -- loop through and calculate decay contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -285,18 +293,21 @@ module GwtMstModule
       swtpdt = this%fmi%gwfsat(n)
       !
       ! -- add decay rate terms to accumulators
+      idiag = this%dis%con%ia(n)
       if (this%idcy == 1) then
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
-        idiag = this%dis%con%ia(n)
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
       elseif (this%idcy == 2) then
         !
-        ! -- zero-order decay rate is not a function of concentration, so add
-        !    to right hand side
-        rrhs = this%decay(n) * vcell * swtpdt * this%porosity(n)
+        ! -- Call function to get zero-order decay rate, which may be changed
+        !    from the user-specified rate to prevent negative concentrations
+        decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), kiter, &
+                                cold(n), cnew(n), delt)
+        this%decaylast(n) = decay_rate
+        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
       endif
       !
@@ -305,27 +316,26 @@ module GwtMstModule
     ! -- Return
     return
   end subroutine mst_fc_dcy
-  
+
+  !> @ brief Fill sorption coefficient method for package
+  !!
+  !!  Method to calculate and fill sorption coefficients for the package.
+  !!
+  !<
   subroutine mst_fc_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs,  &
                         cnew)
-! ******************************************************************************
-! mst_fc_srb -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    real(DP), intent(in), dimension(nodes) :: cnew
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer, intent(in) :: nodes                                   !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                                !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                             !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln          !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo             !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs               !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
@@ -336,7 +346,6 @@ module GwtMstModule
     real(DP) :: const2
     real(DP) :: thetamfrac
     real(DP) :: rhob
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     tled = DONE / delt
@@ -371,30 +380,29 @@ module GwtMstModule
     return
   end subroutine mst_fc_srb
   
+  !> @ brief Calculate sorption terms
+  !!
+  !!  Subroutine to calculate sorption terms
+  !!
+  !<
   subroutine mst_srb_term(isrb, thetamfrac, rhob, vcell, tled, cnew, cold,     &
                           swnew, swold, const1, const2, rate, hcofval, rhsval) 
-! ******************************************************************************
-! mst_srb_term -- Calculate sorption terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    integer(I4B), intent(in) :: isrb
-    real(DP), intent(in) :: thetamfrac
-    real(DP), intent(in) :: rhob
-    real(DP), intent(in) :: vcell
-    real(DP), intent(in) :: tled
-    real(DP), intent(in) :: cnew
-    real(DP), intent(in) :: cold
-    real(DP), intent(in) :: swnew
-    real(DP), intent(in) :: swold
-    real(DP), intent(in) :: const1
-    real(DP), intent(in) :: const2
-    real(DP), intent(out), optional :: rate
-    real(DP), intent(out), optional :: hcofval
-    real(DP), intent(out), optional :: rhsval
+    integer(I4B), intent(in) :: isrb                  !< sorption flag 1, 2, 3 are linear, freundlich, and langmuir
+    real(DP), intent(in) :: thetamfrac                !< fraction of total porosity that is mobile
+    real(DP), intent(in) :: rhob                      !< bulk density
+    real(DP), intent(in) :: vcell                     !< volume of cell
+    real(DP), intent(in) :: tled                      !< one over time step length
+    real(DP), intent(in) :: cnew                      !< concentration at end of this time step
+    real(DP), intent(in) :: cold                      !< concentration at end of last time step
+    real(DP), intent(in) :: swnew                     !< cell saturation at end of this time step
+    real(DP), intent(in) :: swold                     !< cell saturation at end of last time step
+    real(DP), intent(in) :: const1                    !< distribution coefficient or freundlich or langmuir constant
+    real(DP), intent(in) :: const2                    !< zero, freundlich exponent, or langmuir sorption sites
+    real(DP), intent(out), optional :: rate           !< calculated sorption rate
+    real(DP), intent(out), optional :: hcofval        !< diagonal contribution to solution coefficient matrix
+    real(DP), intent(out), optional :: rhsval         !< contribution to solution right-hand-side 
     ! -- local
     real(DP) :: term
     real(DP) :: derv
@@ -403,7 +411,8 @@ module GwtMstModule
     real(DP) :: cavg
     real(DP) :: cbaravg
     real(DP) :: swavg
-! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate based on type of sorption
     if (isrb == 1) then
       ! -- linear
       term = - thetamfrac * rhob * vcell * tled * const1
@@ -446,105 +455,26 @@ module GwtMstModule
     return
   end subroutine mst_srb_term
 
-  function get_freundlich_conc(conc, kf, a) result(cbar)
-! ******************************************************************************
-! get_freundlich_conc -- Calculate cbar for Freundlich
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kf
-    real(DP), intent(in) :: a
-    real(DP) :: cbar
-! ------------------------------------------------------------------------------
-    if (conc > DZERO) then
-      cbar = kf * conc ** a
-    else
-      cbar = DZERO
-    end if
-    return
-  end function 
-  
-  function get_langmuir_conc(conc, kl, sbar) result(cbar)
-! ******************************************************************************
-! get_langmuir_conc -- Calculate cbar for Langmuir
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kl
-    real(DP), intent(in) :: sbar
-    real(DP) :: cbar
-! ------------------------------------------------------------------------------
-    if (conc > DZERO) then
-      cbar = (kl * sbar * conc) / (DONE + kl * conc)
-    else
-      cbar = DZERO
-    end if
-    return
-  end function 
-  
-  function get_freundlich_derivative(conc, kf, a) result(derv)
-! ******************************************************************************
-! get_freundlich_derivative -- Calculate derivative for Freundlich
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kf
-    real(DP), intent(in) :: a
-    real(DP) :: derv
-! ------------------------------------------------------------------------------
-    if (conc > DZERO) then
-      derv = kf * a * conc ** (a - DONE)
-    else
-      derv = DZERO
-    end if
-    return
-  end function 
-  
-  function get_langmuir_derivative(conc, kl, sbar) result(derv)
-! ******************************************************************************
-! get_langmuir_derivative -- Calculate derivative for Langmuir
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    real(DP), intent(in) :: conc
-    real(DP), intent(in) :: kl
-    real(DP), intent(in) :: sbar
-    real(DP) :: derv
-! ------------------------------------------------------------------------------
-    if (conc > DZERO) then
-      derv = (kl * sbar) / (DONE + kl * conc) ** DTWO
-    else
-      derv = DZERO
-    end if
-    return
-  end function 
-  
+  !> @ brief Fill sorption-decay coefficient method for package
+  !!
+  !!  Method to calculate and fill sorption-decay coefficients for the package.
+  !!
+  !<
   subroutine mst_fc_dcy_srb(this, nodes, cold, nja, njasln, amatsln, idxglo,   &
-                            rhs, cnew)
-! ******************************************************************************
-! mst_fc_dcy_srb -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+                            rhs, cnew, kiter)
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(inout), dimension(nodes) :: rhs
-    real(DP), intent(in), dimension(nodes) :: cnew
+    class(GwtMstType) :: this                                       !< GwtMstType object
+    integer, intent(in) :: nodes                                    !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold                  !< concentration at end of last time step
+    integer(I4B), intent(in) :: nja                                 !< number of GWT connections
+    integer(I4B), intent(in) :: njasln                              !< number of connections in solution
+    real(DP), dimension(njasln), intent(inout) :: amatsln           !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo              !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs                !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew                  !< concentration at end of this time step
+    integer(I4B), intent(in) :: kiter                               !< solution outer iteration number
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: hhcof, rrhs
@@ -554,7 +484,9 @@ module GwtMstModule
     real(DP) :: thetamfrac
     real(DP) :: term
     real(DP) :: csrb
-! ------------------------------------------------------------------------------
+    real(DP) :: decay_rate
+    real(DP) :: csrbold
+    real(DP) :: csrbnew
     !
     ! -- loop through and calculate sorption contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -589,17 +521,33 @@ module GwtMstModule
         else if (this%isrb == 3) then
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
-          csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
         end if
       elseif (this%idcy == 2) then
         !
-        ! -- zero-order decay rate is not a function of concentration, so add
-        !    to right hand side
+        ! -- Call function to get zero-order decay rate, which may be changed
+        !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-          ! -- Add zero order sorption term only if distribution coefficient > 0
-          rrhs = term
+          
+          if (this%isrb == 1) then
+            csrbold = cold(n) * distcoef
+            csrbnew = cnew(n) * distcoef
+          else if (this%isrb == 2) then
+            csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          else if (this%isrb == 3) then
+            csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
+          end if
+          
+          decay_rate = get_zero_order_decay(this%decay_sorbed(n),              &
+                                            this%decayslast(n),                &
+                                            kiter, csrbold, csrbnew, delt)
+          this%decayslast(n) = decay_rate
+          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
         end if
+        
       endif
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
@@ -612,22 +560,20 @@ module GwtMstModule
     return
   end subroutine mst_fc_dcy_srb
   
+  !> @ brief Calculate flows for package
+  !!
+  !!  Method to calculate flows for the package.
+  !!
+  !<
   subroutine mst_cq(this, nodes, cnew, cold, flowja)
-! ******************************************************************************
-! mst_cq -- Calculate mass flow terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! - storage
     call this%mst_cq_sto(nodes, cnew, cold, flowja)
@@ -651,21 +597,20 @@ module GwtMstModule
     return
   end subroutine mst_cq
 
+  !> @ brief Calculate storage terms for package
+  !!
+  !!  Method to calculate storage terms for the package.
+  !!
+  !<
   subroutine mst_cq_sto(this, nodes, cnew, cold, flowja)
-! ******************************************************************************
-! mst_cq_sto -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -673,7 +618,6 @@ module GwtMstModule
     real(DP) :: tled
     real(DP) :: vnew, vold
     real(DP) :: hhcof, rrhs
-! ------------------------------------------------------------------------------
     !
     ! -- initialize 
     tled = DONE / delt
@@ -705,20 +649,20 @@ module GwtMstModule
     return
   end subroutine mst_cq_sto
 
+  !> @ brief Calculate decay terms for package
+  !!
+  !!  Method to calculate decay terms for the package.
+  !!
+  !<
   subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)
-! ******************************************************************************
-! mst_cq_dcy -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -726,7 +670,7 @@ module GwtMstModule
     real(DP) :: swtpdt
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
-! ------------------------------------------------------------------------------
+    real(DP) :: decay_rate
     !
     ! -- initialize 
     !
@@ -748,7 +692,9 @@ module GwtMstModule
       if (this%idcy == 1) then
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
       elseif (this%idcy == 2) then
-        rrhs = this%decay(n) * vcell * swtpdt * this%porosity(n)
+        decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n),  &
+                                          0, cold(n), cnew(n), delt)
+        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
       endif
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -761,21 +707,20 @@ module GwtMstModule
     return
   end subroutine mst_cq_dcy
 
+  !> @ brief Calculate sorption terms for package
+  !!
+  !!  Method to calculate sorption terms for the package.
+  !!
+  !<
   subroutine mst_cq_srb(this, nodes, cnew, cold, flowja)
-! ******************************************************************************
-! mst_cq_srb -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -787,7 +732,6 @@ module GwtMstModule
     real(DP) :: const1
     real(DP) :: const2
     real(DP) :: thetamfrac
-! ------------------------------------------------------------------------------
     !
     ! -- initialize 
     tled = DONE / delt
@@ -823,20 +767,20 @@ module GwtMstModule
     return
   end subroutine mst_cq_srb
 
+  !> @ brief Calculate decay-sorption terms for package
+  !!
+  !!  Method to calculate decay-sorption terms for the package.
+  !!
+  !<
   subroutine mst_cq_dcy_srb(this, nodes, cnew, cold, flowja)
-! ******************************************************************************
-! mst_cq_dcy_srb -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(in), dimension(nodes) :: cold
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                              !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew                 !< concentration at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold                 !< concentration at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja    !< flow between two connected control volumes
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -848,7 +792,9 @@ module GwtMstModule
     real(DP) :: thetamfrac
     real(DP) :: term
     real(DP) :: csrb
-! ------------------------------------------------------------------------------
+    real(DP) :: csrbnew
+    real(DP) :: csrbold
+    real(DP) :: decay_rate
     !
     ! -- Calculate sorbed decay change
     !    This routine will only be called if sorption and decay are active
@@ -886,17 +832,29 @@ module GwtMstModule
         else if (this%isrb == 3) then
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
-          csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
         end if
       elseif (this%idcy == 2) then
         !
-        ! -- zero-order decay rate is not a function of concentration, so add
-        !    to right hand side
+        ! -- Call function to get zero-order decay rate, which may be changed
+        !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-          ! -- Add zero order sorption term only if distribution coefficient > 0
-          rrhs = term
-        end if
+          if (this%isrb == 1) then
+            csrbold = cold(n) * distcoef
+            csrbnew = cnew(n) * distcoef
+          else if (this%isrb == 2) then
+            csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+          else if (this%isrb == 3) then
+            csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
+            csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
+          end if
+          decay_rate = get_zero_order_decay(this%decay_sorbed(n),              &
+                                            this%decayslast(n),                &
+                                            0, csrbold, csrbnew, delt)
+          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
+        end if      
       endif
       !
       ! -- calculate rate
@@ -911,24 +869,22 @@ module GwtMstModule
     return
   end subroutine mst_cq_dcy_srb
 
+  !> @ brief Calculate budget terms for package
+  !!
+  !!  Method to calculate budget terms for the package.
+  !!
+  !<
   subroutine mst_bd(this, isuppress_output, model_budget)
-! ******************************************************************************
-! mst_bd -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: isuppress_output
-    type(BudgetType), intent(inout) :: model_budget
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    integer(I4B), intent(in) :: isuppress_output                  !< flag to supress output
+    type(BudgetType), intent(inout) :: model_budget               !< model budget object
     ! -- local
     real(DP) :: rin
     real(DP) :: rout
-! ------------------------------------------------------------------------------
     !
     ! -- sto
     call rate_accumulator(this%ratesto, rin, rout)
@@ -960,24 +916,22 @@ module GwtMstModule
     return
   end subroutine mst_bd
   
+  !> @ brief Output flow terms for package
+  !!
+  !!  Method to output terms for the package.
+  !!
+  !<
   subroutine mst_ot_flow(this, icbcfl, icbcun)
-! ******************************************************************************
-! mst_ot_flow -- Save budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: icbcun
+    class(GwtMstType) :: this                          !< GwtMstType object
+    integer(I4B), intent(in) :: icbcfl                 !< flag and unit number for cell-by-cell output
+    integer(I4B), intent(in) :: icbcun                 !< flag indication if cell-by-cell data should be saved
     ! -- local
     integer(I4B) :: ibinun
     !character(len=16), dimension(2) :: aname
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp=' ', editdesc=' '
     real(DP) :: dinact
-! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
     if(this%ipakcb < 0) then
@@ -1022,18 +976,16 @@ module GwtMstModule
     return
   end subroutine mst_ot_flow
 
+  !> @ brief Deallocate
+  !!
+  !!  Method to deallocate memory for the package.
+  !!
+  !<
   subroutine mst_da(this)
-! ******************************************************************************
-! mst_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtMstType) :: this
-! ------------------------------------------------------------------------------
+    class(GwtMstType) :: this                                      !< GwtMstType object
     !
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
@@ -1044,6 +996,8 @@ module GwtMstModule
       call mem_deallocate(this%decay)
       call mem_deallocate(this%decay_sorbed)
       call mem_deallocate(this%ratedcy)
+      call mem_deallocate(this%decaylast)
+      call mem_deallocate(this%decayslast)
       call mem_deallocate(this%isrb)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
@@ -1063,19 +1017,17 @@ module GwtMstModule
     return
   end subroutine mst_da
 
+  !> @ brief Allocate scalar variables for package
+  !!
+  !!  Method to allocate scalar variables for the package.
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                     !< GwtMstType object
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -1092,22 +1044,20 @@ module GwtMstModule
     return
   end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays for package
+  !!
+  !!  Method to allocate arrays for the package.
+  !!
+  !<
   subroutine allocate_arrays(this, nodes)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    !modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: nodes
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    integer(I4B), intent(in) :: nodes                             !< number of nodes
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate
     ! -- sto
@@ -1119,15 +1069,20 @@ module GwtMstModule
     if (this%idcy == 0) then
       call mem_allocate(this%ratedcy, 1, 'RATEDCY', this%memoryPath)
       call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
+      call mem_allocate(this%decaylast, 1, 'DECAYLAST', this%memoryPath)
     else
       call mem_allocate(this%ratedcy, this%dis%nodes, 'RATEDCY', this%memoryPath)
       call mem_allocate(this%decay, nodes, 'DECAY', this%memoryPath)
+      call mem_allocate(this%decaylast, nodes, 'DECAYLAST', this%memoryPath)
     end if
     if (this%idcy /= 0 .and. this%isrb /= 0) then
-        call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS',           &
-                          this%memoryPath)
+      call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS',           &
+                        this%memoryPath)
+      call mem_allocate(this%decayslast, this%dis%nodes, 'DECAYSLAST',       &
+                        this%memoryPath)
     else
-        call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
+      call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
+      call mem_allocate(this%decayslast, 1, 'DECAYSLAST', this%memoryPath)
     endif
     call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED',                    &
                       this%memoryPath)
@@ -1158,6 +1113,7 @@ module GwtMstModule
     do n = 1, size(this%decay)
       this%decay(n) = DZERO
       this%ratedcy(n) = DZERO
+      this%decaylast(n) = DZERO
     end do
     do n = 1, size(this%bulk_density)
       this%bulk_density(n) = DZERO
@@ -1167,22 +1123,25 @@ module GwtMstModule
     do n = 1, size(this%sp2)
       this%sp2(n) = DZERO
     end do
+    do n = 1, size(this%ratedcys)
+      this%ratedcys(n) = DZERO
+      this%decayslast(n) = DZERO
+    end do
     !
     ! -- Return
     return
   end subroutine allocate_arrays
 
+  !> @ brief Read options for package
+  !!
+  !!  Method to read options for the package.
+  !!
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- Read options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                      !< GwtMstType object
     ! -- local
     character(len=LINELENGTH) :: keyword, keyword2
     integer(I4B) :: ierr
@@ -1201,7 +1160,6 @@ module GwtMstModule
       "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 =                                  &
       "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -1242,7 +1200,6 @@ module GwtMstModule
             write(errmsg,'(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
@@ -1252,18 +1209,17 @@ module GwtMstModule
     return
   end subroutine read_options
 
+  !> @ brief Read data for package
+  !!
+  !!  Method to read data for the package.
+  !!
+  !<
   subroutine read_data(this)
-! ******************************************************************************
-! read_data -- read the immodbile domain (griddata) block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
-    class(GwtMstType) :: this
+    class(GwtMstType) :: this                                     !< GwtMstType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
@@ -1279,7 +1235,6 @@ module GwtMstModule
     data aname(4) /'              DECAY RATE'/
     data aname(5) /'       DECAY SORBED RATE'/
     data aname(6) /'   SECOND SORPTION PARAM'/
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     isfound = .false.
@@ -1344,7 +1299,6 @@ module GwtMstModule
             write(errmsg,'(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END PROCESSING GRIDDATA'
@@ -1352,7 +1306,6 @@ module GwtMstModule
       write(errmsg,'(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check for rquired porosity
@@ -1445,27 +1398,25 @@ module GwtMstModule
     ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return
     return
   end subroutine read_data
 
+  !> @ brief Add porosity values to prsity2
+  !!
+  !!  Method to add immobile domain porosities, which are stored as a 
+  !!  cumulative value in prsity2.
+  !!
+  !<
   subroutine addto_prsity2(this, thetaim)
-! ******************************************************************************
-! Add immobile porosity to prsity2
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    real(DP), dimension(:), intent(in) :: thetaim
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: thetaim                 !< immobile domain porosity that contributes to total porosity
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- Add to prsity2
     do n = 1, this%dis%nodes
@@ -1477,20 +1428,18 @@ module GwtMstModule
     return
   end subroutine addto_prsity2
 
+  !> @ brief Return mobile porosity fraction
+  !!
+  !!  Calculate and return the fraction of the total porosity that is mobile
+  !!
+  !<
   function get_thetamfrac(this, node) result(thetamfrac)
-! ******************************************************************************
-! Calculate and return the fraction of the total porosity that is mobile
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: node
+    class(GwtMstType) :: this                                     !< GwtMstType object
+    integer(I4B), intent(in) :: node                              !< node number
     ! -- return
     real(DP) :: thetamfrac
-! ------------------------------------------------------------------------------
     !
     thetamfrac = this%porosity(node) / &
                  (this%porosity(node) + this%prsity2(node))
@@ -1499,21 +1448,20 @@ module GwtMstModule
     return
   end function get_thetamfrac
   
+  !> @ brief Return immobile porosity fraction
+  !!
+  !!  Pass in an immobile domain porosity and calculate the fraction
+  !!  of the total porosity that is immobile
+  !!
+  !<
   function get_thetaimfrac(this, node, thetaim) result(thetaimfrac)
-! ******************************************************************************
-! Calculate and return the fraction of the total porosity that is immobile
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMstType) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: thetaim
+    class(GwtMstType) :: this                                      !< GwtMstType object
+    integer(I4B), intent(in) :: node                               !< node number
+    real(DP), intent(in) :: thetaim                                !< immobile domain porosity
     ! -- return
     real(DP) :: thetaimfrac
-! ------------------------------------------------------------------------------
     !
     thetaimfrac = thetaim / &
                  (this%porosity(node) + this%prsity2(node))
@@ -1522,6 +1470,135 @@ module GwtMstModule
     return
   end function get_thetaimfrac
   
+  !> @ brief Calculate sorption concentration using Freundlich
+  !!
+  !!  Function to calculate sorption concentration using Freundlich
+  !!
+  !<
+  function get_freundlich_conc(conc, kf, a) result(cbar)
+    ! -- dummy
+    real(DP), intent(in) :: conc                                !< solute concentration
+    real(DP), intent(in) :: kf                                  !< freundlich constant
+    real(DP), intent(in) :: a                                   !< freundlich exponent
+    ! -- return
+    real(DP) :: cbar
+    !
+    if (conc > DZERO) then
+      cbar = kf * conc ** a
+    else
+      cbar = DZERO
+    end if
+    return
+  end function 
   
+  !> @ brief Calculate sorption concentration using Langmuir
+  !!
+  !!  Function to calculate sorption concentration using Langmuir
+  !!
+  !<
+  function get_langmuir_conc(conc, kl, sbar) result(cbar)
+    ! -- dummy
+    real(DP), intent(in) :: conc                              !< solute concentration
+    real(DP), intent(in) :: kl                                !< langmuir constant
+    real(DP), intent(in) :: sbar                              !< langmuir sorption sites
+    ! -- return
+    real(DP) :: cbar
+    !
+    if (conc > DZERO) then
+      cbar = (kl * sbar * conc) / (DONE + kl * conc)
+    else
+      cbar = DZERO
+    end if
+    return
+  end function 
   
+  !> @ brief Calculate sorption derivative using Freundlich
+  !!
+  !!  Function to calculate sorption derivative using Freundlich
+  !!
+  !<
+  function get_freundlich_derivative(conc, kf, a) result(derv)
+    ! -- dummy
+    real(DP), intent(in) :: conc                              !< solute concentration
+    real(DP), intent(in) :: kf                                !< freundlich constant
+    real(DP), intent(in) :: a                                 !< freundlich exponent
+    ! -- return
+    real(DP) :: derv
+    !
+    if (conc > DZERO) then
+      derv = kf * a * conc ** (a - DONE)
+    else
+      derv = DZERO
+    end if
+    return
+  end function 
+  
+  !> @ brief Calculate sorption derivative using Langmuir
+  !!
+  !!  Function to calculate sorption derivative using Langmuir
+  !!
+  !<
+  function get_langmuir_derivative(conc, kl, sbar) result(derv)
+    ! -- dummy
+    real(DP), intent(in) :: conc                              !< solute concentration
+    real(DP), intent(in) :: kl                                !< langmuir constant
+    real(DP), intent(in) :: sbar                              !< langmuir sorption sites
+    ! -- return
+    real(DP) :: derv
+    !
+    if (conc > DZERO) then
+      derv = (kl * sbar) / (DONE + kl * conc) ** DTWO
+    else
+      derv = DZERO
+    end if
+    return
+  end function 
+  
+  !> @ brief Calculate zero-order decay rate and constrain if necessary
+  !!
+  !!  Function to calculate the zero-order decay rate from the user specified
+  !!  decay rate.  If the decay rate is positive, then the decay rate must
+  !!  be constrained so that more mass is not removed than is available.
+  !!  Without this constraint, negative concentrations could result from
+  !!  zero-order decay.
+  !<
+  function get_zero_order_decay(decay_rate_usr, decay_rate_last, kiter, &
+                                cold, cnew, delt) result(decay_rate)
+    ! -- dummy
+    real(DP), intent(in) :: decay_rate_usr    !< user-entered decay rate
+    real(DP), intent(in) :: decay_rate_last   !< decay rate used for last iteration
+    integer(I4B), intent(in) :: kiter         !< Picard iteration counter
+    real(DP), intent(in) :: cold              !< concentration at end of last time step
+    real(DP), intent(in) :: cnew              !< concentration at end of this time step
+    real(DP), intent(in) :: delt              !< length of time step
+    ! -- return
+    real(DP) :: decay_rate                    !< returned value for decay rate
+    !
+    ! -- Return user rate if production, otherwise constrain, if necessary
+    if (decay_rate_usr < DZERO) then
+      !
+      ! -- Production, no need to limit rate
+      decay_rate = decay_rate_usr
+    else
+      !
+      ! -- Need to ensure decay does not result in negative
+      !    concentration, so reduce the rate if it would result in
+      !    removing more mass than is in the cell.
+      if (kiter == 1) then
+        decay_rate = min(decay_rate_usr, cold / delt)
+      else
+        decay_rate = decay_rate_last
+        if (cnew < DZERO) then
+          decay_rate = decay_rate_last + cnew / delt
+        else if (cnew > cold) then
+          decay_rate = decay_rate_last + cnew / delt
+        end if
+        decay_rate = min(decay_rate_usr, decay_rate)
+      end if
+      decay_rate = max(decay_rate, DZERO)
+    end if
+    return
+  end function get_zero_order_decay
+  
+   
 end module GwtMstModule

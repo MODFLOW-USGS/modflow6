@@ -7,7 +7,7 @@
 
 \item \texttt{auxiliary}---defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block.
 
-\item \texttt{flow\_package\_auxiliary\_name}---keyword to specify the name of an auxiliary variable in the corresponding flow package.  If specified, then the simulated concentrations from this advanced transport package will be copied into the auxiliary variable specified with this name.  Note that the flow package must have an auxiliary variable with this name or the program will terminate with an error.  If the flows for this advanced transport package are read from a file, then this option will have no affect.
+\item \texttt{flow\_package\_auxiliary\_name}---keyword to specify the name of an auxiliary variable in the corresponding flow package.  If specified, then the simulated concentrations from this advanced transport package will be copied into the auxiliary variable specified with this name.  Note that the flow package must have an auxiliary variable with this name or the program will terminate with an error.  If the flows for this advanced transport package are read from a file, then this option will have no effect.
 
 \item \texttt{BOUNDNAMES}---keyword to indicate that boundary names may be provided with the list of well cells.
 
@@ -28,6 +28,10 @@
 \item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
 
 \item \texttt{budgetfile}---name of the binary output file to write budget information.
+
+\item \texttt{BUDGETCSV}---keyword to specify that record corresponds to the budget CSV.
+
+\item \texttt{budgetcsvfile}---name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation.
 
 \item \texttt{TS6}---keyword to specify that record corresponds to a time-series file.
 

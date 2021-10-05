@@ -1,3 +1,9 @@
+!> @brief This module contains block parser methods
+!!
+!! This module contains the generic block parser type and methods that are
+!! used to parse MODFLOW 6 block data.
+!!
+!<
 module BlockParserModule
   
   use KindModule,         only: DP, I4B
@@ -5,7 +11,7 @@ module BlockParserModule
   use VersionModule,      only: IDEVELOPMODE
   use InputOutputModule,  only: uget_block, uget_any_block, uterminate_block, &
                                 u9rdcom, urword, upcase
-  use SimModule,          only: store_error, store_error_unit, ustop
+  use SimModule,          only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   
   implicit none
@@ -14,16 +20,16 @@ module BlockParserModule
   public :: BlockParserType
   
   type :: BlockParserType
-    integer(I4B), public  :: iuactive  ! not used internally, so can be public
-    integer(I4B), private :: inunit
-    integer(I4B), private :: iuext
-    integer(I4B), private :: iout
-    integer(I4B), private :: linesRead
-    integer(I4B), private :: lloc
-    character(len=LINELENGTH), private :: blockName
-    character(len=LINELENGTH), private :: blockNameFound
-    character(len=LENHUGELINE), private :: laststring
-    character(len=:), allocatable, private :: line
+    integer(I4B), public  :: iuactive                     !< flag indicating if a file unit is active, variable is not used internally
+    integer(I4B), private :: inunit                       !< file unit number
+    integer(I4B), private :: iuext                        !< external file unit number
+    integer(I4B), private :: iout                         !< listing file unit number
+    integer(I4B), private :: linesRead                    !< number of lines read
+    integer(I4B), private :: lloc                         !< line location counter
+    character(len=LINELENGTH), private :: blockName       !< block name
+    character(len=LINELENGTH), private :: blockNameFound  !< block name found
+    character(len=LENHUGELINE), private :: laststring     !< last string read
+    character(len=:), allocatable, private :: line        !< current line
   contains
     procedure, public :: Initialize
     procedure, public :: Clear
@@ -46,18 +52,16 @@ module BlockParserModule
   
 contains
 
+  !> @ brief Initialize the block parser
+  !!
+  !! Method to initialize the block parser.
+  !!
+  !<
   subroutine Initialize(this, inunit, iout)
-! ******************************************************************************
-! Initialize -- initialize the block parser
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
+    integer(I4B), intent(in) :: inunit             !< input file unit number
+    integer(I4B), intent(in) :: iout               !< listing file unit number
     !
     ! -- initialize values
     this%inunit = inunit
@@ -71,18 +75,17 @@ contains
     return
   end subroutine Initialize
   
+  !> @ brief Close the block parser
+  !!
+  !! Method to clear the block parser, which closes file(s) and clears member
+  !! variables.
+  !!
+  !<
   subroutine Clear(this)
-! ******************************************************************************
-! clear -- Close file(s) and clear member variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    ! -- local
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
+    ! -- local variables
     logical :: lop
-! ------------------------------------------------------------------------------
     !
     ! Close any connected files
     if (this%inunit > 0) then
@@ -113,26 +116,28 @@ contains
     return
   end subroutine Clear
   
+  !> @ brief Get block
+  !!
+  !! Method to get the block from a file. The file is read until the blockname
+  !! is found.
+  !!
+  !<
   subroutine GetBlock(this, blockName, isFound, ierr, supportOpenClose, &
                       blockRequired, blockNameFound)
-! ******************************************************************************
-! GetBlock -- read until blockname is found
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    character(len=*), intent(in) :: blockName
-    logical, intent(out) :: isFound
-    integer(I4B), intent(out) :: ierr
-    logical, intent(in), optional :: supportOpenClose ! default false
-    logical, intent(in), optional :: blockRequired    ! default true
-    character(len=*), intent(inout), optional :: blockNameFound
-    ! -- local
-    logical :: continueRead, supportOpenCloseLocal, blockRequiredLocal
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this                !< BlockParserType object
+    character(len=*), intent(in) :: blockName                    !< block name to search for
+    logical, intent(out) :: isFound                              !< boolean indicating if the block name was found
+    integer(I4B), intent(out) :: ierr                            !< return error code, 0 indicates block was found
+    logical, intent(in), optional :: supportOpenClose            !< boolean indicating if the block supports open/close, default false
+    logical, intent(in), optional :: blockRequired               !< boolean indicating if the block is required, default true
+    character(len=*), intent(inout), optional :: blockNameFound  !< optional return value of block name found
+    ! -- local variables
+    logical :: continueRead
+    logical :: supportOpenCloseLocal
+    logical :: blockRequiredLocal
     !
+    ! -- process optional variables
     if (present(supportOpenClose)) then
       supportOpenCloseLocal = supportOpenClose
     else
@@ -170,27 +175,30 @@ contains
     return
   end subroutine GetBlock
 
+  !> @ brief Get the next line
+  !!
+  !! Method to get the next line from a file.
+  !!
+  !<
   subroutine GetNextLine(this, endOfBlock)
-! ******************************************************************************
-! GetNextLine -- read the next line
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    logical, intent(out) :: endOfBlock
-    ! -- local
-    integer(I4B) :: ierr, ival
-    integer(I4B) :: istart, istop
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
+    logical, intent(out) :: endOfBlock             !< boolean indicating if the end of the block was read
+    ! -- local variables
+    integer(I4B) :: ierr
+    integer(I4B) :: ival
+    integer(I4B) :: istart
+    integer(I4B) :: istop
     real(DP) :: rval
     character(len=10) :: key
     logical :: lineread
-! ------------------------------------------------------------------------------
     !
+    ! -- initialize local variables
     endOfBlock = .false.
     ierr = 0
     lineread = .false.
+    !
+    ! -- read next line
     loop1: do
       if (lineread) exit loop1
       call u9rdcom(this%iuext, this%iout, this%line, ierr)
@@ -218,7 +226,6 @@ contains
           errmsg = 'Unexpected end of file reached.'
           call store_error(errmsg)
           call this%StoreErrorUnit()
-          call ustop()
         endif
       else
         this%lloc = 1
@@ -231,22 +238,22 @@ contains
     return
   end subroutine GetNextLine
 
+  !> @ brief Get a integer
+  !!
+  !! Function to get a integer from the current line.
+  !!
+  !<
   function GetInteger(this) result(i)
-! ******************************************************************************
-! GetInteger -- return an integer
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    integer(I4B) :: i
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: istart, istop
+    ! -- return variable
+    integer(I4B) :: i                               !< integer variable
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this   !< BlockParserType object
+    ! -- local variables
+    integer(I4B) :: istart
+    integer(I4B) :: istop
     real(DP) :: rval
-! ------------------------------------------------------------------------------
     !
+    ! -- get integer using urword
     call urword(this%line, this%lloc, istart, istop, 2, i, rval, &
                 this%iout, this%iuext)
     !
@@ -259,40 +266,41 @@ contains
     return
   end function GetInteger
   
+  !> @ brief Get the number of lines read
+  !!
+  !! Function to get the number of lines read from the current block.
+  !!
+  !<
   function GetLinesRead(this) result(nlines)
-! ******************************************************************************
-! GetLinesRead -- return number of lines that have been read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    integer(I4B) :: nlines
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-! ------------------------------------------------------------------------------
+    ! -- return variable
+    integer(I4B) :: nlines                           !< number of lines read
+    ! -- dummy variable
+    class(BlockParserType), intent(inout) :: this    !< BlockParserType object
     !
+    ! -- number of lines read
     nlines =  this%linesRead
     !
+    ! -- return
     return
   end function GetLinesRead
   
+  !> @ brief Get a double precision real
+  !!
+  !! Function to get adouble precision floating point number from 
+  !! the current line.
+  !!
+  !<
   function GetDouble(this) result(r)
-! ******************************************************************************
-! GetDouble -- return a double precision floating point number
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    real(DP) :: R
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: istart, istop
+    ! -- return variable
+    real(DP) :: r                                  !< double precision real variable
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
+    ! -- local variables
+    integer(I4B) :: istart
+    integer(I4B) :: istop
     integer(I4B) :: ival
-! ------------------------------------------------------------------------------
     !
+    ! -- get double precision real using urword
     call urword(this%line, this%lloc, istart, istop, 3, ival, r, &
                 this%iout, this%iuext)
     !
@@ -305,19 +313,17 @@ contains
     return
   end function GetDouble
   
+  !> @ brief Issue a read error
+  !!
+  !! Method to issue an unable to read error.
+  !!
+  !<
   subroutine ReadScalarError(this, vartype)
-! ******************************************************************************
-! ReadScalarError -- issue unable to read error
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    character(len=*), intent(in) :: vartype
-    ! -- local
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this    !< BlockParserType object
+    character(len=*), intent(in) :: vartype          !< string of variable type
+    ! -- local variables
     character(len=MAXCHARLEN-100) :: linetemp
-! ------------------------------------------------------------------------------
     !
     ! -- use linetemp as line may be longer than MAXCHARLEN
     linetemp = this%line
@@ -331,31 +337,30 @@ contains
       trim(errmsg), trim(adjustl(this%line)), "'."
     call store_error(errmsg)
     call this%StoreErrorUnit()
-    call ustop()
     !
     ! -- return
     return
   end subroutine ReadScalarError
   
+  !> @ brief Get a string
+  !!
+  !! Method to get a string from the current line and optionally convert it
+  !! to upper case.
+  !!
+  !<
   subroutine GetString(this, string, convertToUpper)
-! ******************************************************************************
-! GetString -- return a string and optionally convert to upper case
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    character(len=*), intent(out) :: string
-    logical, optional, intent(in) :: convertToUpper ! default false
-    ! -- local
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this   !< BlockParserType object
+    character(len=*), intent(out) :: string         !< string
+    logical, optional, intent(in) :: convertToUpper !< boolean indicating if the string should be converted to upper case, default false
+    ! -- local variables
     integer(I4B) :: istart
     integer(I4B) :: istop
     integer(I4B) :: ival
     integer(I4B) :: ncode
     real(DP) :: rval
-! ------------------------------------------------------------------------------
     !
+    ! -- process optional variables
     if (present(convertToUpper)) then
       if (convertToUpper) then
         ncode = 1
@@ -375,38 +380,38 @@ contains
     return
   end subroutine GetString
 
+  !> @ brief Get an upper case string
+  !!
+  !! Method to get a string from the current line and convert it
+  !! to upper case.
+  !!
+  !<
   subroutine GetStringCaps(this, string)
-! ******************************************************************************
-! GetStringCaps -- convert string to caps
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    character(len=*),       intent(out)   :: string
-! ------------------------------------------------------------------------------
+    ! -- dummy  variables
+    class(BlockParserType), intent(inout) :: this      !< BlockParserType object
+    character(len=*),       intent(out)   :: string    !< upper case string
     !
+    ! -- call base GetString method with convertToUpper variable
     call this%GetString(string, convertToUpper=.true.)
     !
+    ! -- return
     return
   end subroutine GetStringCaps
 
+  !> @ brief Get the rest of a line
+  !!
+  !! Method to get the rest of the line from the current line.
+  !!
+  !<
   subroutine GetRemainingLine(this, line)
-! ******************************************************************************
-! GetRemainingLine -- get the rest of the line
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    character(len=:), allocatable, intent(out) :: line
-    ! -- local
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this        !< BlockParserType object
+    character(len=:), allocatable, intent(out) :: line   !< remainder of the line
+    ! -- local variables
     integer(I4B) :: lastpos
     integer(I4B) :: newlinelen
-! ------------------------------------------------------------------------------
     !
+    ! -- get the rest of the line
     lastpos = len_trim(this%line)
     newlinelen = lastpos - this%lloc + 2
     newlinelen = max(newlinelen, 1)
@@ -418,51 +423,54 @@ contains
     return
   end subroutine GetRemainingLine
   
+  !> @ brief Ensure that the block is closed
+  !!
+  !! Method to ensure that the block is closed with an "end".
+  !!
+  !<
   subroutine terminateblock(this)
-! ******************************************************************************
-! terminateblock -- ensure block is closed with end
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    ! -- local
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
+    ! -- local variables
     logical :: endofblock
-! ------------------------------------------------------------------------------
     !
+    ! -- look for block termination
     call this%GetNextLine(endofblock)
     if (.not. endofblock) then
       errmsg = "LOOKING FOR 'END " // trim(this%blockname) //                    &
                "'.  FOUND: " // "'" // trim(this%line) // "'."
       call store_error(errmsg)
       call this%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
     return
   end subroutine terminateblock
 
+  !> @ brief Get a cellid
+  !!
+  !! Method to get a cellid from a line.
+  !!
+  !<
   subroutine GetCellid(this, ndim, cellid, flag_string)
-! ******************************************************************************
-! GetCellid -- get a cellid
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    integer(I4B),           intent(in)    :: ndim
-    character(len=*),       intent(out)   :: cellid
-    logical,         optional, intent(in) :: flag_string
-    ! -- local
-    integer(I4B) :: i, j, lloc, istart, istop, ival, istat
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this    !< BlockParserType object
+    integer(I4B), intent(in) :: ndim                 !< number of dimensions (1, 2, or 3)
+    character(len=*), intent(out) :: cellid          !< cell =id
+    logical, optional, intent(in) :: flag_string     !< boolean indicating id cellid is a string
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: ival
+    integer(I4B) :: istat
     real(DP) :: rval
     character(len=10) :: cint
     character(len=100) :: firsttoken
-! ------------------------------------------------------------------------------
     !
+    ! -- process optional variables
     if (present(flag_string)) then
       lloc = this%lloc
       call urword(this%line, lloc, istart, istop, 0, ival, rval, this%iout, &
@@ -491,77 +499,79 @@ contains
     return
   end subroutine GetCellid
 
+  !> @ brief Get the current line
+  !!
+  !! Method to get the current line.
+  !!
+  !<
   subroutine GetCurrentLine(this, line)
-! ******************************************************************************
-! GetCurrentLine -- get the current line
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    character(len=*),       intent(out)   :: line
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
+    character(len=*), intent(out)   :: line        !< current line
     !
+    ! -- get the current line
     line = this%line
     !
     ! -- return
     return
   end subroutine GetCurrentLine
 
-  subroutine StoreErrorUnit(this)
-! ******************************************************************************
-! StoreErrorUnit -- store the unit number for which the read error occurred
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-! ------------------------------------------------------------------------------
+  !> @ brief Store the unit number
+  !!
+  !! Method to store the unit number for the file that caused a read error.
+  !! Default is to terminate the simulation when this method is called.
+  !!
+  !<
+  subroutine StoreErrorUnit(this, terminate)
+    ! -- dummy variable
+    class(BlockParserType), intent(inout) :: this   !< BlockParserType object
+    logical, intent(in), optional :: terminate      !< boolean indicating if the simulation should be terminated
+    ! -- loacl variables
+    logical :: lterminate
     !
-    call store_error_unit(this%iuext)
+    ! -- process optional variables
+    if (present(terminate)) then
+      lterminate = terminate
+    else
+      lterminate = .TRUE.
+    end if
+  !
+    ! -- store error unit
+    call store_error_unit(this%iuext, terminate=lterminate)
     !
     ! -- return
     return
   end subroutine StoreErrorUnit
 
+  !> @ brief Get the unit number
+  !!
+  !! Function to get the unit number for the block parser.
+  !!
+  !<
   function GetUnit(this) result(i)
-! ******************************************************************************
-! GetUnit -- get unit number for the block parser
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    integer(I4B) :: i
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    ! -- return variable
+    integer(I4B) :: i                              !< unit number for the block parser
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
     !
+    ! -- block parser unit number
     i = this%iuext
     !
+    ! -- return
     return
   end function GetUnit
 
+  !> @ brief Development option
+  !!
+  !! Method that will cause the program to terminate with an error if the 
+  !! IDEVELOPMODE flag is set to 1.  This is used to allow develop options
+  !! to be specified for development testing but not for the public release.
+  !! For the public release, IDEVELOPMODE is set to zero.
+  !!
+  !<
   subroutine DevOpt(this)
-! ******************************************************************************
-! DevOpt -- development option.  This subroutine will cause the program to
-!   terminate with an error if the IDEVELOPMODE flag is set to 1.  This
-!   is used to allow develop options to be on for development testing but
-!   not for the public release.  For the public release, IDEVELOPMODE is set
-!   to zero.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(BlockParserType), intent(inout) :: this
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this  !< BlockParserType object
     !
     ! -- If release mode (not develop mode), then option not available.
     !    Terminate with an error.
@@ -570,7 +580,6 @@ contains
                "' detected in block '" // trim(this%blockname) // "'."
       call store_error(errmsg)
       call this%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return

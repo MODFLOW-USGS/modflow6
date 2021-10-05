@@ -1,10 +1,10 @@
 module TimeArrayModule
 
-  use BaseDisModule,    only: DisBaseType
-  use ConstantsModule,  only: LINELENGTH
-  use KindModule,       only: DP, I4B
-  use ListModule,       only: ListType
-  use SimModule,        only: store_error, ustop
+  use BaseDisModule,      only: DisBaseType
+  use KindModule,         only: DP, I4B
+  use ListModule,         only: ListType
+  use SimVariablesModule, only: errmsg
+  use SimModule,          only: store_error
 
   implicit none
   private
@@ -40,16 +40,14 @@ contains
     class(DisBaseType),   pointer, intent(in)  :: dis
     ! -- local
     integer(I4B) :: isize
-    character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
     ! Get dimensions for supported discretization type
     if (dis%supports_layers()) then
       isize = dis%get_ncpl()
     else
-      ermsg = 'Time array series is not supported for discretization type'
-      call store_error(ermsg)
-      call ustop()
+      errmsg = 'Time array series is not supported for discretization type'
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     allocate(newTa)
     allocate(newTa%taArray(isize))

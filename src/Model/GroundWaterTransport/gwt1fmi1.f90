@@ -2,7 +2,7 @@ module GwtFmiModule
   
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT
-  use SimModule,              only: store_error, store_error_unit, ustop
+  use SimModule,              only: store_error, store_error_unit
   use SimVariablesModule,     only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
@@ -135,7 +135,7 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GwtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
@@ -178,9 +178,9 @@ module GwtFmiModule
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
       if (this%nflowpack > 0) then
-        call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
-          &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
-        call ustop()
+        call store_error('FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
+          &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.', &
+          terminate=.TRUE.)
       endif
     endif
     !
@@ -196,7 +196,7 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
@@ -237,15 +237,13 @@ module GwtFmiModule
       if (associated(this%mvrbudobj) .and. inmvr == 0) then
         write(errmsg,'(4x,a)') 'GWF WATER MOVER IS ACTIVE BUT THE GWT MVT &
           &PACKAGE HAS NOT BEEN SPECIFIED.  ACTIVATE GWT MVT PACKAGE.'
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       end if
       if (.not. associated(this%mvrbudobj) .and. inmvr > 0) then
         write(errmsg,'(4x,a)') 'GWF WATER MOVER TERMS ARE NOT AVAILABLE &
           &BUT THE GWT MVT PACKAGE HAS BEEN ACTIVATED.  GWF-GWT EXCHANGE &
           &OR SPECIFY GWFMOVER IN FMI PACKAGEDATA.'
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
     !
@@ -731,7 +729,7 @@ module GwtFmiModule
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DEM6
     use InputOutputModule, only: getunit, openfile, urdaux
-    use SimModule, only: store_error, store_error_unit, ustop
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
@@ -768,7 +766,6 @@ module GwtFmiModule
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF FMI OPTIONS'
@@ -790,7 +787,7 @@ module GwtFmiModule
     use OpenSpecModule, only: ACCESS, FORM
     use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
     use InputOutputModule, only: getunit, openfile, urdaux
-    use SimModule, only: store_error, store_error_unit, ustop
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
@@ -803,6 +800,7 @@ module GwtFmiModule
     integer(I4B) :: iapt
     logical :: isfound, endOfBlock
     logical :: blockrequired
+    logical :: exist
     type(BudObjPtrArray), dimension(:), allocatable :: tmpbudobj
 ! ------------------------------------------------------------------------------
     !
@@ -829,10 +827,14 @@ module GwtFmiModule
               call store_error('GWFBUDGET KEYWORD MUST BE FOLLOWED BY ' //     &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
             inunit = getunit()
+            inquire(file=trim(fname), exist=exist)
+            if (.not. exist) then
+              call store_error('Could not find file '//trim(fname))
+              call this%parser%StoreErrorUnit()
+            end if            
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iubud = inunit
@@ -843,9 +845,13 @@ module GwtFmiModule
               call store_error('GWFHEAD KEYWORD MUST BE FOLLOWED BY ' //     &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
+            inquire(file=trim(fname), exist=exist)
+            if (.not. exist) then
+              call store_error('Could not find file '//trim(fname))
+              call this%parser%StoreErrorUnit()
+            end if            
             inunit = getunit()
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
@@ -857,7 +863,6 @@ module GwtFmiModule
               call store_error('GWFMOVER KEYWORD MUST BE FOLLOWED BY ' //     &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
             inunit = getunit()
@@ -889,7 +894,6 @@ module GwtFmiModule
               call store_error('PACKAGE NAME MUST BE FOLLOWED BY ' //     &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
             inunit = getunit()
@@ -949,7 +953,7 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use SimModule, only: store_error, store_error_unit, ustop, count_errors
+    use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
@@ -1042,7 +1046,6 @@ module GwtFmiModule
     end if
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1076,18 +1079,26 @@ module GwtFmiModule
       &i0, ' TO BUDGET FILE TERMS FROM KSTP ', i0, ' AND KPER ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Do not read the budget if the budget is at end of file or if the next
-    !    record in the budget file is the first timestep of the next stress
-    !    period.
+    ! -- If the latest record read from the budget file is from a stress
+    ! -- period with only one time step, reuse that record (do not read a
+    ! -- new record) if the GWT model is still in that same stress period,
+    ! -- or if that record is the last one in the budget file.
     readnext = .true.
     if (kstp * kper > 1) then
-      if (this%bfr%endoffile) then
-        readnext = .false.
-      else
-        if (this%bfr%kpernext == kper + 1 .and. this%bfr%kstpnext == 1) &
+      if (this%bfr%kstp == 1) then
+        if (this%bfr%kpernext == kper + 1) then
           readnext = .false.
-      endif
-    endif
+        else if (this%bfr%endoffile) then
+          readnext = .false.
+        end if
+      else if (this%bfr%endoffile) then
+        write(errmsg,'(4x,a)') 'REACHED END OF GWF BUDGET &
+          &FILE BEFORE READING SUFFICIENT BUDGET INFORMATION FOR THIS &
+          &GWT SIMULATION.'
+        call store_error(errmsg)
+        call store_error_unit(this%iubud)
+       end if
+    end if
     !
     ! -- Read the next record
     if (readnext) then
@@ -1101,29 +1112,31 @@ module GwtFmiModule
       do n = 1, this%bfr%nbudterms
         call this%bfr%read_record(success, this%iout)
         if (.not. success) then
-          write(errmsg,'(4x,a)') '***ERROR.  GWF BUDGET READ NOT SUCCESSFUL'
+          write(errmsg,'(4x,a)') 'GWF BUDGET READ NOT SUCCESSFUL'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
-          call ustop()
         endif
         !
         ! -- Ensure kper is same between model and budget file
         if (kper /= this%bfr%kper) then
-          write(errmsg,'(4x,a)') '***ERROR.  PERIOD NUMBER IN BUDGET FILE &
-            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.'
+          write(errmsg,'(4x,a)') 'PERIOD NUMBER IN BUDGET FILE &
+            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
-          call ustop()
         endif
         !
         ! -- if budget file kstp > 1, then kstp must match
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
-          write(errmsg,'(4x,a)') '***ERROR.  IF THERE IS MORE THAN ONE TIME &
-            &STEP IN THE BUDGET FILE, THEN BUDGET FILE TIME STEPS MUST MATCH &
-            &GWT MODEL TIME STEPS ONE-FOR-ONE.'
+          write(errmsg,'(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
+            &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
-          call ustop()
         endif
         !
         ! -- parse based on the type of data, and compress all user node
@@ -1167,6 +1180,7 @@ module GwtFmiModule
           case default
             call this%gwfpackages(ip)%copy_values( &
                                                  this%bfr%dstpackagename, &
+                                                 this%bfr%budtxt, &
                                                  this%bfr%auxtxt, &
                                                  this%bfr%nlist, &
                                                  this%bfr%naux, &
@@ -1249,18 +1263,26 @@ module GwtFmiModule
       &i0, ' TO BINARY FILE HEADS FROM KSTP ', i0, ' AND KPER ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Do not read heads if the head is at end of file or if the next
-    !    record in the head file is the first timestep of the next stress
-    !    period.
+    ! -- If the latest record read from the head file is from a stress
+    ! -- period with only one time step, reuse that record (do not read a
+    ! -- new record) if the GWT model is still in that same stress period,
+    ! -- or if that record is the last one in the head file.
     readnext = .true.
     if (kstp * kper > 1) then
-      if (this%hfr%endoffile) then
-        readnext = .false.
-      else
-        if (this%hfr%kpernext == kper + 1 .and. this%hfr%kstpnext == 1) &
+      if (this%hfr%kstp == 1) then
+        if (this%hfr%kpernext == kper + 1) then
           readnext = .false.
-      endif
-    endif
+        else if (this%hfr%endoffile) then
+          readnext = .false.
+        end if
+      else if (this%hfr%endoffile) then
+        write(errmsg,'(4x,a)') 'REACHED END OF GWF HEAD &
+          &FILE BEFORE READING SUFFICIENT HEAD INFORMATION FOR THIS &
+          &GWT SIMULATION.'
+        call store_error(errmsg)
+        call store_error_unit(this%iuhds)
+       end if
+    end if
     !
     ! -- Read the next record
     if (readnext) then
@@ -1274,29 +1296,31 @@ module GwtFmiModule
         ! -- read next head chunk
         call this%hfr%read_record(success, this%iout)
         if (.not. success) then
-          write(errmsg,'(4x,a)') '***ERROR.  GWF HEAD READ NOT SUCCESSFUL'
+          write(errmsg,'(4x,a)') 'GWF HEAD READ NOT SUCCESSFUL'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
-          call ustop()
         endif
         !
         ! -- Ensure kper is same between model and head file
         if (kper /= this%hfr%kper) then
-          write(errmsg,'(4x,a)') '***ERROR.  PERIOD NUMBER IN HEAD FILE &
-            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.'
+          write(errmsg,'(4x,a)') 'PERIOD NUMBER IN HEAD FILE &
+            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE HEAD FILE FOR A GIVEN STRESS &
+            &PERIOD, HEAD FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
-          call ustop()
         endif
         !
         ! -- if head file kstp > 1, then kstp must match
         if (this%hfr%kstp > 1 .and. (kstp /= this%hfr%kstp)) then
-          write(errmsg,'(4x,a)') '***ERROR.  IF THERE IS MORE THAN ONE TIME &
-            &STEP IN THE HEAD FILE, THEN HEAD FILE TIME STEPS MUST MATCH &
-            &GWT MODEL TIME STEPS ONE-FOR-ONE.'
+          write(errmsg,'(4x,a)') 'TIME STEP NUMBER IN HEAD FILE &
+            &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
+            &IS MORE THAN ONE TIME STEP IN THE HEAD FILE FOR A GIVEN STRESS &
+            &PERIOD, HEAD FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
+            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
-          call ustop()
         endif
         !
         ! -- fill the head array for this layer and
@@ -1400,7 +1424,10 @@ module GwtFmiModule
         end if
       end do
     end if
-    if (idx == 0) call ustop('Error in get_package_index.  Could not find '//name)
+    if (idx == 0) then
+      call store_error('Error in get_package_index.  Could not find '//name, &
+                       terminate=.TRUE.)
+    end if
     !
     ! -- return
     return

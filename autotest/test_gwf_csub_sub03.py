@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 
 try:
@@ -24,6 +25,9 @@ ex = ["csub_sub03a", "csub_sub03b"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
+cmppth = "mf6-regression"
+
+
 cvopt = [None, None, None]
 constantcv = [True, True]
 ndelaybeds = [0, 2]
@@ -32,11 +36,10 @@ ndelaycells = [None, 39]
 ddir = "data"
 
 ## run all examples on Travis
-# continuous_integration = [False for idx in range(len(exdirs))]
-continuous_integration = [True, False]
+continuous_integration = [True for e in ex]
 
 # set replace_exe to None to use default executable
-replace_exe = {"mf2005": "mf2005devdbl"}
+replace_exe = None
 
 htol = [None, None, None]
 dtol = 1e-3
@@ -161,15 +164,10 @@ for k in ldnd:
     v = np.genfromtxt(pth)
     dstart.append(v.copy())
 
-# sub output data
-ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
-ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-
 
 # SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, ws):
     name = ex[idx]
-
     # ibc packagedata container counter
     sub6 = []
     ibcno = 0
@@ -247,7 +245,6 @@ def get_model(idx, dir):
     maxibc = len(sub6)
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -256,10 +253,7 @@ def get_model(idx, dir):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
-
-    # create iterative model solution and register the gwf model with it
+    # create iterative model solution
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -274,7 +268,9 @@ def get_model(idx, dir):
         reordering_method="NONE",
         relaxation_factor=relax,
     )
-    sim.register_ims_package(ims, [gwf.name])
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -372,76 +368,15 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    # build MODFLOW-2005 files
-    ws = os.path.join(dir, "mf2005")
-    mc = flopy.modflow.Modflow(name, model_ws=ws)
-    dis = flopy.modflow.ModflowDis(
-        mc,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        nper=nper,
-        perlen=perlen,
-        nstp=nstp,
-        tsmult=tsmult,
-        steady=steady,
-        delr=delr,
-        delc=delc,
-        top=top,
-        botm=botm,
-    )
-    bas = flopy.modflow.ModflowBas(
-        mc, ibound=ib, strt=strt, hnoflo=hnoflo, stoper=0.01
-    )
-    lpf = flopy.modflow.ModflowLpf(
-        mc,
-        laytyp=laytyp,
-        hk=hk,
-        vka=vka,
-        ss=S,
-        sy=sy,
-        constantcv=constantcv[idx],
-        storagecoefficient=True,
-        hdry=hdry,
-    )
-    chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-    rch = flopy.modflow.ModflowRch(mc, rech=rech)
-    wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-    sub = flopy.modflow.ModflowSub(
-        mc,
-        ndb=ndb,
-        nndb=nndb,
-        nmz=nmz,
-        nn=20,
-        idbit=1,
-        ac2=omega,
-        isuboc=1,
-        ln=lnd,
-        ldn=ldnd,
-        rnb=rnb,
-        dp=dp,
-        dz=dz,
-        nz=nz,
-        dhc=dhc,
-        dstart=dstart,
-        hc=hc,
-        sfe=sfe,
-        sfv=sfv,
-        ids15=ds15,
-        ids16=ds16,
-    )
-    oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-    # sip = flopy.modflow.ModflowSip(mc, accl=1., mxiter=nouter, nparm=5,
-    #                                hclose=hclose, ipcalc=1,
-    #                                wseed=0., iprsip=1)
-    pcg = flopy.modflow.ModflowPcg(
-        mc,
-        mxiter=nouter,
-        iter1=ninner,
-        hclose=hclose,
-        rclose=rclose,
-        relax=relax,
-    )
+    return sim
+
+
+def get_model(idx, dir):
+    ws = dir
+    sim = build_model(idx, ws)
+
+    ws = os.path.join(dir, cmppth)
+    mc = build_model(idx, ws)
 
     return sim, mc
 
@@ -456,17 +391,15 @@ def eval_comp(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # MODFLOW-2005 total compaction results
-    fn = "{}.total_comp.hds".format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, "mf2005", fn)
+    # Comparision total compaction results
+    fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
     try:
-        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
-        tc0 = sobj.get_ts((2, 4, 4))
+        tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # calculate maximum absolute error
-    diff = tc["TCOMP3"] - tc0[:, 1]
+    diff = tc["TCOMP3"] - tc0["TCOMP3"]
     diffmax = np.abs(diff).max()
     msg = "maximum absolute total-compaction difference ({}) ".format(diffmax)
 
@@ -540,17 +473,17 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
 
     # initialize testing framework
     test = testing_framework()
@@ -558,15 +491,17 @@ def test_mf6model():
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
-        yield test.run_mf6, Simulation(
-            dir, exfunc=eval_comp, exe_dict=r_exe, htol=htol[idx]
+    # run the test model
+    if is_CI and not continuous_integration[idx]:
+        return
+    test.run_mf6(
+        Simulation(
+            dir,
+            exfunc=eval_comp,
+            htol=htol[idx],
+            mf6_regression=True,
         )
-
-    return
+    )
 
 
 def main():
@@ -576,10 +511,13 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(
-            dir, exfunc=eval_comp, exe_dict=replace_exe, htol=htol[idx]
+            dir,
+            exfunc=eval_comp,
+            mf6_regression=True,
+            htol=htol[idx],
         )
         test.run_mf6(sim)
 

@@ -24,7 +24,7 @@ module LakModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule,           only: count_errors, store_error, ustop
+  use SimModule,           only: count_errors, store_error, store_error_unit
   use GenericUtilitiesModule, only: sim_message
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
@@ -55,6 +55,7 @@ module LakModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ibudcsv => null()
     integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: nlakes => NULL()
@@ -334,6 +335,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
     call mem_allocate(this%nlakes, 'NLAKES', this%memoryPath)
     call mem_allocate(this%noutlets, 'NOUTLETS', this%memoryPath)
@@ -356,6 +358,7 @@ contains
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
+    this%ibudcsv = 0
     this%ipakcsv = 0
     this%nlakes = 0
     this%noutlets = 0
@@ -455,7 +458,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -659,7 +662,6 @@ contains
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set MAXBOUND
@@ -692,7 +694,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -867,7 +869,6 @@ contains
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- check that embedded lakes have only one connection
@@ -978,7 +979,6 @@ contains
     ! -- write summary of lake_connection error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -993,7 +993,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -1097,7 +1097,6 @@ contains
     ! -- write summary of lake_table error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- convert laketables to vectors
@@ -1187,7 +1186,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use InputOutputModule, only: openfile
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -1414,7 +1413,6 @@ contains
     ! -- write summary of lake table error messages
     if (count_errors() > 0) then
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! Close the table file and clear other parser members
@@ -1432,7 +1430,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -1607,7 +1605,6 @@ contains
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1622,7 +1619,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -1677,9 +1674,8 @@ contains
     end if
     !
     ! -- stop if errors were encountered in the DIMENSIONS block
-    ierr = count_errors()
-    if (ierr > 0) then
-      call ustop()
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
     end if
     !
     ! -- read lakes block
@@ -1718,7 +1714,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryHelperModule, only: create_mem_path
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -3073,7 +3069,7 @@ contains
 !  lak_check_valid -- Determine if a valid lake or outlet number has been
 !                     specified.
 ! ******************************************************************************
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- return
     integer(I4B) :: ierr
     ! -- dummy
@@ -3113,7 +3109,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(LakType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
@@ -3367,7 +3363,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
     class(LakType),   intent(inout) :: this
@@ -3386,7 +3382,7 @@ contains
     character(len=*),parameter :: fmtlakeopt = &
       "(4x, 'LAKE ', a, ' VALUE (',g15.7,') SPECIFIED.')"
     character(len=*),parameter :: fmtlakbin = &
-      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
@@ -3418,6 +3414,18 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('BUDGETCSV')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ibudcsv = getunit()
+          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+            filstat_opt='REPLACE')
+          write(this%iout,fmtlakbin) 'BUDGET CSV', fname, this%ibudcsv
+        else
+          call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+            &FILEOUT')
         end if
       case('PACKAGE_CONVERGENCE')
         call this%parser%GetStringCaps(keyword)
@@ -3547,7 +3555,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -3592,10 +3600,10 @@ contains
           this%ionper = nper + 1
         else
           ! -- Found invalid block
+          call this%parser%GetCurrentLine(line)
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -3653,7 +3661,6 @@ contains
     ! -- write summary of lake stress period error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- fill bound array with lake stage, conductance, and bottom elevation
@@ -4396,12 +4403,19 @@ contains
     
   end subroutine lak_ot_dv
   
-  subroutine lak_ot_bdsummary(this, kstp, kper, iout)
-    class(LakType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    call this%budobj%write_budtable(kstp, kper, iout)
+  subroutine lak_ot_bdsummary(this, kstp, kper, iout, ibudfl)
+    ! -- module
+    use TdisModule, only: totim
+    ! -- dummy
+    class(LakType) :: this              !< LakType object
+    integer(I4B), intent(in) :: kstp    !< time step number
+    integer(I4B), intent(in) :: kper    !< period number
+    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    !
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    !
+    return
   end subroutine lak_ot_bdsummary
   
   subroutine lak_da(this)
@@ -4475,6 +4489,7 @@ contains
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%noutlets)
@@ -4930,7 +4945,7 @@ contains
       !
       ! -- write summary of error messages
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !
@@ -5078,7 +5093,7 @@ contains
       !
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !
@@ -5838,7 +5853,8 @@ contains
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
-    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0, &
+                                     ibudcsv=this%ibudcsv)
     idx = 0
     !
     ! -- Go through and set up each budget term

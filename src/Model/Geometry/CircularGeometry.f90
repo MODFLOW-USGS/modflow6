@@ -144,7 +144,7 @@ module CircularGeometryModule
     ! -- module
     use InputOutputModule, only: urword
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(CircularGeometryType) :: this
     character(len=LINELENGTH) :: errmsg
@@ -170,10 +170,8 @@ module CircularGeometryModule
       this%radius = rval      
     case default
       write(errmsg,'(4x,a,a)') &
-        '****ERROR. UNKNOWN CIRCULAR GEOMETRY ATTRIBUTE: ', &
-                               line(istart:istop)
-      call store_error(errmsg)
-      call ustop()
+        'Unknown circular geometry attribute: ', line(istart:istop)
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- return

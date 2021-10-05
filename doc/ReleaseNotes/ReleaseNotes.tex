@@ -154,56 +154,43 @@ MODFLOW~6 is tested with a large number of example problems, and new capabilitie
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.2.2--Month, day, year
-
+	\item Version mf6.3.0--Month, Day, Year
+	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item A new Adaptive Time Step (ATS) utility was added.  The ATS utility allows any stress period to be overridden with an alternative time stepping approach.  The ATS utility implements two main capabilities (1) the capability to retry failed time steps with a shorter time step repeatedly until convergence is achieved, and (2) the capability to shorten and lengthen time steps based on simulation behavior.  These capabilities are described in the user input and output guide in a new section on the ATS utility.
-	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER\_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example ``water-content.uzf.bin''.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  
-	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array, which is marked with the text description ``FLOW-JA-FACE''.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
-	        \item A new option for simulating specific storage changes only when a cell is fully saturated has been added to the storage (STO) package. To activate, the SS\_CONFINED\_ONLY keyword is added to the OPTIONS block in the STO Package. This option is identical to the approach used to calculate storage changes under confined conditions in MODFLOW-2005.
+	        \item The option already existed to provide binary budget and head file information from a GWF simulation for only the first time step of a given stress period, in which case that information will be used for all time steps in that stress period in a GWT simulation that reads from those files. The behavior of this option has been extended such that if the binary budget and head file information provided for the final stress period of the GWF simulation is for only one time step, that information will be used for any subsequent time steps and stress periods in the GWT simulation. This extended behavior includes as a special case the use of binary budget and head file information from only one time step in only one stress period (for example, a single steady-state GWF stress period) for all time steps in all stress periods in a GWT simulation.
+	        \item Added new file-based input capability for the GWT Source and Sink Mixing (SSM) Package.  The SSM Package previously required that all source and sink concentrations be provided as auxiliary variables for corresponding GWF stress packages.  The SSM Package now supports an optional new FILEINPUT block, which can be provided with package names and file names.  Files referenced in the FILEINPUT block can be used to provide time-varying source and sink concentrations.  A description of this new Stress Package Concentration (SPC) Input file is described in the input and output guide under a new section titled ``File Input for Boundary Concentrations.''  If used, a single SSMI file can be provided for a corresponding GWF stress package.  Either an SPC file or the auxiliary variable approach can be used to supply concentrations for a single GWF stress package, but not both.
+	        \item Added BUDGETCSV option to GWF and GWT model output control.  If activated, this option will cause a comma-separated value (CSV) file of the model budget terms to be written to a user-specified output file.
 	\end{itemize}
 	
 	\underline{EXAMPLES}
 	\begin{itemize}
-	        \item Added the following new examples: 
-	        \begin{itemize}
-	          \item -- 
-	          \item --
-	        \end{itemize}
+	        \item --
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-		\item The specific storage formulation in the storage (STO) package has been modified to eliminate the dependency of the original formulation on the vertical datum. The original specific storage formulation also overestimated storage changes for cells that resaturated or desaturated in successive time steps. Furthermore, the sign of the specific storage change was incorrect in cells with negative heads and resaturated or desaturated in successive time steps. The revised specific storage formulation resolves all of the deficiencies of the original formulation and accurately simulates specific storage changes under water table conditions but will change the results for existing models. Testing indicates that the differences between models run with the original and revised specific storage formulation are generally small but tend to increase in models with large specific storage values or have cells that repeatedly resaturated or desaturated in successive time steps.
-		\item The convergence failure message message written to GWF and GWT listing files (FAILED TO MEET SOLVER CONVERGENCE CRITERIA) is now written after the budget summary tables.  In previous releases this convergence failure message was written prior to printing heads and concentrations, which often resulted in this message being unnoticed by users.
-	        \item The order of output written to the GWF and GWT listing files for a time step was reorganized in a consistent manner with model and package flows coming first, followed by dependent variables, and then concluding with budget summary tables.
-	        \item The DISU Package checks to make sure that the top of a cell is not higher than the bottom of an overlying cell.  A new option was added to the DISU Package to allow the user to specify the vertical offset tolerance used in this check.
-	        \item A new check was added to the Horizontal Flow Barrier (HFB) Package to ensure that barriers are between cells that are horizontally connected.  The program would previously continue running if a barrier was between vertically connected cells.
+	        \item Fixed a bug that caused the last binary budget and head file information provided by a GWF simulation in a given stress period to be used for all subsequent GWT simulation time steps in that stress period, even if binary budget and head file information was provided for more than one time step in that stress period. In that situation, the GWF time steps must match the GWT time steps one-for-one.
 	\end{itemize}
 
-%	\underline{STRESS PACKAGES}
-%	\begin{itemize}
-%	        \item xxx  
-%	        \item xxx  
-%	        \item xxx  
-%	\end{itemize}
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+	        \item Fixed a bug in the Recharge (RCH) and Evapotranspiration (EVT) Packages that would occur with array-based input (READASARRAYS) combined with the Time-Array Series (TAS) functionality.  Because the TAS functionality only works for DIS and DISU models, this fix does not have any effect on models that use DISU discretization.  The bug would occur when one or more cells in the upper layer were removed using the IDOMAIN capability.  In this special case, the time-array series values did not carry over to the correct locations in the RCH and EVT arrays.  This error would be difficult to identify for complex models, because the model would run to completion without any errors.  The RCH and EVT Packages were modified to maintain direct correspondence between the \texttt{nodelist} and \texttt{bound} arrays with the arrays provided to the TAS utility.  A small and intended consequence of this fix is that the ID2 value written to the binary budget file for array-based RCH and EVT Packages will correspond to the consecutive cell number in the top layer.  
+	        \item Recharge and evapotranspiration flows that are written to the GWF Model binary budget file are marked with the text headers ``RCH'' and ``EVT'', respectively.  In order to support the array-based input for SSM concentrations, these text headers are marked as ``RCHA'' and ``EVTA'', respectively, if the READASARRAYS option is specified for the package.  This change will have no effect on simulation results; however, post processing capabilities may need to be adjusted to account for this minor renaming convention.
+	        \item xxx  
+	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item The UZF water-content observation by depth was giving an error, because a check was using the wrong index to retrieve the cell top and bottom elevations for the requested observation.  The program was modified to use the correct index, and the output is now as expected.  Note that this bug is not related to the new WC keyword in the OPTIONS block, but rather is related to OBS6 output option.
-	        \item Amend surfdep error check with landflag.  Deep cells (non-land surface cells) should not require surfdep > 0
-	        \item In the LAK observation package, users can specify ``lak'' to get a summary of lake-groundwater exchange.  Users could specify a lake number without specifying a specific connection number (variable ``iconn'').  Code will now stop if lake number is provided without a matching connection number.  Code will still provide a summary of total lake-groundwater exchange when BOUNDNAME is entered for the variable ID.  This also will fix a similar issue for the observation types ``wetted-area'' and ``conductance'', since both require ID2 when ID is an integer corresponding to a lake number.
-	        \item In the MAW observation package, users can specify ``maw'' to get a summary of well-groundwater exchange.  The code was allowing users to specify a well number without requiring specification of a connection number (variable ``icon'').  Code will now stop if well number is provided without a matching connection number.  Code will still provide a summary of total well-groundwater exchange when BOUNDNAME is entered for the variable ID.  This also will fix a similar issue for the observation type ``conductance'', since both require ID2 when ID is an integer corresponding to a well number.
+	        \item--
 	\end{itemize}
 
-%	\underline{SOLUTION}
-%	\begin{itemize}
-%	        \item xxx  
-%	        \item xxx  
-%	        \item xxx  
-%	\end{itemize}
+	\underline{SOLUTION}
+	\begin{itemize}
+	        \item xxx  
+	        \item xxx  
+	\end{itemize}
 
 \end{itemize}
 
@@ -273,7 +260,7 @@ The examples distributed with MODFLOW~6 can be run by navigating to the examples
 
 % -------------------------------------------------
 \section{MODFLOW~6 Documentation}
-Details on the numerical methods and the underlying theory for MODFLOW~6 are described in the following reports:
+Details on the numerical methods and the underlying theory for MODFLOW~6 are described in the following reports and papers:
 
 \begin{itemize}
 
@@ -283,9 +270,17 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 
 \item \bibentry{modflow6xt3d}
 
+\item \bibentry{langevin2020hydraulic}
+
+\item \bibentry{morway2021}
+
 \end{itemize}
  
 \noindent Description of the MODFLOW~6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
+
+% -------------------------------------------------
+% if runtime information exists, then include the run time comparison table
+\IfFileExists{./run-time-comparison.tex}{\input{./run-time-comparison.tex}}{}
 
 % -------------------------------------------------
 \section{Disclaimer and Notices}

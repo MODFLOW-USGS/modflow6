@@ -8,8 +8,7 @@ module ArrayReadersModule
                                BuildIntFormat
   use KindModule,        only: DP, I4B
   use OpenSpecModule,    only: ACCESS, FORM
-  use SimModule,         only: store_error, ustop, store_error_unit, &
-                               store_error_filename
+  use SimModule,         only: store_error, store_error_unit
 
   implicit none
 
@@ -86,7 +85,6 @@ contains
         call store_error(ermsg)
         call store_error(ermsgr)
         call store_error_unit(locat)
-        call ustop()
       endif
       do j=1,jj
         iarr(j) = iarr(j) * iconst
@@ -107,7 +105,6 @@ contains
           call store_error(ermsg)
           call store_error(ermsgr)
           call store_error_unit(locat)
-          call ustop()
         endif
         nvalt = nvalt + nval
         if (nvalt == size(iarr)) exit
@@ -183,7 +180,6 @@ contains
           call store_error(ermsg)
           call store_error(ermsgr)
           call store_error_unit(locat)
-          call ustop()
         endif
         do j=1,jj
           iarr(j,i) = iarr(j,i) * iconst
@@ -204,7 +200,6 @@ contains
           call store_error(ermsg)
           call store_error(ermsgr)
           call store_error_unit(locat)
-          call ustop()
         endif
         do j=1,jj
           iarr(j,i) = iarr(j,i) * iconst
@@ -343,7 +338,6 @@ contains
         call store_error(ermsg)
         call store_error(ermsgr)
         call store_error_unit(locat)
-        call ustop()
       endif
       do j=1,jj
         darr(j) = darr(j) * cnstnt
@@ -364,7 +358,6 @@ contains
           call store_error(ermsg)
           call store_error(ermsgr)
           call store_error_unit(locat)
-          call ustop()
         endif
         nvalt = nvalt + nval
         if (nvalt == size(darr)) exit
@@ -441,7 +434,6 @@ contains
           call store_error(ermsg)
           call store_error(ermsgr)
           call store_error_unit(locat)
-          call ustop()
         endif
         do j=1,jj
           darr(j,i) = darr(j,i) * cnstnt
@@ -462,7 +454,6 @@ contains
           call store_error(ermsg)
           call store_error(ermsgr)
           call store_error_unit(locat)
-          call ustop()
         endif
         do j = 1, jj
           darr(j,i) = darr(j,i) * cnstnt
@@ -697,7 +688,6 @@ contains
       write(ermsg, *) 'Use CONSTANT, INTERNAL, or OPEN/CLOSE.'
       call store_error(ermsg)
       call store_error_unit(iu)
-      call ustop()
     endif
     !
     return
@@ -736,7 +726,6 @@ contains
                     ' OPEN/CLOSE is also specified.'
             call store_error(ermsg)
             call store_error_unit(iu)
-            call ustop()
           endif
           binary = .true.
         case ('IPRN')
@@ -750,7 +739,6 @@ contains
                   // trim(keyword) // '"'
           call store_error(ermsg)
           call store_error_unit(iu)
-          call ustop()
         end select
       enddo
       !
@@ -1009,8 +997,7 @@ contains
       if (ii > 1) then
         ermsg = 'Program error printing array ' // trim(aname) // &
                 ': ii > 1 when prowcolnum is false.'
-        call store_error(ermsg)
-        call ustop()
+        call store_error(ermsg, terminate=.TRUE.)
       endif
       !
       ! -- Write array values, without row numbers
@@ -1059,8 +1046,7 @@ contains
       if (ii > 1) then
         ermsg = 'Program error printing array ' // trim(aname) // &
                 ': ii > 1 when prowcolnum is false.'
-        call store_error(ermsg)
-        call ustop()
+        call store_error(ermsg, terminate=.TRUE.)
       endif
       !
       ! -- Write array values, without row numbers
@@ -1099,7 +1085,6 @@ contains
       call store_error(ermsg)
       call store_error(ermsgr)
       call store_error_unit(locat)
-      call ustop()
     endif
     !
     ! -- Write message about the binary header

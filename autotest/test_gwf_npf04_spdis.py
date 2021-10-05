@@ -9,6 +9,7 @@ the parent grid.  The heads are also compared.
 """
 
 import os
+import pytest
 import sys
 import numpy as np
 
@@ -217,22 +218,37 @@ def eval_mf6(sim):
     msg = "qx should be the same {} {}".format(qxa[0, 2, 1], qxb[0, 0, 0])
     assert np.allclose(qxa[0, 2, 1], qxb[0, 0, 0]), msg
 
+    cbcpth = os.path.join(sim.simpath, "{}.cbc".format(namea))
+    grdpth = os.path.join(sim.simpath, "{}.dis.grb".format(namea))
+    grb = flopy.mf6.utils.MfGrdFile(grdpth)
+    cbb = flopy.utils.CellBudgetFile(cbcpth, precision="double")
+    flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
+    ia = grb._datadict["IA"] - 1
+    for fjf in flow_ja_face:
+        fjf = fjf.flatten()
+        res = fjf[ia[:-1]]
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
+        assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
     return
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, exfunc=eval_mf6, idxsim=idx)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(dir, exfunc=eval_mf6, idxsim=idx))
 
 
 def main():
@@ -242,7 +258,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(dir, exfunc=eval_mf6, idxsim=idx)
         test.run_mf6(sim)

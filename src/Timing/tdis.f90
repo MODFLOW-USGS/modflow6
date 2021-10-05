@@ -495,7 +495,7 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use InputOutputModule, only: GetUnit, openfile
     ! -- dummy
     ! -- local
@@ -554,7 +554,6 @@
                                       trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
           end select
         case ('START_DATE_TIME')
           call parser%GetString(datetime0)
@@ -574,7 +573,6 @@
                                     trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write(iout,'(1x,a)') 'END OF TDIS OPTIONS'
@@ -675,7 +673,7 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
@@ -707,7 +705,6 @@
                                      trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)') 'END OF TDIS DIMENSIONS'
@@ -715,7 +712,6 @@
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -730,7 +726,7 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH, DZERO
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     ! -- local
     character(len=LINELENGTH) :: errmsg
@@ -769,14 +765,12 @@
       ! -- Check for errors
       if(count_errors() > 0) then
         call parser%StoreErrorUnit()
-        call ustop()
       endif
       write(iout,'(1x,a)') 'END OF TDIS PERIODDATA'
     else
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Return
@@ -795,7 +789,7 @@
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DONE
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     integer(I4B), intent(in) :: nper
     real(DP), dimension(:), contiguous, intent(in) :: perlen

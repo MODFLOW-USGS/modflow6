@@ -83,7 +83,7 @@ def rebuild_mf6_release():
     download_pth = os.path.join("temp")
     target_dict = pymake.usgs_program_data.get_target(pm.target)
 
-    pm.download_target(pm.target, download_path=download_pth)
+    pm.download_target(pm.target, download_path=download_pth, verify=False)
 
     # Set MODFLOW 6 to compile develop version of the release
     srcpth = os.path.join(
@@ -122,11 +122,15 @@ def rebuild_mf6_release():
     return
 
 
-def build_mf6():
+def build_mf6(srcdir=None, appdir=None):
     pm = pymake.Pymake()
     pm.target = "mf6" + eext
-    pm.srcdir = os.path.join("..", "src")
-    pm.appdir = os.path.join("..", "bin")
+    if srcdir is None:
+        srcdir = os.path.join("..", "src")
+    pm.srcdir = srcdir
+    if appdir is None:
+        appdir = os.path.join("..", "bin")
+    pm.appdir = appdir
     pm.include_subdirs = True
     pm.inplace = True
     pm.makeclean = True

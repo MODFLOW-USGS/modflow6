@@ -2,17 +2,16 @@
 !
 module InputOutputModule
 
-  use KindModule, only: DP, I4B
-  use SimVariablesModule, only: iunext, isim_mode
-  use SimModule, only: store_error, ustop, store_error_unit,                   &
-                       store_error_filename
+  use KindModule, only: DP, I4B, I8B
+  use SimVariablesModule, only: iunext, isim_mode, errmsg
+  use SimModule, only: store_error, store_error_unit
   use ConstantsModule, only: IUSTART, IULAST,                                  &
                              LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
                              NAMEDBOUNDFLAG, MAXCHARLEN,                       &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
-  use GenericUtilitiesModule, only: IS_SAME, sim_message
+  use GenericUtilitiesModule, only: is_same, sim_message
   private
   public :: GetUnit, u8rdcom, uget_block,                                      &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
@@ -65,7 +64,6 @@ module InputOutputModule
     character(len=20) :: accarg
     character(len=20) :: filstat
     character(len=20) :: filact
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: imode
     integer(I4B) :: iflen
     integer(I4B) :: ivar
@@ -144,7 +142,6 @@ module InputOutputModule
       ! -- Check for an error
       if(ivar /= 0) then
         write(errmsg,2011) fname(1:iflen), iu
-        call store_error(errmsg)
         if(iuop > 0) then
           write(errmsg, 2017) iuop
           call store_error(errmsg)
@@ -160,8 +157,7 @@ module InputOutputModule
         write(errmsg,2016) ivar
         call store_error(errmsg)
         write(errmsg,2018)
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
       !
       ! -- Write a message
@@ -242,14 +238,12 @@ module InputOutputModule
     integer(I4B),        intent(out) :: ierr
     ! -- local definitions
     character (len=2), parameter :: comment = '//'
-    character(len=LINELENGTH)    :: errmsg
     character(len=1), parameter  :: tab = CHAR(9)
     logical :: iscomment
     integer(I4B) :: i, l
 ! ------------------------------------------------------------------------------
     !code
     !
-    !readerrmsg = ''
     line = comment
     pcomments: do
       read (iin,'(a)', iostat=ierr) line
@@ -261,11 +255,9 @@ module InputOutputModule
         exit pcomments
       elseif (ierr /= 0) then
         ! -- Other error...report it
-        call store_error('******Error in u8rdcom.')
-        write(errmsg, *) 'Could not read from unit: ',iin
-        call store_error(errmsg)
         call unitinquire(iin)
-        call ustop()
+        write(errmsg, *) 'u8rdcom: Could not read from unit: ',iin
+        call store_error(errmsg, terminate=.TRUE.)
       endif
       if (len_trim(line).lt.1) then
         line = comment
@@ -436,7 +428,6 @@ module InputOutputModule
                     '" instead.'
             call store_error(ermsg)
             call store_error_unit(iuext)
-            call ustop()
           else
             backspace(iin)
           endif
@@ -450,7 +441,6 @@ module InputOutputModule
                   ' instead.'
           call store_error(ermsg)
           call store_error_unit(iuext)
-          call ustop()
         endif
       end if
     end do mainloop
@@ -512,7 +502,6 @@ module InputOutputModule
           ermsg  = 'Block name missing in file.'
           call store_error(ermsg)
           call store_error_unit(iin)
-          call ustop()
         end if
         exit
       end if
@@ -559,7 +548,6 @@ module InputOutputModule
           write(ermsg, 1) trim(key), trim(ctag), trim(ctag), trim(ctag)
           call store_error(ermsg)
           call store_error_unit(iin)
-          call ustop()
         else
           ierr = 0
           if (iuext /= iin) then
@@ -572,7 +560,6 @@ module InputOutputModule
         write(ermsg, 2) trim(key), trim(ctag), trim(ctag), trim(ctag)
         call store_error(ermsg)
         call store_error_unit(iin)
-        call ustop()
     end select
     return
   end subroutine uterminate_block
@@ -911,7 +898,6 @@ module InputOutputModule
       call store_error(msg)
       call store_error(trim(line))
       call store_error_unit(in)
-      call ustop()
       !
       END SUBROUTINE URWORD
 
@@ -1639,35 +1625,34 @@ module InputOutputModule
     return
   end subroutine ulaprufw
 
-  function linear_interpolate(t0, t1, y0, y1, t) result(y)
-    implicit none
-    ! -- dummy
-    real(DP), intent(in) :: t, t0, t1, y0, y1
-    real(DP)             :: y
-    ! -- local
-    real(DP) :: delt, dely, slope
-    character(len=100) :: msg
-    !
-    ! -- don't get bitten by rounding errors or divide-by-zero
-    if (IS_SAME(t0, t1) .or. IS_SAME(t, t1)) then
-      y = y1
-    elseif (t == t0) then
-      y = y0
-    elseif ((t0 < t .and. t < t1) .or. (t1 < t .and. t < t0)) then
-      ! -- perform linear interpolation
-      delt = t1 - t0
-      dely = y1 - y0
-      slope = dely / delt
-      y = y0 + slope * (t - t0)
-    else
-      ! -- t is outside range t0 to t1
-      msg = 'Error: in linear_interpolate, t is outside range t0 to t1'
-      call store_error(msg)
-      call ustop()
-    endif
-    !
-    return
-  end function linear_interpolate
+  ! function linear_interpolate(t0, t1, y0, y1, t) result(y)
+  !   implicit none
+  !   ! -- dummy
+  !   real(DP), intent(in) :: t, t0, t1, y0, y1
+  !   real(DP)             :: y
+  !   ! -- local
+  !   real(DP) :: delt, dely, slope
+  !   character(len=100) :: msg
+  !   !
+  !   ! -- don't get bitten by rounding errors or divide-by-zero
+  !   if (is_same(t0, t1) .or. is_same(t, t1)) then
+  !     y = y1
+  !   elseif (t == t0) then
+  !     y = y0
+  !   elseif ((t0 < t .and. t < t1) .or. (t1 < t .and. t < t0)) then
+  !     ! -- perform linear interpolation
+  !     delt = t1 - t0
+  !     dely = y1 - y0
+  !     slope = dely / delt
+  !     y = y0 + slope * (t - t0)
+  !   else
+  !     ! -- t is outside range t0 to t1
+  !     msg = 'Error: in linear_interpolate, t is outside range t0 to t1'
+  !     call store_error(msg, terminate=.TRUE.)
+  !   endif
+  !   !
+  !   return
+  ! end function linear_interpolate
 
   function read_line(iu, eof) result (astring)
     ! This function reads a line of arbitrary length and returns
@@ -1720,7 +1705,6 @@ module InputOutputModule
         endif
         call store_error(ermsg)
         call store_error_unit(iu)
-        call ustop()
       endif
       astring = astring // buffer(:isize)
       ! An end-of-record condition stops the loop.
@@ -1822,7 +1806,6 @@ module InputOutputModule
     ! -- local
     integer(I4B) :: n, linelen
     real(DP) :: rval
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     linelen = len(line)
     if(naux > 0) then
@@ -1830,7 +1813,6 @@ module InputOutputModule
         'variables must be specified on one line in the options block.'
       call store_error(errmsg)
       call store_error_unit(inunit)
-      call ustop()
     endif
     auxloop: do
       call urword(line, lloc, istart, istop, 1, n, rval, iout, inunit)
@@ -1902,7 +1884,6 @@ module InputOutputModule
               &<digits> <format>'
       call store_error(trim(ermsg))
       call store_error_unit(inunit)
-      call ustop()
     endif
     !
     ermsg = 'Error setting PRINT_FORMAT. Syntax is incorrect in line:'
@@ -1926,7 +1907,6 @@ module InputOutputModule
               &DIGITS <digits> <format>'
       call store_error(trim(ermsg))
       call store_error_unit(inunit)
-      call ustop()
     endif
     i = 4
     !
@@ -1967,7 +1947,6 @@ module InputOutputModule
           ermsg = 'Valid values are EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.'
           call store_error(ermsg)
           call store_error_unit(inunit)
-          call ustop()
         end select
       else
         exit
@@ -1977,7 +1956,6 @@ module InputOutputModule
       call store_error(ermsg)
       call store_error(line)
       call store_error_unit(inunit)
-      call ustop()
     endif
     !
     ! -- Build the output format.
@@ -2199,7 +2177,7 @@ module InputOutputModule
     integer(I4B), intent(in) :: offset
     integer(I4B), intent(in) :: whence
     integer(I4B), intent(inout) :: status
-    integer(I4B) :: ipos
+    integer(I8B) :: ipos
 ! ------------------------------------------------------------------------------
     !
     inquire(unit=iu, size=ipos)
@@ -2248,7 +2226,6 @@ module InputOutputModule
     ! -- local definitions
     character (len=:), allocatable :: linetemp
     character (len=2), parameter :: comment = '//'
-    character(len=LINELENGTH)    :: errmsg
     character(len=1), parameter  :: tab = CHAR(9)
     logical :: iscomment
     integer(I4B) :: i, j, l, istart, lsize
@@ -2267,11 +2244,9 @@ module InputOutputModule
         exit pcomments
       elseif (ierr /= 0) then
         ! -- Other error...report it
-        call store_error('******Error in u9rdcom.')
-        write(errmsg, *) 'Could not read from unit: ',iin
-        call store_error(errmsg)
         call unitinquire(iin)
-        call ustop()
+        write(errmsg, *) 'u9rdcom: Could not read from unit: ',iin
+        call store_error(errmsg, terminate=.TRUE.)
       endif
       if (len_trim(line).lt.1) then
         line = comment

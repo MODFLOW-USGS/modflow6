@@ -6,6 +6,7 @@
 # the effects of tides on the aquifer.
 
 import os
+import pytest
 import numpy as np
 
 try:
@@ -263,24 +264,27 @@ def set_make_comparison():
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
     build_models()
 
-    # run the test models
-    for idx, on_dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(
-            on_dir,
+    # run the test model
+    test.run_mf6(
+        Simulation(
+            dir,
             idxsim=idx,
             mf6_regression=True,
             cmp_verbose=False,
             make_comparison=set_make_comparison(),
         )
-
-    return
+    )
 
 
 def main():
@@ -290,7 +294,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, on_dir in enumerate(exdirs):
         sim = Simulation(
             on_dir,

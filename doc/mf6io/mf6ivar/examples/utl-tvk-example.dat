@@ -1,0 +1,31 @@
+BEGIN OPTIONS
+  TS6 FILEIN tvk_cells.ts
+  # Note: Time-series file tvk_cells.ts defines time series cells_kz
+END OPTIONS
+
+# Cell 5 will have its K value changed to 1e-3 in the first time step of
+# stress period 2, and changed once more to 1e-4 in the first time step of
+# stress period 4.
+#
+# Cells 101 and 108 will have their respective K33 values changed according
+# to the time series cells_kz specified in the file tvk_cells.ts. Note that
+# these values may continue to change beyond stress period 2, depending on
+# the duration of the time series cells_sy.
+#
+# No changes are made in stress period 1 due to an absence of a block
+# for that period; cells maintain the initial property values specified in
+# the NPF package for the entirety of that period.
+
+BEGIN PERIOD 2
+  5   K   1e-3
+  101 K33 cells_kz
+  108 K33 cells_kz
+END PERIOD
+
+BEGIN PERIOD 4
+  5   K   1e-4
+END PERIOD
+
+# After the last specified change (or after the last specified time record,
+# when a time series is used), each affected cell will retain its latest
+# changed value for the remainder of the simulation.

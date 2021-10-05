@@ -125,7 +125,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     implicit none
     class(GwtCncType), intent(inout) :: this
     integer(I4B) :: i, node, ibd, ierr
@@ -159,7 +159,6 @@ contains
     ! -- Stop if errors detected
     if(ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
@@ -211,7 +210,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwtCncType),intent(inout) :: this
     ! -- local
@@ -238,7 +237,6 @@ contains
     ! -- write summary of cnc package error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return

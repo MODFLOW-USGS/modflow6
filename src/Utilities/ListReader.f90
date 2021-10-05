@@ -167,7 +167,7 @@ module ListReaderModule
     use InputOutputModule, only: u8rdcom, urword, openfile
     use OpenSpecModule, only: form, access
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -202,7 +202,6 @@ module ListReaderModule
       call store_error(errmsg)
       call store_error('Specified OPEN/CLOSE file does not exist')
       call store_error_unit(this%in)
-      call ustop()
     endif
     !
     ! -- Check for (BINARY) keyword
@@ -283,7 +282,7 @@ module ListReaderModule
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBIGLINE
     use InputOutputModule, only: get_node
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -326,8 +325,7 @@ module ListReaderModule
         if(ii > mxlist) then
           inquire(unit=this%inlist, name=fname)
           write(errmsg, fmtmxlsterronly) fname, this%inlist, ii, mxlist
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         endif
         !
         ! -- Store node number and read the remainder of the record
@@ -346,8 +344,7 @@ module ListReaderModule
         if(this%ierr /= 0) then
           inquire(unit=this%inlist, name=fname)
           write(errmsg, fmtlsterronly) trim(adjustl(fname)), this%inlist
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         endif
         !
       case(:-1)
@@ -361,8 +358,7 @@ module ListReaderModule
         ! -- Error
         inquire(unit=this%inlist, name=fname)
         write(errmsg, fmtlsterronly) trim(adjustl(fname)), this%inlist
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
         !
       end select
       !
@@ -390,7 +386,7 @@ module ListReaderModule
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH, DZERO
     use InputOutputModule, only: u8rdcom, urword, get_node
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     use ArrayHandlersModule, only: ExpandArray
     ! -- dummy
     class(ListReaderType) :: this
@@ -450,7 +446,6 @@ module ListReaderModule
         errmsg = 'Error occurred reading line: ' // trim(this%line)
         call store_error(errmsg)
         call store_error_unit(this%inlist)
-        call ustop()
       endif
       !
       ! -- Read layer, row, column or cell number and assign to nodelist
@@ -597,7 +592,6 @@ module ListReaderModule
     ! -- Stop if errors were detected
     if(count_errors() > 0) then
       call store_error_unit(this%inlist)
-      call ustop()
     endif
     !
     ! -- return

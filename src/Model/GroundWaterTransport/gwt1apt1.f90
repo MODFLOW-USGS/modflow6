@@ -41,7 +41,7 @@ module GwtAptModule
                              DNODATA, TABLEFT, TABCENTER, TABRIGHT,            &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              LENAUXNAME
-  use SimModule, only: store_error, store_error_unit, count_errors, ustop
+  use SimModule, only: store_error, store_error_unit, count_errors
   use SimVariablesModule, only: errmsg
   use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
@@ -60,53 +60,54 @@ module GwtAptModule
   
   type, extends(BndType) :: GwtAptType
     
-    character(len=LENPACKAGENAME)                      :: flowpackagename = ''      ! name of corresponding flow package
-    character(len=8), dimension(:), pointer, contiguous :: status => null()         ! active, inactive, constant
-    character(len=LENAUXNAME)                          :: cauxfpconc = ''           ! name of aux column in flow package auxvar array for concentration
-    integer(I4B), pointer                              :: iauxfpconc => null()      ! column in flow package bound array to insert concs
-    integer(I4B), pointer                              :: imatrows => null()        ! if active, add new rows to matrix
-    integer(I4B), pointer                              :: iprconc => null()         ! print conc to listing file
-    integer(I4B), pointer                              :: iconcout => null()        ! unit number for conc output file
-    integer(I4B), pointer                              :: ibudgetout => null()      ! unit number for budget output file
-    integer(I4B), pointer                              :: ncv => null()             ! number of control volumes
-    integer(I4B), pointer                              :: igwfaptpak => null()      ! package number of corresponding this package
-    real(DP), dimension(:), pointer, contiguous        :: strt => null()            ! starting feature concentration
-    integer(I4B), dimension(:), pointer, contiguous    :: idxlocnode => null()      ! map position in global rhs and x array of pack entry
-    integer(I4B), dimension(:), pointer, contiguous    :: idxpakdiag => null()      ! map diag position of feature in global amat
-    integer(I4B), dimension(:), pointer, contiguous    :: idxdglo => null()         ! map position in global array of package diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous    :: idxoffdglo => null()      ! map position in global array of package off diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous    :: idxsymdglo => null()      ! map position in global array of package diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous    :: idxsymoffdglo => null()   ! map position in global array of package off diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfdglo => null()      ! map diagonal feature to feature in global amat
-    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfoffdglo => null()   ! map off diagonal feature to feature in global amat
-    integer(I4B), dimension(:), pointer, contiguous    :: iboundpak => null()       ! package ibound
-    real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()         ! feature concentration for current time step
-    real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()         ! feature concentration from previous time step
-    real(DP), dimension(:), pointer, contiguous        :: dbuff => null()           ! temporary storage array
+    character(len=LENPACKAGENAME)                      :: flowpackagename = ''      !< name of corresponding flow package
+    character(len=8), dimension(:), pointer, contiguous :: status => null()         !< active, inactive, constant
+    character(len=LENAUXNAME)                          :: cauxfpconc = ''           !< name of aux column in flow package auxvar array for concentration
+    integer(I4B), pointer                              :: iauxfpconc => null()      !< column in flow package bound array to insert concs
+    integer(I4B), pointer                              :: imatrows => null()        !< if active, add new rows to matrix
+    integer(I4B), pointer                              :: iprconc => null()         !< print conc to listing file
+    integer(I4B), pointer                              :: iconcout => null()        !< unit number for conc output file
+    integer(I4B), pointer                              :: ibudgetout => null()      !< unit number for budget output file
+    integer(I4B), pointer                              :: ibudcsv => null()         !< unit number for csv budget output file
+    integer(I4B), pointer                              :: ncv => null()             !< number of control volumes
+    integer(I4B), pointer                              :: igwfaptpak => null()      !< package number of corresponding this package
+    real(DP), dimension(:), pointer, contiguous        :: strt => null()            !< starting feature concentration
+    integer(I4B), dimension(:), pointer, contiguous    :: idxlocnode => null()      !< map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous    :: idxpakdiag => null()      !< map diag position of feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: idxdglo => null()         !< map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous    :: idxoffdglo => null()      !< map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous    :: idxsymdglo => null()      !< map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous    :: idxsymoffdglo => null()   !< map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfdglo => null()      !< map diagonal feature to feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfoffdglo => null()   !< map off diagonal feature to feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: iboundpak => null()       !< package ibound
+    real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()         !< feature concentration for current time step
+    real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()         !< feature concentration from previous time step
+    real(DP), dimension(:), pointer, contiguous        :: dbuff => null()           !< temporary storage array
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: featname => null()
-    real(DP), dimension(:), pointer, contiguous        :: concfeat => null()    ! concentration of the feature
-    real(DP), dimension(:,:), pointer, contiguous      :: lauxvar => null()     ! auxiliary variable
-    type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
-    real(DP), dimension(:), pointer, contiguous        :: qsto => null()        ! mass flux due to storage change
-    real(DP), dimension(:), pointer, contiguous        :: ccterm => null()      ! mass flux required to maintain constant concentration
-    integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in flowbudptr
-    integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudsto => null()   ! index of storage terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudtmvr => null()  ! index of to mover terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudfmvr => null()  ! index of from mover terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in flowbudptr
-    integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that flowbudptr%buditem is a general solute source/sink
-    integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
-    real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for flow terms
-    real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
+    real(DP), dimension(:), pointer, contiguous        :: concfeat => null()    !< concentration of the feature
+    real(DP), dimension(:,:), pointer, contiguous      :: lauxvar => null()     !< auxiliary variable
+    type(GwtFmiType), pointer                          :: fmi => null()         !< pointer to fmi object
+    real(DP), dimension(:), pointer, contiguous        :: qsto => null()        !< mass flux due to storage change
+    real(DP), dimension(:), pointer, contiguous        :: ccterm => null()      !< mass flux required to maintain constant concentration
+    integer(I4B), pointer                              :: idxbudfjf => null()   !< index of flow ja face in flowbudptr
+    integer(I4B), pointer                              :: idxbudgwf => null()   !< index of gwf terms in flowbudptr
+    integer(I4B), pointer                              :: idxbudsto => null()   !< index of storage terms in flowbudptr
+    integer(I4B), pointer                              :: idxbudtmvr => null()  !< index of to mover terms in flowbudptr
+    integer(I4B), pointer                              :: idxbudfmvr => null()  !< index of from mover terms in flowbudptr
+    integer(I4B), pointer                              :: idxbudaux => null()   !< index of auxiliary terms in flowbudptr
+    integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   !< flag that flowbudptr%buditem is a general solute source/sink
+    integer(I4B), pointer                              :: nconcbudssm => null() !< number of concbudssm terms (columns)
+    real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  !< user specified concentrations for flow terms
+    real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   !< a mass flow coming from the mover that needs to be added
     !
     ! -- pointer to flow package boundary
     type(BndType), pointer                             :: flowpackagebnd => null()
     !
     ! -- budget objects
-    type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
-    type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! GWF flow budget object
+    type(BudgetObjectType), pointer                    :: budobj => null()      !< apt solute budget object
+    type(BudgetObjectType), pointer                    :: flowbudptr => null()  !< GWF flow budget object
     !
     ! -- table objects
     type(TableType), pointer :: dvtab => null()
@@ -387,7 +388,6 @@ module GwtAptModule
             trim(adjustl(this%flowpackagename))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         else
           ! -- tell package not to update this auxiliary variable
           this%flowpackagebnd%noupdateauxvar(this%iauxfpconc) = 1
@@ -452,10 +452,10 @@ module GwtAptModule
           this%ionper = nper + 1
         else
           ! -- Found invalid block
+          call this%parser%GetCurrentLine(line)
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -513,7 +513,6 @@ module GwtAptModule
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- fill arrays
@@ -622,7 +621,6 @@ module GwtAptModule
     ! -- terminate if any errors were detected
 999 if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -649,8 +647,8 @@ module GwtAptModule
     !
     ! -- this routine should never be called
     found = .false.
-    call store_error('Program error: pak_set_stressperiod not implemented.')
-    call ustop()
+    call store_error('Program error: pak_set_stressperiod not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- return
     return
@@ -936,8 +934,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_fc_expanded not implemented.')
-    call ustop()
+    call store_error('Program error: pak_fc_expanded not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -1101,12 +1099,20 @@ module GwtAptModule
     
   end subroutine apt_ot_dv
   
-  subroutine apt_ot_bdsummary(this, kstp, kper, iout)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    call this%budobj%write_budtable(kstp, kper, iout)
+  subroutine apt_ot_bdsummary(this, kstp, kper, iout, ibudfl)
+    ! -- module
+    use TdisModule, only: totim
+    ! -- dummy
+    class(GwtAptType) :: this           !< GwtAptType object
+    integer(I4B), intent(in) :: kstp    !< time step number
+    integer(I4B), intent(in) :: kper    !< period number
+    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    !
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    !
+    ! -- return
+    return
   end subroutine apt_ot_bdsummary
   
   subroutine allocate_scalars(this)
@@ -1132,6 +1138,7 @@ module GwtAptModule
     call mem_allocate(this%iprconc, 'IPRCONC', this%memoryPath)
     call mem_allocate(this%iconcout, 'ICONCOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%memoryPath)
     call mem_allocate(this%ncv, 'NCV', this%memoryPath)
     call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%memoryPath)
@@ -1148,6 +1155,7 @@ module GwtAptModule
     this%iprconc = 0
     this%iconcout = 0
     this%ibudgetout = 0
+    this%ibudcsv = 0
     this%igwfaptpak = 0
     this%ncv = 0
     this%idxbudfjf = 0
@@ -1282,6 +1290,7 @@ module GwtAptModule
     call mem_deallocate(this%iprconc)
     call mem_deallocate(this%iconcout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%igwfaptpak)
     call mem_deallocate(this%ncv)
     call mem_deallocate(this%idxbudfjf)
@@ -1315,8 +1324,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_solve not implemented.')
-    call ustop()
+    call store_error('Program error: pak_solve not implemented.', &
+                      terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -1342,7 +1351,7 @@ module GwtAptModule
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
     character(len=*),parameter :: fmtaptbin = &
-      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
@@ -1398,6 +1407,19 @@ module GwtAptModule
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('BUDGETCSV')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ibudcsv = getunit()
+          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+            filstat_opt='REPLACE')
+          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'BUDGET CSV', &
+            trim(fname), this%ibudcsv
+        else
+          call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+            &FILEOUT')
         end if
       case default
         !
@@ -1463,7 +1485,7 @@ module GwtAptModule
     ! -- stop if errors were encountered in the DIMENSIONS block
     ierr = count_errors()
     if (ierr > 0) then
-      call ustop()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- read packagedata block
@@ -1630,7 +1652,6 @@ module GwtAptModule
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- deallocate local storage for aux variables
@@ -1841,8 +1862,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_solve not implemented.')
-    call ustop()
+    call store_error('Program error: pak_solve not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- Return
     return
@@ -1999,8 +2020,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_get_nbudterms not implemented.')
-    call ustop()
+    call store_error('Program error: pak_get_nbudterms not implemented.', &
+                      terminate=.TRUE.)
     nbudterms = 0
   end function pak_get_nbudterms
   
@@ -2204,8 +2225,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_setup_budobj not implemented.')
-    call ustop()
+    call store_error('Program error: pak_setup_budobj not implemented.', &
+                     terminate=.TRUE.)
     !
     ! -- return
     return
@@ -2375,8 +2396,8 @@ module GwtAptModule
 ! -----------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_fill_budobj not implemented.')
-    call ustop()
+    call store_error('Program error: pak_fill_budobj not implemented.', & 
+                      terminate=.TRUE.)
     !
     ! -- return
     return
@@ -2581,8 +2602,8 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
-    call store_error('Program error: pak_df_obs not implemented.')
-    call ustop()
+    call store_error('Program error: pak_df_obs not implemented.', &
+                     terminate=.TRUE.)
     !
     return
   end subroutine pak_df_obs
@@ -2761,7 +2782,6 @@ subroutine apt_rp_obs(this)
     ! -- check for errors
     if (count_errors() > 0) then
       call store_error_unit(this%obs%inunitobs)
-      call ustop()
     end if
     !
     return
@@ -2846,9 +2866,7 @@ subroutine apt_rp_obs(this)
                           trim(obsrv%ObsTypeId) // '" for ' // &
                           trim(adjustl(this%text)) // ' package ' // &
                           trim(this%packName)
-                call store_error(errmsg)
-                !call store_error_unit(this%obs%inunitobs)
-                !call ustop()
+                call store_error(errmsg, terminate=.TRUE.)
               end if
           end select
           call this%obs%SaveOneSimval(obsrv, v)
@@ -2858,7 +2876,6 @@ subroutine apt_rp_obs(this)
       ! -- write summary of error messages
       if (count_errors() > 0) then
         call store_error_unit(this%obs%inunitobs)
-        call ustop()
       end if
     end if
     !

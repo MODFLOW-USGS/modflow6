@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 
 try:
@@ -36,8 +37,8 @@ bud_lst = [
     "STO-SS_OUT",
     "STO-SY_IN",
     "STO-SY_OUT",
-    "RCH_IN",
-    "RCH_OUT",
+    "RCHA_IN",
+    "RCHA_OUT",
     "CHD_IN",
     "CHD_OUT",
     "WEL_IN",
@@ -327,7 +328,7 @@ def eval_zb6(sim):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = ["STO-SS", "STO-SY", "RCH", "CHD", "WEL"]
+    cbc_bud = ["STO-SS", "STO-SY", "RCHA", "CHD", "WEL"]
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
@@ -434,7 +435,11 @@ def eval_zb6(sim):
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
 
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
@@ -449,15 +454,14 @@ def test_mf6model():
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
-        yield test.run_mf6, Simulation(
+    # run the test model
+    if is_CI and not continuous_integration[idx]:
+        return
+    test.run_mf6(
+        Simulation(
             dir, exfunc=eval_zb6, exe_dict=r_exe, htol=htol[idx], idxsim=idx
         )
-
-    return
+    )
 
 
 def main():
@@ -467,7 +471,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(
             dir,

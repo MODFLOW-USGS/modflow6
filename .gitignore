@@ -96,7 +96,6 @@ Thumbs.db
 
 *.blg
 
-*.bat
 
 msvs/My Advisor Results*
 
@@ -111,9 +110,12 @@ CMakeFiles/
 .build_rtd_docs/_build
 .build_rtd_docs/_mf6io
 .build_rtd_docs/_mf6src
+.build_rtd_docs/_mf6run
 latex/
 html/
 xml/
+distribution/run-time-comparison.md
+doc/ReleaseNotes/run-time-comparison.tex
 
 # Intel Fortran Visual Studio intermediate files
 msvs/*.fdz

@@ -12,14 +12,21 @@ Reach connectivity must be explicitly specified for this version of the SFR Pack
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
-\vspace{5mm}
 
+\vspace{5mm}
 \noindent \textit{FOR EACH SIMULATION}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-options.dat}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-dimensions.dat}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-packagedata.dat}
+
+\vspace{5mm}
+\noindent \textit{CROSSSECTIONS BLOCK IS OPTIONAL}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-crosssections.dat}
+
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-connectiondata.dat}
-\noindent \textit{IF \texttt{ndv} IS GREATER THAN ZERO FOR ANY REACH}
+
+\vspace{5mm}
+\noindent \textit{IF ndv IS GREATER THAN ZERO FOR ANY REACH}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-diversions.dat}
 
 \vspace{5mm}
@@ -72,3 +79,25 @@ Streamflow Routing Package observations include reach stage and all of the terms
 \vspace{5mm}
 \subsubsection{Example Observation Input File}
 \lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-sfr-example-obs.dat}
+
+\newpage
+\subsection{Streamflow Routing Package Cross-Sections Table Input File}
+Cross-sections tables of distance and relative depth can be specified for individual reaches.  Cross-Section tables are specified by including file names in the LAKE\_TABLES block of the SFR Package.  These file names correspond to a lake table input file.  The format of the lake table input file is described here.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-sfrtab-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/utl-sfrtab-table.dat}
+\vspace{5mm}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/utl-sfrtab-desc.tex}
+\end{description}
+
+\subsubsection{Example Input File}
+%\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-sfrtab-example.dat}
+

@@ -104,7 +104,7 @@ module GwtModule
     ! -- modules
     use ListsModule,                only: basemodellist
     use BaseModelModule,            only: AddBaseModelToList
-    use SimModule,                  only: ustop, store_error, count_errors
+    use SimModule,                  only: store_error, count_errors
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
@@ -190,11 +190,10 @@ module GwtModule
             'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
         case default
           write(errmsg,'(4x,a,a,a,a)')                                         &
-            '****ERROR. UNKNOWN GWT NAMEFILE (',                               &
+            'UNKNOWN GWT NAMEFILE (',                                          &
             trim(adjustl(this%filename)), ') OPTION: ',                        &
             trim(adjustl(namefile_obj%opts(i)))
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
       end select
     end do
     !
@@ -412,6 +411,7 @@ module GwtModule
     !
     ! -- set up output control
     call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
     do ip=1,this%bndlist%Count()
@@ -452,6 +452,7 @@ module GwtModule
     !
     ! -- Read and prepare
     if(this%inoc > 0)  call this%oc%oc_rp()
+    if(this%inssm > 0) call this%ssm%ssm_rp()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_rp()
@@ -577,7 +578,7 @@ module GwtModule
     end if
     if(this%inmst > 0) then
       call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
-                           amatsln, this%idxglo, this%x, this%rhs)
+                           amatsln, this%idxglo, this%x, this%rhs, kiter)
     endif
     if(this%inadv > 0) then
       call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo, this%x,       &
@@ -919,30 +920,33 @@ module GwtModule
   end subroutine gwt_ot_dv
   
   subroutine gwt_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 
+    !
+    ! -- Package budget summary
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
+    enddo
+      
+    ! -- mover budget summary
+    if(this%inmvt > 0) then
+      call this%mvt%mvt_ot_bdsummary(ibudfl)
+    end if
+      
+    ! -- model budget summary
     if (ibudfl /= 0) then
       ipflag = 1
-      !
-      ! -- Package budget summary
-      do ip = 1, this%bndlist%Count()
-        packobj => GetBndFromList(this%bndlist, ip)
-        call packobj%bnd_ot_bdsummary(kstp, kper, this%iout)
-      enddo
-      
-      ! -- mover budget summary
-      if(this%inmvt > 0) then
-        call this%mvt%mvt_ot_bdsummary()
-      end if
-      
-      ! -- model budget summary
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
+    
+    ! -- Write to budget csv
+    call this%budget%writecsv(totim)
     
   end subroutine gwt_ot_bdsummary
   
@@ -1090,7 +1094,7 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
     use GwtIstModule, only: ist_create
@@ -1139,8 +1143,7 @@ module GwtModule
       call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- Packages is the bndlist that is associated with the parent model
@@ -1151,8 +1154,7 @@ module GwtModule
         if(packobj2%packName == pakname) then
           write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
             'already exists: ', trim(pakname)
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         endif
       enddo
     call AddBndToList(this%bndlist, packobj)
@@ -1170,7 +1172,7 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     use NameFileModule,    only: NameFileType
     ! -- dummy
     class(GwtModelType) :: this
@@ -1220,8 +1222,7 @@ module GwtModule
     if(count_errors() > 0) then
       write(errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ',           &
         trim(namefile_obj%filename)
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     ! -- return

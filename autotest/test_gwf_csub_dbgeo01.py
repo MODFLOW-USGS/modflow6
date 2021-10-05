@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 
 try:
@@ -392,7 +393,11 @@ def build_models():
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
     r_exe = None
@@ -406,15 +411,10 @@ def test_mf6model():
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
-        yield test.run_mf6, Simulation(
-            dir, exfunc=eval_sub, exe_dict=r_exe, idxsim=idx
-        )
-
-    return
+    # run the test model
+    if is_CI and not continuous_integration[idx]:
+        return
+    test.run_mf6(Simulation(dir, exfunc=eval_sub, exe_dict=r_exe, idxsim=idx))
 
 
 def main():
@@ -424,7 +424,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(
             dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx

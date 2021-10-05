@@ -3,4 +3,5 @@ BEGIN OPTIONS
   [PRINT_FLOWS]
   [SAVE_FLOWS]
   [BUDGET FILEOUT <budgetfile>]
+  [BUDGETCSV FILEOUT <budgetcsvfile>]
 END OPTIONS

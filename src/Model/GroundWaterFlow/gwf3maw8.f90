@@ -22,7 +22,7 @@ module MawModule
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
-                              store_warning, ustop
+                              store_warning
   use BlockParserModule,   only: BlockParserType
   use SimVariablesModule, only: errmsg, warnmsg
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
@@ -57,6 +57,7 @@ module MawModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: iheadout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ibudcsv => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: iflowingwells => NULL()
     integer(I4B), pointer :: imawiss => NULL()
@@ -279,6 +280,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%iheadout, 'IHEADOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%iflowingwells, 'IFLOWINGWELLS', this%memoryPath)
     call mem_allocate(this%imawiss, 'IMAWISS', this%memoryPath)
     call mem_allocate(this%imawissopt, 'IMAWISSOPT', this%memoryPath)
@@ -299,6 +301,7 @@ contains
     this%iprhed = 0
     this%iheadout = 0
     this%ibudgetout = 0
+    this%ibudcsv = 0
     this%iflowingwells = 0
     this%imawiss = 0
     this%imawissopt = 0
@@ -719,7 +722,6 @@ contains
     ! -- terminate if any errors were detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set MAXBOUND
@@ -1045,7 +1047,6 @@ contains
     ! -- write summary of maw well_connection error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1099,8 +1100,7 @@ contains
       write(this%iout,'(1x,a)')                                                  &
         'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
     else
-      call store_error('Required dimensions block not found.')
-      call ustop()
+      call store_error('Required dimensions block not found.', terminate=.TRUE.)
     end if
     !
     ! -- verify dimensions were set correctly
@@ -1113,7 +1113,6 @@ contains
     ! -- stop if errors were encountered in the DIMENSIONS block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- read wells block
@@ -1373,7 +1372,7 @@ contains
     !
     ! -- check for any error conditions
     if (count_errors() > 0) then
-      call ustop()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- return
@@ -1773,7 +1772,7 @@ contains
       "(4x, 'WELL STORAGE WILL NOT BE SIMULATED.')"
     character(len=*),parameter :: fmtmawbin = &
       "(4x, 'MAW ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x,               &
-     &'OPENED ON UNIT: ', I7)"
+     &'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for 'FLOWING_WELLS' and set this%iflowingwells
@@ -1808,6 +1807,18 @@ contains
         else
           call store_error('Optional maw budget keyword must be ' //             &
                            'followed by fileout.')
+        end if
+      case('BUDGETCSV')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ibudcsv = getunit()
+          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+            filstat_opt='REPLACE')
+          write(this%iout,fmtmawbin) 'BUDGET CSV', fname, this%ibudcsv
+        else
+          call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+            &FILEOUT')
         end if
       case('FLOWING_WELLS')
         this%iflowingwells = 1
@@ -1969,9 +1980,9 @@ contains
           this%ionper = nper + 1
         else
           ! -- Found invalid block
+          call this%parser%GetCurrentLine(line)
           write(errmsg, fmtblkerr) adjustl(trim(line))
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         end if
       end if
     end if
@@ -2043,7 +2054,6 @@ contains
     ! -- write summary of maw well stress period error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- qa data if necessary
@@ -2892,12 +2902,20 @@ contains
     
   end subroutine maw_ot_dv
   
-  subroutine maw_ot_bdsummary(this, kstp, kper, iout)
-    class(MawType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    call this%budobj%write_budtable(kstp, kper, iout)
+  subroutine maw_ot_bdsummary(this, kstp, kper, iout, ibudfl)
+    ! -- module
+    use TdisModule, only: totim
+    ! -- dummy
+    class(MawType) :: this              !< MawType object
+    integer(I4B), intent(in) :: kstp    !< time step number
+    integer(I4B), intent(in) :: kper    !< period number
+    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    !
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    !
+    ! -- return
+    return
   end subroutine maw_ot_bdsummary
   
   subroutine maw_da(this)
@@ -2998,6 +3016,7 @@ contains
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%iheadout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%iflowingwells)
     call mem_deallocate(this%imawiss)
     call mem_deallocate(this%imawissopt)
@@ -3320,7 +3339,7 @@ contains
       !
       ! -- write summary of error messages
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !
@@ -3448,7 +3467,7 @@ contains
       !
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
-        call ustop()
+        call store_error_unit(this%inunit)
       end if
     end if
     !
@@ -4253,7 +4272,8 @@ contains
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
-    call this%budobj%budgetobject_df(this%nmawwells, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%nmawwells, nbudterm, 0, 0, &
+                                     ibudcsv=this%ibudcsv)
     idx = 0
     !
     ! -- Go through and set up each budget term

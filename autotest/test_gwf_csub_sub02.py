@@ -1,4 +1,5 @@
 import os
+import pytest
 
 try:
     import pymake
@@ -30,6 +31,8 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
+cmppth = "mf6-regression"
+
 cg_ske = 1.14e-3 / (500.0 - 20.0)
 cg_S = cg_ske * (500.0 - 20.0)
 ss = [cg_S, cg_S, cg_ske, cg_ske, cg_S]
@@ -38,13 +41,10 @@ cdelay = [False, True, False, True, True]
 ndelaycells = [None, 19, None, 19, 19]
 
 # run all examples on Travis
-# continuous_integration = [True for idx in range(len(exdirs))]
-# the delay bed problems only run on the development version of MODFLOW-2005
-# set travis to True when version 1.13.0 is released
-continuous_integration = [True, False, True, False, False]
+continuous_integration = [True for e in ex]
 
 # set replace_exe to None to use default executable
-replace_exe = {"mf2005": "mf2005devdbl"}
+replace_exe = None
 
 # static model data
 nlay, nrow, ncol = 1, 1, 1
@@ -100,13 +100,9 @@ lnd = [0]
 ldnd = [0]
 dp = [[kv, cr, cc]]
 
-ds15 = [0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-ds16 = [0, 9, 0, 9, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
-
-def get_model(idx, dir):
+def build_model(idx, ws):
     name = ex[idx]
-
     ss = 1.14e-3
     sc6 = True
     if not storagecoeff[idx]:
@@ -114,12 +110,8 @@ def get_model(idx, dir):
         sc6 = None
 
     if cdelay[idx]:
-        nndb = 0
-        ndb = 1
         cdelays = "delay"
     else:
-        nndb = 1
-        ndb = 0
         cdelays = "nodelay"
 
     sub6 = [
@@ -140,7 +132,6 @@ def get_model(idx, dir):
     ]
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -149,12 +140,7 @@ def get_model(idx, dir):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, model_nam_file="{}.nam".format(name)
-    )
-
-    # create iterative model solution and register the gwf model with it
+    # create iterative model solution
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -169,7 +155,11 @@ def get_model(idx, dir):
         reordering_method="NONE",
         relaxation_factor=relax,
     )
-    sim.register_ims_package(ims, [gwf.name])
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=name, model_nam_file="{}.nam".format(name)
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -233,71 +223,15 @@ def get_model(idx, dir):
         saverecord=[("HEAD", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
+    return sim
 
-    # build MODFLOW-2005 files
-    ws = os.path.join(dir, "mf2005")
-    mc = flopy.modflow.Modflow(name, model_ws=ws)
-    dis = flopy.modflow.ModflowDis(
-        mc,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        nper=nper,
-        perlen=perlen,
-        nstp=nstp,
-        tsmult=tsmult,
-        steady=steady,
-        delr=delr,
-        delc=delc,
-        top=top,
-        botm=botm,
-    )
-    bas = flopy.modflow.ModflowBas(
-        mc, ibound=ib, strt=strt, hnoflo=hnoflo, stoper=0.01
-    )
-    lpf = flopy.modflow.ModflowLpf(
-        mc,
-        laytyp=laytyp,
-        hk=hk,
-        vka=hk,
-        ss=ss,
-        sy=sy,
-        constantcv=True,
-        storagecoefficient=storagecoeff[idx],
-        hdry=hdry,
-    )
-    wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-    sub = flopy.modflow.ModflowSub(
-        mc,
-        ndb=ndb,
-        nndb=nndb,
-        nn=10,
-        idbit=1,
-        isuboc=1,
-        ln=lnd,
-        ldn=ldnd,
-        rnb=[1.0],
-        dp=dp,
-        dz=thick,
-        dhc=ini_stress,
-        dstart=ini_stress,
-        hc=ini_stress,
-        sfe=sfe,
-        sfv=sfv,
-        ids15=ds15,
-        ids16=ds16,
-    )
-    oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-    pcg = flopy.modflow.ModflowPcg(
-        mc,
-        mxiter=nouter,
-        iter1=ninner,
-        hclose=hclose,
-        rclose=rclose,
-        relax=relax,
-        ihcofadd=1,
-    )
 
+def get_model(idx, dir):
+    ws = dir
+    sim = build_model(idx, ws)
+
+    ws = os.path.join(dir, cmppth)
+    mc = build_model(idx, ws)
     return sim, mc
 
 
@@ -307,17 +241,17 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
 
     # initialize testing framework
     test = testing_framework()
@@ -325,11 +259,11 @@ def test_mf6model():
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
-        yield test.run_mf6, Simulation(dir, exe_dict=r_exe)
+    if is_CI and not continuous_integration[idx]:
+        return
+
+    # run the test model
+    test.run_mf6(Simulation(dir, mf6_regression=True))
 
     return
 
@@ -341,9 +275,12 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for dir in exdirs:
-        sim = Simulation(dir, exe_dict=replace_exe)
+        sim = Simulation(
+            dir,
+            mf6_regression=True,
+        )
         test.run_mf6(sim)
 
     return

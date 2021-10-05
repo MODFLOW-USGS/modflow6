@@ -4,6 +4,7 @@ module ConnectionsModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LENMEMPATH
   use GenericUtilitiesModule, only: sim_message
+  use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   
   implicit none
@@ -178,7 +179,7 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(ConnectionsType) :: this
     integer(I4B), dimension(:), intent(in) :: ihctemp
@@ -186,7 +187,6 @@ module ConnectionsModule
     real(DP), dimension(:), intent(in) :: hwvatemp
     real(DP), dimension(:), intent(in) :: angldegx
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ii, n, m
     integer(I4B), parameter :: nname = 6
     character(len=24),dimension(nname) :: aname(nname)
@@ -242,7 +242,6 @@ module ConnectionsModule
     enddo
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- fill the isym arrays
@@ -261,7 +260,6 @@ module ConnectionsModule
     enddo
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Fill the jas array, which maps any connection to upper triangle
@@ -282,7 +280,6 @@ module ConnectionsModule
     enddo
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Put cl12 into symmetric arrays cl1 and cl2
@@ -320,7 +317,6 @@ module ConnectionsModule
     enddo
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Put anglextemp into this%anglex; store only upper triangle
@@ -352,7 +348,7 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(ConnectionsType) :: this
     character(len=*), intent(in) :: name_model
@@ -363,12 +359,11 @@ module ConnectionsModule
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ii,n,m
-    integer(I4B) :: ierr, nerr
+    integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B), parameter :: nname = 2
     logical,dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname(nname)
-    character(len=300) :: ermsg
     ! -- formats
     character(len=*),parameter :: fmtsymerr = &
       &"(/,'Error in array: ',(a),/, &
@@ -409,31 +404,27 @@ module ConnectionsModule
                             this%nja, iout, 0)
             lname(2) = .true.
           case default
-            write(ermsg,'(4x,a,a)')'ERROR. UNKNOWN CONNECTIONDATA TAG: ', &
-                                     trim(keyword)
-            call store_error(ermsg)
+            write(errmsg,'(4x,a,a)') 'UNKNOWN CONNECTIONDATA TAG: ', trim(keyword)
+            call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)')'END PROCESSING CONNECTIONDATA'
     else
-      call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
+      call store_error('REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- verify all items were read
     do n = 1, nname
       if(.not. lname(n)) then
-        write(ermsg,'(1x,a,a)') &
-          'ERROR.  REQUIRED INPUT WAS NOT SPECIFIED: ',aname(n)
-        call store_error(ermsg)
+        write(errmsg,'(1x,a,a)') &
+          'REQUIRED INPUT WAS NOT SPECIFIED: ',aname(n)
+        call store_error(errmsg)
       endif
     enddo
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Convert iac to ia
@@ -463,15 +454,12 @@ module ConnectionsModule
           write(line, fmtsymerr) aname(2), ii, this%isym(ii)
           call sim_message(line)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
       enddo
     enddo
     !
-    nerr = count_errors()
-    if(nerr > 0) then
+    if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Return

@@ -1,9 +1,9 @@
 program zonbudmf6
   use KindModule
-  use SimModule, only: ustop
   use ConstantsModule, only: LINELENGTH, LENHUGELINE
   use VersionModule, only: VERSION
-  use SimVariablesModule, only: iout
+  use SimVariablesModule, only: iout, errmsg
+  use SimModule, only: store_error
   use GenericUtilitiesModule, only: sim_message, write_centered
   use InputOutputModule,  only: openfile
   
@@ -30,11 +30,8 @@ program zonbudmf6
   call parse_command_line(fnam, flst, fcsv)
   inquire(file=fnam, exist=exists)
   if (.not. exists) then
-    write(line,'(a)') 'ERROR.  Name file not found.'
-    call sim_message(line, skipbefore=1)
-    write(line,'(a)')  'Looking for: ' // trim(fnam)
-    call sim_message(line)
-    call ustop()
+    write(errmsg,'(a)') 'Name file not found. Looking for: ' // trim(fnam)
+    call store_error(errmsg, terminate=.TRUE.)
   endif
   !  
   ! -- Open list file and write title
@@ -71,8 +68,8 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
 ! ------------------------------------------------------------------------------
   ! -- modules
   use KindModule
-  use SimVariablesModule, only: iout
-  use SimModule, only: store_error, ustop
+  use SimVariablesModule, only: iout, errmsg
+  use SimModule, only: store_error
   use ConstantsModule, only: LENHUGELINE, LINELENGTH
   use InputOutputModule,  only: openfile
   use OpenSpecModule, only: form, access
@@ -87,7 +84,7 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
   type(BlockParserType) :: parser
   integer(I4B) :: ierr, iu
   logical :: isfound, endOfBlock
-  character(len=LINELENGTH) :: keyword, errmsg
+  character(len=LINELENGTH) :: keyword
   character(len=LENHUGELINE) :: filename
   character(len=20) :: fm, acc
 ! ------------------------------------------------------------------------------
@@ -120,7 +117,6 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
                                     trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
-          call ustop()
         end select
         call openfile(iu, iout, trim(filename), trim(keyword), fm, acc)
     end do
@@ -128,7 +124,6 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
     write(errmsg,'(1x,a)')'ERROR.  REQUIRED ZONEBUDGET BLOCK NOT FOUND.'
     call store_error(errmsg)
     call parser%StoreErrorUnit()
-    call ustop()
   end if
   !
   ! -- close name file
@@ -148,9 +143,9 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   ! -- modules
   use KindModule
   use ConstantsModule, only: LINELENGTH
-  use SimVariablesModule, only: iout
+  use SimVariablesModule, only: iout, errmsg
   use GenericUtilitiesModule, only: sim_message
-  use SimModule, only: store_error, ustop
+  use SimModule, only: store_error
   use BudgetDataModule, only: budgetdata_init, budgetdata_read,                &
                               budgetdata_finalize,                             &
                               ia, ja, budtxt, nbudterms,                       &
@@ -186,7 +181,6 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   logical :: success
   logical :: hasiaja = .false.
   logical :: foundchd = .false.
-  character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
   !
   ! -- initialize local variables
@@ -207,8 +201,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       errmsg = 'BUDGET FILE HAS "FLOW-JA-FACE" RECORD BUT NO GRB FILE SPECIFIED.'
       call store_error(errmsg)
       errmsg = 'ADD GRB ENTRY TO ZONE BUDGET NAME FILE.'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
   else
     inquire(unit=iunit_grb, opened=opengrb)
@@ -216,8 +209,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       errmsg = 'BINARY GRID FILE IS PRESENT, BUT BUDGET FILE DOES NOT HAVE &
         &"FLOW-JA-FACE" RECORD IN THE IMETH=1 FORMAT. CHECK TO MAKE SURE &
         &FLOWS ARE SAVED TO THE BUDGET FILE'
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     ! -- At this point, must be a budget file from an advanced package without
@@ -269,8 +261,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
           errmsg = 'Expecting ' // trim(packagenamearray(itime)) // '-' //  &
             trim(budtxtarray(itime)) // ' but found ' // trim(dstpackagename)  &
             // '-' // trim(budtxt)
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         endif
       endif
       !

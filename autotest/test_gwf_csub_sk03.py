@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 import datetime
 
@@ -643,7 +644,11 @@ def build_models():
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
     r_exe = None
@@ -657,11 +662,11 @@ def test_mf6model():
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
-        yield test.run_mf6, Simulation(
+    # run the test model
+    if is_CI and not continuous_integration[idx]:
+        return
+    test.run_mf6(
+        Simulation(
             dir,
             exfunc=eval_comp,
             exe_dict=r_exe,
@@ -669,6 +674,7 @@ def test_mf6model():
             idxsim=idx,
             mf6_regression=True,
         )
+    )
 
     return
 
@@ -680,7 +686,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(
             dir,

@@ -19,8 +19,7 @@ module GwfModule
   use GwfOcModule,                 only: GwfOcType
   use GhostNodeModule,             only: GhostNodeType, gnc_cr
   use GwfObsModule,                only: GwfObsType, gwf_obs_cr
-  use SimModule,                   only: count_errors, store_error,            &
-                                         store_error_unit, ustop
+  use SimModule,                   only: count_errors, store_error
   use BaseModelModule,             only: BaseModelType
 
   implicit none
@@ -114,7 +113,7 @@ module GwfModule
     use ListsModule,                only: basemodellist
     use MemoryHelperModule,         only: create_mem_path
     use BaseModelModule,            only: AddBaseModelToList
-    use SimModule,                  only: ustop, store_error, count_errors
+    use SimModule,                  only: store_error, count_errors
     use GenericUtilitiesModule,     only: write_centered
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use MemoryManagerModule,        only: mem_allocate
@@ -215,11 +214,10 @@ module GwfModule
             'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
         case default
           write(errmsg,'(4x,a,a,a,a)')                                         &
-            '****ERROR. UNKNOWN GWF NAMEFILE (',                               &
-            trim(adjustl(this%filename)), ') OPTION: ',                        &
+            'Unknown GWF namefile (',                                          &
+            trim(adjustl(this%filename)), ') option: ',                        &
             trim(adjustl(namefile_obj%opts(i)))
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
       end select
     end do
     !
@@ -447,6 +445,7 @@ module GwfModule
     !
     ! -- set up output control
     call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
+    call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
     do ip = 1,this%bndlist%Count()
@@ -483,6 +482,7 @@ module GwfModule
     if (.not. readnewdata) return
     !
     ! -- Read and prepare
+    if(this%innpf > 0) call this%npf%npf_rp()
     if(this%inbuy > 0) call this%buy%buy_rp()
     if(this%inhfb > 0) call this%hfb%hfb_rp()
     if(this%inoc > 0)  call this%oc%oc_rp()
@@ -933,7 +933,6 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SparseModule, only: csr_diagsum
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -971,11 +970,6 @@ module GwfModule
       call packobj%bnd_cq(this%x, this%flowja)
     enddo
     !
-    ! -- Finalize calculation of flowja by adding face flows to the diagonal.
-    !    This results in the flow residual being stored in the diagonal
-    !    position for each cell.
-    call csr_diagsum(this%dis%con%ia, this%flowja)
-    !
     ! -- Return
     return
   end subroutine gwf_cq
@@ -989,6 +983,7 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SparseModule, only: csr_diagsum
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -997,6 +992,11 @@ module GwfModule
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Finalize calculation of flowja by adding face flows to the diagonal.
+    !    This results in the flow residual being stored in the diagonal
+    !    position for each cell.
+    call csr_diagsum(this%dis%con%ia, this%flowja)
     !
     ! -- Save the solution convergence flag
     this%icnvg = icnvg
@@ -1192,30 +1192,33 @@ module GwfModule
   end subroutine gwf_ot_dv
   
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 
+    !
+    ! -- Package budget summary
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
+    enddo
+      
+    ! -- mover budget summary
+    if(this%inmvr > 0) then
+      call this%mvr%mvr_ot_bdsummary(ibudfl)
+    end if
+      
+    ! -- model budget summary
     if (ibudfl /= 0) then
       ipflag = 1
-      !
-      ! -- Package budget summary
-      do ip = 1, this%bndlist%Count()
-        packobj => GetBndFromList(this%bndlist, ip)
-        call packobj%bnd_ot_bdsummary(kstp, kper, this%iout)
-      enddo
-      
-      ! -- mover budget summary
-      if(this%inmvr > 0) then
-        call this%mvr%mvr_ot_bdsummary()
-      end if
-      
-      ! -- model budget summary
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
+    
+    ! -- Write to budget csv every time step
+    call this%budget%writecsv(totim)
     
   end subroutine gwf_ot_bdsummary
   
@@ -1440,7 +1443,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use ChdModule, only: chd_create
     use WelModule, only: wel_create
     use DrnModule, only: drn_create
@@ -1496,8 +1499,7 @@ module GwfModule
       call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- Check to make sure that the package name is unique, then store a
@@ -1507,8 +1509,7 @@ module GwfModule
       if(packobj2%packName == pakname) then
         write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
           'already exists: ', trim(pakname)
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
     enddo
     call AddBndToList(this%bndlist, packobj)
@@ -1526,7 +1527,7 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
+    use SimModule,         only: store_error, count_errors
     use NameFileModule,    only: NameFileType
     ! -- dummy
     class(GwfModelType) :: this
@@ -1607,10 +1608,9 @@ module GwfModule
     !
     ! -- Stop if errors
     if(count_errors() > 0) then
-      write(errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ',           &
+      write(errmsg, '(a, a)') 'Error occurred while reading file: ',           &
         trim(namefile_obj%filename)
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     endif
     !
     ! -- return

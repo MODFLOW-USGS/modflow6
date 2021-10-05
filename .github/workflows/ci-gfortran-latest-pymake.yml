@@ -75,9 +75,11 @@ jobs:
         .github/common/update-flopy.sh
 
     - name: Build applications
+      working-directory: autotest
       run: |
-        nosetests -v --with-id --with-timer -w ./autotest get_build_exes.py
-
+        pytest -v --durations=0 get_build_exes.py
+        
     - name: Test applications
+      working-directory: autotest
       run: |
-        nosetests -v --with-id --with-timer -w ./autotest
+        pytest -v --durations=0

@@ -4,7 +4,7 @@ module EvtModule
   use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
-  use SimModule, only: store_error, store_error_unit, ustop
+  use SimModule, only: store_error, store_error_unit
   use ObsModule, only: DefaultObsIdProcessor
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -18,6 +18,7 @@ module EvtModule
   !
   character(len=LENFTYPE)       :: ftype = 'EVT'
   character(len=LENPACKAGENAME) :: text  = '             EVT'
+  character(len=LENPACKAGENAME) :: texta  = '           EVTA'
   !
   type, extends(BndType) :: EvtType
     ! -- logicals
@@ -188,17 +189,16 @@ module EvtModule
                 ' SURF_RATE_SPECIFIED option.'
         call store_error(ermsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
     case ('READASARRAYS')
       if (this%dis%supports_layers()) then
         this%read_as_arrays = .true.
+        this%text = texta
       else
         ermsg = 'READASARRAYS option is not compatible with selected' // &
                 ' discretization type.'
         call store_error(ermsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       if (this%surfratespecified) then
@@ -206,7 +206,6 @@ module EvtModule
                 ' SURF_RATE_SPECIFIED option.'
         call store_error(ermsg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- Write option
@@ -231,7 +230,7 @@ module EvtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(EvtType),intent(inout) :: this
     ! -- local
@@ -268,7 +267,6 @@ module EvtModule
                        ' discretization package, MAXBOUND may not be specified.'
               call store_error(errmsg)
               call this%parser%StoreErrorUnit()
-              call ustop()
             else
               this%maxbound = this%parser%GetInteger()
               write(this%iout,'(4x,a,i7)') 'MAXBOUND = ', this%maxbound
@@ -280,7 +278,6 @@ module EvtModule
               write(errmsg,fmtnsegerr)this%nseg
               call store_error(errmsg)
               call this%parser%StoreErrorUnit()
-              call ustop()
             elseif (this%nseg > 1) then
               ! NSEG>1 is supported only if readasarrays is false
               if (this%read_as_arrays) then
@@ -288,7 +285,6 @@ module EvtModule
                          ' when READASARRAYS is used.'
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
-                call ustop()
               endif
               ! -- Recalculate number of columns required in bound array.
               if (this%surfratespecified) then
@@ -299,29 +295,25 @@ module EvtModule
             endif
           case default
             write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ', &
-                                      trim(keyword)
+              'Unknown '//trim(this%text)//' DIMENSION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
           end select
         end do
         !
         write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
       else
-        call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+        call store_error('Required DIMENSIONS block not found.')
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
     endif
     !
     ! -- verify dimensions were set
     if(this%maxbound <= 0) then
       write(errmsg, '(1x,a)') &
-        'ERROR.  MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+        'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- Call define_listlabel to construct the list label that is written
@@ -361,7 +353,7 @@ module EvtModule
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ArrayHandlersModule, only: ifind
     ! -- dummy
     class(EvtType),intent(inout) :: this
@@ -407,10 +399,10 @@ module EvtModule
           this%ionper = nper + 1
         else
           ! -- Found invalid block
+          call this%parser%GetCurrentLine(line)
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -455,7 +447,6 @@ module EvtModule
         msg = 'Error in EVT input: Definition of PXDP or PETM is incomplete.'
         call store_error(msg)
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
@@ -467,7 +458,9 @@ module EvtModule
     if (inrate == 1) then
       do n = 1, this%nbound
         node = this%nodelist(n)
-        this%bound(2, n) = this%bound(2, n) * this%dis%get_area(node)
+        if (node > 0) then
+          this%bound(2, n) = this%bound(2, n) * this%dis%get_area(node)
+        end if
       enddo
     endif
     !
@@ -532,6 +525,17 @@ module EvtModule
         node = this%nodelist(i)
       else
         node = this%nodesontop(i)
+      end if
+      !
+      ! -- cycle if nonexistent bound
+      if (node <= 0) then
+        this%hcof(i) = DZERO
+        this%rhs(i) = DZERO
+        cycle
+      end if
+      !
+      ! -- reset nodelist to highest active
+      if (.not. this%fixed_cell) then
         if (this%ibound(node) == 0) &
           call this%dis%highest_active(node, this%ibound)
         this%nodelist(i) = node
@@ -655,6 +659,7 @@ module EvtModule
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
       n = this%nodelist(i)
+      if (n <= 0) cycle
       ! -- reset hcof and rhs for excluded cells
       if (this%ibound(n) == 10000) then
         this%hcof(i) = DZERO
@@ -707,7 +712,7 @@ module EvtModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENTIMESERIESNAME, LINELENGTH
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ArrayHandlersModule, only: ifind
     ! -- dummy
     class(EvtType),            intent(inout) :: this
@@ -769,7 +774,6 @@ module EvtModule
           call store_error('****ERROR. IEVT IS NOT FIRST VARIABLE IN &
             &PERIOD BLOCK OR IT IS SPECIFIED MORE THAN ONCE.')
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Read the IEVT array
@@ -789,7 +793,6 @@ module EvtModule
           call store_error('Error.  IEVT must be read at least once ')
           call store_error('prior to reading the SURFACE array.')
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Read the surface array, then indicate
@@ -834,10 +837,9 @@ module EvtModule
       case ('DEPTH')
         !
         if (this%inievt == 0) then
-          call store_error('Error.  IEVT must be read at least once ')
+          call store_error('IEVT must be read at least once ')
           call store_error('prior to reading the DEPTH array.')
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Read the extinction-depth array, then indicate
@@ -849,27 +851,24 @@ module EvtModule
         !
       case ('PXDP')
         if (this%nseg < 2) then
-          ermsg = 'Error in EVT input: PXDP cannot be specified when NSEG < 2'
+          ermsg = 'EVT input: PXDP cannot be specified when NSEG < 2'
           call store_error(ermsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         if (this%inievt == 0) then
-          call store_error('Error.  IEVT must be read at least once ')
+          call store_error('IEVT must be read at least once ')
           call store_error('prior to reading any PXDP array.')
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Assign column for this PXDP vector in bound array
         kpxdp = kpxdp + 1
         if (kpxdp < this%nseg-1) this%segsdefined = .false.
         if (kpxdp > this%nseg-1) then
-          ermsg = 'Error in EVT: Number of PXDP arrays exceeds NSEG-1.'
+          ermsg = 'EVT: Number of PXDP arrays exceeds NSEG-1.'
           call store_error(ermsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         indx = 3 + kpxdp
         !
@@ -880,27 +879,24 @@ module EvtModule
         !
       case ('PETM')
         if (this%nseg < 2) then
-          ermsg = 'Error in EVT input: PETM cannot be specified when NSEG < 2'
+          ermsg = 'EVT input: PETM cannot be specified when NSEG < 2'
           call store_error(ermsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         if (this%inievt == 0) then
-          call store_error('Error.  IEVT must be read at least once ')
+          call store_error('IEVT must be read at least once ')
           call store_error('prior to reading any PETM array.')
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! -- Assign column for this PETM vector in bound array
         kpetm = kpetm + 1
         if (kpetm < this%nseg-1) this%segsdefined = .false.
         if (kpetm > this%nseg-1) then
-          ermsg = 'Error in EVT: Number of PETM arrays exceeds NSEG-1.'
+          ermsg = 'EVT: Number of PETM arrays exceeds NSEG-1.'
           call store_error(ermsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         indx = 3 + this%nseg - 1 + kpetm
         !
@@ -945,10 +941,9 @@ module EvtModule
         ! -- Nothing found
         if (.not. found) then
           call this%parser%GetCurrentLine(line)
-          call store_error('****ERROR. LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
+          call store_error('LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
           call store_error(trim(line))
           call this%parser%StoreErrorUnit()
-          call ustop()
         endif
         !
         ! If this aux variable has been designated as a multiplier array
@@ -969,10 +964,9 @@ module EvtModule
       this%segsdefined = .true.
     endif
     if (.not. this%segsdefined) then
-      ermsg = 'Error in EVT input: Definition of PXDP or PETM is incomplete.'
+      ermsg = 'EVT input: Definition of PXDP or PETM is incomplete.'
       call store_error(ermsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! If the multiplier-array pointer has been assigned and
@@ -1103,7 +1097,7 @@ module EvtModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: get_node
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(EvtType) :: this
@@ -1129,10 +1123,8 @@ module EvtModule
       do ic = 1, ncol
         nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
         noder = this%dis%get_nodenumber(nodeu, 0)
-        if(noder > 0) then
-          this%nodelist(ipos) = noder
-          ipos = ipos + 1
-        endif
+        this%nodelist(ipos) = noder
+        ipos = ipos + 1
       enddo
     enddo
     !

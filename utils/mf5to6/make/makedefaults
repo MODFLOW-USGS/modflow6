@@ -1,5 +1,5 @@
-# makedefaults created on 2021-02-18 08:25:53.237196
-# by pymake (version 1.2.0) for the 'mf5to6' executable 
+# makedefaults created on 2021-07-30 14:36:43.397584
+# by pymake (version 1.2.1) for the 'mf5to6' executable 
 # using the 'gfortran' fortran compiler(s).
 
 # determine OS
@@ -58,14 +58,14 @@ OPTLEVEL ?= -O2
 # set the fortran flags
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -static -fbacktrace $(OS_macro)
+		FFLAGS ?= -static -fbacktrace $(OS_macro) -cpp
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace $(OS_macro)
+		FFLAGS ?= -fbacktrace $(OS_macro) -cpp
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		FFLAGS ?= -no-heap-arrays -fpe0 -traceback
+		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fpp
 		MODSWITCH = -module $(MODDIR)
 	endif
 endif

@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 import pathlib
 
@@ -52,6 +53,12 @@ def get_mf5to6_models():
     """
     Get a list of test models
     """
+
+    # determine if test directory exists
+    dir_available = is_directory_available(example_basedir)
+    if not dir_available:
+        return []
+
     # list of example files to exclude
     exclude = (None,)
 
@@ -209,23 +216,20 @@ def set_make_comparison(test):
     return make_comparison
 
 
-def test_model():
-    # determine if test directory exists
-    dir_available = is_directory_available(example_basedir)
-    if not dir_available:
-        return
-
-    # get a list of test models to run
-    example_dirs = get_mf5to6_models()
-
-    # run the test models
-    for on_dir in example_dirs:
-        yield run_mf5to6, Simulation(
-            on_dir,
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(get_mf5to6_models())),
+)
+def test_model(idx, dir):
+    # run the test model
+    run_mf5to6(
+        Simulation(
+            dir,
             mf6_regression=set_mf6_regression(),
             cmp_verbose=False,
-            make_comparison=set_make_comparison(on_dir),
+            make_comparison=set_make_comparison(dir),
         )
+    )
 
     return
 
@@ -239,15 +243,10 @@ def main():
     # get name of current file
     module_name = sys.modules[__name__].__file__
 
-    # determine if test directory exists
-    dir_available = is_directory_available(example_basedir)
-    if not dir_available:
-        return
-
     # get a list of test models to run
     example_dirs = get_mf5to6_models()
 
-    # run the test models
+    # run the test model
     for on_dir in example_dirs:
         sim = Simulation(
             on_dir,

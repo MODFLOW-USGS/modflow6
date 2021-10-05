@@ -58,6 +58,7 @@
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3api8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3buy8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3csub8.f90"/>
@@ -66,7 +67,6 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3api8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3hfb8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8.f90"/>
@@ -80,6 +80,9 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvbase8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvk8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
 		<Filter Name="GroundWaterTransport">
@@ -109,8 +112,11 @@
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfGridData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfStorageUtils.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionManager.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
@@ -119,8 +125,10 @@
 		<File RelativePath="..\src\Model\NumericalPackage.f90"/></Filter>
 		<Filter Name="Solution">
 		<Filter Name="IMS">
+		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8base.f90"/>
 		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8linear.f90"/>
-		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8reordering.f90"/></Filter>
+		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8reordering.f90"/>
+		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8sparsekit.f90"/></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
@@ -163,13 +171,13 @@
 		<File RelativePath="..\src\Utilities\BudgetObject.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetTerm.f90"/>
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
-		<File RelativePath="..\src\Utilities\compilerversion.f90">
+		<File RelativePath="..\src\Utilities\compilerversion.F90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
-		<File RelativePath="..\src\Utilities\defmacro.f90">
+		<File RelativePath="..\src\Utilities\defmacro.F90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">

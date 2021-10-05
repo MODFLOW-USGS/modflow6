@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 
 try:
@@ -415,57 +416,37 @@ def cbc_compare(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
-
-
-def test_mf6model():
-    # determine if running on Travis or GitHub actions
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
+@pytest.mark.parametrize(
+    "idx, exdir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # run the test model
+    test.build_mf6_models(get_model, idx, exdir)
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        if is_CI and not continuous_integration[idx]:
-            continue
-        yield test.run_mf6, Simulation(
-            dir,
+    test.run_mf6(
+        Simulation(
+            exdir,
             exfunc=eval_sub,
-            exe_dict=r_exe,
             idxsim=idx,
             mf6_regression=True,
         )
-
-    return
+    )
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
-    # run the test models
-    for idx, dir in enumerate(exdirs):
+    # run the test model
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(get_model, idx, exdir)
         sim = Simulation(
-            dir,
+            exdir,
             exfunc=eval_sub,
-            exe_dict=replace_exe,
             idxsim=idx,
             mf6_regression=True,
         )
@@ -473,7 +454,6 @@ def main():
     return
 
 
-# use python testmf6_csub_sub01.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print("standalone run of {}".format(os.path.basename(__file__)))

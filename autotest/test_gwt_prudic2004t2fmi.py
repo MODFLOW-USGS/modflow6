@@ -1,6 +1,7 @@
 # tests to ability to run flow model first followed by transport model
 
 import os
+import pytest
 import shutil
 import numpy as np
 
@@ -617,6 +618,7 @@ def run_transport_model():
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
+        budgetcsv_filerecord="{}.bud.csv".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
         concentrationprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
@@ -764,6 +766,35 @@ def run_transport_model():
     )
     assert np.allclose(tc["LKT1TOMVR"], tc["LKT1BNTOMVR"]), errmsg
 
+    # Compare the budget terms from the list file and the budgetcsvfile
+    fname = "{}.bud.csv".format(gwtname)
+    fname = os.path.join(wst, fname)
+    csvra = np.genfromtxt(
+        fname, dtype=None, names=True, delimiter=",", deletechars=""
+    )
+
+    fname = "{}.lst".format(gwtname)
+    fname = os.path.join(wst, fname)
+    lst = flopy.utils.Mf6ListBudget(
+        fname, budgetkey="MASS BUDGET FOR ENTIRE MODEL"
+    )
+    lstra = lst.get_incremental()
+
+    # list file has additional terms, so need to pluck out the following for
+    # direct comparison
+    imap = (0, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 9, 16, 18)
+    success_all = True
+    failed_list = []
+    for name1, i in zip(csvra.dtype.names, imap):
+        name2 = lstra.dtype.names[i]
+        success = np.allclose(csvra[name1], lstra[name2], rtol=0.001)
+        if not success:
+            success_all = False
+            failed_list.append(name1)
+            print(f"Records do not match for {name1}")
+            for rate1, rate2 in zip(csvra[name1], lstra[name2]):
+                print(rate1, rate2)
+    assert success_all, f"Comparisons failed for {failed_list}"
     return
 
 

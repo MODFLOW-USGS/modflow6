@@ -3,10 +3,10 @@
 
 This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The  official USGS distribution is available at [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html).
 
-### Version 6.2.2 release candidate
+### Version 6.3.0 release candidate
 
 [![Intel compiler](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml)
-[![gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml) 
+[![gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml)
 [![gfortran - previous versions](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml)
 
 [![MODFLOW 6 intel nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml)
@@ -29,7 +29,10 @@ The `develop` branch often contains bug fixes and new features that are not yet 
 
 ## Releases
 
-Software distributions for the current and previous official USGS releases are available [here](https://github.com/MODFLOW-USGS/modflow6/releases).
+Software distributions for the current and previous official USGS releases are available [here](https://github.com/MODFLOW-USGS/modflow6/releases).  The current release is also available [here](https://water.usgs.gov/water-resources/software/MODFLOW-6/) from the USGS.
+
+## Examples
+MODFLOW 6 has an extensive suite of example problems that are constructed using the python [FloPy](https://github.com/modflowpy/flopy) package.  These example problems are contained in a separate git repository located [here](https://github.com/MODFLOW-USGS/modflow6-examples).  These examples are included in the official [USGS MODFLOW 6 distribution](https://water.usgs.gov/water-resources/software/MODFLOW-6/), and they are also rendered into online [descriptions](https://modflow6-examples.readthedocs.io/en/master/examples.html) and [jupyter notebooks](https://modflow6-examples.readthedocs.io/en/master/notebook_examples.html).
 
 ## Continuous Integration
 
@@ -58,7 +61,11 @@ Instructions for building definition files for new packages are summarized in [d
 
 MODFLOW is a popular open-source groundwater flow model distributed by the U.S. Geological Survey.  For 30 years, the MODFLOW program has been widely used by academic researchers, private consultants, and government scientists to accurately, reliably, and efficiently simulate groundwater flow.  With time, growing interest in surface and groundwater interactions, local refinement with nested and unstructured grids, karst groundwater flow, solute transport, and saltwater intrusion, has led to the development of numerous MODFLOW versions.  Although these MODFLOW versions are often based on the core version (presently MODFLOW-2005), there are often incompatibilities that restrict their use with one another.  In many cases, development of these alternative versions has been challenging due to the underlying MODFLOW structure, which was designed for the simulation with a single groundwater flow model using a rectilinear grid.
 
-MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capabilities available in MODFLOW-2005, MODFLOW-NWT, and MODFLOW-LGR. MODFLOW 6 was built on a new object-oriented framework that allows new packages and models to be added, and allows any number of models to be tightly coupled at the matrix level. The Groundwater Flow (GWF) Model is the first model to be released in MODFLOW 6. It supports regular MODFLOW grids consisting of layers, rows, and columns, but it also supports more flexible grids that may conform to irregular boundaries or have increased resolution in areas of interest. The GWF Model consists of the original MODFLOW stress packages (CHD, WEL, DRN, RIV, GHB, RCH, and EVT) and four advanced stress packages (MAW, SFR, LAK, and UZF), which have been distilled from their predecessors to contain the most commonly used capabilities. MODFLOW 6 contains a new Water Mover (MVR) Package that can transfer water from provider packages to receiver packages. Providers can be many of the stress and advanced stress packages; receivers can be any of the advanced stress packages. This new capability makes it possible to route water between lakes and streams, route rejected infiltration into a nearby stream, or augment lakes using groundwater pumped from wells, for example. To modernize user interaction with the program, the MODFLOW 6 input structure was redesigned. Within package input files, information is divided into blocks, and informative keywords are used to label numeric data and activate options. This new input structure was designed to make it easier for users to adjust simulation options in an intuitive manner, reduce user input errors, and allow new capabilities to be added without causing problems with backward compatibility.
+MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capabilities available in MODFLOW-2005, MODFLOW-NWT, and MODFLOW-LGR. MODFLOW 6 was built on a new object-oriented framework that allows new packages and models to be added, and allows any number of models to be run simultaneously in a single simulation.  Model may be coupled sequentially, such as for flow and transport, or the models may be tightly coupled at the matrix level, such as for multiple flow models. MODFLOW 6 presently contains two types of hydrologic models, the Groundwater Flow (GWF) Model and the Groundwater Transport (GWT) Model.
+
+The Groundwater Flow (GWF) Model was the first model to be released in MODFLOW 6. It supports regular MODFLOW grids consisting of layers, rows, and columns, but it also supports more flexible grids that may conform to irregular boundaries or have increased resolution in areas of interest. The GWF Model consists of the original MODFLOW stress packages (CHD, WEL, DRN, RIV, GHB, RCH, and EVT) and four advanced stress packages (MAW, SFR, LAK, and UZF), which have been distilled from their predecessors to contain the most commonly used capabilities. MODFLOW 6 contains a new Water Mover (MVR) Package that can transfer water from provider packages to receiver packages. Providers can be many of the stress and advanced stress packages; receivers can be any of the advanced stress packages. This new capability makes it possible to route water between lakes and streams, route rejected infiltration into a nearby stream, or augment lakes using groundwater pumped from wells, for example. To modernize user interaction with the program, the MODFLOW 6 input structure was redesigned. Within package input files, information is divided into blocks, and informative keywords are used to label numeric data and activate options. This new input structure was designed to make it easier for users to adjust simulation options in an intuitive manner, reduce user input errors, and allow new capabilities to be added without causing problems with backward compatibility.
+
+The GWT model for MODFLOW 6 simulates three-dimensional transport of a single solute species in flowing groundwater. The GWT Model solves the solute transport equation using numerical methods and a generalized CVFD approach, which can be used with regular MODFLOW grids or with unstructured grids. The GWT Model is designed to work with most of the new capabilities released with the GWF Model, including the Newton flow formulation, unstructured grids, advanced packages, and the movement of water between packages. The GWF and GWT Models operate simultaneously during a MODFLOW 6 simulation to represent coupled groundwater flow and solute transport. The GWT Model can also run separately from a GWF Model by reading the heads and flows saved by a previously run GWF Model. The GWT model is also capable of working with the flows from another groundwater flow model, as long as the flows from that model can be written in the correct form to flow and head files.
 
 
 ## How to Cite MODFLOW 6
@@ -73,9 +80,11 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 [Langevin, C.D., Panday, S, and Provost, A.M., 2020, Hydraulic-head formulation for density-dependent flow and transport: Groundwater, v. 58, no. 3, p. 349–362.](https://doi.org/10.1111/gwat.12967)
 
+[Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the MODFLOW 6 water mover package to represent natural and managed hydrologic connections: Groundwater, v. xx, no. xx, p. xx-xx.](https://doi.org/10.1111/gwat.13117)
+
 #### ***Software/Code***
 
-[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2021, MODFLOW 6 Modular Hydrologic Model version 6.2.2 release candidate: U.S. Geological Survey Software Release, 18 February 2021, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2021, MODFLOW 6 Modular Hydrologic Model version 6.3.0 release candidate: U.S. Geological Survey Software Release, 30 July 2021, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
 
 Disclaimer

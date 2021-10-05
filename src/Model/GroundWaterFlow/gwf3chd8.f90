@@ -127,7 +127,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use SimModule, only: ustop, store_error
+    use SimModule, only: store_error
     ! -- dummy
     class(ChdType), intent(inout) :: this
     ! -- local
@@ -164,7 +164,6 @@ contains
     ! -- Stop if errors detected
     if(ierr > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- return
@@ -216,7 +215,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(ChdType),intent(inout) :: this
     ! -- local
@@ -246,7 +245,6 @@ contains
     !write summary of chd package error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return

@@ -1,3 +1,11 @@
+!> @brief This module contains the CSUB package methods
+!!
+!! This module contains the methods used to add the effects of elastic 
+!! skeletal storage, compaction, and subsidence on the groundwater flow 
+!! equation. The contribution of elastic skelatal, inelastic and elastic
+!! interbed storage and water compressibility can be represented.
+!!
+!<
 module GwfCsubModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM8, DEM7, &
@@ -24,7 +32,7 @@ module GwfCsubModule
   use InputOutputModule, only: get_node, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
-                       store_warning, ustop
+                       store_warning
   use SimVariablesModule, only: errmsg, warnmsg
   use SortModule, only: qsort, selectn
   !
@@ -405,7 +413,6 @@ contains
     ! -- terminate if errors dimensions block data
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
 
     ! -- Allocate arrays in
@@ -558,7 +565,6 @@ contains
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set current coarse-grained thickness (cg_thick) and
@@ -676,7 +682,6 @@ contains
                      'then by filename.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
           end if
           call this%parser%GetString(fname)
           write (this%iout, fmtts) trim(fname)
@@ -1009,7 +1014,6 @@ contains
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1078,7 +1082,6 @@ contains
     ! -- stop if errors were encountered in the DIMENSIONS block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
 
     ! -- Call define_listlabel to construct the list label that is written
@@ -2617,7 +2620,6 @@ contains
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- read observations
@@ -2660,8 +2662,7 @@ contains
             'Only the first and last (', nper, ')', &
             'stress period can be steady if interbeds are simulated.', &
             'Stress period', kper, 'has been defined to be steady state.'
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         end if
       end if
     end if
@@ -2862,7 +2863,6 @@ contains
     ! -- terminate if errors encountered when updating material properties
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -3497,7 +3497,6 @@ contains
     if (this%iupdatematprop /= 0) then
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
     end if
     !
@@ -4378,7 +4377,6 @@ contains
         'exceeding the top of the model.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -4965,7 +4963,6 @@ contains
     ! -- terminate if any initialization errors have been detected
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- set initialized
@@ -6039,7 +6036,6 @@ contains
     ! -- terminate if the aquifer head is below the top of delay interbeds
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- solve for delay bed heads
@@ -7606,7 +7602,6 @@ contains
       ! -- write summary of package error messages
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-        call ustop()
       end if
     end if
     !
@@ -7774,7 +7769,6 @@ contains
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
         call store_error_unit(this%inunit)
-        call ustop()
       end if
     end if
     !
@@ -7804,7 +7798,6 @@ contains
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
     logical :: flag_string
-    !--------------------------------------------------------------------------
     !
     ! -- initialize variables
     strng = obsrv%IDstring

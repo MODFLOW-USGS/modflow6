@@ -7,6 +7,7 @@ BEGIN OPTIONS
   [SAVE_FLOWS]
   [HEAD FILEOUT <headfile>]
   [BUDGET FILEOUT <budgetfile>]
+  [BUDGETCSV FILEOUT <budgetcsvfile>]
   [NO_WELL_STORAGE]
   [FLOW_CORRECTION]
   [FLOWING_WELLS]

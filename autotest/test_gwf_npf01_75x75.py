@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 import numpy as np
 
@@ -129,7 +130,7 @@ def get_model(idx, dir):
         iconvert=laytyp[idx],
         ss=ss[idx],
         sy=sy[idx],
-        steady_state={0: True, 2: True},
+        steady_state={0: True, 1: False, 2: True},
         transient={1: True},
     )
 
@@ -210,18 +211,19 @@ def build_models():
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
     build_models()
 
-    # run the test models
-    for dir in exdirs:
-        yield test.run_mf6, Simulation(dir)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(dir))
 
 
 def main():
@@ -231,7 +233,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for dir in exdirs:
         sim = Simulation(dir)
         test.run_mf6(sim)

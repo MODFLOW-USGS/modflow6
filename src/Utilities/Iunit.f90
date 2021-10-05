@@ -12,7 +12,7 @@ module IunitModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENFTYPE
-  use SimModule, only: store_error, count_errors, ustop, store_error_filename
+  use SimModule, only: store_error, store_error_filename
   implicit none
   private
   public :: IunitType
@@ -94,8 +94,7 @@ module IunitModule
     if(irow == 0) then
       write(errmsg, '(a,a)') 'Package type not supported: ', ftyp
       call store_error(errmsg)
-      call store_error_filename(namefilename)
-      call ustop()
+      call store_error_filename(namefilename, terminate=.TRUE.)
     endif
     !
     ! -- Store the iunit number for this ftyp

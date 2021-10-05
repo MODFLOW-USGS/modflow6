@@ -5,10 +5,10 @@ Test to make sure that disu is working correctly
 """
 
 import os
+import pytest
 import shutil
 import subprocess
 import numpy as np
-from nose.tools import raises
 
 try:
     import flopy
@@ -23,8 +23,7 @@ import targets
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "gwf_disu01"
 testdir = os.path.join("temp", testname)
-if not os.path.isdir(testdir):
-    os.mkdir(testdir)
+os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 
@@ -110,7 +109,7 @@ def test_disu_idomain_simple():
 
     # check binary grid file
     fname = os.path.join(ws, name + ".disu.grb")
-    grbobj = flopy.utils.MfGrdFile(fname)
+    grbobj = flopy.mf6.utils.MfGrdFile(fname)
     nodes = grbobj._datadict["NODES"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]

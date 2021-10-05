@@ -1,19 +1,17 @@
 module TimeArraySeriesManagerModule
 
-  use KindModule, only: DP, I4B
-  use BlockParserModule,         only: BlockParserType
+  use KindModule,                only: DP, I4B
+  use SimVariablesModule,        only: errmsg
   use ConstantsModule,           only: DZERO, LENTIMESERIESNAME, LINELENGTH, &
-                                       MAXCHARLEN, LENHUGELINE
-  use InputOutputModule,         only: GetUnit, openfile
+                                       LENHUGELINE
   use ListModule,                only: ListType
-  use SimModule,                 only: store_error, store_error_unit, ustop
+  use SimModule,                 only: store_error, store_error_unit
   use TdisModule,                only: delt, totimc, kper, kstp
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType, &
                                        ConstructTimeArraySeriesLink, &
                                        GetTimeArraySeriesLinkFromList, &
                                        AddTimeArraySeriesLinkToList
-  use TimeArraySeriesModule,     only: TimeArraySeriesType, &
-                                       ConstructTimeArraySeries
+  use TimeArraySeriesModule,     only: TimeArraySeriesType
   use BaseDisModule,             only: DisBaseType
 
   implicit none
@@ -118,7 +116,6 @@ contains
     type(TimeArraySeriesType), pointer :: timearrayseries => null()
     integer(I4B) :: i, j, nlinks, nvals, isize1, isize2, inunit
     real(DP) :: begintime, endtime
-    character(len=MAXCHARLEN) :: ermsg
     ! formats
     character(len=*),parameter :: fmt5 =                                       &
       "(/,'Time-array-series controlled arrays in stress period ',             &
@@ -179,13 +176,12 @@ contains
                 tasLink%BndArray(j) = tasLink%BndArray(j) * tasLink%RMultArray(j)
               enddo
             else
-              ermsg = 'Size mismatch between boundary and multiplier arrays' // &
+              errmsg = 'Size mismatch between boundary and multiplier arrays' // &
                        ' using time-array series: ' // &
                        trim(tasLink%TimeArraySeries%Name)
-              call store_error(ermsg)
+              call store_error(errmsg)
               inunit = tasLink%TimeArraySeries%GetInunit()
               call store_error_unit(inunit)
-              call ustop()
             endif
           endif
         endif
@@ -337,7 +333,6 @@ contains
       ermsg = 'Error: Time-array series "' // trim(tasName) // '" not found.'
       call store_error(ermsg)
       call store_error_unit(inunit)
-      call ustop()
     endif
     tasptr => this%taslist(iloc)
     !

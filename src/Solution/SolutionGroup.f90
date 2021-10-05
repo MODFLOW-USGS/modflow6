@@ -57,7 +57,6 @@ module SolutionGroupModule
     ! -- modules
     use ConstantsModule,        only: LINELENGTH
     use SimVariablesModule,     only: iout, isimcnvg, lastStepFailed
-    use SimModule,              only: store_error, ustop
     use TdisModule,             only: kstp, kper
     ! -- dummy
     class(SolutionGroupType) :: this

@@ -13,8 +13,7 @@ module GwfGwfExchangeModule
   use GwfMvrModule,            only: GwfMvrType
   use ObserveModule,           only: ObserveType
   use ObsModule,               only: ObsType
-  use SimModule,               only: count_errors, store_error,                &
-                                     store_error_unit, ustop
+  use SimModule,               only: count_errors, store_error, store_error_unit
   use BlockParserModule,       only: BlockParserType
   use TableModule,             only: TableType, table_cr
 
@@ -188,7 +187,6 @@ contains
         'GWF MODELS MUST BE IN SAME SOLUTION: ' //                             &
         trim(this%gwfmodel1%name) // ' ' // trim(this%gwfmodel2%name) )
       call this%parser%StoreErrorUnit()
-      call ustop()
     endif
     !
     ! -- read options
@@ -319,7 +317,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     use GwfNpfModule, only: condmean, vcond, hcond
     ! -- dummy
     class(GwfExchangeType) :: this
@@ -348,8 +346,7 @@ contains
                              'specified as an auxiliary variable because ' //    &
                              'K22 was specified in one or both ' //              &
                              'groundwater models.'
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
     endif
     !
@@ -363,16 +360,14 @@ contains
                              'specified as an auxiliary variable because ' //    &
                              'specific discharge is being calculated in' //      &
                              ' one or both groundwater models.'
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
       if(this%icdist == 0) then
         write(errmsg, '(a)') 'GWF-GWF requires that CDIST be ' //                &
                              'specified as an auxiliary variable because ' //    &
                              'specific discharge is being calculated in' //      &
                              ' one or both groundwater models.'
-        call store_error(errmsg)
-        call ustop()
+        call store_error(errmsg, terminate=.TRUE.)
       endif
     endif
     !
@@ -821,7 +816,7 @@ contains
           ny = sin(angle)
         else
           ! error?
-          call ustop('error in gwf_gwf_cq')
+          call store_error('error in gwf_gwf_cq', terminate=.TRUE.)
         endif
         !
         ! -- Calculate the saturated thickness at interface between n1 and n2
@@ -836,12 +831,14 @@ contains
       if(this%icdist > 0) then
         dltot = this%auxvar(this%icdist, i)
       else
-        call ustop('error in gwf_gwf_cq')
+        call store_error('error in gwf_gwf_cq', terminate=.TRUE.)
       endif
       distance = dltot * this%cl1(i) / (this%cl1(i) + this%cl2(i))
       if (this%gwfmodel1%npf%icalcspdis == 1) then
         call this%gwfmodel1%npf%set_edge_properties(n1, ihc, rrate, area,      &
                                                     nx, ny, distance)
+        this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) =                         &
+          this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) + rrate
       endif
       !
       ! -- Submit this connection and flow information to the npf
@@ -849,13 +846,15 @@ contains
       if(this%icdist > 0) then
         dltot = this%auxvar(this%icdist, i)
       else
-        call ustop('error in gwf_gwf_cq')
+        call store_error('error in gwf_gwf_cq', terminate=.TRUE.)
       endif
       if (this%gwfmodel2%npf%icalcspdis == 1) then
         distance = dltot * this%cl2(i) / (this%cl1(i) + this%cl2(i))
         if (ihc /= 0) rrate = -rrate
-        call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,     &
+        call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,      &
                                                     -nx, -ny, distance)
+        this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) =                         &
+          this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) + rrate
       endif
       !
     enddo
@@ -1167,6 +1166,7 @@ contains
     class(GwfExchangeType) :: this
     ! -- local
     integer(I4B) :: iexg, n1, n2
+    integer(I4B) :: ibudfl
     real(DP) :: flow, deltaqgnc
     character(len=LINELENGTH) :: node1str, node2str
     ! -- format
@@ -1218,7 +1218,8 @@ contains
     endif
     !
     ! -- Mover budget output
-    if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary()
+    ibudfl = 1
+    if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary(ibudfl)
     !
     ! -- OBS output
     call this%obs%obs_ot()
@@ -1240,7 +1241,7 @@ contains
     use ConstantsModule, only: LINELENGTH, LENAUXNAME, DEM6
     use MemoryManagerModule, only: mem_allocate
     use InputOutputModule, only: getunit, openfile, urdaux
-    use SimModule, only: store_error, store_error_unit, ustop
+    use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
@@ -1319,7 +1320,6 @@ contains
               errmsg = "Unknown cell averaging method '" // trim(keyword) // "'."
               call store_error(errmsg)
               call this%parser%StoreErrorUnit()
-              call ustop()
             end select
             write(iout,'(4x,a,a)')                                             &
               'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(keyword)
@@ -1344,13 +1344,11 @@ contains
               call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY ' //          &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
             if(fname == '') then
               call store_error('NO GNC6 FILE SPECIFIED.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             this%ingnc = getunit()
             call openfile(this%ingnc, iout, fname, 'GNC')
@@ -1362,13 +1360,11 @@ contains
               call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY ' //          &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
             if(fname == '') then
               call store_error('NO MVR6 FILE SPECIFIED.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             this%inmvr = getunit()
             call openfile(this%inmvr, iout, fname, 'MVR')
@@ -1384,7 +1380,6 @@ contains
               call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY ' //         &
                 '"FILEIN" then by filename.')
               call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             this%obs%active = .true.
             call this%parser%GetString(this%obs%inputFilename)
@@ -1395,7 +1390,6 @@ contains
             errmsg = "Unknown gwf exchange option '" // trim(keyword) // "'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)') 'END OF GWF EXCHANGE OPTIONS'
@@ -1419,7 +1413,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, ustop
+    use SimModule, only: store_error
     implicit none
     ! -- dummy
     class(GwfExchangeType) :: this
@@ -1449,14 +1443,12 @@ contains
             errmsg = "Unknown dimension '" // trim(keyword) // "'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       write(iout,'(1x,a)') 'END OF EXCHANGE DIMENSIONS'
     else
       call store_error('Required dimensions block not found.')
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1473,7 +1465,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit, count_errors
+    use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
@@ -1587,7 +1579,6 @@ contains
       if(nerr > 0) then
         call store_error('Errors encountered in exchange input file.')
         call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       write(iout,'(1x,a)')'END OF EXCHANGEDATA'
@@ -1595,7 +1586,6 @@ contains
       errmsg = 'Required exchangedata block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- return
@@ -1610,7 +1600,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, store_error_unit, count_errors, ustop
+    use SimModule, only: store_error, store_error_unit, count_errors
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfExchangeType) :: this
@@ -1632,14 +1622,12 @@ contains
       call store_error('ADD IMPLICIT OPTION TO GNC OR REMOVE NEWTON FROM ' // &
         'GWF EXCHANGE.')
       call store_error_unit(this%ingnc)
-      call ustop()
     endif
     !
     ! -- Perform checks to ensure GNCs match with GWF-GWF nodes
     if(this%nexg /= this%gnc%nexg) then
       call store_error('NUMBER OF EXCHANGES DOES NOT MATCH NUMBER OF GNCs')
       call store_error_unit(this%ingnc)
-      call ustop()
     endif
     !
     ! -- Go through each entry and confirm
@@ -1656,7 +1644,6 @@ contains
     enddo
     if(count_errors() > 0) then
       call store_error_unit(this%ingnc)
-      call ustop()
     endif
     !
     ! -- close the file
@@ -2134,7 +2121,6 @@ contains
     ! -- write summary of error messages
     if (count_errors() > 0) then
       call store_error_unit(this%inobs)
-      call ustop()
     endif
     !
     ! -- Return
@@ -2239,7 +2225,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    use SimModule, only: store_error, store_error_unit, ustop
+    use SimModule, only: store_error, store_error_unit
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
     class(GwfExchangeType), intent(inout) :: this
@@ -2275,7 +2261,6 @@ contains
                   trim(obsrv%ObsTypeId)
             call store_error(msg)
             call store_error_unit(this%inobs)
-            call ustop()
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         enddo

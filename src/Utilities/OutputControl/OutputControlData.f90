@@ -1,27 +1,40 @@
-module OutputControlData
+!> @brief This module contains the OutputControlDataModule
+!!
+!! This module defines the OutputControlDataType.  This type
+!! can be assigned to different model variables, such as head
+!! or concentration.  The variables are then printed and/or
+!! saved in a consistent manner.
+!!
+!<
+module OutputControlDataModule
   
   use BaseDisModule,          only: DisBaseType
   use InputOutputModule,      only: print_format
-  use KindModule,             only: DP, I4B
+  use KindModule,             only: DP, I4B, LGP
   use PrintSaveManagerModule, only: PrintSaveManagerType
   
   implicit none
   private
   public OutputControlDataType, ocd_cr
   
+  !> @ brief OutputControlDataType
+  !!
+  !!  Object for storing information and determining whether or
+  !!  not model data should be printed to a list file or saved to disk.
+  !<
   type OutputControlDataType
-    character(len=16), pointer              :: cname    => null()
-    character(len=60), pointer              :: cdatafmp => null()
-    integer(I4B), pointer                   :: idataun  => null()
-    character(len=1), pointer               :: editdesc => null()
-    integer(I4B), pointer                   :: nvaluesp => null()
-    integer(I4B), pointer                   :: nwidthp  => null()
-    real(DP), pointer                       :: dnodata  => null()
-    integer(I4B), pointer                   :: inodata  => null()
-    real(DP), dimension(:), pointer, contiguous         :: dblvec   => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: intvec   => null()
-    class(DisBaseType), pointer             :: dis      => null()
-    type(PrintSaveManagerType), pointer     :: psmobj   => null()
+    character(len=16), pointer                       :: cname    => null()      !< name of variable, such as HEAD
+    character(len=60), pointer                       :: cdatafmp => null()      !< fortran format for printing
+    integer(I4B), pointer                            :: idataun  => null()      !< fortran unit number for binary output
+    character(len=1), pointer                        :: editdesc => null()      !< fortran format type (I, G, F, S, E)
+    integer(I4B), pointer                            :: nvaluesp => null()      !< number of values per line for printing
+    integer(I4B), pointer                            :: nwidthp  => null()      !< width of the number for printing
+    real(DP), pointer                                :: dnodata  => null()      !< no data value
+    integer(I4B), pointer                            :: inodata  => null()      !< integer no data value
+    real(DP), dimension(:), pointer, contiguous      :: dblvec   => null()      !< pointer to double precision data array
+    integer(I4B), dimension(:), pointer, contiguous  :: intvec   => null()      !< pointer to integer data array
+    class(DisBaseType), pointer                      :: dis      => null()      !< pointer to discretization package
+    type(PrintSaveManagerType), pointer              :: psmobj   => null()      !< print/save manager object
   contains
     procedure :: allocate_scalars
     procedure :: init_int
@@ -34,16 +47,14 @@ module OutputControlData
   
   contains
   
+  !> @ brief Create OutputControlDataType
+  !!
+  !!  Create by allocating a new OutputControlDataType object
+  !!
+  !<
   subroutine ocd_cr(ocdobj)
-! ******************************************************************************
-! ocd_cr -- Create a new ocd object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(OutputControlDataType), pointer :: ocdobj
-! ------------------------------------------------------------------------------
+    type(OutputControlDataType), pointer :: ocdobj  !< OutputControlDataType object
     !
     ! -- Create the object
     allocate(ocdobj)
@@ -55,26 +66,24 @@ module OutputControlData
     return
   end subroutine ocd_cr
   
+  !> @ brief Check OutputControlDataType object
+  !!
+  !!  Perform a consistency check
+  !!
+  !<
   subroutine ocd_rp_check(this, inunit)
-! ******************************************************************************
-! ocd_rp_check -- Check to make sure settings are consistent
-! ******************************************************************************
-!
-!    Specifications:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors, store_error_unit, ustop
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(OutputControlDataType) :: this
-    integer(I4B), intent(in) :: inunit
+    class(OutputControlDataType) :: this  !< OutputControlDataType object
+    integer(I4B), intent(in) :: inunit    !< Unit number for input
     ! -- locals
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtocsaveerr =                              &
       "(1X,'REQUESTING TO SAVE ',A,' BUT ',A,' SAVE FILE NOT SPECIFIED. ',     &
        &A,' SAVE FILE MUST BE SPECIFIED IN OUTPUT CONTROL OPTIONS.')"
-! ------------------------------------------------------------------------------
     !
     ! -- Check to make sure save file was specified
     if(this%psmobj%save_detected) then
@@ -88,32 +97,30 @@ module OutputControlData
     !
     if(count_errors() > 0) then
       call store_error_unit(inunit)
-      call ustop()
     endif
     !
     ! -- return
     return
   end subroutine ocd_rp_check
 
-  subroutine ocd_ot(this, ipflg, kstp, nstp, iout, iprint_opt, isav_opt)
-! ******************************************************************************
-! ocd_ot -- record information
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Output data
+  !!
+  !!  Depending on the settings, print the data to a listing file and/or
+  !!  save the data to a binary file.
+  !!
+  !<
+  subroutine ocd_ot(this, ipflg, kstp, endofperiod, iout, iprint_opt, isav_opt)
     ! -- dummy
-    class(OutputControlDataType) :: this
-    integer(I4B), intent(inout) :: ipflg
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: nstp
-    integer(I4B), intent(in) :: iout
-    integer(I4B), optional, intent(in) :: iprint_opt
-    integer(I4B), optional, intent(in) :: isav_opt
+    class(OutputControlDataType) :: this               !< OutputControlDataType object
+    integer(I4B), intent(inout) :: ipflg               !< Flag indicating if something was printed
+    integer(I4B), intent(in) :: kstp                   !< Current time step
+    logical(LGP), intent(in) :: endofperiod            !< End of period logical flag
+    integer(I4B), intent(in) :: iout                   !< Unit number for output
+    integer(I4B), optional, intent(in) :: iprint_opt   !< Optional print flag override
+    integer(I4B), optional, intent(in) :: isav_opt     !< Optional save flag override
     ! -- local
     integer(I4B) :: iprint
     integer(I4B) :: idataun
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     iprint = 0
@@ -128,7 +135,7 @@ module OutputControlData
         ipflg = 1
       endif
     else
-      if(this%psmobj%kstp_to_print(kstp, nstp)) then
+      if(this%psmobj%kstp_to_print(kstp, endofperiod)) then
         iprint = 1
         ipflg = 1
       endif
@@ -140,13 +147,13 @@ module OutputControlData
         idataun = this%idataun
       endif
     else
-      if(this%psmobj%kstp_to_save(kstp, nstp)) idataun = this%idataun
+      if(this%psmobj%kstp_to_save(kstp, endofperiod)) idataun = this%idataun
     endif
     !
     ! -- Record double precision array
     if(associated(this%dblvec))                                                &
-    call this%dis%record_array(this%dblvec, iout, iprint, idataun,         &
-                               this%cname, this%cdatafmp, this%nvaluesp,   &
+    call this%dis%record_array(this%dblvec, iout, iprint, idataun,             &
+                               this%cname, this%cdatafmp, this%nvaluesp,       &
                                this%nwidthp, this%editdesc, this%dnodata)
     !
     ! -- Record integer array (not supported yet)
@@ -159,18 +166,16 @@ module OutputControlData
     return
   end subroutine ocd_ot
   
+  !> @ brief Deallocate OutputControlDataType
+  !!
+  !!  Deallocate members of this type
+  !!
+  !<
   subroutine ocd_da(this)
-! ******************************************************************************
-! ocd_da --deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(OutputControlDataType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate 
     deallocate(this%cname)
@@ -187,24 +192,22 @@ module OutputControlData
     return
   end subroutine ocd_da  
   
+  !> @ brief Initialize this OutputControlDataType as double precision data
+  !!
+  !!  Initialize this object as a double precision data type
+  !!
+  !<
   subroutine init_dbl(this, cname, dblvec, dis, cdefpsm, cdeffmp, iout,    &
                       dnodata)
-! ******************************************************************************
-! init_int -- Initialize integer variable
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(OutputControlDataType) :: this
-    character(len=*), intent(in) :: cname
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: dblvec
-    class(DisBaseType), pointer, intent(in) :: dis
-    character(len=*), intent(in) :: cdefpsm
-    character(len=*), intent(in) :: cdeffmp
-    integer(I4B), intent(in) :: iout
-    real(DP), intent(in) :: dnodata
-! ------------------------------------------------------------------------------
+    class(OutputControlDataType) :: this                                  !< OutputControlDataType object
+    character(len=*), intent(in) :: cname                                 !< Name of variable
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: dblvec     !< Data array that will be managed by this object
+    class(DisBaseType), pointer, intent(in) :: dis                        !< Discretization package
+    character(len=*), intent(in) :: cdefpsm                               !< String for defining the print/save manager
+    character(len=*), intent(in) :: cdeffmp                               !< String for print format
+    integer(I4B), intent(in) :: iout                                      !< Unit number for output
+    real(DP), intent(in) :: dnodata                                       !< No data value
     !
     this%cname = cname
     this%dblvec => dblvec
@@ -219,24 +222,22 @@ module OutputControlData
     return
   end subroutine init_dbl
   
+  !> @ brief Initialize this OutputControlDataType as integer data
+  !!
+  !!  Initialize this object as an integer data type
+  !!
+  !<
   subroutine init_int(this, cname, intvec, dis, cdefpsm, cdeffmp, iout,    &
                       inodata)
-! ******************************************************************************
-! init_int -- Initialize integer variable
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(OutputControlDataType) :: this
-    character(len=*), intent(in) :: cname
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: intvec
-    class(DisBaseType), pointer, intent(in) :: dis
-    character(len=*), intent(in) :: cdefpsm
-    character(len=*), intent(in) :: cdeffmp
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: inodata
-! ------------------------------------------------------------------------------
+    class(OutputControlDataType) :: this                                    !< OutputControlDataType object
+    character(len=*), intent(in) :: cname                                   !< Name of variable
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: intvec   !< Data array that will be managed by this object
+    class(DisBaseType), pointer, intent(in) :: dis                          !< Discretization package
+    character(len=*), intent(in) :: cdefpsm                                 !< String for defining the print/save manager
+    character(len=*), intent(in) :: cdeffmp                                 !< String for print format
+    integer(I4B), intent(in) :: iout                                        !< Unit number for output
+    integer(I4B), intent(in) :: inodata                                     !< No data value
     !
     this%cname = cname
     this%intvec => intvec
@@ -252,18 +253,16 @@ module OutputControlData
     return
   end subroutine init_int  
   
+  !> @ brief Allocate OutputControlDataType members
+  !!
+  !!  Allocate and initialize member variables
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(OutputControlDataType) :: this
-! ------------------------------------------------------------------------------
+    class(OutputControlDataType) :: this  !< OutputControlDataType object
     !
     allocate(this%cname)
     allocate(this%cdatafmp)
@@ -288,23 +287,22 @@ module OutputControlData
     return
   end subroutine allocate_scalars  
   
+  !> @ brief Set options for this object based on an input string
+  !!
+  !!  Set FILEOUT and PRINT_FORMAT options for this object.
+  !!
+  !<
   subroutine set_option(this, linein, inunit, iout)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: MNORMAL 
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
-    use SimModule, only: store_error, store_error_unit, count_errors, ustop
+    use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
-    class(OutputControlDataType) :: this
-    character(len=*), intent(in) :: linein
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
+    class(OutputControlDataType) :: this     !< OutputControlDataType object
+    character(len=*), intent(in) :: linein   !< Character string with options
+    integer(I4B), intent(in) :: inunit       !< Unit number for input
+    integer(I4B), intent(in) :: iout         !< Unit number for output
     ! -- local
     character(len=len(linein)) :: line
     integer(I4B) :: lloc, istart, istop, ival
@@ -313,7 +311,6 @@ module OutputControlData
     character(len=*),parameter :: fmtocsave = &
       "(4X,A,' INFORMATION WILL BE WRITTEN TO:',                                 &
        &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
-! ------------------------------------------------------------------------------
     !
     line(:) = linein(:)
     lloc = 1
@@ -334,11 +331,10 @@ module OutputControlData
        call store_error('Looking for FILEOUT or PRINT_FORMAT.  Found:')
        call store_error(trim(adjustl(line)))
        call store_error_unit(inunit)
-       call ustop()
     end select
     !
     ! -- return
     return
   end subroutine set_option  
   
-end module OutputControlData
+end module OutputControlDataModule

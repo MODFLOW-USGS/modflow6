@@ -5,6 +5,7 @@
 # failure occurs.
 
 import os
+import pytest
 import shutil
 import numpy as np
 

@@ -9,8 +9,7 @@ module CommandArguments
                                     simfile, simlstfile, simstdout,              &
                                     isim_mode
   use GenericUtilitiesModule, only: sim_message
-  use SimModule, only: store_error, ustop, store_error_unit,                     &
-                       store_error_filename
+  use SimModule, only: store_error, ustop
   use InputOutputModule, only: upcase, getunit
   !
   implicit none
@@ -205,7 +204,7 @@ module CommandArguments
               call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
               errmsg = trim(adjustl(cexe)) // ': illegal MODFLOW 6 ' //          &
                 'simulation mode option - ' // trim(adjustl(cmode))
-              call store_error(errmsg)
+              call store_error(errmsg, terminate=.TRUE.)
           end select
           !
           ! -- write message to stdout
@@ -219,7 +218,7 @@ module CommandArguments
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
           write(errmsg, '(2a,1x,a)') &
             trim(adjustl(cexe)), ': illegal option -', trim(adjustl(tag))
-          call store_error(errmsg)
+          call store_error(errmsg, terminate=.TRUE.)
       end select
     end do
     !
@@ -231,7 +230,7 @@ module CommandArguments
         write(errmsg, '(2a,2(1x,a))')                                              &
             trim(adjustl(cexe)), ':', trim(adjustl(simfile)),                      &
             'is not present in working directory.'
-        call store_error(errmsg)
+        call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
     !

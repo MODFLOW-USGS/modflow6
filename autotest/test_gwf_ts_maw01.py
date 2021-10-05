@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 
 try:
@@ -434,7 +435,7 @@ def eval_model(sim):
     # get ia/ja from binary grid file
     fname = "{}.dis.grb".format(os.path.basename(sim.name))
     fpth = os.path.join(sim.simpath, fname)
-    grbobj = flopy.utils.MfGrdFile(fpth)
+    grbobj = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grbobj._datadict["IA"] - 1
 
     fname = "{}.cbc".format(os.path.basename(sim.name))
@@ -480,18 +481,19 @@ def build_models():
     return
 
 
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
     build_models()
 
-    # run the test models
-    for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, exfunc=eval_model, idxsim=idx)
-
-    return
+    # run the test model
+    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
 
 
 def main():
@@ -501,7 +503,7 @@ def main():
     # build the models
     build_models()
 
-    # run the test models
+    # run the test model
     for idx, dir in enumerate(exdirs):
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)

@@ -1,14 +1,26 @@
+!> @brief This module contains the storage package methods
+!!
+!! This module contains the methods used to add the effects of storage
+!! on the groundwater flow equation. The contribution of specific 
+!! storage and specific yield can be represented.
+!!
+!<
 module GwfStoModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, LENBUDTXT
+  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO,               &
+                             LENBUDTXT, LINELENGTH
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error, count_errors
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQSaturation, sLinearSaturation
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
-  use GwfStorageUtilsModule, only: SsCapacity, SyCapacity
+  use GwfStorageUtilsModule, only: SsCapacity, SyCapacity, SsTerms, SyTerms
+  use InputOutputModule, only: GetUnit, openfile
+  use TvsModule, only: TvsType, tvs_cr
 
   implicit none
   public :: GwfStoType, sto_cr
@@ -29,6 +41,11 @@ module GwfStoModule
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
     real(DP), pointer                                :: satomega => null()       !< newton-raphson saturation omega
+    integer(I4B), pointer                         :: integratechanges => null()  !< indicates if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
+    integer(I4B), pointer                            :: intvs => null()          !< TVS (time-varying storage) unit number (0 if unused)
+    type(TvsType), pointer                           :: tvs => null()            !< TVS object
+    real(DP), dimension(:), pointer, contiguous, private :: oldss => null()      !< previous time step specific storage
+    real(DP), dimension(:), pointer, contiguous, private :: oldsy => null()      !< previous time step specific yield
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -44,6 +61,7 @@ module GwfStoModule
     !procedure, private :: register_handlers
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: save_old_ss_sy
   end type
 
 contains
@@ -55,11 +73,10 @@ contains
   !<
   subroutine sto_cr(stoobj, name_model, inunit, iout)
     ! -- dummy variables
-    type(GwfStoType), pointer :: stoobj
+    type(GwfStoType), pointer :: stoobj         !< GwfStoType object
     character(len=*), intent(in) :: name_model  !< name of model
     integer(I4B), intent(in) :: inunit          !< package input file unit
     integer(I4B), intent(in) :: iout            !< model listing file unit
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (stoobj)
@@ -91,7 +108,7 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy variables
-    class(GwfStoType)                       :: this
+    class(GwfStoType)                       :: this            !< GwfStoType object
     class(DisBaseType), pointer, intent(in) :: dis             !< model discretization object
     integer(I4B), dimension(:), pointer, contiguous :: ibound  !< model ibound array
     ! -- local variables
@@ -99,7 +116,6 @@ contains
     character(len=*), parameter :: fmtsto = &
       "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014',                 &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the storage package.
     write (this%iout, fmtsto) this%inunit
@@ -123,6 +139,11 @@ contains
     ! -- read the data block
     call this%read_data()
     !
+    ! -- TVS
+    if (this%intvs /= 0) then
+      call this%tvs%ar(this%dis)
+    end if
+    !
     ! -- return
     return
   end subroutine sto_ar
@@ -134,17 +155,15 @@ contains
   !<
   subroutine sto_rp(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: store_error, ustop
     implicit none
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this  !< GwfStoType object
     ! -- local variables
-    integer(I4B)               :: ierr
-    logical                   :: isfound, readss, readsy, endOfBlock
-    character(len=16)        :: css(0:1)
-    character(len=LINELENGTH) :: line, errmsg, keyword
+    integer(I4B) :: ierr
+    logical :: isfound, readss, readsy, endOfBlock
+    character(len=16) :: css(0:1)
+    character(len=LINELENGTH) :: line, keyword
     ! -- formats
     character(len=*), parameter :: fmtlsp = &
                                    "(1X,/1X,'REUSING ',A,' FROM LAST STRESS PERIOD')"
@@ -154,6 +173,11 @@ contains
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Store ss and sy values from end of last stress period if needed
+    if(this%integratechanges /= 0) then
+      call this%save_old_ss_sy()
+    end if
     !
     ! -- get stress period data
     if (this%ionper < kper) then
@@ -177,7 +201,6 @@ contains
           write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       end if
     end if
@@ -200,11 +223,10 @@ contains
         case ('TRANSIENT')
           this%iss = 0
         case default
-          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN STORAGE DATA TAG: ', &
+          write (errmsg, '(4x,a,a)') 'Unknown STORAGE data tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
@@ -214,6 +236,11 @@ contains
 
     write (this%iout, '(//1X,A,I0,A,A,/)') &
       'STRESS PERIOD ', kper, ' IS ', trim(adjustl(css(this%iss)))
+    !
+    ! -- TVS
+    if (this%intvs /= 0) then
+      call this%tvs%rp()
+    end if
     !
     ! -- return
     return
@@ -225,11 +252,20 @@ contains
   !!
   !<
   subroutine sto_ad(this)
+    ! -- modules
+    use TdisModule, only: kstp
     ! -- dummy variables
-    class(GwfStoType) :: this
-! ------------------------------------------------------------------------------
+    class(GwfStoType) :: this  !< GwfStoType object
     !
-    ! -- Subroutine does not do anything at the moment
+    ! -- Store ss and sy values from end of last time step if needed
+    if(this%integratechanges /= 0 .and. kstp > 1) then
+      call this%save_old_ss_sy()
+    end if
+    !
+    ! -- TVS
+    if(this%intvs /= 0) then
+      call this%tvs%ad()
+    endif
     !
     ! -- return
     return
@@ -239,18 +275,13 @@ contains
   !!
   !!  Fill the coefficient matrix and right-hand side with the STO package terms.
   !!
-  !! @param[in,out]  amat  A matrix
-  !! @param[in,out]  rhs   right-hand side
-  !!
   !<
   subroutine sto_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
     ! -- modules
-    use SimModule, only: ustop, store_error
-    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this
-    integer(I4B), intent(in) :: kiter                   !< outer iteration numbed
+    class(GwfStoType) :: this                           !< GwfStoType object
+    integer(I4B), intent(in) :: kiter                   !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold          !< previous heads
     real(DP), intent(in), dimension(:) :: hnew          !< current heads
     integer(I4B), intent(in) :: njasln                  !< size of the A matrix for the solution
@@ -265,24 +296,20 @@ contains
     real(DP) :: sc2
     real(DP) :: rho1
     real(DP) :: rho2
+    real(DP) :: sc1old
+    real(DP) :: sc2old
+    real(DP) :: rho1old
+    real(DP) :: rho2old
     real(DP) :: tp
     real(DP) :: bt
-    real(DP) :: tthk
-    real(DP) :: zold
-    real(DP) :: znew
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ss_sat1
-    real(DP) :: ssh0
-    real(DP) :: ssh1
     real(DP) :: aterm
     real(DP) :: rhsterm
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtsperror =                                &
       &"('DETECTED TIME STEP LENGTH OF ZERO.  GWF STORAGE PACKAGE CANNOT BE ', &
       &'USED UNLESS DELT IS NON-ZERO.')"
-! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
@@ -290,8 +317,7 @@ contains
     ! -- Ensure time step length is not zero
     if (delt == DZERO) then
       write (errmsg, fmtsperror)
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- set variables
@@ -305,7 +331,6 @@ contains
       ! -- aquifer elevations and thickness
       tp = this%dis%top(n)
       bt = this%dis%bot(n)
-      tthk = tp - bt
       !
       ! -- aquifer saturation
       if (this%iconvert(n) == 0) then
@@ -316,45 +341,27 @@ contains
         snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
       end if
       !
-      ! -- set saturation used for ss
-      ss_sat1 = snnew
-      ssh0 = hold(n)
-      ssh1 = DZERO
-      if (this%iconf_ss /= 0) then
-        if (snold < DONE) then
-          ssh0 = tp
-        end if
-        if (snnew < DONE) then
-          ss_sat1 = DZERO
-          ssh1 = tp
-        end if
-      end if
-      !
       ! -- storage coefficients
       sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
-      rho1 = sc1*tled
+      rho1 = sc1 * tled
       !
-      ! -- initialize matrix terms
-      aterm = -rho1 * ss_sat1
-      rhsterm = DZERO
-      !
-      ! -- calculate storage coefficients for amat and rhs
-      ! -- specific storage
-      if (this%iconvert(n) /= 0) then
-        if (this%iorig_ss == 0) then
-          if (this%iconf_ss == 0) then
-            zold = bt + DHALF * tthk * snold
-            znew = bt + DHALF * tthk * snnew
-            rhsterm = -rho1 * (snold * (hold(n) - zold) + snnew * znew)
-          else
-            rhsterm = -rho1 * ssh0 + rho1 * ssh1
-          end if
-        else
-          rhsterm = -rho1 * snold * hold(n)
-        end if
+      if(this%integratechanges /= 0) then
+        ! -- Integration of storage changes (e.g. when using TVS):
+        !    separate the old (start of time step) and new (end of time step)
+        !    primary storage capacities
+        sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), &
+                            this%oldss(n))
+        rho1old = sc1old * tled
       else
-        rhsterm = -rho1 * snold * hold(n)
+        ! -- No integration of storage changes: old and new values are
+        !    identical => normal MF6 storage formulation
+        rho1old = rho1
       end if
+      !
+      ! -- calculate specific storage terms
+      call SsTerms(this%iconvert(n), this%iorig_ss, this%iconf_ss, tp, bt, &
+                   rho1, rho1old, snnew, snold, hnew(n), hold(n), &
+                   aterm, rhsterm)
       !
       ! -- add specific storage terms to amat and rhs
       amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
@@ -368,20 +375,25 @@ contains
         sc2 = SyCapacity(this%dis%area(n), this%sy(n))
         rho2 = sc2 * tled
         !
-        ! -- add specific yield terms to amat at rhs
-        if (snnew < DONE) then
-          if (snnew > DZERO) then
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
-            rhsterm = rho2 * tthk * snold
-            rhsterm = rhsterm + rho2 * bt
-          else
-            rhsterm = -rho2 * tthk * (DZERO - snold)
-          end if
-          ! -- known flow from specific yield
+        if(this%integratechanges /= 0) then
+        ! -- Integration of storage changes (e.g. when using TVS):
+        !    separate the old (start of time step) and new (end of time step)
+        !    secondary storage capacities
+          sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
+          rho2old = sc2old * tled
         else
-          rhsterm = -rho2 * tthk * (DONE - snold)
+        ! -- No integration of storage changes: old and new values are
+        !    identical => normal MF6 storage formulation
+          rho2old = rho2
         end if
-        rhs(n) = rhs(n) - rhsterm
+        !
+        ! -- calculate specific storage terms
+        call SyTerms(tp, bt, rho2, rho2old, snnew, snold, &
+                     aterm, rhsterm)
+!
+        ! -- add specific yield terms to amat and rhs
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+        rhs(n) = rhs(n) + rhsterm
       end if
     end do
     !
@@ -394,15 +406,12 @@ contains
   !!  Fill the coefficient matrix and right-hand side with STO package
   !!  with Newton-Raphson terms.
   !!
-  !! @param[in,out]  amat  A matrix
-  !! @param[in,out]  rhs   right-hand side
-  !!
   !<
   subroutine sto_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                            !< GwfStoType object
     integer(I4B), intent(in) :: kiter                    !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold           !< previous heads
     real(DP), intent(in), dimension(:) :: hnew           !< current heads
@@ -422,12 +431,10 @@ contains
     real(DP) :: bt
     real(DP) :: tthk
     real(DP) :: h
-    real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: derv
     real(DP) :: rterm
     real(DP) :: drterm
-! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
@@ -447,7 +454,6 @@ contains
       h = hnew(n)
       !
       ! -- aquifer saturation
-      snold = sQuadraticSaturation(tp, bt, hold(n))
       snnew = sQuadraticSaturation(tp, bt, h)
       !
       ! -- storage coefficients
@@ -466,7 +472,7 @@ contains
         ! -- newton terms for specific storage
         if (this%iconf_ss == 0) then
           if (this%iorig_ss == 0) then
-            drterm = -rho1 * derv * (h - bt) + rho1 * tthk * snnew * derv 
+            drterm = -rho1 * derv * (h - bt) + rho1 * tthk * snnew * derv
           else
             drterm = -(rho1 * derv * h)
           end if
@@ -498,14 +504,12 @@ contains
   !!  Flow calculation for the STO package components. Components include
   !!  specific storage and specific yield storage.
   !!
-  !!  @param[in,out]  flowja  model budget object
-  !!
   !<
   subroutine sto_cq(this, flowja, hnew, hold)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                                    !< GwfStoType object
     real(DP), dimension(:), contiguous, intent(inout) :: flowja  !< connection flows
     real(DP), dimension(:), contiguous, intent(in) :: hnew       !< current head
     real(DP), dimension(:), contiguous, intent(in) :: hold       !< previous head
@@ -518,16 +522,16 @@ contains
     real(DP) :: sc2
     real(DP) :: rho1
     real(DP) :: rho2
+    real(DP) :: sc1old
+    real(DP) :: sc2old
+    real(DP) :: rho1old
+    real(DP) :: rho2old
     real(DP) :: tp
     real(DP) :: bt
-    real(DP) :: tthk
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: ssh0
-    real(DP) :: ssh1
-    real(DP) :: zold
-    real(DP) :: znew
-! ------------------------------------------------------------------------------
+    real(DP) :: aterm
+    real(DP) :: rhsterm 
     !
     ! -- initialize strg arrays
     do n = 1, this%dis%nodes
@@ -547,45 +551,37 @@ contains
         ! -- aquifer elevations and thickness
         tp = this%dis%top(n)
         bt = this%dis%bot(n)
-        tthk = tp - bt
         !
         ! -- aquifer saturation
-        if (this%iconvert(n) /= 0) then
+        if (this%iconvert(n) == 0) then
+          snold = DONE
+          snnew = DONE
+        else
           snold = sQuadraticSaturation(tp, bt, hold(n), this%satomega)
           snnew = sQuadraticSaturation(tp, bt, hnew(n), this%satomega)
         end if
         !
-        ! -- set saturation used for ss
-        ssh0 = hold(n)
-        ssh1 = hnew(n)
-        if (this%iconf_ss /= 0) then
-          if (snold < DONE) then
-            ssh0 = tp
-          end if
-          if (snnew < DONE) then
-            ssh1 = tp
-          end if
-        end if
         ! -- primary storage coefficient
         sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
         rho1 = sc1*tled
         !
-        ! -- specific storage
-        if (this%iconvert(n) /= 0) then
-          if (this%iorig_ss == 0) then
-            if (this%iconf_ss == 0) then
-              zold = bt + DHALF * tthk * snold
-              znew = bt + DHALF * tthk * snnew
-              rate = rho1 * (snold * (hold(n) - zold) - snnew * (hnew(n) - znew))
-            else
-              rate = rho1 * (ssh0 - ssh1)
-            end if
-          else
-            rate = rho1 * snold * hold(n) - rho1 * snnew * hnew(n)
-          end if
+        if(this%integratechanges /= 0) then
+          ! -- Integration of storage changes (e.g. when using TVS):
+          !    separate the old (start of time step) and new (end of time step)
+          !    primary storage capacities
+          sc1old = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), &
+                              this%oldss(n))
+          rho1old = sc1old * tled
         else
-          rate = rho1 * hold(n) - rho1 * hnew(n)
+          ! -- No integration of storage changes: old and new values are
+          !    identical => normal MF6 storage formulation
+          rho1old = rho1
         end if
+        !
+        ! -- calculate specific storage terms and rate
+        call SsTerms(this%iconvert(n), this%iorig_ss, this%iconf_ss, tp, bt, &
+                      rho1, rho1old, snnew, snold, hnew(n), hold(n), &
+                      aterm, rhsterm, rate)
         !
         ! -- save rate
         this%strgss(n) = rate
@@ -602,8 +598,22 @@ contains
           sc2 = SyCapacity(this%dis%area(n), this%sy(n))
           rho2 = sc2 * tled
           !
-          ! -- contribution from specific yield
-          rate = rho2 * tthk * snold - rho2 * tthk * snnew
+          if(this%integratechanges /= 0) then
+            ! -- Integration of storage changes (e.g. when using TVS):
+            !    separate the old (start of time step) and new (end of time
+            !    step) secondary storage capacities
+            sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
+            rho2old = sc2old * tled
+          else
+            ! -- No integration of storage changes: old and new values are
+            !    identical => normal MF6 storage formulation
+            rho2old = rho2
+          end if
+          !
+          ! -- calculate specific yield storage terms and rate
+          call SyTerms(tp, bt, rho2, rho2old, snnew, snold, &
+                       aterm, rhsterm, rate)
+
         end if
         this%strgsy(n) = rate
         !
@@ -622,21 +632,18 @@ contains
   !!  Budget calculation for the STO package components. Components include
   !!  specific storage and specific yield storage.
   !!
-  !!  @param[in,out]  model_budget  model budget object
-  !!
   !<
   subroutine sto_bd(this, isuppress_output, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this                          !< GwfStoType object
     integer(I4B), intent(in) :: isuppress_output       !< flag to suppress model output
     type(BudgetType), intent(inout) :: model_budget    !< model budget object
     ! -- local variables
     real(DP) :: rin
     real(DP) :: rout
-! ------------------------------------------------------------------------------
     !
     ! -- Add confined storage rates to model budget
     call rate_accumulator(this%strgss, rin, rout)
@@ -661,7 +668,7 @@ contains
   !<
   subroutine sto_save_model_flows(this, icbcfl, icbcun)
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this           !< GwfStoType object
     integer(I4B), intent(in) :: icbcfl  !< flag to output budget data
     integer(I4B), intent(in) :: icbcun  !< cell-by-cell file unit number
     ! -- local variables
@@ -669,7 +676,6 @@ contains
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact
-! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -712,8 +718,13 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(GwfStoType) :: this
-! ------------------------------------------------------------------------------
+    class(GwfStoType) :: this  !< GwfStoType object
+    !
+    ! -- TVS
+    if (this%intvs /= 0) then
+      call this%tvs%da()
+      deallocate(this%tvs)
+    end if
     !
     ! -- Deallocate arrays if package is active
     if (this%inunit > 0) then
@@ -722,6 +733,14 @@ contains
       call mem_deallocate(this%sy)
       call mem_deallocate(this%strgss)
       call mem_deallocate(this%strgsy)
+      !
+      ! -- deallocate TVS arrays
+      if(associated(this%oldss)) then
+        call mem_deallocate(this%oldss)
+      end if
+      if(associated(this%oldsy)) then
+        call mem_deallocate(this%oldsy)
+      end if
     end if
     !
     ! -- Deallocate scalars
@@ -730,6 +749,8 @@ contains
     call mem_deallocate(this%iorig_ss)
     call mem_deallocate(this%iusesy)
     call mem_deallocate(this%satomega)
+    call mem_deallocate(this%integratechanges)
+    call mem_deallocate(this%intvs)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -748,9 +769,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy variables
-    class(GwfStoType) :: this
-    ! -- local variables
-! ------------------------------------------------------------------------------
+    class(GwfStoType) :: this  !< GwfStoType object
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -761,6 +780,9 @@ contains
     call mem_allocate(this%iorig_ss, 'IORIG_SS', this%memoryPath)
     call mem_allocate(this%iusesy, 'IUSESY', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
+    call mem_allocate(this%integratechanges, 'INTEGRATECHANGES', &
+                      this%memoryPath)
+    call mem_allocate(this%intvs, 'INTVS', this%memoryPath)
     !
     ! -- initialize scalars
     this%istor_coef = 0
@@ -768,6 +790,8 @@ contains
     this%iorig_ss = 0
     this%iusesy = 0
     this%satomega = DZERO
+    this%integratechanges = 0
+    this%intvs = 0
     !
     ! -- return
     return
@@ -781,15 +805,13 @@ contains
   subroutine allocate_arrays(this, nodes)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: DZERO
     ! -- dummy variables
-    class(GwfStoType), target :: this
+    class(GwfStoType), target :: this !< GwfStoType object
     integer(I4B), intent(in) :: nodes !< active model nodes
     ! -- local variables
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
-    ! -- Allocate
+    ! -- Allocate arrays
     !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
     call mem_allocate(this%ss, nodes, 'SS', this%memoryPath)
@@ -797,7 +819,7 @@ contains
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
     !
-    ! -- Initialize
+    ! -- Initialize arrays
     this%iss = 0
     do n = 1, nodes
       this%iconvert(n) = 1
@@ -805,6 +827,12 @@ contains
       this%sy(n) = DZERO
       this%strgss(n) = DZERO
       this%strgsy(n) = DZERO
+      if (this%integratechanges /= 0) then
+        this%oldss(n) = DZERO
+        if (this%iusesy /= 0) then
+          this%oldsy(n) = DZERO
+        end if
+      end if
     end do
     !
     ! -- return
@@ -818,12 +846,10 @@ contains
   !<
   subroutine read_options(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error
     ! -- dummy variables
-    class(GwfStoType) :: this
+    class(GwfStoType) :: this  !< GwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword, fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -841,7 +867,6 @@ contains
     character(len=*), parameter :: fmtconfss = &
       "(4X,'SS_CONFINED_ONLY OPTION:',/,                                       &
       &1X,'Specific storage changes only occur under confined conditions')"
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
@@ -865,6 +890,22 @@ contains
           this%iconf_ss = 1
           this%iorig_ss = 0
           write (this%iout, fmtconfss)
+        case ('TVS6')
+          if (this%intvs /= 0) then
+            errmsg = 'Multiple TVS6 keywords detected in OPTIONS block.' // &
+                     ' Only one TVS6 entry allowed.'
+            call store_error(errmsg, terminate=.TRUE.)
+          end if
+          call this%parser%GetStringCaps(keyword)
+          if(trim(adjustl(keyword)) /= 'FILEIN') then
+            errmsg = 'TVS6 keyword must be followed by "FILEIN" ' // &
+                     'then by filename.'
+            call store_error(errmsg, terminate=.TRUE.)
+          endif
+          call this%parser%GetString(fname)
+          this%intvs = GetUnit()
+          call openfile(this%intvs, this%iout, fname, 'TVS')
+          call tvs_cr(this%tvs, this%name_model, this%intvs, this%iout)
         !
         ! -- right now these are options that are only available in the
         !    development version and are not included in the documentation.
@@ -879,10 +920,9 @@ contains
           this%iorig_ss = 0
           write (this%iout, fmtconfss)
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN STO OPTION: ', &
+          write (errmsg, '(4x,a,a)') 'Unknown STO option: ', &
             trim(keyword)
-          call store_error(errmsg)
-          call ustop()
+          call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
       write (this%iout, '(1x,a)') 'END OF STORAGE OPTIONS'
@@ -904,12 +944,10 @@ contains
   !<
   subroutine read_data(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy variables
-    class(GwfStotype) :: this
+    class(GwfStotype) :: this  !< GwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
     character(len=LINELENGTH) :: cellstr
     integer(I4B) :: istart, istop, lloc, ierr
@@ -926,7 +964,6 @@ contains
     data aname(2)/'        SPECIFIC STORAGE'/
     data aname(3)/'          SPECIFIC YIELD'/
     data aname(4)/'     STORAGE COEFFICIENT'/
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     isfound = .false.
@@ -962,19 +999,17 @@ contains
                                         aname(3))
           readsy = .true.
         case default
-          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
+          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-          call ustop()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check for ICONVERT
@@ -1009,7 +1044,6 @@ contains
     !
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-      call ustop()
     end if
     !
     ! -- Check SS and SY for negative values
@@ -1036,4 +1070,42 @@ contains
     return
   end subroutine read_data
 
+  !> @ brief Save old storage property values
+  !!
+  !!  Save ss and sy values from the previous time step for use with storage
+  !!  integration when integratechanges is non-zero.
+  !!
+  !<
+  subroutine save_old_ss_sy(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy variables
+    class(GwfStoType) :: this  !< GwfStoType object
+    ! -- local variables
+    integer(I4B) :: n
+    !
+    ! -- Allocate TVS arrays if needed
+    if(.not. associated(this%oldss)) then
+      call mem_allocate(this%oldss, this%dis%nodes, 'OLDSS', this%memoryPath)
+    end if
+    if(this%iusesy == 1 .and. .not. associated(this%oldsy)) then
+      call mem_allocate(this%oldsy, this%dis%nodes, 'OLDSY', this%memoryPath)
+    end if
+    !
+    ! -- Save current specific storage
+    do n = 1, this%dis%nodes
+      this%oldss(n) = this%ss(n)
+    end do
+    !
+    ! -- Save current specific yield, if used
+    if(this%iusesy == 1) then
+      do n = 1, this%dis%nodes
+        this%oldsy(n) = this%sy(n)
+      end do
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine save_old_ss_sy
+    
 end module GwfStoModule

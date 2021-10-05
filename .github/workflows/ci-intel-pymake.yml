@@ -17,9 +17,9 @@ on:
       - develop
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17392/w_HPCKit_p_2021.1.0.2682_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17427/l_HPCKit_p_2021.1.0.2684_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/17398/m_HPCKit_p_2021.1.0.2681_offline.dmg
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18247/w_HPCKit_p_2021.4.0.3340_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18211/l_HPCKit_p_2021.4.0.3347_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18242/m_HPCKit_p_2021.4.0.3389_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
   LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
@@ -33,11 +33,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            build_script: ifortvars_linux.sh
           - os: macos-latest
-            build_script: ifortvars_macos.sh
           - os: windows-latest
-            build_script: ifortvars_windows.bat
     defaults:
       run:
         shell: bash
@@ -57,7 +54,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            /opt/intel/oneapi/compiler
+            /opt/intel/oneapi
           key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
 
       - name: install ifort on linux
@@ -83,7 +80,7 @@ jobs:
         id: cache-install-windows
         uses: actions/cache@v2
         with:
-          path: C:\Program Files (x86)\Intel\oneAPI\compiler
+          path: C:\Program Files (x86)\Intel\oneAPI
           key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_windows.sh') }}
 
       - name: install ifort on windows
@@ -115,13 +112,25 @@ jobs:
         run: |
           .github/common/update-flopy.sh
 
-      - name: activate ifort and build applications
+      - name: Build applications
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        working-directory: autotest
         run: |
-          .github/intel-scripts/${{ matrix.build_script }}
+          source /opt/intel/oneapi/setvars.sh
+          pytest get_build_exes.py
+
+      - name: Build applications
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call ".github/intel-scripts/ifortvars_windows.bat"
+          cd autotest
+          pytest -v --durations=0 get_build_exes.py
 
       - name: Test applications
+        working-directory: autotest
         run: |
-          nosetests -v --with-id --with-timer -w ./autotest
+          pytest -v --durations=0
 
       - name: exclude unused files from cache on linux
         if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'

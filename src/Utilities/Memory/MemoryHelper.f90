@@ -1,7 +1,7 @@
 module MemoryHelperModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, LENVARNAME, LENCOMPONENTNAME
-  use SimModule, only: store_error, ustop
+  use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
 
   implicit none
@@ -99,8 +99,7 @@ contains
          mem_path
 
       ! -- store error and stop program execution
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
 
 
@@ -138,8 +137,7 @@ contains
         max_length, ' characters or less: ', name, '(len=', len(trim(name)), ')'
 
       ! -- store error and stop program execution
-      call store_error(errmsg)
-      call ustop()
+      call store_error(errmsg, terminate=.TRUE.)
     end if
 
   end subroutine mem_check_length

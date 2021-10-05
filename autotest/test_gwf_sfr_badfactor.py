@@ -1,4 +1,5 @@
 import os
+import pytest
 import sys
 import numpy as np
 import shutil
@@ -22,8 +23,7 @@ mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 paktest = "sfr"
 testname = "ts_sfr01"
 testdir = os.path.join("temp", testname)
-if not os.path.isdir(testdir):
-    os.mkdir(testdir)
+os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 
@@ -34,7 +34,7 @@ def get_model(timeseries=False):
     tdis_rc = []
     for idx in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
-    ts_times = np.arange(0.0, 2.0, 1.0, dtype=np.float)
+    ts_times = np.arange(0.0, 2.0, 1.0, dtype=float)
 
     auxnames = ["temp", "conc"]
     temp, conc = 32.5, 0.1
