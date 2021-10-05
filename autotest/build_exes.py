@@ -68,50 +68,6 @@ def get_compiler_envvar(fc):
     return fc
 
 
-def rebuild_mf6_release():
-    pm = pymake.Pymake(verbose=True)
-    pm.target = "mf6"
-    pm.appdir = ebindir
-    download_pth = os.path.join("temp")
-    target_dict = pymake.usgs_program_data.get_target(pm.target)
-
-    pm.download_target(pm.target, download_path=download_pth, verify=False)
-
-    # Set MODFLOW 6 to compile develop version of the release
-    srcpth = os.path.join(download_pth, target_dict["dirname"], target_dict["srcdir"])
-    fpth = os.path.join(srcpth, "Utilities", "version.f90")
-    with open(fpth) as f:
-        lines = f.read().splitlines()
-
-    assert len(lines) > 0, "could not update {}".format(srcpth)
-
-    f = open(fpth, "w")
-    for line in lines:
-        tag = "IDEVELOPMODE = 0"
-        if tag in line:
-            line = line.replace(tag, "IDEVELOPMODE = 1")
-        f.write("{}\n".format(line))
-    f.close()
-
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the release version of MODFLOW 6
-    pm.build()
-
-    msg = "{} does not exist.".format(pm.target)
-    assert pm.returncode == 0, msg
-
-    # finalize the build
-    pm.finalize()
-
-    return
-
-
 def build_mf6(srcdir=None, appdir=None):
     pm = pymake.Pymake()
     pm.target = "mf6" + eext
@@ -236,10 +192,6 @@ def test_create_dirs():
     return
 
 
-def test_rebuild_mf6_release():
-    rebuild_mf6_release()
-
-
 def test_build_modflow6():
     build_mf6()
 
@@ -258,7 +210,6 @@ def test_build_zbud6():
 
 if __name__ == "__main__":
     test_create_dirs()
-    test_rebuild_mf6_release()
     test_build_modflow6()
     test_build_modflow6_so()
     test_build_mf5to6()
