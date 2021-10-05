@@ -112,6 +112,7 @@ jobs:
 
       - name: activate ifort and build applications
         if: matrix.FC == 'ifort'
+        working-directory: autotest
         run: |
           source /opt/intel/oneapi/setvars.sh
           pytest get_build_exes.py
