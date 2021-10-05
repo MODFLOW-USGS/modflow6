@@ -33,7 +33,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-          - os: macos-latest
+          # todo: add macos again
+          # - os: macos-latest
           - os: windows-latest
     defaults:
       run:
@@ -119,7 +120,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
           source /opt/intel/oneapi/setvars.sh
-          meson setup builddir --buildtype=release --prefix=$(pwd) --libdir=bin
+          meson setup builddir --buildtype=debugoptimized --prefix=$(pwd) --libdir=bin
           meson compile -C builddir
           meson install -C builddir
           cd autotest
@@ -130,7 +131,7 @@ jobs:
         shell: cmd
         run: |
           call ".github/intel-scripts/ifortvars_windows.bat"
-          meson setup builddir --buildtype=release --prefix=%CD% --libdir=bin
+          meson setup builddir --buildtype=debugoptimized --prefix=%CD% --libdir=bin
           meson compile -C builddir
           meson install -C builddir
           cd autotest

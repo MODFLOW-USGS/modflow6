@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest] # todo: add macos-latest again
     defaults:
       run:
         shell: bash
@@ -80,7 +80,7 @@ jobs:
 
     - name: Setup modflow
       run: |
-        meson setup builddir --buildtype=release --prefix=$(pwd) --libdir=bin
+        meson setup builddir --buildtype=debugoptimized --prefix=$(pwd) --libdir=bin
 
     - name: Build modflow
       run: |
