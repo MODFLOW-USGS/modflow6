@@ -121,6 +121,8 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           meson setup builddir --buildtype=release --prefix=$(pwd) --libdir=bin
           meson compile -C builddir
+          meson install -C builddir
+          pytest -v --durations=0 get_exes.py
 
       - name: Build MODFLOW 6 (Windows)
         if: runner.os == 'Windows'
@@ -129,21 +131,12 @@ jobs:
           call ".github/intel-scripts/ifortvars_windows.bat"
           meson setup builddir --buildtype=release --prefix=%CD% --libdir=bin
           meson compile -C builddir
-
-      - name: Install modflow
-        run: |
-          meson install -C builddir
-      
-      - name: Get executables
-        working-directory: autotest
-        run: |
           pytest -v --durations=0 get_exes.py
 
       - name: Test applications
         working-directory: autotest
         run: |
           pytest -v --durations=0
-
 
       - name: exclude unused files from cache on linux
         if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
