@@ -144,4 +144,4 @@ modflow_sources = files(
 
 mf6_internal_lib = static_library('mf6_internal_lib', modflow_sources)
 
-executable('mf6', 'mf6.f90', link_with: mf6_internal_lib)
+executable('mf6', 'mf6.f90', link_with: mf6_internal_lib, install: true)

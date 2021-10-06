@@ -100,6 +100,7 @@ Thumbs.db
 msvs/My Advisor Results*
 
 build/
+lib/
 CMakeFiles/
 
 # ReadTheDocs
@@ -123,3 +124,4 @@ msvs/*.fdz
 # Visual Studio Code
 modflow6.code-workspace
 .vscode/settings.json
+.vscode/launch.json
