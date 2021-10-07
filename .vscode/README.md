@@ -106,6 +106,9 @@ pip install -U fortran-language-server
     "fortran.provideHover": false,
     "fortran.provideCompletion": false,
     "fortran.provideSymbols": false,
+    "[FortranFreeForm]": {
+        "editor.acceptSuggestionOnEnter": "off",
+    },
 ```
 
 
