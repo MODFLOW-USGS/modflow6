@@ -812,7 +812,6 @@ contains
     integer(I4B) :: n
     !
     ! -- Allocate arrays
-    !call mem_allocate(this%iss, 'ISS', this%name_model) !TODO_MJR: this can go?
     call mem_allocate(this%iconvert, nodes, 'ICONVERT', this%memoryPath)
     call mem_allocate(this%ss, nodes, 'SS', this%memoryPath)
     call mem_allocate(this%sy, nodes, 'SY', this%memoryPath)

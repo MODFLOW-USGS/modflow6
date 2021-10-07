@@ -91,10 +91,10 @@ module ConnectionBuilderModule
     logical(LGP) :: isNotPeriodic
     logical(LGP) :: alwaysInterfaceModel
 
-    ! TODO_MJR: for debugging, remove...
-    inquire(file="d:\always.im", exist=alwaysInterfaceModel)
+    ! Force use of the interface model
+    inquire(file="__always__.im", exist=alwaysInterfaceModel)
     if (alwaysInterfaceModel) then
-      write(*,'(a,/)') "### DEBUG: always use interface model ###"
+      write(*,'(a,/)') "### DEBUG: force interface model ###"
     end if
 
     do iex = 1, exchanges%Count()

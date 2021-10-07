@@ -847,7 +847,6 @@
       do kstp = 1, nstp(kper)
         if (kstp == 1) then
           dt = perlen(kper) / float(nstp(kper))
-          ! TODO_MJR: this is incredibly sensitive to floating point settings, suggest rewrite
           if(tsmult(kper) /= DONE)                                              &
               dt = perlen(kper) * (DONE-tsmult(kper)) /                         &
                   (DONE - tsmult(kper) ** nstp(kper))

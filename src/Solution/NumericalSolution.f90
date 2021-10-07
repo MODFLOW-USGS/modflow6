@@ -1506,7 +1506,6 @@ subroutine solution_create(filename, id)
       call this%sln_backtracking(mp, cp, kiter)
     end if
     
-    ! TODO_MJR: discuss this, moved timer now sln_reset is inside...
     call code_timer(0, ttform, this%ttform)
         
     ! (re)build the solution matrix
@@ -1537,12 +1536,7 @@ subroutine solution_create(filename, id)
     enddo
     call code_timer(1, ttform, this%ttform)
     !
-    ! TODO_MJR: for dev
-    !write (file_matrix, "(A6,I3.3,A4)") "matrix", kiter, ".crs"
-    !call save_matrix(file_matrix, this%neq, this%ia, this%ja, this%amat)
-    !
     ! -- linear solve
-    ! filename, nrows, ia, ja, M
     call code_timer(0, ttsoln, this%ttsoln)
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)

@@ -584,11 +584,11 @@ module GridConnectionModule
     if (nbrCnt + 1 > MaxNeighbors) then
        write(*,*) "Error extending connections in GridConnection, &
                   &max. nr. of neighbors exceeded: terminating..."
-       call ustop()  
+       call ustop()
     end if
         
     cellNbrs%neighbors(nbrCnt + 1)%cell%index = newNbrIdx
-    cellNbrs%neighbors(nbrCnt + 1)%cell%model => nbrModel  
+    cellNbrs%neighbors(nbrCnt + 1)%cell%model => nbrModel
     cellNbrs%nrOfNbrs = nbrCnt + 1
   end subroutine  
  
@@ -904,7 +904,6 @@ module GridConnectionModule
       ! for cross-boundary connections, we need to apply the mask to both n-m and m-n,
       ! because if the upper triangular one is disabled, its transposed (lower triangular)
       ! counter part is skipped in the NPF calculation as well.
-      ! TODO_MJR: should we adjust the loop in NPF?
       call this%setMaskOnConnection(this%connectedCells(icell), this%boundaryCells(icell), 1)
     end do
     
