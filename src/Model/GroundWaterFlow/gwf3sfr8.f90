@@ -3873,12 +3873,16 @@ module SfrModule
       r = this%rough(n)
       !
       ! -- calculate stream depth at the midpoint
-      if (this%ncrosspts(n) > 1) then
-        call this%sfr_calc_npoint_depth(n, q1, d1)
+      if (q1 > DZERO) then
+        if (this%ncrosspts(n) > 1) then
+          call this%sfr_calc_npoint_depth(n, q1, d1)
+        else
+          w = this%station(this%iacross(n))
+          qconst = this%unitconv * w * sqrt(s) / r
+          d1 = (q1 / qconst)**DP6
+        end if
       else
-        w = this%station(this%iacross(n))
-        qconst = this%unitconv * w * sqrt(s) / r
-        d1 = (q1 / qconst)**DP6
+        d1 = DZERO
       end if
       if (d1 < DEM30) d1 = DZERO ! test removal of this check
       !

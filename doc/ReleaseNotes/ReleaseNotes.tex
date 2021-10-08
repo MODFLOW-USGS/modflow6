@@ -183,7 +183,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item--
+	        \item The Streamflow Routing (SFR) Package would die with a floating point error when calculating the stream depth as a function of flow rate, if the flow rate was slightly negative.  Added a conditional check to ensure that the stream depth is calculated as zero if the calculated flow rate is zero or less.
 	\end{itemize}
 
 	\underline{SOLUTION}
