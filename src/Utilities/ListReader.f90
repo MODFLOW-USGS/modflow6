@@ -25,7 +25,7 @@ module ListReaderModule
     integer(I4B) :: ntxtrlist = 0                                                ! number of text entries found in rlist
     integer(I4B) :: ntxtauxvar = 0                                               ! number of text entries found in auxvar
     character(len=LENLISTLABEL) :: label = ''                                    ! label for printing list
-    character(len=LINELENGTH) :: line = ''                                       ! line string for reading file
+    character(len=:), allocatable, private :: line                               ! current line
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null()          ! pointer to model shape
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        ! pointer to nodelist
     real(DP), dimension(:, :), pointer, contiguous :: rlist => null()            ! pointer to rlist
@@ -122,7 +122,7 @@ module ListReaderModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: u8rdcom, urword
+    use InputOutputModule, only: u9rdcom, urword
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -139,7 +139,7 @@ module ListReaderModule
     this%ibinary = 0
     !
     ! -- Read to the first non-commented line
-    call u8rdcom(this%in, this%iout, this%line, this%ierr)
+    call u9rdcom(this%in, this%iout, this%line, this%ierr)
     this%lloc = 1
     call urword(this%line, this%lloc, this%istart, this%istop, 1, idum, r,     &
                 this%iout, this%in)
@@ -164,7 +164,7 @@ module ListReaderModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: u8rdcom, urword, openfile
+    use InputOutputModule, only: u9rdcom, urword, openfile
     use OpenSpecModule, only: form, access
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
@@ -236,7 +236,7 @@ module ListReaderModule
     !
     ! -- Read the first line from inlist to be consistent with how the list is
     !    read when it is included in the package input file
-    if(this%ibinary /= 1) call u8rdcom(this%inlist, this%iout, this%line,      &
+    if(this%ibinary /= 1) call u9rdcom(this%inlist, this%iout, this%line,      &
                                        this%ierr)
     !
     ! -- return
@@ -385,7 +385,7 @@ module ListReaderModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH, DZERO
-    use InputOutputModule, only: u8rdcom, urword, get_node
+    use InputOutputModule, only: u9rdcom, urword, get_node
     use SimModule, only: store_error, count_errors
     use ArrayHandlersModule, only: ExpandArray
     ! -- dummy
@@ -419,7 +419,7 @@ module ListReaderModule
     readloop: do
       !
       ! -- First line was already read, so don't read again
-      if(ii /= 1) call u8rdcom(this%inlist, 0, this%line, this%ierr)
+      if(ii /= 1) call u9rdcom(this%inlist, 0, this%line, this%ierr)
       !
       ! -- If this is an unknown-length list, then check for END.
       !    If found, then backspace, set nlist, and exit readloop.
@@ -428,7 +428,7 @@ module ListReaderModule
         call urword(this%line, this%lloc, this%istart, this%istop, 1, idum, r, &
                     this%iout, this%inlist)
         if(this%line(this%istart:this%istop) == 'END' .or. this%ierr < 0) then
-          ! If ierr < 0, backspace was already performed in u8rdcom, so only
+          ! If ierr < 0, backspace was already performed in u9rdcom, so only
           ! need to backspace if END was found.
           if (this%ierr == 0) then
             backspace(this%inlist)
