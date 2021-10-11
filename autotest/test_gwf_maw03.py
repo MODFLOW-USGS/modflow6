@@ -44,7 +44,7 @@ mawsetting_c = [(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)]
 mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c]
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     nlay, nrow, ncol = 1, 101, 101
     nper = 1
@@ -71,9 +71,7 @@ def get_model(idx, dir):
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws)
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.MFModel(
@@ -167,9 +165,7 @@ def get_model(idx, dir):
         gwf,
         budget_filerecord="{}.cbc".format(name),
         head_filerecord="{}.hds".format(name),
-        headprintrecord=[
-            ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        headprintrecord=[("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         filename="{}.oc".format(name),
@@ -187,14 +183,7 @@ def get_model(idx, dir):
         continuous=obs_recarray,
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_maw(sim):
@@ -220,8 +209,7 @@ def eval_maw(sim):
         # M1RATE should have a minimum value less than 200 and
         # M1HEAD should not exceed 0.400001
         msg = (
-            "Injection rate should fall below 200 and the head should not"
-            "exceed 0.4"
+            "Injection rate should fall below 200 and the head should not" "exceed 0.4"
         )
         assert tc["M1RATE"].min() < 200.0, msg
         assert tc["M1HEAD"].max() < 0.400001, msg

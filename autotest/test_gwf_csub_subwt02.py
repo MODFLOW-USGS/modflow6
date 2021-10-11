@@ -249,9 +249,7 @@ def build_model(idx, ws):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(
@@ -431,10 +429,10 @@ def build_model(idx, ws):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
@@ -506,9 +504,7 @@ def eval_comp(sim):
 def cbc_compare(sim):
     print("evaluating cbc and budget...")
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -525,9 +521,7 @@ def cbc_compare(sim):
             bud_lst.append("{}_OUT".format(t))
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]

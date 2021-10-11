@@ -93,9 +93,7 @@ def build_model(idxsim, ws, name):
         inner_dvclose=1e-9,
         rcloserecord=[0.01, "strict"],
     )
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -107,9 +105,7 @@ def build_model(idxsim, ws, name):
         botm=botm,
     )
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1)
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1)
     drn = flopy.mf6.ModflowGwfdrn(
         gwf,
         auxiliary=["ddrn"],
@@ -134,10 +130,10 @@ def build_model(idxsim, ws, name):
         printrecord=[("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -248,9 +244,7 @@ def test_mf6model(idx, dir):
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(
-        Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx)
-    )
+    test.run_mf6(Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx))
 
 
 def main():
@@ -262,9 +256,7 @@ def main():
 
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx
-        )
+        sim = Simulation(dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
     return
 

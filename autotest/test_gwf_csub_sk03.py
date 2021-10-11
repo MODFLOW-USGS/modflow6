@@ -139,9 +139,7 @@ tsname = "FR"
 tsnames.append(tsname)
 sig0.append([(0, 9, 0), tsname])
 
-datestart = datetime.datetime.strptime(
-    "03/21/1938 00:00:00", "%m/%d/%Y %H:%M:%S"
-)
+datestart = datetime.datetime.strptime("03/21/1938 00:00:00", "%m/%d/%Y %H:%M:%S")
 train1 = 2.9635  # 3.9009
 train2 = 2.8274
 fcar1 = 0.8165
@@ -298,9 +296,7 @@ def build_model(idx, ws):
     sc = sske
     compression_indices = None
 
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -526,11 +522,11 @@ def build_model(idx, ws):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
 # SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
@@ -555,9 +551,7 @@ def eval_comp(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -569,9 +563,7 @@ def eval_comp(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()

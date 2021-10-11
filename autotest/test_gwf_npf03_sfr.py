@@ -72,7 +72,7 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # set local data for this model
@@ -99,9 +99,7 @@ def get_model(idx, dir):
         sim_ws=ws,
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # set ims csv files
     csv0 = "{}.outer.ims.csv".format(name)
@@ -216,14 +214,10 @@ def get_model(idx, dir):
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(
-            gwf, strt=strt, filename="{}.ic".format(mname)
-        )
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(mname))
 
         # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(
-            gwf, save_flows=False, icelltype=0, k=hkt
-        )
+        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=0, k=hkt)
 
         # chd files
         if jdx == 0:
@@ -308,9 +302,7 @@ def get_model(idx, dir):
         # maw files
         if jdx == nmodels - 1:
             mpd = [[0, 0.25, bot, strt, "THIEM", 1, "MYWELL"]]
-            mcd = [
-                [0, 0, (0, 15, int(ncolst[jdx]) - 31), top, bot, 999.0, 999.0]
-            ]
+            mcd = [[0, 0, (0, 15, int(ncolst[jdx]) - 31), top, bot, 999.0, 999.0]]
             perioddata = [[0, "RATE", -1e-5]]
             maw = flopy.mf6.ModflowGwfmaw(
                 gwf,
@@ -345,21 +337,12 @@ def get_model(idx, dir):
             gwf,
             budget_filerecord="{}.cbc".format(mname),
             head_filerecord="{}.hds".format(mname),
-            headprintrecord=[
-                ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-            ],
+            headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
             saverecord=[("HEAD", "LAST")],
             printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_hds(sim):

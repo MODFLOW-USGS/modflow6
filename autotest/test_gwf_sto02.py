@@ -57,8 +57,8 @@ def build_models():
     sy = 0.1
 
     tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+    for id in range(nper):
+        tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
     for idx, dir in enumerate(exdirs):
 
@@ -192,8 +192,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
@@ -202,12 +202,10 @@ def test_mf6model(idx, dir):
 def main():
     # initialize testing framework
     test = testing_framework()
-
-    # build the models
-    build_models()
-
+    
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
         test.run_mf6(sim)
 

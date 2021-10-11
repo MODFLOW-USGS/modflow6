@@ -31,7 +31,7 @@ for s in ex:
 ddir = "data"
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nlay, nrow, ncol = 1, 1, 1
     perlen = [1.0, 1.0, 1.0, 1.0, 1.0]
     nper = len(perlen)
@@ -67,9 +67,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -122,9 +120,7 @@ def get_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=laytyp, k=hk, k33=hk)
@@ -171,9 +167,7 @@ def get_model(idx, dir):
     spd.append([cellid1, "SY", 0.01])
     tvsspd[kper - 1] = spd
 
-    tvs = flopy.mf6.ModflowUtltvs(
-        gwf, perioddata=tvsspd, filename=tvs_filename
-    )
+    tvs = flopy.mf6.ModflowUtltvs(gwf, perioddata=tvsspd, filename=tvs_filename)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -184,14 +178,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_model(sim):
@@ -210,9 +197,7 @@ def eval_model(sim):
 
     # Check against manually calculated results
     expected_results = []
-    expected_results.append(
-        0.8
-    )  # TVS SP1: No changes. Check initial solution.
+    expected_results.append(0.8)  # TVS SP1: No changes. Check initial solution.
     expected_results.append(3000.823)  # TVS SP2: Decrease SY1.
     expected_results.append(300.5323)  # TVS SP3: Increase SS1.
     expected_results.append(0.399976)  # TVS SP4: Increase SY1.
@@ -229,9 +214,7 @@ def eval_model(sim):
 
         print(kper, h, expected_result)
 
-        errmsg = (
-            f"Expected head {expected_result} in period {kper} but found {h}"
-        )
+        errmsg = f"Expected head {expected_result} in period {kper} but found {h}"
         assert np.isclose(h, expected_result)
 
     # comment when done testing
@@ -249,8 +232,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -260,15 +243,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

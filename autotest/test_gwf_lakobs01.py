@@ -42,7 +42,7 @@ def get_idomain(nlay, nrow, ncol, lakend):
     return idomain
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     lx = 300.0
     lz = 45.0
     nlay = 45
@@ -78,9 +78,7 @@ def get_model(idx, dir):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = name
@@ -215,14 +213,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-
-    return sim
+    return sim, None
 
 
 # - No need to change any code below
@@ -253,9 +244,7 @@ def test_mf6model(idx, dir):
             expected_msg = True
             error_count += 1
 
-    assert error_count == 1, (
-        "error count = " + str(error_count) + "but should equal 1"
-    )
+    assert error_count == 1, "error count = " + str(error_count) + "but should equal 1"
 
     # fix the error and attempt to rerun model
     orig_fl = os.path.join(exdirs[0], ex[0] + ".lak.obs")

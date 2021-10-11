@@ -68,9 +68,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
         continue_=continue_flag,
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -121,9 +119,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
         c6 = [[0, 0, 0, 1.0], [0, nrow - 1, ncol - 1, 0.0]]
         cd6 = {0: c6}
         maxchd = len(cd6[0])
-        chd = flopy.mf6.ModflowGwfchd(
-            gwf, stress_period_data=cd6, maxbound=maxchd
-        )
+        chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=cd6, maxbound=maxchd)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -137,7 +133,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
 
     # write the input files
     sim.write_simulation()
-    return sim
+    return sim, None
 
 
 def test_normal_termination():

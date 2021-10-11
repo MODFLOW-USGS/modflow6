@@ -33,7 +33,7 @@ ddir = "data"
 time_varying_k = [1.0, 10.0]
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nlay, nrow, ncol = 3, 3, 3
     perlen = [100.0, 100.0]
     nper = len(perlen)
@@ -62,9 +62,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -108,9 +106,7 @@ def get_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
@@ -133,9 +129,7 @@ def get_model(idx, dir):
                 for j in range(ncol):
                     spd.append([(k, i, j), "K", hydraulic_conductivity])
         tvkspd[kper] = spd
-    tvk = flopy.mf6.ModflowUtltvk(
-        gwf, perioddata=tvkspd, filename=tvk_filename
-    )
+    tvk = flopy.mf6.ModflowUtltvk(gwf, perioddata=tvkspd, filename=tvk_filename)
 
     # chd files
     chdspd = []
@@ -161,14 +155,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_model(sim):
@@ -224,8 +211,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -235,15 +222,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

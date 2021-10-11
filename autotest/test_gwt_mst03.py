@@ -56,8 +56,8 @@ def build_models():
     hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
     tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+    for id in range(nper):
+        tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
     for idx, dir in enumerate(exdirs):
         name = ex[idx]

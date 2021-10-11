@@ -54,9 +54,7 @@ def build_mf6(idx, ws):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     flopy.mf6.ModflowIms(
@@ -90,9 +88,7 @@ def build_mf6(idx, ws):
     flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=hk)
 
     # gwf observation
-    flopy.mf6.ModflowUtlobs(
-        gwf, digits=10, print_input=True, continuous=obs_recarray
-    )
+    flopy.mf6.ModflowUtlobs(gwf, digits=10, print_input=True, continuous=obs_recarray)
 
     # chd files
     flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=cd6)
@@ -110,22 +106,7 @@ def build_mf6(idx, ws):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim
-
-
-def get_model(idx, dir):
-    ws = dir
-    # build mf6 with storage package but steady state stress periods
-    sim = build_mf6(idx, ws)
-
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_head(sim):

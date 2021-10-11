@@ -34,7 +34,7 @@ namea = "a"
 nameb = "b"
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     # grid properties
     nlay = 3
@@ -67,9 +67,7 @@ def get_model(idx, dir):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, nper=2, perioddata=[(1.0, 1, 1.0), (1.0, 1, 1.0)]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, nper=2, perioddata=[(1.0, 1, 1.0), (1.0, 1, 1.0)])
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=namea, save_flows=True)
@@ -164,14 +162,7 @@ def get_model(idx, dir):
         exchangedata=exchangedata,
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def qxqyqz(fname, nlay, nrow, ncol):
@@ -227,9 +218,7 @@ def eval_mf6(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
+        errmsg = "min or max residual too large {} {}".format(res.min(), res.max())
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return

@@ -56,9 +56,7 @@ def run_mf6_error(ws, err_str_list):
                 raise RuntimeError(msg)
             else:
                 msg += " but did not print correct error message."
-                msg += '  Correct message should have been "{}"'.format(
-                    err_str
-                )
+                msg += '  Correct message should have been "{}"'.format(err_str)
                 raise ValueError(msg)
     return
 
@@ -123,7 +121,7 @@ def get_minimal_gwf_simulation(
     ic = flopy.mf6.ModflowGwfic(gwf, **ickwargs)
     npf = flopy.mf6.ModflowGwfnpf(gwf, **npfkwargs)
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, **chdkwargs)
-    return sim
+    return sim, None
 
 
 def test_simple_model_success():
@@ -152,9 +150,7 @@ def test_sim_errors():
         # verify that the correct number of errors are reported
         ws = os.path.join(testdir, "sim1")
         chdkwargs = {}
-        chdkwargs["stress_period_data"] = {
-            0: [[(0, 0, 0), 0.0] for i in range(10)]
-        }
+        chdkwargs["stress_period_data"] = {0: [[(0, 0, 0), 0.0] for i in range(10)]}
         sim = get_minimal_gwf_simulation(ws, chdkwargs=chdkwargs)
         sim.write_simulation()
         err_str = ["1. Cell is already a constant head ((1,1,1))."]
@@ -168,9 +164,7 @@ def test_sim_maxerrors():
         simnamefilekwargs = {}
         simnamefilekwargs["maxerrors"] = 5
         chdkwargs = {}
-        chdkwargs["stress_period_data"] = {
-            0: [[(0, 0, 0), 0.0] for i in range(10)]
-        }
+        chdkwargs["stress_period_data"] = {0: [[(0, 0, 0), 0.0] for i in range(10)]}
         sim = get_minimal_gwf_simulation(
             ws, simnamefilekwargs=simnamefilekwargs, chdkwargs=chdkwargs
         )
@@ -189,9 +183,7 @@ def test_disu_errors():
         from disu_util import get_disu_kwargs
 
         ws = os.path.join(testdir, "sim3")
-        disukwargs = get_disu_kwargs(
-            3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3]
-        )
+        disukwargs = get_disu_kwargs(3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3])
         top = disukwargs["top"]
         bot = disukwargs["bot"]
         top[9] = 2.0
@@ -228,9 +220,7 @@ def test_fail_continue_success():
     ws = os.path.join(testdir, "sim5")
     tdiskwargs = {"nper": 1, "perioddata": [(10.0, 10, 1.0)]}
     imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
-    sim = get_minimal_gwf_simulation(
-        ws, imskwargs=imskwargs, tdiskwargs=tdiskwargs
-    )
+    sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs, tdiskwargs=tdiskwargs)
     sim.name_file.continue_ = True
     sim.write_simulation()
     returncode, buff = run_mf6([mf6_exe], ws)

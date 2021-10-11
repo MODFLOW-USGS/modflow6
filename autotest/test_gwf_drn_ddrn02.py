@@ -96,9 +96,7 @@ def build_model(ws, name, uzf=False):
         botm=botm,
     )
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1)
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1)
     if uzf:
         uzf = flopy.mf6.ModflowGwfuzf(
             gwf, simulate_gwseep=True, packagedata=uzf_pd, print_input=True
@@ -131,10 +129,10 @@ def build_model(ws, name, uzf=False):
         printrecord=[("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -231,9 +229,7 @@ def test_mf6model(idx, dir):
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(
-        Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx)
-    )
+    test.run_mf6(Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx))
 
 
 def main():
@@ -245,9 +241,7 @@ def main():
 
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx
-        )
+        sim = Simulation(dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
     return
 

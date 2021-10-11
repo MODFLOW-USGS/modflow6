@@ -77,7 +77,7 @@ def sinfunc(a, b, c, d, x):
     return a * np.sin(b * (x - c)) + d
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     ws = dir
     name = ex[idx]
@@ -107,9 +107,7 @@ def get_model(idx, dir):
     sim.name_file.continue_ = False
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -241,7 +239,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
 def build_models():

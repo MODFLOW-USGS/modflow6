@@ -335,10 +335,10 @@ def build_model(ws, name, timeseries=False):
         printrecord=[("BUDGET", "LAST")],
     )
 
-    return sim
+    return sim, None
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files

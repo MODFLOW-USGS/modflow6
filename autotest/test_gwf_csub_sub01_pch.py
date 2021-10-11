@@ -99,7 +99,7 @@ ini_head = 1.0
 thick = [1.0]
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     sim = build_model(idx, dir, pch=True)
 
     # build MODFLOW-6 with constant material properties
@@ -120,9 +120,7 @@ def build_model(idx, dir, pch=None):
     sim.name_file.memory_print_option = "all"
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
@@ -160,9 +158,7 @@ def build_model(idx, dir, pch=None):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -248,7 +244,7 @@ def build_model(idx, dir, pch=None):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
 def eval_sub(sim):
@@ -309,9 +305,7 @@ def eval_sub(sim):
 # compare cbc and lst budgets
 def cbc_compare(sim):
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -328,9 +322,7 @@ def cbc_compare(sim):
             bud_lst.append("{}_OUT".format(t))
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -450,9 +442,7 @@ def main():
 
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx
-        )
+        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
     return
 

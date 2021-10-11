@@ -40,7 +40,7 @@ for s in ex:
 ddir = "data"
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     nlay, nrow, ncol = 1, 1, 3
     nper = 3
@@ -70,9 +70,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.MFModel(
@@ -191,14 +189,7 @@ def get_model(idx, dir):
         filename="{}.oc".format(name),
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-
-    return sim
+    return sim, None
 
 
 @pytest.mark.parametrize(

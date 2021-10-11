@@ -155,7 +155,7 @@ def get_model(idx, ws):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
 def build_models():

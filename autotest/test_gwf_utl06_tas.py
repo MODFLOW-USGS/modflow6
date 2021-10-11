@@ -41,7 +41,7 @@ idomain = np.ones((nlay, nrow, ncol), dtype=int)
 idomain[0, :, :] = np.array(idomain_lay0)
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     perlen = [5.0]
     nstp = [5]
     tsmult = [1.0]
@@ -69,9 +69,7 @@ def get_model(idx, dir):
         sim_name=sim_name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf"
@@ -197,14 +195,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_transport(sim):

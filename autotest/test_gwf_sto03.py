@@ -97,9 +97,7 @@ def build_model(name, ws, newton_bool, offset=0.0):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     if newton_bool:
@@ -189,11 +187,11 @@ def build_model(name, ws, newton_bool, offset=0.0):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, None
 
 
 # variant SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
     ws = dir
 
@@ -315,9 +313,7 @@ def test_mf6model(idx, dir):
     if is_CI and not continuous_integration[idx]:
         return
     test.run_mf6(
-        Simulation(
-            dir, exfunc=eval_sto, exe_dict=r_exe, htol=htol[idx], idxsim=idx
-        )
+        Simulation(dir, exfunc=eval_sto, exe_dict=r_exe, htol=htol[idx], idxsim=idx)
     )
 
 

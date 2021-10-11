@@ -62,7 +62,7 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
     nlay = nlays[idx]
 
@@ -97,9 +97,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
     # set ims csv files
     csv0 = "{}.outer.ims.csv".format(name)
     csv1 = "{}.inner.ims.csv".format(name)
@@ -170,9 +168,7 @@ def get_model(idx, dir):
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(
-            gwf, strt=strt, filename="{}.ic".format(mname)
-        )
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(mname))
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(
@@ -211,21 +207,12 @@ def get_model(idx, dir):
             gwf,
             budget_filerecord="{}.cbc".format(mname),
             head_filerecord="{}.hds".format(mname),
-            headprintrecord=[
-                ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-            ],
+            headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
             saverecord=[("HEAD", "LAST")],
             printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_hds(sim):

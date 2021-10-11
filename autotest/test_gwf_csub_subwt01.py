@@ -157,9 +157,7 @@ def build_model(idx, ws):
         sim_ws=ws,
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(
@@ -178,9 +176,7 @@ def build_model(idx, ws):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, save_flows=True, print_input=True
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True, print_input=True)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -199,9 +195,7 @@ def build_model(idx, ws):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -264,10 +258,10 @@ def build_model(idx, ws):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
-    return sim
+    return sim, None
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
@@ -340,9 +334,7 @@ def eval_comp(sim):
 def cbc_compare(sim):
     print("evaluating cbc and budget...")
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -359,9 +351,7 @@ def cbc_compare(sim):
             bud_lst.append("{}_OUT".format(t))
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]

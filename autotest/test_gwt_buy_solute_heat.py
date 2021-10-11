@@ -20,7 +20,7 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     lx = 2000.0
     lz = 1000.0
@@ -54,9 +54,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "flow"
@@ -140,9 +138,7 @@ def get_model(idx, dir):
     ghb_cond = 10.0 * (1.0 * 10.0) / 5.0
     ghb_salinity = 35.0
     ghb_temperature = 5.0
-    ghb_density = (
-        1000.0 + 0.7 * ghb_salinity - 0.375 * (ghb_temperature - 25.0)
-    )
+    ghb_density = 1000.0 + 0.7 * ghb_salinity - 0.375 * (ghb_temperature - 25.0)
     ghblist1 = []
     for k in range(nlay):
         ghblist1.append(
@@ -336,14 +332,7 @@ def get_model(idx, dir):
             filename="{}-h.gwfgwt".format(name),
         )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def make_plot(sim):
@@ -360,16 +349,12 @@ def make_plot(sim):
 
     fname = gwtsname + ".ucn"
     fname = os.path.join(ws, fname)
-    cobj = flopy.utils.HeadFile(
-        fname, text="CONCENTRATION"
-    )  # , precision='double')
+    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")  # , precision='double')
     conc = cobj.get_alldata()
 
     fname = gwthname + ".ucn"
     fname = os.path.join(ws, fname)
-    tobj = flopy.utils.HeadFile(
-        fname, text="CONCENTRATION"
-    )  # , precision='double')
+    tobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")  # , precision='double')
     temperature = tobj.get_alldata()
 
     fname = gwfname + ".buy.bin"
@@ -390,9 +375,7 @@ def make_plot(sim):
     pxs.plot_bc(ftype="GHB")
     a = conc[idxtime]
     pa = pxs.plot_array(a, cmap="jet", alpha=0.25)
-    cs = pxs.contour_array(
-        a, levels=35.0 * np.array([0.01, 0.5, 0.99]), colors="y"
-    )
+    cs = pxs.contour_array(a, levels=35.0 * np.array([0.01, 0.5, 0.99]), colors="y")
     plt.colorbar(pa, shrink=0.5)
     ax.set_title("SALINITY")
 
@@ -403,9 +386,7 @@ def make_plot(sim):
     pxs.plot_bc(ftype="GHB")
     a = temperature[idxtime]
     pa = pxs.plot_array(a, cmap="jet", alpha=0.25)
-    cs = pxs.contour_array(
-        a, levels=5 + 20.0 * np.array([0.01, 0.5, 0.99]), colors="y"
-    )
+    cs = pxs.contour_array(a, levels=5 + 20.0 * np.array([0.01, 0.5, 0.99]), colors="y")
     plt.colorbar(pa, shrink=0.5)
     ax.set_title("TEMPERATURE")
 
@@ -448,16 +429,12 @@ def eval_transport(sim):
 
     fname = gwtsname + ".ucn"
     fname = os.path.join(ws, fname)
-    cobj = flopy.utils.HeadFile(
-        fname, text="CONCENTRATION"
-    )  # , precision='double')
+    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")  # , precision='double')
     conc = cobj.get_alldata()
 
     fname = gwthname + ".ucn"
     fname = os.path.join(ws, fname)
-    tobj = flopy.utils.HeadFile(
-        fname, text="CONCENTRATION"
-    )  # , precision='double')
+    tobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")  # , precision='double')
     temperature = tobj.get_alldata()
 
     # density is lagged, so use c and t from previous timestep
