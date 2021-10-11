@@ -115,9 +115,7 @@ def build_models():
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(
-            gwf, strt=strt, filename="{}.ic".format(gwfname)
-        )
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(
@@ -161,9 +159,7 @@ def build_models():
             gwf,
             budget_filerecord="{}.cbc".format(gwfname),
             head_filerecord="{}.hds".format(gwfname),
-            headprintrecord=[
-                ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-            ],
+            headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
             saverecord=[("HEAD", "LAST")],
             printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         )
@@ -210,9 +206,7 @@ def build_models():
 
         # initial conditions
         strt = np.zeros((nlay, nrow, ncol))
-        ic = flopy.mf6.ModflowGwtic(
-            gwt, strt=strt, filename="{}.ic".format(gwtname)
-        )
+        ic = flopy.mf6.ModflowGwtic(gwt, strt=strt, filename="{}.ic".format(gwtname))
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(
@@ -274,9 +268,7 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         times = cobj.get_times()
         t = times[-1]
         csim = cobj.get_data(totim=t)
@@ -346,10 +338,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
         test.run_mf6(sim)
 

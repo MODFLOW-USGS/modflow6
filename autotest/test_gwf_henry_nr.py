@@ -242,13 +242,6 @@ def build_model(idx, dir):
     return sim, None
 
 
-def build_models():
-    for idx, on_dir in enumerate(exdirs):
-        sim = get_model(idx, on_dir)
-        sim.write_simulation()
-    return
-
-
 def set_make_comparison():
     version = get_mf6_version()
     print("MODFLOW version='{}'".format(version))
@@ -289,11 +282,9 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, on_dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             on_dir,
             idxsim=idx,

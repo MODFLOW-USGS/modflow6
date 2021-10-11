@@ -158,13 +158,6 @@ def get_model(idx, ws):
     return sim, None
 
 
-def build_models():
-    for idx, on_dir in enumerate(exdirs):
-        sim = get_model(idx, on_dir)
-        sim.write_simulation()
-    return
-
-
 def eval_obs(sim):
     print("evaluating well observations...")
 
@@ -215,10 +208,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_obs, idxsim=idx)
         test.run_mf6(sim)
 

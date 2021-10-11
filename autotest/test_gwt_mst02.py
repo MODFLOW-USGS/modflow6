@@ -145,14 +145,10 @@ def build_models():
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(
-            gwf, strt=strt, filename="{}.ic".format(gwfname)
-        )
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
         # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(
-            gwf, save_flows=False, icelltype=laytyp, k=hk
-        )
+        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
 
         # chd files
         chddict = {0: [[(0, 0, 0), 1.0]]}
@@ -165,9 +161,7 @@ def build_models():
             gwf,
             budget_filerecord="{}.bud".format(gwfname),
             head_filerecord="{}.hds".format(gwfname),
-            headprintrecord=[
-                ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-            ],
+            headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
             saverecord=[("HEAD", "ALL")],
             printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         )
@@ -208,9 +202,7 @@ def build_models():
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(
-            gwt, strt=0.0, filename="{}.ic".format(gwtname)
-        )
+        ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename="{}.ic".format(gwtname))
 
         # mass storage and transfer
         mst = flopy.mf6.ModflowGwtmst(
@@ -268,9 +260,7 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         ts = cobj.get_ts([(0, 0, 0), (0, 0, 1)])
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -312,10 +302,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
         test.run_mf6(sim)
 
