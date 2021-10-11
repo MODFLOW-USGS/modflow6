@@ -116,16 +116,16 @@ sub6 = [
 
 
 def build_model(idx, dir):
-    sim = build_model(idx, dir, adjustmat=True)
+    sim = get_model(idx, dir, adjustmat=True)
 
     # build MODFLOW-6 with constant material properties
     pth = os.path.join(dir, compdir)
-    mc = build_model(idx, pth, None)
+    mc = get_model(idx, pth, None)
 
     return sim, mc
 
 
-def build_model(idx, dir, adjustmat=False):
+def get_model(idx, dir, adjustmat=False):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -233,7 +233,7 @@ def build_model(idx, dir, adjustmat=False):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim, None
+    return sim
 
 
 def calc_theta_thick(comp, thickini=1.0):
@@ -467,13 +467,6 @@ def cbc_compare(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(

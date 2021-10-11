@@ -72,7 +72,7 @@ def initial_conditions():
     return np.sqrt(h0 ** 2 + x * (h1 ** 2 - h0 ** 2) / (xlen - delr))
 
 
-def build_model(idxsim, ws, name):
+def get_model(idxsim, ws, name):
     strt = initial_conditions()
     hdsfile = "{}.hds".format(name)
     if newton[idxsim]:
@@ -130,7 +130,7 @@ def build_model(idxsim, ws, name):
         printrecord=[("BUDGET", "ALL")],
     )
 
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
@@ -138,7 +138,7 @@ def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(idx, ws, name)
+    sim = get_model(idx, ws, name)
 
     return sim, None
 
@@ -214,13 +214,6 @@ def drain_smoothing(xdiff, xrange, newton=False):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(

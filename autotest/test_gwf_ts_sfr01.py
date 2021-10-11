@@ -26,7 +26,7 @@ continuous_integration = [True for idx in range(len(exdirs))]
 replace_exe = None
 
 
-def build_model(ws, name, timeseries=False):
+def get_model(ws, name, timeseries=False):
     # static model data
     # temporal discretization
     nper = 1
@@ -521,7 +521,7 @@ def build_model(ws, name, timeseries=False):
         printrecord=[("BUDGET", "LAST"), ("HEAD", "LAST")],
     )
 
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
@@ -529,11 +529,11 @@ def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(ws, name)
+    sim = get_model(ws, name)
 
     # build MODFLOW 6 files with timeseries
     ws = os.path.join(dir, "mf6")
-    mc = build_model(ws, name, timeseries=True)
+    mc = get_model(ws, name, timeseries=True)
 
     return sim, mc
 
@@ -608,13 +608,6 @@ def eval_model(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(

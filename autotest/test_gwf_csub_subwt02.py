@@ -242,7 +242,7 @@ for k in range(nlay):
                 ibcno += 1
 
 
-def build_model(idx, ws):
+def get_model(idx, ws):
     name = ex[idx]
 
     sim = flopy.mf6.MFSimulation(
@@ -429,18 +429,18 @@ def build_model(idx, ws):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
 
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(idx, ws)
+    sim = get_model(idx, ws)
 
     # build comparision files
     ws = os.path.join(dir, cmppth)
-    mc = build_model(idx, ws)
+    mc = get_model(idx, ws)
 
     return sim, mc
 
@@ -599,13 +599,6 @@ def cbc_compare(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(

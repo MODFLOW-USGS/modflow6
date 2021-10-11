@@ -378,13 +378,6 @@ def eval_sub(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_input()
-    return
 
 
 @pytest.mark.parametrize(

@@ -95,7 +95,7 @@ ghb_cond = 5.0
 ghb_packname = "MYGHB"
 
 
-def build_model(ws, name, api=False):
+def get_model(ws, name, api=False):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -176,7 +176,7 @@ def build_model(ws, name, api=False):
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
@@ -184,22 +184,13 @@ def build_model(idx, dir):
     ws = dir
     name = ex[idx]
 
-    sim = build_model(ws, name)
+    sim = get_model(ws, name)
 
     # build comparison model with zeroed values
     ws = os.path.join(dir, "libmf6")
-    mc = build_model(ws, name, api=True)
+    mc = get_model(ws, name, api=True)
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 def api_ghb_pak(hcof, rhs):

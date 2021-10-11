@@ -70,7 +70,7 @@ maxchd = len(cd6[0])
 rech = {0: 0.001}
 
 
-def build_model(idx, dir, no_ptcrecord):
+def get_model(idx, dir, no_ptcrecord):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -139,16 +139,16 @@ def build_model(idx, dir, no_ptcrecord):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
 
-    return sim, None
+    return sim
 
 
 # water table recharge problem
 def build_model(idx, dir):
-    sim = build_model(idx, dir, no_ptcrecords[idx])
+    sim = get_model(idx, dir, no_ptcrecords[idx])
 
     # build MODFLOW-6 without no_ptc option
     pth = os.path.join(dir, "mf6")
-    mc = build_model(idx, pth, None)
+    mc = get_model(idx, pth, None)
 
     return sim, mc
 

@@ -89,7 +89,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, rech):
+def get_model(ws, name, rech):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -148,29 +148,20 @@ def build_model(ws, name, rech):
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = build_model(ws, name, rech=rch_spd)
+    sim = get_model(ws, name, rech=rch_spd)
 
     # build comparison model
     ws = os.path.join(dir, "libmf6")
-    mc = build_model(ws, name, rech=0.0)
+    mc = get_model(ws, name, rech=0.0)
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 def api_func(exe, idx, model_ws=None):

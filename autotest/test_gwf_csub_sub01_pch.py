@@ -100,16 +100,16 @@ thick = [1.0]
 
 
 def build_model(idx, dir):
-    sim = build_model(idx, dir, pch=True)
+    sim = get_model(idx, dir, pch=True)
 
     # build MODFLOW-6 with constant material properties
     pth = os.path.join(dir, compdir)
-    mc = build_model(idx, pth)
+    mc = get_model(idx, pth)
 
     return sim, mc
 
 
-def build_model(idx, dir, pch=None):
+def get_model(idx, dir, pch=None):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -400,13 +400,6 @@ def cbc_compare(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(

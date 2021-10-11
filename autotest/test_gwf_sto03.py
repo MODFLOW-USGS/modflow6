@@ -91,7 +91,7 @@ for idx in range(nper):
     well_spd[idx] = [[0, 0, 0, mult * absrate]]
 
 
-def build_model(name, ws, newton_bool, offset=0.0):
+def get_model(name, ws, newton_bool, offset=0.0):
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -187,7 +187,7 @@ def build_model(name, ws, newton_bool, offset=0.0):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim, None
+    return sim
 
 
 # variant SUB package problem 3
@@ -196,11 +196,11 @@ def build_model(idx, dir):
     ws = dir
 
     # build model with no offset
-    sim = build_model(name, ws, newton_bool=newton[idx])
+    sim = get_model(name, ws, newton_bool=newton[idx])
 
     # build model with offset
     ws = os.path.join(dir, cmppth)
-    mc = build_model(name, ws, newton_bool=newton[idx], offset=cmp_offset)
+    mc = get_model(name, ws, newton_bool=newton[idx], offset=cmp_offset)
     return sim, mc
 
 
