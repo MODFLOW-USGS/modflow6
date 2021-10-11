@@ -585,6 +585,8 @@ def eval_zdisplacement(sim):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
+    assert False, "This test needs to be discussed with Joe"
+
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
     r_exe = None
