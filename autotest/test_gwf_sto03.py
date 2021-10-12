@@ -204,14 +204,6 @@ def build_model(idx, dir):
     return sim, mc
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_simulation()
-    return
-
-
 def eval_hmax(fpth):
     b = flopy.utils.Mf6Obs(fpth)
     times = b.get_times()

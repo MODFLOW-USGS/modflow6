@@ -151,14 +151,6 @@ def build_model(idx, dir):
     return sim, mc
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_simulation()
-    return
-
-
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, dir",

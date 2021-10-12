@@ -419,14 +419,6 @@ def build_model(idx, dir):
     return sim, mc
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_input()
-    return
-
-
 def eval_zdisplacement(sim):
     print("evaluating z-displacement...")
 
