@@ -109,7 +109,7 @@ For the following compilations, only this command has to be executed:
 meson compile -C builddir
 ```
 
-In order to run the tests the binaries have to be installed.
+In order to run the tests the binaries have to be installed by executing:
 
 ```shell
 meson install -C builddir
@@ -146,7 +146,7 @@ Then download latest release binaries and build latest release by executing:
 pytest -v get_exes.py
 ```
 
-Then you the tests can be run with commands similar to these:
+Then the tests can be run with commands similar to these:
 
 ```shell
 # Build MODFLOW 6 tests generated using flopy
