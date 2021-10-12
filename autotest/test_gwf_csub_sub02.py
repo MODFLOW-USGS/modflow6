@@ -246,15 +246,13 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     if is_CI and not continuous_integration[idx]:
         return
 
     # run the test model
     test.run_mf6(Simulation(dir, mf6_regression=True))
-
-    return
 
 
 def main():

@@ -195,7 +195,7 @@ def build_mf6(idx, ws, newton=None):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
@@ -386,7 +386,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:

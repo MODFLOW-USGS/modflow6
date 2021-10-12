@@ -476,7 +476,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:

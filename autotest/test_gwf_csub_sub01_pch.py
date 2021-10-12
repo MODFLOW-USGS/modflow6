@@ -244,7 +244,7 @@ def get_model(idx, dir, pch=None):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim, None
+    return sim
 
 
 def eval_sub(sim):
@@ -395,8 +395,6 @@ def cbc_compare(sim):
     else:
         sim.success = True
         print("    " + msg)
-
-    return
 
 
 # - No need to change any code below

@@ -58,7 +58,6 @@ def run_mf6_error(ws, err_str_list):
                 msg += " but did not print correct error message."
                 msg += '  Correct message should have been "{}"'.format(err_str)
                 raise ValueError(msg)
-    return
 
 
 def get_minimal_gwf_simulation(
@@ -121,7 +120,7 @@ def get_minimal_gwf_simulation(
     ic = flopy.mf6.ModflowGwfic(gwf, **ickwargs)
     npf = flopy.mf6.ModflowGwfnpf(gwf, **npfkwargs)
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, **chdkwargs)
-    return sim, None
+    return sim
 
 
 def test_simple_model_success():

@@ -133,7 +133,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
 
     # write the input files
     sim.write_simulation()
-    return sim, None
+    return sim
 
 
 def test_normal_termination():

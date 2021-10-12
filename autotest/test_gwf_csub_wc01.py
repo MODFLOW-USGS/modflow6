@@ -364,7 +364,7 @@ def build_mf6(idx, ws, interbed=False):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
-    return sim, None
+    return sim
 
 
 def eval_wcomp(sim):
@@ -428,8 +428,6 @@ def eval_wcomp(sim):
 
     # compare budgets
     cbc_compare(sim)
-
-    return
 
 
 # compare cbc and lst budgets
@@ -527,8 +525,6 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
-
 
 # - No need to change any code below
 
@@ -549,7 +545,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
