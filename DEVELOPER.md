@@ -120,7 +120,7 @@ The binaries can then be found in the `bin` folder.
 
 ## Running Tests Locally
 
-(Optional) For complete testing as done on Travis, clone the modflow6-testmodels repository:
+For complete testing as done on the CI, clone the modflow6-testmodels repository:
 
 ```shell
 # Clone your GitHub repository:
