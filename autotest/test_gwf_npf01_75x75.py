@@ -200,14 +200,6 @@ def build_model(idx, dir):
     return sim, mc
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_input()
-    return
-
-
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, dir",
@@ -218,7 +210,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models_legacy(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir))
@@ -230,12 +222,10 @@ def main():
 
     # build the models
     # run the test model
-    for dir in exdirs:
-        test.build_mf6_models(build_model, idx, dir)
+    for idx, dir in enumerate(exdirs):
+        test.build_mf6_models_legacy(build_model, idx, dir)
         sim = Simulation(dir)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":
