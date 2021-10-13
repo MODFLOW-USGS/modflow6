@@ -172,18 +172,19 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
 	        \item Fixed a bug that caused the last binary budget and head file information provided by a GWF simulation in a given stress period to be used for all subsequent GWT simulation time steps in that stress period, even if binary budget and head file information was provided for more than one time step in that stress period. In that situation, the GWF time steps must match the GWT time steps one-for-one.
+	        \item Boundary packages, such as WEL, DRN and GHB, for example, read lists of data using a general list reader.  For text input, the list of data would not be read correctly if it was longer than 300 characters wide.  Most lists would normally be less than 300 characters unless a large number of auxiliary variables were specified.  In this case, information beyond 300 characters would not be read.  The list reader was modified to use an unlimited character length so that any number of auxiliary variables can be specified.
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
 	        \item Fixed a bug in the Recharge (RCH) and Evapotranspiration (EVT) Packages that would occur with array-based input (READASARRAYS) combined with the Time-Array Series (TAS) functionality.  Because the TAS functionality only works for DIS and DISU models, this fix does not have any effect on models that use DISU discretization.  The bug would occur when one or more cells in the upper layer were removed using the IDOMAIN capability.  In this special case, the time-array series values did not carry over to the correct locations in the RCH and EVT arrays.  This error would be difficult to identify for complex models, because the model would run to completion without any errors.  The RCH and EVT Packages were modified to maintain direct correspondence between the \texttt{nodelist} and \texttt{bound} arrays with the arrays provided to the TAS utility.  A small and intended consequence of this fix is that the ID2 value written to the binary budget file for array-based RCH and EVT Packages will correspond to the consecutive cell number in the top layer.  
 	        \item Recharge and evapotranspiration flows that are written to the GWF Model binary budget file are marked with the text headers ``RCH'' and ``EVT'', respectively.  In order to support the array-based input for SSM concentrations, these text headers are marked as ``RCHA'' and ``EVTA'', respectively, if the READASARRAYS option is specified for the package.  This change will have no effect on simulation results; however, post processing capabilities may need to be adjusted to account for this minor renaming convention.
-	        \item xxx  
+	        \item When the PRINT\_FLOWS option was used with the Source and Sink Mixing (SSM) Package, the cell ID numbers written to the listing file were incorrect.  The SSM Package was fixed to output the correct cell ID.
 	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item--
+	        \item The Streamflow Routing (SFR) Package would die with a floating point error when calculating the stream depth as a function of flow rate, if the flow rate was slightly negative.  Added a conditional check to ensure that the stream depth is calculated as zero if the calculated flow rate is zero or less.
 	\end{itemize}
 
 	\underline{SOLUTION}

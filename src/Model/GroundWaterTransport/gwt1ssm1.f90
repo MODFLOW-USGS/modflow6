@@ -631,7 +631,7 @@ module GwtSsmModule
               !
               ! -- set nodestr and write outputtab table
               nodeu = this%dis%get_nodeuser(node)
-              call this%dis%nodeu_to_string(node, nodestr)
+              call this%dis%nodeu_to_string(nodeu, nodestr)
               bname = this%fmi%gwfpackages(ip)%name
               call this%outputtab%add_term(i)
               call this%outputtab%add_term(trim(adjustl(nodestr)))
@@ -639,7 +639,6 @@ module GwtSsmModule
               call this%outputtab%add_term(cssm)
               call this%outputtab%add_term(rrate)
               call this%outputtab%add_term(bname)
-              !                                     qssm, cssm, rrate, bname)
             end if
           end if
           !

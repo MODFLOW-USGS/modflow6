@@ -84,19 +84,19 @@ To run tests:
 cd modflow6/autotest
 
 # Run all modflow6 tests (including building executables and the mfio documentation - requires installation of LaTeX
-nosetests -v
+pytest -v
 
 # Build MODFLOW 6, MODFLOW 6 utilities, and all versions of MODFLOW used in comparison tests
-nosetests -v get_build_exes.py
+pytest -v get_build_exes.py
 
 # Build MODFLOW 6 tests generated using flopy
-nosetests -v test_*
+pytest -v test_*
 
 # Build MODFLOW 6 example tests
-nosetests -v test_z01_testmodels_mf6.py
+pytest -v test_z01_testmodels_mf6.py
 
 # Build MODFLOW 5 to 6 converter example tests
-nosetests -v test_z02_testmodels_mf5to6.py
+pytest -v test_z02_testmodels_mf5to6.py
 ```
 
 You should execute the test suites before submitting a PR to github.

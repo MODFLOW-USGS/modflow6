@@ -11,7 +11,7 @@ VERIFY = False
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from get_build_exes import build_mf6
+from build_exes import build_mf6
 
 github_repo = "MODFLOW-USGS/modflow6"
 working_dir = "./temp/"

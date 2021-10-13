@@ -4,212 +4,100 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build MF6 (Release)",
+            "label": "Build MF6 (ifort)",
             "command": "${workspaceFolder}/.vscode/run_python.sh",
             "windows": {
-                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
-                    "${workspaceFolder}\\.vscode\\build_vscode.py",
-                    "-exe",
-                    "-release",
-                    "-only"
-                ],    
-              },
+                    "${config:python.defaultInterpreterPath}",
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "ifort",
+                    "build",
+                ],                
+                "problemMatcher": "$msCompile"
+            },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
-                "-exe",
-                "-release",
-                "-only"
+                "--compiler",
+                "ifort",
+                "build",
             ],
             "group": "build",
-            "presentation": {
-                "reveal": "silent"
-            },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$gcc"
         },
         {
-            "label": "Rebuild MF6 (Release)",
-            "type": "shell",
+            "label": "Rebuild MF6 (ifort)",
             "command": "${workspaceFolder}/.vscode/run_python.sh",
             "windows": {
-                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
-                    "${workspaceFolder}\\.vscode\\build_vscode.py",
-                    "-exe",
-                    "-release",
-                    "-all"
-                ],    
-              },
+                    "${config:python.defaultInterpreterPath}",
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "ifort",
+                    "rebuild",
+                ],
+                "problemMatcher": "$msCompile",
+            },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
-                "-exe",
-                "-release",
-                "-all"
+                "--compiler",
+                "ifort",
+                "rebuild",
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "reveal": "silent"
-            },
-            "problemMatcher": "$msCompile"
+            "group": "build",            
+            "problemMatcher": "$gcc"
         },
         {
-            "label": "Build MF6 (Debug)",
-            "type": "shell",
+            "label": "Build MF6 (gfortran)",
             "command": "${workspaceFolder}/.vscode/run_python.sh",
             "windows": {
-                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
                 "args": [
-                    "${workspaceFolder}\\.vscode\\build_vscode.py",
-                    "-exe",
-                    "-debug",
-                    "-only"
-                ],    
-              },
+                    "${config:python.defaultInterpreterPath}",
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "gfortran",
+                    "build",
+                ],                
+                "problemMatcher": "$msCompile"
+            },
             "args": [
+                "${config:python.defaultInterpreterPath}",
                 "${workspaceFolder}/.vscode/build_vscode.py",
-                "-exe",
-                "-debug",
-                "-only"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "reveal": "silent"
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-          "label": "Rebuild MF6 (Debug)",
-          "type": "shell",
-          "command": "${workspaceFolder}/.vscode/run_python.sh",
-          "windows": {
-              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
-              "args": [
-                  "${workspaceFolder}\\.vscode\\build_vscode.py",
-                  "-exe",
-                  "-debug",
-                  "-all"
-              ],    
-            },
-          "args": [
-              "${workspaceFolder}/.vscode/build_vscode.py",
-              "-exe",
-              "-debug",
-              "-all"
-          ],
-        "group": {
-              "kind": "build",
-              "isDefault": true
-          },
-          "presentation": {
-              "reveal": "silent"
-          },
-          "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "Build MF6 dll (Release)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/run_python.sh",
-            "windows": {
-                "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
-                "args": [
-                    "${workspaceFolder}\\.vscode\\build_vscode.py",
-                    "-dll",
-                    "-release",
-                    "-only"
-                ],    
-              },
-            "args": [
-                "${workspaceFolder}/.vscode/build_vscode.py",
-                "-dll",
-                "-release",
-                "-only"
+                "--compiler",
+                "gfortran",
+                "build",
             ],
             "group": "build",
-            "presentation": {
-                "reveal": "silent"            
-            },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$gcc"
         },
         {
-          "label": "Rebuild MF6 dll (Release)",
-          "type": "shell",
-          "command": "${workspaceFolder}/.vscode/run_python.sh",
-          "windows": {
-              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
-              "args": [
-                  "${workspaceFolder}\\.vscode\\build_vscode.py",
-                  "-dll",
-                  "-release",
-                  "-all"
-              ],    
+            "label": "Rebuild MF6 (gfortran)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${config:python.defaultInterpreterPath}",
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "gfortran",
+                    "rebuild",
+                ],
+                "problemMatcher": "$msCompile",
             },
-          "args": [
-              "${workspaceFolder}/.vscode/build_vscode.py",
-              "-dll",
-              "-release",
-              "-all"
-          ],
-        "group": "build",
-          "presentation": {
-              "reveal": "silent"
-          },
-          "problemMatcher": "$msCompile"
+            "args": [
+                "${config:python.defaultInterpreterPath}",
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "gfortran",
+                "rebuild",
+            ],
+            "group": "build",            
+            "problemMatcher": "$gcc"
         },
-        {
-          "label": "Build MF6 dll (Debug)",
-          "type": "shell",
-          "command": "${workspaceFolder}/.vscode/run_python.sh",
-          "windows": {
-              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
-              "args": [
-                  "${workspaceFolder}\\.vscode\\build_vscode.py",
-                  "-dll",
-                  "-debug",
-                  "-only"
-              ],    
-            },
-          "args": [
-              "${workspaceFolder}/.vscode/build_vscode.py",
-              "-dll",
-              "-debug",
-              "-only"
-          ],
-        "group": "build",
-          "presentation": {
-              "reveal": "silent"
-          },
-          "problemMatcher": "$msCompile"
-        },
-        {
-          "label": "Rebuild MF6 dll (Debug)",
-          "type": "shell",
-          "command": "${workspaceFolder}/.vscode/run_python.sh",
-          "windows": {
-              "command": "${workspaceFolder}\\.vscode\\run_python.cmd",
-              "args": [
-                  "${workspaceFolder}\\.vscode\\build_vscode.py",
-                  "-dll",
-                  "-debug",
-                  "-all"
-              ],    
-            },
-          "args": [
-              "${workspaceFolder}/.vscode/build_vscode.py",
-              "-dll",
-              "-debug",
-              "-all"
-          ],
-          "group": "build",
-          "presentation": {
-              "reveal": "silent"
-          },
-          "problemMatcher": "$msCompile"
-      }
     ]
 }
