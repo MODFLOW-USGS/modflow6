@@ -44,7 +44,7 @@ contains
     type(ObsOutputType),       pointer :: ObsOutput => null()
     !---------------------------------------------------------------------------
     ! -- format for totim
-10  format(G0)
+10  format(G20.13)
     ! -- output unit
     nunit = obsrv%UnitNumber
     !
