@@ -206,6 +206,7 @@ def get_model(idx, dir):
 
 # - No need to change any code below
 def test_mf6model():
+    assert False, "Discuss with Joe"
     # build and run the test model
     sim = build_models()
     sim.run_simulation()

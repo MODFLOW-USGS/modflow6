@@ -565,6 +565,8 @@ def eval_model(sim, mfnwt, include_NWT=False):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
+
+    assert False, "Discuss with Joe"
     include_NWT = False
     # initialize testing framework
     test = testing_framework()

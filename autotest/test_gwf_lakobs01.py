@@ -222,6 +222,7 @@ def build_model(idx, dir):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
+    assert False, "Discuss with Joe"
     # initialize testing framework
     test = testing_framework()
 

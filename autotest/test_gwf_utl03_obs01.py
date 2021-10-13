@@ -144,7 +144,7 @@ def build_mf6(idx, ws, binaryobs=True):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
@@ -231,6 +231,7 @@ def eval_obs(sim):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
+    assert False, "Discuss with Joe"
     # initialize testing framework
     test = testing_framework()
 

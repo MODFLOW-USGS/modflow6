@@ -50,7 +50,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 
-def get_model(idx, ws):
+def build_model(idx, ws):
 
     name = ex[idx]
 
@@ -207,14 +207,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
     # run the test model
     for idx, dir in enumerate(exdirs):
         test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_obs, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

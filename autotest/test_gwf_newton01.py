@@ -38,7 +38,7 @@ oname = "head_obs.csv"
 obs_recarray = {oname: [("h1", "HEAD", (0, 1, 1)), ("h2", "HEAD", (1, 1, 1))]}
 
 
-def build_mf6(idx, ws):
+def build_model(idx, ws):
     c6 = []
     for loc in chdloc:
         c6.append([loc, chd])
@@ -145,12 +145,10 @@ def main():
 
     # build the models
     # run the test model
-    for dir in exdirs:
+    for idx, dir in enumerate(exdirs):
         test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_head)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

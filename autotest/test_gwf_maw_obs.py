@@ -197,6 +197,7 @@ def build_model(idx, dir):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
+    assert False, "discuss with Joe"
     # initialize testing framework
     test = testing_framework()
 
@@ -246,8 +247,6 @@ def test_mf6model(idx, dir):
 
     # rerun the model, should be no errors
     sim.run_simulation()
-
-    return
 
 
 def main():

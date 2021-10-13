@@ -136,7 +136,7 @@ def build_mf6(idx, ws, storage=True):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim, None
+    return sim
 
 
 def build_model(idx, dir):
