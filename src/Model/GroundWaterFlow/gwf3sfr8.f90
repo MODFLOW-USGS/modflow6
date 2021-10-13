@@ -1094,9 +1094,9 @@ module SfrModule
         write(this%iout,'(1x,a)') &
           'END OF ' // trim(adjustl(this%text)) // ' CROSSSECTIONS'
         
+        !
+        ! -- check for duplicate sfr crosssections
         do n = 1, this%maxbound
-          !
-          ! -- check for duplicate sfr crosssections
           if (nboundchk(n) > 1) then
             write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)') &
               'Cross-section data for reach', n, &
@@ -1120,6 +1120,9 @@ module SfrModule
           call mem_reallocate(this%xsdepths, this%ncrossptstot, 'XSDEPTHS', this%memoryPath)          
         end if
         !
+        ! -- write cross-section data to the model listing file
+        call cross_data%output(this%width)
+        !
         ! -- pack cross-section data
         call cross_data%pack(this%ncrossptstot, this%ncrosspts, &
                              this%iacross, &
@@ -1131,7 +1134,6 @@ module SfrModule
         deallocate(cross_data)
         nullify(cross_data)
       end if
-      
       !
       ! -- return
       return
