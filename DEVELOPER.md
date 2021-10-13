@@ -28,7 +28,7 @@ Meson is used to build MODFLOW 6.
 Install Meson and assure it is in your PATH: https://mesonbuild.com/Getting-meson.html
 
 
-### gfortran (version 4.9 to 8)
+### gfortran (version 4.9 to 10)
 
 gfortran can be used to compile MODFLOW 6 and associated utilities and generate distributable files.
 
@@ -39,8 +39,8 @@ gfortran can be used to compile MODFLOW 6 and associated utilities and generate 
 
 #### macOS
 
-- Install [homebrew](https://brew.sh/)
-- `brew install gcc`
+- [Homebrew](https://brew.sh/): `brew install gcc`
+- [MacPorts](https://www.macports.org/): `sudo port install gcc10`
 
 #### Windows
 
@@ -57,7 +57,8 @@ gfortran can be used to compile MODFLOW 6 and associated utilities and generate 
 
 ### Python
 
-Install Python, for example via miniconda: https://docs.conda.io/en/latest/miniconda.html
+Install Python, for example via [miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/individual).
+Please make sure that your Python version is 3.7 or higher.
 Then install all packages necessary to run the tests either by executing [install-python-std.sh](.github/common/install-python-std.sh) via bash directly or by installing the listed packages manually.
 
 ### ifort (optional)
@@ -66,7 +67,8 @@ Intel fortran can be used to compile MODFLOW 6 and associated utilities and gene
 Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
 
 ### LaTeX (optional)
-[LaTeX](https://www.latex-project.org/) which is used to generate the MODFLOW 6 Input/Output document (docs/mf6io/mf6io.nightlybuild).
+
+[LaTeX](https://www.latex-project.org/) which is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
 
 ## Getting the Sources
 
@@ -140,7 +142,8 @@ Update your flopy installation by executing
 python update_flopy.py
 ```
 
-Then download latest release binaries and build latest release by executing:
+The tests require other MODFLOW-related binary executables, distributed from https://github.com/MODFLOW-USGS/executables.
+Testing also requires a binary executable of the last MODFLOW 6 officially released version, compiled in develop mode with the currently configured compiler. To download MODFLOW-related binaries and to rebuild the last official MODFLOW 6 release, execute the following::
 
 ```shell
 pytest -v get_exes.py
