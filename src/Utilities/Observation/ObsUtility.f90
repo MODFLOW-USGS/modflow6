@@ -43,7 +43,7 @@ contains
     character(len=LENOBSNAME), pointer :: linout => null()
     type(ObsOutputType),       pointer :: ObsOutput => null()
     !---------------------------------------------------------------------------
-    ! -- format
+    ! -- format for totim
 10  format(G20.13)
     ! -- output unit
     nunit = obsrv%UnitNumber
