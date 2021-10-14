@@ -528,7 +528,7 @@ module sfrCrossSectionManager
           text = 'DEPTH'
           call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
           if (reach_fail(irch) > 0) then
-            text = 'INVALID'
+            text = 'NEEDS ADJUSTMENT'
             call this%inputtab%initialize_column(text, 10, alignment=TABLEFT)
           end if
           !
@@ -547,8 +547,8 @@ module sfrCrossSectionManager
               else
                 cvalid = 'TRUE'
               end if
+              call this%inputtab%add_term(cvalid)
             end if 
-            call this%inputtab%add_term(cvalid)
           end do
           !
           ! -- finalize the table
@@ -669,7 +669,7 @@ module sfrCrossSectionManager
     nullify(this%cross_sections)
     !
     ! -- input table
-    if (this%iprpak > 0) then
+    if (associated(this%inputtab)) then
       call this%inputtab%table_da()
       deallocate(this%inputtab)
       nullify(this%inputtab)
