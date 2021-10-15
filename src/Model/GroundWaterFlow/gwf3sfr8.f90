@@ -1189,7 +1189,7 @@ module SfrModule
         if (ival > nconnmax) then
           nconnmax = ival
         end if
-      end do 
+      end do
       !
       ! -- reallocate connection data for package
       call mem_reallocate(this%ja, nja, 'JA', this%memoryPath)
@@ -1281,7 +1281,7 @@ module SfrModule
         
         write(this%iout,'(1x,a)')                                                  &
           'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
-        
+          
         do n = 1, this%maxbound
           !
           ! -- check for missing or duplicate sfr connections
@@ -2666,6 +2666,11 @@ module SfrModule
       call this%obs%StoreObsType('wet-area', .false., indx)
       this%obs%obsData(indx)%ProcessIdPtr => sfr_process_obsID
       !
+      ! -- Store obs type and assign procedure pointer
+      !    for wetted-width observation type.
+      call this%obs%StoreObsType('wet-width', .false., indx)
+      this%obs%obsData(indx)%ProcessIdPtr => sfr_process_obsID
+      !
       ! -- return
       return
     end subroutine sfr_df_obs
@@ -2743,6 +2748,8 @@ module SfrModule
                 v = this%calc_perimeter_wet(n, this%depth(n))
               case ('WET-AREA')
                 v = this%calc_area_wet(n, this%depth(n))
+              case ('WET-WIDTH')
+                v = this%calc_top_width_wet(n, this%depth(n))
               case default
                 msg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
                 call store_error(msg)
@@ -2835,7 +2842,8 @@ module SfrModule
           if (obsrv%ObsTypeId == 'STAGE' .or. &
               obsrv%ObsTypeId == 'DEPTH' .or. &
               obsrv%ObsTypeId == 'WET-PERIMETER' .or. &
-              obsrv%ObsTypeId == 'WET-AREA') then
+              obsrv%ObsTypeId == 'WET-AREA' .or. &
+              obsrv%ObsTypeId == 'WET-WIDTH') then
             nn1 = obsrv%NodeNumber
             if (nn1 == NAMEDBOUNDFLAG) then
               if (obsrv%indxbnds_count > 1) then
@@ -3058,26 +3066,29 @@ module SfrModule
         case ('CROSS_SECTION')
           ixserror = 0
           !
-          ! -- read FILE keyword
-          call this%parser%GetStringCaps(keyword)
-          select case (keyword)
-            case('TAB6')
-              call this%parser%GetStringCaps(keyword)
-              if(trim(adjustl(keyword)) /= 'FILEIN') then
-                errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //           &
-                          'then by filename.'
-                call store_error(errmsg)
-                ixserror = 1
-              end if
-              if (ixserror == 0) then
-                call this%parser%GetString(crossfile)
-              end if
-            case default
-              write(errmsg,'(a,1x,i4,1x,a)') &
-                'CROSS-SECTION TABLE ENTRY for REACH ', n, &
-                'MUST INCLUDE TAB6 KEYWORD'
-              call store_error(errmsg)
-          end select
+          ! -- hack for now until flopy issue resolved
+          call this%parser%GetString(crossfile)
+          ! !
+          ! ! -- read FILE keyword
+          ! call this%parser%GetStringCaps(keyword)
+          ! select case (keyword)
+          !   case('TAB6')
+          !     call this%parser%GetStringCaps(keyword)
+          !     if(trim(adjustl(keyword)) /= 'FILEIN') then
+          !       errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //           &
+          !                 'then by filename.'
+          !       call store_error(errmsg)
+          !       ixserror = 1
+          !     end if
+          !     if (ixserror == 0) then
+          !       call this%parser%GetString(crossfile)
+          !     end if
+          !   case default
+          !     write(errmsg,'(a,1x,i4,1x,a)') &
+          !       'CROSS-SECTION TABLE ENTRY for REACH ', n, &
+          !       'MUST INCLUDE TAB6 KEYWORD'
+          !     call store_error(errmsg)
+          ! end select
 
         case ('AUXILIARY')
           call this%parser%GetStringCaps(caux)
