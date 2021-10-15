@@ -34,6 +34,11 @@ Software distributions for the current and previous official USGS releases are a
 ## Examples
 MODFLOW 6 has an extensive suite of example problems that are constructed using the python [FloPy](https://github.com/modflowpy/flopy) package.  These example problems are contained in a separate git repository located [here](https://github.com/MODFLOW-USGS/modflow6-examples).  These examples are included in the official [USGS MODFLOW 6 distribution](https://water.usgs.gov/water-resources/software/MODFLOW-6/), and they are also rendered into online [descriptions](https://modflow6-examples.readthedocs.io/en/master/examples.html) and [jupyter notebooks](https://modflow6-examples.readthedocs.io/en/master/notebook_examples.html).
 
+## Contributing
+
+First, follow [DEVELOPER.md](DEVELOPER.md) in order to set up your development environment to build and test MODFLOW 6.
+The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Continuous Integration
 
 This repository contains an `./autotest` folder with python scripts for building and testing the MODFLOW 6 program and other workflow tasks.  The testing workflow relies heavily on several related repositories including:
@@ -98,4 +103,3 @@ functionality of the software and related material nor shall the fact of release
 constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
-
