@@ -22,11 +22,6 @@ following products on your development machine.
 [Git](https://git-scm.com) and/or the **GitHub app** (for [Mac](https://mac.github.com) or [Windows](https://windows.github.com)).
 [GitHub's Guide to Installing Git](https://help.github.com/articles/set-up-git) is a good source of information.
 
-### Meson
-
-Meson is used to build MODFLOW 6.
-Install Meson and assure it is in your PATH: https://mesonbuild.com/Getting-meson.html
-
 
 ### gfortran (version 4.9 to 10)
 
@@ -92,7 +87,10 @@ git remote add upstream https://github.com/MODFLOW-USGS/modflow6.git
 
 ## Building
 
-You can build modflow with Visual Studio Code tasks as described [here](.vscode/README.md).
+### Meson
+
+First, install [Meson](https://mesonbuild.com/Getting-meson.html) and assure it is in your [PATH](https://en.wikipedia.org/wiki/PATH_(variable)).
+When using Visual Studio Code, you can use tasks as described [here](.vscode/README.md).
 For the more general instructions, continue to read this section.
 
 First configure the build directory:
@@ -119,6 +117,22 @@ meson install -C builddir
 
 The binaries can then be found in the `bin` folder.
 
+### Visual Studio
+
+As of October 2021, debugging with Visual Studio tends to be more convenient than with other solutions.
+First, download Visual Studio from the [official website](https://visualstudio.microsoft.com/).
+The solution files can be found in the `msvs` folder.
+
+### Pymake
+
+Follow the installation instructions as explained on the README of the [repository](https://github.com/modflowpy/pymake).
+The README also explains how to build MODFLOW 6 with it.
+
+### Make
+
+We also provide make files which can be used to build MODFLOW 6 with [GNU Make](https://www.gnu.org/software/make/).
+For the build instructions we refer to the [GNU Make Manual](https://www.gnu.org/software/make/manual/).
+
 
 ## Running Tests Locally
 
@@ -143,10 +157,16 @@ python update_flopy.py
 ```
 
 The tests require other MODFLOW-related binary executables, distributed from https://github.com/MODFLOW-USGS/executables.
-Testing also requires a binary executable of the last MODFLOW 6 officially released version, compiled in develop mode with the currently configured compiler. To download MODFLOW-related binaries and to rebuild the last official MODFLOW 6 release, execute the following::
+Testing also requires a binary executable of the last MODFLOW 6 officially released version, compiled in develop mode with the currently configured compiler. To download MODFLOW-related binaries and to rebuild the last official MODFLOW 6 release, execute:
 
 ```shell
 pytest -v get_exes.py
+```
+
+Unless you built and installed MODFLOW 6 binaries with meson, you will also have to execute the following command to build the binaries:
+
+```shell
+pytest -v build_exes.py
 ```
 
 Then the tests can be run with commands similar to these:
@@ -162,9 +182,5 @@ pytest -v test_z01_testmodels_mf6.py
 pytest -v test_z02_testmodels_mf5to6.py
 ```
 
-You should execute the test suites before submitting a PR to github.
-
-
-All the tests are executed on our Continuous Integration infrastructure and a PR could only be merged once the tests pass.
-
-- Github Actions CI fails if any of the test suites described above fails.
+You should execute the test suites before submitting a PR to Github.
+All the tests are executed on our Continuous Integration infrastructure and a pull request can only be merged once all tests pass.
