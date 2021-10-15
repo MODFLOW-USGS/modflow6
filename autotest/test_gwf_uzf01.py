@@ -210,6 +210,8 @@ def build_model(idx, dir):
     obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
     obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
 
+    return sim, None
+
 
 def eval_flow(sim):
     print("evaluating flow...")
