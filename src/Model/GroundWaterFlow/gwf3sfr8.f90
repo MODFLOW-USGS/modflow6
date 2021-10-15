@@ -3066,29 +3066,26 @@ module SfrModule
         case ('CROSS_SECTION')
           ixserror = 0
           !
-          ! -- hack for now until flopy issue resolved
-          call this%parser%GetString(crossfile)
-          ! !
-          ! ! -- read FILE keyword
-          ! call this%parser%GetStringCaps(keyword)
-          ! select case (keyword)
-          !   case('TAB6')
-          !     call this%parser%GetStringCaps(keyword)
-          !     if(trim(adjustl(keyword)) /= 'FILEIN') then
-          !       errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //           &
-          !                 'then by filename.'
-          !       call store_error(errmsg)
-          !       ixserror = 1
-          !     end if
-          !     if (ixserror == 0) then
-          !       call this%parser%GetString(crossfile)
-          !     end if
-          !   case default
-          !     write(errmsg,'(a,1x,i4,1x,a)') &
-          !       'CROSS-SECTION TABLE ENTRY for REACH ', n, &
-          !       'MUST INCLUDE TAB6 KEYWORD'
-          !     call store_error(errmsg)
-          ! end select
+          ! -- read FILE keyword
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+            case('TAB6')
+              call this%parser%GetStringCaps(keyword)
+              if(trim(adjustl(keyword)) /= 'FILEIN') then
+                errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //           &
+                          'then by filename.'
+                call store_error(errmsg)
+                ixserror = 1
+              end if
+              if (ixserror == 0) then
+                call this%parser%GetString(crossfile)
+              end if
+            case default
+              write(errmsg,'(a,1x,i4,1x,a)') &
+                'CROSS-SECTION TABLE ENTRY for REACH ', n, &
+                'MUST INCLUDE TAB6 KEYWORD'
+              call store_error(errmsg)
+          end select
 
         case ('AUXILIARY')
           call this%parser%GetStringCaps(caux)

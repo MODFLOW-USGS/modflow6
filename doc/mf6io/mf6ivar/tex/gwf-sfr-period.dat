@@ -2,5 +2,5 @@ BEGIN PERIOD <iper>
   <rno> <sfrsetting>
   <rno> <sfrsetting>
   ...
-  CROSS_SECTION <tab6_filename> 
+  CROSS_SECTION TAB6 FILEIN <tab6_filename> 
 END PERIOD

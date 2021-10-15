@@ -143,7 +143,7 @@ EVAPORATION <@evaporation@>
 RUNOFF <@runoff@>
 DIVERSION <idv> <@divflow@> 
 UPSTREAM_FRACTION <upstream_fraction>
-CROSS_SECTION <tab6_filename> 
+CROSS_SECTION TAB6 FILEIN <tab6_filename> 
 AUXILIARY <auxname> <@auxval@> 
 \end{lstlisting}
 
@@ -170,6 +170,10 @@ AUXILIARY <auxname> <@auxval@>
 \item \texttt{upstream\_fraction}---real value that defines the fraction of upstream flow (USTRF) from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one.
 
 \item \texttt{CROSS\_SECTION}---keyword to specify that record corresponds to a reach cross-section.
+
+\item \texttt{TAB6}---keyword to specify that record corresponds to a cross-section table file.
+
+\item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
 
 \item \texttt{tab6\_filename}---character string that defines the path and filename for the file containing cross-section table data for the reach. The TAB6\_FILENAME file includes the number of entries in the file and the station elevation data in terms of the fractional width and the reach depth. Instructions for creating the TAB6\_FILENAME input file are provided in SFR Reach Cross-Section Table Input File section.
 

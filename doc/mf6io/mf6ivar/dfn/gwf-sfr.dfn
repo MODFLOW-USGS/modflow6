@@ -795,7 +795,7 @@ description real value that defines the fraction of upstream flow (USTRF) from e
 
 block period
 name cross_sectionrecord
-type record cross_section tab6_filename
+type record cross_section tab6 filein tab6_filename
 shape
 tagged
 in_record false
@@ -813,6 +813,28 @@ tagged true
 optional false
 longname cross_section keyword
 description keyword to specify that record corresponds to a reach cross-section.
+
+block period
+name tab6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname head keyword
+description keyword to specify that record corresponds to a cross-section table file.
+
+block period
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
 
 block period
 name tab6_filename
