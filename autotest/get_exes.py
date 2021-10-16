@@ -11,7 +11,9 @@ if running_on_CI():
     os.environ["PYMAKE_DOUBLE"] = "1"
 
 # paths to executables for previous versions of MODFLOW
-ebindir = os.path.abspath(os.path.join(os.path.expanduser("~"), ".local", "bin"))
+ebindir = os.path.abspath(
+    os.path.join(os.path.expanduser("~"), ".local", "bin")
+)
 if not os.path.exists(ebindir):
     os.makedirs(ebindir)
 
@@ -57,7 +59,9 @@ def rebuild_mf6_release():
     pm.download_target(pm.target, download_path=download_pth, verify=False)
 
     # Set MODFLOW 6 to compile develop version of the release
-    srcpth = os.path.join(download_pth, target_dict["dirname"], target_dict["srcdir"])
+    srcpth = os.path.join(
+        download_pth, target_dict["dirname"], target_dict["srcdir"]
+    )
     fpth = os.path.join(srcpth, "Utilities", "version.f90")
     with open(fpth) as f:
         lines = f.read().splitlines()

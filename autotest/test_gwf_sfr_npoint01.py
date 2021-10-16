@@ -94,7 +94,9 @@ np_data = {
         "d": np.array([1.0, 0.0, 0.5, 0.0, 1.0], dtype=float),
     },
     xsect_types[8]: {
-        "x": np.array([0.0, 0.1 * rwid, 0.5 * rwid, 0.9 * rwid, rwid], dtype=float),
+        "x": np.array(
+            [0.0, 0.1 * rwid, 0.5 * rwid, 0.9 * rwid, rwid], dtype=float
+        ),
         "d": np.array([1.0, 1.0, 0.0, 1.0, 1.0], dtype=float),
     },
 }

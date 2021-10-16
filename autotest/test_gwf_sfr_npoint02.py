@@ -44,19 +44,20 @@ rhk = 0.0
 slope = 0.001
 ustrf = 1.0
 ndv = 0
-inflow = 1000.
+inflow = 1000.0
 
 np_data = {}
 for n in range(nper):
     rwid = float(n + 1) * rwid0
     np_data[n] = {
         "x": np.array([0.0, rwid], dtype=float),
-        "d": np.array([0.0, 0.0], dtype=float)
+        "d": np.array([0.0, 0.0], dtype=float),
     }
 
 # depth as a function of flow for a wide cross-section
 def flow_to_depth_wide(rwid, q):
-    return ((q * roughness) / (conversion_fact * rwid * np.sqrt(slope)))**0.6
+    return ((q * roughness) / (conversion_fact * rwid * np.sqrt(slope))) ** 0.6
+
 
 #
 def build_model(idx, ws):

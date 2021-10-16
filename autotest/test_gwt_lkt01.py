@@ -202,8 +202,8 @@ def get_model(idx, dir):
         budget_filerecord="{}.cbc".format(gwfname),
         head_filerecord="{}.hds".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "ALL", "STEPS"), ("BUDGET", "ALL", "STEPS")],
-        printrecord=[("HEAD", "LAST", "STEPS"), ("BUDGET", "LAST", "STEPS")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
     # create gwt model
@@ -326,10 +326,10 @@ def get_model(idx, dir):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "ALL", "STEP")],
+        saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[
-            ("CONCENTRATION", "ALL", "STEP"),
-            ("BUDGET", "ALL", "STEP"),
+            ("CONCENTRATION", "ALL"),
+            ("BUDGET", "ALL"),
         ],
     )
 
