@@ -3561,6 +3561,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: text
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: ierr

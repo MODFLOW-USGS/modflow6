@@ -24,6 +24,7 @@ ex = [
     "sfr_npt01f",
     "sfr_npt01g",
     "sfr_npt01h",
+    "sfr_npt01i",
 ]
 exdirs = [os.path.join("temp", s) for s in ex]
 
@@ -36,6 +37,7 @@ xsect_types = (
     "trapezoidal",
     "v",
     "w",
+    "v_invalid",
 )
 
 # spatial discretization data
@@ -78,16 +80,24 @@ np_data = {
         "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
     },
     xsect_types[5]: {
-        "x": np.array([0.0, 0.4, 0.6, rwid], dtype=float),
+        "x": np.array([0.0, 0.4 * rwid, 0.6 * rwid, rwid], dtype=float),
         "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
     },
     xsect_types[6]: {
-        "x": np.array([0.0, 0.5, rwid], dtype=float),
+        "x": np.array([0.0, 0.5 * rwid, rwid], dtype=float),
         "d": np.array([1.0, 0.0, 1.0], dtype=float),
     },
     xsect_types[7]: {
-        "x": np.array([0.0, 0.2, 0.5, 0.7, rwid], dtype=float),
+        "x": np.array(
+            [0.0, 0.2 * rwid, 0.5 * rwid, 0.7 * rwid, rwid], dtype=float
+        ),
         "d": np.array([1.0, 0.0, 0.5, 0.0, 1.0], dtype=float),
+    },
+    xsect_types[8]: {
+        "x": np.array(
+            [0.0, 0.1 * rwid, 0.5 * rwid, 0.9 * rwid, rwid], dtype=float
+        ),
+        "d": np.array([1.0, 1.0, 0.0, 1.0, 1.0], dtype=float),
     },
 }
 
