@@ -27,6 +27,7 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
+
 def get_model(idx, dir):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
@@ -107,7 +108,7 @@ def get_model(idx, dir):
         stress_period_data=chdspdict,
         save_flows=True,
         auxiliary=[f"aux{i}" for i in range(100)],
-        pname="CHD-1"
+        pname="CHD-1",
     )
 
     # output control

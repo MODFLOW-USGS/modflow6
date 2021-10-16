@@ -277,7 +277,8 @@ contains
     !
     ! -- Test for quote at end of substring
     if (istop < ltrim) then
-      if (defLine(istop+1:istop+1) == '''') then
+      if (defLine(istop+1:istop+1).EQ.CHAR(34) .OR. &
+          defLine(istop+1:istop+1).EQ.CHAR(39)) then
         ltrim = istop
       end if
     end if

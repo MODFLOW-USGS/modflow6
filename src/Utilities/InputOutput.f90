@@ -767,6 +767,7 @@ module InputOutputModule
       CHARACTER(len=20) STRING
       CHARACTER(len=30) RW
       CHARACTER(len=1) TAB
+      CHARACTER(len=1) CHAREND
       character(len=200) :: msg
       character(len=LINELENGTH) :: msg_line
 !C     ------------------------------------------------------------------
@@ -794,11 +795,17 @@ module InputOutputModule
 !C
 !C3------Found start of word.  Look for end.
 !C3A-----When word is quoted, only a quote can terminate it.
-20    IF(LINE(I:I).EQ.'''') THEN
+!C-------SEARCH FOR A SINGLE (CHAR(39)) OR DOUBLE (CHAR(34)) QUOTE
+20    IF(LINE(I:I).EQ.CHAR(34) .OR. LINE(I:I).EQ.CHAR(39)) THEN
+         IF (LINE(I:I).EQ.CHAR(34)) THEN
+           CHAREND = CHAR(34)
+         ELSE
+           CHAREND = CHAR(39)
+         END IF
          I=I+1
          IF(I.LE.LINLEN) THEN
             DO 25 J=I,LINLEN
-            IF(LINE(J:J).EQ.'''') GO TO 40
+            IF(LINE(J:J).EQ.CHAREND) GO TO 40
 25          CONTINUE
          END IF
 !C
