@@ -185,7 +185,7 @@ def get_model(idx, dir):
             ("lak10", "lak", 1, 10),
             ("lak11", "lak", 1, 11),
         ],
-        "digits": 10,
+        # "digits": 10,
     }
 
     lak = flopy.mf6.modflow.ModflowGwflak(
@@ -212,8 +212,8 @@ def get_model(idx, dir):
         budget_filerecord="{}.cbc".format(gwfname),
         head_filerecord="{}.hds".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "ALL", "STEPS"), ("BUDGET", "ALL", "STEPS")],
-        printrecord=[("HEAD", "LAST", "STEPS"), ("BUDGET", "LAST", "STEPS")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
     return sim

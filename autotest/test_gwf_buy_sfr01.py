@@ -233,7 +233,7 @@ def get_model(idx, dir):
         budget_filerecord="{}.cbc".format(gwfname),
         head_filerecord="{}.hds".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "ALL", "STEPS"), ("BUDGET", "ALL", "STEPS")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
