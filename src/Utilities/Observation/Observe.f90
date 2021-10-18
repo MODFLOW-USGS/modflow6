@@ -271,18 +271,13 @@ contains
       endif
     enddo
     !
-    ! -- Remaining text is ID [and ID2]; store it
-    ltrim = len_trim(defLine)
-    call urword(defLine,icol,istart,istop,1,n,r,iout,inunit)
-    !
-    ! -- Test for quote at end of substring
-    if (istop < ltrim) then
-      if (defLine(istop+1:istop+1).EQ.CHAR(34) .OR. &
-          defLine(istop+1:istop+1).EQ.CHAR(39)) then
-        ltrim = istop
-      end if
+    ! -- Remaining text is ID [and ID2]; store the remainder of the string
+    istart = istop + 1
+    istop = len_trim(defLine)
+    if (istart > istop) then
+      istart = istop
     end if
-    newObservation%IDstring = (defLine(istart:ltrim))
+    newObservation%IDstring = defLine(istart:istop)
     !
     ! Store UnitNumber, FormattedOutput, and IndxObsOutput
     newObservation%UnitNumber = numunit

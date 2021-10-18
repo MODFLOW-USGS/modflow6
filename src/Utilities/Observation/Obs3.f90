@@ -271,7 +271,7 @@ contains
     elseif (n == -2) then
       ! Integer can't be read from strng; it's presumed to be a boundary
       ! name (already converted to uppercase)
-      obsrv%FeatureName = trim(adjustl(strng))
+      obsrv%FeatureName = strng(istart:istop)
       ! -- Observation may require summing rates from multiple boundaries,
       !    so assign NodeNumber as a value that indicates observation
       !    is for a named boundary or group of boundaries.
