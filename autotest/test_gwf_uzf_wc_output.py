@@ -355,7 +355,7 @@ def get_mf6_model(idx, dir):
         filename="{}.oc".format(name),
     )
 
-    return sim, None
+    return sim
 
 
 def get_mfnwt_model(idx, dir):
@@ -560,13 +560,8 @@ def eval_model(sim, mfnwt, include_NWT=False):
 
 
 # - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
+def test_mf6model():
 
-    assert False, "Discuss with Joe"
     include_NWT = False
     # initialize testing framework
     test = testing_framework()

@@ -33,7 +33,7 @@ iuz_cell_dict = {}
 cell_iuz_dict = {}
 
 
-def get_model(idx, dir):
+def build_model():
 
     nlay, nrow, ncol = 3, 1, 10
     nper = 1
@@ -201,14 +201,14 @@ def get_model(idx, dir):
         filename="{}.oc".format(name),
     )
 
-    return sim, None
+    return sim
 
 
 # - No need to change any code below
 def test_mf6model():
-    assert False, "Discuss with Joe"
     # build and run the test model
-    sim = build_models()
+    sim = build_model()
+    sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
@@ -230,7 +230,8 @@ def test_mf6model():
 
 def main():
     # build and run the test model
-    sim = build_models()
+    sim = build_model()
+    sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file

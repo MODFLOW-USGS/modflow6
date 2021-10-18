@@ -27,7 +27,7 @@ os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
 
 
-def get_model(timeseries=False):
+def build_model(timeseries=False):
     # static model data
     # temporal discretization
     nper = 1
@@ -522,14 +522,14 @@ def get_model(timeseries=False):
         printrecord=[("BUDGET", "LAST"), ("HEAD", "LAST")],
     )
 
-    return sim, None
+    return sim
 
 
 # - No need to change any code below
 def test_mf6model():
-    assert False, "Discuss with Joe"
     # build and run the test model
-    sim = build_models()
+    sim = build_model()
+    sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
@@ -551,7 +551,8 @@ def test_mf6model():
 
 def main():
     # build and run the test model
-    sim = build_models()
+    sim = build_model()
+    sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file

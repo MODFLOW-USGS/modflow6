@@ -220,7 +220,7 @@ ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]
 
 
 # variant SUB package problem 3
-def build_model(idx, dir):
+def get_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -419,6 +419,14 @@ def build_model(idx, dir):
     return sim, mc
 
 
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim, mc = get_model(idx, dir)
+        sim.write_simulation()
+        mc.write_input()
+    return
+
+
 def eval_zdisplacement(sim):
     print("evaluating z-displacement...")
 
@@ -577,8 +585,6 @@ def eval_zdisplacement(sim):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
-    assert False, "This test needs to be discussed with Joe"
-
     # determine if running on Travis or GitHub actions
     is_CI = running_on_CI()
     r_exe = None
@@ -590,7 +596,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    test.build_mf6_models(build_model, idx, dir)
+    build_models()
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -611,9 +617,10 @@ def main():
     test = testing_framework()
 
     # build the models
+    build_models()
+
     # run the test model
     for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             dir,
             exfunc=eval_zdisplacement,
