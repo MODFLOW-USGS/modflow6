@@ -20,7 +20,7 @@ module ListModule
     procedure, public :: Add
     procedure, public :: Clear
     procedure, public :: Count
-    procedure, public :: Contains
+    procedure, public :: ContainsObject
     procedure, public :: DeallocateBackward
     procedure, public :: GetNextItem
     procedure, public :: GetPreviousItem
@@ -153,7 +153,7 @@ contains
     return
   end function Count
 
-  function Contains(this, obj, isEqual) result(hasObj)
+  function ContainsObject(this, obj, isEqual) result(hasObj)
     class(ListType), intent(inout) :: this
     class(*), pointer :: obj
     procedure(isEqualIface), pointer, intent(in) :: isEqual

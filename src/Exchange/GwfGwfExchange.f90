@@ -29,7 +29,7 @@ module GwfGwfExchangeModule
     character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
     type(BlockParserType)                            :: parser                   !< block parser for input file
     type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
-    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2  
+    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2
     ! 
     ! -- GWF specific option block:
     integer(I4B), pointer                            :: iprpak      => null()    !< print input flag
@@ -52,8 +52,8 @@ module GwfGwfExchangeModule
     real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    !< saturated conductance
     integer(I4B), dimension(:), pointer, contiguous  :: idxglo      => null()    !< mapping to global (solution) amat
     integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
-    real(DP), pointer                                :: satomega    => null()    !< saturation smoothing    
-    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange    
+    real(DP), pointer                                :: satomega    => null()    !< saturation smoothing
+    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
     character(len=LENBOUNDNAME), dimension(:),                                   &
                                  pointer, contiguous :: boundname   => null()    !< boundnames
     !

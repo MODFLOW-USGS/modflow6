@@ -242,7 +242,7 @@ module GridConnectionModule
       ! add to list of exchanges
       exObjPtr => connEx
       areEqualMethod => arePointersEqual
-      if (.not. this%exchanges%Contains(exObjPtr, areEqualMethod)) then
+      if (.not. this%exchanges%ContainsObject(exObjPtr, areEqualMethod)) then
         call AddDisConnExchangeToList(this%exchanges, connEx)
       end if
     end if
@@ -260,7 +260,7 @@ module GridConnectionModule
 
     mPtr => modelToAdd
     areEqualMethod => arePointersEqual
-    if (.not. this%regionalModels%Contains(mPtr, areEqualMethod)) then
+    if (.not. this%regionalModels%ContainsObject(mPtr, areEqualMethod)) then
       call AddNumericalModelToList(this%regionalModels, modelToAdd)
     end if
     
