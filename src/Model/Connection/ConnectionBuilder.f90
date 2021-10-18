@@ -93,6 +93,7 @@ module ConnectionBuilderModule
     logical(LGP) :: alwaysInterfaceModel
 
     ! Force use of the interface model
+    alwaysInterfaceModel = .false.
     call get_environment_variable('DEV_ALWAYS_USE_IFMOD', status=status)
     if (status == 0) then
       alwaysInterfaceModel = .true.
