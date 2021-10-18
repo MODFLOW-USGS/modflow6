@@ -12,13 +12,16 @@ module ConnectionsModule
   public :: ConnectionsType
   public :: iac_to_ia
 
+  public :: fillisym
+  public :: filljas
+  
   type ConnectionsType
     character(len=LENMEMPATH)                       :: memoryPath                !< memory path of the connections data
     character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model    
     integer(I4B), pointer                           :: nodes      => null()      !< number of nodes
     integer(I4B), pointer                           :: nja        => null()      !< number of connections
     integer(I4B), pointer                           :: njas       => null()      !< number of symmetric connections
-    integer(I4B), pointer                           :: ianglex    => null()      !< indicates whether or not anglex was read
+    integer(I4B), pointer                           :: ianglex    => null()      !< indicates whether or not anglex is present
     integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !< (size:nodes+1) csr index array
     integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !< (size:nja) csr pointer array
     integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !< (size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!    
@@ -855,7 +858,8 @@ module ConnectionsModule
 
   subroutine disuconnections(this, name_model, nodes, nodesuser, nrsize, &
                              nodereduced, nodeuser, iainp, jainp, &
-                             ihcinp, cl12inp, hwvainp, angldegxinp)
+                             ihcinp, cl12inp, hwvainp, angldegxinp, &
+                             iangledegx)
 ! ******************************************************************************
 ! disuconnections -- Construct the connectivity arrays using disu
 !   information.  Grid may be reduced
@@ -881,6 +885,7 @@ module ConnectionsModule
     real(DP), dimension(:), contiguous, intent(in) :: cl12inp
     real(DP), dimension(:), contiguous, intent(in) :: hwvainp
     real(DP), dimension(:), contiguous, intent(in) :: angldegxinp
+    integer(I4B), intent(in) :: iangledegx
     ! -- local
     integer(I4B),dimension(:),allocatable :: ihctemp
     real(DP),dimension(:),allocatable :: cl12temp
@@ -896,7 +901,7 @@ module ConnectionsModule
     !
     ! -- Set scalars
     this%nodes = nodes
-    this%ianglex = 1
+    this%ianglex = iangledegx
     !
     ! -- If not a reduced grid, then copy and finalize, otherwise more
     !    processing is required
@@ -1098,7 +1103,7 @@ module ConnectionsModule
 
   subroutine fillisym(neq, nja, ia, ja, isym)
 ! ******************************************************************************
-! fillisym -- Private function to fill the isym array
+! fillisym -- function to fill the isym array
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1136,7 +1141,7 @@ module ConnectionsModule
 
   subroutine filljas(neq, nja, ia, ja, isym, jas)
 ! ******************************************************************************
-! fillisym -- Private function to fill the jas array
+! fillisym -- function to fill the jas array
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

@@ -6,6 +6,7 @@ BEGIN OPTIONS
   [CELL_AVERAGING <cell_averaging>]
   [VARIABLECV [DEWATERED]]
   [NEWTON]
+  [XT3D]
   [GNC6 FILEIN <gnc6_filename>]
   [MVR6 FILEIN <mvr6_filename>]
   [OBS6 FILEIN <obs6_filename>]

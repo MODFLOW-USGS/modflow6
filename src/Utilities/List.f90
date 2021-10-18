@@ -4,7 +4,7 @@ module ListModule
   use ConstantsModule, only: LINELENGTH
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
-  public :: ListType, ListNodeType
+  public :: ListType, ListNodeType, isEqualIface, arePointersEqual
 
   type :: ListType
     ! -- Public members
@@ -20,6 +20,7 @@ module ListModule
     procedure, public :: Add
     procedure, public :: Clear
     procedure, public :: Count
+    procedure, public :: ContainsObject
     procedure, public :: DeallocateBackward
     procedure, public :: GetNextItem
     procedure, public :: GetPreviousItem
@@ -52,7 +53,14 @@ module ListModule
     ! -- Private procedures
     procedure, private :: DeallocValue
   end type ListNodeType
-
+  
+  interface
+    function isEqualIface(obj1, obj2) result(isEqual)
+      class(*), pointer :: obj1, obj2
+      logical :: isEqual
+    end function
+  end interface
+  
 contains
 
   ! -- Public type-bound procedures for ListType
@@ -145,6 +153,36 @@ contains
     return
   end function Count
 
+  function ContainsObject(this, obj, isEqual) result(hasObj)
+    class(ListType), intent(inout) :: this
+    class(*), pointer :: obj
+    procedure(isEqualIface), pointer, intent(in) :: isEqual
+    logical :: hasObj
+    ! local
+    type(ListNodeType), pointer :: current => null()
+   
+    hasObj = .false.
+    current => this%firstNode
+    do while (associated(current))
+      if (isEqual(current%Value, obj)) then
+        hasObj = .true.
+        return
+      end if
+      
+      ! -- Advance to the next node
+      current => current%nextNode
+    enddo
+    
+    ! this means there is no match
+    return
+  end function  
+  
+  function arePointersEqual(obj1, obj2) result(areIdentical)
+    class(*), pointer :: obj1, obj2
+    logical :: areIdentical
+    areIdentical = associated(obj1, obj2) 
+  end function arePointersEqual
+  
   subroutine DeallocateBackward(this, fromNode)
     ! **************************************************************************
     ! DeallocateBackward

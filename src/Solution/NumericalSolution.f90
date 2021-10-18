@@ -141,6 +141,7 @@ module NumericalSolutionModule
     procedure :: add_model
     procedure :: add_exchange
     procedure :: get_models
+    procedure :: get_exchanges
     procedure :: save
 
     procedure, private :: sln_connect
@@ -160,6 +161,7 @@ module NumericalSolutionModule
     procedure, private :: allocate_arrays
     procedure, private :: convergence_summary
     procedure, private :: csv_convergence_summary
+    procedure, private :: sln_buildsystem
     procedure, private :: writeCSVHeader
     procedure, private :: writePTCInfoToFile
     
@@ -803,7 +805,7 @@ subroutine solution_create(filename, id)
       end if
     end if
     !
-    if (THIS%THETA < DEM3) then
+    if (THIS%theta < DEM3) then
       this%theta = DEM3
     end if
     !
@@ -1426,6 +1428,7 @@ subroutine solution_create(filename, id)
     character(len=LENPAKLOC) :: strh
     character(len=25) :: cval
     character(len=7) :: cmsg
+    character(len=13) :: file_matrix
     integer(I4B) :: ic
     integer(I4B) :: im    
     integer(I4B) :: icsv0
@@ -1502,34 +1505,12 @@ subroutine solution_create(filename, id)
     if (this%numtrack > 0) then
       call this%sln_backtracking(mp, cp, kiter)
     end if
-    !
-    ! -- Set amat and rhs to zero
-    call this%sln_reset()
+    
     call code_timer(0, ttform, this%ttform)
-    !
-    ! -- Calculate the matrix terms for each exchange
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cf(kiter)
-    enddo
-    !
-    ! -- Calculate the matrix terms for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cf(kiter)
-    enddo
-    !
-    ! -- Add exchange coefficients to the solution
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, 1)
-    enddo
-    !
-    ! -- Add model coefficients to the solution
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, 1)
-    enddo
+        
+    ! (re)build the solution matrix
+    call this%sln_buildsystem(kiter, inewton=1)
+    
     !
     ! -- Add exchange Newton-Raphson terms to solution
     do ic=1,this%exchangelist%Count()
@@ -1890,6 +1871,47 @@ subroutine solution_create(filename, id)
     
   end subroutine finalizeSolve
   
+  ! helper routine to calculate coefficients and setup the solution matrix
+  subroutine sln_buildsystem(this, kiter, inewton)
+    class(NumericalSolutionType) :: this
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: inewton
+    
+    ! local
+    integer(I4B) :: im, ic
+    class(NumericalModelType), pointer :: mp
+    class(NumericalExchangeType), pointer :: cp
+    !
+    ! -- Set amat and rhs to zero
+    call this%sln_reset()
+    
+    !
+    ! -- Calculate the matrix terms for each exchange
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_cf(kiter)
+    enddo
+    !
+    ! -- Calculate the matrix terms for each model
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_cf(kiter)
+    enddo
+    !
+    ! -- Add exchange coefficients to the solution
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
+    enddo
+    !
+    ! -- Add model coefficients to the solution
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_fc(kiter, this%amat, this%nja, inewton)
+    enddo
+    
+  end subroutine sln_buildsystem
+  
   !> @ brief Solution convergence summary
   !!
   !!  Save convergence summary to a File.
@@ -2198,6 +2220,16 @@ subroutine solution_create(filename, id)
     return
   end subroutine add_exchange
 
+  !> @brief Returns a pointer to the list of exchanges in this solution
+  !<
+  function get_exchanges(this) result(exchanges)
+    class(NumericalSolutionType) :: this !< instance of the numerical solution
+    type(ListType), pointer :: exchanges    !< pointer to the exchange list
+
+    exchanges => this%exchangelist
+
+  end function get_exchanges
+    
   !> @ brief Assign solution connections
   !!
   !!  Assign solution connections. This is the main workhorse method for a 
@@ -2230,7 +2262,7 @@ subroutine solution_create(filename, id)
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_ac(this%sparse)
     enddo
-    !
+    !    
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
     this%nja=this%sparse%nnz
@@ -2257,7 +2289,28 @@ subroutine solution_create(filename, id)
     ! -- return
     return
   end subroutine sln_connect
-
+  
+  ! fill list with exchanges from this solution, of equal type
+  subroutine getExchanges(this, exchanges, connectionType)
+    class(NumericalSolutionType), intent(inout) :: this
+    type(ListType), intent(inout) :: exchanges
+    character(len=7), intent(in) :: connectionType
+    
+    ! local
+    integer(I4B) :: ic
+    class(NumericalExchangeType), pointer :: numEx
+    class(*), pointer :: exPtr
+    
+    do ic=1,this%exchangelist%Count()
+      numEx => GetNumericalExchangeFromList(this%exchangelist, ic)
+      if (connectionType == numEx%typename) then
+        exPtr => numEx
+        call exchanges%Add(exPtr)
+      end if
+    enddo
+    
+  end subroutine
+  
   !> @ brief Reset the solution
   !!
   !!  Reset the solution by setting the coefficient matrix and right-hand side 
@@ -2562,8 +2615,6 @@ subroutine solution_create(filename, id)
     integer(I4B), intent(in) :: kiter                    !< Picard iteration number
     ! -- local variables
     character(len=7) :: cmsg
-    integer(I4B) :: ic
-    integer(I4B) :: im
     integer(I4B) :: nb
     integer(I4B) :: btflag
     integer(I4B) :: ibflag
@@ -2572,34 +2623,11 @@ subroutine solution_create(filename, id)
     !
     ! -- initialize local variables
     ibflag = 0
+    
     !
     ! -- refill amat and rhs with standard conductance
-    ! -- Set amat and rhs to zero
-    call this%sln_reset()
-    !
-    ! -- Calculate matrix coefficients (CF) for each exchange
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cf(kiter)
-    end do
-    !
-    ! -- Calculate matrix coefficients (CF) for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cf(kiter)
-    end do
-    !
-    ! -- Fill coefficients (FC) for each exchange
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, 0)
-    end do
-    !
-    ! -- Fill coefficients (FC) for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, 0)
-    end do
+    call this%sln_buildsystem(kiter, inewton=0)
+       
     !
     ! -- calculate initial l2 norm
     if (kiter == 1) then
@@ -2631,33 +2659,10 @@ subroutine solution_create(filename, id)
           end if
           !
           ibtcnt = nb
-          !
-          ! -- Set amat and rhs to zero
-          call this%sln_reset()
-          !
-          ! -- Calculate matrix coefficients (CF) for each exchange
-          do ic=1,this%exchangelist%Count()
-            cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-            call cp%exg_cf(kiter)
-          end do
-          !
-          ! -- Calculate matrix coefficients (CF) for each model
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_cf(kiter)
-          end do
-          !
-          ! -- Fill coefficients (FC) for each exchange
-          do ic=1,this%exchangelist%Count()
-            cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-            call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, 0)
-          end do
-          !
-          ! -- Fill coefficients (FC) for each model
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_fc(kiter, this%amat, this%nja, 0)
-          end do
+          
+          ! recalculate linear system (amat and rhs)
+          call this%sln_buildsystem(kiter, inewton=0)
+                    
           !
           ! -- calculate updated l2norm
           call this%sln_l2norm(this%neq, this%nja,                             &
@@ -3169,7 +3174,30 @@ subroutine solution_create(filename, id)
     !
     return
   end function GetNumericalSolutionFromList
-  
-  
-  
+
+
+  ! print sparse matrix (crs) to file, with zero-based indices
+  subroutine save_matrix(filename, nrows, ia, ja, M) !MJR
+    use InputOutputModule, only:getunit
+    
+    character(len=*), intent(in)              :: filename
+    integer(I4B), intent(in)                  :: nrows
+    integer(I4B), dimension(:), intent(in)    :: ia, ja
+    real(DP), dimension(:), intent(in)        :: M    
+    
+    integer(I4B) :: inunit
+    integer(I4B) :: i,j
+    
+    inunit = getunit()
+    open(inunit, file=filename)    
+    do i=1,nrows
+      do j=ia(i),ia(i+1)-1        
+        write(inunit, '(I12,I12,F20.10)') i-1, ja(j)-1, M(j) ! NB: zero-based
+      enddo
+    enddo
+    close(inunit)
+    
+  end subroutine  
+
+
 end module NumericalSolutionModule

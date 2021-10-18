@@ -1,7 +1,7 @@
 module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
@@ -34,9 +34,11 @@ module GwfDisuModule
     real(DP), dimension(:), pointer, contiguous :: cl12inp => null()             ! (size:njausr) user-input cl12 array
     real(DP), dimension(:), pointer, contiguous :: hwvainp => null()             ! (size:njausr) user-input hwva array
     real(DP), dimension(:), pointer, contiguous :: angldegxinp => null()         ! (size:njausr) user-input angldegx array
+    integer(I4B), pointer :: iangledegx => null()                                ! =1 when angle information was present in input, 0 otherwise
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
+    logical(LGP) :: readFromFile                                                 ! True, when DIS is read from file (almost always)
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
@@ -58,6 +60,7 @@ module GwfDisuModule
     ! -- private
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+    procedure :: allocate_arrays_mem
     procedure :: read_options
     procedure :: read_dimensions
     procedure :: read_mf6_griddata
@@ -368,7 +371,8 @@ module GwfDisuModule
                                   this%nodereduced, this%nodeuser,             &
                                   this%iainp, this%jainp,                      &
                                   this%ihcinp, this%cl12inp,                   &
-                                  this%hwvainp, this%angldegxinp)
+                                  this%hwvainp, this%angldegxinp,              &
+                                  this%iangledegx)
     this%nja = this%con%nja
     this%njas = this%con%njas
     !
@@ -521,24 +525,30 @@ module GwfDisuModule
     call mem_deallocate(this%njausr)
     call mem_deallocate(this%nvert)
     call mem_deallocate(this%voffsettol)
+    call mem_deallocate(this%iangledegx)
     !
     ! -- arrays
-    call mem_deallocate(this%top1d)
-    call mem_deallocate(this%bot1d)
-    call mem_deallocate(this%area1d)
-    call mem_deallocate(this%idomain)
-    if (associated(this%iavert)) then
-      call mem_deallocate(this%iavert)
-      call mem_deallocate(this%javert)
+    if (this%readFromFile) then
+      call mem_deallocate(this%top1d)
+      call mem_deallocate(this%bot1d)
+      call mem_deallocate(this%area1d)      
+      if (associated(this%iavert)) then
+        call mem_deallocate(this%iavert)
+        call mem_deallocate(this%javert)
+      end if
+      call mem_deallocate(this%vertices)
+      call mem_deallocate(this%iainp)
+      call mem_deallocate(this%jainp)
+      call mem_deallocate(this%ihcinp)
+      call mem_deallocate(this%cl12inp)
+      call mem_deallocate(this%hwvainp)
+      call mem_deallocate(this%angldegxinp)      
     end if
-    call mem_deallocate(this%vertices)
-    call mem_deallocate(this%iainp)
-    call mem_deallocate(this%jainp)
-    call mem_deallocate(this%ihcinp)
-    call mem_deallocate(this%cl12inp)
-    call mem_deallocate(this%hwvainp)
-    call mem_deallocate(this%angldegxinp)
+
+    call mem_deallocate(this%idomain)
     call mem_deallocate(this%cellxy)
+
+    
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     !
@@ -761,6 +771,7 @@ module GwfDisuModule
     end if
     !
     ! -- allocate vectors that are the size of nodesuser
+    this%readFromFile = .true.
     call mem_allocate(this%top1d, this%nodesuser, 'TOP1D', this%memoryPath)
     call mem_allocate(this%bot1d, this%nodesuser, 'BOT1D', this%memoryPath)
     call mem_allocate(this%area1d, this%nodesuser, 'AREA1D', this%memoryPath)
@@ -947,6 +958,9 @@ module GwfDisuModule
       call store_error('Required CONNECTIONDATA block not found.')
       call this%parser%StoreErrorUnit()
     end if
+    !
+    ! -- store whether angledegx was read
+    if (lname(6)) this%iangledegx = 1
     !
     ! -- verify all items were read
     do n = 1, nname
@@ -1443,8 +1457,8 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Terminate with error if requesting unit vector components for problems
-    !    without vertex data
-    if (this%nvert < 1) then
+    !    without cell data
+    if (size(this%cellxy,2) < 1) then
       write(errmsg, '(a)') &
         'Cannot calculate unit vector components for DISU grid if VERTEX ' //    &
         'data are not specified'
@@ -1537,12 +1551,15 @@ module GwfDisuModule
     call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
     call mem_allocate(this%nvert, 'NVERT', this%memoryPath)
     call mem_allocate(this%voffsettol, 'VOFFSETTOL', this%memoryPath)
+    call mem_allocate(this%iangledegx, 'IANGLEDEGX', this%memoryPath)
     !
     ! -- Set values
     this%ndim = 1
     this%njausr = 0
     this%nvert = 0
     this%voffsettol = DZERO
+    this%iangledegx = 0
+    this%readFromFile = .false.
     !
     ! -- Return
     return
@@ -1580,6 +1597,16 @@ module GwfDisuModule
     ! -- Return
     return
   end subroutine allocate_arrays
+
+  subroutine allocate_arrays_mem(this)
+    use MemoryManagerModule, only: mem_allocate
+    class(GwfDisuType) :: this
+     
+    call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%memoryPath)
+    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
+    call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%memoryPath)
+    
+  end subroutine allocate_arrays_mem
 
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string, allow_zero) result(nodeu)

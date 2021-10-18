@@ -61,6 +61,8 @@ idomainp = np.ones((nlayp, nrowp, ncolp), dtype=np.int32)
 # Zero out where the child grid will reside
 idomainp[0:2, 6:11, 2:8] = 0
 
+xorigin = 2*delrp
+yorigin = 4*delcp
 
 # ------------------------------------------
 # Common SFR data for all parent models
@@ -766,6 +768,8 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         top=topc,
         botm=botmc,
         idomain=idomainc,
+        xorigin=xorigin,
+        yorigin=yorigin,
         filename="{}.dis".format(gwfnamec),
     )
 

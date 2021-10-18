@@ -6,6 +6,7 @@ module GwfGwfExchangeModule
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                                      TABCENTER, TABLEFT, LENAUXNAME
+  use ListModule,              only: ListType
   use ListsModule,             only: basemodellist
   use DisConnExchangeModule,   only: DisConnExchangeType
   use GwfModule,               only: GwfModelType
@@ -20,13 +21,15 @@ module GwfGwfExchangeModule
   implicit none
 
   private
+  public :: GwfExchangeType
   public :: gwfexchange_create
+  public :: GetGwfExchangeFromList
 
   type, extends(DisConnExchangeType) :: GwfExchangeType
     character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
     type(BlockParserType)                            :: parser                   !< block parser for input file
     type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
-    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2  
+    type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2
     ! 
     ! -- GWF specific option block:
     integer(I4B), pointer                            :: iprpak      => null()    !< print input flag
@@ -49,8 +52,8 @@ module GwfGwfExchangeModule
     real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    !< saturated conductance
     integer(I4B), dimension(:), pointer, contiguous  :: idxglo      => null()    !< mapping to global (solution) amat
     integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
-    real(DP), pointer                                :: satomega    => null()    !< saturation smoothing    
-    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange    
+    real(DP), pointer                                :: satomega    => null()    !< saturation smoothing
+    real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
     character(len=LENBOUNDNAME), dimension(:),                                   &
                                  pointer, contiguous :: boundname   => null()    !< boundnames
     !
@@ -86,10 +89,12 @@ module GwfGwfExchangeModule
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
-    procedure, private :: gwf_gwf_bdsav
+    procedure          :: gwf_gwf_bdsav
     procedure, private :: gwf_gwf_df_obs
     procedure, private :: gwf_gwf_rp_obs
     procedure, public  :: gwf_gwf_save_simvals
+    procedure, private :: gwf_gwf_calc_simvals
+    procedure, public  :: gwf_gwf_set_spdis
   end type GwfExchangeType
 
 contains
@@ -371,6 +376,12 @@ contains
       endif
     endif
     !
+    if (this%ixt3d > 0 .and. this%ianglex == 0) then
+      write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //               &
+                           'specified as an auxiliary variable because ' //      &
+                           'XT3D is enabled on the exchange.'
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
     ! -- Go through each connection and calculate the saturated conductance
     do iexg = 1, this%nexg
       !
@@ -719,43 +730,36 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO, DPIO180
-    use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n1
-    integer(I4B) :: n2
-    integer(I4B) :: ihc
-    integer(I4B) :: ibdn1
-    integer(I4B) :: ibdn2
-    integer(I4B) :: ictn1
-    integer(I4B) :: ictn2
-    integer(I4B) :: iusg
-    real(DP) :: topn1
-    real(DP) :: topn2
-    real(DP) :: botn1
-    real(DP) :: botn2
-    real(DP) :: satn1
-    real(DP) :: satn2
-    real(DP) :: hn1
-    real(DP) :: hn2
-    real(DP) :: rrate
-    real(DP) :: thksat
-    real(DP) :: angle
-    real(DP) :: nx
-    real(DP) :: ny
-    real(DP) :: distance
-    real(DP) :: dltot
-    real(DP) :: hwva
-    real(DP) :: area
 ! ------------------------------------------------------------------------------
     !
     ! -- calculate flow and store in simvals
+    call this%gwf_gwf_calc_simvals()    
+    !
+    ! -- calculate specific discharge and set to model
+    call this%gwf_gwf_set_spdis()
+    !
+    ! -- return
+    return
+  end subroutine gwf_gwf_cq
+
+
+  !> @brief Calculate flow rates for the exchanges and
+  !< store them in a member array
+  subroutine gwf_gwf_calc_simvals(this)
+    use ConstantsModule, only: DZERO
+    class(GwfExchangeType) :: this !< the exchange
+    ! local
+    integer(I4B) :: i
+    integer(I4B) :: n1, n2
+    integer(I4B) :: ibdn1, ibdn2
+    real(DP) :: rrate
+
     do i = 1, this%nexg
       rrate = DZERO
       n1 = this%nodem1(i)
@@ -770,7 +774,36 @@ contains
       endif
       this%simvals(i) = rrate
     end do
-    !
+    
+    return
+  end subroutine gwf_gwf_calc_simvals
+
+  !> @brief Calculate specific discharge from flow rates
+  !< and set them to the models
+  subroutine gwf_gwf_set_spdis(this)
+    use ConstantsModule, only: DZERO, DPIO180
+    use GwfNpfModule, only: thksatnm
+    class(GwfExchangeType) :: this !< the exchange
+    ! local
+    integer(I4B) :: iusg
+    integer(I4B) :: i
+    integer(I4B) :: n1, n2
+    integer(I4B) :: ibdn1, ibdn2
+    integer(I4B) :: ictn1, ictn2
+    integer(I4B) :: ihc
+    real(DP) :: rrate
+    real(DP) :: topn1, topn2
+    real(DP) :: botn1, botn2
+    real(DP) :: satn1, satn2
+    real(DP) :: hn1, hn2
+    real(DP) :: nx, ny
+    real(DP) :: distance
+    real(DP) :: dltot
+    real(DP) :: hwva
+    real(DP) :: area
+    real(DP) :: thksat
+    real(DP) :: angle
+
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
@@ -859,9 +892,8 @@ contains
       !
     enddo
     !
-    ! -- return
     return
-  end subroutine gwf_gwf_cq
+  end subroutine gwf_gwf_set_spdis
   
   subroutine gwf_gwf_bd(this, icnvg, isuppress_output, isolnid)
 ! ******************************************************************************
@@ -1338,6 +1370,9 @@ contains
             this%inewton = 1
             write(iout, '(4x,a)')                                              &
                              'NEWTON-RAPHSON method used for unconfined cells'
+          case ('XT3D')
+            this%ixt3d = 1
+            write(iout, '(4x,a)') 'XT3D will be applied on the interface'
           case ('GNC6')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
@@ -2314,6 +2349,38 @@ contains
     !
     return
   end subroutine gwf_gwf_process_obsID
+
+  function CastAsGwfExchangeClass(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(GwfExchangeType), pointer :: res
+    !
+    res => null()
+    if (.not. associated(obj)) return
+    !
+    select type (obj)
+    class is (GwfExchangeType)
+      res => obj
+    end select
+    return
+  end function CastAsGwfExchangeClass
+
+  function GetGwfExchangeFromList(list, idx) result (res)
+    implicit none
+    ! -- dummy
+    type(ListType),            intent(inout) :: list
+    integer(I4B),                   intent(in)    :: idx
+    class(GwfExchangeType), pointer    :: res
+    ! -- local
+    class(*), pointer :: obj
+    !
+    obj => list%GetItem(idx)
+    res => CastAsGwfExchangeClass(obj)
+    !
+    return
+  end function GetGwfExchangeFromList
+
+
 
 end module GwfGwfExchangeModule
 
