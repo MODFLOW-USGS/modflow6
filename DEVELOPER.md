@@ -116,6 +116,7 @@ meson install -C builddir
 ```
 
 The binaries can then be found in the `bin` folder.
+`meson install` also triggers a compilation if necessary so executing `meson install` is enough to get up-to-date binaries in the `bin` folder.
 
 ### Visual Studio
 
