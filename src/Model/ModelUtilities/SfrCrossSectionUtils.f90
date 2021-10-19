@@ -11,7 +11,7 @@
 module GwfSfrCrossSectionUtilsModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DHALF, DONE, DTWO
+  use ConstantsModule, only: DZERO, DHALF, DTWOTHIRDS, DONE, DTWO
 
   implicit none
   private
@@ -20,6 +20,7 @@ module GwfSfrCrossSectionUtilsModule
   public :: get_wetted_perimeter
   public :: get_cross_section_area
   public :: get_hydraulic_radius
+  public :: get_mannings_term
 
 contains
 
@@ -199,6 +200,69 @@ contains
     ! -- return
     return
   end function get_hydraulic_radius
+
+  !> @brief Calculate the manning's coefficient for a reach
+  !!
+  !! Function to calculate the mannings coefficient that is a 
+  !! function of the depth for a reach using the cross-section 
+  !! station depth data and roughness data given a passed depth.
+  !!
+  !! @return      f               manning's coefficient
+  !<
+  function get_mannings_term(npts, stations, depths, roughnesses, roughness, d) result(f)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts                      !< number of station depth data for a reach
+    real(DP), dimension(npts), intent(in) :: stations     !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: depths       !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: roughnesses  !< cross-section Mannings roughness fraction data
+    real(DP), intent(in) :: roughness                     !< base reach roughness
+    real(DP), intent(in) :: d                             !< depth to evaluate cross-section
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: f
+    real(DP) :: rh
+    real(DP) :: r
+    real(DP) :: p
+    real(DP) :: a
+    real(DP), dimension(npts-1) :: areas
+    real(DP), dimension(npts-1) :: perimeters
+    !
+    ! -- intitialize the hydraulic radius, perimeter, and area
+    f = DZERO
+    rh = DZERO
+    r = DZERO
+    p = DZERO
+    a = DZERO
+    !
+    ! -- calculate the wetted perimeter for each line segment
+    call get_wetted_perimeters(npts, stations, depths, d, perimeters)
+    !
+    ! -- calculate the wetted perimenter
+    do n = 1, npts - 1
+      p = p + perimeters(n)
+    end do
+    !
+    ! -- calculate the hydraulic radius only if the perimeter is non-zero
+    if (p > DZERO) then
+      !
+      ! -- calculate the cross-sectional area for each line segment
+      call get_cross_section_areas(npts, stations, depths, d, areas)
+      !
+      ! -- calculate the cross-sectional area
+      do n = 1, npts - 1
+        p = perimeters(n)
+        r = roughness * roughnesses(n)
+        if (p * r > DZERO) then
+          a = areas(n)
+          rh = a / p
+          f = f + a * r**DTWOTHIRDS / r
+        end if
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end function get_mannings_term
 
   ! -- private functions and subroutines
 
