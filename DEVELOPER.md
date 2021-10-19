@@ -172,8 +172,8 @@ pytest -v build_exes.py
 Then the tests can be run with commands similar to these:
 
 ```shell
-# Build MODFLOW 6 tests generated using flopy
-pytest -v test_*
+# Build MODFLOW 6 tests
+pytest -v
 
 # Build MODFLOW 6 example tests
 pytest -v test_z01_testmodels_mf6.py
@@ -181,6 +181,13 @@ pytest -v test_z01_testmodels_mf6.py
 # Build MODFLOW 5 to 6 converter example tests
 pytest -v test_z02_testmodels_mf5to6.py
 ```
+
+By adding the flag "-n" the tests can even be run in parallel:
+
+```shell
+pytest -v -n auto
+```
+
 
 You should execute the test suites before submitting a PR to Github.
 All the tests are executed on our Continuous Integration infrastructure and a pull request can only be merged once all tests pass.
