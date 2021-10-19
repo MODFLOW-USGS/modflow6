@@ -64,7 +64,7 @@ uzf_pd = [[0, (0, 0, 0), 1, 0, ddrn, kv, 0.05, 0.35, 0.1, 4.0]]
 uzf_obs = {"uzf_obs.csv": [("d1_1_1", "UZF-GWD", (0, 0, 0))]}
 
 
-def build_model(ws, name, uzf=False):
+def get_model(ws, name, uzf=False):
     hdsfile = "{}.hds".format(name)
 
     # build the model
@@ -96,9 +96,7 @@ def build_model(ws, name, uzf=False):
         botm=botm,
     )
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1)
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1)
     if uzf:
         uzf = flopy.mf6.ModflowGwfuzf(
             gwf, simulate_gwseep=True, packagedata=uzf_pd, print_input=True
@@ -134,16 +132,16 @@ def build_model(ws, name, uzf=False):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(ws, name)
+    sim = get_model(ws, name)
 
     # build MODFLOW 6 files with UZF package
     ws = os.path.join(dir, "mf6")
-    mc = build_model(ws, name, uzf=True)
+    mc = get_model(ws, name, uzf=True)
 
     return sim, mc
 
@@ -201,13 +199,6 @@ def eval_disch(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -226,14 +217,12 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(
-        Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx)
-    )
+    test.run_mf6(Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx))
 
 
 def main():
@@ -241,13 +230,10 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx
-        )
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
     return
 

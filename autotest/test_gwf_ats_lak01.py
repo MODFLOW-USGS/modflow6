@@ -34,7 +34,7 @@ def get_idomain(nlay, nrow, ncol, lakend):
     return idomain
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     lx = 300.0
     lz = 45.0
     nlay = 45
@@ -81,9 +81,7 @@ def get_model(idx, dir):
             (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
             (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
         ]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
+        ats = flopy.mf6.ModflowUtlats(sim, maxats=len(atsperiod), perioddata=atsperiod)
         ats_filerecord = name + ".ats"
 
     # create tdis package
@@ -228,14 +226,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def make_plot_xsect(sim, headall, stageall):
@@ -359,9 +350,7 @@ def eval_results(sim):
             node, node2, q = r
             n0 = node - 1
             if ilak[n0] == 1:
-                kk, ii, jj = get_kij_from_node(
-                    n0, botm.shape[1], botm.shape[2]
-                )
+                kk, ii, jj = get_kij_from_node(n0, botm.shape[1], botm.shape[2])
                 tp = botm[kk - 1, ii, jj]
                 if stage_current > tp and q != 0.0:
                     all_passed = False
@@ -452,28 +441,22 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-    return
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

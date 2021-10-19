@@ -77,7 +77,7 @@ def sinfunc(a, b, c, d, x):
     return a * np.sin(b * (x - c)) + d
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     ws = dir
     name = ex[idx]
@@ -107,9 +107,7 @@ def get_model(idx, dir):
     sim.name_file.continue_ = False
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -335,9 +333,7 @@ def get_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "ALL")],
     )
@@ -353,14 +349,7 @@ def get_model(idx, dir):
         filename="{}.gwfgwt".format(name),
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def get_patch_collection(modelgrid, head, conc, cmap="jet", zorder=None):
@@ -384,9 +373,7 @@ def get_patch_collection(modelgrid, head, conc, cmap="jet", zorder=None):
                 poly, closed=True, edgecolor="k", facecolor="red"
             )
             patches.append(patch)
-    pc = matplotlib.collections.PatchCollection(
-        patches, cmap=cmap, zorder=zorder
-    )
+    pc = matplotlib.collections.PatchCollection(patches, cmap=cmap, zorder=zorder)
     pc.set_array(conc.flatten())
     return pc
 
@@ -442,9 +429,7 @@ def make_plot(sim, headall, concall):
         )
         ax.add_patch(patch)
         # aquifer polygon
-        aqpoly = np.array(
-            [[0, 0], [lx, 0], [lx, fz * lz], [lx * fx, lz], [0, lz]]
-        )
+        aqpoly = np.array([[0, 0], [lx, 0], [lx, fz * lz], [lx * fx, lz], [0, lz]])
         patch = matplotlib.patches.Polygon(
             aqpoly, closed=True, facecolor=".7", zorder=1
         )
@@ -498,9 +483,7 @@ def eval_transport(sim):
     # load concs
     fname = os.path.join(ws, gwtname + ".ucn")
     assert os.path.isfile(fname)
-    concobj = flopy.utils.HeadFile(
-        fname, text="concentration", precision="double"
-    )
+    concobj = flopy.utils.HeadFile(fname, text="concentration", precision="double")
     conc = concobj.get_alldata()
 
     # extract 10 simulated heads and concs for cell (0, 0, 20)
@@ -559,7 +542,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
@@ -570,10 +553,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
         test.run_mf6(sim)
 

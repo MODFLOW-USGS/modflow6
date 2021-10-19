@@ -26,7 +26,7 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -65,9 +65,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -162,12 +160,8 @@ def get_model(idx, dir):
     connlen = connwidth = delr / 2.0
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
-    con_data.append(
-        (0, 0, (0, 0, 0), "VERTICAL", 0.0, 0, 0, connlen, connwidth)
-    )
-    con_data.append(
-        (1, 0, (0, 0, ncol - 1), "VERTICAL", 0.0, 0, 0, connlen, connwidth)
-    )
+    con_data.append((0, 0, (0, 0, 0), "VERTICAL", 0.0, 0, 0, connlen, connwidth))
+    con_data.append((1, 0, (0, 0, ncol - 1), "VERTICAL", 0.0, 0, 0, connlen, connwidth))
     p_data = [
         (0, "STATUS", "CONSTANT"),
         (0, "STAGE", 1.0),
@@ -430,8 +424,7 @@ def get_model(idx, dir):
 
     sft_obs = {
         (gwtname + ".sft.obs.csv",): [
-            ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1)
-            for i in range(7)
+            ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1) for i in range(7)
         ]
         + [
             ("sft-1-extinflow", "EXT-INFLOW", 1),
@@ -474,9 +467,7 @@ def get_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -490,14 +481,7 @@ def get_model(idx, dir):
         filename="{}.gwfgwt".format(name),
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_results(sim):
@@ -577,8 +561,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
@@ -588,15 +572,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

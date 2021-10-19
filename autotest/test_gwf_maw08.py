@@ -52,7 +52,7 @@ Kv = 1.0
 radius = 0.05
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     dvclose, rclose, relax = 1e-9, 1e-9, 1.0
 
     name = ex[idx]
@@ -140,9 +140,7 @@ def get_model(idx, dir):
     mawpackagedata["ngwfnodes"] = 2
 
     # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
-    mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(
-        gwf, maxbound=2
-    )
+    mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(gwf, maxbound=2)
     mawconnectiondata["icon"] = [0, 1]
     mawconnectiondata["cellid"] = cellids
     mawconnectiondata["scrn_top"] = 100.0
@@ -169,9 +167,7 @@ def get_model(idx, dir):
             ("whead", "head", (0,)),
         ]
     }
-    maw.obs.initialize(
-        filename=opth, digits=20, print_input=True, continuous=obsdata
-    )
+    maw.obs.initialize(filename=opth, digits=20, print_input=True, continuous=obsdata)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -201,14 +197,7 @@ def get_model(idx, dir):
         ],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_results(sim):
@@ -270,8 +259,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
@@ -281,15 +270,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

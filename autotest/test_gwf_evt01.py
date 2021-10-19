@@ -28,7 +28,7 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     nlay, nrow, ncol = 1, 1, 3
     chdheads = list(np.linspace(1, 100))
@@ -55,9 +55,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
@@ -104,9 +102,7 @@ def get_model(idx, dir):
 
     nseg = 4
     surf_rate_specified = True
-    evtspd = [
-        [(0, 0, 1), 95.0, 0.001, 90.0, 0.25, 0.5, 0.75, 1.0, 0.0, 1.0, 0.1]
-    ]
+    evtspd = [[(0, 0, 1), 95.0, 0.001, 90.0, 0.25, 0.5, 0.75, 1.0, 0.0, 1.0, 0.1]]
 
     # nseg = 4
     # surf_rate_specified = False
@@ -136,14 +132,7 @@ def get_model(idx, dir):
         filename="{}.oc".format(name),
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def etfunc(h, qmax, surf, exdp, petm, pxdp, petm0=1.0):
@@ -214,8 +203,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -225,15 +214,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

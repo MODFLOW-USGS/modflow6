@@ -499,9 +499,7 @@ def get_parent_mvr_info(frac):
     # return the appropriate mvr info for the current scenario
     mvrperioddata = [("WEL-1", 0, "SFR-parent", 10, "FACTOR", 1.0)]
     if frac is not None:
-        mvrperioddata.append(
-            ("SFR-parent", 15, "SFR-parent", 16, "FACTOR", frac)
-        )
+        mvrperioddata.append(("SFR-parent", 15, "SFR-parent", 16, "FACTOR", frac))
 
     mvrspd = {0: mvrperioddata}
 
@@ -593,9 +591,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
     for i in range(len(perlen)):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # Instantiate the gwf model (parent model)
     gwf = flopy.mf6.ModflowGwf(
@@ -640,9 +636,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
 
     # Instantiate initial conditions package
     strt = [topp - 0.25, topp - 0.25, topp - 0.25]
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
     # Instantiate node property flow package
     npf = flopy.mf6.ModflowGwfnpf(
@@ -782,9 +776,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         topc - 0.25,
         topc - 0.25,
     ]
-    icc = flopy.mf6.ModflowGwfic(
-        gwfc, strt=strtc, filename="{}.ic".format(gwfnamec)
-    )
+    icc = flopy.mf6.ModflowGwfic(gwfc, strt=strtc, filename="{}.ic".format(gwfnamec))
 
     # Instantiate node property flow package
     icelltypec = [1, 0, 0, 0, 0, 0]
@@ -998,9 +990,7 @@ def build_model(idx, sim_ws):
     )
     scen_nm_parent = name + "_" + scen_nm + "_p"
     scen_nm_child = name + "_" + scen_nm + "_c"
-    sim, gwf, gwfc = instantiate_base_simulation(
-        sim_ws, scen_nm_parent, scen_nm_child
-    )
+    sim, gwf, gwfc = instantiate_base_simulation(sim_ws, scen_nm_parent, scen_nm_child)
     # add the sfr packages
     add_parent_sfr(gwf, scen_nm_parent, conns)
     add_child_sfr(gwfc, scen_nm_child)
@@ -1018,9 +1008,7 @@ def build_model(idx, sim_ws):
 def check_simulation_output(sim):
     idx = sim.idxsim
 
-    gwf_srch_str1 = (
-        " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
-    )
+    gwf_srch_str1 = " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
     gwf_srch_str2 = " WATER MOVER PACKAGE (MVR) FLOW RATES   "
     sim_srch_str = " WATER MOVER PACKAGE (MVR) FLOW RATES "
 
@@ -1101,9 +1089,7 @@ def check_simulation_output(sim):
         gwf_transferred_50 = parent_sfr_mvr_amount / (
             parent_sfr_mvr_amount + sim_mvr_amount
         )
-        sim_transferred_50 = sim_mvr_amount / (
-            parent_sfr_mvr_amount + sim_mvr_amount
-        )
+        sim_transferred_50 = sim_mvr_amount / (parent_sfr_mvr_amount + sim_mvr_amount)
         assert np.allclose(
             np.array([gwf_transferred_50, sim_transferred_50]),
             np.array([0.5, 0.5]),
@@ -1118,9 +1104,7 @@ def check_simulation_output(sim):
         gwf_transferred_75 = parent_sfr_mvr_amount / (
             parent_sfr_mvr_amount + sim_mvr_amount
         )
-        sim_transferred_75 = sim_mvr_amount / (
-            parent_sfr_mvr_amount + sim_mvr_amount
-        )
+        sim_transferred_75 = sim_mvr_amount / (parent_sfr_mvr_amount + sim_mvr_amount)
         assert np.allclose(
             np.array([gwf_transferred_75, sim_transferred_75]),
             np.array([0.75, 0.25]),
@@ -1132,13 +1116,6 @@ def check_simulation_output(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = build_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -1150,7 +1127,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     test.run_mf6, Simulation(
         dir,
@@ -1163,10 +1140,8 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             exdir,
             exfunc=check_simulation_output,

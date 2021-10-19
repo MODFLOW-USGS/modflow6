@@ -99,9 +99,7 @@ def get_mf6_models():
 
     # build list of directories with valid example files
     if example_basedir is not None:
-        example_dirs = get_example_dirs(
-            example_basedir, exclude, prefix="test"
-        )
+        example_dirs = get_example_dirs(example_basedir, exclude, prefix="test")
     else:
         example_dirs = []
 
@@ -201,11 +199,14 @@ def set_make_comparison(test):
     return make_comparison
 
 
+mf6_models = get_mf6_models()
+
+
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(get_mf6_models())),
+    "dir",
+    mf6_models,
 )
-def test_mf6model(idx, dir):
+def test_mf6model(dir):
     # run the test model
     run_mf6(
         Simulation(

@@ -59,9 +59,7 @@ def build_mf6(idx, ws, storage=True):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -120,9 +118,7 @@ def build_mf6(idx, ws, storage=True):
 
     # storage
     if storage:
-        flopy.mf6.ModflowGwfsto(
-            gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True}
-        )
+        flopy.mf6.ModflowGwfsto(gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True})
 
     # chd files
     flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=cd6)
@@ -143,7 +139,7 @@ def build_mf6(idx, ws, storage=True):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     ws = dir
     # build mf6 with storage package but steady state stress periods
     sim = build_mf6(idx, ws, storage=True)
@@ -153,14 +149,6 @@ def get_model(idx, dir):
     mc = build_mf6(idx, wsc, storage=False)
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_simulation()
-    return
 
 
 # - No need to change any code below
@@ -173,7 +161,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir))
@@ -184,10 +172,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for dir in exdirs:
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir)
         test.run_mf6(sim)
 

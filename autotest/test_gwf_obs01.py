@@ -22,10 +22,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 cell_dimensions = (300,)
-ex = [
-    "gwf_obs01{}".format(chr(ord("a") + idx))
-    for idx in range(len(cell_dimensions))
-]
+ex = ["gwf_obs01{}".format(chr(ord("a") + idx)) for idx in range(len(cell_dimensions))]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -65,7 +62,7 @@ def get_chd(idx):
     return {0: c}
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nlay, nrow, ncol = 1, cell_dimensions[idx], cell_dimensions[idx]
     nper = 1
     perlen = [5.0]
@@ -93,9 +90,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     flopy.mf6.ModflowIms(
@@ -132,9 +127,7 @@ def get_model(idx, dir):
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
     )
-    flopy.mf6.ModflowUtlobs(
-        gwf, pname="head_obs", digits=20, continuous=get_obs(idx)
-    )
+    flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=get_obs(idx))
 
     # initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=get_strt_array(idx))
@@ -156,14 +149,7 @@ def get_model(idx, dir):
     # output control
     flopy.mf6.ModflowGwfoc(gwf, printrecord=[("BUDGET", "LAST")])
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_model(sim):
@@ -186,7 +172,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build all of the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -197,10 +183,9 @@ def main():
     test = testing_framework()
 
     # build all of the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
 
