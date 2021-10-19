@@ -62,42 +62,51 @@ np_data = {
     xsect_types[0]: {
         "x": np.array([rwid], dtype=float),
         "d": np.array([0.0], dtype=float),
+        "n": np.array([roughness], dtype=float),
     },
     xsect_types[1]: {
         "x": np.array([0.0, rwid], dtype=float),
         "d": np.array([0.0, 0.0], dtype=float),
+        "n": np.array([roughness] * 2, dtype=float),
     },
     xsect_types[2]: {
         "x": np.array([0.0, rwid], dtype=float),
         "d": np.array([1.0, 0.0], dtype=float),
+        "n": np.array([roughness] * 2, dtype=float),
     },
     xsect_types[3]: {
         "x": np.array([0.0, rwid], dtype=float),
         "d": np.array([0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 2, dtype=float),
     },
     xsect_types[4]: {
         "x": np.array([0.0, 0.0, rwid, rwid], dtype=float),
         "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 4, dtype=float),
     },
     xsect_types[5]: {
         "x": np.array([0.0, 0.4 * rwid, 0.6 * rwid, rwid], dtype=float),
         "d": np.array([1.0, 0.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 4, dtype=float),
     },
     xsect_types[6]: {
         "x": np.array([0.0, 0.5 * rwid, rwid], dtype=float),
         "d": np.array([1.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 3, dtype=float),
     },
     xsect_types[7]: {
         "x": np.array(
             [0.0, 0.2 * rwid, 0.5 * rwid, 0.7 * rwid, rwid], dtype=float
         ),
         "d": np.array([1.0, 0.0, 0.5, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 5, dtype=float),
     },
     xsect_types[8]: {
         "x": np.array(
             [0.0, 0.1 * rwid, 0.5 * rwid, 0.9 * rwid, rwid], dtype=float
         ),
         "d": np.array([1.0, 1.0, 0.0, 1.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 5, dtype=float),
     },
 }
 
@@ -439,11 +448,12 @@ def build_model(idx, ws):
     if crosssections is not None:
         stations = np_data[xsect_type]["x"] / rwid
         depths = np_data[xsect_type]["d"]
-        table = [[x, d] for x, d in zip(stations, depths)]
+        roughnesses = np_data[xsect_type]["n"] / roughness
+        table = [[x, d, r] for x, d, r in zip(stations, depths, roughnesses)]
         flopy.mf6.ModflowUtlsfrtab(
             gwf,
             nrow=stations.shape[0],
-            ncol=2,
+            ncol=3,
             table=table,
             filename=sfr_tab,
         )

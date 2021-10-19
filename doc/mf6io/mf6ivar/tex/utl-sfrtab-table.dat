@@ -1,5 +1,5 @@
 BEGIN TABLE
-  <xfraction> <depth>
-  <xfraction> <depth>
+  <xfraction> <depth> [<manfraction>]
+  <xfraction> <depth> [<manfraction>]
   ...
 END TABLE
