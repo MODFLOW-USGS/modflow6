@@ -205,16 +205,17 @@ contains
   !!
   !! Function to calculate the mannings coefficient that is a 
   !! function of the depth for a reach using the cross-section 
-  !! station depth data and roughness data given a passed depth.
+  !! station-depth data and roughness factor data given a passed
+  !! depth.
   !!
   !! @return      f               manning's coefficient
   !<
-  function get_mannings_term(npts, stations, depths, roughnesses, roughness, d) result(f)
+  function get_mannings_term(npts, stations, depths, roughfracs, roughness, d) result(f)
     ! -- dummy variables
     integer(I4B), intent(in) :: npts                      !< number of station depth data for a reach
     real(DP), dimension(npts), intent(in) :: stations     !< cross-section station distances (x-distance)
     real(DP), dimension(npts), intent(in) :: depths       !< cross-section depth data
-    real(DP), dimension(npts), intent(in) :: roughnesses  !< cross-section Mannings roughness fraction data
+    real(DP), dimension(npts), intent(in) :: roughfracs   !< cross-section Mannings roughness fraction data
     real(DP), intent(in) :: roughness                     !< base reach roughness
     real(DP), intent(in) :: d                             !< depth to evaluate cross-section
     ! -- local variables
@@ -251,11 +252,11 @@ contains
       ! -- calculate the cross-sectional area
       do n = 1, npts - 1
         p = perimeters(n)
-        r = roughness * roughnesses(n)
+        r = roughness * roughfracs(n)
         if (p * r > DZERO) then
           a = areas(n)
           rh = a / p
-          f = f + a * r**DTWOTHIRDS / r
+          f = f + a * rh**DTWOTHIRDS / r
         end if
       end do
     end if

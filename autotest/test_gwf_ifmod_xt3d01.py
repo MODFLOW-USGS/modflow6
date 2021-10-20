@@ -107,7 +107,9 @@ def get_model(idx, dir):
 
     # boundary stress period data
     left_chd = [
-        [(ilay, irow, 0), h_left] for ilay in range(nlay) for irow in range(nrow)
+        [(ilay, irow, 0), h_left]
+        for ilay in range(nlay)
+        for irow in range(nrow)
     ]
     right_chd = [
         [(ilay, irow, ncol - 1), h_right]
@@ -127,7 +129,9 @@ def get_model(idx, dir):
         memory_print_option="ALL",
     )
 
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -339,7 +343,9 @@ def eval_heads(sim):
                 assert diff < 10 * hclose, (
                     "Difference in spec. dis. for parent {}"
                     " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(diff, 10 * hclose, irow, icol)
+                    " for row {} and col {}".format(
+                        diff, 10 * hclose, irow, icol
+                    )
                 )
 
     # and now the child
@@ -352,7 +358,9 @@ def eval_heads(sim):
                 assert diff < 10 * hclose, (
                     "Head difference in child model {}"
                     " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(diff, 10 * hclose, irow, icol)
+                    " for row {} and col {}".format(
+                        diff, 10 * hclose, irow, icol
+                    )
                 )
 
     for irow in range(mg_c.nrow):
@@ -367,7 +375,9 @@ def eval_heads(sim):
                 assert diff < 10 * hclose, (
                     "Difference in spec. dis. for child {}"
                     " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(diff, 10 * hclose, irow, icol)
+                    " for row {} and col {}".format(
+                        diff, 10 * hclose, irow, icol
+                    )
                 )
 
     # todo: mflistbudget
@@ -393,7 +403,9 @@ def eval_heads(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(res.min(), res.max())
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return

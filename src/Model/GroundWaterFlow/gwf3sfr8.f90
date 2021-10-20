@@ -997,7 +997,7 @@ module SfrModule
         this%ncrosspts(i) = 1
         this%station(ipos) = this%width(i)
         this%xsdepths(ipos) = DZERO
-        this%xsrough(ipos) = this%rough(n)
+        this%xsrough(ipos) = DONE
         ipos = ipos + 1
         this%iacross(i+1) = ipos 
       end do
@@ -3772,21 +3772,23 @@ module SfrModule
       real(DP) :: wp
       real(DP) :: rh
       !
-      ! -- initialize streamflow
+      ! -- initialize variables
       qman = DZERO
+      npts = this%ncrosspts(n)
       !
       ! -- set constant terms for Manning's equation
       call sChSmooth(depth, sat, derv)
       s = this%slope(n)
       !
-      ! -- get the location of the cross-section data for the reach
-      npts = this%ncrosspts(n)
-      i0 = this%iacross(n)
-      i1 = this%iacross(n + 1) - 1
-      !
       ! -- calculate the mannings coefficient that is a 
       !    function of depth
       if (npts > 1) then
+        !
+        ! -- get the location of the cross-section data for the reach
+        i0 = this%iacross(n)
+        i1 = this%iacross(n + 1) - 1
+        !
+        ! -- get the depth dependent mannings factor
         factor = get_mannings_term(npts, &
                                    this%station(i0:i1), &
                                    this%xsdepths(i0:i1), &
@@ -3794,7 +3796,7 @@ module SfrModule
                                    this%rough(n), &
                                    depth)
       else
-        r = this%xsrough(i0)
+        r = this%rough(n)
         aw = this%calc_area_wet(n, depth)
         wp = this%calc_perimeter_wet(n, depth)
         if (wp > DZERO) then
