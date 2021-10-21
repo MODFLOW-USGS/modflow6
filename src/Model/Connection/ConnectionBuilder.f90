@@ -160,6 +160,7 @@ module ConnectionBuilderModule
   function createModelConnection(model, connectionType) result(connection)
     use SimModule, only: ustop
     use GwfGwfConnectionModule, only: GwfGwfConnectionType
+    use GwtGwtConnectionModule, only: GwtGwtConnectionType
     use GwfModule, only: GwfModelType
     
     class(NumericalModelType), pointer , intent(in) :: model          !< the model for which the connection will be created
@@ -167,19 +168,23 @@ module ConnectionBuilderModule
     class(SpatialModelConnectionType), pointer :: connection          !< the created connection
     
     ! different concrete connection types:
-    class(GwfGwfConnectionType), pointer :: gwfConnection => null()
+    class(GwfGwfConnectionType), pointer :: flowConnection => null()
+    class(GwtGwtConnectionType), pointer :: transportConnection => null()
     
     connection => null()
     
     ! select on type of connection to create
     select case(connectionType)       
       case('GWF-GWF')      
-        allocate(GwfGwfConnectionType :: gwfConnection)
-        call gwfConnection%construct(model)
-        connection => gwfConnection
-        gwfConnection => null()
-        
-      !case('GWT-GWT')    
+        allocate(GwfGwfConnectionType :: flowConnection)
+        call flowConnection%construct(model)
+        connection => flowConnection
+        flowConnection => null()        
+      case('GWT-GWT')
+        allocate(GwtGwtConnectionType :: transportConnection)
+        call transportConnection%construct(model)
+        connection => transportConnection
+        transportConnection => null()
       case default
         write(*,*) 'Error (which should never happen): undefined exchangetype found'
         call ustop()

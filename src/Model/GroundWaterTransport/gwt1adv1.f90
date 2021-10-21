@@ -5,6 +5,7 @@ module GwtAdvModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
+  use GwtAdvOptionsModule,    only: GwtAdvOptionsType
 
   implicit none
   private
@@ -13,9 +14,9 @@ module GwtAdvModule
 
   type, extends(NumericalPackageType) :: GwtAdvType
     
-    integer(I4B), pointer                            :: iadvwt => null()        ! advection scheme (0 up, 1 central, 2 tvd)
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
+    integer(I4B), pointer                            :: iadvwt => null()        !< advection scheme (0 up, 1 central, 2 tvd)
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        !< pointer to model ibound
+    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
     
   contains
   
@@ -65,13 +66,15 @@ module GwtAdvModule
     advobj%fmi => fmi
     !
     ! -- Initialize block parser
-    call advobj%parser%Initialize(advobj%inunit, advobj%iout)
+    if (inunit > 0) then
+      call advobj%parser%Initialize(advobj%inunit, advobj%iout)
+    end if
     !
     ! -- Return
     return
   end subroutine adv_cr
 
-  subroutine adv_ar(this, dis, ibound)
+  subroutine adv_ar(this, dis, ibound, adv_options)
 ! ******************************************************************************
 ! adv_ar -- Allocate and Read
 ! ******************************************************************************
@@ -83,15 +86,13 @@ module GwtAdvModule
     class(GwtAdvType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
+    type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtadv =                                    &
       "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017',                &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
-    !
-    ! --print a message identifying the advection package.
-    write(this%iout, fmtadv) this%inunit
+! ------------------------------------------------------------------------------    
     !
     ! -- adv pointers to arguments that were passed in
     this%dis     => dis
@@ -100,8 +101,19 @@ module GwtAdvModule
     ! -- Allocate arrays (not needed for adv)
     !call this%allocate_arrays(dis%nodes)
     !
-    ! -- Read advection options
-    call this%read_options()
+    ! -- Read or set advection options
+    if (.not. present(adv_options)) then
+      !
+      ! --print a message identifying the advection package.
+      write(this%iout, fmtadv) this%inunit
+      !
+      ! --read options from file
+      call this%read_options()
+    else
+      !
+      ! --set options from input arg
+      this%iadvwt = adv_options%iAdvScheme
+    end if
     !
     ! -- Return
     return

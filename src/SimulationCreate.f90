@@ -304,6 +304,7 @@ module SimulationCreateModule
     ! -- modules
     use GwfGwfExchangeModule,    only: gwfexchange_create
     use GwfGwtExchangeModule,    only: gwfgwt_cr
+    use GwtGwtExchangeModule,    only: gwtexchange_create
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -326,64 +327,38 @@ module SimulationCreateModule
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
+
+        id = id + 1
+
         call parser%GetStringCaps(keyword)
+        call parser%GetString(fname)
+        call parser%GetStringCaps(name1)
+        call parser%GetStringCaps(name2)
+
+        ! find model index in list
+        m1 = ifind(modelname, name1)
+        if(m1 < 0) then
+          write(errmsg, fmtmerr) trim(name1)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
+        endif
+        m2 = ifind(modelname, name2)
+        if(m2 < 0) then
+          write(errmsg, fmtmerr) trim(name2)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
+        endif
+
+        write(iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ',    &
+              id, ' will be created to connect model ', m1, ' with model ', m2
+
         select case (keyword)
           case ('GWF6-GWF6')
-            id = id + 1
-            !
-            ! -- get filename
-            call parser%GetString(fname)
-            !
-            ! -- get first modelname and then model id
-            call parser%GetStringCaps(name1)
-            m1 = ifind(modelname, name1)
-            if(m1 < 0) then
-              write(errmsg, fmtmerr) trim(name1)
-              call store_error(errmsg)
-              call parser%StoreErrorUnit()
-            endif
-            !
-            ! -- get second modelname and then model id
-            call parser%GetStringCaps(name2)
-            m2 = ifind(modelname, name2)
-            if(m2 < 0) then
-              write(errmsg, fmtmerr) trim(name2)
-              call store_error(errmsg)
-              call parser%StoreErrorUnit()
-            endif
-            !
-            ! -- Create the exchange object.
-            write(iout, '(4x,a,i0,a,i0,a,i0)') 'GWF6-GWF6 exchange ', id,      &
-              ' will be created to connect model ', m1, ' with model ', m2
             call gwfexchange_create(fname, id, m1, m2)
           case ('GWF6-GWT6')
-            id = id + 1
-            !
-            ! -- get filename
-            call parser%GetString(fname)
-            !
-            ! -- get first modelname and then model id
-            call parser%GetStringCaps(name1)
-            m1 = ifind(modelname, name1)
-            if(m1 < 0) then
-              write(errmsg, fmtmerr) trim(name1)
-              call store_error(errmsg)
-              call parser%StoreErrorUnit()
-            endif
-            !
-            ! -- get second modelname and then model id
-            call parser%GetStringCaps(name2)
-            m2 = ifind(modelname, name2)
-            if(m2 < 0) then
-              write(errmsg, fmtmerr) trim(name2)
-              call store_error(errmsg)
-              call parser%StoreErrorUnit()
-            endif
-            !
-            ! -- Create the exchange object.
-            write(iout, '(4x,a,i0,a,i0,a,i0)') 'GWF6-GWT6 exchange ', id,      &
-              ' will be created to connect model ', m1, ' with model ', m2
             call gwfgwt_cr(fname, id, m1, m2)
+          case ('GWT6-GWT6')
+            call gwtexchange_create(fname, id, m1, m2)
           case default
             write(errmsg, '(4x,a,a)') &
                   '****ERROR. UNKNOWN SIMULATION EXCHANGES: ',                 &

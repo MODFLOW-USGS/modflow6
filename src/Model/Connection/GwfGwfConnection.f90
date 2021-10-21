@@ -18,9 +18,9 @@ module GwfGwfConnectionModule
   implicit none
   private
 
-  !> Connecting two GWF models in space, implements NumericalExchangeType
-  !! so the solution can used this object to determine the coefficients
-  !! for the coupling between two adjacent models.
+  !> Connecting a GWF model to other models in space, implements 
+  !! NumericalExchangeType so the solution can used this object to determine 
+  !! the coefficients for the coupling between two adjacent models.
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
@@ -728,7 +728,7 @@ contains
 
   
   !> @brief Cast NumericalModelType to GwfModelType
-  !<
+  !< TODO_MJR: move this
   function CastToGwfModel(obj) result(gwfmodel)
     use NumericalModelModule, only: NumericalModelType
     class(NumericalModelType), pointer :: obj !< The numerical model to be cast

@@ -20,7 +20,7 @@ module GwfInterfaceModelModule
   !! Patching (a part of the) discretizations of two GWF models in a
   !! general way, e.g. DIS+DIS with refinement, requires the resulting 
   !< discretization to be of type DISU.  
-  type, public, extends(GwfModelType) :: GwfInterfaceModelType    
+  type, public, extends(GwfModelType) :: GwfInterfaceModelType
     class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the connections
                                                                       !! object for the interface grid
     class(GwfModelType), private, pointer :: owner => null()          !< the real GWF model for which the exchange coefficients
@@ -46,7 +46,7 @@ contains
   !<
   subroutine construct(this, name, iout)
     use MemoryHelperModule, only: create_mem_path
-    class(GwfInterfaceModelType), intent(inout) :: this !< the interface model
+    class(GwfInterfaceModelType), intent(inout) :: this !< the GWF interface model
     character(len=*), intent(in)  :: name               !< the interface model's name
     integer(I4B), intent(in) :: iout                    !< the output unit, to be passed 
                                                         !! to the packages as well
@@ -63,12 +63,13 @@ contains
     
   end subroutine construct
    
-  ! set up the interface model, analogously to what happens in gwf_cr
+  !> @brief set up the interface model, analogously to what 
+  !< happens in gwf_cr
   subroutine createModel(this, gridConn)
     use MemoryManagerModule, only: mem_allocate
     use Xt3dModule, only: xt3d_cr
-    class(GwfInterfaceModelType), intent(inout) :: this
-    class(GridConnectionType), pointer, intent(in) :: gridConn
+    class(GwfInterfaceModelType), intent(inout) :: this        !< the GWF interface model
+    class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection for creating a DISU
     ! local
     class(NumericalModelType), pointer :: numMod
     
@@ -77,7 +78,7 @@ contains
     select type (numMod)
       class is (GwfModelType)
         this%owner => numMod
-      end select
+    end select
     
     this%inewton = this%owner%inewton
     this%inewtonur = this%owner%inewtonur
