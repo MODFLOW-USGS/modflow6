@@ -75,7 +75,9 @@ def build_model(idx, dir):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = name
@@ -124,7 +126,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -235,7 +239,9 @@ def build_model(idx, dir):
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (1, 0, 0)])
     obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
+    obs = flopy.mf6.ModflowUtlobs(
+        gwf, pname="head_obs", digits=20, continuous=obs_dict
+    )
 
     return sim, None
 
@@ -306,7 +312,9 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(res.min(), res.max())
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     bpth = os.path.join(ws, name + ".uzf.bud")

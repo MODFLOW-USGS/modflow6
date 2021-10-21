@@ -62,7 +62,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -320,7 +322,8 @@ def build_model(idx, dir):
 
     sft_obs = {
         (gwtname + ".sft.obs.csv",): [
-            ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1) for i in range(7)
+            ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1)
+            for i in range(7)
         ]
         + [
             ("sft-1-extinflow", "EXT-INFLOW", 1),
@@ -361,7 +364,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -392,7 +397,9 @@ def eval_results(sim):
     assert os.path.isfile(fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     csftall = cobj.get_alldata()
-    csft = csftall[-2].flatten()  # because it's lagged, get two time steps back
+    csft = csftall[
+        -2
+    ].flatten()  # because it's lagged, get two time steps back
 
     # load the aquifer concentrations
     fname = gwtname + ".ucn"
@@ -457,9 +464,9 @@ def eval_results(sim):
         # print(n, hsfr, hgwf, rhosfr, rhogwf, qcalc, qsim)
         # if not np.allclose(qcalc, qsim):
         #    print('reach {} flow {} not equal {}'.format(n, qcalc, qsim))
-        assert np.allclose(qcalc, qsim), "reach {} flow {} not equal {}".format(
-            n, qcalc, qsim
-        )
+        assert np.allclose(
+            qcalc, qsim
+        ), "reach {} flow {} not equal {}".format(n, qcalc, qsim)
 
     # uncomment when testing
     # assert False

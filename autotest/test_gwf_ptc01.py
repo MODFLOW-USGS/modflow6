@@ -59,7 +59,9 @@ def build_mf6(idx, ws, storage=True):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -118,7 +120,9 @@ def build_mf6(idx, ws, storage=True):
 
     # storage
     if storage:
-        flopy.mf6.ModflowGwfsto(gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True})
+        flopy.mf6.ModflowGwfsto(
+            gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True}
+        )
 
     # chd files
     flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=cd6)

@@ -87,7 +87,9 @@ def get_model(ws, name, riv_spd):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -131,7 +133,9 @@ def get_model(ws, name, riv_spd):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
     # riv package
-    riv = flopy.mf6.ModflowGwfriv(gwf, stress_period_data=riv_spd, pname=riv_packname)
+    riv = flopy.mf6.ModflowGwfriv(
+        gwf, stress_period_data=riv_spd, pname=riv_packname
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -150,8 +154,14 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # create river data
-    rd = [[(0, 0, icol), riv_stage, riv_cond, riv_bot] for icol in range(1, ncol - 1)]
-    rd2 = [[(0, 0, icol), riv_stage2, riv_cond, riv_bot] for icol in range(1, ncol - 1)]
+    rd = [
+        [(0, 0, icol), riv_stage, riv_cond, riv_bot]
+        for icol in range(1, ncol - 1)
+    ]
+    rd2 = [
+        [(0, 0, icol), riv_stage2, riv_cond, riv_bot]
+        for icol in range(1, ncol - 1)
+    ]
     sim = get_model(ws, name, riv_spd={0: rd, 5: rd2})
 
     # build comparison model with zeroed values

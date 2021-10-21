@@ -70,7 +70,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -218,7 +220,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -253,7 +257,9 @@ def eval_transport(sim):
     # mobile concentration
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_alldata().flatten()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -280,7 +286,9 @@ def eval_transport(sim):
         rate_sim = immrate[i]["q"][0]
         saturation = 0.5
         volume = 10.0 * 10.0 * 10.0
-        rate_calc = (cim[i] - conc[i]) * zetaim[sim.idxsim] * saturation * volume
+        rate_calc = (
+            (cim[i] - conc[i]) * zetaim[sim.idxsim] * saturation * volume
+        )
         print(t, conc[i], cim[i], rate_sim, rate_calc)
         msg = "Rate: {} /= {} for time {}".format(rate_sim, rate_calc, t)
         assert np.allclose(rate_sim, rate_calc), msg

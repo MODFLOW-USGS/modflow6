@@ -67,7 +67,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwt model
     gwtname = "gwt_" + name
@@ -111,7 +113,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename="{}.ic".format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # dispersion
     xt3d_off = not xt3d[idx]
@@ -159,7 +163,9 @@ def build_model(idx, dir):
             ("qz", np.float64),
         ]
     )
-    spdis = np.array([(id1, id1, 0.0, 0.0, 0.0, 0.0) for id1 in range(100)], dtype=dt)
+    spdis = np.array(
+        [(id1, id1, 0.0, 0.0, 0.0, 0.0) for id1 in range(100)], dtype=dt
+    )
 
     dt = np.dtype(
         [
@@ -169,14 +175,20 @@ def build_model(idx, dir):
             ("SATURATION", np.float64),
         ]
     )
-    sat = np.array([(i, i, 0.0, 1.0) for i in range(nlay * nrow * ncol)], dtype=dt)
+    sat = np.array(
+        [(i, i, 0.0, 1.0) for i in range(nlay * nrow * ncol)], dtype=dt
+    )
 
     fname = os.path.join(ws, "mybudget.bud")
     with open(fname, "wb") as fbin:
         for kstp in range(1):  # nstp[0]):
             write_budget(fbin, flowja, kstp=kstp + 1)
-            write_budget(fbin, spdis, text="      DATA-SPDIS", imeth=6, kstp=kstp + 1)
-            write_budget(fbin, sat, text="        DATA-SAT", imeth=6, kstp=kstp + 1)
+            write_budget(
+                fbin, spdis, text="      DATA-SPDIS", imeth=6, kstp=kstp + 1
+            )
+            write_budget(
+                fbin, sat, text="        DATA-SAT", imeth=6, kstp=kstp + 1
+            )
     fbin.close()
 
     # flow model interface
@@ -191,7 +203,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -207,7 +221,9 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)

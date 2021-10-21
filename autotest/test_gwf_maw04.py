@@ -124,7 +124,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(
@@ -149,7 +151,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=confined, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=confined, k=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -160,7 +164,9 @@ def build_model(idx, dir):
         transient={1: True},
     )
     # constant head
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd, save_flows=False)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf, stress_period_data=chd_spd, save_flows=False
+    )
     # multi-aquifer well
     hks = hk * skin_mult[idx]
     mpd = [[0, radius, botm[-1], strt, condeqn[idx], 2]]
@@ -206,7 +212,9 @@ def build_model(idx, dir):
             botm=botm,
         )
         bas = flopy.modflow.ModflowBas(mc, strt=strt)
-        lpf = flopy.modflow.ModflowLpf(mc, laytyp=confined, hk=hk, vka=hk, ss=ss, sy=0)
+        lpf = flopy.modflow.ModflowLpf(
+            mc, laytyp=confined, hk=hk, vka=hk, ss=ss, sy=0
+        )
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=chd5_spd)
         # mnw2
         # empty mnw2 file to create recarrays

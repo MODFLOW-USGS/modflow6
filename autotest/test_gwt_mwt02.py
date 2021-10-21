@@ -57,7 +57,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -257,7 +259,9 @@ def build_model(idx, dir):
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=0.000, filename="{}.ic".format(gwtname))
+        ic = flopy.mf6.ModflowGwtic(
+            gwt, strt=0.000, filename="{}.ic".format(gwtname)
+        )
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(
@@ -413,7 +417,9 @@ def make_plot(sim):
 
     fname = gwtname + ".ucn"
     fname = os.path.join(ws, fname)
-    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")  # , precision='double')
+    cobj = flopy.utils.HeadFile(
+        fname, text="CONCENTRATION"
+    )  # , precision='double')
     conc = cobj.get_data()
 
     import matplotlib.pyplot as plt

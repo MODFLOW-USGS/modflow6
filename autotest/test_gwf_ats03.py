@@ -78,7 +78,9 @@ def build_model(idx, dir):
     ats_filerecord = None
     if True:
         atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj)]
-        ats = flopy.mf6.ModflowUtlats(sim, maxats=len(atsperiod), perioddata=atsperiod)
+        ats = flopy.mf6.ModflowUtlats(
+            sim, maxats=len(atsperiod), perioddata=atsperiod
+        )
         ats_filerecord = name + ".ats"
 
     tdis = flopy.mf6.ModflowTdis(
@@ -135,7 +137,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -200,7 +204,9 @@ def build_model(idx, dir):
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (0, 0, ncol - 1)])
     obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
+    obs = flopy.mf6.ModflowUtlobs(
+        gwf, pname="head_obs", digits=20, continuous=obs_dict
+    )
 
     return sim, None
 

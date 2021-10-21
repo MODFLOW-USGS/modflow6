@@ -228,7 +228,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
@@ -263,10 +265,14 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt[idx], filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt[idx], filename="{}.ic".format(name)
+    )
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -411,7 +417,9 @@ def main():
     # run the test model
     for idx, dir in enumerate(exdirs):
         test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx)
+        sim = Simulation(
+            dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx
+        )
         test.run_mf6(sim)
 
 

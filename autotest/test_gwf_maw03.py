@@ -71,7 +71,9 @@ def build_model(idx, dir):
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws)
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.MFModel(
@@ -165,7 +167,9 @@ def build_model(idx, dir):
         gwf,
         budget_filerecord="{}.cbc".format(name),
         head_filerecord="{}.hds".format(name),
-        headprintrecord=[("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        headprintrecord=[
+            ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         filename="{}.oc".format(name),
@@ -209,7 +213,8 @@ def eval_maw(sim):
         # M1RATE should have a minimum value less than 200 and
         # M1HEAD should not exceed 0.400001
         msg = (
-            "Injection rate should fall below 200 and the head should not" "exceed 0.4"
+            "Injection rate should fall below 200 and the head should not"
+            "exceed 0.4"
         )
         assert tc["M1RATE"].min() < 200.0, msg
         assert tc["M1HEAD"].max() < 0.400001, msg

@@ -158,7 +158,9 @@ def build_model(idx, dir):
         ]
     )
     wel = [
-        np.array([(0 + 1, 0 + 1, inflow_rate, source_concentration)], dtype=dt),
+        np.array(
+            [(0 + 1, 0 + 1, inflow_rate, source_concentration)], dtype=dt
+        ),
         np.array([(0 + 1, 0 + 1, inflow_rate, 0.0)], dtype=dt),
     ]
     chd = np.array([(ncol - 1 + 1, ncol - 1 + 1, -inflow_rate, 0.0)], dtype=dt)
@@ -171,7 +173,9 @@ def build_model(idx, dir):
             ("SATURATION", np.float64),
         ]
     )
-    sat = np.array([(i, i, 0.0, 1.0) for i in range(nlay * nrow * ncol)], dtype=dt)
+    sat = np.array(
+        [(i, i, 0.0, 1.0) for i in range(nlay * nrow * ncol)], dtype=dt
+    )
 
     fname = os.path.join(ws, "mybudget.bud")
     with open(fname, "wb") as fbin:
@@ -249,7 +253,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -280,7 +286,9 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)

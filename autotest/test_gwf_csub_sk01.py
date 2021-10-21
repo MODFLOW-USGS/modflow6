@@ -168,7 +168,9 @@ def get_model(idx, ws):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(
@@ -187,7 +189,9 @@ def get_model(idx, ws):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=name, newtonoptions=newtonoptions
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -397,7 +401,9 @@ def eval_comp(sim):
         print("    " + msg)
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
+    fpth = os.path.join(
+        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
+    )
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -409,7 +415,9 @@ def eval_comp(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
+    fpth = os.path.join(
+        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
+    )
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()

@@ -93,7 +93,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
     )
 
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -110,7 +112,9 @@ def build_model(idx, dir):
 
     # submodel on the left:
     left_chd = [
-        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
+        [(ilay, irow, 0), h_left]
+        for irow in range(nrow)
+        for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
 
@@ -267,9 +271,9 @@ def check_interface_models(mf6):
     # XT3D flag should be set to 1
     mem_addr = mf6.get_var_address("IXT3D", ifm_name_left, "NPF")
     ixt3d = mf6.get_value_ptr(mem_addr)[0]
-    assert ixt3d == 1, "Interface model for {} should have XT3D enabled".format(
-        name_left
-    )
+    assert (
+        ixt3d == 1
+    ), "Interface model for {} should have XT3D enabled".format(name_left)
 
     # check if n2 > n1, then cell 1 is below 2
     mem_addr = mf6.get_var_address("TOP", ifm_name_left, "DIS")
@@ -279,7 +283,9 @@ def check_interface_models(mf6):
     zc = (bot + top) / 2
     assert all(
         [zc[i] >= zc[i + 1] for i in range(len(zc) - 1)]
-    ), "Interface model for {} contains incorrectly numbered cells".format(name_left)
+    ), "Interface model for {} contains incorrectly numbered cells".format(
+        name_left
+    )
 
     # confirm some properties for the 'left' interface
     # model, looping over the models that contribute:

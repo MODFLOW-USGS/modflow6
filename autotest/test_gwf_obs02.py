@@ -63,7 +63,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution and register the gwf model with it
     flopy.mf6.ModflowIms(
@@ -104,11 +106,15 @@ def build_model(idx, dir):
     # build list of obs csv files to create
     obsdict = {}
     for i in range(nrow):
-        obslst = [("h_{}_{}".format(i, j), "head", (0, i, j)) for j in range(ncol)]
+        obslst = [
+            ("h_{}_{}".format(i, j), "head", (0, i, j)) for j in range(ncol)
+        ]
         fname = "{}.{}.obs.csv".format(name, i)
         obsdict[fname] = obslst
 
-    flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obsdict)
+    flopy.mf6.ModflowUtlobs(
+        gwf, pname="head_obs", digits=20, continuous=obsdict
+    )
 
     # initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=1.0)
@@ -152,7 +158,9 @@ def eval_model(sim):
         for j in range(ncol):
             obsname_true = "h_{}_{}".format(i, j).upper()
             obsname_found = rec.dtype.names[j + 1].upper()
-            errmsg = 'obsname in {} is incorrect.  Looking for "{}" but found "{}"'
+            errmsg = (
+                'obsname in {} is incorrect.  Looking for "{}" but found "{}"'
+            )
             errmsg = errmsg.format(fname, obsname_true, obsname_found)
             assert obsname_true == obsname_found, errmsg
         headcsv[0, i, :] = np.array(rec.tolist()[1:])
@@ -161,7 +169,9 @@ def eval_model(sim):
     hobj = flopy.utils.HeadFile(fn)
     headbin = hobj.get_data()
 
-    assert np.allclose(headcsv, headbin), "headcsv not equal head from binary file"
+    assert np.allclose(
+        headcsv, headbin
+    ), "headcsv not equal head from binary file"
 
     return
 

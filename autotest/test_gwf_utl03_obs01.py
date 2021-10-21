@@ -52,8 +52,12 @@ for loc in chdlocr:
 cd6 = {0: c60, 1: c61}
 
 # gwf obs
-obs_data0 = [("h{:04d}".format(i + 1), "HEAD", (0, 10, 10)) for i in range(1000)]
-obs_data1 = [("h{:04d}".format(i + 1001), "HEAD", (0, 1, 1)) for i in range(737)]
+obs_data0 = [
+    ("h{:04d}".format(i + 1), "HEAD", (0, 10, 10)) for i in range(1000)
+]
+obs_data1 = [
+    ("h{:04d}".format(i + 1001), "HEAD", (0, 1, 1)) for i in range(737)
+]
 
 # solver data
 nouter, ninner = 100, 300
@@ -68,7 +72,9 @@ def build_mf6(idx, ws, binaryobs=True):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(

@@ -61,13 +61,17 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
 
     newtonoptions = "NEWTON UNDER_RELAXATION"
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions=newtonoptions)
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=gwfname, newtonoptions=newtonoptions
+    )
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -120,10 +124,13 @@ def build_model(idx, dir):
     mawcondeqn = "THIEM"
     mawngwfnodes = nlay
     # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
-    mawpackagedata = [[0, mawradius, mawbottom, mstrt, mawcondeqn, mawngwfnodes]]
+    mawpackagedata = [
+        [0, mawradius, mawbottom, mstrt, mawcondeqn, mawngwfnodes]
+    ]
     # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = [
-        [0, icon, (icon, 0, 0), top, mawbottom, -999.0, -999.0] for icon in range(nlay)
+        [0, icon, (icon, 0, 0), top, mawbottom, -999.0, -999.0]
+        for icon in range(nlay)
     ]
     # <wellno> <mawsetting>
     mawperioddata = [[0, "STATUS", "ACTIVE"]]
@@ -146,7 +153,9 @@ def build_model(idx, dir):
             ("whead", "head", (0,)),
         ]
     }
-    maw.obs.initialize(filename=opth, digits=20, print_input=True, continuous=obsdata)
+    maw.obs.initialize(
+        filename=opth, digits=20, print_input=True, continuous=obsdata
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(

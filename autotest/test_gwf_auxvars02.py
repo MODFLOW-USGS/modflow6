@@ -54,7 +54,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
@@ -91,7 +93,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01
+    )
 
     # chd files
     chdlist0 = []

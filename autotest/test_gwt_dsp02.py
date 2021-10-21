@@ -107,7 +107,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -159,7 +161,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename="{}.ic".format(gwfname)
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -231,7 +235,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename="{}.ic".format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
@@ -261,14 +267,18 @@ def build_model(idx, dir):
     )
 
     # sources
-    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]], filename="{}.ssm".format(gwtname))
+    ssm = flopy.mf6.ModflowGwtssm(
+        gwt, sources=[[]], filename="{}.ssm".format(gwtname)
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -293,7 +303,9 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)

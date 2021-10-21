@@ -99,7 +99,9 @@ def get_mf6_models():
 
     # build list of directories with valid example files
     if example_basedir is not None:
-        example_dirs = get_example_dirs(example_basedir, exclude, prefix="test")
+        example_dirs = get_example_dirs(
+            example_basedir, exclude, prefix="test"
+        )
     else:
         example_dirs = []
 

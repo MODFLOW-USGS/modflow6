@@ -63,7 +63,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwt model
     gwtname = "gwt_" + name
@@ -107,7 +109,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename="{}.ic".format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # dispersion
     xt3d_off = not xt3d[idx]
@@ -140,7 +144,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -156,7 +162,9 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -170,8 +178,9 @@ def eval_transport(sim):
     m = (c0 - ce) / (x0 - xe)
     b = c0 - m * x0
     cres = m * x + b
-    msg = "simulated concentrations do not match with known " "solution. {} {}".format(
-        conc, cres
+    msg = (
+        "simulated concentrations do not match with known "
+        "solution. {} {}".format(conc, cres)
     )
     assert np.allclose(cres, conc.flatten()), msg
 
