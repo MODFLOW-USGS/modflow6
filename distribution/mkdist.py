@@ -856,7 +856,7 @@ if __name__ == "__main__":
     # run the comparison tests so the run time comparison table can be
     # created for the release notes
     cmd = ["python", "evaluate_run_times.py"]
-    pth = '.'
+    pth = "."
     buff, ierr = run_command(cmd, pth)
     msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
     assert ierr == 0, buff + msg

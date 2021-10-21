@@ -55,7 +55,7 @@ def get_model(idx, ws):
     strt = 1.0
     hk = 1.0
 
-    boundnames = ("left faces", "right face")
+    boundnames = ('left face"s', "right face")
     c = {
         0: [
             [0, 0, 0, 1.0000000, boundnames[0]],
@@ -171,7 +171,7 @@ def replace_quotes(idx, exdir):
             lines = f.readlines()
         with open(fpth, "w") as f:
             for line in lines:
-                f.write(line.replace("'", '"'))
+                f.write(line.replace("'", '"').replace('face"s', "face's"))
 
 
 def eval_obs(sim):

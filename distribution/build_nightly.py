@@ -10,13 +10,13 @@ sys.path.append(os.path.join("..", "autotest"))
 from build_exes import build_mf6, build_mf6_so, build_mf5to6, build_zbud6
 
 # make sure exe extension is used on windows
-eext = ''
-soext = '.so'
-if sys.platform.lower() == 'win32':
-    eext = '.exe'
-    soext = '.dll'
+eext = ""
+soext = ".so"
+if sys.platform.lower() == "win32":
+    eext = ".exe"
+    soext = ".dll"
 
-binpth, temppth = os.path.join('..', 'bin'), os.path.join('temp')
+binpth, temppth = os.path.join("..", "bin"), os.path.join("temp")
 
 
 def get_zipname():
@@ -44,14 +44,14 @@ def relpath_fallback(pth):
 def create_dir(pth):
     # remove pth directory if it exists
     if os.path.exists(pth):
-        print('removing... {}'.format(os.path.abspath(pth)))
+        print("removing... {}".format(os.path.abspath(pth)))
         shutil.rmtree(pth)
 
     # create pth directory
-    print('creating... {}'.format(os.path.abspath(pth)))
+    print("creating... {}".format(os.path.abspath(pth)))
     os.makedirs(pth)
 
-    msg = 'could not create... {}'.format(os.path.abspath(pth))
+    msg = "could not create... {}".format(os.path.abspath(pth))
     assert os.path.exists(pth), msg
 
     # return
@@ -60,6 +60,7 @@ def create_dir(pth):
 
 def test_update_version():
     from make_release import update_version
+
     update_version()
 
     # return
@@ -94,14 +95,15 @@ def test_zbud6():
 
 def test_update_mf6io():
     from mkdist import update_mf6io_tex_files
+
     if not os.path.isdir(temppth):
         os.makedirs(temppth)
     # build simple model
-    name = 'mymodel'
+    name = "mymodel"
     ws = os.path.join(temppth, name)
-    exe_name = 'mf6'
-    if sys.platform.lower() == 'win32':
-        exe_name += '.exe'
+    exe_name = "mf6"
+    if sys.platform.lower() == "win32":
+        exe_name += ".exe"
     exe_name = os.path.join(binpth, exe_name)
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=exe_name)
     tdis = flopy.mf6.ModflowTdis(sim)
@@ -110,10 +112,10 @@ def test_update_mf6io():
     dis = flopy.mf6.ModflowGwfdis(gwf, nrow=10, ncol=10)
     ic = flopy.mf6.ModflowGwfic(gwf)
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_specific_discharge=True)
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=[[(0, 0, 0), 1.],
-                                                           [(0, 9, 9), 0.]])
-    oc = flopy.mf6.ModflowGwfoc(gwf,
-                                printrecord=[('BUDGET', 'ALL')])
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf, stress_period_data=[[(0, 0, 0), 1.0], [(0, 9, 9), 0.0]]
+    )
+    oc = flopy.mf6.ModflowGwfoc(gwf, printrecord=[("BUDGET", "ALL")])
     sim.write_simulation()
 
     # update the mf6io simulation output for LaTeX
@@ -129,10 +131,10 @@ def test_zip_assets():
         os.makedirs(temppth)
 
     # zip assets
-    env = 'GITHUB_ACTIONS'
+    env = "GITHUB_ACTIONS"
     os.environ[env] = "true"
     if env in os.environ:
-        fpth = get_zipname() + '.zip'
+        fpth = get_zipname() + ".zip"
         # zip up exe's using directories
         zip_pth = os.path.join(temppth, fpth)
         success = pymake.zip_all(zip_pth, dir_pths=binpth)
