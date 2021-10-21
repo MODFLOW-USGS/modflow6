@@ -116,7 +116,7 @@ rech = {0: v}
 ske = [6e-4, 3e-4, 6e-4]
 
 # variant SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -125,9 +125,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     top = tops[idx]
@@ -238,9 +236,7 @@ def get_model(idx, dir):
         top=top,
         botm=botm,
     )
-    bas = flopy.modflow.ModflowBas(
-        mc, ibound=ib, strt=strt, hnoflo=hnoflo, stoper=0.01
-    )
+    bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo, stoper=0.01)
     upw = flopy.modflow.ModflowUpw(
         mc,
         laytyp=laytyp,
@@ -276,22 +272,12 @@ def get_model(idx, dir):
     return sim, mc
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_input()
-    return
-
-
 def eval_sto(sim):
 
     print("evaluating storage...")
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -303,9 +289,7 @@ def eval_sto(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -391,15 +375,13 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models_legacy(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
     test.run_mf6(
-        Simulation(
-            dir, exfunc=eval_sto, exe_dict=r_exe, htol=htol[idx], idxsim=idx
-        )
+        Simulation(dir, exfunc=eval_sto, exe_dict=r_exe, htol=htol[idx], idxsim=idx)
     )
 
 
@@ -408,10 +390,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models_legacy(build_model, idx, dir)
         sim = Simulation(
             dir,
             exfunc=eval_sto,

@@ -238,7 +238,7 @@ ds17 = [
 ]
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     sim = build_mf6(idx, dir)
 
     # build mf6 with interbeds
@@ -256,9 +256,7 @@ def build_mf6(idx, ws, interbed=False):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -299,9 +297,7 @@ def build_mf6(idx, ws, interbed=False):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -433,16 +429,12 @@ def eval_wcomp(sim):
     # compare budgets
     cbc_compare(sim)
 
-    return
-
 
 # compare cbc and lst budgets
 def cbc_compare(sim):
     print("evaluating cbc and budget...")
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -459,9 +451,7 @@ def cbc_compare(sim):
             bud_lst.append("{}_OUT".format(t))
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -535,17 +525,8 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
-
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -564,7 +545,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -577,10 +558,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for dir in exdirs:
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exe_dict=replace_exe, exfunc=eval_wcomp)
         test.run_mf6(sim)
 

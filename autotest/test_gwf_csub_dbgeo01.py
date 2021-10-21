@@ -211,7 +211,7 @@ def calc_stress(sgm0, sgs0, h, bt):
     return geo, es
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     c6 = []
     for j in range(0, ncol, 2):
         c6.append([(0, 0, j), chdh[idx]])
@@ -228,9 +228,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
@@ -265,14 +263,10 @@ def get_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt[idx], filename="{}.ic".format(name)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt[idx], filename="{}.ic".format(name))
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -384,13 +378,6 @@ def eval_sub(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_input()
-    return
 
 
 @pytest.mark.parametrize(
@@ -409,7 +396,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -421,16 +408,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx
-        )
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
-    return
 
 
 # use python testmf6_csub_sub01.py --mf2005 mf2005devdbl

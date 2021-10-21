@@ -72,7 +72,7 @@ def initial_conditions():
     return np.sqrt(h0 ** 2 + x * (h1 ** 2 - h0 ** 2) / (xlen - delr))
 
 
-def build_model(idxsim, ws, name):
+def get_model(idxsim, ws, name):
     strt = initial_conditions()
     hdsfile = "{}.hds".format(name)
     if newton[idxsim]:
@@ -93,9 +93,7 @@ def build_model(idxsim, ws, name):
         inner_dvclose=1e-9,
         rcloserecord=[0.01, "strict"],
     )
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -107,9 +105,7 @@ def build_model(idxsim, ws, name):
         botm=botm,
     )
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1)
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1)
     drn = flopy.mf6.ModflowGwfdrn(
         gwf,
         auxiliary=["ddrn"],
@@ -137,12 +133,12 @@ def build_model(idxsim, ws, name):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(idx, ws, name)
+    sim = get_model(idx, ws, name)
 
     return sim, None
 
@@ -218,13 +214,6 @@ def drain_smoothing(xdiff, xrange, newton=False):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -243,14 +232,12 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(
-        Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx)
-    )
+    test.run_mf6(Simulation(dir, exfunc=eval_disch, exe_dict=r_exe, idxsim=idx))
 
 
 def main():
@@ -258,13 +245,10 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx
-        )
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_disch, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
     return
 

@@ -50,7 +50,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 
-def get_model(idx, ws):
+def build_model(idx, ws):
 
     name = ex[idx]
 
@@ -155,14 +155,7 @@ def get_model(idx, ws):
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, on_dir in enumerate(exdirs):
-        sim = get_model(idx, on_dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_obs(sim):
@@ -204,7 +197,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_obs, idxsim=idx))
@@ -214,15 +207,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_obs, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

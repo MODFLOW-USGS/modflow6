@@ -115,17 +115,17 @@ sub6 = [
 ]
 
 
-def get_model(idx, dir):
-    sim = build_model(idx, dir, adjustmat=True)
+def build_model(idx, dir):
+    sim = get_model(idx, dir, adjustmat=True)
 
     # build MODFLOW-6 with constant material properties
     pth = os.path.join(dir, compdir)
-    mc = build_model(idx, pth, None)
+    mc = get_model(idx, pth, None)
 
     return sim, mc
 
 
-def build_model(idx, dir, adjustmat=False):
+def get_model(idx, dir, adjustmat=False):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -136,9 +136,7 @@ def build_model(idx, dir, adjustmat=False):
     sim.name_file.memory_print_option = "all"
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
@@ -176,9 +174,7 @@ def build_model(idx, dir, adjustmat=False):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -216,9 +212,7 @@ def build_model(idx, dir, adjustmat=False):
         ("sk", "sk", (0, 0, 1)),
     ]
     tags = ["dbcomp", "dbthick", "dbporo"]
-    for jdx, otype in enumerate(
-        ["delay-compaction", "delay-thickness", "delay-theta"]
-    ):
+    for jdx, otype in enumerate(["delay-compaction", "delay-thickness", "delay-theta"]):
         for n in range(ndcell[idx]):
             tag = "{}{:02d}".format(tags[jdx], n + 1)
             obs.append((tag, otype, (0, n)))
@@ -335,9 +329,7 @@ def eval_sub(sim):
         ovals["THICK"] = tc[tagb]
         ovals["THETA"] = tc[tagp]
         calc = np.zeros((comp.shape[0]), dtype=dtype)
-        calc["THETA"], calc["THICK"] = calc_theta_thick(
-            comp, thickini=thickini
-        )
+        calc["THETA"], calc["THICK"] = calc_theta_thick(comp, thickini=thickini)
         for key in calc.dtype.names:
             diff = calc[key] - ovals[key]
             diffmax = np.abs(diff).max()
@@ -380,9 +372,7 @@ def eval_sub(sim):
 # compare cbc and lst budgets
 def cbc_compare(sim):
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -399,9 +389,7 @@ def cbc_compare(sim):
             bud_lst.append("{}_OUT".format(t))
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -479,13 +467,6 @@ def cbc_compare(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -504,7 +485,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -516,14 +497,10 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx
-        )
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx)
         test.run_mf6(sim)
     return
 

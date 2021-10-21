@@ -57,7 +57,7 @@ mawradius = np.sqrt(mawarea / np.pi)  # .65
 mawcond = Kh * delc * dz / (0.5 * delr)
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nper = 2
     perlen = [10.0, 10.0]
     nstp = [1, 100]
@@ -82,17 +82,13 @@ def get_model(idx, dir):
         memory_print_option="summary",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
 
     newtonoptions = "NEWTON UNDER_RELAXATION"
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=gwfname, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions=newtonoptions)
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -145,8 +141,7 @@ def get_model(idx, dir):
     mawpackagedata = [[0, mawradius, bot, mstrt, mawcondeqn, mawngwfnodes]]
     # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = [
-        [0, icon, (icon, 0, 0), top, bot, mawcond, -999]
-        for icon in range(nlay)
+        [0, icon, (icon, 0, 0), top, bot, mawcond, -999] for icon in range(nlay)
     ]
     # <wellno> <mawsetting>
     mawperioddata = {}
@@ -174,9 +169,7 @@ def get_model(idx, dir):
             ("whead", "head", (0,)),
         ]
     }
-    maw.obs.initialize(
-        filename=opth, digits=20, print_input=True, continuous=obsdata
-    )
+    maw.obs.initialize(filename=opth, digits=20, print_input=True, continuous=obsdata)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -206,14 +199,7 @@ def get_model(idx, dir):
         ],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_results(sim):
@@ -294,9 +280,7 @@ def eval_results(sim):
             qmaw = ra_maw[i]["q"]
             qgwf = ra_gwf[i]["q"]
             if istp == 0:
-                assert np.allclose(
-                    qmaw, 0.0
-                ), "inactive well, flow should be 0."
+                assert np.allclose(qmaw, 0.0), "inactive well, flow should be 0."
             msg = "step {} record {} comparing qmaw with qgwf: {} {}".format(
                 istp, i, qmaw, qgwf
             )
@@ -315,8 +299,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
@@ -326,15 +310,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

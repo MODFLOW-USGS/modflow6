@@ -33,6 +33,8 @@ type, extends(NumericalExchangeType) :: DisConnExchangeType
   integer(I4B), pointer                            :: ianglex     => null()    !< flag indicating anglex was read, if read, ianglex is index in auxvar
   integer(I4B), pointer                            :: icdist      => null()    !< flag indicating cdist was read, if read, icdist is index in auxvar
 
+  integer(I4B), pointer                            :: ixt3d       => null()    !< flag indicating if XT3D should be applied on the interface
+
   contains
 
   procedure :: allocate_scalars
@@ -54,11 +56,13 @@ subroutine allocate_scalars(this)
   call mem_allocate(this%naux, 'NAUX', this%memoryPath)
   call mem_allocate(this%ianglex, 'IANGLEX', this%memoryPath)
   call mem_allocate(this%icdist, 'ICDIST', this%memoryPath)
+  call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
   
   this%nexg = 0  
   this%naux = 0
   this%ianglex = 0
   this%icdist = 0
+  this%ixt3d = 0
 
 end subroutine allocate_scalars
 
@@ -101,6 +105,7 @@ subroutine disconnex_da(this)
   call mem_deallocate(this%auxname, 'AUXNAME', trim(this%memoryPath))
   call mem_deallocate(this%ianglex)
   call mem_deallocate(this%icdist)
+  call mem_deallocate(this%ixt3d)
 
 end subroutine disconnex_da
 

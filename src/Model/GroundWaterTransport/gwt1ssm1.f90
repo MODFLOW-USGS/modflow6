@@ -312,6 +312,9 @@ module GwtSsmModule
         else
           ctmp = this%cnew(n)
           omega = DONE  ! lhs
+          if (ctmp < DZERO) then
+            omega = DZERO ! concentration is negative, so set mass flux to zero
+          end if
         end if
       else
         !

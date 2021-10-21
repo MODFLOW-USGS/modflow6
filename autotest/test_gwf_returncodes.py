@@ -68,9 +68,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
         continue_=continue_flag,
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -121,9 +119,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
         c6 = [[0, 0, 0, 1.0], [0, nrow - 1, ncol - 1, 0.0]]
         cd6 = {0: c6}
         maxchd = len(cd6[0])
-        chd = flopy.mf6.ModflowGwfchd(
-            gwf, stress_period_data=cd6, maxbound=maxchd
-        )
+        chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=cd6, maxbound=maxchd)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -140,7 +136,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
     return sim
 
 
-def test_normal_termination():
+def normal_termination():
     # get the simulation
     sim = get_sim(ws, idomain=1)
 
@@ -160,7 +156,7 @@ def test_normal_termination():
     return
 
 
-def test_converge_fail_continue():
+def converge_fail_continue():
     # get the simulation
     sim = get_sim(ws, idomain=1, continue_flag=True, nouter=1)
 
@@ -214,17 +210,7 @@ def idomain_runtime_error():
                 raise ValueError(msg)
 
 
-def test_converge_fail_nocontinue():
-    # run the test model
-    converge_fail_nocontinue()
-
-
-def test_mf6_idomain_error():
-    # run the test model
-    idomain_runtime_error()
-
-
-def test_unknown_keyword_error():
+def unknown_keyword_error():
     with pytest.raises(RuntimeError):
         returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
         msg = "could not run {}".format("unknown_keyword")
@@ -250,52 +236,49 @@ def run_argv(arg, return_str):
         raise RuntimeError(msg)
 
 
-@pytest.mark.parametrize(
-    "arg",
-    ["-h", "--help", "-?"],
-)
-def test_help_argv(arg):
-    return_str = "{} [options]     retrieve program information".format(app)
-    run_argv(arg, return_str)
+def help_argv():
+    for arg in ["-h", "--help", "-?"]:
+        return_str = "{} [options]     retrieve program information".format(app)
+        run_argv(arg, return_str)
 
 
-@pytest.mark.parametrize(
-    "arg",
-    ["-v", "--version"],
-)
-def test_version_argv(arg):
-    return_str = "{}: 6".format(app)
-    run_argv(arg, return_str)
+def version_argv():
+    for arg in ["-v", "--version"]:
+        return_str = "{}: 6".format(app)
+        run_argv(arg, return_str)
 
 
-@pytest.mark.parametrize(
-    "arg",
-    ["-dev", "--develop"],
-)
-def test_develop_argv(arg):
-    return_str = "{}: develop version".format(app)
-    run_argv(arg, return_str)
+def develop_argv():
+    for arg in ["-dev", "--develop"]:
+        return_str = "{}: develop version".format(app)
+        run_argv(arg, return_str)
 
 
-@pytest.mark.parametrize(
-    "arg",
-    ["-c", "--compiler"],
-)
-def test_compiler_argv(arg):
-    return_str = "{}: MODFLOW 6 compiled".format(app)
-    run_argv(arg, return_str)
+def compiler_argv():
+    for arg in ["-c", "--compiler"]:
+        return_str = "{}: MODFLOW 6 compiled".format(app)
+        run_argv(arg, return_str)
 
 
-def test_clean_sim():
+def clean_sim():
     print("Cleaning up")
     shutil.rmtree(ws)
+
+
+def test_main():
+    idomain_runtime_error()
+    unknown_keyword_error()
+    normal_termination()
+    converge_fail_nocontinue()
+    help_argv()
+    version_argv()
+    develop_argv()
+    compiler_argv()
+    clean_sim()
 
 
 if __name__ == "__main__":
     # print message
     print("standalone run of {}".format(os.path.basename(__file__)))
 
-    idomain_runtime_error()
-    test_unknown_keyword_error()
-    test_normal_termination()
-    converge_fail_nocontinue()
+    test_main()

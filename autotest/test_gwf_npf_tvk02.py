@@ -31,7 +31,7 @@ for s in ex:
 ddir = "data"
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nlay, nrow, ncol = 1, 1, 3
     perlen = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     nper = len(perlen)
@@ -62,9 +62,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -108,9 +106,7 @@ def get_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
@@ -156,9 +152,7 @@ def get_model(idx, dir):
     spd.append([cellid3, "K", 1.0])
     tvkspd[kper - 1] = spd
 
-    tvk = flopy.mf6.ModflowUtltvk(
-        gwf, perioddata=tvkspd, filename=tvk_filename
-    )
+    tvk = flopy.mf6.ModflowUtltvk(gwf, perioddata=tvkspd, filename=tvk_filename)
 
     # chd files
     chdspd = []
@@ -181,14 +175,7 @@ def get_model(idx, dir):
         printrecord=[("HEAD", "LAST")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_model(sim):
@@ -207,9 +194,7 @@ def eval_model(sim):
 
     # Check against manually calculated results
     expected_results = []
-    expected_results.append(
-        0.5
-    )  # TVK SP1: No changes. Check initial solution.
+    expected_results.append(0.5)  # TVK SP1: No changes. Check initial solution.
     expected_results.append(0.4)  # TVK SP2: Increase K1.
     expected_results.append(0.75)  # TVK SP3: Decrease K1.
     expected_results.append(0.6)  # TVK SP4: Revert K1 and increase K3.
@@ -230,9 +215,7 @@ def eval_model(sim):
 
         print(kper, h, expected_result)
 
-        errmsg = (
-            f"Expected head {expected_result} in period {kper} but found {h}"
-        )
+        errmsg = f"Expected head {expected_result} in period {kper} but found {h}"
         assert np.isclose(h, expected_result)
 
     # comment when done testing
@@ -250,8 +233,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -261,15 +244,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

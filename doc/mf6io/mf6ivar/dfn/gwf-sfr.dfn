@@ -658,7 +658,7 @@ numeric_index true
 
 block period
 name sfrsetting
-type keystring status manning stage inflow rainfall evaporation runoff diversionrecord upstream_fraction auxiliaryrecord
+type keystring status manning stage inflow rainfall evaporation runoff diversionrecord upstream_fraction cross_sectionrecord auxiliaryrecord
 shape
 tagged false
 in_record true
@@ -792,6 +792,60 @@ in_record true
 reader urword
 longname fraction of upstream flow
 description real value that defines the fraction of upstream flow (USTRF) from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one.
+
+block period
+name cross_sectionrecord
+type record cross_section tab6 filein tab6_filename
+shape
+tagged
+in_record false
+reader urword
+longname
+description
+
+block period
+name cross_section
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname cross_section keyword
+description keyword to specify that record corresponds to a reach cross-section.
+
+block period
+name tab6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname head keyword
+description keyword to specify that record corresponds to a cross-section table file.
+
+block period
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block period
+name tab6_filename
+type string
+preserve_case true
+in_record true
+reader urword
+optional false
+tagged false
+longname table file name
+description character string that defines the path and filename for the file containing cross-section table data for the reach. The TAB6\_FILENAME file includes the number of entries in the file and the station elevation data in terms of the fractional width and the reach depth. Instructions for creating the TAB6\_FILENAME input file are provided in SFR Reach Cross-Section Table Input File section.
 
 block period
 name auxiliaryrecord

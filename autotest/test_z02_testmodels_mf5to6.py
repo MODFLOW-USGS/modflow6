@@ -124,6 +124,7 @@ def run_mf5to6(sim):
     """
     src = os.path.join(example_basedir, sim.name)
     dst = os.path.join("temp", "working")
+    os.makedirs(dst, exist_ok=True)
 
     # set lgrpth to None
     lgrpth = None
@@ -216,20 +217,21 @@ def set_make_comparison(test):
     return make_comparison
 
 
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(get_mf5to6_models())),
-)
-def test_model(idx, dir):
-    # run the test model
-    run_mf5to6(
-        Simulation(
-            dir,
-            mf6_regression=set_mf6_regression(),
-            cmp_verbose=False,
-            make_comparison=set_make_comparison(dir),
+def test_model():
+
+    # TODO: Replace with parametrize fixture as soon as data races of tests are fixed
+    mf5to6_models = get_mf5to6_models()
+
+    for dir in mf5to6_models:
+        # run the test model
+        run_mf5to6(
+            Simulation(
+                dir,
+                mf6_regression=set_mf6_regression(),
+                cmp_verbose=False,
+                make_comparison=set_make_comparison(dir),
+            )
         )
-    )
 
     return
 

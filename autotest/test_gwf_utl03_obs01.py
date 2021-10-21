@@ -52,12 +52,8 @@ for loc in chdlocr:
 cd6 = {0: c60, 1: c61}
 
 # gwf obs
-obs_data0 = [
-    ("h{:04d}".format(i + 1), "HEAD", (0, 10, 10)) for i in range(1000)
-]
-obs_data1 = [
-    ("h{:04d}".format(i + 1001), "HEAD", (0, 1, 1)) for i in range(737)
-]
+obs_data0 = [("h{:04d}".format(i + 1), "HEAD", (0, 10, 10)) for i in range(1000)]
+obs_data1 = [("h{:04d}".format(i + 1001), "HEAD", (0, 1, 1)) for i in range(737)]
 
 # solver data
 nouter, ninner = 100, 300
@@ -72,9 +68,7 @@ def build_mf6(idx, ws, binaryobs=True):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -153,7 +147,7 @@ def build_mf6(idx, ws, binaryobs=True):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     ws = dir
     # build mf6 with ascii observation output
     sim = build_mf6(idx, ws, binaryobs=False)
@@ -167,11 +161,10 @@ def get_model(idx, dir):
 
 def build_models():
     for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
+        sim, mc = build_model(idx, dir)
         sim.write_simulation()
         mc.write_simulation()
         hack_binary_obs(idx, dir)
-    return
 
 
 def hack_binary_obs(idx, dir):
@@ -258,8 +251,6 @@ def main():
     for dir in exdirs:
         sim = Simulation(dir, exfunc=eval_obs)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

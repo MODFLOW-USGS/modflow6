@@ -78,7 +78,7 @@ riv_cond = 35.0
 riv_packname = "MYRIV"
 
 
-def build_model(ws, name, riv_spd):
+def get_model(ws, name, riv_spd):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -87,9 +87,7 @@ def build_model(ws, name, riv_spd):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -133,9 +131,7 @@ def build_model(ws, name, riv_spd):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
     # riv package
-    riv = flopy.mf6.ModflowGwfriv(
-        gwf, stress_period_data=riv_spd, pname=riv_packname
-    )
+    riv = flopy.mf6.ModflowGwfriv(gwf, stress_period_data=riv_spd, pname=riv_packname)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -148,37 +144,22 @@ def build_model(ws, name, riv_spd):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
 
     # create river data
-    rd = [
-        [(0, 0, icol), riv_stage, riv_cond, riv_bot]
-        for icol in range(1, ncol - 1)
-    ]
-    rd2 = [
-        [(0, 0, icol), riv_stage2, riv_cond, riv_bot]
-        for icol in range(1, ncol - 1)
-    ]
-    sim = build_model(ws, name, riv_spd={0: rd, 5: rd2})
+    rd = [[(0, 0, icol), riv_stage, riv_cond, riv_bot] for icol in range(1, ncol - 1)]
+    rd2 = [[(0, 0, icol), riv_stage2, riv_cond, riv_bot] for icol in range(1, ncol - 1)]
+    sim = get_model(ws, name, riv_spd={0: rd, 5: rd2})
 
     # build comparison model with zeroed values
     ws = os.path.join(dir, "libmf6")
     rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
-    mc = build_model(ws, name, riv_spd={0: rd_bmi})
+    mc = get_model(ws, name, riv_spd={0: rd_bmi})
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 def api_func(exe, idx, model_ws=None):
@@ -281,7 +262,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
@@ -292,10 +273,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 

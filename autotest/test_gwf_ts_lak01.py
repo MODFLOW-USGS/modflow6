@@ -254,7 +254,7 @@ for t in ts_times:
 lak_obs = {"lak_obs.csv": [("lake1", "STAGE", (0,))]}
 
 
-def build_model(ws, name, timeseries=False):
+def get_model(ws, name, timeseries=False):
     hdsfile = "{}.hds".format(name)
 
     # build the model
@@ -338,16 +338,16 @@ def build_model(ws, name, timeseries=False):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(ws, name)
+    sim = get_model(ws, name)
 
     # build MODFLOW 6 files with UZF package
     ws = os.path.join(dir, "mf6")
-    mc = build_model(ws, name, timeseries=True)
+    mc = get_model(ws, name, timeseries=True)
 
     return sim, mc
 
@@ -381,13 +381,6 @@ def eval_budget(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -399,7 +392,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_budget, idxsim=idx))
@@ -410,10 +403,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_budget, idxsim=idx)
         test.run_mf6(sim)
     return

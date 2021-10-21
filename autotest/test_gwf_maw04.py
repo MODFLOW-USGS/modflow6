@@ -115,7 +115,7 @@ for idx in range(nper):
 hclose, rclose = 1e-9, 1e-6
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
     ws = dir
 
@@ -124,9 +124,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(
@@ -151,9 +149,7 @@ def get_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=confined, k=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=confined, k=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -164,9 +160,7 @@ def get_model(idx, dir):
         transient={1: True},
     )
     # constant head
-    chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chd_spd, save_flows=False
-    )
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd, save_flows=False)
     # multi-aquifer well
     hks = hk * skin_mult[idx]
     mpd = [[0, radius, botm[-1], strt, condeqn[idx], 2]]
@@ -212,9 +206,7 @@ def get_model(idx, dir):
             botm=botm,
         )
         bas = flopy.modflow.ModflowBas(mc, strt=strt)
-        lpf = flopy.modflow.ModflowLpf(
-            mc, laytyp=confined, hk=hk, vka=hk, ss=ss, sy=0
-        )
+        lpf = flopy.modflow.ModflowLpf(mc, laytyp=confined, hk=hk, vka=hk, ss=ss, sy=0)
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=chd5_spd)
         # mnw2
         # empty mnw2 file to create recarrays
@@ -256,15 +248,6 @@ def get_model(idx, dir):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_input()
-    return
-
-
 @pytest.mark.parametrize(
     "idx, dir",
     list(enumerate(exdirs)),
@@ -277,7 +260,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models_legacy(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -290,10 +273,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models_legacy(build_model, idx, dir)
         sim = Simulation(dir, require_failure=require_failure[idx])
         test.run_mf6(sim)
 

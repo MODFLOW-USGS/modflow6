@@ -87,7 +87,7 @@ nouter, ninner = 100, 100
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, rech=rch_spd):
+def get_model(ws, name, rech=rch_spd):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -96,9 +96,7 @@ def build_model(ws, name, rech=rch_spd):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -171,26 +169,17 @@ def build_model(ws, name, rech=rch_spd):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = build_model(ws, name)
+    sim = get_model(ws, name)
 
     # build comparison model
     ws = os.path.join(dir, "libmf6")
-    mc = build_model(ws, name, rech=0.0)
+    mc = get_model(ws, name, rech=0.0)
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 def run_perturbation(mf6, max_iter, recharge, tag, rch):
@@ -269,9 +258,7 @@ def api_func(exe, idx, model_ws=None):
         est_iter = 0
         while est_iter < 100:
             # base simulation loop
-            has_converged = run_perturbation(
-                mf6, max_iter, new_recharge, rch_tag, rch
-            )
+            has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch)
             if not has_converged:
                 return api_return(success, model_ws)
             h0 = head.reshape((nrow, ncol))[5, 5]
@@ -306,9 +293,7 @@ def api_func(exe, idx, model_ws=None):
                 rch += dr
 
         # solution with final estimated recharge for the timestep
-        has_converged = run_perturbation(
-            mf6, max_iter, new_recharge, rch_tag, rch
-        )
+        has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch)
         if not has_converged:
             return api_return(success, model_ws)
 
@@ -345,7 +330,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
@@ -356,10 +341,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 

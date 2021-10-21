@@ -33,7 +33,7 @@ iuz_cell_dict = {}
 cell_iuz_dict = {}
 
 
-def get_model():
+def build_model():
 
     nlay, nrow, ncol = 3, 1, 10
     nper = 1
@@ -66,9 +66,7 @@ def get_model():
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -108,21 +106,15 @@ def get_model():
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=100.0, k33=10
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=100.0, k33=10)
 
     # aquifer storage
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, iconvert=1, ss=1e-5, sy=0.2, transient=True
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, iconvert=1, ss=1e-5, sy=0.2, transient=True)
 
     # chd files
     chdval = -3.0
     chdspd = {0: [[(2, 0, 0), chdval]]}
-    chd = flopy.mf6.ModflowGwfchd(
-        gwf, print_flows=True, stress_period_data=chdspd
-    )
+    chd = flopy.mf6.ModflowGwfchd(gwf, print_flows=True, stress_period_data=chdspd)
 
     # transient uzf info
     # iuzno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
@@ -212,16 +204,11 @@ def get_model():
     return sim
 
 
-def build_models():
-    sim = get_model()
-    sim.write_simulation()
-    return sim
-
-
 # - No need to change any code below
 def test_mf6model():
     # build and run the test model
-    sim = build_models()
+    sim = build_model()
+    sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
@@ -234,9 +221,7 @@ def test_mf6model():
             expected_msg = True
             error_count += 1
 
-    assert error_count == 8, (
-        "error count = " + str(error_count) + "but should equal 8"
-    )
+    assert error_count == 8, "error count = " + str(error_count) + "but should equal 8"
 
     print("Finished running surfdep check")
 
@@ -245,7 +230,8 @@ def test_mf6model():
 
 def main():
     # build and run the test model
-    sim = build_models()
+    sim = build_model()
+    sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
@@ -258,9 +244,7 @@ def main():
             expected_msg = True
             error_count += 1
 
-    assert error_count == 8, (
-        "error count = " + str(error_count) + "but should equal 8"
-    )
+    assert error_count == 8, "error count = " + str(error_count) + "but should equal 8"
 
     print("Finished running surfdep check")
 

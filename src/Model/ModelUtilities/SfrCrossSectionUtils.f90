@@ -19,6 +19,7 @@ module GwfSfrCrossSectionUtilsModule
   public :: get_wetted_topwidth
   public :: get_wetted_perimeter
   public :: get_cross_section_area
+  public :: get_hydraulic_radius
 
 contains
 
@@ -145,6 +146,59 @@ contains
     ! -- return
     return
   end function get_cross_section_area
+
+  !> @brief Calculate the hydraulic radius for a reach
+  !!
+  !! Function to calculate the hydraulic radius for a reach using 
+  !! the cross-section station depth data given a passed depth.
+  !!
+  !! @return      r               hydraulic radius
+  !<
+  function get_hydraulic_radius(npts, stations, depths, d) result(r)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), intent(in) :: d                          !< depth to evaluate cross-section
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: r
+    real(DP) :: p
+    real(DP) :: a
+    real(DP), dimension(npts-1) :: areas
+    real(DP), dimension(npts-1) :: perimeters
+    !
+    ! -- intitialize the hydraulic radius, perimeter, and area
+    r = DZERO
+    p = DZERO
+    a = DZERO
+    !
+    ! -- calculate the wetted perimeter for each line segment
+    call get_wetted_perimeters(npts, stations, depths, d, perimeters)
+    !
+    ! -- calculate the wetted perimenter
+    do n = 1, npts - 1
+      p = p + perimeters(n)
+    end do
+    !
+    ! -- calculate the hydraulic radius only if the perimeter is non-zero
+    if (p > DZERO) then
+      !
+      ! -- calculate the cross-sectional area for each line segment
+      call get_cross_section_areas(npts, stations, depths, d, areas)
+      !
+      ! -- calculate the cross-sectional area
+      do n = 1, npts - 1
+        a = a + areas(n)
+      end do
+      !
+      ! -- calculate the hydraulic radius
+      r = a / p
+    end if
+    !
+    ! -- return
+    return
+  end function get_hydraulic_radius
 
   ! -- private functions and subroutines
 

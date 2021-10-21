@@ -7,9 +7,13 @@
 !<
 module Mf6CoreModule 
   use KindModule,             only: I4B, LGP
-  use ListsModule,            only: basesolutionlist, solutiongrouplist, basemodellist, baseexchangelist
+  use ListsModule,            only: basesolutionlist, solutiongrouplist,         &
+                                    basemodellist, baseexchangelist,             &
+                                    baseconnectionlist
   use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
+  use SpatialModelConnectionModule, only: SpatialModelConnectionType,            &
+                                          GetSpatialModelConnectionFromList
   use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule,    only: SolutionGroupType, GetSolutionGroupFromList
   implicit none  
@@ -125,6 +129,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       !
       ! -- FINAL PROCESSING (FP)
       ! -- Final processing for each model
@@ -161,6 +166,13 @@ module Mf6CoreModule
         ep => GetBaseExchangeFromList(baseexchangelist, ic)
         call ep%exg_da()
         deallocate(ep)
+      enddo
+      !
+      ! -- Deallocate for each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_da()
+        deallocate(mc)
       enddo
       !
       ! -- Deallocate for each solution
@@ -219,6 +231,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       
       ! -- Define each model
       do im = 1, basemodellist%Count()
@@ -230,6 +243,16 @@ module Mf6CoreModule
       do ic = 1, baseexchangelist%Count()
         ep => GetBaseExchangeFromList(baseexchangelist, ic)
         call ep%exg_df()
+      enddo
+      !
+      ! -- when needed, this is were the interface models are
+      ! created and added to the numerical solutions
+      call connections_cr()
+      !
+      ! -- Define each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_df()
       enddo
       !
       ! -- Define each solution
@@ -257,6 +280,7 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       
       ! -- Allocate and read each model
       do im = 1, basemodellist%Count()
@@ -270,6 +294,12 @@ module Mf6CoreModule
         call ep%exg_ar()
       enddo
       !
+      ! -- Allocate and read all model connections
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_ar()
+      enddo
+      !
       ! -- Allocate and read each solution
       do is=1,basesolutionlist%Count()
         sp => GetBaseSolutionFromList(basesolutionlist, is)
@@ -277,6 +307,38 @@ module Mf6CoreModule
       enddo
       !
     end subroutine simulation_ar
+
+    !> @brief Create the model connections from the exchanges
+    !!
+    !! This will upgrade the numerical exchanges in the solution,
+    !! whenever the configuration requires this, to Connection 
+    !! objects. Currently we anticipate:
+    !!
+    !!   GWF-GWF => GwfGwfConnection
+    !!   GWT-GWT => GwtGwtConecction
+    !<
+    subroutine connections_cr()
+      use ConnectionBuilderModule
+      use SimVariablesModule, only: iout
+      integer(I4B) :: isol
+      type(ConnectionBuilderType) :: connectionBuilder
+      class(BaseSolutionType), pointer :: sol => null()
+
+      write(iout,'(/a)') 'PROCESSING MODEL CONNECTIONS'
+
+      if (baseexchangelist%Count() == 0) then
+        ! if this is not a coupled simulation in any way,
+        ! then we will not need model connections
+        return
+      end if
+
+      do isol = 1, basesolutionlist%Count()
+        sol => GetBaseSolutionFromList(basesolutionlist, isol)
+        call connectionBuilder%processSolution(sol)
+      end do
+
+      write(iout,'(a)') 'END OF MODEL CONNECTIONS'
+    end subroutine connections_cr
     
     !> @brief Read and prepare time step
     !!
@@ -306,10 +368,12 @@ module Mf6CoreModule
       ! -- local variables
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       class(BaseSolutionType), pointer :: sp => null()
       character(len=LINELENGTH) :: line
       character(len=LINELENGTH) :: fmt
       integer(I4B) :: im
+      integer(I4B) :: ie
       integer(I4B) :: ic
       integer(I4B) :: is
       !
@@ -339,9 +403,15 @@ module Mf6CoreModule
       enddo
       !
       ! -- Read and prepare each exchange
-      do ic = 1, baseexchangelist%Count()
-        ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      do ie = 1, baseexchangelist%Count()
+        ep => GetBaseExchangeFromList(baseexchangelist, ie)
         call ep%exg_rp()
+      enddo
+      !
+      ! -- Read and prepare each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_rp()
       enddo
       !
       ! -- reset simulation convergence flag
@@ -354,9 +424,15 @@ module Mf6CoreModule
       enddo
       !
       ! -- time update for each exchange
-      do ic = 1, baseexchangelist%Count()
-        ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      do ie = 1, baseexchangelist%Count()
+        ep => GetBaseExchangeFromList(baseexchangelist, ie)
         call ep%exg_calculate_delt()
+      enddo
+      !
+      ! -- time update for each connection
+      do ic = 1, baseconnectionlist%Count()
+        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        call mc%exg_calculate_delt()
       enddo
       !
       ! -- time update for each solution
@@ -475,9 +551,11 @@ module Mf6CoreModule
       class(BaseSolutionType), pointer :: sp => null()
       class(BaseModelType), pointer :: mp => null()
       class(BaseExchangeType), pointer :: ep => null()
+      class(SpatialModelConnectionType), pointer :: mc => null()
       character(len=LINELENGTH) :: line
       character(len=LINELENGTH) :: fmt
       integer(I4B) :: im
+      integer(I4B) :: ix
       integer(I4B) :: ic
       integer(I4B) :: is
       !
@@ -504,10 +582,16 @@ module Mf6CoreModule
           enddo
           !
           ! -- Write output for each exchange
-          do ic = 1, baseexchangelist%Count()
-            ep => GetBaseExchangeFromList(baseexchangelist, ic)
+          do ix = 1, baseexchangelist%Count()
+            ep => GetBaseExchangeFromList(baseexchangelist, ix)
             call ep%exg_ot()
           enddo
+          !
+          ! -- Write output for each connection
+          do ic = 1, baseconnectionlist%Count()
+            mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+            call mc%exg_ot()
+          end do
           !
           ! -- Write output for each solution
           do is=1,basesolutionlist%Count()
