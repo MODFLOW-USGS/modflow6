@@ -12,10 +12,10 @@ if get_option('optimization') == '3'
   error('Only optimzation levels <= 2 are supported')
 endif
 
-if get_option('debug') == true
-  profile = 'debug'
-else
+if get_option('optimization') == '2'
   profile = 'release'
+else
+  profile = 'debug'
 endif
 
 message('The used profile is: ', profile)
