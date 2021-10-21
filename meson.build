@@ -5,7 +5,7 @@ project(
   default_options : [
     'optimization=2',
     'b_vscrt=static_from_buildtype',
-    #'fortran_std=f2008',
+    'fortran_std=f2008',
 ])
 
 if get_option('optimization') == '3'
