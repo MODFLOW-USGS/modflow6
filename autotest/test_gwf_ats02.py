@@ -72,8 +72,12 @@ def build_model(idx, dir):
     # create tdis package
     ats_filerecord = None
     if True:
-        atsperiod = [(i, dt0, dtmin, dtmax, dtadj, dtfailadj) for i in range(nper)]
-        ats = flopy.mf6.ModflowUtlats(sim, maxats=len(atsperiod), perioddata=atsperiod)
+        atsperiod = [
+            (i, dt0, dtmin, dtmax, dtadj, dtfailadj) for i in range(nper)
+        ]
+        ats = flopy.mf6.ModflowUtlats(
+            sim, maxats=len(atsperiod), perioddata=atsperiod
+        )
         ats_filerecord = name + ".ats"
 
     tdis = flopy.mf6.ModflowTdis(
@@ -180,7 +184,9 @@ def build_model(idx, dir):
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (4, 0, 0)])
     obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
+    obs = flopy.mf6.ModflowUtlobs(
+        gwf, pname="head_obs", digits=20, continuous=obs_dict
+    )
 
     return sim, None
 
@@ -206,7 +212,9 @@ def make_plot(sim):
     for ilay in range(5):
         h = head[:, ilay]
         h = np.ma.masked_where(h < 0, h)
-        (botline,) = plt.plot([times.min(), times.max()], [botm[ilay], botm[ilay]])
+        (botline,) = plt.plot(
+            [times.min(), times.max()], [botm[ilay], botm[ilay]]
+        )
         plt.plot(
             times,
             h,
@@ -245,7 +253,9 @@ def eval_flow(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
     # ensure layer 1 is dry with the DRY value
-    assert np.max(tc["OBS1"][:201]) == -1.0e30, "layer 1 should be dry for this period"
+    assert (
+        np.max(tc["OBS1"][:201]) == -1.0e30
+    ), "layer 1 should be dry for this period"
 
 
 # - No need to change any code below

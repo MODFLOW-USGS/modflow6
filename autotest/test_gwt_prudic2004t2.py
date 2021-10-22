@@ -45,7 +45,9 @@ def build_model(idx, dir):
     # order to speed up this autotest
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 25, 1.0)]
     nper = len(tdis_rc)
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
@@ -124,14 +126,18 @@ def build_model(idx, dir):
         gwf,
         budget_filerecord="{}.bud".format(gwfname),
         head_filerecord="{}.hds".format(gwfname),
-        headprintrecord=[("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        headprintrecord=[
+            ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
     rch_on = True
     if rch_on:
-        rch = flopy.mf6.ModflowGwfrcha(gwf, recharge={0: 4.79e-3}, pname="RCH-1")
+        rch = flopy.mf6.ModflowGwfrcha(
+            gwf, recharge={0: 4.79e-3}, pname="RCH-1"
+        )
 
     chdlist = []
     fname = os.path.join(data_ws, "chd.dat")
@@ -149,7 +155,9 @@ def build_model(idx, dir):
                     float(hd),
                 ]
             )
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist, pname="CHD-1")
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf, stress_period_data=chdlist, pname="CHD-1"
+    )
 
     rivlist = []
     fname = os.path.join(data_ws, "riv.dat")
@@ -523,14 +531,18 @@ def make_plot(sim):
 
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(fname, precision="double", text="concentration")
+    bobj = flopy.utils.HeadFile(
+        fname, precision="double", text="concentration"
+    )
     lkaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
 
     fname = gwtname + ".sft.bin"
     fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(fname, precision="double", text="concentration")
+    bobj = flopy.utils.HeadFile(
+        fname, precision="double", text="concentration"
+    )
     sfaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
@@ -568,14 +580,18 @@ def eval_results(sim):
 
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(fname, precision="double", text="concentration")
+    bobj = flopy.utils.HeadFile(
+        fname, precision="double", text="concentration"
+    )
     lkaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
 
     fname = gwtname + ".sft.bin"
     fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(fname, precision="double", text="concentration")
+    bobj = flopy.utils.HeadFile(
+        fname, precision="double", text="concentration"
+    )
     sfaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()

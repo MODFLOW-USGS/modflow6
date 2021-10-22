@@ -62,7 +62,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -106,7 +108,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename="{}.ic".format(gwfname)
+    )
 
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
@@ -129,7 +133,9 @@ def build_model(idx, dir):
                 for j in range(ncol):
                     spd.append([(k, i, j), "K", hydraulic_conductivity])
         tvkspd[kper] = spd
-    tvk = flopy.mf6.ModflowUtltvk(gwf, perioddata=tvkspd, filename=tvk_filename)
+    tvk = flopy.mf6.ModflowUtltvk(
+        gwf, perioddata=tvkspd, filename=tvk_filename
+    )
 
     # chd files
     chdspd = []

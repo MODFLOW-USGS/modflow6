@@ -1,6 +1,5 @@
 import os
 import pytest
-import sys
 import numpy as np
 
 try:
@@ -23,7 +22,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = [
-    "chd01",
+    "bndname01",
 ]
 exdirs = []
 for s in ex:
@@ -31,7 +30,18 @@ for s in ex:
 ddir = "data"
 
 
-def build_model(idx, dir):
+def build_model(idx, exdir):
+
+    sim = get_model(idx, exdir)
+
+    ws = os.path.join(exdir, "mf6")
+    mc = get_model(idx, ws)
+
+    return sim, mc
+
+
+def get_model(idx, ws):
+
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -45,7 +55,13 @@ def build_model(idx, dir):
     strt = 1.0
     hk = 1.0
 
-    c = {0: [[(0, 0, 0), 1.0000000], [(0, 0, 99), 0.0000000]]}
+    boundnames = ('left face"s', "right face")
+    c = {
+        0: [
+            [0, 0, 0, 1.0000000, boundnames[0]],
+            [0, 0, 99, 0.0000000, boundnames[1]],
+        ]
+    }
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-6, 1e-6, 1.0
@@ -57,7 +73,6 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -66,17 +81,7 @@ def build_model(idx, dir):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
-    gwfname = "gwf_" + name
-    gwf = flopy.mf6.MFModel(
-        sim,
-        model_type="gwf6",
-        modelname=gwfname,
-        model_nam_file="{}.nam".format(gwfname),
-    )
-    gwf.name_file.save_flows = True
-
-    # create iterative model solution and register the gwf model with it
+    # create iterative model solution and register
     imsgwf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -90,9 +95,15 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
     )
-    sim.register_ims_package(imsgwf, [gwf.name])
+
+    # create gwf model
+    gwfname = "gwf_" + name
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=gwfname,
+        save_flows=True,
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -104,12 +115,12 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename="{}.dis".format(gwfname),
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
+        gwf,
+        strt=strt,
     )
 
     # node property flow
@@ -120,12 +131,22 @@ def build_model(idx, dir):
     # chd files
     chd = flopy.mf6.ModflowGwfchd(
         gwf,
+        print_input=True,
+        boundnames=True,
         maxbound=len(c),
         stress_period_data=c,
         save_flows=False,
         print_flows=True,
         pname="CHD-1",
     )
+    fname = f"{gwfname}.chd.obs"
+    chd_obs = {
+        f"{fname}.csv": [
+            (boundnames[0], "chd", boundnames[0]),
+            (boundnames[1], "chd", boundnames[1]),
+        ]
+    }
+    chd.obs.initialize(filename=fname, print_input=True, continuous=chd_obs)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -133,63 +154,87 @@ def build_model(idx, dir):
         budget_filerecord="{}.cbc".format(gwfname),
         head_filerecord="{}.hds".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim, None
+    return sim
 
 
-def eval_model(sim):
-    print("evaluating model...")
+def replace_quotes(idx, exdir):
+    ws = os.path.join(exdir, "mf6")
+    gwfname = f"gwf_{ex[idx]}"
+    extensions = (".chd", ".chd.obs")
+    for ext in extensions:
+        fpth = os.path.join(ws, f"{gwfname}{ext}")
+        with open(fpth) as f:
+            lines = f.readlines()
+        with open(fpth, "w") as f:
+            for line in lines:
+                f.write(line.replace("'", '"').replace('face"s', "face's"))
 
-    name = ex[sim.idxsim]
-    gwfname = "gwf_" + name
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(gwfname))
-    try:
-        hobj = flopy.utils.HeadFile(fpth, precision="double")
-        head = hobj.get_data().flatten()
-    except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+def eval_obs(sim):
+    idx = sim.idxsim
+    ws = exdirs[idx]
+    name = ex[idx]
+    print("evaluating observations results..." f"({name})")
 
-    # This is the answer to this problem.
-    hres = np.linspace(1, 0, 100)
-    assert np.allclose(
-        hres, head
-    ), "simulated head do not match with known solution."
+    fpth = os.path.join(ws, f"gwf_{name}.chd.obs.csv")
+    obs0 = np.genfromtxt(fpth, delimiter=",", names=True)
+    names0 = obs0.dtype.names
 
-    # comment when done testing
-    # assert False
+    fpth = os.path.join(ws, "mf6", f"gwf_{name}.chd.obs.csv")
+    obs1 = np.genfromtxt(fpth, delimiter=",", names=True)
+    names1 = obs1.dtype.names
+
+    assert names0 == names1, "observation names are not identical"
+
+    assert np.array_equal(obs0, obs1), "observations are not identical"
 
     return
 
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, exdir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, exdir)
+
+    # replace quotes
+    replace_quotes(idx, exdir)
 
     # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
+    test.run_mf6(
+        Simulation(
+            exdir,
+            idxsim=idx,
+        )
+    )
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
+    # build and run the test model
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
+        sim = Simulation(
+            exdir,
+            idxsim=idx,
+            exfunc=eval_obs,
+        )
+        replace_quotes(idx, exdir)
         test.run_mf6(sim)
+
+    return
 
 
 if __name__ == "__main__":

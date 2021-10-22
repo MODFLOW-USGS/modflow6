@@ -78,7 +78,9 @@ def get_model(ws, name, bmi=False):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -128,7 +130,9 @@ def get_model(ws, name, bmi=False):
 
     # evapotranspiration
     if not bmi:
-        evt = flopy.mf6.ModflowGwfevta(gwf, surface=top, rate=et_max, depth=et_depth)
+        evt = flopy.mf6.ModflowGwfevta(
+            gwf, surface=top, rate=et_max, depth=et_depth
+        )
     wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data=[[(0, 0, 0), 0.0]])
 
     # output control

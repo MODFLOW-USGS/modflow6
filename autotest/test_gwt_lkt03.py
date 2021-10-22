@@ -60,7 +60,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -142,11 +144,17 @@ def build_model(idx, dir):
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     # lake 1
-    con_data.append((0, 0, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth))
+    con_data.append(
+        (0, 0, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth)
+    )
     # lake 2
-    con_data.append((1, 0, (0, 0, 3), "VERTICAL", "None", 10, 10, connlen, connwidth))
+    con_data.append(
+        (1, 0, (0, 0, 3), "VERTICAL", "None", 10, 10, connlen, connwidth)
+    )
     # lake 3
-    con_data.append((2, 0, (0, 0, 4), "VERTICAL", "None", 10, 10, connlen, connwidth))
+    con_data.append(
+        (2, 0, (0, 0, 4), "VERTICAL", "None", 10, 10, connlen, connwidth)
+    )
 
     p_data = [
         (0, "RAINFALL", 0.1),
@@ -371,7 +379,9 @@ def eval_results(sim):
     dt = [("node", "<i4"), ("node2", "<i4"), ("q", "<f8")]
     answer = np.array(answer, dtype=dt)
     for dtname, dttype in dt:
-        assert np.allclose(res[dtname], answer[dtname]), "{} {}".format(res, answer)
+        assert np.allclose(res[dtname], answer[dtname]), "{} {}".format(
+            res, answer
+        )
 
     # check the storage terms, which include the total mass in the lake as an aux variable
     res = bobj.get_data(text="storage")[-1]
@@ -379,7 +389,9 @@ def eval_results(sim):
     dt = [("node", "<i4"), ("node2", "<i4"), ("q", "<f8"), ("MASS", "<f8")]
     answer = np.array(answer, dtype=dt)
     for dtname, dttype in dt:
-        assert np.allclose(res[dtname], answer[dtname]), "{} {}".format(res, answer)
+        assert np.allclose(res[dtname], answer[dtname]), "{} {}".format(
+            res, answer
+        )
 
     # uncomment when testing
     # assert False

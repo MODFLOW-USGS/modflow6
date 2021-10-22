@@ -68,7 +68,6 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -129,7 +128,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -284,7 +285,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename="{}.ic".format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
@@ -305,7 +308,9 @@ def build_model(idx, dir):
         gwt, sources=sourcerecarray, filename="{}.ssm".format(gwtname)
     )
 
-    uztpackagedata = [(iuz, 0.0, "uzt{}".format(iuz + 1)) for iuz in range(nlay)]
+    uztpackagedata = [
+        (iuz, 0.0, "uzt{}".format(iuz + 1)) for iuz in range(nlay)
+    ]
     uztperioddata = [
         (0, "INFILTRATION", 100.0),
         (0, "UZET", 100.0),
@@ -313,7 +318,8 @@ def build_model(idx, dir):
 
     uzt_obs = {
         (gwtname + ".uzt.obs.csv",): [
-            ("uztconc{}".format(k + 1), "CONCENTRATION", k + 1) for k in range(nlay)
+            ("uztconc{}".format(k + 1), "CONCENTRATION", k + 1)
+            for k in range(nlay)
         ],
     }
     # append additional obs attributes to obs dictionary
@@ -443,14 +449,18 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(res.min(), res.max())
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     bpth = os.path.join(ws, gwtname + ".uzt.bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     uzet = bobj.get_data(text="UZET")
     uz_answer = [-0.432] + 14 * [0.0]
-    for uz in uzet[100:]:  # Need to look later in simulation when ET demand is met
+    for uz in uzet[
+        100:
+    ]:  # Need to look later in simulation when ET demand is met
         msg = "unsat ET not correct.  Found {}.  Should be {}".format(
             uz["q"], uz_answer
         )

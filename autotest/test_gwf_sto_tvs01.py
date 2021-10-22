@@ -67,7 +67,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -120,7 +122,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename="{}.ic".format(gwfname)
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=laytyp, k=hk, k33=hk)
@@ -167,7 +171,9 @@ def build_model(idx, dir):
     spd.append([cellid1, "SY", 0.01])
     tvsspd[kper - 1] = spd
 
-    tvs = flopy.mf6.ModflowUtltvs(gwf, perioddata=tvsspd, filename=tvs_filename)
+    tvs = flopy.mf6.ModflowUtltvs(
+        gwf, perioddata=tvsspd, filename=tvs_filename
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -197,7 +203,9 @@ def eval_model(sim):
 
     # Check against manually calculated results
     expected_results = []
-    expected_results.append(0.8)  # TVS SP1: No changes. Check initial solution.
+    expected_results.append(
+        0.8
+    )  # TVS SP1: No changes. Check initial solution.
     expected_results.append(3000.823)  # TVS SP2: Decrease SY1.
     expected_results.append(300.5323)  # TVS SP3: Increase SS1.
     expected_results.append(0.399976)  # TVS SP4: Increase SY1.
@@ -214,7 +222,9 @@ def eval_model(sim):
 
         print(kper, h, expected_result)
 
-        errmsg = f"Expected head {expected_result} in period {kper} but found {h}"
+        errmsg = (
+            f"Expected head {expected_result} in period {kper} but found {h}"
+        )
         assert np.isclose(h, expected_result)
 
     # comment when done testing

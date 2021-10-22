@@ -141,7 +141,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     top = tops[idx]
@@ -252,7 +254,9 @@ def eval_zb6(sim):
     f.write("END ZONEBUDGET\n")
     f.close()
 
-    fpth = os.path.join(sim.simpath, "{}.zon".format(os.path.basename(sim.name)))
+    fpth = os.path.join(
+        sim.simpath, "{}.zon".format(os.path.basename(sim.name))
+    )
     f = open(fpth, "w")
     f.write("BEGIN DIMENSIONS\n")
     f.write("  NCELLS {}\n".format(size3d))
@@ -305,7 +309,9 @@ def eval_zb6(sim):
             ion = 0
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, "{}.lst".format(os.path.basename(sim.name)))
+    fpth = os.path.join(
+        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
+    )
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -317,7 +323,9 @@ def eval_zb6(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(os.path.basename(sim.name)))
+    fpth = os.path.join(
+        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
+    )
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -379,8 +387,10 @@ def eval_zb6(sim):
     for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
         diffzb[:, idx] = zbsum[key0] - d[key]
     diffzbmax = np.abs(diffzb).max()
-    msg += "\nmaximum absolute zonebudget-cell by cell difference ({}) ".format(
-        diffzbmax
+    msg += (
+        "\nmaximum absolute zonebudget-cell by cell difference ({}) ".format(
+            diffzbmax
+        )
     )
 
     # write summary
@@ -439,7 +449,9 @@ def test_mf6model(idx, dir):
     if is_CI and not continuous_integration[idx]:
         return
     test.run_mf6(
-        Simulation(dir, exfunc=eval_zb6, exe_dict=r_exe, htol=htol[idx], idxsim=idx)
+        Simulation(
+            dir, exfunc=eval_zb6, exe_dict=r_exe, htol=htol[idx], idxsim=idx
+        )
     )
 
 

@@ -140,7 +140,9 @@ def build_model(idx, dir):
     mawpackagedata["ngwfnodes"] = 2
 
     # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
-    mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(gwf, maxbound=2)
+    mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(
+        gwf, maxbound=2
+    )
     mawconnectiondata["icon"] = [0, 1]
     mawconnectiondata["cellid"] = cellids
     mawconnectiondata["scrn_top"] = 100.0
@@ -167,7 +169,9 @@ def build_model(idx, dir):
             ("whead", "head", (0,)),
         ]
     }
-    maw.obs.initialize(filename=opth, digits=20, print_input=True, continuous=obsdata)
+    maw.obs.initialize(
+        filename=opth, digits=20, print_input=True, continuous=obsdata
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(

@@ -35,7 +35,9 @@ ddir = "data"
 nlay, nrow, ncol = 100, 1, 1
 
 
-def build_model(idx, dir):
+def build_model(idx, exdir):
+
+    name = ex[idx]
 
     perlen = [500.0]
     nper = len(perlen)
@@ -53,28 +55,18 @@ def build_model(idx, dir):
     sy = 0.1
 
     tdis_rc = []
-    for id in range(nper):
-        tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
-
-    name = ex[idx]
+    for idx in range(nper):
+        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = exdir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
-
-    # create gwf model
-    gwfname = name
-    newtonoptions = "NEWTON UNDER_RELAXATION"
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=gwfname,
-        newtonoptions=newtonoptions,
-        save_flows=True,
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
     # create iterative model solution and register the gwf model with it
@@ -94,9 +86,16 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
     )
-    sim.register_ims_package(imsgwf, [gwf.name])
+
+    # create gwf model
+    newtonoptions = "NEWTON UNDER_RELAXATION"
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=name,
+        newtonoptions=newtonoptions,
+        save_flows=True,
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -114,7 +113,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -140,12 +141,13 @@ def build_model(idx, dir):
 
     # note: for specifying lake number, use fortran indexing!
     uzf_obs = {
-        name
-        + ".uzf.obs.csv": [
-            ("wc2", "water-content", 2, 0.5),
-            ("wc50", "water-content", 50, 0.5),
-            ("wcbn2", "water-content", "uzf02", 0.5),
-            ("wcbn50", "water-content", "UZF050", 0.5),
+        f"{name}.uzf.obs.csv": [
+            ("wc 02", "water-content", 2, 0.5),
+            ("wc 50", "water-content", 50, 0.5),
+            ("wcbn 02", "water-content", "uzf 002", 0.5),
+            ("wcbn 50", "water-content", "UZF 050", 0.5),
+            ("rch 02", "uzf-gwrch", "uzf 002"),
+            ("rch 50", "uzf-gwrch", "uzf 050"),
         ]
     }
 
@@ -155,7 +157,21 @@ def build_model(idx, dir):
     thti = thtr
     thts = sy
     eps = 4
-    uzf_pkdat = [[0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf01"]] + [
+    uzf_pkdat = [
+        [
+            0,
+            (0, 0, 0),
+            1,
+            1,
+            sd,
+            vks,
+            thtr,
+            thts,
+            thti,
+            eps,
+            "uzf 001",
+        ]
+    ] + [
         [
             k,
             (k, 0, 0),
@@ -167,7 +183,7 @@ def build_model(idx, dir):
             thts,
             thti,
             eps,
-            "uzf0{}".format(k + 1),
+            f"uzf {k + 1:03d}",
         ]
         for k in range(1, nlay - 1)
     ]
@@ -197,8 +213,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord="{}.bud".format(name),
+        head_filerecord="{}.hds".format(name),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -207,8 +223,10 @@ def build_model(idx, dir):
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (1, 0, 0)])
-    obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
+    obs_dict = {f"{name}.obs.csv": obs_lst}
+    obs = flopy.mf6.ModflowUtlobs(
+        gwf, pname="head_obs", digits=20, continuous=obs_dict
+    )
 
     return sim, None
 
@@ -225,9 +243,9 @@ def eval_flow(sim):
     ia = grbobj._datadict["IA"] - 1
     ja = grbobj._datadict["JA"] - 1
 
-    bpth = os.path.join(ws, name + ".uzf.bud")
-    bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
-    gwf_recharge = bobj.get_data(text="GWF")
+    upth = os.path.join(ws, name + ".uzf.bud")
+    uobj = flopy.utils.CellBudgetFile(upth, precision="double")
+    gwf_recharge = uobj.get_data(text="GWF")
 
     bpth = os.path.join(ws, name + ".bud")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
@@ -243,26 +261,43 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(res.min(), res.max())
+        errmsg = "min or max residual too large {} {}".format(
+            res.min(), res.max()
+        )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
+    # Open the uzf observation file
+    fpth = os.path.join(ws, f"{name}.uzf.obs.csv")
+    obs_obj = flopy.utils.Mf6Obs(fpth)
+    names = obs_obj.get_obsnames()
+    obs = {
+        names[-2]: obs_obj.get_data(obsname=names[-2]),
+        names[-1]: obs_obj.get_data(obsname=names[-1]),
+    }
+    cbc = uobj.get_ts(idx=[[0, 0, 1], [0, 0, 49]], text="GWF")
+    for idx, key in enumerate(obs.keys()):
+        assert np.allclose(obs[key][key], -cbc[:, idx + 1]), (
+            f"observation data for {key} is not the same as "
+            "data in the cell-by-cell file."
+        )
 
     return
 
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, exdir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, exdir)
 
     # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
+    test.run_mf6(Simulation(exdir, exfunc=eval_flow, idxsim=idx))
 
 
 def main():
@@ -270,9 +305,9 @@ def main():
     test = testing_framework()
 
     # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
+        sim = Simulation(exdir, exfunc=eval_flow, idxsim=idx)
         test.run_mf6(sim)
 
     return

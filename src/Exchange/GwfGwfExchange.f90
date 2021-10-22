@@ -2340,7 +2340,7 @@ contains
     else
       ! Integer can't be read from strng; it's presumed to be an exchange
       ! boundary name (already converted to uppercase)
-      obsrv%FeatureName = strng(istart:istop)
+      obsrv%FeatureName = trim(adjustl(strng))
       ! -- Observation may require summing rates from multiple exchange
       !    boundaries, so assign intPak1 as a value that indicates observation
       !    is for a named exchange boundary or group of exchange boundaries.

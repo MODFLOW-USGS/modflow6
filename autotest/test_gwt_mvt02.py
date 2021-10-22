@@ -63,7 +63,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -291,7 +293,9 @@ def build_model(idx, dir):
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=10.0, filename="{}.ic".format(gwtname))
+        ic = flopy.mf6.ModflowGwtic(
+            gwt, strt=10.0, filename="{}.ic".format(gwtname)
+        )
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(
@@ -323,7 +327,8 @@ def build_model(idx, dir):
 
         sft_obs = {
             (gwtname + ".sft.obs.csv",): [
-                ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1) for i in range(7)
+                ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1)
+                for i in range(7)
             ]
             + [
                 ("sft-1-extinflow", "EXT-INFLOW", 1),

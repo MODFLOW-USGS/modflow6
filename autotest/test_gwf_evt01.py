@@ -55,7 +55,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
@@ -102,7 +104,9 @@ def build_model(idx, dir):
 
     nseg = 4
     surf_rate_specified = True
-    evtspd = [[(0, 0, 1), 95.0, 0.001, 90.0, 0.25, 0.5, 0.75, 1.0, 0.0, 1.0, 0.1]]
+    evtspd = [
+        [(0, 0, 1), 95.0, 0.001, 90.0, 0.25, 0.5, 0.75, 1.0, 0.0, 1.0, 0.1]
+    ]
 
     # nseg = 4
     # surf_rate_specified = False

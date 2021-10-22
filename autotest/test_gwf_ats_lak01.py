@@ -81,7 +81,9 @@ def build_model(idx, dir):
             (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
             (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
         ]
-        ats = flopy.mf6.ModflowUtlats(sim, maxats=len(atsperiod), perioddata=atsperiod)
+        ats = flopy.mf6.ModflowUtlats(
+            sim, maxats=len(atsperiod), perioddata=atsperiod
+        )
         ats_filerecord = name + ".ats"
 
     # create tdis package
@@ -350,7 +352,9 @@ def eval_results(sim):
             node, node2, q = r
             n0 = node - 1
             if ilak[n0] == 1:
-                kk, ii, jj = get_kij_from_node(n0, botm.shape[1], botm.shape[2])
+                kk, ii, jj = get_kij_from_node(
+                    n0, botm.shape[1], botm.shape[2]
+                )
                 tp = botm[kk - 1, ii, jj]
                 if stage_current > tp and q != 0.0:
                     all_passed = False

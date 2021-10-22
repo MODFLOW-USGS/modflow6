@@ -80,7 +80,9 @@ def build_model(idx, dir):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = name
@@ -129,7 +131,9 @@ def build_model(idx, dir):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -224,7 +228,9 @@ def build_model(idx, dir):
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
+    obs = flopy.mf6.ModflowUtlobs(
+        gwf, pname="head_obs", digits=20, continuous=obs_dict
+    )
 
     return sim, None
 
@@ -263,7 +269,9 @@ def eval_flow(sim):
     print("Ending volume of mobile water in unsat zone is ", vw)
     print("Storage change for mobile water in unsat zone should be ", qsto)
     print("Simulated storage is ", qstosim)
-    assert np.allclose(qsto, qstosim), "Simulated storage not equal known storage"
+    assert np.allclose(
+        qsto, qstosim
+    ), "Simulated storage not equal known storage"
     assert np.allclose(
         vw, volume_mobile_sim
     ), "Simulated mobile water volume in aux does not match known result"

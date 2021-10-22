@@ -2619,6 +2619,7 @@ contains
       ! Integer can't be read from strng; it's presumed to be a boundary
       ! name (already converted to uppercase)
       obsrv%FeatureName = strng(istart:istop)
+      !obsrv%FeatureName = trim(adjustl(strng))
       ! -- Observation may require summing rates from multiple boundaries,
       !    so assign NodeNumber as a value that indicates observation
       !    is for a named boundary or group of boundaries.

@@ -98,7 +98,9 @@ def get_model(ws, name, rech):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(

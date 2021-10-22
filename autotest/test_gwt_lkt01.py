@@ -64,7 +64,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -142,9 +144,15 @@ def build_model(idx, dir):
     connlen = connwidth = delr / 2.0
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
-    con_data.append((0, 0, (0, 0, 1), "HORIZONTAL", "None", 10, 10, connlen, connwidth))
-    con_data.append((0, 1, (0, 0, 3), "HORIZONTAL", "None", 10, 10, connlen, connwidth))
-    con_data.append((0, 2, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth))
+    con_data.append(
+        (0, 0, (0, 0, 1), "HORIZONTAL", "None", 10, 10, connlen, connwidth)
+    )
+    con_data.append(
+        (0, 1, (0, 0, 3), "HORIZONTAL", "None", 10, 10, connlen, connwidth)
+    )
+    con_data.append(
+        (0, 2, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth)
+    )
     p_data = [
         (0, "STATUS", "CONSTANT"),
         (0, "STAGE", -0.4),
@@ -238,7 +246,9 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename="{}.ic".format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename="{}.ic".format(gwtname)
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
@@ -313,7 +323,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[
             ("CONCENTRATION", "ALL"),
@@ -354,7 +366,9 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
-    answer = np.array([4.86242795, 27.24270616, 64.55536421, 27.24270616, 4.86242795])
+    answer = np.array(
+        [4.86242795, 27.24270616, 64.55536421, 27.24270616, 4.86242795]
+    )
     assert np.allclose(caq[-1].flatten(), answer), "{} {}".format(
         caq[-1].flatten(), answer
     )

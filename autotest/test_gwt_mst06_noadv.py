@@ -63,7 +63,9 @@ def build_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwt model
     gwtname = "gwt_" + name
@@ -107,10 +109,14 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=8.0, filename="{}.ic".format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=8.0, filename="{}.ic".format(gwtname)
+    )
 
     # mass storage and transfer
-    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1, zero_order_decay=True, decay=1.0)
+    mst = flopy.mf6.ModflowGwtmst(
+        gwt, porosity=0.1, zero_order_decay=True, decay=1.0
+    )
 
     srcs = {0: [[(0, 0, 0), 0.00]]}
     src = flopy.mf6.ModflowGwtsrc(
@@ -126,7 +132,9 @@ def build_model(idx, dir):
         gwt,
         budget_filerecord="{}.bud".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -142,7 +150,9 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc = cobj.get_ts((0, 0, 0))
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
@@ -150,8 +160,9 @@ def eval_transport(sim):
     # The answer
     # print(conc[:, 1])
     cres = np.array([7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0])
-    msg = "simulated concentrations do not match with known " "solution. {} {}".format(
-        conc[:, 1], cres
+    msg = (
+        "simulated concentrations do not match with known "
+        "solution. {} {}".format(conc[:, 1], cres)
     )
     assert np.allclose(cres, conc[:, 1]), msg
 
@@ -175,8 +186,9 @@ def eval_transport(sim):
         0.0,
         0.0,
     ]
-    msg = "simulated decay rates do not match with known " "solution. {} {}".format(
-        decay_rate, decay_rate_answer
+    msg = (
+        "simulated decay rates do not match with known "
+        "solution. {} {}".format(decay_rate, decay_rate_answer)
     )
     assert np.allclose(decay_rate, decay_rate_answer), msg
 
