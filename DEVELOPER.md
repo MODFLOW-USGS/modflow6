@@ -93,30 +93,33 @@ First, install [Meson](https://mesonbuild.com/Getting-meson.html) and assure it 
 When using Visual Studio Code, you can use tasks as described [here](.vscode/README.md).
 For the more general instructions, continue to read this section.
 
-First configure the build directory:
+First configure the build directory.
+Per default it uses the compiler flags for a release build.
+If you want to create a debug build, add `-Doptimization=0` to the following `setup` command.
 
 ```shell
 # bash (linux and macOS)
-meson builddir --prefix=$(pwd) --libdir=bin
+meson setup builddir --prefix=$(pwd) --libdir=bin
 
 # cmd (windows)
-meson builddir --prefix=%CD% --libdir=bin
+meson setup builddir --prefix=%CD% --libdir=bin
 ```
 
-For the following compilations, only this command has to be executed:
+Compile MODFLOW 6 by executing:
 
 ```shell
 meson compile -C builddir
 ```
 
-In order to run the tests the binaries have to be installed by executing:
+In order to run the tests the binaries have to be installed:
 
 ```shell
 meson install -C builddir
 ```
 
 The binaries can then be found in the `bin` folder.
-`meson install` also triggers a compilation if necessary so executing `meson install` is enough to get up-to-date binaries in the `bin` folder.
+`meson install` also triggers a compilation if necessary.
+Therefore, executing `meson install` is enough to get up-to-date binaries in the `bin` folder.
 
 ### Visual Studio
 
