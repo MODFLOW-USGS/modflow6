@@ -120,7 +120,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
           source /opt/intel/oneapi/setvars.sh
-          meson setup builddir --buildtype=debugoptimized --prefix=$(pwd) --libdir=bin
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson compile -C builddir
           meson install -C builddir
           cd autotest
@@ -131,7 +131,7 @@ jobs:
         shell: cmd
         run: |
           call ".github/intel-scripts/ifortvars_windows.bat"
-          meson setup builddir --buildtype=debugoptimized --prefix=%CD% --libdir=bin
+          meson setup builddir -Ddebug=false --prefix=%CD% --libdir=bin
           meson compile -C builddir
           meson install -C builddir
           cd autotest
