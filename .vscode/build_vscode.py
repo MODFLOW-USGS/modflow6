@@ -32,7 +32,9 @@ if not os.path.isdir(builddir):
 subprocess.run(["meson", "compile", "-C", builddir], check=True)
 
 # Remove all files from bin folder
-for file in os.scandir(os.path.join(os.getcwd(), "bin")):
-    os.remove(file.path)
+for dir_entry in os.scandir(os.path.join(os.getcwd(), "bin")):
+    path = dir_entry.path
+    if os.path.isfile(path):
+        os.remove(path)
 
 subprocess.run(["meson", "install", "-C", builddir], check=True)
