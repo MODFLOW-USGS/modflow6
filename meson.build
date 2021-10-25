@@ -9,7 +9,7 @@ project(
 ])
 
 if get_option('optimization') == '3'
-  error('Only optimzation levels <= 2 are supported')
+  error('Only optimization levels <= 2 are supported')
 endif
 
 if get_option('optimization') == '2'
