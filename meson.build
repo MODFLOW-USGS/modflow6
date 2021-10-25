@@ -9,16 +9,16 @@ project(
 ])
 
 if get_option('optimization') == '3'
-  error('Only optimzation levels <= 2 are supported')
+  error('Only optimization levels <= 2 are supported')
 endif
 
 if get_option('optimization') == '2'
   profile = 'release'
 else
-  profile = 'debug'
+  profile = 'develop'
 endif
 
-message('The used profile is: ', profile)
+message('The used profile is:', profile)
 
 
 fc = meson.get_compiler('fortran')
@@ -34,7 +34,7 @@ if fc_id == 'gcc'
   # Options specific to profile
   if profile == 'release'
     compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid'] 
-  elif profile == 'debug'
+  elif profile == 'develop'
     compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid,denormal'] 
   endif
 

@@ -16,7 +16,7 @@
                     "--buildtype",
                     "release",
                     "build",
-                ],                
+                ],
                 "problemMatcher": "$msCompile"
             },
             "args": [
@@ -29,7 +29,9 @@
                 "build",
             ],
             "group": "build",
-            "problemMatcher": "$gcc"
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Rebuild MF6 (ifort, release)",
@@ -45,7 +47,6 @@
                     "release",
                     "rebuild",
                 ],
-                "problemMatcher": "$msCompile",
             },
             "args": [
                 "${config:python.defaultInterpreterPath}",
@@ -56,8 +57,10 @@
                 "release",
                 "rebuild",
             ],
-            "group": "build",            
-            "problemMatcher": "$gcc"
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Build MF6 (gfortran, release)",
@@ -72,7 +75,7 @@
                     "--buildtype",
                     "release",
                     "build",
-                ],                
+                ],
                 "problemMatcher": "$msCompile"
             },
             "args": [
@@ -85,7 +88,9 @@
                 "build",
             ],
             "group": "build",
-            "problemMatcher": "$gcc"
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Rebuild MF6 (gfortran, release)",
@@ -101,7 +106,6 @@
                     "release",
                     "rebuild",
                 ],
-                "problemMatcher": "$msCompile",
             },
             "args": [
                 "${config:python.defaultInterpreterPath}",
@@ -112,8 +116,10 @@
                 "release",
                 "rebuild",
             ],
-            "group": "build",            
-            "problemMatcher": "$gcc"
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Build MF6 (ifort, debug)",
@@ -128,7 +134,7 @@
                     "--buildtype",
                     "debug",
                     "build",
-                ],                
+                ],
                 "problemMatcher": "$msCompile"
             },
             "args": [
@@ -141,7 +147,9 @@
                 "build",
             ],
             "group": "build",
-            "problemMatcher": "$gcc"
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Rebuild MF6 (ifort, debug)",
@@ -157,7 +165,6 @@
                     "debug",
                     "rebuild",
                 ],
-                "problemMatcher": "$msCompile",
             },
             "args": [
                 "${config:python.defaultInterpreterPath}",
@@ -168,8 +175,10 @@
                 "debug",
                 "rebuild",
             ],
-            "group": "build",            
-            "problemMatcher": "$gcc"
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Build MF6 (gfortran, debug)",
@@ -184,7 +193,7 @@
                     "--buildtype",
                     "debug",
                     "build",
-                ],                
+                ],
                 "problemMatcher": "$msCompile"
             },
             "args": [
@@ -197,7 +206,9 @@
                 "build",
             ],
             "group": "build",
-            "problemMatcher": "$gcc"
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "label": "Rebuild MF6 (gfortran, debug)",
@@ -213,7 +224,6 @@
                     "debug",
                     "rebuild",
                 ],
-                "problemMatcher": "$msCompile",
             },
             "args": [
                 "${config:python.defaultInterpreterPath}",
@@ -224,8 +234,10 @@
                 "debug",
                 "rebuild",
             ],
-            "group": "build",            
-            "problemMatcher": "$gcc"
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
         },
     ]
 }
