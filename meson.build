@@ -15,7 +15,7 @@ endif
 if get_option('optimization') == '2'
   profile = 'release'
 else
-  profile = 'debug'
+  profile = 'develop'
 endif
 
 message('The used profile is:', profile)
@@ -34,7 +34,7 @@ if fc_id == 'gcc'
   # Options specific to profile
   if profile == 'release'
     compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid'] 
-  elif profile == 'debug'
+  elif profile == 'develop'
     compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid,denormal'] 
   endif
 
