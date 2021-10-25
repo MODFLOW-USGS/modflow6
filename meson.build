@@ -18,7 +18,7 @@ else
   profile = 'debug'
 endif
 
-message('The used profile is: ', profile)
+message('The used profile is:', profile)
 
 
 fc = meson.get_compiler('fortran')
