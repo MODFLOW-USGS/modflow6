@@ -12,13 +12,13 @@ if running_on_CI():
 
 # path to rebuilt executables for previous versions of MODFLOW
 rebuilt_bindir = os.path.join("..", "bin", "rebuilt")
-)
+
 if not os.path.exists(rebuilt_bindir):
     os.makedirs(rebuilt_bindir)
 
 # paths to downloaded for previous versions of MODFLOW
 downloaded_bindir = os.path.join("..", "bin", "downloaded")
-)
+
 if not os.path.exists(downloaded_bindir):
     os.makedirs(downloaded_bindir)
 
