@@ -21,7 +21,8 @@ if sysinfo.lower() == "win32":
     target_so = ".dll"
 
 # paths to executables for  previous versions of MODFLOW
-ebindir = os.path.join(os.path.expanduser("~"), ".local", "bin")
+downloaded_bindir = os.path.join("..", "bin", "downloaded")
+rebuilt_bindir = os.path.join("..", "bin", "rebuilt")
 
 # paths to MODFLOW 6 executable, source files, and example files
 bindir = os.path.join("..", "bin")
@@ -29,19 +30,19 @@ bindir = os.path.join("..", "bin")
 # create dictionary of valid executable targets for regression tests
 target_dict = {}
 
-target = target_pth("mf2005dbl{}".format(target_ext), ebindir)
+target = target_pth("mf2005dbl{}".format(target_ext), downloaded_bindir)
 target_dict["mf2005"] = target
-target = target_pth("mfnwtdbl{}".format(target_ext), ebindir)
+target = target_pth("mfnwtdbl{}".format(target_ext), downloaded_bindir)
 target_dict["mfnwt"] = target
-target = target_pth("mfusgdbl{}".format(target_ext), ebindir)
+target = target_pth("mfusgdbl{}".format(target_ext), downloaded_bindir)
 target_dict["mfusg"] = target
-target = target_pth("mflgrdbl{}".format(target_ext), ebindir)
+target = target_pth("mflgrdbl{}".format(target_ext), downloaded_bindir)
 target_dict["mflgr"] = target
-target = target_pth("mf2005{}".format(target_ext), ebindir)
+target = target_pth("mf2005{}".format(target_ext), downloaded_bindir)
 target_dict["mf2005s"] = target
-target = target_pth("mt3dms{}".format(target_ext), ebindir)
+target = target_pth("mt3dms{}".format(target_ext), downloaded_bindir)
 target_dict["mt3dms"] = target
-target = target_pth("mf6{}".format(target_ext), ebindir)
+target = target_pth("mf6{}".format(target_ext), rebuilt_bindir)
 target_dict["mf6-regression"] = target
 
 # create MODFLOW 6 target name and add to dictionary
