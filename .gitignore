@@ -64,6 +64,7 @@ bin/libmf6.*
 bin/mf5to6
 bin/zbud6
 bin/*.txt
+bin/**/*.json
 
 UserPrefs.xml
 

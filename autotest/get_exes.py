@@ -10,12 +10,17 @@ if running_on_CI():
     print("running on CI environment")
     os.environ["PYMAKE_DOUBLE"] = "1"
 
-# paths to executables for previous versions of MODFLOW
-ebindir = os.path.abspath(
-    os.path.join(os.path.expanduser("~"), ".local", "bin")
-)
-if not os.path.exists(ebindir):
-    os.makedirs(ebindir)
+# path to rebuilt executables for previous versions of MODFLOW
+rebuilt_bindir = os.path.join("..", "bin", "rebuilt")
+
+if not os.path.exists(rebuilt_bindir):
+    os.makedirs(rebuilt_bindir)
+
+# paths to downloaded for previous versions of MODFLOW
+downloaded_bindir = os.path.join("..", "bin", "downloaded")
+
+if not os.path.exists(downloaded_bindir):
+    os.makedirs(downloaded_bindir)
 
 
 mfexe_pth = "temp/mfexes"
@@ -52,7 +57,7 @@ def create_dir(pth):
 def rebuild_mf6_release():
     pm = pymake.Pymake(verbose=True)
     pm.target = "mf6"
-    pm.appdir = ebindir
+    pm.appdir = rebuilt_bindir
     download_pth = os.path.join("temp")
     target_dict = pymake.usgs_program_data.get_target(pm.target)
 
@@ -105,7 +110,7 @@ def test_getmfexes(verify=True):
     for target in os.listdir(mfexe_pth):
         srcpth = os.path.join(mfexe_pth, target)
         if os.path.isfile(srcpth):
-            dstpth = os.path.join(ebindir, target)
+            dstpth = os.path.join(downloaded_bindir, target)
             print("copying {} -> {}".format(srcpth, dstpth))
             shutil.copy(srcpth, dstpth)
 
