@@ -27,6 +27,7 @@ module GwfModule
   private
   public :: gwf_cr
   public :: GwfModelType
+  public :: CastAsGwfModel
 
   type, extends(NumericalModelType) :: GwfModelType
 
@@ -1616,5 +1617,23 @@ module GwfModule
     ! -- return
     return
   end subroutine ftype_check
+  
+  !> @brief Cast to GWF model
+  !<
+  function CastAsGwfModel(model) result (gwfModel)
+    implicit none
+    class(*), pointer, intent(inout) :: model
+    class(GwfModelType), pointer :: gwfModel
+
+    gwfModel => null()
+    if (.not. associated(model)) return
+    select type (model)
+    class is (GwfModelType)
+    gwfModel => model
+    end select
+    return
+  
+  end function CastAsGwfModel
+  
 
 end module GwfModule

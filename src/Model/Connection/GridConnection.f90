@@ -6,6 +6,7 @@ module GridConnectionModule
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface, arePointersEqual
   use NumericalModelModule
+  use GwfDisuModule
   use DisConnExchangeModule
   use TopologyModule
   use ConnectionsModule  
@@ -17,7 +18,7 @@ module GridConnectionModule
   integer(I4B), parameter :: MaxNeighbors = 7
   
   !> This class is used to construct the connections object for 
-  !! the interface model's spatial discretization/grid. 
+  !! the interface model's spatial discretization/grid.
   !! 
   !! It works as follows:
   !!
@@ -78,6 +79,8 @@ module GridConnectionModule
     procedure, pass(this) :: extendConnection
     generic :: getInterfaceIndex => getInterfaceIndexByCell, &
                                     getInterfaceIndexByIndexModel
+
+    procedure, pass(this) :: getDiscretization
     
     ! 'protected'
     procedure, pass(this) :: isPeriodic
@@ -1052,6 +1055,66 @@ module GridConnectionModule
     call mem_allocate(this%nrOfCells, 'NRCELLS', this%memoryPath)
     
   end subroutine allocateScalars
+
+  !> @brief Sets the discretization (DISU) after all
+  !! preprocessing by this grid connection has been done,
+  !< this comes after disu_cr
+  subroutine getDiscretization(this, disu)  
+    use ConnectionsModule 
+    use SparseModule, only: sparsematrix
+    class(GridConnectionType) :: this   !< the grid connection
+    class(GwfDisuType), pointer :: disu !< the target disu object 
+    ! local
+    integer(I4B) :: icell, nrOfCells, idx
+    type(NumericalModelType), pointer :: model
+    real(DP) :: x,y    
+          
+    ! the following is similar to dis_df
+    nrOfCells = this%nrOfCells
+    disu%nodes = nrOfCells
+    disu%nodesuser = nrOfCells
+    disu%nja = this%connections%nja
+
+    call disu%allocate_arrays()
+    ! these are otherwise allocated in dis%read_dimensions    
+    call disu%allocate_arrays_mem()
+    
+    ! fill data
+    do icell = 1, nrOfCells
+      idx = this%idxToGlobal(icell)%index
+      model => this%idxToGlobal(icell)%model
+      
+      disu%top(icell) = model%dis%top(idx)
+      disu%bot(icell) = model%dis%bot(idx)
+      disu%area(icell) = model%dis%area(idx)
+    end do
+     
+    ! grid connections follow from GridConnection:
+    disu%con => this%connections
+    disu%njas =  disu%con%njas
+    
+    ! copy cell x,y
+    do icell = 1, nrOfCells
+      idx = this%idxToGlobal(icell)%index
+      model => this%idxToGlobal(icell)%model
+      call model%dis%get_cellxy(idx, x, y)
+      ! we need to have the origins in here explicitly since
+      ! we are merging grids with possibly different origins
+      ! TODO_MJR: how 'bout rotation?
+      disu%cellxy(1,icell) = x + model%dis%xorigin
+      disu%cellxy(2,icell) = y + model%dis%yorigin
+    end do
+
+    ! if vertices will be needed, it will look like this:
+    !
+    ! 1. determine total nr. of verts
+    ! 2. allocate vertices list
+    ! 3. create sparse
+    ! 4. get vertex data per cell, add functions to base
+    ! 5. add vertex (x,y) to list and connectivity to sparse
+    ! 6. generate ia/ja from sparse
+    
+  end subroutine getDiscretization
   
   !> @brief Deallocate grid connection resources
   !<

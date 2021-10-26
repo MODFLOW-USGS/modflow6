@@ -49,8 +49,8 @@ module GwtGwtConnectionModule
 
 contains
 
-  !> @brief Basic construction of the connection
-  !<
+!> @brief Basic construction of the connection
+!<
 subroutine gwtGwtConnection_ctor(this, model)  
   use InputOutputModule, only: openfile
   class(GwtGwtConnectionType) :: this         !< the connection
@@ -59,8 +59,10 @@ subroutine gwtGwtConnection_ctor(this, model)
   ! local
   character(len=LINELENGTH) :: fname
   character(len=LENCOMPONENTNAME) :: name
+  class(*), pointer :: modelPtr
 
-  this%gwtModel => CastToGwtModel(model)
+  modelPtr => model
+  this%gwtModel => CastAsGwtModel(modelPtr)
   
   if (model%id > 99999) then
     write(*,*) 'Error: running 100000 submodels or more is not yet supported'
@@ -74,18 +76,20 @@ subroutine gwtGwtConnection_ctor(this, model)
   write(this%iout, '(a,a)') 'Creating GWT-GWT connection for model ',           &
                             trim(this%gwtModel%name)
 
-! first call base constructor
-call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
+  ! first call base constructor
+  call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
 
-call this%allocateScalars()
-this%typename = 'GWT-GWT'
-this%iAdvScheme = 0
+  call this%allocateScalars()
+  this%typename = 'GWT-GWT'
+  this%iAdvScheme = 0
 
-allocate(this%gwtInterfaceModel)
-this%interfaceModel => this%gwtInterfaceModel
+  allocate(this%gwtInterfaceModel)
+  this%interfaceModel => this%gwtInterfaceModel
 
 end subroutine gwtGwtConnection_ctor
 
+!> @brief Allocate scalar variables for this connection
+!<
 subroutine allocateScalars(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
@@ -125,8 +129,7 @@ subroutine gwtgwtcon_df(this)
   ! we have to 'catch up' and create the interface model
   ! here, then the remainder of this routine will be define
   write(imName,'(a,i5.5)') 'GWTIM_', this%gwtModel%id
-  call this%gwtInterfaceModel%construct(imName, this%iout)
-  call this%gwtInterfaceModel%createModel(this%gridConnection)
+  call this%gwtInterfaceModel%gwtifmod_cr(imName, this%iout, this%gridConnection)
 
   ! connect X, RHS, and IBOUND
   call this%spatialcon_setmodelptrs()
@@ -140,6 +143,14 @@ end subroutine gwtgwtcon_df
 !<
 subroutine gwtgwtcon_ar(this)
   class(GwtGwtConnectionType) :: this !< the connection
+
+  ! TODO_MJR: validate
+
+  ! allocate and read base
+  call this%spatialcon_ar()
+
+  ! ... and now the interface model
+  call this%gwtInterfaceModel%model_ar()
 
 end subroutine gwtgwtcon_ar
 
@@ -205,7 +216,7 @@ subroutine gwtgwtcon_da(this)
   ! arrays
   
   ! interface model
-  !call this%interfaceModel%model_da()
+  call this%gwtInterfaceModel%model_da()
   deallocate(this%gwtInterfaceModel)
 
   ! dealloc base
@@ -220,20 +231,5 @@ subroutine gwtgwtcon_da(this)
   end do
 
 end subroutine gwtgwtcon_da
-
-!> @brief Cast NumericalModelType to GwtModelType
-!< TODO_MJR: move this to GWT
-function CastToGwtModel(obj) result(gwtmodel)
-  use NumericalModelModule, only: NumericalModelType
-  class(NumericalModelType), pointer :: obj !< The numerical model to be cast
-  class(GwtModelType), pointer :: gwtmodel  !< The GWT model
-  
-  gwtmodel => null()
-  select type(obj)
-    type is (GwtModelType)
-      gwtmodel => obj
-    end select
-    
-end function CastToGwtModel
 
 end module

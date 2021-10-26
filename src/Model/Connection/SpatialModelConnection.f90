@@ -61,17 +61,18 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
 
     ! partly overriding NumericalExchangeType:
-    procedure, pass(this) :: exg_df => spatialcon_df
+    procedure, pass(this) :: exg_df => spatialcon_df    
+    procedure, pass(this) :: exg_ar => spatialcon_ar
     procedure, pass(this) :: exg_mc => spatialcon_mc
     procedure, pass(this) :: exg_da => spatialcon_da
 
-    procedure, pass(this) :: spatialcon_df
+    procedure, pass(this) :: spatialcon_df    
+    procedure, pass(this) :: spatialcon_ar
+    procedure, pass(this) :: spatialcon_da
+    
+    ! protected    
     procedure, pass(this) :: spatialcon_setmodelptrs
     procedure, pass(this) :: spatialcon_connect
-    procedure, pass(this) :: spatialcon_mc
-    procedure, pass(this) :: spatialcon_da
-
-    ! protected
     procedure, pass(this) :: validateConnection
 
     ! private
@@ -144,6 +145,33 @@ contains ! module procedures
     call this%allocateArrays()
     
   end subroutine spatialcon_df
+
+  !> @brief Allocate the connection, 
+  !<
+  subroutine spatialcon_ar(this)
+    class(SpatialModelConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: icell, idx, localIdx
+    class(GridConnectionType), pointer :: gc
+    class(NumericalModelType), pointer :: model
+    
+    ! init x and ibound with model data
+    gc => this%gridConnection
+    do icell = 1, gc%nrOfCells
+      idx = gc%idxToGlobal(icell)%index
+      model => gc%idxToGlobal(icell)%model      
+      this%interfaceModel%x(icell) = model%x(idx)
+      this%interfaceModel%ibound(icell) = model%ibound(idx)
+    end do
+
+    ! fill mapping to global index (which can be
+    ! done now because moffset is set in sln_df)
+    do localIdx = 1, gc%nrOfCells
+      gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index +        &
+                                    gc%idxToGlobal(localIdx)%model%moffset
+    end do
+
+  end subroutine spatialcon_ar
 
   !> @brief set model pointers to connection 
   !<

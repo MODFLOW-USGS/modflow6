@@ -18,6 +18,7 @@ module GwfDisuModule
   public :: GwfDisuType
   public :: disu_cr
   public :: disu_init_mem
+  public :: CastAsDisuType
 
   type, extends(DisBaseType) :: GwfDisuType
     integer(I4B), pointer :: njausr => null()                                    ! user-specified nja size
@@ -2028,5 +2029,19 @@ module GwfDisuModule
     ! -- return
     return
   end subroutine record_srcdst_list_header
+
+  !> @brief Cast base to DISU
+  !<
+  function CastAsDisuType(dis) result(disu)
+    class(*), pointer :: dis            !< base pointer to DISU object
+    class(GwfDisuType), pointer :: disu !< the resulting DISU pointer
+
+    disu => null()
+    select type(dis)
+    class is (GwfDisuType)
+      disu => dis
+    end select
+
+  end function CastAsDisuType
 
 end module GwfDisuModule

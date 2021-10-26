@@ -35,8 +35,8 @@ module GwfGwfConnectionModule
     generic, public :: construct => gwfGwfConnection_ctor
     
     ! overriding NumericalExchangeType
+    procedure, pass(this) :: exg_df => gwfgwfcon_df    
     procedure, pass(this) :: exg_ar => gwfgwfcon_ar
-    procedure, pass(this) :: exg_df => gwfgwfcon_df 
     procedure, pass(this) :: exg_ac => gwfgwfcon_ac
     procedure, pass(this) :: exg_rp => gwfgwfcon_rp
     procedure, pass(this) :: exg_cf => gwfgwfcon_cf
@@ -123,10 +123,11 @@ contains
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
     write(imName,'(a,i5.5)') 'IFM_', this%gwfModel%id
-    call this%gwfInterfaceModel%construct(imName, this%iout)
-    call this%gwfInterfaceModel%createModel(this%gridConnection)
-    call this%gwfInterfaceModel%defineModel(this%gwfModel%npf%satomega, &
-                                            this%iXt3dOnExchange)
+    call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
+
+    this%gwfInterfaceModel%npf%satomega = this%gwfModel%npf%satomega
+    this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
+    call this%gwfInterfaceModel%model_df()
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
@@ -152,10 +153,7 @@ contains
   subroutine gwfgwfcon_ar(this)
   use GridConnectionModule, only: GridConnectionType
     class(GwfGwfConnectionType) :: this !< this connection
-    ! local    
-    integer(I4B) :: icell, idx, localIdx
-    class(NumericalModelType), pointer :: model
-    type(GridConnectionType), pointer :: gc !< pointer to the grid connection    
+    ! local 
     integer(I4B) :: iex
     class(GwfExchangeType), pointer :: gwfEx
 
@@ -163,27 +161,12 @@ contains
     ! NB: only makes sense after the models' allocate&read have been
     ! called, which is why we do it here
     call this%validateConnection()
+  
+    ! allocate and read base
+    call this%spatialcon_ar()
 
-    gc => this%gridConnection
-
-    ! init x and ibound with model data
-    do icell = 1, gc%nrOfCells     
-      idx = gc%idxToGlobal(icell)%index
-      model => gc%idxToGlobal(icell)%model
-      
-      this%gwfInterfaceModel%x(icell) = model%x(idx)
-      this%gwfInterfaceModel%ibound(icell) = model%ibound(idx)
-    end do
-    
-    ! *_ar
-    call this%gwfInterfaceModel%allocateAndReadModel()
-
-    ! fill mapping to global index (which can be
-    ! done now because moffset is set in sln_df)
-    do localIdx = 1, gc%nrOfCells
-      gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index +        &
-                                    gc%idxToGlobal(localIdx)%model%moffset
-    end do
+    ! ... and now the interface model
+    call this%gwfInterfaceModel%model_ar()
 
     ! loop over exchanges and AR the movers and obs
     do iex=1, this%localExchanges%Count()
@@ -197,6 +180,7 @@ contains
         end if
       end if
     end do
+
   end subroutine gwfgwfcon_ar
 
   !> @brief Read time varying data when required

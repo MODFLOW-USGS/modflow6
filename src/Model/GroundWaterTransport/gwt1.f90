@@ -31,6 +31,7 @@ module GwtModule
   private
   public :: gwt_cr
   public :: GwtModelType
+  public :: CastAsGwtModel
 
   type, extends(NumericalModelType) :: GwtModelType
     
@@ -1229,6 +1230,18 @@ module GwtModule
     return
   end subroutine ftype_check
 
-
+  !> @brief Cast to GwtModelType
+  function CastAsGwtModel(model) result(gwtmodel)
+    class(*), pointer :: model               !< The object to be cast
+    class(GwtModelType), pointer :: gwtmodel !< The GWT model
+    
+    gwtmodel => null()
+    if (.not. associated(model)) return
+    select type(model)
+    type is (GwtModelType)
+      gwtmodel => model
+    end select
+      
+  end function CastAsGwtModel
   
 end module GwtModule

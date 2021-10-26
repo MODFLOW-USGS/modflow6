@@ -1,7 +1,10 @@
 module GwtInterfaceModelModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B  
+  use MemoryManagerModule, only: mem_allocate
+  use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
-  use GwtModule, only: GwtModelType
+  use GwtModule, only: GwtModelType, CastAsGwtModel
+  use GwfDisuModule, only: disu_cr, CastAsDisuType
   use GwtAdvModule, only: adv_cr, GwtAdvType
   use GwtAdvOptionsModule, only: GwtAdvOptionsType
   use GridConnectionModule
@@ -14,65 +17,86 @@ module GwtInterfaceModelModule
   !! its GWT neighbors. The interface model itself will not be part 
   !! of the solution, it is not being solved. 
   type, public, extends(GwtModelType) :: GwtInterfaceModelType
-  
-    class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
-                                                             !! are calculated with this interface model
+    class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the interface grid
+    class(GwtModelType), private, pointer :: owner => null()          !< the real GWT model for which the exchange coefficients
+                                                                      !! are calculated with this interface model
   contains
-    procedure, pass(this) :: construct
-    procedure, pass(this) :: createModel
-    ! override
-    procedure :: model_da => deallocateModel
+    procedure, pass(this) :: gwtifmod_cr
+    procedure, pass(this) :: model_df => gwtifmod_df
+    procedure, pass(this) :: model_ar => gwtifmod_ar
+    procedure, pass(this) :: model_da => gwtifmod_da
   end type GwtInterfaceModelType
 
 contains
 
-!> @brief Construction and minimal initialization
-!<
-subroutine construct(this, name, iout)
-  use MemoryHelperModule, only: create_mem_path
-  class(GwtInterfaceModelType), intent(inout) :: this !< the GWT interface model
-  character(len=*), intent(in)  :: name               !< the interface model's name
-  integer(I4B), intent(in) :: iout                    !< the output unit, to be passed 
-                                                      !! to the packages as well
-  
+!> @brief Create the interface model, analogously to what 
+!< happens in gwt_cr
+subroutine gwtifmod_cr(this, name, iout, gridConn)
+  class(GwtInterfaceModelType), intent(inout) :: this        !< the GWT interface model
+  character(len=*), intent(in)  :: name                      !< the interface model's name
+  integer(I4B), intent(in) :: iout                           !< the output unit
+  class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection data for creating a DISU
+  ! local
+  class(NumericalModelType), pointer :: numMod
+  class(*), pointer :: modelPtr
+
   this%memoryPath = create_mem_path(name)
   call this%allocate_scalars(name)
 
   this%iout = iout
-  
-end subroutine construct
- 
-!> @brief Set up the interface model, analogously to what 
-!< happens in gwt_cr
-subroutine createModel(this, gridConn)
-  use MemoryManagerModule, only: mem_allocate
-  use Xt3dModule, only: xt3d_cr
-  class(GwtInterfaceModelType), intent(inout) :: this        !< the GWT interface model
-  class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection data for creating a DISU
-  ! local
-  class(NumericalModelType), pointer :: numMod
+  this%gridConnection => gridConn
+  modelPtr => gridConn%model
+  this%owner => CastAsGwtModel(modelPtr)
 
-  numMod => gridConn%model
-  select type (numMod)
-  class is (GwtModelType)
-    this%owner => numMod
-  end select
-   
-  ! create disu for interface
-  
-  ! create packages
+  ! create dis and packages
   ! TODO_MJR: fmi
+  call disu_cr(this%dis, this%name, -1, this%iout)
   call adv_cr(this%adv, this%name, -1, this%iout, this%fmi)
     
-end subroutine createModel
+end subroutine gwtifmod_cr
 
-subroutine deallocateModel(this)
+!> @brief Define the GWT interface model
+!<
+subroutine gwtifmod_df(this)
+  class(GwtInterfaceModelType) :: this !< the GWT interface model
+  ! local
+  class(*), pointer :: disPtr
+
+  this%moffset = 0
+
+  ! define DISU
+  disPtr => this%dis
+  call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
+
+end subroutine gwtifmod_df
+
+
+!> @brief Allocate and read the GWT interface model and its packages
+!<
+subroutine gwtifmod_ar(this)
+  class(GwtInterfaceModelType) :: this !< the GWT interface model
+  ! local
+  class(*), pointer :: disPtr
+  type(GwtAdvOptionsType) :: advecOpt
+
+  advecOpt%iAdvScheme = 2
+
+  ! define DISU    
+  disPtr => this%dis
+  call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
+  call this%adv%adv_ar(this%dis, this%ibound, advecOpt)
+
+end subroutine gwtifmod_ar
+
+!> @brief Clean up resources
+!<
+subroutine gwtifmod_da(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
 
   ! dealloc base
-  call this%model_da()
+  !call this%model_da()
 
-end subroutine deallocateModel
+end subroutine gwtifmod_da
 
 
 end module GwtInterfaceModelModule
