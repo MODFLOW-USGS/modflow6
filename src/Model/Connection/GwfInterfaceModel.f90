@@ -91,14 +91,16 @@ contains
     
   end subroutine createModel
   
-  subroutine defineModel(this, satomega)
+  subroutine defineModel(this, satomega, ixt3d)
     class(GwfInterfaceModelType), intent(inout) :: this
     real(DP) :: satomega
+    integer(I4B) :: ixt3d
     ! local
     type(GwfNpfOptionsType) :: npfOptions
 
     this%moffset = 0
     this%npf%satomega = satomega
+    this%npf%ixt3d = ixt3d
 
     ! define NPF package
     call npfOptions%construct()

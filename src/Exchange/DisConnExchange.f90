@@ -1,5 +1,5 @@
 module DisConnExchangeModule
-use KindModule, only: I4B, DP
+use KindModule, only: I4B, DP, LGP
 use ConstantsModule, only: LENAUXNAME, LENBOUNDNAME
 use ListModule, only: ListType
 use NumericalModelModule, only: NumericalModelType
@@ -40,6 +40,7 @@ type, extends(NumericalExchangeType) :: DisConnExchangeType
   procedure :: allocate_scalars
   procedure :: allocate_arrays
   procedure :: disconnex_da
+  procedure :: use_interface_model
   
 
 end type DisConnExchangeType
@@ -83,6 +84,18 @@ subroutine allocate_arrays(this)
   call mem_allocate(this%auxvar, this%naux, this%nexg, 'AUXVAR', this%memoryPath)
 
 end subroutine allocate_arrays
+
+!> @brief Should interface model be used to handle these
+!! exchanges, to be overridden for inheriting types
+!<
+function use_interface_model(this) result(useIM)
+  class(DisConnExchangeType) :: this !< instance of exchange object
+  logical(LGP) :: useIM              !< flag whether interface model should be used
+                                     !! for this exchange instead
+
+  useIM = .false.
+
+end function
 
 !> @brief clean up all scalars and arrays
 !<

@@ -79,6 +79,7 @@ module GwfGwfExchangeModule
     procedure          :: exg_fp      => gwf_gwf_fp
     procedure          :: get_iasym   => gwf_gwf_get_iasym
     procedure          :: connects_model => gwf_gwf_connects_model
+    procedure          :: use_interface_model
     procedure          :: allocate_scalars
     procedure          :: allocate_arrays
     procedure          :: read_options
@@ -2249,6 +2250,16 @@ contains
     end select
 
   end function gwf_gwf_connects_model
+
+  !> @brief Should interface model be used for this exchange
+  !<
+  function use_interface_model(this) result(useIM)
+    class(GwfExchangeType) :: this !< instance of exchange object
+    logical(LGP) :: useIM          !< true when interface model should be used
+  
+    useIM = (this%ixt3d > 0)
+  
+  end function
 
   subroutine gwf_gwf_save_simvals(this)
 ! ******************************************************************************

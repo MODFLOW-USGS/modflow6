@@ -2,7 +2,7 @@ module GwtGwtConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME
   use SimModule, only: ustop
-  use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use SpatialModelConnectionModule
   use NumericalModelModule
   use GwtModule
@@ -19,12 +19,12 @@ module GwtGwtConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwtGwtConnectionType
 
-    type(GwtModelType), pointer :: gwtModel => null()                 !< the model for which this connection exists
-    type(GwtInterfaceModelType), pointer :: interfaceModel => null()  !< the interface model
-    integer(I4B), pointer :: iAdvScheme => null()                     !< the advection scheme at the interface: 
-                                                                      !! 0 = upstream, 1 = central, 2 = TVD
+    type(GwtModelType), pointer :: gwtModel => null()                   !< the model for which this connection exists
+    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
+    integer(I4B), pointer :: iAdvScheme => null()                       !< the advection scheme at the interface: 
+                                                                        !! 0 = upstream, 1 = central, 2 = TVD
 
-    integer(I4B) :: iout                                              !< the list file for the interface model
+    integer(I4B) :: iout                                                !< the list file for the interface model
 
   contains
 
@@ -81,7 +81,8 @@ call this%allocateScalars()
 this%typename = 'GWT-GWT'
 this%iAdvScheme = 0
 
-allocate(this%interfaceModel)
+allocate(this%gwtInterfaceModel)
+this%interfaceModel => this%gwtInterfaceModel
 
 end subroutine gwtGwtConnection_ctor
 
@@ -124,8 +125,14 @@ subroutine gwtgwtcon_df(this)
   ! we have to 'catch up' and create the interface model
   ! here, then the remainder of this routine will be define
   write(imName,'(a,i5.5)') 'GWTIM_', this%gwtModel%id
-  call this%interfaceModel%construct(imName, this%iout)
-  call this%interfaceModel%createModel(this%gridConnection)
+  call this%gwtInterfaceModel%construct(imName, this%iout)
+  call this%gwtInterfaceModel%createModel(this%gridConnection)
+
+  ! connect X, RHS, and IBOUND
+  call this%spatialcon_setmodelptrs()
+
+  ! add connections from the interface model to solution matrix
+  call this%spatialcon_connect()
 
 end subroutine gwtgwtcon_df
 
@@ -188,6 +195,29 @@ end subroutine gwtgwtcon_ot
 
 subroutine gwtgwtcon_da(this)
   class(GwtGwtConnectionType) :: this !< the connection
+  ! local
+  class(GwtExchangeType), pointer :: gwtEx
+  integer(I4B) :: iex
+
+  ! scalars
+  call mem_deallocate(this%iAdvScheme)
+
+  ! arrays
+  
+  ! interface model
+  !call this%interfaceModel%model_da()
+  deallocate(this%gwtInterfaceModel)
+
+  ! dealloc base
+  call this%spatialcon_da()
+
+  ! we need to deallocate the baseexchanges we own:
+  do iex=1, this%localExchanges%Count()
+    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    if (associated(gwtEx%model1, this%gwtModel)) then
+      call gwtEx%exg_da()
+    end if
+  end do
 
 end subroutine gwtgwtcon_da
 

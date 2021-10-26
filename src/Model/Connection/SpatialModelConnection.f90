@@ -1,10 +1,13 @@
 module SpatialModelConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SparseModule, only:sparsematrix
+  use ConnectionsModule, only: ConnectionsType
+  use CsrUtilsModule, only: getCSRIndex
+  use SimModule, only: ustop
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType
   use ListModule, only: ListType
@@ -24,7 +27,8 @@ module SpatialModelConnectionModule
   !< values for the exchange.
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
-    class(NumericalModelType), pointer  :: owner => null()                !< the model whose connection this is    
+    class(NumericalModelType), pointer  :: owner => null()                !< the model whose connection this is
+    class(NumericalModelType), pointer  :: interfaceModel => null()       !< the interface model
     integer(I4B), pointer               :: nrOfConnections => null()      !< total nr. of connected cells (primary)
     type(ListType), pointer             :: localExchanges => null()       !< all exchanges which directly connect with our model,
                                                                           !! (we own all that have our owning model as model 1)
@@ -61,12 +65,13 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: exg_mc => spatialcon_mc
     procedure, pass(this) :: exg_da => spatialcon_da
 
-    procedure, pass(this) :: spatialcon_df 
+    procedure, pass(this) :: spatialcon_df
+    procedure, pass(this) :: spatialcon_setmodelptrs
+    procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: spatialcon_mc
     procedure, pass(this) :: spatialcon_da
 
     ! protected
-    procedure, pass(this) :: createCoefficientMatrix
     procedure, pass(this) :: validateConnection
 
     ! private
@@ -76,7 +81,9 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: getNrOfConnections    
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays    
-    procedure, private, pass(this) :: validateDisConnExchange
+    procedure, private, pass(this) :: validateDisConnExchange    
+    procedure, private, pass(this) :: createCoefficientMatrix    
+    procedure, private, pass(this) :: maskOwnerConnections
     
   end type SpatialModelConnectionType
 
@@ -102,6 +109,9 @@ contains ! module procedures
     this%internalStencilDepth = 1
     this%exchangeStencilDepth = 1
     this%nrOfConnections = 0
+
+    ! this should be set in derived ctor
+    this%interfaceModel => null()
         
   end subroutine spatialConnection_ctor
   
@@ -119,7 +129,7 @@ contains ! module procedures
   end subroutine addExchangeToSpatialConnection
   
   !> @brief Define this connection, mostly sets up the grid
-  !< connection and allocates arrays
+  !< connection, allocates arrays, and links x,rhs, and ibound
   subroutine spatialcon_df(this)
     class(SpatialModelConnectionType) :: this !< this connection
     
@@ -135,12 +145,93 @@ contains ! module procedures
     
   end subroutine spatialcon_df
 
+  !> @brief set model pointers to connection 
+  !<
+  subroutine spatialcon_setmodelptrs(this)
+    class(SpatialModelConnectionType) :: this !< this connection
+    
+    ! point x, ibound, and rhs to connection
+    this%interfaceModel%x => this%x
+    call mem_checkin(this%interfaceModel%x, 'X', this%interfaceModel%memoryPath, 'X', this%memoryPath)
+    this%interfaceModel%rhs => this%rhs
+    call mem_checkin(this%interfaceModel%rhs, 'RHS', this%interfaceModel%memoryPath, 'RHS', this%memoryPath)
+    this%interfaceModel%ibound => this%active
+    call mem_checkin(this%interfaceModel%ibound, 'IBOUND', this%interfaceModel%memoryPath, 'IBOUND', this%memoryPath)
+
+  end subroutine spatialcon_setmodelptrs
+
+  !> @brief map interface model connections to our sparse matrix,  
+  !< analogously to what happens in sln_connect.
+  subroutine spatialcon_connect(this)
+    class(SpatialModelConnectionType) :: this !< this connection
+    ! local
+    type(sparsematrix) :: sparse
+
+    call sparse%init(this%neq, this%neq, 7)
+    call this%interfaceModel%model_ac(sparse)
+    
+    ! create amat from sparse
+    call this%createCoefficientMatrix(sparse)
+    call sparse%destroy()
+    
+    ! map connections
+    call this%interfaceModel%model_mc(this%ia, this%ja)
+    call this%maskOwnerConnections()
+
+  end subroutine spatialcon_connect
+
+
+  !> @brief Mask the owner's connections
+  !!
+  !! Determine which connections are handled by the interface model 
+  !! (using the connections object in its discretization) and
+  !< set their mask to zero for the owning model.
+  subroutine maskOwnerConnections(this)
+    use CsrUtilsModule, only: getCSRIndex
+    class(SpatialModelConnectionType) :: this !< the connection
+    ! local
+    integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx
+    type(ConnectionsType), pointer :: conn
+    
+    ! set the mask on connections that are calculated by the interface model
+    conn => this%interfaceModel%dis%con
+    do n = 1, conn%nodes
+      ! only for connections internal to the owning model
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+        cycle
+      end if      
+      nloc = this%gridConnection%idxToGlobal(n)%index
+      
+      do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1
+        m = conn%ja(ipos)
+        if (.not. associated(this%gridConnection%idxToGlobal(m)%model, this%owner)) then
+            cycle
+        end if
+        mloc = this%gridConnection%idxToGlobal(m)%index
+        
+        if (conn%mask(ipos) > 0) then
+          ! calculated by interface model, set local model's mask to zero
+          csrIdx = getCSRIndex(nloc, mloc, this%owner%ia, this%owner%ja)          
+          if (csrIdx == -1) then
+            ! this can only happen with periodic boundary conditions, 
+            ! then there is no need to set the mask
+            if (this%gridConnection%isPeriodic(nloc, mloc)) cycle
+            
+            write(*,*) 'Error: cannot find cell connection in global system'
+            call ustop()
+          end if
+          
+          call this%owner%dis%con%set_mask(csrIdx, 0)          
+        end if
+      end do
+    end do
+    
+  end subroutine maskOwnerConnections
+
   !> @brief Creates the mapping from the local system 
   !< matrix to the global one
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
-    use CsrUtilsModule, only: getCSRIndex
-    use GridConnectionModule
     class(SpatialModelConnectionType) :: this       !< this connection
     integer(I4B), dimension(:), intent(in) :: iasln !< global IA array
     integer(I4B), dimension(:), intent(in) :: jasln !< global JA array

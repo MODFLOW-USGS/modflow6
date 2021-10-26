@@ -1,7 +1,7 @@
 module GwtGwtExchangeModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use ListModule, only: ListType
-  use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use DisConnExchangeModule
@@ -31,6 +31,8 @@ module GwtGwtExchangeModule
   contains
     procedure :: exg_df => gwtgwt_df
     procedure :: exg_da => gwtgwt_da
+    procedure :: connects_model => gwtgwt_connects_model
+    procedure :: use_interface_model
     procedure :: allocate_scalars
 
   end type GwtExchangeType
@@ -80,6 +82,37 @@ subroutine gwtexchange_create(filename, id, m1id, m2id)
 
 end subroutine gwtexchange_create
 
+!> @brief Return true when this exchange provides matrix 
+!< coefficients for solving @param model
+function gwtgwt_connects_model(this, model) result(is_connected)
+  class(GwtExchangeType) :: this                      !< the instance of the GWT-GWT exchange
+  class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
+  logical(LGP) :: is_connected                        !< true, when connected
+
+  is_connected = .false.
+  
+  select type(model)
+  class is (GwtModelType)    
+  if (associated(this%gwtmodel1, model)) then
+    is_connected = .true.
+  else if (associated(this%gwtmodel2, model)) then
+    is_connected = .true.
+  end if    
+  end select
+
+end function gwtgwt_connects_model
+
+!> @brief Should interface model be used for this exchange
+!<
+function use_interface_model(this) result(useIM)
+  class(GwtExchangeType) :: this !< instance of exchange object
+  logical(LGP) :: useIM          !< true when interface model should be used
+
+  ! transport always uses IM for this coupling
+  useIM = .true.
+
+end function
+
 !> @brief allocate the scalar variables for this exchange
 !<
 subroutine allocate_scalars(this)
@@ -97,12 +130,19 @@ end subroutine allocate_scalars
 subroutine gwtgwt_df(this)
   class(GwtExchangeType) :: this
 
+  call this%DisConnExchangeType%allocate_arrays()
+
 end subroutine gwtgwt_df
 
 !> @brief deallocate members of the exchange object
 !<
 subroutine gwtgwt_da(this)
   class(GwtExchangeType) :: this
+
+  call mem_deallocate(this%iAdvScheme)
+
+  ! deallocate base
+  call this%DisConnExchangeType%disconnex_da()
 
 end subroutine gwtgwt_da
 

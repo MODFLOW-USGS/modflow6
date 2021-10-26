@@ -20,6 +20,8 @@ module GwtInterfaceModelModule
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
+    ! override
+    procedure :: model_da => deallocateModel
   end type GwtInterfaceModelType
 
 contains
@@ -34,6 +36,8 @@ subroutine construct(this, name, iout)
                                                       !! to the packages as well
   
   this%memoryPath = create_mem_path(name)
+  call this%allocate_scalars(name)
+
   this%iout = iout
   
 end subroutine construct
@@ -61,6 +65,14 @@ subroutine createModel(this, gridConn)
   call adv_cr(this%adv, this%name, -1, this%iout, this%fmi)
     
 end subroutine createModel
+
+subroutine deallocateModel(this)
+  class(GwtInterfaceModelType) :: this !< the GWT interface model
+
+  ! dealloc base
+  call this%model_da()
+
+end subroutine deallocateModel
 
 
 end module GwtInterfaceModelModule

@@ -2,9 +2,9 @@ module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH  
   use CsrUtilsModule, only: getCSRIndex
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin  
-  use SimModule, only: ustop
   use SparseModule, only:sparsematrix
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use SimModule, only: ustop
   use SpatialModelConnectionModule  
   use GwfInterfaceModelModule
   use NumericalModelModule
@@ -24,12 +24,11 @@ module GwfGwfConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
-    type(GwfModelType), pointer :: gwfModel => null()                 !< the model for which this connection exists
-    type(GwfInterfaceModelType), pointer  :: interfaceModel => null() !< the interface model
-    integer(I4B), pointer :: iXt3dOnExchange => null()                !< run XT3D on the interface,
-                                                                      !! 0 = don't, 1 = matrix, 2 = rhs
-
-    integer(I4B) :: iout                                              !< the list file for the interface model
+    type(GwfModelType), pointer :: gwfModel => null()                    !< the model for which this connection exists
+    type(GwfInterfaceModelType), pointer  :: gwfInterfaceModel => null() !< the interface model
+    integer(I4B), pointer :: iXt3dOnExchange => null()                   !< run XT3D on the interface,
+                                                                         !! 0 = don't, 1 = matrix, 2 = rhs
+    integer(I4B) :: iout                                                 !< the list file for the interface model
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -52,7 +51,6 @@ module GwfGwfConnectionModule
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: maskOwnerConnections
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchanges
@@ -96,7 +94,8 @@ contains
     this%typename = 'GWF-GWF'
     this%iXt3dOnExchange = 1
     
-    allocate(this%interfaceModel)
+    allocate(this%gwfInterfaceModel)
+    this%interfaceModel => this%gwfInterfaceModel
   
   end subroutine gwfGwfConnection_ctor
       
@@ -108,11 +107,7 @@ contains
   subroutine gwfgwfcon_df(this)
     class(GwfGwfConnectionType) :: this !< this connection    
     ! local
-    type(sparsematrix) :: sparse
-    real(DP) :: satOmega
     character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
-        
-    satOmega = this%gwfModel%npf%satomega
 
     if (this%gwfModel%npf%ixt3d > 0) then
       this%internalStencilDepth = 2
@@ -121,90 +116,25 @@ contains
       this%exchangeStencilDepth = 2
     end if
 
-    ! this sets up the GridConnection
+    ! this sets up the GridConnection 
     call this%spatialcon_df()
     
     ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
     write(imName,'(a,i5.5)') 'IFM_', this%gwfModel%id
-    call this%interfaceModel%construct(imName, this%iout)
-    call this%interfaceModel%createModel(this%gridConnection)
-    this%interfaceModel%npf%ixt3d = this%iXt3dOnExchange
+    call this%gwfInterfaceModel%construct(imName, this%iout)
+    call this%gwfInterfaceModel%createModel(this%gridConnection)
+    call this%gwfInterfaceModel%defineModel(this%gwfModel%npf%satomega, &
+                                            this%iXt3dOnExchange)
 
-    ! define, from here
-    call this%interfaceModel%defineModel(satOmega)
-     
-    ! point x, ibound, and rhs to connection
-    this%interfaceModel%x => this%x
-    call mem_checkin(this%interfaceModel%x, 'X', this%interfaceModel%memoryPath, 'X', this%memoryPath)
-    this%interfaceModel%rhs => this%rhs
-    call mem_checkin(this%interfaceModel%rhs, 'RHS', this%interfaceModel%memoryPath, 'RHS', this%memoryPath)
-    this%interfaceModel%ibound => this%active
-    call mem_checkin(this%interfaceModel%ibound, 'IBOUND', this%interfaceModel%memoryPath, 'IBOUND', this%memoryPath)
-    
-    ! assign connections, fill ia/ja, map connections (following sln_connect) and mask
-    call sparse%init(this%neq, this%neq, 7)
-    call this%interfaceModel%model_ac(sparse)
-    
-    ! create amat from sparse
-    call this%createCoefficientMatrix(sparse)
-    call sparse%destroy()
-    
-    ! map connections
-    call this%interfaceModel%model_mc(this%ia, this%ja)  
-      
-    ! mask
-    call this%maskOwnerConnections()
+    ! point X, RHS, IBOUND to connection
+    call this%spatialcon_setmodelptrs()
+
+    ! connect interface model to spatial connection
+    call this%spatialcon_connect()
     
   end subroutine gwfgwfcon_df
-    
-  !> @brief Mask the owner's connections
-  !!
-  !! Determine which connections are handled by the interface model 
-  !! (using the connections object in its discretization) and
-  !< set their mask to zero for the owning model.
-  subroutine maskOwnerConnections(this)
-    use CsrUtilsModule, only: getCSRIndex
-    class(GwfGwfConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx
-    type(ConnectionsType), pointer :: conn
-    
-    ! set the mask on connections that are calculated by the interface model
-    conn => this%interfaceModel%dis%con
-    do n = 1, conn%nodes
-      ! only for connections internal to the owning model
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
-        cycle
-      end if      
-      nloc = this%gridConnection%idxToGlobal(n)%index
-      
-      do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1
-        m = conn%ja(ipos)
-        if (.not. associated(this%gridConnection%idxToGlobal(m)%model, this%owner)) then
-            cycle
-        end if
-        mloc = this%gridConnection%idxToGlobal(m)%index
-        
-        if (conn%mask(ipos) > 0) then
-          ! calculated by interface model, set local model's mask to zero
-          csrIdx = getCSRIndex(nloc, mloc, this%owner%ia, this%owner%ja)          
-          if (csrIdx == -1) then
-            ! this can only happen with periodic boundary conditions, 
-            ! then there is no need to set the mask
-            if (this%gridConnection%isPeriodic(nloc, mloc)) cycle
-            
-            write(*,*) 'Error: cannot find cell connection in global system'
-            call ustop()
-          end if
-          
-          call this%owner%dis%con%set_mask(csrIdx, 0)          
-        end if
-      end do
-    end do
-    
-  end subroutine maskOwnerConnections
   
   !> @brief allocation of scalars in the connection
   !<
@@ -241,12 +171,12 @@ contains
       idx = gc%idxToGlobal(icell)%index
       model => gc%idxToGlobal(icell)%model
       
-      this%interfaceModel%x(icell) = model%x(idx)
-      this%interfaceModel%ibound(icell) = model%ibound(idx)      
+      this%gwfInterfaceModel%x(icell) = model%x(idx)
+      this%gwfInterfaceModel%ibound(icell) = model%ibound(idx)
     end do
     
     ! *_ar
-    call this%interfaceModel%allocateAndReadModel()  
+    call this%gwfInterfaceModel%allocateAndReadModel()
 
     ! fill mapping to global index (which can be
     ! done now because moffset is set in sln_df)
@@ -339,7 +269,7 @@ contains
     call this%syncInterfaceModel()
     
     ! calculate (wetting/drying, saturation)
-    call this%interfaceModel%model_cf(kiter)
+    call this%gwfInterfaceModel%model_cf(kiter)
     
   end subroutine gwfgwfcon_cf
   
@@ -377,7 +307,7 @@ contains
     class(GwfExchangeType), pointer :: gwfEx
     
     ! fill (and add to...) coefficients for interface
-    call this%interfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
+    call this%gwfInterfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
     
     ! map back to solution matrix
     do n = 1, this%neq
@@ -502,8 +432,8 @@ contains
 
     call mem_deallocate(this%iXt3dOnExchange)
     
-    call this%interfaceModel%model_da()
-    deallocate(this%interfaceModel)
+    call this%gwfInterfaceModel%model_da()
+    deallocate(this%gwfInterfaceModel)
     
     call this%spatialcon_da()
 
@@ -548,12 +478,12 @@ contains
     class(DisBaseType), pointer :: imDis                    !< interface model discretization
     type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
 
-    imDis => this%interfaceModel%dis
-    imCon => this%interfaceModel%dis%con
-    imNpf => this%interfaceModel%npf
+    imDis => this%gwfInterfaceModel%dis
+    imCon => this%gwfInterfaceModel%dis%con
+    imNpf => this%gwfInterfaceModel%npf
     toGlobal => this%gridConnection%idxToGlobal
 
-    call this%interfaceModel%model_cq(icnvg, isuppress_output)
+    call this%gwfInterfaceModel%model_cq(icnvg, isuppress_output)
 
     if (this%gwfModel%npf%icalcspdis /= 1) return
 
@@ -588,7 +518,7 @@ contains
           ihc = imCon%ihc(isym)
           area = imCon%hwva(isym)          
           satThick = imNpf%calcSatThickness(n, m, ihc)
-          rrate = this%interfaceModel%flowja(ipos)
+          rrate = this%gwfInterfaceModel%flowja(ipos)
 
           call imDis%connection_normal(n, m, ihc, nx, ny, nz, ipos)   
           call imDis%connection_vector(n, m, nozee, imNpf%sat(n), imNpf%sat(m), &
@@ -612,7 +542,7 @@ contains
           iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
 
           ! update flowja with correct value
-          this%gwfModel%flowja(iposLoc) = this%interfaceModel%flowja(ipos)
+          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
         end if
       end do
     end do
@@ -641,8 +571,8 @@ contains
 
           nIface = this%gridConnection%getInterfaceIndex(gwfEx%nodem1(i), gwfEx%model1)
           mIface = this%gridConnection%getInterfaceIndex(gwfEx%nodem2(i), gwfEx%model2)
-          ipos = getCSRIndex(nIface, mIface, this%interfaceModel%ia, this%interfaceModel%ja)
-          gwfEx%simvals(i) = this%interfaceModel%flowja(ipos)
+          ipos = getCSRIndex(nIface, mIface, this%gwfInterfaceModel%ia, this%gwfInterfaceModel%ja)
+          gwfEx%simvals(i) = this%gwfInterfaceModel%flowja(ipos)
 
         end if
       end do

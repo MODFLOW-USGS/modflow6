@@ -109,7 +109,7 @@ module ConnectionBuilderModule
     
       ! for now, if we have XT3D on the interface, we use a connection,
       ! (this will be more generic in the future)      
-      if (conEx%ixt3d > 0 .or. alwaysInterfaceModel) then
+      if (conEx%use_interface_model() .or. alwaysInterfaceModel) then
 
         ! fetch connection for model 1:
         modelConnection => lookupConnection(conEx%model1, conEx%typename)
