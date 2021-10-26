@@ -32,10 +32,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-          # todo: add macos again
-          # - os: macos-latest
-          - os: windows-latest
+          #- os: ubuntu-latest
+          - os: macos-latest
+          #- os: windows-latest
     defaults:
       run:
         shell: bash

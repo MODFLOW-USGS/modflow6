@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest] # todo: add macos-latest again
+        os: [macos-latest] # todo: add macos-latest again
     defaults:
       run:
         shell: bash
