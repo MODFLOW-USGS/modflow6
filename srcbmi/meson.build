@@ -9,7 +9,7 @@ bmi_sources = files(
 
 system = build_machine.system()
 if system == 'darwin'
-  library('mf6', bmi_sources, link_with: mf6_internal_lib, name_prefix: 'lib', install: true)
-else
   library('mf6', bmi_sources, link_with: mf6_internal_lib, name_prefix: 'lib', install: true, name_suffix: 'so')
+else
+  library('mf6', bmi_sources, link_with: mf6_internal_lib, name_prefix: 'lib', install: true)
 endif  
