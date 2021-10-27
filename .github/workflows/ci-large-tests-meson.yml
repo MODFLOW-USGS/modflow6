@@ -122,7 +122,6 @@ jobs:
 
       - name: Build gfortran applications
         if: matrix.FC == 'gfortran'
-        working-directory: autotest
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson compile -C builddir
