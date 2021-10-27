@@ -301,19 +301,4 @@ contains
     return
   end function CastAsGwfModelClass
   
-  function CastAsGwfInterfaceModelClass(obj) result (res)
-    implicit none
-    class(*), pointer, intent(inout) :: obj
-    class(GwfInterfaceModelType), pointer :: res
-    
-    res => null()
-    if (.not. associated(obj)) return
-    
-    select type (obj)
-    class is (GwfInterfaceModelType)
-      res => obj
-    end select
-    return
-  end function CastAsGwfInterfaceModelClass
-  
 end module GwfInterfaceModelModule

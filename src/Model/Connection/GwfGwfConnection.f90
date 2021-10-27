@@ -292,26 +292,6 @@ contains
 
     return
   end subroutine gwfgwfcon_rp
-     
-  !> @brief Advance the connection to the new time
-  !<
-  subroutine gwfgwfcon_ad(this)
-    class(GwfGwfConnectionType) :: this !< this connection
-    ! local
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
-
-    ! loop over exchanges and RP the movers
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        if (gwfEx%inmvr > 0) then
-          call gwfEx%mvr%mvr_ad()
-        end if
-      end if
-    end do
-
-  end subroutine gwfgwfcon_ad
 
   !> @brief Add connections, handled by the interface model,
   !< to the global system's sparse
