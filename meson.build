@@ -6,6 +6,7 @@ project(
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',
     'fortran_std=f2008',
+    'warning_level=0'
 ])
 
 if get_option('optimization') == '3'
@@ -29,7 +30,7 @@ link_args = []
 # Command line options for gfortran
 if fc_id == 'gcc'
   # General options
-  compile_args += ['-pedantic', '-Wcharacter-truncation']
+  compile_args += ['-pedantic', '-Wcharacter-truncation', '-Wno-unused-dummy-argument', '-Wno-unused-value', '-Wconversion']
 
   # Options specific to profile
   if profile == 'release'

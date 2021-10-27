@@ -134,7 +134,7 @@ module MessageModule
       ! -- resize message
       if (inc_array) then
         call ExpandArray(this%message, increment=this%inc_message)
-        this%inc_message = this%inc_message * 1.1
+        this%inc_message = int(this%inc_message * 1.1)
       end if
       !
       ! -- Determine if the substring exists in the passed message.

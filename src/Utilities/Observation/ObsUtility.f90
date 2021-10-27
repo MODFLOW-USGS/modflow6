@@ -101,7 +101,7 @@ contains
     if (linout == '') then
       write(linout,10)totim
       if (iprec == 1) then
-        totimsngl = totim
+        totimsngl = real(totim, real32)
         write(nunit)totimsngl
       elseif (iprec == 2) then
         totimdbl = totim
@@ -110,7 +110,7 @@ contains
     endif
     ! -- write value to unformatted output
     if (iprec == 1) then
-      valsngl = value
+      valsngl = real(value, real32)
       write(nunit)valsngl
     elseif (iprec == 2) then
       valdbl = value

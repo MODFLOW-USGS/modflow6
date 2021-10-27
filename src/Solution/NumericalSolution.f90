@@ -1428,7 +1428,6 @@ subroutine solution_create(filename, id)
     character(len=LENPAKLOC) :: strh
     character(len=25) :: cval
     character(len=7) :: cmsg
-    character(len=13) :: file_matrix
     integer(I4B) :: ic
     integer(I4B) :: im    
     integer(I4B) :: icsv0
