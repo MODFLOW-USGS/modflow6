@@ -30,7 +30,12 @@ link_args = []
 # Command line options for gfortran
 if fc_id == 'gcc'
   # General options
-  compile_args += ['-pedantic', '-Wcharacter-truncation', '-Wno-unused-dummy-argument', '-Wno-unused-value', '-Wconversion']
+  compile_args += ['-pedantic',
+                   '-Wcharacter-truncation',
+                   '-Wno-unused-dummy-argument',
+                   '-Wno-unused-value', 
+                   '-Wno-c-binding-type',
+                   '-Wunused-function',]
 
   # Options specific to profile
   if profile == 'release'

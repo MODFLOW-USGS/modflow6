@@ -6,4 +6,8 @@ zonebudget_sources = files(
     'src' / 'zoneoutput.f90',
 )
 
-executable('zbud6', zonebudget_sources, link_with: mf6_internal_lib, install: true)
+executable('zbud6',
+           zonebudget_sources,
+           link_with: mf6_internal_lib, 
+           install: true,
+           fortran_args: util_args)
