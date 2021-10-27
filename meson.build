@@ -6,7 +6,7 @@ project(
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',
     'fortran_std=f2008',
-    'warning_level=0'
+    'warning_level=1'
 ])
 
 if get_option('optimization') == '3'
@@ -34,8 +34,9 @@ if fc_id == 'gcc'
                    '-Wcharacter-truncation',
                    '-Wno-unused-dummy-argument',
                    '-Wno-unused-value', 
-                   '-Wno-c-binding-type',
-                   '-Wunused-function',]
+                   '-Wno-c-binding-type', # TODO!
+                   '-Wno-intrinsic-shadow',
+                   '-Wno-maybe-uninitialized']
 
   # Options specific to profile
   if profile == 'release'
