@@ -17,9 +17,6 @@
 name: Large tests
 
 on:
-  pull_request:
-    branches:
-      - develop
   schedule:
     - cron: '0 6 * * *' # run at 6 AM UTC every day
 
