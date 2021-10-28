@@ -26,20 +26,16 @@ module GwfGwfExchangeModule
   public :: GetGwfExchangeFromList
 
   type, extends(DisConnExchangeType) :: GwfExchangeType
-    character(len=LINELENGTH), pointer               :: filename    => null()    !< name of the input file
-    type(BlockParserType)                            :: parser                   !< block parser for input file
     type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
     type(GwfModelType), pointer                      :: gwfmodel2   => null()    !< pointer to GWF Model 2
     ! 
-    ! -- GWF specific option block:
-    integer(I4B), pointer                            :: iprpak      => null()    !< print input flag
+    ! -- GWF specific option block:    
     integer(I4B), pointer                            :: iprflow     => null()    !< print flag for cell by cell flows
     integer(I4B), pointer                            :: ipakcb      => null()    !< save flag for cell by cell flows
     integer(I4B), pointer                            :: inewton     => null()    !< newton flag (1 newton is on)
     integer(I4B), pointer                            :: icellavg    => null()    !< cell averaging
     integer(I4B), pointer                            :: ivarcv      => null()    !< variable cv
-    integer(I4B), pointer                            :: idewatcv    => null()    !< dewatered cv    
-    integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
+    integer(I4B), pointer                            :: idewatcv    => null()    !< dewatered cv
     integer(I4B), pointer                            :: ingnc       => null()    !< unit number for gnc (0 if off)
     type(GhostNodeType), pointer                     :: gnc         => null()    !< gnc object
     integer(I4B), pointer                            :: inmvr       => null()    !< unit number for mover (0 if off)
@@ -54,8 +50,6 @@ module GwfGwfExchangeModule
     integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
     real(DP), pointer                                :: satomega    => null()    !< saturation smoothing
     real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
-    character(len=LENBOUNDNAME), dimension(:),                                   &
-                                 pointer, contiguous :: boundname   => null()    !< boundnames
     !
     ! -- table objects
     type(TableType), pointer :: outputtab1 => null()
@@ -83,8 +77,7 @@ module GwfGwfExchangeModule
     procedure          :: allocate_scalars
     procedure          :: allocate_arrays
     procedure          :: read_options
-    procedure          :: read_dimensions
-    procedure          :: read_data
+    procedure          :: parse_option
     procedure          :: read_gnc
     procedure          :: read_mvr
     procedure, private :: condcalc
@@ -1270,28 +1263,17 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ArrayHandlersModule, only: ifind
     use ConstantsModule, only: LINELENGTH, LENAUXNAME, DEM6
-    use MemoryManagerModule, only: mem_allocate
-    use InputOutputModule, only: getunit, openfile, urdaux
+    use MemoryManagerModule, only: mem_allocate    
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: fname
-    character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound
-    logical :: endOfBlock
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: lloc
+    logical :: endOfBlock    
     integer(I4B) :: ierr
-    integer(I4B) :: ival
-    integer(I4B) :: inobs
-    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -1300,135 +1282,31 @@ contains
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(iout,'(1x,a)')'PROCESSING GWF EXCHANGE OPTIONS'
+      write(iout,'(1x,a)')'PROCESSING GWF-GWF EXCHANGE OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) then
           exit
         end if
         call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case('AUXILIARY')
-            call this%parser%GetRemainingLine(line)
-            lloc = 1
-            call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart,     &
-                        istop, caux, line, 'GWF_GWF_Exchange')
-            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
-                                'AUXNAME', trim(this%memoryPath))
-            do n = 1, this%naux
-              this%auxname(n) = caux(n)
-            end do
-            deallocate(caux)
-            !
-            ! -- If ANGLDEGX is an auxiliary variable, then anisotropy can be
-            !    used in either model.  Store ANGLDEGX position in this%ianglex
-            ival = ifind(this%auxname, 'ANGLDEGX')
-            if (ival > 0) then
-              this%ianglex = ival
-            end if
-            ival = ifind(this%auxname, 'CDIST')
-            if(ival > 0) then
-              this%icdist = ival
-            end if
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(iout,'(4x,a)') &
-              'THE LIST OF EXCHANGES WILL BE PRINTED.'
-          case ('PRINT_FLOWS')
-            this%iprflow = 1
-            write(iout,'(4x,a)') &
-              'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
-          case ('SAVE_FLOWS')
-            this%ipakcb = -1
-            write(iout,'(4x,a)') &
-              'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
-          case ('ALTERNATIVE_CELL_AVERAGING')
-            call this%parser%GetStringCaps(keyword)
-            select case(keyword)
-            case('LOGARITHMIC')
-              this%icellavg = 1
-            case('AMT-LMK')
-              this%icellavg = 2
-            case default
-              errmsg = "Unknown cell averaging method '" // trim(keyword) // "'."
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-            end select
-            write(iout,'(4x,a,a)')                                             &
-              'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(keyword)
-          case ('VARIABLECV')
-            this%ivarcv = 1
-            write(iout,'(4x,a)')                                               &
-              'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
-            call this%parser%GetStringCaps(keyword)
-            if(keyword == 'DEWATERED') then
-              this%idewatcv = 1
-              write(iout,'(4x,a)')                                             &
-                'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   ' // &
-                'AN UNDERLYING CELL.'
-            endif
-          case ('NEWTON')
-            this%inewton = 1
-            write(iout, '(4x,a)')                                              &
-                             'NEWTON-RAPHSON method used for unconfined cells'
-          case ('XT3D')
-            this%ixt3d = 1
-            write(iout, '(4x,a)') 'XT3D will be applied on the interface'
-          case ('GNC6')
-            call this%parser%GetStringCaps(keyword)
-            if(keyword /= 'FILEIN') then
-              call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY ' //          &
-                '"FILEIN" then by filename.')
-              call this%parser%StoreErrorUnit()
-            endif
-            call this%parser%GetString(fname)
-            if(fname == '') then
-              call store_error('NO GNC6 FILE SPECIFIED.')
-              call this%parser%StoreErrorUnit()
-            endif
-            this%ingnc = getunit()
-            call openfile(this%ingnc, iout, fname, 'GNC')
-            write(iout,'(4x,a)')                                               &
-              'GHOST NODES WILL BE READ FROM ', trim(fname)
-          case ('MVR6')
-            call this%parser%GetStringCaps(keyword)
-            if(keyword /= 'FILEIN') then
-              call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY ' //          &
-                '"FILEIN" then by filename.')
-              call this%parser%StoreErrorUnit()
-            endif
-            call this%parser%GetString(fname)
-            if(fname == '') then
-              call store_error('NO MVR6 FILE SPECIFIED.')
-              call this%parser%StoreErrorUnit()
-            endif
-            this%inmvr = getunit()
-            call openfile(this%inmvr, iout, fname, 'MVR')
-            write(iout,'(4x,a)')                                               &
-              'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
-          case ('BOUNDNAMES')
-            this%inamedbound = 1
-            write(iout,'(4x,a)') 'EXCHANGE BOUNDARIES HAVE NAMES' // &
-                                      ' IN LAST COLUMN.'
-          case ('OBS6')
-            call this%parser%GetStringCaps(keyword)
-            if(keyword /= 'FILEIN') then
-              call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY ' //         &
-                '"FILEIN" then by filename.')
-              call this%parser%StoreErrorUnit()
-            endif
-            this%obs%active = .true.
-            call this%parser%GetString(this%obs%inputFilename)
-            inobs = GetUnit()
-            call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
-            this%obs%inUnitObs = inobs
-          case default
-            errmsg = "Unknown gwf exchange option '" // trim(keyword) // "'."
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-        end select
+
+        ! first parse option in base
+        if (this%DisConnExchangeType%parse_option(keyword, iout)) then
+          cycle
+        end if
+
+        ! it's probably ours
+        if (this%parse_option(keyword, iout)) then
+          cycle
+        end if
+
+        ! unknown option
+        errmsg = "Unknown GWF-GWF exchange option '" // trim(keyword) // "'."
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
       end do
-      write(iout,'(1x,a)') 'END OF GWF EXCHANGE OPTIONS'
+
+      write(iout,'(1x,a)') 'END OF GWF-GWF EXCHANGE OPTIONS'
     end if
     !
     ! -- set omega value used for saturation calculations
@@ -1440,193 +1318,112 @@ contains
     return
   end subroutine read_options
 
-  subroutine read_dimensions(this, iout)
-! ******************************************************************************
-! read_dimensions -- Read Dimensions
-! Subroutine: (1) read dimensions (size of exchange list) from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
-    implicit none
-    ! -- dummy
-    class(GwfExchangeType) :: this
-    integer(I4B), intent(in) :: iout
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-! ------------------------------------------------------------------------------
-    !
-    ! -- get options block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr,                     &
-      supportOpenClose=.true.)
-    !
-    ! -- parse options block if detected
-    if (isfound) then
-      write(iout,'(1x,a)') 'PROCESSING EXCHANGE DIMENSIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('NEXG')
-            this%nexg = this%parser%GetInteger()
-            write(iout,'(4x,a,i0)') 'NEXG = ', this%nexg
-          case default
-            errmsg = "Unknown dimension '" // trim(keyword) // "'."
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write(iout,'(1x,a)') 'END OF EXCHANGE DIMENSIONS'
-    else
-      call store_error('Required dimensions block not found.')
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- return
-    return
-  end subroutine read_dimensions
+  !> @brief parse option from exchange file
+  !<
+  function parse_option(this, keyword, iout) result(parsed)
+    use InputOutputModule, only: getunit, openfile
+    class(GwfExchangeType) :: this                   !< instance of exchange object
+    character(len=LINELENGTH), intent(in) :: keyword !< the option name
+    integer(I4B), intent(in) :: iout                 !< for logging    
+    logical(LGP) :: parsed                           !< true when parsed
+    ! local    
+    character(len=LINELENGTH) :: fname
+    integer(I4B) :: inobs
+    character(len=LINELENGTH) :: subkey
 
-  subroutine read_data(this, iout)
-! ******************************************************************************
-! read_data -- Read EXGDATA block
-! Subroutine: (1) read list of EXGs from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, store_error_unit, count_errors
-    ! -- dummy
-    class(GwfExchangeType) :: this
-    integer(I4B), intent(in) :: iout
-    ! -- local
-    character(len=LINELENGTH) :: nodestr, node1str, node2str, cellid
-    character(len=2) :: cnfloat
-    integer(I4B) :: lloc, ierr, nerr, iaux
-    integer(I4B) :: iexg, nodem1, nodem2, nodeum1, nodeum2
-    logical :: isfound, endOfBlock
-    ! -- format
-    character(len=*), parameter :: fmtexglabel = "(5x, 3a10, 50(a16))"
-    character(len=*), parameter :: fmtexgdata  =                               &
-      "(5x, a, 1x, a ,I10, 50(1pg16.6))"
-    character(len=40) :: fmtexgdata2
-! ------------------------------------------------------------------------------
-    !
-    ! -- get ExchangeData block
-    call this%parser%GetBlock('EXCHANGEDATA', isfound, ierr,                   &
-                              supportOpenClose=.true.)
-    !
-    ! -- parse ExchangeData block if detected
-    if (isfound) then
-      write(iout,'(1x,a)')'PROCESSING EXCHANGEDATA'
-      if(this%iprpak /= 0) then
-        if (this%inamedbound==0) then
-          write(iout, fmtexglabel) 'NODEM1', 'NODEM2', 'IHC',                  &
-              'CL1', 'CL2', 'HWVA', (adjustr(this%auxname(iaux)),              &
-              iaux = 1, this%naux)
-        else
-          write(iout, fmtexglabel) 'NODEM1', 'NODEM2', 'IHC', 'CL1', 'CL2',    &
-              'HWVA', (adjustr(this%auxname(iaux)),iaux=1,this%naux),          &
-              ' BOUNDNAME      '
-          ! Define format suitable for writing input data,
-          ! any auxiliary variables, and boundname.
-          write(cnfloat,'(i0)') 3+this%naux
-          fmtexgdata2 = '(5x, a, 1x, a, i10, ' // trim(cnfloat) //             &
-            '(1pg16.6), 1x, a)'
-        endif
+    parsed = .true.
+
+    select case (keyword)
+    case ('PRINT_FLOWS')
+      this%iprflow = 1
+      write(iout,'(4x,a)') &
+        'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
+    case ('SAVE_FLOWS')
+      this%ipakcb = -1
+      write(iout,'(4x,a)') &
+        'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
+    case ('ALTERNATIVE_CELL_AVERAGING')
+      call this%parser%GetStringCaps(subkey)
+      select case(subkey)
+      case('LOGARITHMIC')
+        this%icellavg = 1
+      case('AMT-LMK')
+        this%icellavg = 2
+      case default
+        errmsg = "Unknown cell averaging method '" // trim(subkey) // "'."
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end select
+      write(iout,'(4x,a,a)')                                             &
+        'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
+    case ('VARIABLECV')
+      this%ivarcv = 1
+      write(iout,'(4x,a)')                                               &
+        'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
+      call this%parser%GetStringCaps(subkey)
+      if(subkey == 'DEWATERED') then
+        this%idewatcv = 1
+        write(iout,'(4x,a)')                                             &
+          'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   ' // &
+          'AN UNDERLYING CELL.'
       endif
-      do iexg = 1, this%nexg
-        call this%parser%GetNextLine(endOfBlock)
-        lloc = 1
-        !
-        ! -- Read and check node 1
-        call this%parser%GetCellid(this%gwfmodel1%dis%ndim, cellid, flag_string=.true.)
-        nodem1 = this%gwfmodel1%dis%noder_from_cellid(cellid, this%parser%iuactive,   &
-                                               iout, flag_string=.true.)
-        this%nodem1(iexg) = nodem1
-        !
-        ! -- Read and check node 2
-        call this%parser%GetCellid(this%gwfmodel2%dis%ndim, cellid, flag_string=.true.)
-        nodem2 = this%gwfmodel2%dis%noder_from_cellid(cellid, this%parser%iuactive,   &
-                                               iout, flag_string=.true.)
-        this%nodem2(iexg) = nodem2
-        !
-        ! -- Read rest of input line
-        this%ihc(iexg) = this%parser%GetInteger()
-        this%cl1(iexg) = this%parser%GetDouble()
-        this%cl2(iexg) = this%parser%GetDouble()
-        this%hwva(iexg) = this%parser%GetDouble()
-        do iaux = 1, this%naux
-          this%auxvar(iaux, iexg) = this%parser%GetDouble()
-        enddo
-        if (this%inamedbound==1) then
-          call this%parser%GetStringCaps(this%boundname(iexg))
-        endif
-        !
-        ! -- Write the data to listing file if requested
-        if(this%iprpak /= 0) then
-          nodeum1 = this%gwfmodel1%dis%get_nodeuser(nodem1)
-          call this%gwfmodel1%dis%nodeu_to_string(nodeum1, node1str)
-          nodeum2 = this%gwfmodel2%dis%get_nodeuser(nodem2)
-          call this%gwfmodel2%dis%nodeu_to_string(nodeum2, node2str)
-          if (this%inamedbound == 0) then
-            write(iout, fmtexgdata) trim(node1str), trim(node2str),            &
-                        this%ihc(iexg), this%cl1(iexg), this%cl2(iexg),        &
-                        this%hwva(iexg),                                       &
-                        (this%auxvar(iaux, iexg), iaux=1,this%naux)
-          else
-            write(iout, fmtexgdata2) trim(node1str), trim(node2str),           &
-                        this%ihc(iexg), this%cl1(iexg), this%cl2(iexg),        &
-                        this%hwva(iexg),                                       &
-                        (this%auxvar(iaux, iexg), iaux=1,this%naux),           &
-                        trim(this%boundname(iexg))
-          endif
-        endif
-        !
-        ! -- Check to see if nodem1 is outside of active domain
-        if(nodem1 <= 0) then
-          call this%gwfmodel1%dis%nodeu_to_string(nodeum1, nodestr)
-          write(errmsg, *)                                                       &
-                  trim(adjustl(this%gwfmodel1%name)) //                          &
-                  ' Cell is outside active grid domain ' //                      &
-                  trim(adjustl(nodestr)) // '.'
-          call store_error(errmsg)
-        endif
-        !
-        ! -- Check to see if nodem2 is outside of active domain
-        if(nodem2 <= 0) then
-          call this%gwfmodel2%dis%nodeu_to_string(nodeum2, nodestr)
-          write(errmsg, *)                                                       &
-                  trim(adjustl(this%gwfmodel2%name)) //                          &
-                  ' Cell is outside active grid domain ' //                      &
-                  trim(adjustl(nodestr)) // '.'
-          call store_error(errmsg)
-        endif
-      enddo
-      !
-      ! -- Stop if errors
-      nerr = count_errors()
-      if(nerr > 0) then
-        call store_error('Errors encountered in exchange input file.')
+    case ('NEWTON')
+      this%inewton = 1
+      write(iout, '(4x,a)')                                              &
+                       'NEWTON-RAPHSON method used for unconfined cells'          
+    case ('GNC6')
+      call this%parser%GetStringCaps(subkey)
+      if(subkey /= 'FILEIN') then
+        call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY ' //          &
+          '"FILEIN" then by filename.')
         call this%parser%StoreErrorUnit()
       endif
-      !
-      write(iout,'(1x,a)')'END OF EXCHANGEDATA'
-    else
-      errmsg = 'Required exchangedata block not found.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- return
-    return
-  end subroutine read_data
+      call this%parser%GetString(fname)
+      if(fname == '') then
+        call store_error('NO GNC6 FILE SPECIFIED.')
+        call this%parser%StoreErrorUnit()
+      endif
+      this%ingnc = getunit()
+      call openfile(this%ingnc, iout, fname, 'GNC')
+      write(iout,'(4x,a)')                                               &
+        'GHOST NODES WILL BE READ FROM ', trim(fname)
+    case ('MVR6')
+      call this%parser%GetStringCaps(subkey)
+      if(subkey /= 'FILEIN') then
+        call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY ' //          &
+          '"FILEIN" then by filename.')
+        call this%parser%StoreErrorUnit()
+      endif
+      call this%parser%GetString(fname)
+      if(fname == '') then
+        call store_error('NO MVR6 FILE SPECIFIED.')
+        call this%parser%StoreErrorUnit()
+      endif
+      this%inmvr = getunit()
+      call openfile(this%inmvr, iout, fname, 'MVR')
+      write(iout,'(4x,a)')                                               &
+        'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
+    case ('BOUNDNAMES')
+      this%inamedbound = 1
+      write(iout,'(4x,a)') 'EXCHANGE BOUNDARIES HAVE NAMES' // &
+                                ' IN LAST COLUMN.'
+    case ('OBS6')
+      call this%parser%GetStringCaps(subkey)
+      if(subkey /= 'FILEIN') then
+        call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY ' //         &
+          '"FILEIN" then by filename.')
+        call this%parser%StoreErrorUnit()
+      endif
+      this%obs%active = .true.
+      call this%parser%GetString(this%obs%inputFilename)
+      inobs = GetUnit()
+      call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
+      this%obs%inUnitObs = inobs
+    case default
+      parsed = .false.
+    end select
+
+  end function parse_option
 
   subroutine read_gnc(this, iout)
 ! ******************************************************************************
@@ -1885,13 +1682,9 @@ contains
     class(GwfExchangeType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
-    !    
-    allocate(this%filename)
-    this%filename = ''
     !
     call this%DisConnExchangeType%allocate_scalars()
     !
-    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
     call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
     call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
     this%iprpak = 0
@@ -1905,7 +1698,6 @@ contains
     call mem_allocate(this%ingnc, 'INGNC', this%memoryPath)
     call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
-    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     this%icellavg = 0
     this%ivarcv = 0
@@ -1953,7 +1745,6 @@ contains
     call mem_deallocate(this%idxglo)
     call mem_deallocate(this%idxsymglo)
     call mem_deallocate(this%simvals)
-    deallocate(this%boundname)
     !
     ! -- output table objects
     if (associated(this%outputtab1)) then
@@ -1969,7 +1760,6 @@ contains
     !
     ! -- scalars    
     deallocate(this%filename)
-    call mem_deallocate(this%iprpak)
     call mem_deallocate(this%iprflow)
     call mem_deallocate(this%ipakcb)
     !
@@ -1980,7 +1770,6 @@ contains
     call mem_deallocate(this%ingnc)
     call mem_deallocate(this%inmvr)
     call mem_deallocate(this%inobs)
-    call mem_deallocate(this%inamedbound)
     call mem_deallocate(this%satomega)
     !
     ! -- deallocate base
@@ -2013,14 +1802,6 @@ contains
     call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)    !
     call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
     call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
-    !
-    ! -- Allocate boundname
-    if(this%inamedbound==1) then
-      allocate(this%boundname(this%nexg))
-    else
-      allocate(this%boundname(1))
-    endif
-    this%boundname(:) = ''
     !
     ! -- allocate and initialize the output table
     if (this%iprflow /= 0) then

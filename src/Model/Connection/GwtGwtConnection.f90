@@ -1,6 +1,7 @@
 module GwtGwtConnectionModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME
+  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO   
+  use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use SpatialModelConnectionModule
@@ -9,6 +10,8 @@ module GwtGwtConnectionModule
   use GwtGwtExchangeModule
   use GwtInterfaceModelModule
   use SparseModule, only: sparsematrix
+  use ConnectionsModule, only: ConnectionsType
+  use TopologyModule, only: GlobalCellType
 
   implicit none
   private
@@ -21,8 +24,10 @@ module GwtGwtConnectionModule
 
     type(GwtModelType), pointer :: gwtModel => null()                   !< the model for which this connection exists
     type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
-    integer(I4B), pointer :: iAdvScheme => null()                       !< the advection scheme at the interface: 
+    integer(I4B), pointer :: iAdvScheme => null()                       !< the advection scheme at the interface:
                                                                         !! 0 = upstream, 1 = central, 2 = TVD
+    real(DP), dimension(:), pointer, contiguous :: flowja => null()     !< intercell flows at the interface, coming from
+                                                                        !! multiple GWF models
 
     integer(I4B) :: iout                                                !< the list file for the interface model
 
@@ -32,7 +37,7 @@ module GwtGwtConnectionModule
     generic, public :: construct => gwtGwtConnection_ctor
 
     procedure, pass(this) :: exg_ar => gwtgwtcon_ar
-    procedure, pass(this) :: exg_df => gwtgwtcon_df 
+    procedure, pass(this) :: exg_df => gwtgwtcon_df
     procedure, pass(this) :: exg_ac => gwtgwtcon_ac
     procedure, pass(this) :: exg_rp => gwtgwtcon_rp
     procedure, pass(this) :: exg_cf => gwtgwtcon_cf
@@ -43,7 +48,8 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_ot => gwtgwtcon_ot
 
     ! local stuff
-    procedure, pass(this), private :: allocateScalars
+    procedure, pass(this), private :: allocate_scalars
+    procedure, pass(this), private :: allocate_arrays
 
   end type GwtGwtConnectionType
 
@@ -51,10 +57,10 @@ contains
 
 !> @brief Basic construction of the connection
 !<
-subroutine gwtGwtConnection_ctor(this, model)  
+subroutine gwtGwtConnection_ctor(this, model)
   use InputOutputModule, only: openfile
   class(GwtGwtConnectionType) :: this         !< the connection
-  class(NumericalModelType), pointer :: model !< the model owning this connection, 
+  class(NumericalModelType), pointer :: model !< the model owning this connection,
                                               !! this must be a GwtModelType
   ! local
   character(len=LINELENGTH) :: fname
@@ -63,7 +69,7 @@ subroutine gwtGwtConnection_ctor(this, model)
 
   modelPtr => model
   this%gwtModel => CastAsGwtModel(modelPtr)
-  
+
   if (model%id > 99999) then
     write(*,*) 'Error: running 100000 submodels or more is not yet supported'
     call ustop()
@@ -79,7 +85,7 @@ subroutine gwtGwtConnection_ctor(this, model)
   ! first call base constructor
   call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
 
-  call this%allocateScalars()
+  call this%allocate_scalars()
   this%typename = 'GWT-GWT'
   this%iAdvScheme = 0
 
@@ -90,12 +96,27 @@ end subroutine gwtGwtConnection_ctor
 
 !> @brief Allocate scalar variables for this connection
 !<
-subroutine allocateScalars(this)
+subroutine allocate_scalars(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
   call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
-  
-end subroutine allocateScalars
+
+end subroutine allocate_scalars
+
+!> @brief Allocate array variables for this connection
+!<
+subroutine allocate_arrays(this)
+  class(GwtGwtConnectionType) :: this !< the connection
+  ! local
+  integer(I4B) :: i
+
+  call mem_allocate(this%flowja, this%nja, 'FLOWJA', this%memoryPath)
+
+  do i = 1, size(this%flowja)
+    this%flowja(i) = DZERO
+  end do
+
+end subroutine allocate_arrays
 
 !> @brief define the GWT-GWT connection
 !<
@@ -130,12 +151,17 @@ subroutine gwtgwtcon_df(this)
   ! here, then the remainder of this routine will be define
   write(imName,'(a,i5.5)') 'GWTIM_', this%gwtModel%id
   call this%gwtInterfaceModel%gwtifmod_cr(imName, this%iout, this%gridConnection)
+  this%gwtInterfaceModel%adv%iadvwt = this%iAdvScheme
+  call this%gwtInterfaceModel%model_df()
 
-  ! connect X, RHS, and IBOUND
+  ! connect X, RHS, IBOUND, and flowja
   call this%spatialcon_setmodelptrs()
+  this%gwtInterfaceModel%fmi%gwfflowja => this%flowja
 
   ! add connections from the interface model to solution matrix
   call this%spatialcon_connect()
+
+  call this%allocate_arrays()
 
 end subroutine gwtgwtcon_df
 
@@ -154,11 +180,27 @@ subroutine gwtgwtcon_ar(this)
 
 end subroutine gwtgwtcon_ar
 
-!> @brief add connections for the global system for
+!> @brief add connections to the global system for
 !< this connection
 subroutine gwtgwtcon_ac(this, sparse)
   class(GwtGwtConnectionType) :: this         !< this connection
   type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
+  ! local
+  integer(I4B) :: ic, iglo, jglo
+  type(GlobalCellType) :: boundaryCell, connectedCell
+
+  ! connections to other models
+  do ic = 1, this%gridConnection%nrOfBoundaryCells
+    boundaryCell = this%gridConnection%boundaryCells(ic)%cell
+    connectedCell = this%gridConnection%connectedCells(ic)%cell
+    iglo = boundaryCell%index + boundaryCell%model%moffset
+    jglo = connectedCell%index + connectedCell%model%moffset
+    call sparse%addconnection(iglo, jglo, 1)
+    call sparse%addconnection(jglo, iglo, 1)
+  end do
+
+  ! and internal connections
+  call this%spatialcon_ac(sparse)
 
 end subroutine gwtgwtcon_ac
 
@@ -170,6 +212,42 @@ end subroutine gwtgwtcon_rp
 subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
   integer(I4B), intent(in) :: kiter   !< the iteration counter
+  ! local
+  integer(I4B) :: n, m, ipos, iposLoc
+  type(ConnectionsType), pointer :: imCon                 !< interface model connections
+  type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
+
+  ! for readability
+  imCon => this%gwtInterfaceModel%dis%con
+  toGlobal => this%gridConnection%idxToGlobal
+
+  write(*,*) 'CF for ', this%name, ' iteration ', kiter
+  ! loop over connections in interface
+  do n = 1, this%neq
+    do ipos = imCon%ia(n) + 1, imCon%ia(n+1) - 1
+      if (imCon%mask(ipos) < 1) then
+        ! skip this connection, it's masked so not determined by us
+        cycle
+      end if
+
+      m = imCon%ja(ipos)
+      if (associated(toGlobal(n)%model, toGlobal(m)%model)) then
+        ! internal connection for a model, copy from its flowja
+        iposLoc = getCSRIndex(toGlobal(n)%index, toGlobal(m)%index,             &
+                              toGlobal(n)%model%ia, toGlobal(n)%model%ja)
+        this%flowja(ipos) = toGlobal(n)%model%flowja(iposLoc)
+      else
+        ! flow between models, copy from ???
+        write(*,*)'connection between ', toGlobal(n)%model%name, toGlobal(n)%index, toGlobal(m)%model%name, toGlobal(m)%index
+      end if
+
+
+      
+    end do
+  end do
+
+  ! copy flowja
+  !this%gwtInterfaceModel%fmi%gwfflowja
 
 end subroutine gwtgwtcon_cf
 
@@ -214,7 +292,8 @@ subroutine gwtgwtcon_da(this)
   call mem_deallocate(this%iAdvScheme)
 
   ! arrays
-  
+  call mem_deallocate(this%flowja)
+
   ! interface model
   call this%gwtInterfaceModel%model_da()
   deallocate(this%gwtInterfaceModel)

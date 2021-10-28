@@ -5,6 +5,7 @@ module GwtInterfaceModelModule
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
   use GwfDisuModule, only: disu_cr, CastAsDisuType
+  use GwtFmiModule, only: fmi_cr, GwtFmiType
   use GwtAdvModule, only: adv_cr, GwtAdvType
   use GwtAdvOptionsModule, only: GwtAdvOptionsType
   use GridConnectionModule
@@ -49,9 +50,9 @@ subroutine gwtifmod_cr(this, name, iout, gridConn)
   this%owner => CastAsGwtModel(modelPtr)
 
   ! create dis and packages
-  ! TODO_MJR: fmi
   call disu_cr(this%dis, this%name, -1, this%iout)
-  call adv_cr(this%adv, this%name, -1, this%iout, this%fmi)
+  call fmi_cr(this%fmi, this%name, 0, this%iout)
+  call adv_cr(this%adv, this%name, 0, this%iout, this%fmi)
     
 end subroutine gwtifmod_cr
 
@@ -67,6 +68,16 @@ subroutine gwtifmod_df(this)
   ! define DISU
   disPtr => this%dis
   call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
+  call this%fmi%fmi_df(this%dis, 0)
+
+   ! assign or point model members to dis members
+  this%neq = this%dis%nodes
+  this%nja = this%dis%nja
+  this%ia  => this%dis%con%ia
+  this%ja  => this%dis%con%ja
+  !
+  ! allocate model arrays, now that neq and nja are assigned
+  call this%allocate_arrays()
 
 end subroutine gwtifmod_df
 
@@ -94,7 +105,7 @@ subroutine gwtifmod_da(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
 
   ! dealloc base
-  !call this%model_da()
+  call this%model_da()
 
 end subroutine gwtifmod_da
 

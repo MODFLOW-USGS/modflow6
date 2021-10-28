@@ -37,7 +37,6 @@ module GwfGwfConnectionModule
     ! overriding NumericalExchangeType
     procedure, pass(this) :: exg_df => gwfgwfcon_df    
     procedure, pass(this) :: exg_ar => gwfgwfcon_ar
-    procedure, pass(this) :: exg_ac => gwfgwfcon_ac
     procedure, pass(this) :: exg_rp => gwfgwfcon_rp
     procedure, pass(this) :: exg_cf => gwfgwfcon_cf
     procedure, pass(this) :: exg_fc => gwfgwfcon_fc
@@ -207,31 +206,6 @@ contains
     return
   end subroutine gwfgwfcon_rp
 
-  !> @brief Add connections, handled by the interface model,
-  !< to the global system's sparse
-  subroutine gwfgwfcon_ac(this, sparse)        
-    class(GwfGwfConnectionType) :: this         !< this connection
-    type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
-    ! local
-    integer(I4B) :: n, m, ipos
-    integer(I4B) :: nglo, mglo
-    
-    do n = 1, this%neq
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
-        ! only add connections for own model to global matrix
-        cycle
-      end if
-      nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
-      do ipos = this%ia(n) + 1, this%ia(n+1) - 1
-        m = this%ja(ipos)
-        mglo = this%gridConnection%idxToGlobal(m)%index + this%gridConnection%idxToGlobal(m)%model%moffset
-        
-        call sparse%addconnection(nglo, mglo, 1)
-      end do
-    end do
-    
-  end subroutine gwfgwfcon_ac
-    
   !> @brief Calculate (or adjust) matrix coefficients,
   !! in this case those which are determined or affected
   !< by the connection of a GWF model with its neigbors
@@ -462,6 +436,7 @@ contains
     class(DisBaseType), pointer :: imDis                    !< interface model discretization
     type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
 
+    ! for readability
     imDis => this%gwfInterfaceModel%dis
     imCon => this%gwfInterfaceModel%dis%con
     imNpf => this%gwfInterfaceModel%npf
@@ -518,6 +493,7 @@ contains
           dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
           call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
                                                      nx, ny, dist)
+          ! correct flowja diagonal                                                     
           this%gwfModel%flowja(this%gwfModel%ia(nLoc)) =                        &
             this%gwfModel%flowja(this%gwfModel%ia(nLoc)) + rrate
         else

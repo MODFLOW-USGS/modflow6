@@ -63,14 +63,15 @@ module SpatialModelConnectionModule
     ! partly overriding NumericalExchangeType:
     procedure, pass(this) :: exg_df => spatialcon_df    
     procedure, pass(this) :: exg_ar => spatialcon_ar
+    procedure, pass(this) :: exg_ac => spatialcon_ac
     procedure, pass(this) :: exg_mc => spatialcon_mc
     procedure, pass(this) :: exg_da => spatialcon_da
-
+    
+    ! protected
     procedure, pass(this) :: spatialcon_df    
     procedure, pass(this) :: spatialcon_ar
+    procedure, pass(this) :: spatialcon_ac
     procedure, pass(this) :: spatialcon_da
-    
-    ! protected    
     procedure, pass(this) :: spatialcon_setmodelptrs
     procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: validateConnection
@@ -255,6 +256,31 @@ contains ! module procedures
     end do
     
   end subroutine maskOwnerConnections
+
+  !> @brief Add connections, handled by the interface model,
+  !< to the global system's sparse
+  subroutine spatialcon_ac(this, sparse)        
+    class(SpatialModelConnectionType) :: this   !< this connection
+    type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
+    ! local
+    integer(I4B) :: n, m, ipos
+    integer(I4B) :: nglo, mglo
+    
+    do n = 1, this%neq
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+        ! only add connections for own model to global matrix
+        cycle
+      end if
+      nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
+      do ipos = this%ia(n) + 1, this%ia(n+1) - 1
+        m = this%ja(ipos)
+        mglo = this%gridConnection%idxToGlobal(m)%index + this%gridConnection%idxToGlobal(m)%model%moffset
+        
+        call sparse%addconnection(nglo, mglo, 1)
+      end do
+    end do
+    
+  end subroutine spatialcon_ac
 
   !> @brief Creates the mapping from the local system 
   !< matrix to the global one

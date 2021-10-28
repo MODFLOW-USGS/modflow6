@@ -102,7 +102,7 @@ module GwtFmiModule
     ! -- dummy
     type(GwtFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(inout) :: inunit
+    integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
