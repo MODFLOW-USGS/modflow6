@@ -32,11 +32,12 @@ if fc_id == 'gcc'
   # General options
   compile_args += ['-pedantic',
                    '-Wcharacter-truncation',
-                   '-Wno-unused-dummy-argument',
-                   '-Wno-unused-value', 
-                   '-Wno-c-binding-type', # TODO!
-                   '-Wno-intrinsic-shadow',
-                   '-Wno-maybe-uninitialized']
+                   '-Wno-unused-dummy-argument', # This makes problems with OOP      
+                   '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
+                   '-Wno-maybe-uninitialized',   # Uninitialized warnings give false positives with allocatables
+                   '-Wno-uninitialized',           
+                   #'-Wno-c-binding-type',                   
+                   ]
 
   # Options specific to profile
   if profile == 'release'
