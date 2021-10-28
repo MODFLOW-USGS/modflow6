@@ -236,7 +236,7 @@ contains
     integer(I4B),      intent(in) :: inunit
     ! -- local
     real(DP) :: r
-    integer(I4B) :: i, icol, iout, istart, istop, ltrim, n
+    integer(I4B) :: i, icol, iout, istart, istop, n
     ! --------------------------------------------------------------------------
     !
     ! -- initialize

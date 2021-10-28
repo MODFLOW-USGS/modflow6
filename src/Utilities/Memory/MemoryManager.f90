@@ -41,7 +41,6 @@ module MemoryManagerModule
   type(MemoryListType) :: memorylist
   type(TableType), pointer :: memtab => null()
   integer(I8B) :: nvalues_alogical = 0
-  integer(I8B) :: nvalues_achr = 0
   integer(I8B) :: nvalues_astr = 0
   integer(I8B) :: nvalues_aint = 0
   integer(I8B) :: nvalues_adbl = 0

@@ -129,7 +129,7 @@ contains
   function get_start_time(start_time) result(bmi_status) bind(C, name="get_start_time")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_start_time
     ! -- dummy variables
-    double precision, intent(out) :: start_time !< start time
+    real(kind=c_double), intent(out) :: start_time !< start time
     integer(kind=c_int) :: bmi_status           !< BMI status code
 
     start_time = 0.0_DP
@@ -147,8 +147,8 @@ contains
     ! -- modules
     use TdisModule, only: totalsimtime
     ! -- dummy variables
-    double precision, intent(out) :: end_time !< end time
-    integer(kind=c_int) :: bmi_status         !< BMI status code
+    real(kind=c_double), intent(out) :: end_time !< end time
+    integer(kind=c_int) :: bmi_status            !< BMI status code
 
     end_time = totalsimtime
     bmi_status = BMI_SUCCESS
@@ -165,7 +165,7 @@ contains
     ! -- modules
     use TdisModule, only: totim
     ! -- dummy variables
-    double precision, intent(out) :: current_time !< current time
+    real(kind=c_double), intent(out) :: current_time !< current time
     integer(kind=c_int) :: bmi_status             !< BMI status code
 
     current_time = totim
@@ -183,7 +183,7 @@ contains
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    double precision, intent(out) :: time_step  !< current time step
+    real(kind=c_double), intent(out) :: time_step  !< current time step
     integer(kind=c_int) :: bmi_status           !< BMI status code
 
     time_step = delt
@@ -299,7 +299,7 @@ contains
     !DIR$ ATTRIBUTES DLLEXPORT :: get_var_itemsize
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
-    integer, intent(out) :: var_size                        !< size of the element in bytes
+    integer(kind=c_int), intent(out) :: var_size                        !< size of the element in bytes
     integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! -- local variables
     character(len=LENMEMPATH) :: mem_path
@@ -325,7 +325,7 @@ contains
     !DIR$ ATTRIBUTES DLLEXPORT :: get_var_nbytes
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
-    integer, intent(out) :: var_nbytes                      !< size in bytes
+    integer(kind=c_int), intent(out) :: var_nbytes                      !< size in bytes
     integer(kind=c_int) :: bmi_status                       !< BMI status code
     ! -- local variables
     integer(I4B) :: var_size, isize
@@ -364,7 +364,7 @@ contains
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
-    integer :: bmi_status                                   !< BMI status code
+    integer(kind=c_int) :: bmi_status                                   !< BMI status code
     ! -- local variables
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -440,7 +440,7 @@ contains
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
     type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the integer array
-    integer :: bmi_status                                   !< BMI status code
+    integer(kind=c_int) :: bmi_status                                   !< BMI status code
     ! -- local variables
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -622,8 +622,8 @@ contains
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
-    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
-    integer :: bmi_status                                   !< BMI status code
+    type(c_ptr), intent(in) :: c_arr_ptr                   !< pointer to the double precision array
+    integer(kind=c_int) :: bmi_status                      !< BMI status code
     ! -- local variables
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
@@ -694,8 +694,8 @@ contains
     use MemorySetHandlerModule, only: on_memory_set
     ! -- dummy variables
     character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
-    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the integer array
-    integer :: bmi_status                                   !< BMI status code
+    type(c_ptr), intent(in) :: c_arr_ptr                   !< pointer to the integer array
+    integer(kind=c_int) :: bmi_status                      !< BMI status code
     ! -- local variables
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name

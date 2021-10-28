@@ -1428,7 +1428,6 @@ subroutine solution_create(filename, id)
     character(len=LENPAKLOC) :: strh
     character(len=25) :: cval
     character(len=7) :: cmsg
-    character(len=13) :: file_matrix
     integer(I4B) :: ic
     integer(I4B) :: im    
     integer(I4B) :: icsv0
@@ -2289,28 +2288,7 @@ subroutine solution_create(filename, id)
     ! -- return
     return
   end subroutine sln_connect
-  
-  ! fill list with exchanges from this solution, of equal type
-  subroutine getExchanges(this, exchanges, connectionType)
-    class(NumericalSolutionType), intent(inout) :: this
-    type(ListType), intent(inout) :: exchanges
-    character(len=7), intent(in) :: connectionType
-    
-    ! local
-    integer(I4B) :: ic
-    class(NumericalExchangeType), pointer :: numEx
-    class(*), pointer :: exPtr
-    
-    do ic=1,this%exchangelist%Count()
-      numEx => GetNumericalExchangeFromList(this%exchangelist, ic)
-      if (connectionType == numEx%typename) then
-        exPtr => numEx
-        call exchanges%Add(exPtr)
-      end if
-    enddo
-    
-  end subroutine
-  
+
   !> @ brief Reset the solution
   !!
   !!  Reset the solution by setting the coefficient matrix and right-hand side 
@@ -3174,30 +3152,4 @@ subroutine solution_create(filename, id)
     !
     return
   end function GetNumericalSolutionFromList
-
-
-  ! print sparse matrix (crs) to file, with zero-based indices
-  subroutine save_matrix(filename, nrows, ia, ja, M) !MJR
-    use InputOutputModule, only:getunit
-    
-    character(len=*), intent(in)              :: filename
-    integer(I4B), intent(in)                  :: nrows
-    integer(I4B), dimension(:), intent(in)    :: ia, ja
-    real(DP), dimension(:), intent(in)        :: M    
-    
-    integer(I4B) :: inunit
-    integer(I4B) :: i,j
-    
-    inunit = getunit()
-    open(inunit, file=filename)    
-    do i=1,nrows
-      do j=ia(i),ia(i+1)-1        
-        write(inunit, '(I12,I12,F20.10)') i-1, ja(j)-1, M(j) ! NB: zero-based
-      enddo
-    enddo
-    close(inunit)
-    
-  end subroutine  
-
-
 end module NumericalSolutionModule
