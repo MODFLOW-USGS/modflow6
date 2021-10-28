@@ -34,9 +34,8 @@ if fc_id == 'gcc'
                    '-Wcharacter-truncation',
                    '-Wno-unused-dummy-argument', # This makes problems with OOP      
                    '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
-                   '-Wno-maybe-uninitialized',   # Uninitialized warnings give false positives with allocatables
-                   '-Wno-uninitialized',           
-                   #'-Wno-c-binding-type',                   
+                   '-Wno-maybe-uninitialized',   # "Uninitialized" flags produce false positives with allocatables
+                   '-Wno-uninitialized',                     
                    ]
 
   # Options specific to profile
