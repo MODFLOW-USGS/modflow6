@@ -1,4 +1,4 @@
-name: gfortran - check warnings
+name: tests - gfortran - latest version
 
 on:
   push:
@@ -14,12 +14,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     defaults:
       run:
         shell: bash
 
-    if: github.repository_owner == 'MODFLOW-USGS'
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2.3.4
@@ -58,10 +57,40 @@ jobs:
       run: |
         .github/common/python-version.sh
 
+    - name: Set and print branch name
+      run: |
+        .github/common/git-branch-export.sh
+
+    - name: Get regression test files
+      run: |
+        .github/common/get-regression-files.sh
+
+    - name: Check out the correct regression test branch
+      run: |
+        .github/common/checkout-regression-branch.sh
+
+    - name: Update flopy MODFLOW 6 classes
+      run: |
+        .github/common/update-flopy.sh
+
     - name: Setup modflow
       run: |
-        meson setup builddir -Ddebug=false -Dwerror=true
+        meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
 
-    - name: Build modflow and check for warnings
+    - name: Build modflow
       run: |
-        meson compile -C builddir
+        meson compile -C builddir 
+
+    - name: Install modflow
+      run: |
+        meson install -C builddir
+
+    - name: Get executables
+      working-directory: autotest
+      run: |
+        pytest -v --durations=0 get_exes.py
+
+    - name: Test applications
+      working-directory: autotest
+      run: |
+        pytest -v --durations=0

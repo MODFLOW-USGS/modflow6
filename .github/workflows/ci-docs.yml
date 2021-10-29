@@ -1,4 +1,4 @@
-name: Pull Request Docs Build
+name: docs
 
 on:
   push:

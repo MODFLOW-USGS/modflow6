@@ -20,7 +20,6 @@ jobs:
       run:
         shell: bash
 
-    if: github.repository_owner == 'MODFLOW-USGS'
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2.3.4
