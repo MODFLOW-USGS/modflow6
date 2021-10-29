@@ -38,55 +38,55 @@ module NumericalSolutionModule
   public :: GetNumericalSolutionFromList
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
-    character(len=LENMEMPATH)                            :: memoryPath                     !< the path for storing solution variables in the memory manager
-    character(len=LINELENGTH)                            :: fname                          !< input file name
-    type(ListType), pointer                              :: modellist                      !< list of models in solution
-    type(ListType), pointer                              :: exchangelist                   !< list of exchanges in solution
-    integer(I4B), pointer                                :: id                             !< solution number
-    integer(I4B), pointer                                :: iu                             !< input file unit
-    real(DP), pointer                                    :: ttform                         !< timer - total formulation time
-    real(DP), pointer                                    :: ttsoln                         !< timer - total solution time
-    integer(I4B), pointer                                :: neq => null()                  !< number of equations
-    integer(I4B), pointer                                :: nja => null()                  !< number of non-zero entries
-    integer(I4B), dimension(:), pointer, contiguous      :: ia => null()                   !< CRS row pointers
-    integer(I4B), dimension(:), pointer, contiguous      :: ja => null()                   !< CRS column pointers
-    real(DP), dimension(:), pointer, contiguous          :: amat => null()                 !< coefficient matrix
-    real(DP), dimension(:), pointer, contiguous          :: rhs => null()                  !< right-hand side vector
-    real(DP), dimension(:), pointer, contiguous          :: x => null()                    !< dependent-variable vector
-    integer(I4B), dimension(:), pointer, contiguous      :: active => null()               !< active cell array
-    real(DP), dimension(:), pointer, contiguous          :: xtemp => null()                !< temporary vector for previous dependent-variable iterate
-    type(BlockParserType) :: parser                                                        !< block parser object
+    character(len=LENMEMPATH)                        :: memoryPath        !< the path for storing solution variables in the memory manager
+    character(len=LINELENGTH)                        :: fname             !< input file name
+    type(ListType), pointer                          :: modellist         !< list of models in solution
+    type(ListType), pointer                          :: exchangelist      !< list of exchanges in solution
+    integer(I4B), pointer                            :: id                !< solution number
+    integer(I4B), pointer                            :: iu                !< input file unit
+    real(DP), pointer                                :: ttform            !< timer - total formulation time
+    real(DP), pointer                                :: ttsoln            !< timer - total solution time
+    integer(I4B), pointer                            :: neq => null()     !< number of equations
+    integer(I4B), pointer                            :: nja => null()     !< number of non-zero entries
+    integer(I4B), dimension(:), pointer, contiguous  :: ia => null()      !< CRS row pointers
+    integer(I4B), dimension(:), pointer, contiguous  :: ja => null()      !< CRS column pointers
+    real(DP), dimension(:), pointer, contiguous      :: amat => null()    !< coefficient matrix
+    real(DP), dimension(:), pointer, contiguous      :: rhs => null()     !< right-hand side vector
+    real(DP), dimension(:), pointer, contiguous      :: x => null()       !< dependent-variable vector
+    integer(I4B), dimension(:), pointer, contiguous  :: active => null()  !< active cell array
+    real(DP), dimension(:), pointer, contiguous      :: xtemp => null()   !< temporary vector for previous dependent-variable iterate
+    type(BlockParserType) :: parser                                       !< block parser object
     !
     ! -- sparse matrix data
-    real(DP), pointer                                    :: theta => null()                !< under-relaxation theta
-    real(DP), pointer                                    :: akappa => null()               !< under-relaxation kappa
-    real(DP), pointer                                    :: gamma => null()                !< under-relaxation gamma
-    real(DP), pointer                                    :: amomentum => null()            !< under-relaxation momentum term
-    real(DP), pointer                                    :: breduc => null()               !< backtracking reduction factor
-    real(DP), pointer                                    :: btol => null()                 !< backtracking tolerance
-    real(DP), pointer                                    :: res_lim => null()              !< backtracking residual threshold
-    real(DP), pointer                                    :: dvclose => null()              !< dependent-variable closure criteria
-    real(DP), pointer                                    :: bigchold => null()             !< cooley under-relaxation weight
-    real(DP), pointer                                    :: bigch => null()                !< under-relaxation maximum dependent-variable change
-    real(DP), pointer                                    :: relaxold => null()             !< under-relaxation previous relaxation factor
-    real(DP), pointer                                    :: res_prev => null()             !< previous L-2 norm
-    real(DP), pointer                                    :: res_new => null()              !< current L-2 norm
-    integer(I4B), pointer                                :: icnvg => null()                !< convergence flag (1) non-convergence (0)
-    integer(I4B), pointer                                :: itertot_timestep => null()     !< total nr. of linear solves per call to sln_ca
-    integer(I4B), pointer                                :: iouttot_timestep => null()     !< total nr. of outer iterations per call to sln_ca
-    integer(I4B), pointer                                :: itertot_sim => null()          !< total nr. of inner iterations for simulation
-    integer(I4B), pointer                                :: mxiter => null()               !< maximum number of Picard iterations
-    integer(I4B), pointer                                :: linmeth => null()              !< linear acceleration method used
-    integer(I4B), pointer                                :: nonmeth => null()              !< under-relaxation method used
-    integer(I4B), pointer                                :: numtrack => null()             !< maximum number of backtracks
-    integer(I4B), pointer                                :: iprims => null()               !< solver print option
-    integer(I4B), pointer                                :: ibflag => null()               !< backtracking flag (1) on (0) off
-    integer(I4B), dimension(:,:), pointer, contiguous    :: lrch => null()                 !< location of the largest dependent-variable change at the end of a Picard iteration
-    real(DP), dimension(:), pointer, contiguous          :: hncg => null()                 !< largest dependent-variable change at the end of a Picard iteration
-    real(DP), dimension(:), pointer, contiguous          :: dxold => null()                !< DBD under-relaxation previous dependent-variable change
-    real(DP), dimension(:), pointer, contiguous          :: deold => null()                !< DBD under-relaxation dependent-variable change variable
-    real(DP), dimension(:), pointer, contiguous          :: wsave => null()                !< DBD under-relaxation sign-change factor
-    real(DP), dimension(:), pointer, contiguous          :: hchold => null()               !< DBD under-relaxation weighted dependent-variable change
+    real(DP), pointer                                :: theta => null()            !< under-relaxation theta
+    real(DP), pointer                                :: akappa => null()           !< under-relaxation kappa
+    real(DP), pointer                                :: gamma => null()            !< under-relaxation gamma
+    real(DP), pointer                                :: amomentum => null()        !< under-relaxation momentum term
+    real(DP), pointer                                :: breduc => null()           !< backtracking reduction factor
+    real(DP), pointer                                :: btol => null()             !< backtracking tolerance
+    real(DP), pointer                                :: res_lim => null()          !< backtracking residual threshold
+    real(DP), pointer                                :: dvclose => null()          !< dependent-variable closure criteria
+    real(DP), pointer                                :: bigchold => null()         !< cooley under-relaxation weight
+    real(DP), pointer                                :: bigch => null()            !< under-relaxation maximum dependent-variable change
+    real(DP), pointer                                :: relaxold => null()         !< under-relaxation previous relaxation factor
+    real(DP), pointer                                :: res_prev => null()         !< previous L-2 norm
+    real(DP), pointer                                :: res_new => null()          !< current L-2 norm
+    integer(I4B), pointer                            :: icnvg => null()            !< convergence flag (1) non-convergence (0)
+    integer(I4B), pointer                            :: itertot_timestep => null() !< total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                            :: iouttot_timestep => null() !< total nr. of outer iterations per call to sln_ca
+    integer(I4B), pointer                            :: itertot_sim => null()      !< total nr. of inner iterations for simulation
+    integer(I4B), pointer                            :: mxiter => null()           !< maximum number of Picard iterations
+    integer(I4B), pointer                            :: linmeth => null()          !< linear acceleration method used
+    integer(I4B), pointer                            :: nonmeth => null()          !< under-relaxation method used
+    integer(I4B), pointer                            :: numtrack => null()         !< maximum number of backtracks
+    integer(I4B), pointer                            :: iprims => null()           !< solver print option
+    integer(I4B), pointer                            :: ibflag => null()           !< backtracking flag (1) on (0) off
+    integer(I4B), dimension(:,:), pointer, contiguous:: lrch => null()             !< location of the largest dependent-variable change at the end of a Picard iteration
+    real(DP), dimension(:), pointer, contiguous      :: hncg => null()             !< largest dependent-variable change at the end of a Picard iteration
+    real(DP), dimension(:), pointer, contiguous      :: dxold => null()            !< DBD under-relaxation previous dependent-variable change
+    real(DP), dimension(:), pointer, contiguous      :: deold => null()            !< DBD under-relaxation dependent-variable change variable
+    real(DP), dimension(:), pointer, contiguous      :: wsave => null()            !< DBD under-relaxation sign-change factor
+    real(DP), dimension(:), pointer, contiguous      :: hchold => null()           !< DBD under-relaxation weighted dependent-variable change
     !
     ! -- convergence summary information
     character(len=31), dimension(:), pointer, contiguous :: caccel => null()               !< convergence string
