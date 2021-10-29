@@ -117,7 +117,6 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson compile -C builddir
           meson install -C builddir
           cd autotest
           pytest -v --durations=0 get_exes.py
@@ -128,7 +127,6 @@ jobs:
         run: |
           call ".github/intel-scripts/ifortvars_windows.bat"
           meson setup builddir -Ddebug=false --prefix=%CD% --libdir=bin
-          meson compile -C builddir
           meson install -C builddir
           cd autotest
           pytest -v --durations=0 get_exes.py

@@ -72,11 +72,7 @@ jobs:
       run: |
         meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
 
-    - name: Build modflow
-      run: |
-        meson compile -C builddir 
-
-    - name: Install modflow
+    - name: Build and install modflow
       run: |
         meson install -C builddir
 
