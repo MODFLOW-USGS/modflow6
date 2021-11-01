@@ -1,31 +1,40 @@
 import subprocess
 import os
 import argparse
-import sys
+import shutil
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--compiler', type=str)
-parser.add_argument('action')
+parser.add_argument("--compiler", type=str)
+parser.add_argument("--buildtype", type=str)
+parser.add_argument("action")
 args = parser.parse_args()
 
 os.environ["FC"] = args.compiler
+builddir = f"builddir_{args.compiler}_{args.buildtype}"
 
 
-builddir = f"builddir_{args.compiler}"
+if args.action == "rebuild" and os.path.isdir(builddir):
+    shutil.rmtree(builddir)
 
-subprocess.run(["meson", "setup", builddir, "--prefix", os.getcwd(), "--libdir", "bin"], check=True)
 
-if args.action == "build":
-    subprocess.run(["meson", "compile", "-C", builddir], check=True)
-elif args.action == "rebuild":
-    subprocess.run(["meson", "compile", "-C", builddir, "--clean"], check=True)
+if args.buildtype == "release":
+    setup_flag = ["-Doptimization=2"]
+elif args.buildtype == "debug":
+    setup_flag = ["-Doptimization=0"]
 
-subprocess.run(
-    [
-        "meson",
-        "install",
-        "-C",
-        builddir,
-    ],
-    check=True,
-)
+if not os.path.isdir(builddir):
+    subprocess.run(
+        ["meson", "setup", builddir, "--prefix", os.getcwd(), "--libdir", "bin"]
+        + setup_flag,
+        check=True,
+    )
+
+subprocess.run(["meson", "compile", "-C", builddir], check=True)
+
+# Remove all files from bin folder
+for dir_entry in os.scandir(os.path.join(os.getcwd(), "bin")):
+    path = dir_entry.path
+    if os.path.isfile(path):
+        os.remove(path)
+
+subprocess.run(["meson", "install", "-C", builddir], check=True)

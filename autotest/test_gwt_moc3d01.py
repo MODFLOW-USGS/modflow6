@@ -43,7 +43,7 @@ for s in ex:
 ddir = "data"
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nlay, nrow, ncol = 1, 122, 1
     nper = 1
     perlen = perlens[idx]  # [120.]
@@ -294,7 +294,7 @@ def get_model(idx, dir):
         filename="{}.gwfgwt".format(name),
     )
 
-    return sim
+    return sim, None
 
 
 def eval_transport(sim):
@@ -380,11 +380,6 @@ def eval_transport(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -396,7 +391,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
@@ -407,10 +402,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
         test.run_mf6(sim)
 

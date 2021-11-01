@@ -1049,7 +1049,8 @@ module SfrModule
         call cross_data%initialize(this%ncrossptstot, this%ncrosspts, &
                                    this%iacross, &
                                    this%station, this%xsdepths)
-        
+        !
+        ! -- read all of the entries in the block
         readtable: do
           call this%parser%GetNextLine(endOfBlock)
           if (endOfBlock) exit
@@ -1059,8 +1060,8 @@ module SfrModule
           !
           ! -- check for reach number error
           if (n < 1 .or. n > this%maxbound) then
-            write(errmsg, '(a,1x,a,1x,i0)')                                        &
-              'SFR reach in connectiondata block is less than one or greater',     &
+            write(errmsg, '(a,1x,a,1x,i0)') &
+              'SFR reach in crosssections block is less than one or greater', &
               'than NREACHES:', n
             call store_error(errmsg)
             cycle readtable
@@ -1094,9 +1095,9 @@ module SfrModule
         write(this%iout,'(1x,a)') &
           'END OF ' // trim(adjustl(this%text)) // ' CROSSSECTIONS'
         
+        !
+        ! -- check for duplicate sfr crosssections
         do n = 1, this%maxbound
-          !
-          ! -- check for duplicate sfr crosssections
           if (nboundchk(n) > 1) then
             write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)') &
               'Cross-section data for reach', n, &
@@ -1120,6 +1121,9 @@ module SfrModule
           call mem_reallocate(this%xsdepths, this%ncrossptstot, 'XSDEPTHS', this%memoryPath)          
         end if
         !
+        ! -- write cross-section data to the model listing file
+        call cross_data%output(this%width)
+        !
         ! -- pack cross-section data
         call cross_data%pack(this%ncrossptstot, this%ncrosspts, &
                              this%iacross, &
@@ -1131,7 +1135,6 @@ module SfrModule
         deallocate(cross_data)
         nullify(cross_data)
       end if
-      
       !
       ! -- return
       return
@@ -1186,7 +1189,7 @@ module SfrModule
         if (ival > nconnmax) then
           nconnmax = ival
         end if
-      end do 
+      end do
       !
       ! -- reallocate connection data for package
       call mem_reallocate(this%ja, nja, 'JA', this%memoryPath)
@@ -1278,7 +1281,7 @@ module SfrModule
         
         write(this%iout,'(1x,a)')                                                  &
           'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
-        
+          
         do n = 1, this%maxbound
           !
           ! -- check for missing or duplicate sfr connections
@@ -1557,16 +1560,22 @@ module SfrModule
     subroutine sfr_rp(this)
       ! -- modules
       use TdisModule, only: kper, nper
+      use MemoryManagerModule, only: mem_reallocate
+      use sfrCrossSectionManager, only: cross_section_cr, SfrCrossSection
       ! -- dummy variables
       class(SfrType),intent(inout) :: this  !< SfrType object
       ! -- local variables
       character(len=LINELENGTH) :: title
       character(len=LINELENGTH) :: line
+      character(len=LINELENGTH) :: crossfile
       integer(I4B) :: ierr
       integer(I4B) :: n
       integer(I4B) :: ichkustrm
+      integer(I4B) :: ichkcross
+      integer(I4B) :: ncrossptstot
       logical :: isfound
       logical :: endOfBlock
+      type(SfrCrossSection), pointer :: cross_data => null()
       ! -- formats
       character(len=*),parameter :: fmtblkerr = &
         "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -1578,6 +1587,7 @@ module SfrModule
       !
       ! -- initialize flags
       ichkustrm = 0
+      ichkcross = 0
       if (kper == 1) then
         ichkustrm = 1
       end if
@@ -1615,6 +1625,12 @@ module SfrModule
       ! -- Read data if ionper == kper
       if(this%ionper==kper) then
         !
+        ! -- create and initialize cross-section data
+        call cross_section_cr(cross_data, this%iout, this%iprpak, this%maxbound)
+        call cross_data%initialize(this%ncrossptstot, this%ncrosspts, &
+                                   this%iacross, &
+                                   this%station, this%xsdepths)
+        !
         ! -- setup table for period data
         if (this%iprpak /= 0) then
           !
@@ -1648,17 +1664,50 @@ module SfrModule
           end if
           !
           ! -- read data from the rest of the line
-          call this%sfr_set_stressperiod(n, ichkustrm)
+          call this%sfr_set_stressperiod(n, ichkustrm, crossfile)
           !
           ! -- write line to table
           if (this%iprpak /= 0) then
             call this%parser%GetCurrentLine(line)
             call this%inputtab%line_to_columns(line)
           end if
+          !
+          ! -- process cross-section file
+          if (trim(adjustl(crossfile)) /= 'NONE') then
+            call cross_data%read_table(n, this%width(n), trim(adjustl(crossfile)))
+          end if
         end do
+        !
+        ! -- write raw period data 
         if (this%iprpak /= 0) then
           call this%inputtab%finalize_table()
         end if
+        !
+        ! -- finalize cross-sections
+
+        !
+        ! -- determine the current size of cross-section data
+        ncrossptstot = cross_data%get_ncrossptstot()
+        !
+        ! -- reallocate sfr package cross-section data
+        if (ncrossptstot /= this%ncrossptstot) then
+          this%ncrossptstot = ncrossptstot
+          call mem_reallocate(this%station, this%ncrossptstot, 'STATION', this%memoryPath)
+          call mem_reallocate(this%xsdepths, this%ncrossptstot, 'XSDEPTHS', this%memoryPath)          
+        end if
+        !
+        ! -- write cross-section data to the model listing file
+        call cross_data%output(this%width, kstp=1, kper=kper)
+        !
+        ! -- pack cross-section data
+        call cross_data%pack(this%ncrossptstot, this%ncrosspts, &
+                             this%iacross, &
+                             this%station, this%xsdepths)
+        !
+        ! -- deallocate temporary local storage for reach cross-sections
+        call cross_data%destroy()
+        deallocate(cross_data)
+        nullify(cross_data)
       !
       ! -- Reuse data from last stress period
       else
@@ -2617,6 +2666,11 @@ module SfrModule
       call this%obs%StoreObsType('wet-area', .false., indx)
       this%obs%obsData(indx)%ProcessIdPtr => sfr_process_obsID
       !
+      ! -- Store obs type and assign procedure pointer
+      !    for wetted-width observation type.
+      call this%obs%StoreObsType('wet-width', .false., indx)
+      this%obs%obsData(indx)%ProcessIdPtr => sfr_process_obsID
+      !
       ! -- return
       return
     end subroutine sfr_df_obs
@@ -2694,6 +2748,8 @@ module SfrModule
                 v = this%calc_perimeter_wet(n, this%depth(n))
               case ('WET-AREA')
                 v = this%calc_area_wet(n, this%depth(n))
+              case ('WET-WIDTH')
+                v = this%calc_top_width_wet(n, this%depth(n))
               case default
                 msg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
                 call store_error(msg)
@@ -2786,7 +2842,8 @@ module SfrModule
           if (obsrv%ObsTypeId == 'STAGE' .or. &
               obsrv%ObsTypeId == 'DEPTH' .or. &
               obsrv%ObsTypeId == 'WET-PERIMETER' .or. &
-              obsrv%ObsTypeId == 'WET-AREA') then
+              obsrv%ObsTypeId == 'WET-AREA' .or. &
+              obsrv%ObsTypeId == 'WET-WIDTH') then
             nn1 = obsrv%NodeNumber
             if (nn1 == NAMEDBOUNDFLAG) then
               if (obsrv%indxbnds_count > 1) then
@@ -2874,13 +2931,14 @@ module SfrModule
     !! Method to read and set period data for a SFR package reach.
     !!
     !<
-    subroutine sfr_set_stressperiod(this, n, ichkustrm)
+    subroutine sfr_set_stressperiod(this, n, ichkustrm, crossfile)
       ! -- modules
       use TimeSeriesManagerModule, only: read_value_or_time_series_adv
       ! -- dummy variables
-      class(SfrType),intent(inout) :: this         !< SfrType object
-      integer(I4B), intent(in) :: n                !< reach number
-      integer(I4B), intent(inout) :: ichkustrm     !< flag indicating if upstream fraction data specified
+      class(SfrType),intent(inout) :: this                   !< SfrType object
+      integer(I4B), intent(in) :: n                          !< reach number
+      integer(I4B), intent(inout) :: ichkustrm               !< flag indicating if upstream fraction data specified
+      character(len=LINELENGTH), intent(inout) :: crossfile  !< cross-section file name
       ! -- local variables
       character(len=10) :: cnum
       character(len=LINELENGTH) :: text
@@ -2890,9 +2948,13 @@ module SfrModule
       integer(I4B) :: ii
       integer(I4B) :: jj
       integer(I4B) :: idiv
+      integer(I4B) :: ixserror
       character (len=10) :: cp
       real(DP) :: divq
       real(DP), pointer :: bndElem => null()
+      !
+      ! -- initialize variables
+      crossfile = 'NONE'
       !
       ! -- read line
       call this%parser%GetStringCaps(keyword)
@@ -2946,7 +3008,7 @@ module SfrModule
           call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
                                             'BND', this%tsManager, this%iprpak,   &
                                             'RUNOFF')
-      case ('INFLOW')
+        case ('INFLOW')
           call this%parser%GetString(text)
           jj = 1  ! For 'INFLOW'
           bndElem => this%inflow(n)
@@ -3000,6 +3062,31 @@ module SfrModule
           call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,      &
                                             'BND', this%tsManager, this%iprpak,   &
                                             'USTRF')
+
+        case ('CROSS_SECTION')
+          ixserror = 0
+          !
+          ! -- read FILE keyword
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+            case('TAB6')
+              call this%parser%GetStringCaps(keyword)
+              if(trim(adjustl(keyword)) /= 'FILEIN') then
+                errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //           &
+                          'then by filename.'
+                call store_error(errmsg)
+                ixserror = 1
+              end if
+              if (ixserror == 0) then
+                call this%parser%GetString(crossfile)
+              end if
+            case default
+              write(errmsg,'(a,1x,i4,1x,a)') &
+                'CROSS-SECTION TABLE ENTRY for REACH ', n, &
+                'MUST INCLUDE TAB6 KEYWORD'
+              call store_error(errmsg)
+          end select
+
         case ('AUXILIARY')
           call this%parser%GetStringCaps(caux)
           do jj = 1, this%naux

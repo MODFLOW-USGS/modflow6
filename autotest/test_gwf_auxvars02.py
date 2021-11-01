@@ -27,7 +27,8 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
-def get_model(idx, dir):
+
+def build_model(idx, dir):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
     perlen = [1.0, 1.0, 1.0]
@@ -107,7 +108,7 @@ def get_model(idx, dir):
         stress_period_data=chdspdict,
         save_flows=True,
         auxiliary=[f"aux{i}" for i in range(100)],
-        pname="CHD-1"
+        pname="CHD-1",
     )
 
     # output control
@@ -121,14 +122,7 @@ def get_model(idx, dir):
         filename="{}.oc".format(name),
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_model(sim):
@@ -155,8 +149,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -166,15 +160,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

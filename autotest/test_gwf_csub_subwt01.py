@@ -147,7 +147,7 @@ for k in range(len(thick)):
                 ibcno += 1
 
 
-def build_model(idx, ws):
+def get_model(idx, ws):
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -267,15 +267,15 @@ def build_model(idx, ws):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(idx, ws)
+    sim = get_model(idx, ws)
 
     # build comparision files
     ws = os.path.join(dir, cmppth)
-    mc = build_model(idx, ws)
+    mc = get_model(idx, ws)
 
     return sim, mc
 
@@ -439,13 +439,6 @@ def cbc_compare(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -464,7 +457,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -485,10 +478,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for dir in exdirs:
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             dir,
             exe_dict=replace_exe,

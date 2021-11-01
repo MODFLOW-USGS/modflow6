@@ -60,7 +60,6 @@ def run_mf6_error(ws, err_str_list):
                     err_str
                 )
                 raise ValueError(msg)
-    return
 
 
 def get_minimal_gwf_simulation(

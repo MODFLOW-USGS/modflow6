@@ -90,7 +90,7 @@ module mf6xmi
   use mf6bmiError
   use Mf6CoreModule
   use KindModule
-  use iso_c_binding, only: c_int, c_char
+  use iso_c_binding, only: c_int, c_char, c_double
   implicit none
 
   integer(I4B), pointer :: iterationCounter => null() !< the counter for the outer iteration loop, initialized in xmi_prepare_iteration()
@@ -106,7 +106,7 @@ contains
   function xmi_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_prepare_time_step
     ! -- dummy variables
-    double precision, intent(in) :: dt  !< time step
+    real(kind=c_double), intent(in) :: dt  !< time step
     integer(kind=c_int) :: bmi_status   !< BMI status code
 
     call Mf6PrepareTimestep()

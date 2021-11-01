@@ -26,7 +26,7 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -185,14 +185,7 @@ def get_model(idx, dir):
         ],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_results(sim):
@@ -270,8 +263,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
@@ -281,15 +274,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

@@ -65,7 +65,7 @@ def get_chd(idx):
     return {0: c}
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nlay, nrow, ncol = 1, cell_dimensions[idx], cell_dimensions[idx]
     nper = 1
     perlen = [5.0]
@@ -156,14 +156,7 @@ def get_model(idx, dir):
     # output control
     flopy.mf6.ModflowGwfoc(gwf, printrecord=[("BUDGET", "LAST")])
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_model(sim):
@@ -186,7 +179,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build all of the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -197,10 +190,9 @@ def main():
     test = testing_framework()
 
     # build all of the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
 

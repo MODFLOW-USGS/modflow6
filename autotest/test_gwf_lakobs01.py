@@ -24,10 +24,8 @@ import targets
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
-ex = ["gwf_lakobs_01a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
+ex = "gwf_lakobs_01a"
+exdir = os.path.join("temp", ex)
 
 
 # store global gwf for subsequent plotting
@@ -42,7 +40,7 @@ def get_idomain(nlay, nrow, ncol, lakend):
     return idomain
 
 
-def get_model(idx, dir):
+def build_model():
     lx = 300.0
     lz = 45.0
     nlay = 45
@@ -69,10 +67,10 @@ def get_model(idx, dir):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = ex
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = exdir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
     )
@@ -218,24 +216,13 @@ def get_model(idx, dir):
     return sim
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-
-    return sim
-
-
 # - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
+def test_mf6model():
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    sim = build_models()
+    sim = build_model()
 
     # write model input
     sim.write_simulation()
@@ -244,7 +231,7 @@ def test_mf6model(idx, dir):
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdirs[0], "mfsim.lst"), "r")
+    f = open(os.path.join(exdir, "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -258,8 +245,8 @@ def test_mf6model(idx, dir):
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdirs[0], ex[0] + ".lak.obs")
-    new_fl = os.path.join(exdirs[0], ex[0] + ".lak.obs.new")
+    orig_fl = os.path.join(exdir, ex + ".lak.obs")
+    new_fl = os.path.join(exdir, ex + ".lak.obs.new")
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 
@@ -289,7 +276,7 @@ def main():
     test = testing_framework()
 
     # build the models
-    sim = build_models()
+    sim = build_model()
 
     # write model input
     sim.write_simulation()
@@ -298,7 +285,7 @@ def main():
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdirs[0], "mfsim.lst"), "r")
+    f = open(os.path.join(exdir, "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -312,8 +299,8 @@ def main():
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdirs[0], ex[0] + ".lak.obs")
-    new_fl = os.path.join(exdirs[0], ex[0] + ".lak.obs.new")
+    orig_fl = os.path.join(exdir, ex + ".lak.obs")
+    new_fl = os.path.join(exdir, ex + ".lak.obs.new")
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 

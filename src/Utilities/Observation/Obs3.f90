@@ -168,7 +168,7 @@ module ObsModule
     type(ObsDataType), dimension(:), pointer, public :: obsData => null()
     ! -- Private members
     integer(I4B), private :: iprecision = 2                                      ! 2=double; 1=single
-    integer(I4B), private :: idigits = 5
+    integer(I4B), private :: idigits = 0
     character(len=LINELENGTH), private :: outputFilename = ''
     character(len=LINELENGTH), private :: blockTypeFound = ''
     character(len=20), private:: obsfmtcont = ''
@@ -666,11 +666,12 @@ contains
     ! -- formats
 10  format('No options block found in OBS input. Defaults will be used.')
 40  format('Text output number of digits of precision set to: ',i2)
+50  format('Text output number of digits set to internal representation (G0).')
 60  format(/,'Processing observation options:',/)
 ! ------------------------------------------------------------------------------
     !
     localprecision = 0
-    localdigits = 0
+    localdigits = -1
     lineList => null()
     !
     ! -- Find and store file name
@@ -706,23 +707,32 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case ('DIGITS')
-          ! -- Specifies number of significant digits used writing simulated
-          !    values to a text file. Default is 5 digits.
-          if (localdigits==0) then
-            localdigits = this%parser%GetInteger()
-            if (localdigits < 1) then
-              errmsg = 'Error in OBS input: Invalid value for DIGITS option'
-              call store_error(errmsg)
-              exit readblockoptions
-            endif
-            if (localdigits < 2) localdigits = 2
-            if (localdigits > 16) localdigits = 16
-            write(this%iout,40)localdigits
-          else
+          !
+          ! -- error if digits already read
+          if (localdigits /= -1) then
             errmsg = 'Error in OBS input: DIGITS has already been defined'
             call store_error(errmsg)
             exit readblockoptions
-          endif
+          end if
+          !
+          ! -- Specifies number of significant digits used writing simulated
+          !    values to a text file. Default is stored digits.
+          !
+          ! -- Read integer value
+          localdigits = this%parser%GetInteger()
+          !
+          ! -- Set localdigits to valid value: 0, or 2 to 16
+          if (localdigits == 0) then
+            write(this%iout, 50)
+          else if (localdigits < 1) then
+              errmsg = 'Error in OBS input: Invalid value for DIGITS option'
+              call store_error(errmsg)
+              exit readblockoptions
+          else
+            if (localdigits < 2) localdigits = 2
+            if (localdigits > 16) localdigits = 16
+            write(this%iout, 40) localdigits
+          end if
         case ('PRINT_INPUT')
           this%echo = .true.
           write(this%iout,'(a)')'The PRINT_INPUT option has been specified.'
@@ -742,8 +752,8 @@ contains
     write(this%iout,'(1x)')
     !
     ! -- Assign type variables
-    if (localprecision>0) this%iprecision = localprecision
-    if (localdigits>0) this%idigits = localdigits
+    if (localprecision > 0) this%iprecision = localprecision
+    if (localdigits >= 0) this%idigits = localdigits
     !
     return
   end subroutine read_obs_options
@@ -759,10 +769,14 @@ contains
     ! -- dummy
     class(ObsType) :: this
     ! formats
-    50 format('(g',i2.2,'.',i2.2,')')
+50  format('(g',i2.2,'.',i2.2,')')
 ! ------------------------------------------------------------------------------
     !
-    write(this%obsfmtcont,50)this%idigits+7, this%idigits
+    if (this%idigits == 0) then
+      this%obsfmtcont = '(G0)'
+    else
+      write(this%obsfmtcont,50) this%idigits+7, this%idigits
+    end if
     return
   end subroutine define_fmts
 

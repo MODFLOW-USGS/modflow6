@@ -31,16 +31,14 @@ import targets
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
-ex = ["maw_obs"]
 newtonoptions = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
+ex = "maw_obs"
+exdir = os.path.join("temp", ex)
 
 ddir = "data"
 
 
-def get_model(idx, dir):
+def build_model():
 
     nlay, nrow, ncol = 1, 1, 3
     nper = 3
@@ -62,10 +60,10 @@ def get_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = ex
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = exdir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
     )
@@ -81,7 +79,7 @@ def get_model(idx, dir):
         modelname=name,
         model_nam_file="{}.nam".format(name),
     )
-    gwf.name_file.newtonoptions = newtonoptions[idx]
+    gwf.name_file.newtonoptions = newtonoptions[0]
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -93,7 +91,7 @@ def get_model(idx, dir):
         inner_maximum=ninner,
         inner_dvclose=hclose,
         rcloserecord=rclose,
-        linear_acceleration=krylov[idx],
+        linear_acceleration=krylov[0],
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
@@ -194,23 +192,12 @@ def get_model(idx, dir):
     return sim
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-
-    return sim
-
-
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
+def test_mf6model():
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    sim = build_models()
+    sim = build_model()
 
     # write model input
     sim.write_simulation()
@@ -219,7 +206,7 @@ def test_mf6model(idx, dir):
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdirs[0], "mfsim.lst"), "r")
+    f = open(os.path.join(exdir, "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -233,8 +220,8 @@ def test_mf6model(idx, dir):
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs")
-    new_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs.new")
+    orig_fl = os.path.join(exdir, ex + ".maw.obs")
+    new_fl = os.path.join(exdir, ex + ".maw.obs.new")
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 
@@ -256,15 +243,13 @@ def test_mf6model(idx, dir):
     # rerun the model, should be no errors
     sim.run_simulation()
 
-    return
-
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    sim = build_models()
+    sim = build_model()
 
     # write model input
     sim.write_simulation()
@@ -273,7 +258,7 @@ def main():
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdirs[0], "mfsim.lst"), "r")
+    f = open(os.path.join(exdir, "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -287,8 +272,8 @@ def main():
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs")
-    new_fl = os.path.join(exdirs[0], ex[0] + ".maw.obs.new")
+    orig_fl = os.path.join(exdir, ex + ".maw.obs")
+    new_fl = os.path.join(exdir, ex + ".maw.obs.new")
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 

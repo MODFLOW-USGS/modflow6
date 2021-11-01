@@ -40,7 +40,7 @@ nlay, nrow, = (
 )
 
 
-def build_models():
+def build_model(idx, dir):
 
     perlen = [10]
     nper = len(perlen)
@@ -57,112 +57,108 @@ def build_models():
     sy = 0.1
 
     tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+    for id in range(nper):
+        tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    for idx, dir in enumerate(exdirs):
+    name = ex[idx]
+    ncol = ncols[idx]
 
-        name = ex[idx]
-        ncol = ncols[idx]
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+    )
 
-        # build MODFLOW 6 files
-        ws = dir
-        sim = flopy.mf6.MFSimulation(
-            sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
-        )
+    # create tdis package
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
-        # create tdis package
-        tdis = flopy.mf6.ModflowTdis(
-            sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-        )
+    # create gwf model
+    gwfname = "gwf_" + name
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=gwfname,
+        newtonoptions=None,
+    )
 
-        # create gwf model
-        gwfname = "gwf_" + name
-        gwf = flopy.mf6.ModflowGwf(
-            sim,
-            modelname=gwfname,
-            newtonoptions=None,
-        )
+    # create iterative model solution and register the gwf model with it
+    nouter, ninner = 20, 10
+    hclose, rclose, relax = 1e-6, 1e-6, 0.97
+    imsgwf = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        # under_relaxation="DBD",
+        # under_relaxation_theta=0.7,
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="CG",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="{}.ims".format(gwfname),
+    )
+    sim.register_ims_package(imsgwf, [gwf.name])
 
-        # create iterative model solution and register the gwf model with it
-        nouter, ninner = 20, 10
-        hclose, rclose, relax = 1e-6, 1e-6, 0.97
-        imsgwf = flopy.mf6.ModflowIms(
-            sim,
-            print_option="SUMMARY",
-            outer_dvclose=hclose,
-            outer_maximum=nouter,
-            # under_relaxation="DBD",
-            # under_relaxation_theta=0.7,
-            inner_maximum=ninner,
-            inner_dvclose=hclose,
-            rcloserecord=rclose,
-            linear_acceleration="CG",
-            scaling_method="NONE",
-            reordering_method="NONE",
-            relaxation_factor=relax,
-            filename="{}.ims".format(gwfname),
-        )
-        sim.register_ims_package(imsgwf, [gwf.name])
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+    )
 
-        dis = flopy.mf6.ModflowGwfdis(
-            gwf,
-            nlay=nlay,
-            nrow=nrow,
-            ncol=ncol,
-            delr=delr,
-            delc=delc,
-            top=top,
-            botm=botm,
-            idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        )
+    # initial conditions
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
-        # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    # node property flow
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=laytyp, k=hk
+    )
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(
+        gwf,
+        save_flows=False,
+        iconvert=laytyp,
+        ss=ss,
+        sy=sy,
+        steady_state={0: False},
+        transient={0: True},
+    )
 
-        # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(
-            gwf, save_flows=False, icelltype=laytyp, k=hk
-        )
-        # storage
-        sto = flopy.mf6.ModflowGwfsto(
-            gwf,
-            save_flows=False,
-            iconvert=laytyp,
-            ss=ss,
-            sy=sy,
-            steady_state={0: False},
-            transient={0: True},
-        )
+    # wel files
+    welspdict = {
+        0: [[(0, 0, j), -10.0] for j in range(ncol)],
+    }
+    wel = flopy.mf6.ModflowGwfwel(
+        gwf,
+        print_input=True,
+        print_flows=True,
+        stress_period_data=welspdict,
+        save_flows=False,
+    )
 
-        # wel files
-        welspdict = {
-            0: [[(0, 0, j), -10.0] for j in range(ncol)],
-        }
-        wel = flopy.mf6.ModflowGwfwel(
-            gwf,
-            print_input=True,
-            print_flows=True,
-            stress_period_data=welspdict,
-            save_flows=False,
-        )
+    # output control
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        budget_filerecord="{}.cbc".format(gwfname),
+        head_filerecord="{}.hds".format(gwfname),
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        saverecord=[("HEAD", "ALL")],
+        printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+    )
 
-        # output control
-        oc = flopy.mf6.ModflowGwfoc(
-            gwf,
-            budget_filerecord="{}.cbc".format(gwfname),
-            head_filerecord="{}.hds".format(gwfname),
-            headprintrecord=[
-                ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-            ],
-            saverecord=[("HEAD", "ALL")],
-            printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        )
+    # write MODFLOW 6 files
+    sim.write_simulation()
 
-        # write MODFLOW 6 files
-        sim.write_simulation()
-
-    return
+    return sim, None
 
 
 def eval_flow(sim):
@@ -192,8 +188,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
@@ -203,15 +199,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

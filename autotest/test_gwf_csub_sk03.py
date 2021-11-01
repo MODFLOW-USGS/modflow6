@@ -260,7 +260,7 @@ ds17 = [
 ]
 
 
-def build_model(idx, ws):
+def get_model(idx, ws):
     name = ex[idx]
     newton = newtons[idx]
     newtonoptions = None
@@ -530,16 +530,16 @@ def build_model(idx, ws):
 
 
 # SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = build_model(idx, ws)
+    sim = get_model(idx, ws)
 
     # build comparison files
     cpth = cmppths[idx]
     ws = os.path.join(dir, cpth)
-    mc = build_model(idx, ws)
+    mc = get_model(idx, ws)
 
     return sim, mc
 
@@ -635,13 +635,6 @@ def eval_comp(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -660,7 +653,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -683,11 +676,9 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             dir,
             exfunc=eval_comp,

@@ -99,17 +99,17 @@ ini_head = 1.0
 thick = [1.0]
 
 
-def get_model(idx, dir):
-    sim = build_model(idx, dir, pch=True)
+def build_model(idx, dir):
+    sim = get_model(idx, dir, pch=True)
 
     # build MODFLOW-6 with constant material properties
     pth = os.path.join(dir, compdir)
-    mc = build_model(idx, pth)
+    mc = get_model(idx, pth)
 
     return sim, mc
 
 
-def build_model(idx, dir, pch=None):
+def get_model(idx, dir, pch=None):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -404,17 +404,8 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
-
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -433,7 +424,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -445,16 +436,13 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx
         )
         test.run_mf6(sim)
-    return
 
 
 # use python testmf6_csub_sub01.py --mf2005 mf2005devdbl

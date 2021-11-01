@@ -74,7 +74,7 @@ contains
       ! -- increase increment by a multiplier and a value no
       !    smaller than a default or specified minimum size
       else
-        increment =  nsize * 0.2_DP
+        increment =  int(nsize * 0.2_DP)
         increment = max(minimum_increment, increment)
       end if
       !

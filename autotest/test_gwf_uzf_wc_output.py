@@ -568,11 +568,8 @@ def eval_model(sim, mfnwt, include_NWT=False):
 
 
 # - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
+def test_mf6model():
+
     include_NWT = False
     # initialize testing framework
     test = testing_framework()

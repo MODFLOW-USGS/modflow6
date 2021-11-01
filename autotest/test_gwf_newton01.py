@@ -38,7 +38,7 @@ oname = "head_obs.csv"
 obs_recarray = {oname: [("h1", "HEAD", (0, 1, 1)), ("h2", "HEAD", (1, 1, 1))]}
 
 
-def build_mf6(idx, ws):
+def build_model(idx, ws):
     c6 = []
     for loc in chdloc:
         c6.append([loc, chd])
@@ -110,22 +110,7 @@ def build_mf6(idx, ws):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim
-
-
-def get_model(idx, dir):
-    ws = dir
-    # build mf6 with storage package but steady state stress periods
-    sim = build_mf6(idx, ws)
-
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_head(sim):
@@ -152,7 +137,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_head))
@@ -163,14 +148,11 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
-    for dir in exdirs:
+    for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_head)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

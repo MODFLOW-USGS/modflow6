@@ -136,4 +136,9 @@ mf5to6_sources = files(
     'src' / 'WelPackageWriter.f90',
 )
 
-executable('mf5to6', mf5to6_sources, link_with: mf6_internal_lib, install: true)
+executable('mf5to6',
+            mf5to6_sources,
+            link_with: mf6_internal_lib,
+            install: true,
+            override_options: ['fortran_std=none'],
+            fortran_args: util_args)

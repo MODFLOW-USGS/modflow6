@@ -212,7 +212,7 @@ def build_mf6(idx, ws, update=None):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
     ws = dir
 
@@ -283,15 +283,6 @@ def eval_void(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
-
-
 @pytest.mark.parametrize(
     "idx, dir",
     list(enumerate(exdirs)),
@@ -308,7 +299,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -321,11 +312,9 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_void, idxsim=idx)
         test.run_mf6(sim)
     return

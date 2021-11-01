@@ -211,7 +211,7 @@ def calc_stress(sgm0, sgs0, h, bt):
     return geo, es
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     c6 = []
     for j in range(0, ncol, 2):
         c6.append([(0, 0, j), chdh[idx]])
@@ -384,13 +384,6 @@ def eval_sub(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_input()
-    return
 
 
 @pytest.mark.parametrize(
@@ -409,7 +402,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -421,16 +414,13 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             dir, exfunc=eval_sub, exe_dict=replace_exe, idxsim=idx
         )
         test.run_mf6(sim)
-    return
 
 
 # use python testmf6_csub_sub01.py --mf2005 mf2005devdbl

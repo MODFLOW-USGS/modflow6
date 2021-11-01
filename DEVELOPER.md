@@ -15,23 +15,55 @@ if you'd like to contribute to MODFLOW 6.
 ## Prerequisite Software
 
 Before you can build and test MODFLOW 6, you must install and configure the
-following products on your development machine:
+following products on your development machine.
 
-* [Git](https://git-scm.com) and/or the **GitHub app** (for [Mac](https://mac.github.com) or
-  [Windows](https://windows.github.com)); [GitHub's Guide to Installing
-  Git](https://help.github.com/articles/set-up-git) is a good source of information.
+### Git
 
-* [gfortran](https://gcc.gnu.org/wiki/GFortran), (version 4.9 to 8) which is used to compile MODFLOW 6 and associated utilities and generate distributable files.
+[Git](https://git-scm.com) and/or the **GitHub app** (for [Mac](https://mac.github.com) or [Windows](https://windows.github.com)).
+[GitHub's Guide to Installing Git](https://help.github.com/articles/set-up-git) is a good source of information.
 
-* (Optional) [Intel Fortran](https://software.intel.com/en-us/fortran-compilers) which is used to compile MODFLOW 6 and associated utilities and generate distributable files (if not using gfortran).
 
-* [python](https://www.python.org/) which is used to run MODFLOW 6 autotests (suggest using an Anaconda python distribution).
+### gfortran (version 4.9 to 10)
 
-* [flopy](https://github.com/modflowpy/flopy) which is used to run MODFLOW 6 autotests.
+gfortran can be used to compile MODFLOW 6 and associated utilities and generate distributable files.
 
-* [pymake](https://github.com/modflowpy/pymake) which is used to run MODFLOW 6 autotests.
+#### Linux
 
-* (Optional) [LaTeX](https://www.latex-project.org/) which is used to generate the MODFLOW 6 Input/Output document (docs/mf6io/mf6io.nightlybuild).
+- fedora-based: `dnf install gcc-gfortran`
+- debian-based: `apt install gfortran`
+
+#### macOS
+
+- [Homebrew](https://brew.sh/): `brew install gcc`
+- [MacPorts](https://www.macports.org/): `sudo port install gcc10`
+
+#### Windows
+
+- Download the Minimalist GNU for Windows (MinGW) installer from Source Forge:
+  https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe
+- Run the installer. Make sure to change `Architecture` to `x86_64`. Leave the
+  other settings on default.
+- Find the `mingw64/bin` directory in the installation and add it
+  to your PATH. Find `Edit the system environment variables` in your Windows
+  Start Screen. Click the `Environmental Variables` button and double-click the
+  `Path` variable in the User Variables (the top table). Click the `New` button
+  and enter the location of the `mingw64/bin` directory.
+
+
+### Python
+
+Install Python, for example via [miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/individual).
+Please make sure that your Python version is 3.7 or higher.
+Then install all packages necessary to run the tests either by executing [install-python-std.sh](.github/common/install-python-std.sh) via bash directly or by installing the listed packages manually.
+
+### ifort (optional)
+
+Intel fortran can be used to compile MODFLOW 6 and associated utilities and generate distributable files (if not using gfortran).
+Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
+
+### LaTeX (optional)
+
+[LaTeX](https://www.latex-project.org/) which is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
 
 ## Getting the Sources
 
@@ -55,21 +87,60 @@ git remote add upstream https://github.com/MODFLOW-USGS/modflow6.git
 
 ## Building
 
-To build MODFLOW 6 run:
+### Meson
+
+First, install [Meson](https://mesonbuild.com/Getting-meson.html) and assure it is in your [PATH](https://en.wikipedia.org/wiki/PATH_(variable)).
+When using Visual Studio Code, you can use tasks as described [here](.vscode/README.md).
+For the more general instructions, continue to read this section.
+
+First configure the build directory.
+Per default it uses the compiler flags for a release build.
+If you want to create a debug build, add `-Doptimization=0` to the following `setup` command.
 
 ```shell
-# Go to the pymake directory
-cd modflow6/pymake
+# bash (linux and macOS)
+meson setup builddir --prefix=$(pwd) --libdir=bin
 
-# run the modflow6 pymake build script
-python makebin.py -mc ../src/ ../bin/mf6
+# cmd (windows)
+meson setup builddir --prefix=%CD% --libdir=bin
 ```
 
-* Results are put in the bin folder.
+Compile MODFLOW 6 by executing:
+
+```shell
+meson compile -C builddir
+```
+
+In order to run the tests the binaries have to be installed:
+
+```shell
+meson install -C builddir
+```
+
+The binaries can then be found in the `bin` folder.
+`meson install` also triggers a compilation if necessary.
+Therefore, executing `meson install` is enough to get up-to-date binaries in the `bin` folder.
+
+### Visual Studio
+
+As of October 2021, debugging with Visual Studio tends to be more convenient than with other solutions.
+First, download Visual Studio from the [official website](https://visualstudio.microsoft.com/).
+The solution files can be found in the `msvs` folder.
+
+### Pymake
+
+Follow the installation instructions as explained on the README of the [repository](https://github.com/modflowpy/pymake).
+The README also explains how to build MODFLOW 6 with it.
+
+### Make
+
+We also provide make files which can be used to build MODFLOW 6 with [GNU Make](https://www.gnu.org/software/make/).
+For the build instructions we refer to the [GNU Make Manual](https://www.gnu.org/software/make/manual/).
+
 
 ## Running Tests Locally
 
-(Optional) For complete testing as done on Travis, clone the modflow6-testmodels repository:
+For complete testing as done on the CI, clone the modflow6-testmodels repository:
 
 ```shell
 # Clone your GitHub repository:
@@ -77,20 +148,36 @@ git clone git@github.com:<github username>/modflow6-testmodels.git
 ```
 * The modflow6-testmodels repository must be cloned in the same directory that contains the modflow6 repository.
 
-To run tests:
+To run tests first change directory to the `autotest` folder:
 
 ```shell
-# Go to the autotest directory
 cd modflow6/autotest
+```
 
-# Run all modflow6 tests (including building executables and the mfio documentation - requires installation of LaTeX
+Update your flopy installation by executing
+
+```shell
+python update_flopy.py
+```
+
+The tests require other MODFLOW-related binary executables, distributed from https://github.com/MODFLOW-USGS/executables.
+Testing also requires a binary executable of the last MODFLOW 6 officially released version, compiled in develop mode with the currently configured compiler. To download MODFLOW-related binaries and to rebuild the last official MODFLOW 6 release, execute:
+
+```shell
+pytest -v get_exes.py
+```
+
+Unless you built and installed MODFLOW 6 binaries with meson, you will also have to execute the following command to build the binaries:
+
+```shell
+pytest -v build_exes.py
+```
+
+Then the tests can be run with commands similar to these:
+
+```shell
+# Build MODFLOW 6 tests
 pytest -v
-
-# Build MODFLOW 6, MODFLOW 6 utilities, and all versions of MODFLOW used in comparison tests
-pytest -v get_build_exes.py
-
-# Build MODFLOW 6 tests generated using flopy
-pytest -v test_*
 
 # Build MODFLOW 6 example tests
 pytest -v test_z01_testmodels_mf6.py
@@ -99,17 +186,12 @@ pytest -v test_z01_testmodels_mf6.py
 pytest -v test_z02_testmodels_mf5to6.py
 ```
 
-You should execute the test suites before submitting a PR to github.
+By adding the flag "-n" the tests can even be run in parallel:
+
+```shell
+pytest -v -n auto
+```
 
 
-All the tests are executed on our Continuous Integration infrastructure and a PR could only be merged once the tests pass.
-
-- Travis CI fails if any of the test suites described above fails.
-
-## <a name="clang-format"></a> Formatting your source code
-
-Add some guidelines
-
-## Linting/verifying your source code
-
-Fortran linting?
+You should execute the test suites before submitting a PR to Github.
+All the tests are executed on our Continuous Integration infrastructure and a pull request can only be merged once all tests pass.

@@ -43,7 +43,7 @@ contains
     character(len=LENOBSNAME), pointer :: linout => null()
     type(ObsOutputType),       pointer :: ObsOutput => null()
     !---------------------------------------------------------------------------
-    ! -- format
+    ! -- format for totim
 10  format(G20.13)
     ! -- output unit
     nunit = obsrv%UnitNumber
@@ -101,7 +101,7 @@ contains
     if (linout == '') then
       write(linout,10)totim
       if (iprec == 1) then
-        totimsngl = totim
+        totimsngl = real(totim, real32)
         write(nunit)totimsngl
       elseif (iprec == 2) then
         totimdbl = totim
@@ -110,7 +110,7 @@ contains
     endif
     ! -- write value to unformatted output
     if (iprec == 1) then
-      valsngl = value
+      valsngl = real(value, real32)
       write(nunit)valsngl
     elseif (iprec == 2) then
       valdbl = value

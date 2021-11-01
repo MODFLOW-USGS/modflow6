@@ -33,7 +33,7 @@ for s in ex:
     exdirs.append(os.path.join("temp", s))
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -185,7 +185,7 @@ def get_model(idx, dir):
             ("lak10", "lak", 1, 10),
             ("lak11", "lak", 1, 11),
         ],
-        "digits": 10,
+        # "digits": 10,
     }
 
     lak = flopy.mf6.modflow.ModflowGwflak(
@@ -212,18 +212,11 @@ def get_model(idx, dir):
         budget_filerecord="{}.cbc".format(gwfname),
         head_filerecord="{}.hds".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "ALL", "STEPS"), ("BUDGET", "ALL", "STEPS")],
-        printrecord=[("HEAD", "LAST", "STEPS"), ("BUDGET", "LAST", "STEPS")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_results(sim):
@@ -270,8 +263,6 @@ def eval_results(sim):
     # todo: add a better check of the lake concentrations
     # assert False
 
-    return
-
 
 # - No need to change any code below
 @pytest.mark.parametrize(
@@ -282,28 +273,22 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-    return
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

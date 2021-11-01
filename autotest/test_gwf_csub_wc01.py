@@ -238,7 +238,7 @@ ds17 = [
 ]
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     sim = build_mf6(idx, dir)
 
     # build mf6 with interbeds
@@ -433,8 +433,6 @@ def eval_wcomp(sim):
     # compare budgets
     cbc_compare(sim)
 
-    return
-
 
 # compare cbc and lst budgets
 def cbc_compare(sim):
@@ -535,17 +533,8 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
-
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -564,7 +553,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -577,10 +566,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for dir in exdirs:
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exe_dict=replace_exe, exfunc=eval_wcomp)
         test.run_mf6(sim)
 

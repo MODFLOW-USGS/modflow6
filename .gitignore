@@ -59,11 +59,7 @@ doc/UserGuide/*.pdf
 doc/ConverterGuide/*.pdf
 doc/zonebudget/*.pdf
 
-bin/mf6
-bin/libmf6.*
-bin/mf5to6
-bin/zbud6
-bin/*.txt
+bin/**
 
 UserPrefs.xml
 

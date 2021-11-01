@@ -532,7 +532,7 @@ module ListReaderModule
           this%rlist(jj, ii) = DZERO
           this%ntxtrlist = this%ntxtrlist + 1
           if(this%ntxtrlist > size(this%txtrlist)) then
-            increment = size(this%txtrlist) * 0.2
+            increment = int(size(this%txtrlist) * 0.2)
             increment = max(100, increment)
             call ExpandArray(this%txtrlist, increment)
             call ExpandArray(this%idxtxtrow, increment)
@@ -559,7 +559,7 @@ module ListReaderModule
           this%auxvar(jj, ii) = DZERO
           this%ntxtauxvar = this%ntxtauxvar + 1
           if(this%ntxtauxvar > size(this%txtauxvar)) then
-            increment = size(this%txtauxvar) * 0.2
+            increment = int(size(this%txtauxvar) * 0.2)
             increment = max(100, increment)
             call ExpandArray(this%txtauxvar, increment)
             call ExpandArray(this%idxtxtauxrow, increment)

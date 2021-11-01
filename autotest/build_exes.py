@@ -17,10 +17,6 @@ if running_on_CI():
     print("running on CI environment")
     os.environ["PYMAKE_DOUBLE"] = "1"
 
-# paths to executables for previous versions of MODFLOW
-ebindir = os.path.abspath(os.path.join(os.path.expanduser("~"), ".local", "bin"))
-if not os.path.exists(ebindir):
-    os.makedirs(ebindir)
 
 # make sure exe extension is used on windows
 eext = ""
@@ -140,7 +136,9 @@ def build_mf5to6():
     srcdir = os.path.join("..", "utils", "mf5to6", "src")
     target = os.path.join("..", "bin", "mf5to6")
     target += eext
-    extrafiles = os.path.join("..", "utils", "mf5to6", "pymake", "extrafiles.txt")
+    extrafiles = os.path.join(
+        "..", "utils", "mf5to6", "pymake", "extrafiles.txt"
+    )
 
     # build modflow 5 to 6 converter
     pymake.main(

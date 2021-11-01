@@ -57,7 +57,7 @@ mawradius = np.sqrt(mawarea / np.pi)  # .65
 mawcond = Kh * delc * dz / (0.5 * delr)
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     nper = 2
     perlen = [10.0, 10.0]
     nstp = [1, 100]
@@ -206,14 +206,7 @@ def get_model(idx, dir):
         ],
     )
 
-    return sim
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
+    return sim, None
 
 
 def eval_results(sim):
@@ -315,8 +308,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
@@ -326,15 +319,11 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

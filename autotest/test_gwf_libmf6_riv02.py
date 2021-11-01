@@ -78,7 +78,7 @@ riv_cond = 35.0
 riv_packname = "MYRIV"
 
 
-def build_model(ws, name, riv_spd, api=False):
+def get_model(ws, name, riv_spd, api=False):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -151,7 +151,7 @@ def build_model(ws, name, riv_spd, api=False):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
@@ -165,23 +165,14 @@ def get_model(idx, dir):
         [(0, 0, icol), riv_stage2, riv_cond, riv_bot]
         for icol in range(1, ncol - 1)
     ]
-    sim = build_model(ws, name, riv_spd={0: rd, 5: rd2})
+    sim = get_model(ws, name, riv_spd={0: rd, 5: rd2})
 
     # build comparison model with zeroed values
     ws = os.path.join(dir, "libmf6")
     rd_api = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
-    mc = build_model(ws, name, riv_spd={0: rd_api}, api=True)
+    mc = get_model(ws, name, riv_spd={0: rd_api}, api=True)
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 def api_riv_pak(stage, h, hcof, rhs):
@@ -311,7 +302,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
@@ -322,10 +313,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 

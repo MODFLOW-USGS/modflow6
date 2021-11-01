@@ -69,7 +69,7 @@ nouter, ninner = 100, 100
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(ws, name, bmi=False):
+def get_model(ws, name, bmi=False):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -146,26 +146,17 @@ def build_model(ws, name, bmi=False):
     return sim
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = build_model(ws, name)
+    sim = get_model(ws, name)
 
     # build comparison model
     ws = os.path.join(dir, "libmf6")
-    mc = build_model(ws, name, bmi=True)
+    mc = get_model(ws, name, bmi=True)
 
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 def head2et_wellrate(h):
@@ -282,7 +273,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
@@ -293,10 +284,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
 

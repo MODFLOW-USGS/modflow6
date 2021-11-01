@@ -100,7 +100,7 @@ crnd0 = 6e-6 * np.ones(shape3d, dtype=float)
 crnd0[:, 0, 0] = 0.0
 
 
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
     newton = newtons[idx]
 
@@ -264,7 +264,7 @@ def get_model(idx, dir):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
-    return sim
+    return sim, None
 
 
 def eval_comp(sim):
@@ -358,11 +358,6 @@ def eval_comp(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim = get_model(idx, dir)
-        sim.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -380,8 +375,8 @@ def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(
@@ -395,17 +390,13 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             dir, exfunc=eval_comp, exe_dict=replace_exe, htol=htol, idxsim=idx
         )
         test.run_mf6(sim)
-
-    return
 
 
 if __name__ == "__main__":

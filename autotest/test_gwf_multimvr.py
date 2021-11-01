@@ -61,6 +61,8 @@ idomainp = np.ones((nlayp, nrowp, ncolp), dtype=np.int32)
 # Zero out where the child grid will reside
 idomainp[0:2, 6:11, 2:8] = 0
 
+xorigin = 2 * delrp
+yorigin = 4 * delcp
 
 # ------------------------------------------
 # Common SFR data for all parent models
@@ -766,6 +768,8 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         top=topc,
         botm=botmc,
         idomain=idomainc,
+        xorigin=xorigin,
+        yorigin=yorigin,
         filename="{}.dis".format(gwfnamec),
     )
 
@@ -1128,13 +1132,6 @@ def check_simulation_output(sim):
 
 
 # - No need to change any code below
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = build_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_simulation()
-    return
 
 
 @pytest.mark.parametrize(
@@ -1146,7 +1143,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models(build_model, idx, dir)
 
     test.run_mf6, Simulation(
         dir,
@@ -1159,10 +1156,8 @@ def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    build_models()
-
     for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(
             exdir,
             exfunc=check_simulation_output,

@@ -46,6 +46,27 @@ class testing_framework(object):
         if regression is not None:
             regression.write_simulation()
 
+    def build_mf6_models_legacy(self, build_function, idx, exdir):
+        """
+        Build base and regression for older MODFLOW 6 models
+
+        Parameters
+        ----------
+        build_function : function
+            user defined function that builds a base model and optionally
+            builds a regression model. If a regression model is not built
+            then None must be returned from the function for the regression
+            model.
+        idx : int
+            counter that corresponds to exdir entry
+        exdir : str
+            path to regression model files
+        """
+        base, regression = build_function(idx, exdir)
+        base.write_simulation()
+        if regression is not None:
+            regression.write_input()
+
     def run_mf6(self, sim):
         """
         Run the MODFLOW 6 simulation and compare to existing head file or

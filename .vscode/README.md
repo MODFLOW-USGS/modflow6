@@ -9,43 +9,7 @@ MacOS. There are two major advantages over Visual Studio:
 This folder contains the configuration files for using VSCode for MODFLOW 6 
 development.
 At the moment they are used for building and debugging MODFLOW 6.
-
-## ifort
-
-Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
-
-
-## gfortran
-
-### Linux
-
-- fedora-based: `dnf install gcc-gfortran`
-- debian-based: `apt install gfortran`
-
-### macOS
-
-- `brew install gcc`
-
-### Windows
-
-- Down the Minimalist GNU for Windows (MinGW) installer from Source Forge:
-  https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe
-- Run the installer. Make sure to change `Architecture` to `x86_64`. Leave the
-  other settings on default.
-- Optionally, find the `mingw64/bin` directory in the installation and add it
-  to your PATH. Find `Edit the system environment variables` in your Windows
-  Start Screen. Click the `Environmental Variables` button and double-click the
-  `Path` variable in the User Variables (the top table). Click the `New` button
-  and enter the location of the `mingw64/bin` directory.
-
-
-## Meson
-
-Install Meson and assure it is in your PATH: https://mesonbuild.com/Getting-meson.html
-
-## Python
-
-Install Python, for example via miniconda: https://docs.conda.io/en/latest/miniconda.html
+In order to build MODFLOW 6 follow the steps in [DEVELOPER.md](../DEVELOPER.md)
 
 ## Visual Studio Code
 

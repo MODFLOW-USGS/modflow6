@@ -132,7 +132,7 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def get_model(idx, dir):
+def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -236,15 +236,6 @@ def get_model(idx, dir):
     )
 
     return sim, None
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        if mc is not None:
-            mc.write_input()
-    return
 
 
 def eval_zb6(sim):
@@ -452,7 +443,7 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    build_models()
+    test.build_mf6_models_legacy(build_model, idx, dir)
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
@@ -469,10 +460,9 @@ def main():
     test = testing_framework()
 
     # build the models
-    build_models()
-
     # run the test model
     for idx, dir in enumerate(exdirs):
+        test.build_mf6_models_legacy(build_model, idx, dir)
         sim = Simulation(
             dir,
             exfunc=eval_zb6,
