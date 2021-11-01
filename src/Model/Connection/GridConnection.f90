@@ -628,7 +628,7 @@ module GridConnectionModule
 	  ! local
     integer(I4B) :: newSize
     type(GlobalCellType), dimension(:), pointer :: tempMap
-		
+
     if (ifaceIdx > size(this%idxToGlobal)) then
       newSize = 2*size(this%idxToGlobal)
       allocate(tempMap(size(this%idxToGlobal)))

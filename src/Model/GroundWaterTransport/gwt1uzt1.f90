@@ -45,12 +45,12 @@ module GwtUztModule
   
   type, extends(GwtAptType) :: GwtUztType
     
-    integer(I4B), pointer                                  :: idxbudinfl => null()  ! index of uzf infiltration terms in flowbudptr
-    integer(I4B), pointer                                  :: idxbudrinf => null()  ! index of rejected infiltration terms in flowbudptr
-    integer(I4B), pointer                                  :: idxbuduzet => null()  ! index of unsat et terms in flowbudptr
-    integer(I4B), pointer                                  :: idxbudritm => null()  ! index of rej infil to mover rate to mover terms in flowbudptr
-    real(DP), dimension(:), pointer, contiguous            :: concinfl => null()    ! infiltration concentration
-    real(DP), dimension(:), pointer, contiguous            :: concuzet => null()    ! unsat et concentration
+    integer(I4B), pointer                       :: idxbudinfl => null()  ! index of uzf infiltration terms in flowbudptr
+    integer(I4B), pointer                       :: idxbudrinf => null()  ! index of rejected infiltration terms in flowbudptr
+    integer(I4B), pointer                       :: idxbuduzet => null()  ! index of unsat et terms in flowbudptr
+    integer(I4B), pointer                       :: idxbudritm => null()  ! index of rej infil to mover rate to mover terms in flowbudptr
+    real(DP), dimension(:), pointer, contiguous :: concinfl => null()    ! infiltration concentration
+    real(DP), dimension(:), pointer, contiguous :: concuzet => null()    ! unsat et concentration
 
   contains
   
