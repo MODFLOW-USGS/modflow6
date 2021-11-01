@@ -9,6 +9,9 @@ Reach connectivity must be explicitly specified for this version of the SFR Pack
 	\label{fig:sfr-connectivity}
 \end{figure}
 
+Reaches can be specified to have a wide-rectangular cross-section or an irregular cross-section with an arbitrary number of station-elevation points (n-point cross-sections --- added in version 6.3.0). The approach used to represent n-point cross-sections in the SFR Package is a generalization of the 8-point cross-section available in the SFR Package for previous versions of MODFLOW \citep{modflowsfr1pack}. The station-elevation data for n-point cross-sections is specified as xfraction and depth data, which is converted to station position using the specified reach width and elevation using the specified top elevation of the reach stream bed. Fraction values were specified for the station data to maintain use of the specified reach width for reaches using n-point cross-sections. Furthermore, use of a maximum xfraction value less than or greater than one allows users to vary the width of a reach during a simulation.
+
+Manning's roughness coefficient fractions can optionally be specified with the xfraction-depth data for a n-point cross-section to represent roughness coefficient variations in a channel (for example, different channel and overbank Manning's roughness coefficients). When Manning's coefficient fractions are specified, the streamflow is calculated for each segment of the n-point cross-section and summed to calculate the total streamflow for a reach; this is the same approach used in the SFR Package for previous versions of MODFLOW \citep{modflowsfr1pack} to calculate the stream flow for the left bank, defined channel, and right bank. Fraction values are specified for n-point cross-section Manning's roughness coefficient data in order to allow users to also set Manning's roughness coefficients in the stress period data and using timeseries.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
