@@ -24,6 +24,8 @@ soext = ".so"
 if sys.platform.lower() == "win32":
     eext = ".exe"
     soext = ".dll"
+elif sys.platform.lower() == "darwin":
+    soext = ".dylib"
 
 mfexe_pth = "temp/mfexes"
 
