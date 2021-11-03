@@ -65,7 +65,7 @@ def run_flow_model():
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True)
 
     # ims
-    hclose = 0.01
+    hclose = 0.0001
     rclose = 0.1
     nouter = 1000
     ninner = 100
@@ -787,7 +787,7 @@ def run_transport_model():
     failed_list = []
     for name1, i in zip(csvra.dtype.names, imap):
         name2 = lstra.dtype.names[i]
-        success = np.allclose(csvra[name1], lstra[name2], rtol=0.001)
+        success = np.allclose(csvra[name1], lstra[name2], rtol=0.01)
         if not success:
             success_all = False
             failed_list.append(name1)

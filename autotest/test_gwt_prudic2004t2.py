@@ -52,7 +52,7 @@ def build_model(idx, dir):
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
     # ims
-    hclose = 0.01
+    hclose = 0.001
     rclose = 0.1
     nouter = 1000
     ninner = 100
