@@ -117,7 +117,6 @@ MODULE IMSLinearModule
       CLASS(ImsLinearDataType), INTENT(INOUT) :: this            !< ImsLinearDataType instance
       CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME        !< solution name
       type(BlockParserType) :: parser                            !< block parser
-      !integer(I4B), INTENT(IN) :: INIU                           !< IMS input file unit
       integer(I4B), INTENT(IN) :: IOUT                           !< simulation listing file unit
       integer(I4B), TARGET, INTENT(IN) :: IPRIMS                 !< print option
       integer(I4B), INTENT(IN) :: MXITER                         !< maximum outer iterations
@@ -205,9 +204,6 @@ MODULE IMSLinearModule
       ! -- SET DEFAULT IMSLINEAR PARAMETERS
       CALL this%SET_IMSLINEAR_INPUT(IFDPARAM)
       NINNER = this%iter1
-      !
-      ! -- Initialize block parser
-      !call parser%Initialize(iniu, iout)
       !
       ! -- get IMSLINEAR block
       if (lreaddata) then

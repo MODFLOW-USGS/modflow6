@@ -412,6 +412,7 @@ contains
     class(ObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
+    class(ObserveType), pointer :: obsrv => null()
 ! ------------------------------------------------------------------------------
     !
     deallocate(this%active)
@@ -444,7 +445,12 @@ contains
     call this%obsOutputList%DeallocObsOutputList()
     deallocate(this%obsOutputList)
     !
-    ! -- deallocate obslist
+    ! -- deallocate data in obslist and then deallocate obslist
+    do i = 1, this%obsList%Count()
+      obsrv => this%get_obs(i)
+      call obsrv%da()
+      deallocate(obsrv)
+    end do
     call this%obslist%Clear()
     !
     ! -- nullify

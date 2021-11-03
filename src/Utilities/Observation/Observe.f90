@@ -72,6 +72,7 @@ module ObserveModule
     procedure, public  :: WriteTo
     procedure, public  :: AddObsIndex
     procedure, public  :: ResetObsIndex
+    procedure, public  :: da
   end type ObserveType
 
   type :: ObsDataType
@@ -214,6 +215,23 @@ contains
     ! -- return
     return
   end subroutine AddObsIndex
+
+  subroutine da(this)
+! **************************************************************************
+! da -- destroy observation
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    ! -- dummy
+    class(ObserveType), intent(inout) :: this
+    if (allocated(this%indxbnds)) then
+      deallocate(this%indxbnds)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine da
 
   ! Non-type-bound procedures
 
