@@ -334,6 +334,8 @@ module BudgetModule
     deallocate(this%bddim)
     deallocate(this%labeltitle)
     deallocate(this%bdzone)
+    deallocate(this%ibudcsv)
+    deallocate(this%icsvheader)
     !
     ! -- Arrays
     deallocate(this%vbvl)
