@@ -1,5 +1,20 @@
 import numpy as np
 
+# power for Manning's hydraulic radius term
+mpow = 2.0 / 3.0
+
+
+def calculate_rectchan_mannings_discharge(
+    conversion_factor, roughness, slope, width, depth
+):
+    """
+    Calculate Manning's discharge for a rectangular channel.
+
+    """
+    area = width * depth
+    return conversion_factor * area * depth ** mpow * slope ** 0.5 / roughness
+
+
 # n-point cross-section functions
 def get_wetted_station(
     x0,
@@ -154,22 +169,24 @@ def manningsq(
     if isinstance(roughness, float):
         roughness = np.ones(x.shape, dtype=float) * roughness
     if x.shape[0] > 1:
-        f = 0.0
+        q = 0.0
         for i0 in range(x.shape[0] - 1):
             i1 = i0 + 1
             perimeter = get_wetted_perimeter(x[i0], x[i1], d[i0], d[i1], v)
             area = get_wetted_area(x[i0], x[i1], d[i0], d[i1], v)
             if perimeter > 0.0:
                 radius = area / perimeter
-                f += area * radius ** 0.666666 / roughness[i0]
+                q += (
+                    conv * area * radius ** mpow * slope ** 0.5 / roughness[i0]
+                )
     else:
         perimeter = wetted_perimeter(x, d, v)
         area = wetted_area(x, d, v)
         radius = 0.0
         if perimeter > 0.0:
             radius = area / perimeter
-        f = area * radius ** 0.666666 / roughness[0]
-    return conv * slope ** 0.5 * f
+        q = conv * area * radius ** mpow * slope ** 0.5 / roughness[0]
+    return q
 
 
 def get_depths(

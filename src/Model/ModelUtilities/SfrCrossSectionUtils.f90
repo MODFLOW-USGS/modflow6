@@ -20,7 +20,7 @@ module GwfSfrCrossSectionUtilsModule
   public :: get_wetted_perimeter
   public :: get_cross_section_area
   public :: get_hydraulic_radius
-  public :: get_mannings_term
+  public :: get_mannings_section
 
 contains
 
@@ -201,26 +201,28 @@ contains
     return
   end function get_hydraulic_radius
 
-  !> @brief Calculate the manning's coefficient for a reach
+  !> @brief Calculate the manning's discharge for a reach
   !!
-  !! Function to calculate the mannings coefficient that is a 
-  !! function of the depth for a reach using the cross-section 
-  !! station-depth data and roughness factor data given a passed
-  !! depth.
+  !! Function to calculate the mannings discharge for a reach
+  !! by calculating the discharge for each section, which can
+  !! have a unique Manning's coefficient given a passed depth.
   !!
-  !! @return      f               manning's coefficient
+  !! @return      q               reach discharge
   !<
-  function get_mannings_term(npts, stations, depths, roughfracs, roughness, d) result(f)
+  function get_mannings_section(npts, stations, depths, roughfracs, &
+                                roughness, conv_fact, slope, d) result(q)
     ! -- dummy variables
     integer(I4B), intent(in) :: npts                      !< number of station depth data for a reach
     real(DP), dimension(npts), intent(in) :: stations     !< cross-section station distances (x-distance)
     real(DP), dimension(npts), intent(in) :: depths       !< cross-section depth data
     real(DP), dimension(npts), intent(in) :: roughfracs   !< cross-section Mannings roughness fraction data
     real(DP), intent(in) :: roughness                     !< base reach roughness
+    real(DP), intent(in) :: conv_fact                     !< unit conversion factor
+    real(DP), intent(in) :: slope                         !< reach slope
     real(DP), intent(in) :: d                             !< depth to evaluate cross-section
     ! -- local variables
     integer(I4B) :: n
-    real(DP) :: f
+    real(DP) :: q
     real(DP) :: rh
     real(DP) :: r
     real(DP) :: p
@@ -229,7 +231,7 @@ contains
     real(DP), dimension(npts-1) :: perimeters
     !
     ! -- intitialize the hydraulic radius, perimeter, and area
-    f = DZERO
+    q = DZERO
     rh = DZERO
     r = DZERO
     p = DZERO
@@ -256,14 +258,14 @@ contains
         if (p * r > DZERO) then
           a = areas(n)
           rh = a / p
-          f = f + a * rh**DTWOTHIRDS / r
+          q = q + conv_fact * a * rh**DTWOTHIRDS * sqrt(slope) / r
         end if
       end do
     end if
     !
     ! -- return
     return
-  end function get_mannings_term
+  end function get_mannings_section
 
   ! -- private functions and subroutines
 

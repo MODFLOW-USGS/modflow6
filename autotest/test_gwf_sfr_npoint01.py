@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import pytest
 
@@ -12,8 +13,6 @@ except:
 
 from framework import testing_framework
 from simulation import Simulation
-
-import sys
 
 sys.path.append("scripts")
 from cross_section_functions import get_depths

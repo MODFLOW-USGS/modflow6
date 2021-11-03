@@ -35,7 +35,7 @@ module SfrModule
                                            get_wetted_topwidth, &
                                            get_wetted_perimeter, &
                                            get_cross_section_area, &
-                                           get_mannings_term
+                                           get_mannings_section
   !
   implicit none
   !
@@ -2039,6 +2039,7 @@ module SfrModule
       ipakfail = 0
       locdhmax = 0
       locrmax = 0
+      r = DZERO
       dhmax = DZERO
       rmax = DZERO
       !
@@ -2092,10 +2093,14 @@ module SfrModule
         final_check: do n = 1, this%maxbound
           if (this%iboundpak(n) == 0) cycle
           dh = this%stage0(n) - this%stage(n)
-          r = this%usflow0(n) - this%usflow(n)
           !
-          ! -- normalize flow difference and convert to a depth
-          r = r * delt / this%calc_surface_area(n)
+          ! -- evaluate flow difference if the time step is transient
+          if (this%gwfiss == 0) then
+            r = this%usflow0(n) - this%usflow(n)
+            !
+            ! -- normalize flow difference and convert to a depth
+            r = r * delt / this%calc_surface_area(n)
+          end if
           !
           ! -- evaluate magnitude of differences
           if (n == 1) then
@@ -3766,7 +3771,6 @@ module SfrModule
       real(DP) :: sat
       real(DP) :: derv
       real(DP) :: s
-      real(DP) :: factor
       real(DP) :: r
       real(DP) :: aw
       real(DP) :: wp
@@ -3774,41 +3778,48 @@ module SfrModule
       !
       ! -- initialize variables
       qman = DZERO
-      npts = this%ncrosspts(n)
       !
-      ! -- set constant terms for Manning's equation
-      call sChSmooth(depth, sat, derv)
-      s = this%slope(n)
-      !
-      ! -- calculate the mannings coefficient that is a 
-      !    function of depth
-      if (npts > 1) then
+      ! -- calculate Manning's discharge for non-zero depths
+      if (depth > DZERO) then
+        npts = this%ncrosspts(n)
         !
-        ! -- get the location of the cross-section data for the reach
-        i0 = this%iacross(n)
-        i1 = this%iacross(n + 1) - 1
+        ! -- set constant terms for Manning's equation
+        call sChSmooth(depth, sat, derv)
+        s = this%slope(n)
         !
-        ! -- get the depth dependent mannings factor
-        factor = get_mannings_term(npts, &
-                                   this%station(i0:i1), &
-                                   this%xsdepths(i0:i1), &
-                                   this%xsrough(i0:i1), &
-                                   this%rough(n), &
-                                   depth)
-      else
-        r = this%rough(n)
-        aw = this%calc_area_wet(n, depth)
-        wp = this%calc_perimeter_wet(n, depth)
-        if (wp > DZERO) then
-          rh = aw / wp
+        ! -- calculate the mannings coefficient that is a 
+        !    function of depth
+        if (npts > 1) then
+          !
+          ! -- get the location of the cross-section data for the reach
+          i0 = this%iacross(n)
+          i1 = this%iacross(n + 1) - 1
+          !
+          ! -- get the Manning's sum of the Manning's discharge
+          !    for each section
+          qman = get_mannings_section(npts, &
+                                      this%station(i0:i1), &
+                                      this%xsdepths(i0:i1), &
+                                      this%xsrough(i0:i1), &
+                                      this%rough(n), &
+                                      this%unitconv, &
+                                      s, &
+                                      depth)
         else
-          rh = DZERO
+          r = this%rough(n)
+          aw = this%calc_area_wet(n, depth)
+          wp = this%calc_perimeter_wet(n, depth)
+          if (wp > DZERO) then
+            rh = aw / wp
+          else
+            rh = DZERO
+          end if
+          qman = this%unitconv * aw * (rh**DTWOTHIRDS) * sqrt(s) / r
         end if
-        factor = aw * (rh**DTWOTHIRDS) / r
+        !
+        ! -- calculate stream flow
+        qman = sat * qman
       end if
-      !
-      ! -- calculate stream flow
-      qman = sat * this%unitconv * sqrt(s) * factor
       !
       ! -- return
       return
@@ -4012,7 +4023,6 @@ module SfrModule
       else
         d1 = DZERO
       end if
-      if (d1 < DEM30) d1 = DZERO ! test removal of this check
       !
       ! -- return
       return
@@ -4033,6 +4043,7 @@ module SfrModule
       real(DP), intent(inout) :: d    !< stream depth at midpoint of reach
       ! -- local variables
       integer(I4B) :: iter
+      real(DP) :: perturbation
       real(DP) :: q0
       real(DP) :: q1
       real(DP) :: dq
@@ -4041,16 +4052,17 @@ module SfrModule
       real(DP) :: residual
       !
       ! -- initialize variables
+      perturbation = this%deps * DTWO
       d = DZERO
       q0 = DZERO
       residual = q0 - qrch
       !
       ! -- Newton-Raphson iteration
       nriter: do iter = 1, this%maxsfrit
-        call this%sfr_calc_qman(n, d + this%deps, q1)
+        call this%sfr_calc_qman(n, d + perturbation, q1)
         dq = (q1 - q0)
         if (dq /= DZERO) then
-            derv = this%deps / (q1 - q0)
+            derv = perturbation / (q1 - q0)
         else
             derv = DZERO
         end if

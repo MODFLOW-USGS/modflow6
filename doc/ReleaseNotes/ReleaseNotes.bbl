@@ -1,4 +1,4 @@
-\begin{thebibliography}{9}
+\begin{thebibliography}{10}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -65,5 +65,11 @@ Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
   ``XT3D'' Option in the Node Property Flow (NPF) Package of MODFLOW 6: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A56, 46 p.}, accessed
   August 4, 2017, at \url{https://doi.org/10.3133/tm6A56}.
+
+\bibitem[{Prudic and others(2004)Prudic, Konikow, and Banta}]{modflowsfr1pack}
+Prudic, D.E., Konikow, L.F., and Banta, E.R., 2004, A New Streamflow-Routing
+  (SFR1) Package to simulate stream-aquifer interaction with MODFLOW-2000:
+  {U.S. Geological Survey Open File Report 2004--1042, 104 p.}, accessed June
+  27, 2017, at \url{https://pubs.er.usgs.gov/publication/ofr20041042}.
 
 \end{thebibliography}
