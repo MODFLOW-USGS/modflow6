@@ -791,7 +791,7 @@ class Simulation(object):
 
 def api_return(success, model_ws):
     """
-    parse libmf6.so and libmf6.dll stdout file
+    parse libmf6 stdout shared object file
     """
     fpth = os.path.join(model_ws, "mfsim.stdout")
     return success, open(fpth).readlines()

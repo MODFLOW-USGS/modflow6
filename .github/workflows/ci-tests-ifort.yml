@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: Intel compiler
+name: tests - ifort
 
 on:
   push:
@@ -112,23 +112,25 @@ jobs:
         run: |
           .github/common/update-flopy.sh
 
-      - name: Build applications
+      - name: Build MODFLOW 6 (Linux or macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
-        working-directory: autotest
         run: |
           source /opt/intel/oneapi/setvars.sh
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          cd autotest
           pytest -v --durations=0 get_exes.py
-          pytest -v --durations=0 build_exes.py   
 
-      - name: Build applications
+      - name: Build MODFLOW 6 (Windows)
         if: runner.os == 'Windows'
-        working-directory: autotest
-        shell: cmd         
+        shell: cmd
         run: |
-          call "../.github/intel-scripts/ifortvars_windows.bat"
+          call ".github/intel-scripts/ifortvars_windows.bat"
+          meson setup builddir -Ddebug=false --prefix=%CD% --libdir=bin
+          meson install -C builddir
+          cd autotest
           pytest -v --durations=0 get_exes.py
-          pytest -v --durations=0 build_exes.py           
-          
+
       - name: Test applications
         working-directory: autotest
         run: |

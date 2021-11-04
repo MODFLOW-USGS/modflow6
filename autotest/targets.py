@@ -19,6 +19,8 @@ sysinfo = sys.platform.lower()
 if sysinfo.lower() == "win32":
     target_ext = ".exe"
     target_so = ".dll"
+elif sysinfo.lower() == "darwin":
+    target_so = ".dylib"
 
 # paths to executables for  previous versions of MODFLOW
 downloaded_bindir = os.path.join("..", "bin", "downloaded")

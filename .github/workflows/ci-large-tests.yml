@@ -14,7 +14,7 @@
 #    - develop
 
 
-name: Large tests
+name: large tests
 
 on:
   schedule:
@@ -40,6 +40,7 @@ jobs:
       run:
         shell: bash
 
+    if: github.repository_owner == 'MODFLOW-USGS'
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
@@ -109,18 +110,20 @@ jobs:
 
       - name: activate ifort and build applications
         if: matrix.FC == 'ifort'
-        working-directory: autotest
         run: |
           source /opt/intel/oneapi/setvars.sh
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          cd autotest
           pytest -v --durations=0 get_exes.py
-          pytest -v --durations=0 build_exes.py
 
       - name: Build gfortran applications
         if: matrix.FC == 'gfortran'
-        working-directory: autotest
         run: |
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          cd autotest
           pytest -v --durations=0 get_exes.py
-          pytest -v --durations=0 build_exes.py
 
       - name: Test applications
         working-directory: autotest

@@ -59,10 +59,20 @@ endif
 # Command line options for ifort
 if fc_id == 'intel-cl' 
   # windows
-  compile_args += ['/fpe:0', '/fpp']
+  compile_args += ['/fpe:0',              # Activate all floating point exceptions
+                   '/fpp',                # Activate preprocessing
+                   '/Qdiag-disable:7025', # f2008 warning
+                   '/Qdiag-disable:5268', # Line too long
+                  ]
+  link_args += ['/ignore:4217', # access through ddlimport might be inefficient
+                '/ignore:4286'  # same as 4217, but more general
+               ]
 elif fc_id == 'intel' 
   # linux and macOS
-  compile_args += '-fpe0'
+  compile_args += ['-fpe0',              # Activate all floating point exceptions
+                  '-diag-disable:7025',  # f2008 warning
+                  '-diag-disable:5268',  # Line too long
+                  ]
   link_args += '-static-intel'
 endif
 
