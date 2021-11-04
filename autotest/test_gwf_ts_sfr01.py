@@ -615,18 +615,18 @@ def eval_model(sim):
 
 
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, exdir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, exdir)
 
     # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
+    test.run_mf6(Simulation(exdir, exfunc=eval_model, idxsim=idx))
 
 
 def main():
@@ -635,9 +635,9 @@ def main():
 
     # build the models
     # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
+    for idx, exdir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, exdir)
+        sim = Simulation(exdir, exfunc=eval_model, idxsim=idx)
         test.run_mf6(sim)
     return
 

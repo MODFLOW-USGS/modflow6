@@ -39,6 +39,7 @@ from common_regression import (
 # find path to examples directory
 home = get_home_dir()
 
+
 def get_mf5to6_models():
     """
     Get a list of test models
@@ -105,6 +106,7 @@ def get_mf5to6_models():
 
     return example_dirs
 
+
 find_dir = "modflow6-testmodels"
 example_basedir = get_example_basedir(home, find_dir, subdir="mf5to6")
 
@@ -116,8 +118,6 @@ mf5to6_models = get_mf5to6_models()
 
 
 sfmt = "{:25s} - {}"
-
-
 
 
 def run_mf5to6(sim):

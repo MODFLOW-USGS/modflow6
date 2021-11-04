@@ -1,4 +1,6 @@
 import os
+import shutil
+
 import pytest
 import sys
 import numpy as np
@@ -21,19 +23,15 @@ except:
     raise Exception(msg)
 
 import flopy.utils.binaryfile as bf
-from framework import testing_framework
-from simulation import Simulation
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 mfnwt_exe = os.path.abspath(targets.target_dict["mfnwt"])
 
-ex = ["uzf_3lay_wc_chk"]
-exdirs = []
+ex = "uzf_3lay_wc_chk"
+exdir = os.path.join("temp", ex)
+
 iuz_cell_dict = {}
 cell_iuz_dict = {}
-
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 nlay, nrow, ncol = 3, 1, 10
 nper = 6
@@ -243,7 +241,7 @@ uzf_spd = {
 }
 
 
-def get_mf6_model(idx, dir):
+def get_mf6_model(idx, ws):
 
     tdis_rc = []
     for i in range(nper):
@@ -252,7 +250,6 @@ def get_mf6_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
     )
@@ -364,12 +361,11 @@ def get_mf6_model(idx, dir):
     return sim
 
 
-def get_mfnwt_model(idx, dir):
+def get_mfnwt_model(idx, ws):
 
     name = ex[idx]
 
     # build MODFLOW-NWT files
-    ws = dir
     mfnwt_ws = os.path.join(ws, "mfnwt")
 
     # Instantiate the MODFLOW model
@@ -456,18 +452,18 @@ def get_mfnwt_model(idx, dir):
 
 
 def build_models(include_NWT=False):
-    for idx, dir in enumerate(exdirs):
-        # Start by building the MF6 model
-        sim = get_mf6_model(idx, dir)
-        # Construct MF-NWT model for comparing water contents
-        # (Commented out to avoid NWT dependency, but left behind
-        #  for local testing if needed in the future)
-        if include_NWT:
-            mfnwt = get_mfnwt_model(idx, dir)
+    # Start by building the MF6 model
+    sim = get_mf6_model(0, exdir)
+    # Construct MF-NWT model for comparing water contents
+    # (Commented out to avoid NWT dependency, but left behind
+    #  for local testing if needed in the future)
+    if include_NWT:
+        mfnwt = get_mfnwt_model(0, exdir)
 
-        sim.write_simulation()
-        if include_NWT:
-            mfnwt.write_input()
+    sim.write_simulation()
+    if include_NWT:
+        mfnwt.write_input()
+
     if include_NWT:
         return sim, mfnwt
     else:
@@ -477,8 +473,8 @@ def build_models(include_NWT=False):
 def eval_model(sim, mfnwt, include_NWT=False):
     print("evaluating model...")
 
-    name = ex[0]
-    ws = exdirs[0]
+    name = ex
+    ws = exdir
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
     # Get the MF6 heads
@@ -571,8 +567,6 @@ def eval_model(sim, mfnwt, include_NWT=False):
 def test_mf6model():
 
     include_NWT = False
-    # initialize testing framework
-    test = testing_framework()
 
     # build and write the model input
     mf6, mfnwt = build_models(include_NWT=include_NWT)
@@ -588,27 +582,13 @@ def test_mf6model():
     else:
         eval_model(mf6, None, include_NWT=include_NWT)
 
+    shutil.rmtree(exdir, ignore_errors=True)
+
     return
 
 
 def main():
-    include_NWT = False
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    mf6, mfnwt = build_models(include_NWT=include_NWT)
-
-    # run the test model
-    mf6.run_simulation()
-    if include_NWT:
-        mfnwt.run_model()
-
-    # compare water contents
-    if include_NWT:
-        eval_model(mf6, mfnwt)
-    else:
-        eval_model(mf6, None, include_NWT=include_NWT)
+    test_mf6model()
 
     return
 

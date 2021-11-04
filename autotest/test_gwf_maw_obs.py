@@ -6,6 +6,8 @@
 
 
 import os
+import shutil
+
 import pytest
 import numpy as np
 
@@ -25,8 +27,6 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework
-from simulation import Simulation
 import targets
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
@@ -193,9 +193,6 @@ def build_model():
 
 
 def test_mf6model():
-    # initialize testing framework
-    test = testing_framework()
-
     # build the models
     sim = build_model()
 
@@ -241,59 +238,15 @@ def test_mf6model():
     os.rename(new_fl, orig_fl)
 
     # rerun the model, should be no errors
-    sim.run_simulation()
+    success, buff = sim.run_simulation()
+
+    assert success, "model rerun failed"
+
+    shutil.rmtree(exdir, ignore_errors=True)
 
 
 def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    sim = build_model()
-
-    # write model input
-    sim.write_simulation()
-
-    # attempt to run model should fail
-    sim.run_simulation()
-
-    # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdir, "mfsim.lst"), "r")
-    lines = f.readlines()
-    error_count = 0
-    expected_msg = False
-    for line in lines:
-        if "ID2 (icon) is missing" in line:
-            expected_msg = True
-            error_count += 1
-
-    assert error_count == 1, (
-        "error count = " + str(error_count) + ", but should equal 1"
-    )
-
-    # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdir, ex + ".maw.obs")
-    new_fl = os.path.join(exdir, ex + ".maw.obs.new")
-    sr = open(orig_fl, "r")
-    sw = open(new_fl, "w")
-
-    lines = sr.readlines()
-    error_free_line = "  mawgw  maw  1  1\n"
-    for line in lines:
-        if " maw " in line:
-            sw.write(error_free_line)
-        else:
-            sw.write(line)
-
-    sr.close()
-    sw.close()
-
-    # delete original and replace with corrected lab obs input
-    os.remove(orig_fl)
-    os.rename(new_fl, orig_fl)
-
-    # rerun the model, should be no errors
-    sim.run_simulation()
+    test_mf6model()
 
     return
 

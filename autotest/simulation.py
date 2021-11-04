@@ -249,7 +249,11 @@ class Simulation(object):
         print(msg)
         try:
             success, buff = flopy.run_model(
-                exe, nam, model_ws=self.simpath, silent=False, report=True
+                exe,
+                nam,
+                model_ws=self.simpath,
+                silent=False,
+                report=True,
             )
             msg = sfmt.format("MODFLOW 6 run", self.name)
             if success:

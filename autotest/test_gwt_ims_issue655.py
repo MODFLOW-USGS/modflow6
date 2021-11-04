@@ -43,7 +43,7 @@ for s in ex:
 nlay, nrow, ncol = 1, 11, 11
 
 
-def build_models(idx, ws):
+def build_model(idx, ws):
     nper = 1
     perlen = [1000.0]
     nstp = [5]
@@ -267,10 +267,8 @@ def build_models(idx, ws):
         exgmnameb=gwtname,
         filename="{}.gwfgwt".format(name),
     )
-    # write MODFLOW 6 files
-    sim.write_simulation()
 
-    return
+    return sim, None
 
 
 def eval_transport(sim):
@@ -320,33 +318,27 @@ def eval_transport(sim):
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, exdir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    for idx, ws in enumerate(exdirs):
-        build_models(idx, ws)
+    # build the model
+    test.build_mf6_models(build_model, idx, exdir)
 
     # run the test model
-    test.run_mf6(Simulation(ws, exfunc=eval_transport, idxsim=idx))
+    test.run_mf6(Simulation(exdir, exfunc=eval_transport, idxsim=idx))
 
 
 def main():
     # initialize testing framework
     test = testing_framework()
 
-    # build the models
-    for idx, ws in enumerate(exdirs):
-        build_models(idx, ws)
-
-    # run the test model
-    for idx, ws in enumerate(exdirs):
-        sim = Simulation(ws, exfunc=eval_transport, idxsim=idx)
-        test.run_mf6(sim)
+    # build and run the test model
+    for idx, exdir in enumerate(exdirs):
+        test_mf6model(idx, exdir)
 
     return
 

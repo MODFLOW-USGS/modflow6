@@ -47,6 +47,7 @@ def run_mf6(argv, ws):
 def run_mf6_error(ws, err_str_list):
     returncode, buff = run_mf6([mf6_exe], ws)
     msg = "mf terminated with error"
+    shutil.rmtree(ws, ignore_errors=True)
     if returncode != 0:
         if not isinstance(err_str_list, list):
             err_str_list = list(err_str_list)
@@ -127,7 +128,7 @@ def get_minimal_gwf_simulation(
 
 def test_simple_model_success():
     # test a simple model to make sure it runs and terminates correctly
-    ws = os.path.join(testdir, "sim0")
+    ws = f"{testdir}_sim0"
     sim = get_minimal_gwf_simulation(ws)
     sim.write_simulation()
     returncode, buff = run_mf6([mf6_exe], ws)
@@ -136,6 +137,7 @@ def test_simple_model_success():
     final_message = "Normal termination of simulation."
     failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
     assert final_message in buff[-1], failure_message
+    shutil.rmtree(ws, ignore_errors=True)
     return
 
 
@@ -149,7 +151,7 @@ def test_empty_folder():
 def test_sim_errors():
     with pytest.raises(RuntimeError):
         # verify that the correct number of errors are reported
-        ws = os.path.join(testdir, "sim1")
+        ws = f"{testdir}_sim1"
         chdkwargs = {}
         chdkwargs["stress_period_data"] = {
             0: [[(0, 0, 0), 0.0] for i in range(10)]
@@ -163,7 +165,7 @@ def test_sim_errors():
 def test_sim_maxerrors():
     with pytest.raises(RuntimeError):
         # verify that the maxerrors keyword gives the correct error output
-        ws = os.path.join(testdir, "sim2")
+        ws = f"{testdir}_sim2"
         simnamefilekwargs = {}
         simnamefilekwargs["maxerrors"] = 5
         chdkwargs = {}
@@ -187,7 +189,7 @@ def test_disu_errors():
     with pytest.raises(RuntimeError):
         from disu_util import get_disu_kwargs
 
-        ws = os.path.join(testdir, "sim3")
+        ws = f"{testdir}_sim3"
         disukwargs = get_disu_kwargs(
             3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3]
         )
@@ -211,7 +213,7 @@ def test_disu_errors():
 def test_solver_fail():
     with pytest.raises(RuntimeError):
         # test failed to converge
-        ws = os.path.join(testdir, "sim4")
+        ws = f"{testdir}_sim4"
         imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
         sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs)
         sim.write_simulation()
@@ -224,7 +226,7 @@ def test_solver_fail():
 
 def test_fail_continue_success():
     # test continue but failed to converge
-    ws = os.path.join(testdir, "sim5")
+    ws = f"{testdir}_sim5"
     tdiskwargs = {"nper": 1, "perioddata": [(10.0, 10, 1.0)]}
     imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
     sim = get_minimal_gwf_simulation(
@@ -242,11 +244,9 @@ def test_fail_continue_success():
     final_message = "Normal termination of simulation."
     failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
     assert final_message in buff[0], failure_message
-    return
 
+    shutil.rmtree(ws, ignore_errors=True)
 
-def test_clean_sim():
-    shutil.rmtree(testdir)
     return
 
 

@@ -19,6 +19,8 @@ except:
     raise Exception(msg)
 
 import targets
+from framework import testing_framework
+from simulation import Simulation
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "gwf_disu01"
@@ -46,7 +48,7 @@ def test_disu_simple():
     from disu_util import get_disu_kwargs
 
     name = "disu01a"
-    ws = os.path.join(testdir, name)
+    ws = f"{testdir}_{name}"
     nlay = 3
     nrow = 3
     ncol = 3
@@ -68,6 +70,7 @@ def test_disu_simple():
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
     sim.write_simulation()
     sim.run_simulation()
+    shutil.rmtree(ws, ignore_errors=True)
     return
 
 
@@ -75,7 +78,7 @@ def test_disu_idomain_simple():
     from disu_util import get_disu_kwargs
 
     name = "disu01b"
-    ws = os.path.join(testdir, name)
+    ws = f"{testdir}_{name}"
     nlay = 3
     nrow = 3
     ncol = 3
@@ -131,7 +134,7 @@ def test_disu_idomain_simple():
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     flowja = budobj.get_data(text="FLOW-JA-FACE")[0].flatten()
     assert flowja.shape[0] == 126
-
+    shutil.rmtree(ws, ignore_errors=True)
     return
 
 
