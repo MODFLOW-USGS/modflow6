@@ -1,10 +1,6 @@
-import os
-import shutil
-
 import pytest
-import sys
+import os
 import numpy as np
-import targets
 
 try:
     import pymake
@@ -24,11 +20,13 @@ except:
 
 import flopy.utils.binaryfile as bf
 
-mf6_exe = os.path.abspath(targets.target_dict["mf6"])
-mfnwt_exe = os.path.abspath(targets.target_dict["mfnwt"])
+from framework import testing_framework
+from simulation import Simulation
 
-ex = "uzf_3lay_wc_chk"
-exdir = os.path.join("temp", ex)
+include_NWT = False
+
+ex = ["uzf_3lay_wc_chk"]
+exdirs = [os.path.join("temp", name) for name in ex]
 
 iuz_cell_dict = {}
 cell_iuz_dict = {}
@@ -241,7 +239,7 @@ uzf_spd = {
 }
 
 
-def get_mf6_model(idx, ws):
+def build_mf6_model(idx, ws):
 
     tdis_rc = []
     for i in range(nper):
@@ -251,7 +249,7 @@ def get_mf6_model(idx, ws):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
 
     # create tdis package
@@ -361,16 +359,19 @@ def get_mf6_model(idx, ws):
     return sim
 
 
-def get_mfnwt_model(idx, ws):
+def build_mfnwt_model(idx, ws):
 
     name = ex[idx]
 
     # build MODFLOW-NWT files
-    mfnwt_ws = os.path.join(ws, "mfnwt")
+    ws = os.path.join(ws, "mfnwt")
 
     # Instantiate the MODFLOW model
     mf = flopy.modflow.Modflow(
-        modelname=name, model_ws=mfnwt_ws, version="mfnwt", exe_name=mfnwt_exe
+        modelname=name,
+        model_ws=ws,
+        version="mfnwt",
+        exe_name="mfnwt",
     )
 
     # Instantiate discretization package
@@ -451,31 +452,26 @@ def get_mfnwt_model(idx, ws):
     return mf
 
 
-def build_models(include_NWT=False):
+def build_model(idx, ws):
     # Start by building the MF6 model
-    sim = get_mf6_model(0, exdir)
+    sim = build_mf6_model(idx, ws)
+
     # Construct MF-NWT model for comparing water contents
-    # (Commented out to avoid NWT dependency, but left behind
-    #  for local testing if needed in the future)
+    #   Commented out to avoid NWT dependency, but left behind for
+    #   local testing if needed in the future.
     if include_NWT:
-        mfnwt = get_mfnwt_model(0, exdir)
-
-    sim.write_simulation()
-    if include_NWT:
-        mfnwt.write_input()
-
-    if include_NWT:
-        return sim, mfnwt
+        mc = build_mfnwt_model(idx, ws)
     else:
-        return sim, None
+        mc = None
+    return sim, mc
 
 
-def eval_model(sim, mfnwt, include_NWT=False):
+def eval_model(sim):
     print("evaluating model...")
 
-    name = ex
-    ws = exdir
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    idx = sim.idxsim
+    name = ex[idx]
+    ws = os.path.join("temp", name)
 
     # Get the MF6 heads
     fpth = os.path.join(ws, "uzf_3lay_wc_chk.hds")
@@ -505,8 +501,8 @@ def eval_model(sim, mfnwt, include_NWT=False):
     # Retrieve MF-NWT water contents from formatted linker file
     if include_NWT:
         mfnwt_wc = []
-        nwtwc = os.path.join(ws, "mfnwt", "mt3d_link.ftl")
-        with open(nwtwc, "r") as f:
+        fpth = os.path.join(ws, "mfnwt", "mt3d_link.ftl")
+        with open(fpth, "r") as f:
             for line in f:
                 if "WATER CONTENT   ".lower() in line.lower():
                     line = next(f)
@@ -564,31 +560,31 @@ def eval_model(sim, mfnwt, include_NWT=False):
 
 
 # - No need to change any code below
-def test_mf6model():
+@pytest.mark.parametrize(
+    "idx, exdir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, exdir):
+    # initialize testing framework
+    test = testing_framework()
 
-    include_NWT = False
+    # build the model
+    test.build_mf6_models(build_model, idx, exdir)
 
-    # build and write the model input
-    mf6, mfnwt = build_models(include_NWT=include_NWT)
-
-    # run the test model
-    mf6.run_simulation()
-    if include_NWT:
-        mfnwt.run_model()
-
-    # compare water contents
-    if include_NWT:
-        eval_model(mf6, mfnwt)
-    else:
-        eval_model(mf6, None, include_NWT=include_NWT)
-
-    shutil.rmtree(exdir, ignore_errors=True)
-
+    # run the test models
+    test.run_mf6(
+        Simulation(
+            exdir,
+            exfunc=eval_model,
+            idxsim=idx,
+        )
+    )
     return
 
 
 def main():
-    test_mf6model()
+    for idx, exdir in enumerate(exdirs):
+        test_mf6model(idx, exdir)
 
     return
 

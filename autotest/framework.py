@@ -44,7 +44,10 @@ class testing_framework(object):
         base, regression = build_function(idx, exdir)
         base.write_simulation()
         if regression is not None:
-            regression.write_simulation()
+            if isinstance(regression, flopy.mf6.MFSimulation):
+                regression.write_simulation()
+            else:
+                regression.write_input()
 
     def build_mf6_models_legacy(self, build_function, idx, exdir):
         """
