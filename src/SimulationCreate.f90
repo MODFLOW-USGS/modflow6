@@ -117,8 +117,8 @@ module SimulationCreateModule
     !    a solution.
     call check_model_assignment()
     !
-    ! -- Close the input file
-    close(inunit)
+    ! -- Close the file
+    call parser%Clear()
     !
     ! -- Go through each solution and assign exchanges accordingly
     call assign_exchanges()    
