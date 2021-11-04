@@ -61,7 +61,9 @@ module CommandArguments
     if (ipos == 0) then
       ipos = index(cexe, '\', back=.TRUE.)
     end if
-    if (ipos /= 0) then
+    if (ipos == 0) then
+      ipos = 1
+    else
       ipos = ipos + 1
     end if
     cexe = cexe(ipos:)
