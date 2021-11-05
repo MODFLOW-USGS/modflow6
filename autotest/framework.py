@@ -1,4 +1,5 @@
 import os
+import sys
 
 try:
     import pymake
@@ -19,6 +20,14 @@ except:
 
 def running_on_CI():
     return "TRAVIS" in os.environ or "CI" in os.environ
+
+
+def set_teardown_test():
+    teardown = True
+    for idx, arg in enumerate(sys.argv):
+        if arg.lower() == "--keep":
+            teardown = False
+    return teardown
 
 
 class testing_framework(object):
@@ -44,7 +53,10 @@ class testing_framework(object):
         base, regression = build_function(idx, exdir)
         base.write_simulation()
         if regression is not None:
-            regression.write_simulation()
+            if isinstance(regression, flopy.mf6.MFSimulation):
+                regression.write_simulation()
+            else:
+                regression.write_input()
 
     def build_mf6_models_legacy(self, build_function, idx, exdir):
         """

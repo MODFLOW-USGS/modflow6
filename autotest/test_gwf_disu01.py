@@ -5,7 +5,6 @@ Test to make sure that disu is working correctly
 """
 
 import os
-import pytest
 import shutil
 import subprocess
 import numpy as np
@@ -19,12 +18,14 @@ except:
     raise Exception(msg)
 
 import targets
+from framework import set_teardown_test
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "gwf_disu01"
 testdir = os.path.join("temp", testname)
-os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
+
+teardown_test = set_teardown_test()
 
 
 def run_mf6(argv, ws):
@@ -46,7 +47,7 @@ def test_disu_simple():
     from disu_util import get_disu_kwargs
 
     name = "disu01a"
-    ws = os.path.join(testdir, name)
+    ws = f"{testdir}_{name}"
     nlay = 3
     nrow = 3
     ncol = 3
@@ -68,6 +69,8 @@ def test_disu_simple():
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
     sim.write_simulation()
     sim.run_simulation()
+    if teardown_test:
+        shutil.rmtree(ws, ignore_errors=True)
     return
 
 
@@ -75,7 +78,7 @@ def test_disu_idomain_simple():
     from disu_util import get_disu_kwargs
 
     name = "disu01b"
-    ws = os.path.join(testdir, name)
+    ws = f"{testdir}_{name}"
     nlay = 3
     nrow = 3
     ncol = 3
@@ -131,7 +134,8 @@ def test_disu_idomain_simple():
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     flowja = budobj.get_data(text="FLOW-JA-FACE")[0].flatten()
     assert flowja.shape[0] == 126
-
+    if teardown_test:
+        shutil.rmtree(ws, ignore_errors=True)
     return
 
 

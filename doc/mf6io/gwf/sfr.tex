@@ -1,4 +1,4 @@
-Input to the Streamflow Routing (SFR) Package is read from the file that has type ``SFR6'' in the Name File. Any number of SFR Packages can be specified for a single groundwater flow model; however, water cannot be routed between reaches in separate packages except in cases where the MVR Package is used to route water between separate packages.
+Input to the Streamflow Routing (SFR) Package is read from the file that has type ``SFR6'' in the Name File. Any number of SFR Packages can be specified for a single groundwater flow model; however, water cannot be routed between reaches in separate packages except in cases where the MVR Package is used to route water between separate packages. Reaches can be specified to have a wide-rectangular cross-section or an irregular cross-section with an arbitrary number of station-height points (added in version 6.3.0). Irregular cross-sections are discussed in the \hyperref[sec:n-point]{Streamflow Routing Package Cross-Section Table Input File} section.
 
 Reach connectivity must be explicitly specified for this version of the SFR Package, unlike the abbreviated SFR Package segment connectivity specified in previous versions of MODFLOW. Explicit specification of reach connectivity has been adopted to facilitate better validation of stream network connectivity by the program. Explicit reach connectivity means that a reach must be specified as an upstream connection for all downstream connections to the reach. Downstream connections for a reach are denoted with a negative reach number. Flow in a reach is unidirectional, always flowing from the upstream end to the downstream end of a reach. An example of the reach connectivity for a hypothetical stream network is shown in figure~\ref{fig:sfr-connectivity}.
 
@@ -8,7 +8,6 @@ Reach connectivity must be explicitly specified for this version of the SFR Pack
 	\caption[Illustration of a simple stream network having seven reaches with a junction having two reaches, a confluence of two reaches, and the resulting reach connectivity]{Simple stream network having seven reaches with a junction having two reaches, a confluence of two reaches, and the resulting reach connectivity. Downstream connections for a reach must include the reach as an upstream connection for all downstream connections to the reach. Downstream connections for a  reach are denoted with a negative reach number}
 	\label{fig:sfr-connectivity}
 \end{figure}
-
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
@@ -81,8 +80,21 @@ Streamflow Routing Package observations include reach stage and all of the terms
 \lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-sfr-example-obs.dat}
 
 \newpage
-\subsection{Streamflow Routing Package Cross-Sections Table Input File}
-Cross-sections tables of distance and relative depth can be specified for individual reaches.  Cross-Section tables are specified by including file names in the LAKE\_TABLES block of the SFR Package.  These file names correspond to a lake table input file.  The format of the lake table input file is described here.
+\subsection{Streamflow Routing Package Cross-Section Table Input File} \label{sec:n-point}
+
+The approach used to represent irregular cross-sections in the SFR Package is a generalization of the 8-point cross-section available in the SFR Package for previous versions of MODFLOW \citep{modflowsfr1pack}. The station-height data for irregular cross-sections is specified as xfraction and height data (fig.~\ref{fig:sfr-n-point}), which is converted to station position using the specified reach width (RWID) and elevation using the specified bottom elevation of the reach (RTP). Fraction values were specified for the station data to maintain use of the specified reach width for reaches using irregular cross-sections. Furthermore, use of a maximum xfraction value less than or greater than one allows users to vary the width of a reach during a simulation.
+
+Manning's roughness coefficient fractions can optionally be specified with the xfraction-height data for a irregular cross-section to represent roughness coefficient variations in a channel (for example, different channel and overbank Manning's roughness coefficients). When Manning's coefficient fractions are specified, the streamflow is calculated for each segment of the cross-section and summed to calculate the total streamflow for a reach; this is the same approach used in the SFR Package for previous versions of MODFLOW \citep{modflowsfr1pack} to calculate the stream flow for the left bank, defined channel, and right bank. Fraction values are specified for irregular cross-section Manning's roughness coefficient data in order to allow users to also set Manning's roughness coefficients in the stress period data and using timeseries.
+
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=1.0]{../Figures/n-point-cross-section}
+	\caption[Illustration of a irregular cross section used to compute depth, wetted top width, wetted perimeter, and wetted cross-sectional area for a stream reach]{Irregular cross section used to compute depth, wetted top width, wetted perimeter, and wetted cross-sectional area for a stream reach for the case where the maximum XFRACTION is one}
+	\label{fig:sfr-n-point}
+\end{figure}
+
+Cross-Section tables are specified by including file names in the CROSSSECTIONS or PERIOD blocks of the SFR Package for specific reaches.  These file names correspond to a Streamflow Routing cross-section table input file.  The format of the Streamflow Routing cross-section table input file is described here.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
@@ -99,5 +111,5 @@ Cross-sections tables of distance and relative depth can be specified for indivi
 \end{description}
 
 \subsubsection{Example Input File}
-%\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-sfrtab-example.dat}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-sfrtab-example.dat}
 

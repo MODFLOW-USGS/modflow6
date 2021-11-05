@@ -36,17 +36,8 @@ from common_regression import (
     set_mf6_regression,
 )
 
-
 # find path to examples directory
 home = get_home_dir()
-
-find_dir = "modflow6-testmodels"
-example_basedir = get_example_basedir(home, find_dir, subdir="mf5to6")
-
-if example_basedir is not None:
-    assert os.path.isdir(example_basedir)
-
-sfmt = "{:25s} - {}"
 
 
 def get_mf5to6_models():
@@ -116,6 +107,19 @@ def get_mf5to6_models():
     return example_dirs
 
 
+find_dir = "modflow6-testmodels"
+example_basedir = get_example_basedir(home, find_dir, subdir="mf5to6")
+
+if example_basedir is not None:
+    assert os.path.isdir(example_basedir)
+
+# get a list of test models to run
+mf5to6_models = get_mf5to6_models()
+
+
+sfmt = "{:25s} - {}"
+
+
 def run_mf5to6(sim):
     """
     Run the MODFLOW 6 simulation and compare to existing head file or
@@ -123,7 +127,7 @@ def run_mf5to6(sim):
 
     """
     src = os.path.join(example_basedir, sim.name)
-    dst = os.path.join("temp", "working")
+    dst = os.path.join("temp", f"z02_mf5to6_{sim.name}")
     os.makedirs(dst, exist_ok=True)
 
     # set lgrpth to None
@@ -183,7 +187,7 @@ def run_mf5to6(sim):
 
     # standard setup
     src = dst
-    dst = os.path.join("temp", sim.name)
+    dst = os.path.join("temp", f"z02_mf6_{sim.name}")
     sim.setup(src, dst)
 
     # clean up temp/working directory (src)
@@ -217,21 +221,19 @@ def set_make_comparison(test):
     return make_comparison
 
 
-def test_model():
-
-    # TODO: Replace with parametrize fixture as soon as data races of tests are fixed
-    mf5to6_models = get_mf5to6_models()
-
-    for dir in mf5to6_models:
-        # run the test model
-        run_mf5to6(
-            Simulation(
-                dir,
-                mf6_regression=set_mf6_regression(),
-                cmp_verbose=False,
-                make_comparison=set_make_comparison(dir),
-            )
+@pytest.mark.parametrize(
+    "exdir",
+    mf5to6_models,
+)
+def test_model(exdir):
+    run_mf5to6(
+        Simulation(
+            exdir,
+            mf6_regression=set_mf6_regression(),
+            cmp_verbose=False,
+            make_comparison=set_make_comparison(exdir),
         )
+    )
 
     return
 
@@ -245,11 +247,11 @@ def main():
     # get name of current file
     module_name = sys.modules[__name__].__file__
 
-    # get a list of test models to run
-    example_dirs = get_mf5to6_models()
+    # # get a list of test models to run
+    # example_dirs = get_mf5to6_models()
 
     # run the test model
-    for on_dir in example_dirs:
+    for on_dir in mf5to6_models:
         sim = Simulation(
             on_dir,
             mf6_regression=set_mf6_regression(),

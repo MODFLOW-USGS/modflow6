@@ -15,7 +15,8 @@ module sfrCrossSectionManager
   type :: SfrCrossSectionType
     integer(I4B), pointer :: npoints
     real(DP), pointer, dimension(:), contiguous :: station => null()
-    real(DP), pointer, dimension(:), contiguous :: depth => null()
+    real(DP), pointer, dimension(:), contiguous :: height => null()
+    real(DP), pointer, dimension(:), contiguous :: roughfraction => null()
     logical(LGP), pointer, dimension(:), contiguous :: valid => null()
   end type SfrCrossSectionType
 
@@ -85,14 +86,16 @@ module sfrCrossSectionManager
   !! data.
   !!
   !<
-  subroutine initialize(this, ncrossptstot, ncrosspts, iacross, station, depth)
+  subroutine initialize(this, ncrossptstot, ncrosspts, iacross, &
+                        station, height, roughfraction)
     ! -- dummy variables
     class(SfrCrossSection) :: this                                   !< SfrCrossSection object
     integer(I4B), intent(in) :: ncrossptstot                         !< total number of cross-section points
     integer(I4B), dimension(this%nreaches), intent(in) :: ncrosspts  !< pointers to cross-section data in data vector
     integer(I4B), dimension(this%nreaches+1), intent(in) :: iacross  !< pointers to cross-section data in data vector
     real(DP), dimension(ncrossptstot), intent(in) :: station         !< cross-section station data
-    real(DP), dimension(ncrossptstot), intent(in) :: depth           !< cross-section depth data
+    real(DP), dimension(ncrossptstot), intent(in) :: height          !< cross-section height data
+    real(DP), dimension(ncrossptstot), intent(in) :: roughfraction   !< cross-section roughness fraction data
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -115,7 +118,8 @@ module sfrCrossSectionManager
       npoints = ncrosspts(n)
       allocate(this%cross_sections(n)%npoints)
       allocate(this%cross_sections(n)%station(npoints))
-      allocate(this%cross_sections(n)%depth(npoints))
+      allocate(this%cross_sections(n)%height(npoints))
+      allocate(this%cross_sections(n)%roughfraction(npoints))
       allocate(this%cross_sections(n)%valid(npoints))
     end do
     !
@@ -129,7 +133,8 @@ module sfrCrossSectionManager
       ipos = 1
       do i = i0, i1
         this%cross_sections(n)%station(ipos) = station(i)
-        this%cross_sections(n)%depth(ipos) = depth(i)
+        this%cross_sections(n)%height(ipos) = height(i)
+        this%cross_sections(n)%roughfraction(ipos) = roughfraction(i)
         this%cross_sections(n)%valid(ipos) = .TRUE.
         ipos = ipos + 1
       end do
@@ -153,7 +158,7 @@ module sfrCrossSectionManager
     class(SfrCrossSection) :: this             !< SfrCrossSection object
     integer(I4B), intent(in) :: irch           !< current reach
     real(DP), intent(in) :: width              !< reach width
-    character(len=*), intent(in) :: filename   !< table file with station depth data
+    character(len=*), intent(in) :: filename   !< table file with station height data
     ! -- local variables
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: keyword
@@ -247,13 +252,15 @@ module sfrCrossSectionManager
       ! -- deallocate
       deallocate(this%cross_sections(irch)%npoints)
       deallocate(this%cross_sections(irch)%station)
-      deallocate(this%cross_sections(irch)%depth)
+      deallocate(this%cross_sections(irch)%height)
+      deallocate(this%cross_sections(irch)%roughfraction)
       deallocate(this%cross_sections(irch)%valid)
       !
       ! -- reallocate
       allocate(this%cross_sections(irch)%npoints)
       allocate(this%cross_sections(irch)%station(n))
-      allocate(this%cross_sections(irch)%depth(n))
+      allocate(this%cross_sections(irch)%height(n))
+      allocate(this%cross_sections(irch)%roughfraction(n))
       allocate(this%cross_sections(irch)%valid(n))
       !
       ! -- initialize
@@ -279,7 +286,12 @@ module sfrCrossSectionManager
             cycle readtabledata
           end if
           this%cross_sections(irch)%station(ipos) = parser%GetDouble() * width
-          this%cross_sections(irch)%depth(ipos) = parser%GetDouble()
+          this%cross_sections(irch)%height(ipos) = parser%GetDouble()
+          if (j > 2) then
+            this%cross_sections(irch)%roughfraction(ipos) = parser%GetDouble()
+          else
+            this%cross_sections(irch)%roughfraction(ipos) = DONE
+          end if
           this%cross_sections(irch)%valid(ipos) = .TRUE.
         end do readtabledata
         
@@ -327,44 +339,57 @@ module sfrCrossSectionManager
     integer(I4B), intent(in) :: irch  !< current reach
     ! -- local variables
     logical(LGP) :: station_error
-    logical(LGP) :: depth_error
+    logical(LGP) :: height_error
+    logical(LGP) :: height_zero_error
+    logical(LGP) :: roughness_error
     character(len=LINELENGTH) :: filename   
     integer(I4B) :: npts
     integer(I4B) :: n
     integer(I4B) :: i
     integer(I4B) :: ipos
     real(DP) :: station
-    real(DP) :: depth
+    real(DP) :: height
+    real(DP) :: roughfraction
     real(DP) :: aw
     real(DP) :: rh
     real(DP) :: dc0
     real(DP) :: dc1
-    real(DP), dimension(:), allocatable :: depths
-    real(DP), dimension(:), allocatable :: unique_depths
+    real(DP), dimension(:), allocatable :: heights
+    real(DP), dimension(:), allocatable :: unique_heights
     real(DP), dimension(3) :: factor
     !
     ! -- initialize local variables
     station_error = .FALSE.
-    depth_error = .FALSE.
+    height_error = .FALSE.
+    height_zero_error = .TRUE.
+    roughness_error = .FALSE.
     npts = this%npoints(irch)
     !
-    ! -- validate the station and depth data
+    ! -- validate the station and height data
     do n = 1, npts
       station = this%cross_sections(irch)%station(n)
       if (station < DZERO) then
         station_error = .TRUE.
       end if
-      depth = this%cross_sections(irch)%depth(n)
-      if (station < DZERO) then
-        depth_error = .TRUE.
+      height = this%cross_sections(irch)%height(n)
+      if (height < DZERO) then
+        height_error = .TRUE.
+      else if (height == DZERO) then
+        height_zero_error = .FALSE.
       end if
-      if (station_error .and. depth_error) then
+      roughfraction = this%cross_sections(irch)%roughfraction(n)
+      if (roughfraction <= DZERO) then
+        roughness_error = .TRUE.
+      end if
+      if (station_error .and. height_error .and. &
+          roughness_error) then
         exit
       end if
     end do
     !
     ! -- write error messages
-    if (station_error .or. depth_error) then
+    if (station_error .or. height_error .or. &
+        height_zero_error .or. roughness_error) then
       filename = this%filenames(irch)
       if (station_error) then
         write(errmsg, '(3a,1x,i0,1x,a)') &
@@ -372,34 +397,46 @@ module sfrCrossSectionManager
           "' for reach", irch, 'must be greater than or equal to zero.'
         call store_error(errmsg)
       end if
-      if (depth_error) then
+      if (height_error) then
         write(errmsg, '(3a,1x,i0,1x,a)') &
-          "All depth data in '", trim(adjustl(filename)), &
+          "All height data in '", trim(adjustl(filename)), &
           "' for reach", irch, 'must be greater than or equal to zero.'
+        call store_error(errmsg)
+      end if
+      if (height_zero_error) then
+        write(errmsg, '(3a,1x,i0,1x,a)') &
+          "At least one height data value in '", trim(adjustl(filename)), &
+          "' for reach", irch, 'must be equal to zero.'
+        call store_error(errmsg)
+      end if
+      if (roughness_error) then
+        write(errmsg, '(3a,1x,i0,1x,a)') &
+          "All manfraction data in '", trim(adjustl(filename)), &
+          "' for reach", irch, 'must be greater than zero.'
         call store_error(errmsg)
       end if
     end if
     !
-    ! -- initialize and fill depths
-    allocate(depths(npts))
+    ! -- initialize and fill heights
+    allocate(heights(npts))
     do n = 1, npts
-      depths(n) = this%cross_sections(irch)%depth(n)
+      heights(n) = this%cross_sections(irch)%height(n)
     end do
     !
-    ! -- get unique depths
-    call unique_values(depths, unique_depths)
+    ! -- get unique heights
+    call unique_values(heights, unique_heights)
     !
     ! -- calculate the product of the area and the hydraulic radius to 
     !    the 2/3 power
-    do n = 1, size(unique_depths)
-      if (unique_depths(n) <= DZERO) cycle
+    do n = 1, size(unique_heights)
+      if (unique_heights(n) <= DZERO) cycle
       ipos = 1
       do i = -1, 1, 1
-        depth = unique_depths(n) + real(i, DP) * DEM6
+        height = unique_heights(n) + real(i, DP) * DEM6
         aw = get_cross_section_area(npts, this%cross_sections(irch)%station, &
-                                    this%cross_sections(irch)%depth, depth)
+                                    this%cross_sections(irch)%height, height)
         rh = get_hydraulic_radius(npts, this%cross_sections(irch)%station, &
-                                  this%cross_sections(irch)%depth, depth)
+                                  this%cross_sections(irch)%height, height)
         factor(ipos) = aw * rh**DTWOTHIRDS
         ipos = ipos + 1
       end do
@@ -411,9 +448,9 @@ module sfrCrossSectionManager
       ! -- evaluate the difference
       if (dc0 < DZERO .or. dc1 < DZERO) then
         this%invalid = this%invalid + 1
-        depth = unique_depths(n)
+        height = unique_heights(n)
         do i = 1, npts
-          if (this%cross_sections(irch)%depth(i) == depth) then
+          if (this%cross_sections(irch)%height(i) == height) then
             this%cross_sections(irch)%valid(i) = .FALSE.
           end if
         end do
@@ -421,8 +458,8 @@ module sfrCrossSectionManager
     end do
     !
     ! -- deallocate local storage
-    deallocate(depths)
-    deallocate(unique_depths)
+    deallocate(heights)
+    deallocate(unique_heights)
     !
     ! -- return
     return
@@ -434,12 +471,13 @@ module sfrCrossSectionManager
   !! listing file.
   !!
   !<
-  subroutine output(this, widths, kstp, kper)
+  subroutine output(this, widths, roughs, kstp, kper)
     use ConstantsModule, only: TABLEFT
     use SimModule, only: store_warning
     ! -- dummy variables
     class(SfrCrossSection) :: this                            !< SfrCrossSection object
     real(DP), dimension(this%nreaches), intent(in) :: widths  !< reach widths
+    real(DP), dimension(this%nreaches), intent(in) :: roughs  !< reach Manning's roughness coefficients
     integer(I4B), intent(in), optional :: kstp                !< time step
     integer(I4B), intent(in), optional :: kper                !< stress period
     ! -- local variables
@@ -456,6 +494,8 @@ module sfrCrossSectionManager
     integer(I4B) :: ninvalid_reaches
     real(DP) :: width
     real(DP) :: xfraction
+    real(DP) :: rough
+    real(DP) :: r
     integer(I4B), dimension(this%nreaches) :: reach_fail
     !
     ! -- initialize local variables
@@ -505,9 +545,9 @@ module sfrCrossSectionManager
           !
           ! -- calculate the number of table columns
           if (reach_fail(irch) > 0) then
-            ntabcols = 4
+            ntabcols = 6
           else
-            ntabcols = 3
+            ntabcols = 5
           end if
           !
           ! -- reset the input table object
@@ -525,22 +565,30 @@ module sfrCrossSectionManager
           call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
           text = 'STATION'
           call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
-          text = 'DEPTH'
+          text = 'HEIGHT'
+          call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+          text = "MANFRACTION"
+          call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+          text = "MANNING'S ROUGHNESS COEFFICIENT"
           call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
           if (reach_fail(irch) > 0) then
             text = 'NEEDS ADJUSTMENT'
             call this%inputtab%initialize_column(text, 10, alignment=TABLEFT)
           end if
           !
-          ! -- set the width
+          ! -- set the width and roughness for the reach
           width = widths(irch)
+          rough = roughs(irch)
           !
           ! -- fill the table
           do n = 1, this%npoints(irch)
             xfraction = this%cross_sections(irch)%station(n) / width
+            r = this%cross_sections(irch)%roughfraction(n) * rough
             call this%inputtab%add_term(xfraction)
             call this%inputtab%add_term(this%cross_sections(irch)%station(n))
-            call this%inputtab%add_term(this%cross_sections(irch)%depth(n))
+            call this%inputtab%add_term(this%cross_sections(irch)%height(n))
+            call this%inputtab%add_term(this%cross_sections(irch)%roughfraction(n))
+            call this%inputtab%add_term(r)
             if (reach_fail(irch) > 0) then
               if (this%cross_sections(irch)%valid(n)) then
                 cvalid = ''
@@ -569,7 +617,7 @@ module sfrCrossSectionManager
         'Cross-section data for', ninvalid_reaches, &
         'reaches include one or more points that result in a', &
         'non-unique depth-conveyance relation. This occurs when', & 
-        'there are horizontal sections at non-zero depths', &
+        'there are horizontal sections at non-zero heights', &
         '(for example, flat overbank sections). This can usually', &
         'be resolved by adding a small slope to these flat', &
         'sections. See the cross-section tables in the model', &
@@ -584,7 +632,7 @@ module sfrCrossSectionManager
   !> @brief Get the total number of cross-section points
   !!
   !! Function to get the total number of cross-section points to
-  !! get the new size of the station xsdepth data for all reaches.
+  !! get the new size of the station xsheight data for all reaches.
   !!
   !<
   function get_ncrossptstot(this) result(nptstot)
@@ -609,14 +657,16 @@ module sfrCrossSectionManager
   !! Subroutine to pack the cross-section object into vectors.
   !!
   !<
-  subroutine pack(this, ncrossptstot, ncrosspts, iacross, station, depth)
+  subroutine pack(this, ncrossptstot, ncrosspts, iacross, &
+                  station, height, roughfraction)
     ! -- dummy variables
     class(SfrCrossSection) :: this                                      !< SfrCrossSection object
     integer(I4B), intent(in) :: ncrossptstot                            !< total number of cross-section points
     integer(I4B), dimension(this%nreaches), intent(inout) :: ncrosspts  !< pointers to cross-section data in data vector
     integer(I4B), dimension(this%nreaches+1), intent(inout) :: iacross  !< pointers to cross-section data in data vector
     real(DP), dimension(ncrossptstot), intent(inout) :: station         !< cross-section station data
-    real(DP), dimension(ncrossptstot), intent(inout) :: depth           !< cross-section depth data
+    real(DP), dimension(ncrossptstot), intent(inout) :: height          !< cross-section height data
+    real(DP), dimension(ncrossptstot), intent(inout) :: roughfraction   !< cross-section roughness fraction data
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -631,7 +681,8 @@ module sfrCrossSectionManager
       ncrosspts(n) = npoints
       do i = 1, npoints
         station(ipos) = this%cross_sections(n)%station(i)
-        depth(ipos) = this%cross_sections(n)%depth(i)
+        height(ipos) = this%cross_sections(n)%height(i)
+        roughfraction(ipos) = this%cross_sections(n)%roughfraction(i)
         ipos = ipos + 1
       end do
       iacross(n+1) = ipos
@@ -660,8 +711,10 @@ module sfrCrossSectionManager
       nullify(this%cross_sections(n)%npoints)
       deallocate(this%cross_sections(n)%station)
       nullify(this%cross_sections(n)%station)
-      deallocate(this%cross_sections(n)%depth)
-      nullify(this%cross_sections(n)%depth)
+      deallocate(this%cross_sections(n)%height)
+      nullify(this%cross_sections(n)%height)
+      deallocate(this%cross_sections(n)%roughfraction)
+      nullify(this%cross_sections(n)%roughfraction)
       deallocate(this%cross_sections(n)%valid)
       nullify(this%cross_sections(n)%valid)
     end do

@@ -1024,7 +1024,9 @@ def check_simulation_output(sim):
     gwf_srch_str2 = " WATER MOVER PACKAGE (MVR) FLOW RATES   "
     sim_srch_str = " WATER MOVER PACKAGE (MVR) FLOW RATES "
 
-    cur_ws, gwfparent = exdirs[idx], gwf_names[idx]
+    # cur_ws, gwfparent = exdirs[idx], gwf_names[idx]
+    cur_ws = exdirs[idx]
+    gwfparent = name + "_" + mvr_scens[idx] + "_p"
     with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
         os.path.join(cur_ws, "mfsim.lst"), "r"
     ) as sim_lst:
@@ -1135,20 +1137,22 @@ def check_simulation_output(sim):
 
 
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, exdir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, exdir)
 
-    test.run_mf6, Simulation(
-        dir,
-        exfunc=check_simulation_output,
-        idxsim=idx,
+    test.run_mf6(
+        Simulation(
+            exdir,
+            exfunc=check_simulation_output,
+            idxsim=idx,
+        )
     )
 
 
@@ -1157,7 +1161,7 @@ def main():
     test = testing_framework()
 
     for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
+        test.build_mf6_models(build_model, idx, exdir)
         sim = Simulation(
             exdir,
             exfunc=check_simulation_output,

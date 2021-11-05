@@ -51,7 +51,7 @@ for n in range(nper):
     rwid = float(n + 1) * rwid0
     np_data[n] = {
         "x": np.array([0.0, rwid], dtype=float),
-        "d": np.array([0.0, 0.0], dtype=float),
+        "h": np.array([0.0, 0.0], dtype=float),
     }
 
 # depth as a function of flow for a wide cross-section
@@ -155,7 +155,7 @@ def build_model(idx, ws):
         sfr_tab = f"{name}.{n:02d}.sfr.tab"
         pname = f"sfrtab{n:02d}"
         stations = np_data[n]["x"] / rwid0
-        depths = np_data[n]["d"]
+        depths = np_data[n]["h"]
         table = [[x, d] for x, d in zip(stations, depths)]
         t = flopy.mf6.ModflowUtlsfrtab(
             gwf,

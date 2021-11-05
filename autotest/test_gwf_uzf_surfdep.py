@@ -235,30 +235,13 @@ def test_mf6model():
 
     print("Finished running surfdep check")
 
+    shutil.rmtree(testdir, ignore_errors=True)
+
     return
 
 
 def main():
-    # build and run the test model
-    sim = build_model()
-    sim.write_simulation()
-    sim.run_simulation()
-
-    # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(testdir, "mfsim.lst"), "r")
-    lines = f.readlines()
-    error_count = 0
-    expected_msg = False
-    for line in lines:
-        if "SURFDEP" and "cannot" in line:
-            expected_msg = True
-            error_count += 1
-
-    assert error_count == 8, (
-        "error count = " + str(error_count) + "but should equal 8"
-    )
-
-    print("Finished running surfdep check")
+    test_mf6model()
 
     return
 
