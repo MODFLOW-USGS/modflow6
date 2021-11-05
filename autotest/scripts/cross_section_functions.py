@@ -19,35 +19,35 @@ def calculate_rectchan_mannings_discharge(
 def get_wetted_station(
     x0,
     x1,
-    d0,
-    d1,
-    d,
+    h0,
+    h1,
+    depth,
 ):
     """Get the wetted length in the x-direction"""
     # -- calculate the minimum and maximum depth
-    dmin = min(d0, d1)
-    dmax = max(d0, d1)
+    hmin = min(h0, h1)
+    hmax = max(h0, h1)
 
-    # -- if d is less than or equal to the minimum value the
+    # -- if depth is less than or equal to the minimum value the
     #    station length (xlen) is zero
-    if d <= dmin:
+    if depth <= hmin:
         x1 = x0
-    # -- if d is between dmin and dmax, station length is less
-    #    than d1 - d0
-    elif d < dmax:
+    # -- if depth is between hmin and hmax, station length is less
+    #    than h1 - h0
+    elif depth < hmax:
         xlen = x1 - x0
-        dlen = d1 - d0
+        dlen = h1 - h0
         if abs(dlen) > 0.0:
             slope = xlen / dlen
         else:
             slope = 0.0
-        if d0 > d1:
-            dx = (d - d1) * slope
+        if h0 > h1:
+            dx = (depth - h1) * slope
             xt = x1 + dx
             xt0 = xt
             xt1 = x1
         else:
-            dx = (d - d0) * slope
+            dx = (depth - h0) * slope
             xt = x0 + dx
             xt0 = x0
             xt1 = xt
@@ -59,66 +59,66 @@ def get_wetted_station(
 def get_wetted_perimeter(
     x0,
     x1,
-    d0,
-    d1,
-    d,
+    h0,
+    h1,
+    depth,
 ):
     # -- calculate the minimum and maximum depth
-    dmin = min(d0, d1)
-    dmax = max(d0, d1)
+    hmin = min(h0, h1)
+    hmax = max(h0, h1)
 
     # -- calculate the wetted perimeter for the segment
     xlen = x1 - x0
     if xlen > 0.0:
-        if d > dmax:
-            dlen = dmax - dmin
+        if depth > hmax:
+            dlen = hmax - hmin
         else:
-            dlen = d - dmin
+            dlen = depth - hmin
     else:
-        if d > dmin:
-            dlen = min(d, dmax) - dmin
+        if depth > hmin:
+            dlen = min(depth, hmax) - hmin
         else:
             dlen = 0.0
     return np.sqrt(xlen ** 2.0 + dlen ** 2.0)
 
 
-def get_wetted_area(x0, x1, d0, d1, d):
+def get_wetted_area(x0, x1, h0, h1, depth):
     # -- calculate the minimum and maximum depth
-    dmin = min(d0, d1)
-    dmax = max(d0, d1)
+    hmin = min(h0, h1)
+    hmax = max(h0, h1)
 
     # -- calculate the wetted area for the segment
     xlen = x1 - x0
     area = 0.0
     if xlen > 0.0:
-        # -- add the area above dmax
-        if d > dmax:
-            area = xlen * (d - dmax)
+        # -- add the area above hmax
+        if depth > hmax:
+            area = xlen * (depth - hmax)
         # -- add the area below zmax
-        if dmax != dmin and d > dmin:
-            area += 0.5 * (d - dmin)
+        if hmax != hmin and depth > hmin:
+            area += 0.5 * (depth - hmin)
     return area
 
 
 def wetted_area(
     x,
-    d,
-    v,
+    h,
+    depth,
     verbose=False,
 ):
     area = 0.0
     if x.shape[0] == 1:
-        area = x[0] * v
+        area = x[0] * depth
     else:
         for idx in range(0, x.shape[0] - 1):
             x0, x1 = x[idx], x[idx + 1]
-            d0, d1 = d[idx], d[idx + 1]
+            h0, h1 = h[idx], h[idx + 1]
 
             # get station data
-            x0, x1 = get_wetted_station(x0, x1, d0, d1, v)
+            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
 
             # get wetted area
-            a = get_wetted_area(x0, x1, d0, d1, v)
+            a = get_wetted_area(x0, x1, h0, h1, depth)
             area += a
 
             # write to screen
@@ -133,8 +133,8 @@ def wetted_area(
 
 def wetted_perimeter(
     x,
-    d,
-    v,
+    h,
+    depth,
     verbose=False,
 ):
     perimeter = 0.0
@@ -143,13 +143,13 @@ def wetted_perimeter(
     else:
         for idx in range(0, x.shape[0] - 1):
             x0, x1 = x[idx], x[idx + 1]
-            d0, d1 = d[idx], d[idx + 1]
+            h0, h1 = h[idx], h[idx + 1]
 
             # get station data
-            x0, x1 = get_wetted_station(x0, x1, d0, d1, v)
+            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
 
             # get wetted perimeter
-            perimeter += get_wetted_perimeter(x0, x1, d0, d1, v)
+            perimeter += get_wetted_perimeter(x0, x1, h0, h1, depth)
 
             # write to screen
             if verbose:
@@ -160,8 +160,8 @@ def wetted_perimeter(
 
 def manningsq(
     x,
-    d,
-    v,
+    h,
+    depth,
     roughness=0.01,
     slope=0.001,
     conv=1.0,
@@ -172,16 +172,16 @@ def manningsq(
         q = 0.0
         for i0 in range(x.shape[0] - 1):
             i1 = i0 + 1
-            perimeter = get_wetted_perimeter(x[i0], x[i1], d[i0], d[i1], v)
-            area = get_wetted_area(x[i0], x[i1], d[i0], d[i1], v)
+            perimeter = get_wetted_perimeter(x[i0], x[i1], h[i0], h[i1], depth)
+            area = get_wetted_area(x[i0], x[i1], h[i0], h[i1], depth)
             if perimeter > 0.0:
                 radius = area / perimeter
                 q += (
                     conv * area * radius ** mpow * slope ** 0.5 / roughness[i0]
                 )
     else:
-        perimeter = wetted_perimeter(x, d, v)
-        area = wetted_area(x, d, v)
+        perimeter = wetted_perimeter(x, h, depth)
+        area = wetted_area(x, h, depth)
         radius = 0.0
         if perimeter > 0.0:
             radius = area / perimeter
@@ -192,7 +192,7 @@ def manningsq(
 def get_depths(
     flows,
     x,
-    d,
+    h,
     roughness=0.01,
     slope=0.001,
     conv=1.0,
@@ -207,7 +207,7 @@ def get_depths(
     for idx, q in enumerate(flows):
         depths[idx] = qtodepth(
             x,
-            d,
+            h,
             q,
             roughness=roughness,
             slope=slope,
@@ -221,7 +221,7 @@ def get_depths(
 
 def qtodepth(
     x,
-    d,
+    h,
     q,
     roughness=0.01,
     slope=0.001,
@@ -229,11 +229,11 @@ def qtodepth(
     dd=1e-4,
     verbose=False,
 ):
-    d0 = 0.0
+    h0 = 0.0
     q0 = manningsq(
         x,
-        d,
-        d0,
+        h,
+        h0,
         roughness=roughness,
         slope=slope,
         conv=conv,
@@ -246,8 +246,8 @@ def qtodepth(
     while abs(r) > 1e-12:
         q1 = manningsq(
             x,
-            d,
-            d0 + dd,
+            h,
+            h0 + dd,
             roughness=roughness,
             slope=slope,
             conv=conv,
@@ -257,11 +257,11 @@ def qtodepth(
             derv = dd / (q1 - q0)
         else:
             derv = 0.0
-        d0 -= derv * r
+        h0 -= derv * r
         q0 = manningsq(
             x,
-            d,
-            d0,
+            h,
+            h0,
             roughness=roughness,
             slope=slope,
             conv=conv,
@@ -273,4 +273,4 @@ def qtodepth(
             print(f"iteration {iter:>2d} - residual={r}")
         if iter > 100:
             break
-    return d0
+    return h0

@@ -1,4 +1,5 @@
 import os
+import sys
 
 try:
     import pymake
@@ -19,6 +20,14 @@ except:
 
 def running_on_CI():
     return "TRAVIS" in os.environ or "CI" in os.environ
+
+
+def set_teardown_test():
+    teardown = True
+    for idx, arg in enumerate(sys.argv):
+        if arg.lower() == "--keep":
+            teardown = False
+    return teardown
 
 
 class testing_framework(object):

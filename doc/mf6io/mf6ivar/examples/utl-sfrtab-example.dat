@@ -4,7 +4,7 @@ begin dimensions
 end dimensions
 
 begin table
-# xfraction   depth  manfraction
+# xfraction  height   manfraction
         0.0     1.0         10.0
         0.1     1.0         10.0
         0.2     1.0          1.0
@@ -15,5 +15,5 @@ begin table
         0.7     0.0          1.0
         0.8     1.0         10.0
         0.9     1.0         10.0
-        1.0     1.0         10.0
+        1.0     1.0        999.0  #any value can be used for manfraction
 end table

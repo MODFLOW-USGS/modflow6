@@ -21,12 +21,15 @@ except:
     raise Exception(msg)
 
 import targets
+from framework import set_teardown_test
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "gwf_errors"
 testdir = os.path.join("temp", testname)
 os.makedirs(testdir, exist_ok=True)
 everything_was_successful = True
+
+teardown_test = set_teardown_test()
 
 
 def run_mf6(argv, ws):
@@ -47,7 +50,8 @@ def run_mf6(argv, ws):
 def run_mf6_error(ws, err_str_list):
     returncode, buff = run_mf6([mf6_exe], ws)
     msg = "mf terminated with error"
-    shutil.rmtree(ws, ignore_errors=True)
+    if teardown_test:
+        shutil.rmtree(ws, ignore_errors=True)
     if returncode != 0:
         if not isinstance(err_str_list, list):
             err_str_list = list(err_str_list)
@@ -137,7 +141,8 @@ def test_simple_model_success():
     final_message = "Normal termination of simulation."
     failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
     assert final_message in buff[-1], failure_message
-    shutil.rmtree(ws, ignore_errors=True)
+    if teardown_test:
+        shutil.rmtree(ws, ignore_errors=True)
     return
 
 
@@ -245,7 +250,8 @@ def test_fail_continue_success():
     failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
     assert final_message in buff[0], failure_message
 
-    shutil.rmtree(ws, ignore_errors=True)
+    if teardown_test:
+        shutil.rmtree(ws, ignore_errors=True)
 
     return
 

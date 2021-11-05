@@ -68,7 +68,7 @@ inflow = 1000.0
 
 np_data = {
     "x": np.array([0.0, (1.0 / 3.0), (2.0 / 3.0), 1.0], dtype=float),
-    "d": np.array([0.0, 0.0, 0.0, 0.0], dtype=float),
+    "h": np.array([0.0, 0.0, 0.0, 0.0], dtype=float),
     "r": np.array([10.0, 1.0, 10.0, 10.0], dtype=float),
 }
 
@@ -216,7 +216,7 @@ def build_model(idx, ws, base=False):
         sfr_tab = f"{name}.{n:02d}.sfr.tab"
         pname = f"sfrtab{n:02d}"
         stations = np_data["x"]
-        depths = np_data["d"]
+        depths = np_data["h"]
         roughs = np_data["r"]
         table = [[x, d, r] for x, d, r in zip(stations, depths, roughs)]
         t = flopy.mf6.ModflowUtlsfrtab(

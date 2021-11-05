@@ -118,7 +118,7 @@ module SfrModule
     integer(I4B), dimension(:), pointer, contiguous :: ncrosspts => null()        !< number of cross-section points for each reach
     integer(I4B), dimension(:), pointer, contiguous :: iacross => null()          !< pointers to cross-section data for each reach
     real(DP), dimension(:), pointer, contiguous :: station => null()              !< cross-section station (x-position) data
-    real(DP), dimension(:), pointer, contiguous :: xsdepths => null()             !< cross-section depth data
+    real(DP), dimension(:), pointer, contiguous :: xsheight => null()             !< cross-section height data
     real(DP), dimension(:), pointer, contiguous :: xsrough => null()              !< cross-section roughness data
     ! -- connection data
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()             !< reach connection direction
@@ -192,7 +192,7 @@ module SfrModule
       procedure, private :: sfr_read_diversions
       ! -- calculations
       procedure, private :: sfr_calc_reach_depth
-      procedure, private :: sfr_calc_npoint_depth
+      procedure, private :: sfr_calc_xs_depth
       ! -- error checking
       procedure, private :: sfr_check_reaches
       procedure, private :: sfr_check_connections
@@ -393,7 +393,7 @@ module SfrModule
       call mem_allocate(this%ncrosspts, this%maxbound, 'NCROSSPTS', this%memoryPath)
       call mem_allocate(this%iacross, this%maxbound+1, 'IACROSS', this%memoryPath)
       call mem_allocate(this%station, this%ncrossptstot, 'STATION', this%memoryPath)
-      call mem_allocate(this%xsdepths, this%ncrossptstot, 'XSDEPTHS', this%memoryPath)
+      call mem_allocate(this%xsheight, this%ncrossptstot, 'XSHEIGHT', this%memoryPath)
       call mem_allocate(this%xsrough, this%ncrossptstot, 'XSROUGH', this%memoryPath)
       !
       ! -- initialize variables
@@ -443,7 +443,7 @@ module SfrModule
       ! -- initialize additional cross-section data
       do i = 1, this%ncrossptstot
         this%station(i) = DZERO
-        this%xsdepths(i) = DZERO
+        this%xsheight(i) = DZERO
         this%xsrough(i) = DZERO
       end do
       !
@@ -996,7 +996,7 @@ module SfrModule
       do i = 1, this%maxbound
         this%ncrosspts(i) = 1
         this%station(ipos) = this%width(i)
-        this%xsdepths(ipos) = DZERO
+        this%xsheight(ipos) = DZERO
         this%xsrough(ipos) = DONE
         ipos = ipos + 1
         this%iacross(i+1) = ipos 
@@ -1053,7 +1053,7 @@ module SfrModule
         call cross_section_cr(cross_data, this%iout, this%iprpak, this%maxbound)
         call cross_data%initialize(this%ncrossptstot, this%ncrosspts, &
                                    this%iacross, &
-                                   this%station, this%xsdepths, &
+                                   this%station, this%xsheight, &
                                    this%xsrough)
         !
         ! -- read all of the entries in the block
@@ -1125,7 +1125,7 @@ module SfrModule
         if (ncrossptstot /= this%ncrossptstot) then
           this%ncrossptstot = ncrossptstot
           call mem_reallocate(this%station, this%ncrossptstot, 'STATION', this%memoryPath)
-          call mem_reallocate(this%xsdepths, this%ncrossptstot, 'XSDEPTHS', this%memoryPath)          
+          call mem_reallocate(this%xsheight, this%ncrossptstot, 'XSHEIGHT', this%memoryPath)          
           call mem_reallocate(this%xsrough, this%ncrossptstot, 'XSROUGH', this%memoryPath)          
         end if
         !
@@ -1136,7 +1136,7 @@ module SfrModule
         call cross_data%pack(this%ncrossptstot, this%ncrosspts, &
                              this%iacross, &
                              this%station, &
-                             this%xsdepths, &
+                             this%xsheight, &
                              this%xsrough)
         !
         ! -- deallocate temporary local storage for reach cross-sections
@@ -1639,7 +1639,7 @@ module SfrModule
         call cross_section_cr(cross_data, this%iout, this%iprpak, this%maxbound)
         call cross_data%initialize(this%ncrossptstot, this%ncrosspts, &
                                    this%iacross, &
-                                   this%station, this%xsdepths, &
+                                   this%station, this%xsheight, &
                                    this%xsrough)
         !
         ! -- setup table for period data
@@ -1705,7 +1705,7 @@ module SfrModule
         if (ncrossptstot /= this%ncrossptstot) then
           this%ncrossptstot = ncrossptstot
           call mem_reallocate(this%station, this%ncrossptstot, 'STATION', this%memoryPath)
-          call mem_reallocate(this%xsdepths, this%ncrossptstot, 'XSDEPTHS', this%memoryPath)          
+          call mem_reallocate(this%xsheight, this%ncrossptstot, 'XSHEIGHT', this%memoryPath)          
           call mem_reallocate(this%xsrough, this%ncrossptstot, 'XSROUGH', this%memoryPath)          
         end if
         !
@@ -1716,7 +1716,7 @@ module SfrModule
         call cross_data%pack(this%ncrossptstot, this%ncrosspts, &
                              this%iacross, &
                              this%station, &
-                             this%xsdepths, &
+                             this%xsheight, &
                              this%xsrough)
         !
         ! -- deallocate temporary local storage for reach cross-sections
@@ -2491,7 +2491,7 @@ module SfrModule
       call mem_deallocate(this%ncrosspts)
       call mem_deallocate(this%iacross)
       call mem_deallocate(this%station)
-      call mem_deallocate(this%xsdepths)
+      call mem_deallocate(this%xsheight)
       call mem_deallocate(this%xsrough)
       !
       ! -- deallocate budobj
@@ -3799,7 +3799,7 @@ module SfrModule
           !    for each section
           qman = get_mannings_section(npts, &
                                       this%station(i0:i1), &
-                                      this%xsdepths(i0:i1), &
+                                      this%xsheight(i0:i1), &
                                       this%xsrough(i0:i1), &
                                       this%rough(n), &
                                       this%unitconv, &
@@ -4014,7 +4014,7 @@ module SfrModule
       ! -- calculate stream depth at the midpoint
       if (q1 > DZERO) then
         if (this%ncrosspts(n) > 1) then
-          call this%sfr_calc_npoint_depth(n, q1, d1)
+          call this%sfr_calc_xs_depth(n, q1, d1)
         else
           w = this%station(this%iacross(n))
           qconst = this%unitconv * w * sqrt(s) / r
@@ -4029,13 +4029,13 @@ module SfrModule
     end subroutine sfr_calc_reach_depth
 
 
-    !> @brief Calculate the depth at the midpoint of a n-point cross-section
+    !> @brief Calculate the depth at the midpoint of a irregular cross-section
     !!
     !! Method to calculate the depth at the midpoint of a reach with a
-    !! n-point cross-section using Newton-Raphson.
+    !! irregular cross-section using Newton-Raphson.
     !!
     !<
-    subroutine sfr_calc_npoint_depth(this, n, qrch, d)
+    subroutine sfr_calc_xs_depth(this, n, qrch, d)
       ! -- dummy variables
       class(SfrType) :: this          !< SfrType object
       integer(I4B), intent(in) :: n   !< reach number
@@ -4079,7 +4079,7 @@ module SfrModule
       !
       ! -- return
       return
-    end subroutine sfr_calc_npoint_depth
+    end subroutine sfr_calc_xs_depth
 
 
     !> @brief Check reach data
@@ -5265,7 +5265,7 @@ module SfrModule
       i1 = this%iacross(n + 1) - 1
       if (npts > 1) then
         calc_area_wet = get_cross_section_area(npts, this%station(i0:i1), &
-                                               this%xsdepths(i0:i1), depth)
+                                               this%xsheight(i0:i1), depth)
       else
         calc_area_wet = this%station(i0) * depth
       end if
@@ -5298,7 +5298,7 @@ module SfrModule
       i1 = this%iacross(n + 1) - 1
       if (npts > 1) then
         calc_perimeter_wet = get_wetted_perimeter(npts, this%station(i0:i1), &
-                                                  this%xsdepths(i0:i1), depth)
+                                                  this%xsheight(i0:i1), depth)
       else
         calc_perimeter_wet = this%station(i0) ! no depth dependence in original implementation
       end if
@@ -5388,7 +5388,7 @@ module SfrModule
       if (npts > 1) then
         calc_top_width_wet = sat * get_wetted_topwidth(npts, &
                                                        this%station(i0:i1), &
-                                                       this%xsdepths(i0:i1), &
+                                                       this%xsheight(i0:i1), &
                                                        depth)        
       else
         calc_top_width_wet = sat * this%station(i0)
