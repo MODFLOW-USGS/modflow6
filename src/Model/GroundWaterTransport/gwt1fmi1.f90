@@ -536,12 +536,15 @@ module GwtFmiModule
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate fmi arrays
+    if (associated(this%datp)) then
     deallocate(this%datp)
     deallocate(this%gwfpackages)
     deallocate(this%flowpacknamearray)
+      call mem_deallocate(this%iatp)
+    end if
+
     deallocate(this%aptbudobj)
     call mem_deallocate(this%flowcorrect)
-    call mem_deallocate(this%iatp)
     call mem_deallocate(this%igwfmvrterm)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then

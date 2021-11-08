@@ -1,6 +1,6 @@
 module GwtInterfaceModelModule
-  use KindModule, only: I4B  
-  use MemoryManagerModule, only: mem_allocate
+  use KindModule, only: I4B, DP  
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
@@ -62,6 +62,7 @@ subroutine gwtifmod_df(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
   ! local
   class(*), pointer :: disPtr
+  integer(I4B) :: i
 
   this%moffset = 0
 
@@ -79,6 +80,10 @@ subroutine gwtifmod_df(this)
   ! allocate model arrays, now that neq and nja are assigned
   call this%allocate_arrays()
 
+  do i = 1, size(this%flowja)
+    this%flowja = 0.0_DP
+  end do
+
 end subroutine gwtifmod_df
 
 
@@ -95,8 +100,10 @@ subroutine gwtifmod_ar(this)
   ! define DISU    
   disPtr => this%dis
   call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
+  call this%fmi%fmi_ar(this%ibound)
   call this%adv%adv_ar(this%dis, this%ibound, advecOpt)
-
+  this%inadv = 999
+  
 end subroutine gwtifmod_ar
 
 !> @brief Clean up resources
@@ -104,8 +111,27 @@ end subroutine gwtifmod_ar
 subroutine gwtifmod_da(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
 
-  ! dealloc base
-  call this%model_da()
+  call this%dis%dis_da()
+  call this%fmi%fmi_da()
+  call this%adv%adv_da()
+  
+  deallocate(this%dis)
+  deallocate(this%fmi)
+  deallocate(this%adv)
+
+  ! scalars
+  call mem_deallocate(this%inic)
+  call mem_deallocate(this%infmi)
+  call mem_deallocate(this%inadv)
+  call mem_deallocate(this%indsp)
+  call mem_deallocate(this%inssm)
+  call mem_deallocate(this%inmst)
+  call mem_deallocate(this%inmvt)
+  call mem_deallocate(this%inoc)
+  call mem_deallocate(this%inobs)
+
+  ! base
+  call this%NumericalModelType%model_da()
 
 end subroutine gwtifmod_da
 

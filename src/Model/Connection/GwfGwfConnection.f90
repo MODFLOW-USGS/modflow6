@@ -29,6 +29,8 @@ module GwfGwfConnectionModule
     integer(I4B), pointer :: iXt3dOnExchange => null()                   !< run XT3D on the interface,
                                                                          !! 0 = don't, 1 = matrix, 2 = rhs
     integer(I4B) :: iout                                                 !< the list file for the interface model
+
+    real(DP), dimension(:), pointer, contiguous :: exgflowja => null()   !< flowja through exchange faces
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -50,10 +52,12 @@ module GwfGwfConnectionModule
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
+    procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchanges
     procedure, pass(this), private :: printExchangeFlow
+    procedure, pass(this), private :: saveExchangeFlows
     
   end type GwfGwfConnectionType
 
@@ -133,6 +137,8 @@ contains
 
     ! connect interface model to spatial connection
     call this%spatialcon_connect()
+
+    call this%allocate_arrays()
     
   end subroutine gwfgwfcon_df
   
@@ -146,6 +152,22 @@ contains
     call mem_allocate(this%iXt3dOnExchange, 'IXT3DEXG', this%memoryPath)
 
   end subroutine allocateScalars
+
+  !> @brief allocation of arrays in the connection
+  !<
+  subroutine allocate_arrays(this)
+    use MemoryManagerModule, only: mem_allocate
+    class(GwfGwfConnectionType) :: this !< the connection
+    ! local
+    integer(I4B) :: i
+
+    call mem_allocate(this%exgflowja, this%gridConnection%nrOfBoundaryCells,    &
+                      'EXGFLOWJA', this%memoryPath)
+    do i = 1, size(this%exgflowja)
+      this%exgflowja(i) = 0.0_DP
+    end do
+
+  end subroutine allocate_arrays
   
   !> @brief Allocate and read the connection
   !<
@@ -388,7 +410,11 @@ contains
     integer(I4B) :: iex
     class(GwfExchangeType), pointer :: gwfEx
 
+    ! scalars
     call mem_deallocate(this%iXt3dOnExchange)
+
+    ! arrays
+    call mem_deallocate(this%exgflowja)
     
     call this%gwfInterfaceModel%model_da()
     deallocate(this%gwfInterfaceModel)
@@ -507,7 +533,9 @@ contains
       end do
     end do
 
-    call this%setFlowToExchanges()    
+    call this%setFlowToExchanges()
+
+    call this%saveExchangeFlows()
 
   end subroutine gwfgwfcon_cq
 
@@ -539,6 +567,27 @@ contains
     end do
 
   end subroutine setFlowToExchanges
+
+  !> @brief Copy interface model flowja between models, to
+  !< the local buffer for reuse by, e.g., GWT
+  subroutine saveExchangeFlows(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: i, n, m, ipos
+    type(GlobalCellType) :: boundaryCell, connectedCell
+
+    do i = 1, this%gridConnection%nrOfBoundaryCells
+      boundaryCell = this%gridConnection%boundaryCells(i)%cell
+      connectedCell = this%gridConnection%connectedCells(i)%cell
+      n = this%gridConnection%getInterfaceIndex(boundaryCell%index,             &
+                                                boundaryCell%model)
+      m = this%gridConnection%getInterfaceIndex(connectedCell%index,            &
+                                                connectedCell%model)
+      ipos = getCSRIndex(n, m, this%gwfInterfaceModel%ia, this%gwfInterfaceModel%ja)
+      this%exgflowja(i) = this%gwfInterfaceModel%flowja(ipos)
+    end do
+
+  end subroutine saveExchangeFlows
 
   !> @brief Calculate the budget terms for this connection, this is
   !! dispatched to the GWF-GWF exchanges.

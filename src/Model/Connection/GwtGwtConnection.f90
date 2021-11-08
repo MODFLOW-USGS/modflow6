@@ -26,8 +26,10 @@ module GwtGwtConnectionModule
     type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iAdvScheme => null()                       !< the advection scheme at the interface:
                                                                         !! 0 = upstream, 1 = central, 2 = TVD
-    real(DP), dimension(:), pointer, contiguous :: flowja => null()     !< intercell flows at the interface, coming from
+    real(DP), dimension(:), pointer, contiguous :: exgflowja => null()  !< intercell flows at the interface, coming from
                                                                         !! multiple GWF models
+    
+    real(DP), dimension(:), pointer, contiguous :: flowja => null()     !< flowja for the interface model
 
     integer(I4B) :: iout                                                !< the list file for the interface model
 
@@ -50,6 +52,7 @@ module GwtGwtConnectionModule
     ! local stuff
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
+    procedure, pass(this), private :: syncInterfaceModel
 
   end type GwtGwtConnectionType
 
@@ -110,10 +113,10 @@ subroutine allocate_arrays(this)
   ! local
   integer(I4B) :: i
 
-  call mem_allocate(this%flowja, this%nja, 'FLOWJA', this%memoryPath)
-
+  call mem_allocate(this%flowja, this%interfaceModel%nja, 'FLOWJA',         &
+                    this%memoryPath)
   do i = 1, size(this%flowja)
-    this%flowja(i) = DZERO
+    this%flowja = 0.0_DP
   end do
 
 end subroutine allocate_arrays
@@ -154,14 +157,14 @@ subroutine gwtgwtcon_df(this)
   this%gwtInterfaceModel%adv%iadvwt = this%iAdvScheme
   call this%gwtInterfaceModel%model_df()
 
+  call this%allocate_arrays()
+
   ! connect X, RHS, IBOUND, and flowja
   call this%spatialcon_setmodelptrs()
   this%gwtInterfaceModel%fmi%gwfflowja => this%flowja
 
   ! add connections from the interface model to solution matrix
   call this%spatialcon_connect()
-
-  call this%allocate_arrays()
 
 end subroutine gwtgwtcon_df
 
@@ -213,15 +216,35 @@ subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
   integer(I4B), intent(in) :: kiter   !< the iteration counter
   ! local
-  integer(I4B) :: n, m, ipos, iposLoc
+  integer(I4B) :: i
+
+  ! reset interface system
+  do i = 1, this%nja
+    this%amat(i) = 0.0_DP
+  end do
+  do i = 1, this%neq
+    this%rhs(i) = 0.0_DP
+  end do
+
+  ! copy model data into interface model
+  call this%syncInterfaceModel()
+
+  call this%gwtInterfaceModel%model_cf(kiter)
+  
+end subroutine gwtgwtcon_cf
+
+subroutine syncInterfaceModel(this)
+  class(GwtGwtConnectionType) :: this !< the connection
+  ! local
+  integer(I4B) :: i, n, m, ipos, iposLoc, idx
   type(ConnectionsType), pointer :: imCon                 !< interface model connections
   type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
+  type(GlobalCellType), pointer :: boundaryCell, connectedCell
 
   ! for readability
   imCon => this%gwtInterfaceModel%dis%con
   toGlobal => this%gridConnection%idxToGlobal
 
-  write(*,*) 'CF for ', this%name, ' iteration ', kiter
   ! loop over connections in interface
   do n = 1, this%neq
     do ipos = imCon%ia(n) + 1, imCon%ia(n+1) - 1
@@ -236,20 +259,31 @@ subroutine gwtgwtcon_cf(this, kiter)
         iposLoc = getCSRIndex(toGlobal(n)%index, toGlobal(m)%index,             &
                               toGlobal(n)%model%ia, toGlobal(n)%model%ja)
         this%flowja(ipos) = toGlobal(n)%model%flowja(iposLoc)
-      else
-        ! flow between models, copy from ???
-        write(*,*)'connection between ', toGlobal(n)%model%name, toGlobal(n)%index, toGlobal(m)%model%name, toGlobal(m)%index
-      end if
-
-
-      
+      end if      
     end do
   end do
 
-  ! copy flowja
-  !this%gwtInterfaceModel%fmi%gwfflowja
+  ! the flowja for exchange cells
+  do i = 1, this%gridConnection%nrOfBoundaryCells
+    boundaryCell => this%gridConnection%boundaryCells(i)%cell
+    connectedCell => this%gridConnection%connectedCells(i)%cell
+    n = this%gridConnection%getInterfaceIndex(boundaryCell%index,             &
+                                              boundaryCell%model)
+    m = this%gridConnection%getInterfaceIndex(connectedCell%index,            &
+                                              connectedCell%model)
+    ipos = getCSRIndex(n, m, this%ia, this%ja)
+    this%flowja(ipos) = this%exgflowja(i)
+    ipos = getCSRIndex(m, n, this%ia, this%ja)
+    this%flowja(ipos) = -this%exgflowja(i)
+  end do
 
-end subroutine gwtgwtcon_cf
+  ! copy concentrations
+  do i = 1, this%gridConnection%nrOfCells      
+    idx = this%gridConnection%idxToGlobal(i)%index
+    this%x(i) = this%gridConnection%idxToGlobal(i)%model%x(idx)
+  end do
+
+end subroutine
 
 subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
   class(GwtGwtConnectionType) :: this               !< the connection
@@ -258,6 +292,28 @@ subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
   real(DP), dimension(:), intent(inout) :: amatsln  !< global system matrix coefficients
   real(DP), dimension(:), intent(inout) ::rhssln    !< global right-hand-side
   integer(I4B), optional, intent(in) :: inwtflag    !< newton-raphson flag
+  ! local
+  integer(I4B) :: n, nglo, ipos
+
+  call this%gwtInterfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
+  
+  ! map back to solution matrix
+  do n = 1, this%neq
+    ! we cannot check with the mask here, because cross-terms are not
+    ! necessarily from primary connections. But, we only need the coefficients
+    ! for our own model (i.e. fluxes into cells belonging to this%owner):
+    if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+      ! only add connections for own model to global matrix
+      cycle
+    end if
+    
+    nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
+    rhssln(nglo) = rhssln(nglo) + this%rhs(n)
+    
+    do ipos = this%ia(n), this%ia(n+1) - 1
+      amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
+    end do
+  end do
 
 end subroutine gwtgwtcon_fc
 
@@ -266,6 +322,8 @@ subroutine gwtgwtcon_cq(this, icnvg, isuppress_output, isolnid)
   integer(I4B), intent(inout) :: icnvg         !< convergence flag
   integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
   integer(I4B), intent(in) :: isolnid          !< solution id
+
+  call this%gwtInterfaceModel%model_cq(icnvg, isuppress_output)
 
 end subroutine gwtgwtcon_cq
 
