@@ -154,4 +154,9 @@ add_library(mf6_internal_lib STATIC ${modflow_sources})
 
 add_executable(mf6 mf6.f90)
 
-target_link_libraries(mf6 PRIVATE mf6_internal_lib)
+target_include_directories(mf6_internal_lib PRIVATE ${HDF5_INCLUDE_DIR_FORTRAN})
+target_link_libraries(mf6 PRIVATE mf6_internal_lib hdf5::hdf5_fortran-static)
+
+if (NOT CMAKE_DEBUG_POSTFIX)
+  set_target_properties(mf6 PROPERTIES DEBUG_POSTFIX "d")
+endif()

@@ -618,9 +618,19 @@ contains
     integer(I4B) :: icol, icol1, istart, istop, n
     real(DP) :: r
     character(len=MAXCHARLEN) :: fname, line
+    character(len=MAXCHARLEN) :: h5path
     !
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
+    fname = ''
     call read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
+    if (locat == 0 .AND. trim(fname) /= '') then
+      ! CONSTANT/HDF5 was found -- read cnstnt and return
+      call urword(line,icol,istart,istop,0,n,r,iout,iu)
+      h5path = line(istart:istop)
+      call read_control_h5_dbl(iu, fname, h5path, cnstnt)
+      iprn = -1
+      return
+    endif
     if (locat == 0) then
       ! CONSTANT was found -- read value and return
       call urword(line,icol,istart,istop,3,n,cnstnt,iout,iu)
@@ -645,7 +655,38 @@ contains
     !
     return
   end subroutine read_control_dbl
-  
+
+  subroutine read_control_h5_dbl(iu, fname, h5path, cnstnt)
+    ! -- Read CONSTANT/HDF5
+    ! -- modules
+    use hdf5
+
+    ! -- dummy
+    integer(I4B), intent(in)       :: iu
+    character(len=*), intent(in)   :: fname
+    character(len=*), intent(in)   :: h5path
+    real(DP), intent(inout)        :: cnstnt
+
+    ! -- local
+    character(len=LENBIGLINE)      :: ermsg
+    integer(HID_T)                 :: file_id
+    integer(HID_T)                 :: dset_id
+    integer(HSIZE_T), dimension(2) :: dims
+    integer                        :: ierr
+
+    call h5fopen_f(fname, H5F_ACC_RDONLY_F, file_id, ierr)
+    if (ierr /= 0) then
+      write(ermsg, *) "ERROR OPENING HDF5 FILE '" // trim(fname) // "'"
+      call store_error(ermsg)
+      call store_error_unit(iu)
+    endif
+    call h5dopen_f(file_id, h5path, dset_id, ierr)
+    call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, cnstnt, dims, ierr)
+    call h5dclose_f(dset_id, ierr)
+    call h5fclose_f(file_id, ierr)
+
+  end subroutine read_control_h5_dbl
+
   subroutine read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     ! -- dummy
@@ -672,6 +713,10 @@ contains
     ! -- Read first token of array control record.
     call urword(line,icol,istart,istop,1,n,r,iout,iu)
     if (line(istart:istop).eq.'CONSTANT') then
+      locat = 0
+    elseif (line(istart:istop).eq.'CONSTANT/HDF5') then
+      call urword(line,icol,istart,istop,0,n,r,iout,iu)
+      fname = line(istart:istop)
       locat = 0
     elseif (line(istart:istop).eq.'INTERNAL') then
       locat = iu

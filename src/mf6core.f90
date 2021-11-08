@@ -65,17 +65,24 @@ module Mf6CoreModule
     !<
     subroutine Mf6Initialize()
       ! -- modules
+      use hdf5, only: h5open_f
       use SimulationCreateModule, only: simulation_cr
+
+      integer :: ierr
+
       !
       ! -- print banner and info to screen
       call printInfo()
       
       ! -- create
       call simulation_cr()
-      
+
+      ! -- initialize hdf5
+      call h5open_f(ierr)
+
       ! -- define
       call simulation_df()
-        
+
       ! -- allocate and read
       call simulation_ar()
       
