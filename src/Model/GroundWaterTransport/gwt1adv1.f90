@@ -145,6 +145,7 @@ module GwtAdvModule
       if (this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        if (this%dis%con%mask(ipos) == 0) cycle
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
@@ -186,6 +187,7 @@ module GwtAdvModule
     !
     ! -- Loop through each n connection.  This will
     do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+      if (this%dis%con%mask(ipos) == 0) cycle
       m = this%dis%con%ja(ipos)
       if (m > n .and. this%ibound(m) /= 0) then
         qtvd = this%advqtvd(n, m, ipos, cnew)

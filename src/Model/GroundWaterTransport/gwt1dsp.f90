@@ -6,6 +6,8 @@ module GwtDspModule
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
   use Xt3dModule,             only: Xt3dType, xt3d_cr
+  use GwtDspOptionsModule,    only: GwtDspOptionsType
+  use GwtDspGridDataModule,   only: GwtDspGridDataType
 
   implicit none
   private
@@ -54,6 +56,7 @@ module GwtDspModule
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: set_data
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
    
@@ -97,7 +100,7 @@ module GwtDspModule
     return
   end subroutine dsp_cr
 
-  subroutine dsp_df(this, dis)
+  subroutine dsp_df(this, dis, options)
 ! ******************************************************************************
 ! dsp_df -- Allocate and Read
 ! ******************************************************************************
@@ -108,6 +111,8 @@ module GwtDspModule
     ! -- dummy
     class(GwtDspType) :: this
     class(DisBaseType), pointer :: dis
+    type(GwtDspOptionsType), optional, intent(in) :: options !< the optional DSP options, used when not
+                                                             !! creating DSP from file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
@@ -123,7 +128,11 @@ module GwtDspModule
     this%ixt3d = 1
     !
     ! -- Read dispersion options
-    call this%read_options()
+    if (present(options)) then
+      this%ixt3d = options%ixt3d
+    else
+      call this%read_options()
+    end if
     !
     ! -- xt3d create
     if(this%ixt3d > 0) then
@@ -185,7 +194,7 @@ module GwtDspModule
     return
   end subroutine dsp_mc
 
-  subroutine dsp_ar(this, ibound, porosity)
+  subroutine dsp_ar(this, ibound, porosity, grid_data)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
 ! ******************************************************************************
@@ -197,6 +206,8 @@ module GwtDspModule
     class(GwtDspType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
+    type(GwtDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
+                                                                !! to create the package without input file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
@@ -214,8 +225,13 @@ module GwtDspModule
     ! -- Allocate arrays
     call this%allocate_arrays(this%dis%nodes)
     !
-    ! -- Read dispersion data
-    call this%read_data()
+    if (present(grid_data)) then
+      ! -- Set dispersion data
+      call this%set_data(grid_data)
+    else
+      ! -- Read dispersion data    
+      call this%read_data()
+    end if
     !
     ! -- Return
     return
@@ -291,6 +307,7 @@ module GwtDspModule
         if(this%fmi%ibdgwfsat0(n) == 0) cycle
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          if (this%dis%con%mask(ipos) == 0) cycle
           m = this%dis%con%ja(ipos)
           if (m < n) cycle
           if(this%fmi%ibdgwfsat0(m) == 0) cycle
@@ -686,7 +703,41 @@ module GwtDspModule
     ! -- Return
     return
   end subroutine read_data
- 
+
+
+  !< @brief Set the grid data to the package
+  !<
+  subroutine set_data(this, grid_data)
+    use MemoryManagerModule, only: mem_reallocate
+    class(GwtDspType) :: this                         !< this DSP package
+    type(GwtDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
+    ! local
+    integer(I4B) :: i
+
+    call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC',                   &
+                        trim(this%memoryPath))
+    call mem_reallocate(this%alh, this%dis%nodes, 'ALH',                       &
+                        trim(this%memoryPath))
+    call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                       &
+                        trim(this%memoryPath))
+    call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1',                     &
+                        trim(this%memoryPath))
+    call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                     &
+                        trim(this%memoryPath))
+    call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                       &
+                        trim(this%memoryPath))
+
+    do i = 1, this%dis%nodes
+      this%diffc(i) = grid_data%diffc(i)
+      this%alh(i) = grid_data%alh(i)
+      this%alv(i) = grid_data%alv(i)
+      this%ath1(i) = grid_data%ath1(i)
+      this%ath2(i) = grid_data%ath2(i)
+      this%atv(i) = grid_data%atv(i)
+    end do
+
+  end subroutine
+
   subroutine calcdispellipse(this)
 ! ******************************************************************************
 ! calcdispellipse -- Calculate dispersion coefficients

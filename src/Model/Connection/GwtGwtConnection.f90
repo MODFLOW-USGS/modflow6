@@ -1,5 +1,5 @@
 module GwtGwtConnectionModule
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, DP, lGP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO   
   use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
@@ -30,6 +30,9 @@ module GwtGwtConnectionModule
                                                                         !! multiple GWF models
     
     real(DP), dimension(:), pointer, contiguous :: flowja => null()     !< flowja for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfsat => null()     !< gwfsat for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfhead => null()    !< gwfhead for the interface model
+    real(DP), dimension(:,:), pointer, contiguous :: gwfspdis => null() !< gwfspdis for the interface model
 
     integer(I4B) :: iout                                                !< the list file for the interface model
 
@@ -42,6 +45,7 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_df => gwtgwtcon_df
     procedure, pass(this) :: exg_ac => gwtgwtcon_ac
     procedure, pass(this) :: exg_rp => gwtgwtcon_rp
+    procedure, pass(this) :: exg_ad => gwtgwtcon_ad
     procedure, pass(this) :: exg_cf => gwtgwtcon_cf
     procedure, pass(this) :: exg_fc => gwtgwtcon_fc
     procedure, pass(this) :: exg_da => gwtgwtcon_da
@@ -115,8 +119,16 @@ subroutine allocate_arrays(this)
 
   call mem_allocate(this%flowja, this%interfaceModel%nja, 'FLOWJA',         &
                     this%memoryPath)
+  call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
+  call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
+  call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
+
   do i = 1, size(this%flowja)
     this%flowja = 0.0_DP
+  end do
+
+  do i = 1, this%neq
+    this%gwfsat = 0.0_DP
   end do
 
 end subroutine allocate_arrays
@@ -128,7 +140,8 @@ subroutine gwtgwtcon_df(this)
   ! local
   integer(I4B) :: iex
   class(GwtExchangeType), pointer :: gwtEx
-  character(len=LENCOMPONENTNAME) :: imName
+  
+  character(len=LENCOMPONENTNAME) :: imName  
 
   ! determine advection scheme (the GWT-GWT exchanges
   ! have been read at this point)
@@ -161,8 +174,12 @@ subroutine gwtgwtcon_df(this)
 
   ! connect X, RHS, IBOUND, and flowja
   call this%spatialcon_setmodelptrs()
-  this%gwtInterfaceModel%fmi%gwfflowja => this%flowja
 
+  this%gwtInterfaceModel%fmi%gwfflowja => this%flowja
+  this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
+  this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
+  this%gwtInterfaceModel%fmi%gwfspdis => this%gwfspdis
+  
   ! add connections from the interface model to solution matrix
   call this%spatialcon_connect()
 
@@ -172,8 +189,21 @@ end subroutine gwtgwtcon_df
 !<
 subroutine gwtgwtcon_ar(this)
   class(GwtGwtConnectionType) :: this !< the connection
-
+  ! local
+  integer(I4B) :: i, idx
+  class(GwtModelType), pointer :: gwtModel
+  class(*), pointer :: modelPtr
   ! TODO_MJR: validate
+
+  ! fill porosity from mst packages, needed for dsp
+  if (this%gwtModel%inmst > 0) then
+    do i = 1, this%neq
+      modelPtr => this%gridConnection%idxToGlobal(i)%model
+      gwtModel => CastAsGwtModel(modelPtr)
+      idx = this%gridConnection%idxToGlobal(i)%index
+      this%gwtInterfaceModel%porosity(i) = gwtModel%mst%porosity(idx)
+    end do
+  end if
 
   ! allocate and read base
   call this%spatialcon_ar()
@@ -212,6 +242,16 @@ subroutine gwtgwtcon_rp(this)
 
 end subroutine gwtgwtcon_rp
 
+subroutine gwtgwtcon_ad(this)
+  class(GwtGwtConnectionType) :: this !< the connection
+  
+  ! copy model data into interface model
+  call this%syncInterfaceModel()
+
+  call this%gwtInterfaceModel%model_ad()
+
+end subroutine gwtgwtcon_ad
+
 subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
   integer(I4B), intent(in) :: kiter   !< the iteration counter
@@ -226,13 +266,13 @@ subroutine gwtgwtcon_cf(this, kiter)
     this%rhs(i) = 0.0_DP
   end do
 
-  ! copy model data into interface model
-  call this%syncInterfaceModel()
-
   call this%gwtInterfaceModel%model_cf(kiter)
   
 end subroutine gwtgwtcon_cf
 
+!> @brief called during advance (*_ad), to copy the data
+!! from the models into the connection's placeholder arrays
+!<
 subroutine syncInterfaceModel(this)
   class(GwtGwtConnectionType) :: this !< the connection
   ! local
@@ -240,6 +280,8 @@ subroutine syncInterfaceModel(this)
   type(ConnectionsType), pointer :: imCon                 !< interface model connections
   type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
   type(GlobalCellType), pointer :: boundaryCell, connectedCell
+  class(GwtModelType), pointer :: gwtModel
+  class(*), pointer :: modelPtr
 
   ! for readability
   imCon => this%gwtInterfaceModel%dis%con
@@ -283,7 +325,20 @@ subroutine syncInterfaceModel(this)
     this%x(i) = this%gridConnection%idxToGlobal(i)%model%x(idx)
   end do
 
-end subroutine
+  ! copy fmi
+  do i = 1, this%gridConnection%nrOfCells      
+    idx = this%gridConnection%idxToGlobal(i)%index
+    modelPtr => this%gridConnection%idxToGlobal(i)%model
+    gwtModel => CastAsGwtModel(modelPtr)
+
+    this%gwfsat(i) = gwtModel%fmi%gwfsat(idx)
+    this%gwfhead(i) = gwtModel%fmi%gwfhead(idx)
+    this%gwfspdis(1, i) = gwtModel%fmi%gwfspdis(1, idx)
+    this%gwfspdis(2, i) = gwtModel%fmi%gwfspdis(2, idx)
+    this%gwfspdis(3, i) = gwtModel%fmi%gwfspdis(3, idx)
+  end do
+
+end subroutine syncInterfaceModel
 
 subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
   class(GwtGwtConnectionType) :: this               !< the connection
@@ -299,11 +354,9 @@ subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
   
   ! map back to solution matrix
   do n = 1, this%neq
-    ! we cannot check with the mask here, because cross-terms are not
-    ! necessarily from primary connections. But, we only need the coefficients
-    ! for our own model (i.e. fluxes into cells belonging to this%owner):
+    ! We only need the coefficients for our own model 
+    ! (i.e. rows in the matrix that belong to this%owner):
     if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
-      ! only add connections for own model to global matrix
       cycle
     end if
     
@@ -345,12 +398,16 @@ subroutine gwtgwtcon_da(this)
   ! local
   class(GwtExchangeType), pointer :: gwtEx
   integer(I4B) :: iex
+  logical(LGP) :: isOpen
 
   ! scalars
   call mem_deallocate(this%iAdvScheme)
 
   ! arrays
   call mem_deallocate(this%flowja)
+  call mem_deallocate(this%gwfsat)
+  call mem_deallocate(this%gwfhead)
+  call mem_deallocate(this%gwfspdis)
 
   ! interface model
   call this%gwtInterfaceModel%model_da()
@@ -358,6 +415,11 @@ subroutine gwtgwtcon_da(this)
 
   ! dealloc base
   call this%spatialcon_da()
+
+  inquire(this%iout, opened=isOpen)
+    if (isOpen) then
+      close(this%iout)
+    end if
 
   ! we need to deallocate the baseexchanges we own:
   do iex=1, this%localExchanges%Count()
