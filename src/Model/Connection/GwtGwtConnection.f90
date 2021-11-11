@@ -24,12 +24,12 @@ module GwtGwtConnectionModule
 
     type(GwtModelType), pointer :: gwtModel => null()                   !< the model for which this connection exists
     type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
-    integer(I4B), pointer :: iAdvScheme => null()                       !< the advection scheme at the interface:
+    integer(I4B), pointer :: iIfaceAdvScheme => null()                       !< the advection scheme at the interface:
                                                                         !! 0 = upstream, 1 = central, 2 = TVD
     real(DP), dimension(:), pointer, contiguous :: exgflowja => null()  !< intercell flows at the interface, coming from
                                                                         !! multiple GWF models
     
-    real(DP), dimension(:), pointer, contiguous :: flowja => null()     !< flowja for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null()     !< flowja for the interface model
     real(DP), dimension(:), pointer, contiguous :: gwfsat => null()     !< gwfsat for the interface model
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null()    !< gwfhead for the interface model
     real(DP), dimension(:,:), pointer, contiguous :: gwfspdis => null() !< gwfspdis for the interface model
@@ -94,7 +94,7 @@ subroutine gwtGwtConnection_ctor(this, model)
 
   call this%allocate_scalars()
   this%typename = 'GWT-GWT'
-  this%iAdvScheme = 0
+  this%iIfaceAdvScheme = 0
 
   allocate(this%gwtInterfaceModel)
   this%interfaceModel => this%gwtInterfaceModel
@@ -106,7 +106,7 @@ end subroutine gwtGwtConnection_ctor
 subroutine allocate_scalars(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
-  call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
+  call mem_allocate(this%iIfaceAdvScheme, 'IADVSCHEME', this%memoryPath)
 
 end subroutine allocate_scalars
 
@@ -117,14 +117,14 @@ subroutine allocate_arrays(this)
   ! local
   integer(I4B) :: i
 
-  call mem_allocate(this%flowja, this%interfaceModel%nja, 'FLOWJA',         &
+  call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'FLOWJA',         &
                     this%memoryPath)
   call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
   call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
   call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
 
-  do i = 1, size(this%flowja)
-    this%flowja = 0.0_DP
+  do i = 1, size(this%gwfflowja)
+    this%gwfflowja = 0.0_DP
   end do
 
   do i = 1, this%neq
@@ -147,8 +147,8 @@ subroutine gwtgwtcon_df(this)
   ! have been read at this point)
   do iex = 1, this%localExchanges%Count()
     gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
-    if (gwtEx%iAdvScheme > this%iAdvScheme) then
-      this%iAdvScheme = gwtEx%iAdvScheme
+    if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
+      this%iIfaceAdvScheme = gwtEx%iAdvScheme
     end if
   end do
 
@@ -156,7 +156,7 @@ subroutine gwtgwtcon_df(this)
   if (this%gwtModel%adv%iadvwt == 2) then
     this%internalStencilDepth = 2
   end if
-  if (this%iAdvScheme == 2) then
+  if (this%iIfaceAdvScheme == 2) then
     this%exchangeStencilDepth = 2
   end if
 
@@ -167,7 +167,8 @@ subroutine gwtgwtcon_df(this)
   ! here, then the remainder of this routine will be define
   write(imName,'(a,i5.5)') 'GWTIM_', this%gwtModel%id
   call this%gwtInterfaceModel%gwtifmod_cr(imName, this%iout, this%gridConnection)
-  this%gwtInterfaceModel%adv%iadvwt = this%iAdvScheme
+  this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
+
   call this%gwtInterfaceModel%model_df()
 
   call this%allocate_arrays()
@@ -175,7 +176,7 @@ subroutine gwtgwtcon_df(this)
   ! connect X, RHS, IBOUND, and flowja
   call this%spatialcon_setmodelptrs()
 
-  this%gwtInterfaceModel%fmi%gwfflowja => this%flowja
+  this%gwtInterfaceModel%fmi%gwfflowja => this%gwfflowja
   this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
   this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
   this%gwtInterfaceModel%fmi%gwfspdis => this%gwfspdis
@@ -286,21 +287,18 @@ subroutine syncInterfaceModel(this)
   ! for readability
   imCon => this%gwtInterfaceModel%dis%con
   toGlobal => this%gridConnection%idxToGlobal
-
+  
   ! loop over connections in interface
   do n = 1, this%neq
     do ipos = imCon%ia(n) + 1, imCon%ia(n+1) - 1
-      if (imCon%mask(ipos) < 1) then
-        ! skip this connection, it's masked so not determined by us
-        cycle
-      end if
-
       m = imCon%ja(ipos)
       if (associated(toGlobal(n)%model, toGlobal(m)%model)) then
         ! internal connection for a model, copy from its flowja
         iposLoc = getCSRIndex(toGlobal(n)%index, toGlobal(m)%index,             &
                               toGlobal(n)%model%ia, toGlobal(n)%model%ja)
-        this%flowja(ipos) = toGlobal(n)%model%flowja(iposLoc)
+        modelPtr => toGlobal(n)%model
+        gwtModel => CastAsGwtModel(modelPtr)                      
+        this%gwfflowja(ipos) = gwtModel%fmi%gwfflowja(iposLoc)
       end if      
     end do
   end do
@@ -313,10 +311,10 @@ subroutine syncInterfaceModel(this)
                                               boundaryCell%model)
     m = this%gridConnection%getInterfaceIndex(connectedCell%index,            &
                                               connectedCell%model)
-    ipos = getCSRIndex(n, m, this%ia, this%ja)
-    this%flowja(ipos) = this%exgflowja(i)
-    ipos = getCSRIndex(m, n, this%ia, this%ja)
-    this%flowja(ipos) = -this%exgflowja(i)
+    ipos = getCSRIndex(n, m, imCon%ia, imCon%ja)
+    this%gwfflowja(ipos) = this%exgflowja(i)
+    ipos = getCSRIndex(m, n, imCon%ia, imCon%ja)
+    this%gwfflowja(ipos) = -this%exgflowja(i)
   end do
 
   ! copy concentrations
@@ -401,10 +399,10 @@ subroutine gwtgwtcon_da(this)
   logical(LGP) :: isOpen
 
   ! scalars
-  call mem_deallocate(this%iAdvScheme)
+  call mem_deallocate(this%iIfaceAdvScheme)
 
   ! arrays
-  call mem_deallocate(this%flowja)
+  call mem_deallocate(this%gwfflowja)
   call mem_deallocate(this%gwfsat)
   call mem_deallocate(this%gwfhead)
   call mem_deallocate(this%gwfspdis)

@@ -25,6 +25,8 @@ module GwtInterfaceModelModule
     integer(i4B), pointer :: iadv => null()                           !< = 1: the interface model has advection enabled
     integer(i4B), pointer :: idsp => null()                           !< = 1: the interface model has dispersion enabled
 
+    integer(i4B), pointer :: iAdvScheme => null()                     !< the advection scheme: 0 = up, 1 = central, 2 = tvd
+
     class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the interface grid
     class(GwtModelType), private, pointer :: owner => null()          !< the real GWT model for which the exchange coefficients
                                                                       !! are calculated with this interface model
@@ -84,6 +86,7 @@ subroutine allocate_scalars(this, modelname)
   
   call mem_allocate(this%iadv , 'IADV',  this%memoryPath)
   call mem_allocate(this%idsp , 'IDSP',  this%memoryPath)
+  call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
 
   this%iadv = 0
   this%idsp = 0
@@ -141,7 +144,7 @@ subroutine gwtifmod_ar(this)
 
   call this%fmi%fmi_ar(this%ibound)
   if (this%iadv > 0) then
-    advecOpt%iAdvScheme = 2
+    advecOpt%iAdvScheme = this%owner%adv%iadvwt
     call this%adv%adv_ar(this%dis, this%ibound, advecOpt)
     this%inadv = 999 ! TODO_MJR: gwt packages should be creatable without input file
   end if
@@ -188,6 +191,7 @@ subroutine gwtifmod_da(this)
   ! this
   call mem_deallocate(this%iadv)
   call mem_deallocate(this%idsp)
+  call mem_deallocate(this%iAdvScheme)
   call mem_deallocate(this%porosity)
 
   ! gwt packages
