@@ -849,7 +849,7 @@ subroutine solution_create(filename, id)
     if ( this%linmeth == 1 )then
       allocate(this%imslinear)
       WRITE(IOUT,*) '***IMS LINEAR SOLVER WILL BE USED***'
-      call this%imslinear%imslinear_allocate(this%name, this%iu, IOUT,           &
+      call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT,       &
                                              this%iprims, this%mxiter,           &
                                              ifdparam, imslinear,                &
                                              this%neq, this%nja, this%ia,        &

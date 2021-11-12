@@ -6,6 +6,8 @@
 
 
 import os
+import shutil
+
 import pytest
 import sys
 import numpy as np
@@ -70,9 +72,11 @@ def build_model():
     name = ex
 
     # build MODFLOW 6 files
-    ws = exdir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+        sim_name=name,
+        version="mf6",
+        exe_name=mf6_exe,
+        sim_ws=exdir,
     )
 
     # create tdis package
@@ -268,6 +272,8 @@ def test_mf6model():
     # rerun the model, should be no errors
     sim.run_simulation()
 
+    shutil.rmtree(exdir, ignore_errors=True)
+
     return
 
 
@@ -321,6 +327,9 @@ def main():
 
     # rerun the model, should be no errors
     sim.run_simulation()
+
+    # clean the working directory
+    shutil.rmtree(exdir, ignore_errors=True)
 
     return
 

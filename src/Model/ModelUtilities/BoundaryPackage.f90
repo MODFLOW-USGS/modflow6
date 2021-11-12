@@ -1080,7 +1080,7 @@ module BndModule
       if(present(auxvar)) then
         this%auxvar => auxvar
       else
-        call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',         &
+        call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',      &
                           this%memoryPath)
         do i = 1, this%maxbound
           do j = 1, this%naux
@@ -1091,7 +1091,10 @@ module BndModule
       !
       ! -- Allocate boundname
       if (this%inamedbound /= 0) then
-        call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound,             &
+        call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound,          &
+                          'BOUNDNAME', this%memoryPath)
+      else
+        call mem_allocate(this%boundname, LENBOUNDNAME, 0,                      &
                           'BOUNDNAME', this%memoryPath)
       end if
       !

@@ -189,7 +189,9 @@ def set_make_comparison(test):
         "test051_uzfp2": ("6.2.1",),
         "test051_uzfp3_lakmvr_v2": ("6.2.1",),
         "test051_uzfp3_wellakmvr_v2": ("6.2.1",),
-        "test045_lake4ss": ("6.3.0",)
+        "test045_lake4ss": ("6.2.2",),
+        "test056_mt3dms_usgs_gwtex_dev": ("6.2.2",),
+        "test056_mt3dms_usgs_gwtex_IR_dev": ("6.2.2",),
     }
     make_comparison = True
     if test in compare_tests.keys():

@@ -85,7 +85,7 @@ The GWT model for MODFLOW 6 simulates three-dimensional transport of a single so
 
 [Langevin, C.D., Panday, S, and Provost, A.M., 2020, Hydraulic-head formulation for density-dependent flow and transport: Groundwater, v. 58, no. 3, p. 349–362.](https://doi.org/10.1111/gwat.12967)
 
-[Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the MODFLOW 6 water mover package to represent natural and managed hydrologic connections: Groundwater, v. xx, no. xx, p. xx-xx.](https://doi.org/10.1111/gwat.13117)
+[Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the MODFLOW 6 water mover package to represent natural and managed hydrologic connections: Groundwater, v. 59, no. 6, p. 913-924.](https://doi.org/10.1111/gwat.13117)
 
 #### ***Software/Code***
 

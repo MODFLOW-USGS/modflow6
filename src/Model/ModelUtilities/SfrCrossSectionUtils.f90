@@ -11,7 +11,7 @@
 module GwfSfrCrossSectionUtilsModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DHALF, DONE, DTWO
+  use ConstantsModule, only: DZERO, DHALF, DTWOTHIRDS, DONE, DTWO
 
   implicit none
   private
@@ -20,6 +20,7 @@ module GwfSfrCrossSectionUtilsModule
   public :: get_wetted_perimeter
   public :: get_cross_section_area
   public :: get_hydraulic_radius
+  public :: get_mannings_section
 
 contains
 
@@ -32,7 +33,7 @@ contains
   !<
   function get_saturated_topwidth(npts, stations) result(w)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
     ! -- local variables
     real(DP) :: w
@@ -51,15 +52,15 @@ contains
   !> @brief Calculate the wetted top width for a reach
   !!
   !! Function to calculate the wetted top width for a reach using the
-  !! cross-section station depth data given a passed depth.
+  !! cross-section station-height data given a passed depth.
   !!
   !! @return      w               wetted top width
   !<
-  function get_wetted_topwidth(npts, stations, depths, d) result(w)
+  function get_wetted_topwidth(npts, stations, heights, d) result(w)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     ! -- local variables
     integer(I4B) :: n
@@ -70,7 +71,7 @@ contains
     w = DZERO
     !
     ! -- calculate the wetted top width for each line segment
-    call get_wetted_topwidths(npts, stations, depths, d, widths)
+    call get_wetted_topwidths(npts, stations, heights, d, widths)
     !
     ! -- calculate the wetted top widths
     do n = 1, npts - 1
@@ -84,15 +85,15 @@ contains
   !> @brief Calculate the wetted perimeter for a reach
   !!
   !! Function to calculate the wetted perimeter for a reach using the
-  !! cross-section station depth data given a passed depth.
+  !! cross-section station-height data given a passed depth.
   !!
   !! @return      p               wetted perimeter
   !<
-  function get_wetted_perimeter(npts, stations, depths, d) result(p)
+  function get_wetted_perimeter(npts, stations, heights, d) result(p)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     ! -- local variables
     integer(I4B) :: n
@@ -103,7 +104,7 @@ contains
     p = DZERO
     !
     ! -- calculate the wetted perimeter for each line segment
-    call get_wetted_perimeters(npts, stations, depths, d, perimeters)
+    call get_wetted_perimeters(npts, stations, heights, d, perimeters)
     !
     ! -- calculate the wetted perimenter
     do n = 1, npts - 1
@@ -117,15 +118,15 @@ contains
   !> @brief Calculate the cross-sectional area for a reach
   !!
   !! Function to calculate the cross-sectional area for a reach using 
-  !! the cross-section station depth data given a passed depth.
+  !! the cross-section station-height data given a passed depth.
   !!
   !! @return      a               cross-sectional area
   !<
-  function get_cross_section_area(npts, stations, depths, d) result(a)
+  function get_cross_section_area(npts, stations, heights, d) result(a)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     ! -- local variables
     integer(I4B) :: n
@@ -136,7 +137,7 @@ contains
     a = DZERO
     !
     ! -- calculate the cross-sectional area for each line segment
-    call get_cross_section_areas(npts, stations, depths, d, areas)
+    call get_cross_section_areas(npts, stations, heights, d, areas)
     !
     ! -- calculate the cross-sectional area
     do n = 1, npts - 1
@@ -150,15 +151,15 @@ contains
   !> @brief Calculate the hydraulic radius for a reach
   !!
   !! Function to calculate the hydraulic radius for a reach using 
-  !! the cross-section station depth data given a passed depth.
+  !! the cross-section station-height data given a passed depth.
   !!
   !! @return      r               hydraulic radius
   !<
-  function get_hydraulic_radius(npts, stations, depths, d) result(r)
+  function get_hydraulic_radius(npts, stations, heights, d) result(r)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     ! -- local variables
     integer(I4B) :: n
@@ -174,7 +175,7 @@ contains
     a = DZERO
     !
     ! -- calculate the wetted perimeter for each line segment
-    call get_wetted_perimeters(npts, stations, depths, d, perimeters)
+    call get_wetted_perimeters(npts, stations, heights, d, perimeters)
     !
     ! -- calculate the wetted perimenter
     do n = 1, npts - 1
@@ -185,7 +186,7 @@ contains
     if (p > DZERO) then
       !
       ! -- calculate the cross-sectional area for each line segment
-      call get_cross_section_areas(npts, stations, depths, d, areas)
+      call get_cross_section_areas(npts, stations, heights, d, areas)
       !
       ! -- calculate the cross-sectional area
       do n = 1, npts - 1
@@ -200,20 +201,86 @@ contains
     return
   end function get_hydraulic_radius
 
+  !> @brief Calculate the manning's discharge for a reach
+  !!
+  !! Function to calculate the mannings discharge for a reach
+  !! by calculating the discharge for each section, which can
+  !! have a unique Manning's coefficient given a passed depth.
+  !!
+  !! @return      q               reach discharge
+  !<
+  function get_mannings_section(npts, stations, heights, roughfracs, &
+                                roughness, conv_fact, slope, d) result(q)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts                      !< number of station-height data for a reach
+    real(DP), dimension(npts), intent(in) :: stations     !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: heights      !< cross-section height data
+    real(DP), dimension(npts), intent(in) :: roughfracs   !< cross-section Mannings roughness fraction data
+    real(DP), intent(in) :: roughness                     !< base reach roughness
+    real(DP), intent(in) :: conv_fact                     !< unit conversion factor
+    real(DP), intent(in) :: slope                         !< reach slope
+    real(DP), intent(in) :: d                             !< depth to evaluate cross-section
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: q
+    real(DP) :: rh
+    real(DP) :: r
+    real(DP) :: p
+    real(DP) :: a
+    real(DP), dimension(npts-1) :: areas
+    real(DP), dimension(npts-1) :: perimeters
+    !
+    ! -- intitialize the hydraulic radius, perimeter, and area
+    q = DZERO
+    rh = DZERO
+    r = DZERO
+    p = DZERO
+    a = DZERO
+    !
+    ! -- calculate the wetted perimeter for each line segment
+    call get_wetted_perimeters(npts, stations, heights, d, perimeters)
+    !
+    ! -- calculate the wetted perimenter
+    do n = 1, npts - 1
+      p = p + perimeters(n)
+    end do
+    !
+    ! -- calculate the hydraulic radius only if the perimeter is non-zero
+    if (p > DZERO) then
+      !
+      ! -- calculate the cross-sectional area for each line segment
+      call get_cross_section_areas(npts, stations, heights, d, areas)
+      !
+      ! -- calculate the cross-sectional area
+      do n = 1, npts - 1
+        p = perimeters(n)
+        r = roughness * roughfracs(n)
+        if (p * r > DZERO) then
+          a = areas(n)
+          rh = a / p
+          q = q + conv_fact * a * rh**DTWOTHIRDS * sqrt(slope) / r
+        end if
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end function get_mannings_section
+
   ! -- private functions and subroutines
 
   !> @brief Calculate the wetted perimeters for each line segment
   !!
   !! Subroutine to calculate the wetted perimeter for each line segment
-  !! that defines the reach using the cross-section station depth 
+  !! that defines the reach using the cross-section station-height 
   !! data given a passed depth.
   !!
   !<
-  subroutine get_wetted_perimeters(npts, stations, depths, d, p)
+  subroutine get_wetted_perimeters(npts, stations, heights, d, p)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     real(DP), dimension(npts-1), intent(inout) :: p    !< wetted perimeter for each line segment
     ! -- local variables
@@ -227,17 +294,17 @@ contains
     real(DP) :: xlen
     real(DP) :: dlen
     !
-    ! -- iterate over the station-depth data
+    ! -- iterate over the station-height data
     do n = 1, npts - 1
       !
       ! -- initialize the wetted perimeter
       p(n) = DZERO
       !
-      ! -- initialize station-depth data for segment
+      ! -- initialize station-height data for segment
       x0 = stations(n)
       x1 = stations(n+1)
-      d0 = depths(n)
-      d1 = depths(n+1)
+      d0 = heights(n)
+      d1 = heights(n+1)
       !
       ! -- get the start and end station position of the wetted segment
       call get_wetted_station(x0, x1, d0, d1, dmax, dmin, d)
@@ -268,15 +335,15 @@ contains
   !> @brief Calculate the cross-sectional areas for each line segment
   !!
   !! Subroutine to calculate the cross-sectional area for each line segment
-  !! that defines the reach using the cross-section station depth 
+  !! that defines the reach using the cross-section station-height 
   !! data given a passed depth.
   !!
   !<
-  subroutine get_cross_section_areas(npts, stations, depths, d, a)
+  subroutine get_cross_section_areas(npts, stations, heights, d, a)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     real(DP), dimension(npts-1), intent(inout) :: a    !< cross-sectional area for each line segment
     ! -- local variables
@@ -289,17 +356,17 @@ contains
     real(DP) :: dmin
     real(DP) :: xlen
     !
-    ! -- iterate over the station-depth data
+    ! -- iterate over the station-height data
     do n = 1, npts - 1
       !
       ! -- initialize the cross-sectional area
       a(n) = DZERO
       !
-      ! -- initialize station-depth data for segment
+      ! -- initialize station-height data for segment
       x0 = stations(n)
       x1 = stations(n+1)
-      d0 = depths(n)
-      d1 = depths(n+1)
+      d0 = heights(n)
+      d1 = heights(n+1)
       !
       ! -- get the start and end station position of the wetted segment
       call get_wetted_station(x0, x1, d0, d1, dmax, dmin, d)
@@ -327,15 +394,15 @@ contains
   !> @brief Calculate the wetted top widths for each line segment
   !!
   !! Subroutine to calculate the wetted top width for each line segment
-  !! that defines the reach using the cross-section station depth 
+  !! that defines the reach using the cross-section station-height 
   !! data given a passed depth.
   !!
   !<
-  subroutine get_wetted_topwidths(npts, stations, depths, d, w)
+  subroutine get_wetted_topwidths(npts, stations, heights, d, w)
     ! -- dummy variables
-    integer(I4B), intent(in) :: npts                   !< number of station depth data for a reach
+    integer(I4B), intent(in) :: npts                   !< number of station-height data for a reach
     real(DP), dimension(npts), intent(in) :: stations  !< cross-section station distances (x-distance)
-    real(DP), dimension(npts), intent(in) :: depths    !< cross-section depth data
+    real(DP), dimension(npts), intent(in) :: heights   !< cross-section height data
     real(DP), intent(in) :: d                          !< depth to evaluate cross-section
     real(DP), dimension(npts-1), intent(inout) :: w    !< wetted top widths for each line segment
     ! -- local variables
@@ -347,14 +414,14 @@ contains
     real(DP) :: dmax
     real(DP) :: dmin
     !
-    ! -- iterate over the station-depth data
+    ! -- iterate over the station-height data
     do n = 1, npts - 1
       !
-      ! -- initialize station-depth data for segment
+      ! -- initialize station-height data for segment
       x0 = stations(n)
       x1 = stations(n+1)
-      d0 = depths(n)
-      d1 = depths(n+1)
+      d0 = heights(n)
+      d1 = heights(n+1)
       !
       ! -- get the start and end station position of the wetted segment
       call get_wetted_station(x0, x1, d0, d1, dmax, dmin, d)

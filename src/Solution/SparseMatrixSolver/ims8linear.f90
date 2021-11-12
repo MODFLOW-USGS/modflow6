@@ -97,8 +97,6 @@ MODULE IMSLinearModule
       PROCEDURE, PRIVATE :: SET_IMSLINEAR_INPUT => imslinear_set_input
   END TYPE ImsLinearDataType
   
-  type(BlockParserType), private :: parser
-
   
   CONTAINS
   
@@ -107,8 +105,8 @@ MODULE IMSLinearModule
     !!  Allocate storage for linear accelerators and read data
     !!
     !<
-    SUBROUTINE imslinear_ar(this, NAME, INIU, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                            IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X,       &
+    SUBROUTINE imslinear_ar(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
+                            IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X,         &
                             NINNER, LFINDBLOCK)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
@@ -118,7 +116,7 @@ MODULE IMSLinearModule
       ! -- dummy variables
       CLASS(ImsLinearDataType), INTENT(INOUT) :: this            !< ImsLinearDataType instance
       CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME        !< solution name
-      integer(I4B), INTENT(IN) :: INIU                           !< IMS input file unit
+      type(BlockParserType) :: parser                            !< block parser
       integer(I4B), INTENT(IN) :: IOUT                           !< simulation listing file unit
       integer(I4B), TARGET, INTENT(IN) :: IPRIMS                 !< print option
       integer(I4B), INTENT(IN) :: MXITER                         !< maximum outer iterations
@@ -133,6 +131,7 @@ MODULE IMSLinearModule
       real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X       !< dependent variables
       integer(I4B), TARGET, INTENT(INOUT) :: NINNER              !< maximum number of inner iterations
       integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK           !< flag indicating if the linear block is present (1) or missing (0)
+
       ! -- local variables
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg
@@ -205,9 +204,6 @@ MODULE IMSLinearModule
       ! -- SET DEFAULT IMSLINEAR PARAMETERS
       CALL this%SET_IMSLINEAR_INPUT(IFDPARAM)
       NINNER = this%iter1
-      !
-      ! -- Initialize block parser
-      call parser%Initialize(iniu, iout)
       !
       ! -- get IMSLINEAR block
       if (lreaddata) then

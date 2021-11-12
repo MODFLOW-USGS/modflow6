@@ -21,7 +21,7 @@ except:
     raise Exception(msg)
 
 import targets
-from framework import running_on_CI
+from framework import running_on_CI, set_teardown_test
 
 sfmt = "{:25s} - {}"
 extdict = {
@@ -49,11 +49,9 @@ class Simulation(object):
         mf6_regression=False,
         make_comparison=True,
     ):
-        delFiles = True
+        teardown_test = set_teardown_test()
         for idx, arg in enumerate(sys.argv):
-            if arg.lower() == "--keep":
-                delFiles = False
-            elif arg[2:].lower() in list(targets.target_dict.keys()):
+            if arg[2:].lower() in list(targets.target_dict.keys()):
                 key = arg[2:].lower()
                 exe0 = targets.target_dict[key]
                 exe = os.path.join(os.path.dirname(exe0), sys.argv[idx + 1])
@@ -135,7 +133,7 @@ class Simulation(object):
         # set allow failure
         self.require_failure = require_failure
 
-        self.delFiles = delFiles
+        self.teardown_test = teardown_test
         self.success = False
 
         # set is_ci
@@ -223,7 +221,7 @@ class Simulation(object):
             shutil.copytree(dst, pth)
         elif testModel:
             action = pymake.setup_mf6_comparison(
-                src, dst, remove_existing=self.delFiles
+                src, dst, remove_existing=self.teardown_test
             )
         else:
             action = pymake.get_mf6_comparison(dst)
@@ -249,7 +247,11 @@ class Simulation(object):
         print(msg)
         try:
             success, buff = flopy.run_model(
-                exe, nam, model_ws=self.simpath, silent=False, report=True
+                exe,
+                nam,
+                model_ws=self.simpath,
+                silent=False,
+                report=True,
             )
             msg = sfmt.format("MODFLOW 6 run", self.name)
             if success:
@@ -517,7 +519,7 @@ class Simulation(object):
 
         """
         if self.success:
-            if self.delFiles:
+            if self.teardown_test:
                 msg = sfmt.format("Teardown test", self.name)
                 print(msg)
 

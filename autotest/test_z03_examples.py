@@ -132,6 +132,8 @@ def set_make_comparison(test):
         "ex-gwf-nwt-p02b": ("6.2.1",),
         "ex-gwf-advtidal": ("6.2.1",),
         "ex-gwf-sfr-p01": ("6.2.1",),
+        "ex-gwf-lgr": ("6.2.2",),
+        "ex-gwt-rotate": ("6.2.2",),
     }
     make_comparison = True
     if test in compare_tests.keys():
@@ -148,17 +150,17 @@ mf6_models = get_mf6_models()
 
 
 @pytest.mark.parametrize(
-    "dir",
+    "exdir",
     mf6_models,
 )
-def test_mf6model(dir):
+def test_mf6model(exdir):
     # run the test model
     run_mf6(
         Simulation(
-            dir,
+            exdir,
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=set_make_comparison(dir),
+            make_comparison=set_make_comparison(exdir),
         )
     )
 

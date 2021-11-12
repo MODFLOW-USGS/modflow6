@@ -969,9 +969,7 @@ module MemoryManagerModule
       end do
       !
       ! -- deallocate mt pointer, repoint, recalculate isize
-      if (isize_old > 0) then
-        deallocate(astr)
-      end if
+      deallocate(astr)
       !
       ! -- allocate astr1d
       allocate(astr(nrow), stat=istat, errmsg=errmsg)
