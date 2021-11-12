@@ -111,6 +111,7 @@ contains
     this%linesRead = 0
     this%blockName = ''
     this%line = ''
+    deallocate(this%line)
     !
     ! -- return
     return

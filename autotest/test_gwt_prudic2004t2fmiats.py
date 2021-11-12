@@ -69,7 +69,7 @@ def run_flow_model():
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True)
 
     # ims
-    hclose = 0.01
+    hclose = 0.001
     rclose = 0.1
     nouter = 1000
     ninner = 100

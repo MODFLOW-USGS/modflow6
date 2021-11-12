@@ -144,17 +144,17 @@ mf6_models = get_mf6_models()
 
 
 @pytest.mark.parametrize(
-    "dir",
+    "exdir",
     mf6_models,
 )
-def test_mf6model(dir):
+def test_mf6model(exdir):
     # run the test model
     run_mf6(
         Simulation(
-            dir,
+            exdir,
             mf6_regression=set_mf6_regression(),
             cmp_verbose=False,
-            make_comparison=set_make_comparison(dir),
+            make_comparison=set_make_comparison(exdir),
         )
     )
 

@@ -412,6 +412,7 @@ contains
     class(ObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
+    class(ObserveType), pointer :: obsrv => null()
 ! ------------------------------------------------------------------------------
     !
     deallocate(this%active)
@@ -428,13 +429,9 @@ contains
     ! -- deallocate pakobs components and pakobs
     if (associated(this%pakobs)) then
       do i = 1, this%npakobs
-        if (allocated(this%pakobs(i)%obsrv%indxbnds)) then
-          deallocate(this%pakobs(i)%obsrv%indxbnds)
-        end if
-        !
-        ! -- nullify pointer to this%pakobs(i)%obsrv
-        !    deallocate does not work in gfortran-8 since no
-        !    allocatable variables in obsrv except for indxbnds
+        obsrv => this%pakobs(i)%obsrv
+        call obsrv%da()
+        deallocate(obsrv)
         nullify(this%pakobs(i)%obsrv)
       end do
       deallocate(this%pakobs)

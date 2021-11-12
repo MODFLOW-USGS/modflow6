@@ -213,10 +213,17 @@ contains
       call tasLink%da()
     enddo
     !
+    ! -- Go through and deallocate individual time array series
+    do i = 1, size(this%taslist)
+      call this%taslist(i)%da()
+    end do
+    !
     ! -- Deallocate the list of time-array series links.
     call this%boundTasLinks%Clear(.true.)
     deallocate(this%boundTasLinks)
     deallocate(this%tasfiles)
+    !
+    ! -- Deallocate the time array series
     deallocate(this%taslist)
     deallocate(this%tasnames)
     !

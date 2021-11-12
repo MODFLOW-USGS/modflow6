@@ -89,4 +89,4 @@ jobs:
     - name: Test applications
       working-directory: autotest
       run: |
-        pytest -v --durations=0
+        pytest -v -n=auto --durations=0
