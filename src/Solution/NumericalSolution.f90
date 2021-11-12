@@ -2363,8 +2363,17 @@ subroutine solution_create(filename, id)
       ! -- store x in temporary location
       this%xtemp(n) = this%x(n)
       !
-      ! -- set Dirichlet boundary and no-flow condition
-      if (this%active(n) <= 0) then
+      ! -- make adjustments to the continuity equation for the node
+      ! -- adjust small diagonal coefficient in an active cell
+      if (this%active(n) > 0) then
+        diagval = -DONE
+        adiag = abs(this%amat(this%ia(n)))
+        if (adiag < DEM15) then
+          this%amat(this%ia(n)) = diagval
+          this%rhs(n) = this%rhs(n) + diagval * this%x(n) 
+        endif
+      ! -- Dirichlet boundary or no-flow cell
+      else
         this%amat(this%ia(n)) = DONE
         this%rhs(n) = this%x(n)
         i1 = this%ia(n) + 1
@@ -2372,30 +2381,23 @@ subroutine solution_create(filename, id)
         do i = i1, i2
           this%amat(i) = DZERO
         end do
-      !
-      ! -- take care of the case where there is a zero on the row diagonal
-      else
-        diagval = -DONE
-        adiag = abs(this%amat(this%ia(n)))
-        if (adiag < DEM15) then
-          this%amat(this%ia(n)) = diagval
-          this%rhs(n) = this%rhs(n) + diagval * this%x(n) 
-        endif
-      endif
+      end if
     end do
     !
-    ! -- eliminate Dirichlet boundary to preserve symmetrix matrix
+    ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
     if (this%isymmetric == 1) then
       do n = 1, this%neq
-        i1 = this%ia(n) + 1
-        i2 = this%ia(n + 1) - 1
-        do i = i1, i2
-          jcol = this%ja(i)
-          if (this%active(jcol) < 0) then
-            this%rhs(n) = this%rhs(n) - this%amat(i) * this%x(jcol)
-            this%amat(i) = DZERO
-          end if
-        end do
+        if (this%active(n) > 0) then
+          i1 = this%ia(n) + 1
+          i2 = this%ia(n + 1) - 1
+          do i = i1, i2
+            jcol = this%ja(i)
+            if (this%active(jcol) < 0) then
+              this%rhs(n) = this%rhs(n) - this%amat(i) * this%x(jcol)
+              this%amat(i) = DZERO
+            end if
+          end do
+        end if
       end do
     end if
     !
