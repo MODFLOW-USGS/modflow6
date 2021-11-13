@@ -5,12 +5,15 @@ import flopy
 
 
 def target_pth(target, pth):
-    exe_exists = flopy.which(target)
+    exe_exists = flopy.which(target, path=pth)
+    # if target does not exist in specified path determine if it
+    # exists anywhere in the path
     if exe_exists is None:
-        target = os.path.abspath(os.path.join(pth, target))
-    else:
-        target = os.path.abspath(exe_exists)
-    return target
+        exe_exists = flopy.which(target)
+    if exe_exists is None:
+        exe_exists = os.path.abspath(os.path.join(pth, target))
+        raise Exception(f"{exe_exists} does not exist or is not executable.")
+    return os.path.abspath(exe_exists)
 
 
 target_ext = ""

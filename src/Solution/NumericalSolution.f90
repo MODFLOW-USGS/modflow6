@@ -1,7 +1,7 @@
 ! This is the numerical solution module.
 
 module NumericalSolutionModule
-  use KindModule,              only: DP, I4B
+  use KindModule,              only: DP, I4B, LGP
   use TimerModule,             only: code_timer
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC,   &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
@@ -38,24 +38,25 @@ module NumericalSolutionModule
   public :: GetNumericalSolutionFromList
   
   type, extends(BaseSolutionType) :: NumericalSolutionType
-    character(len=LENMEMPATH)                        :: memoryPath        !< the path for storing solution variables in the memory manager
-    character(len=LINELENGTH)                        :: fname             !< input file name
-    type(ListType), pointer                          :: modellist         !< list of models in solution
-    type(ListType), pointer                          :: exchangelist      !< list of exchanges in solution
-    integer(I4B), pointer                            :: id                !< solution number
-    integer(I4B), pointer                            :: iu                !< input file unit
-    real(DP), pointer                                :: ttform            !< timer - total formulation time
-    real(DP), pointer                                :: ttsoln            !< timer - total solution time
-    integer(I4B), pointer                            :: neq => null()     !< number of equations
-    integer(I4B), pointer                            :: nja => null()     !< number of non-zero entries
-    integer(I4B), dimension(:), pointer, contiguous  :: ia => null()      !< CRS row pointers
-    integer(I4B), dimension(:), pointer, contiguous  :: ja => null()      !< CRS column pointers
-    real(DP), dimension(:), pointer, contiguous      :: amat => null()    !< coefficient matrix
-    real(DP), dimension(:), pointer, contiguous      :: rhs => null()     !< right-hand side vector
-    real(DP), dimension(:), pointer, contiguous      :: x => null()       !< dependent-variable vector
-    integer(I4B), dimension(:), pointer, contiguous  :: active => null()  !< active cell array
-    real(DP), dimension(:), pointer, contiguous      :: xtemp => null()   !< temporary vector for previous dependent-variable iterate
-    type(BlockParserType) :: parser                                       !< block parser object
+    character(len=LENMEMPATH)                        :: memoryPath            !< the path for storing solution variables in the memory manager
+    character(len=LINELENGTH)                        :: fname                 !< input file name
+    type(ListType), pointer                          :: modellist             !< list of models in solution
+    type(ListType), pointer                          :: exchangelist          !< list of exchanges in solution
+    integer(I4B), pointer                            :: id                    !< solution number
+    integer(I4B), pointer                            :: iu                    !< input file unit
+    real(DP), pointer                                :: ttform                !< timer - total formulation time
+    real(DP), pointer                                :: ttsoln                !< timer - total solution time
+    integer(I4B), pointer                            :: isymmetric => null()  !< flag indicating if matrix symmetry is required
+    integer(I4B), pointer                            :: neq => null()         !< number of equations
+    integer(I4B), pointer                            :: nja => null()         !< number of non-zero entries
+    integer(I4B), dimension(:), pointer, contiguous  :: ia => null()          !< CRS row pointers
+    integer(I4B), dimension(:), pointer, contiguous  :: ja => null()          !< CRS column pointers
+    real(DP), dimension(:), pointer, contiguous      :: amat => null()        !< coefficient matrix
+    real(DP), dimension(:), pointer, contiguous      :: rhs => null()         !< right-hand side vector
+    real(DP), dimension(:), pointer, contiguous      :: x => null()           !< dependent-variable vector
+    integer(I4B), dimension(:), pointer, contiguous  :: active => null()      !< active cell array
+    real(DP), dimension(:), pointer, contiguous      :: xtemp => null()       !< temporary vector for previous dependent-variable iterate
+    type(BlockParserType) :: parser                                           !< block parser object
     !
     ! -- sparse matrix data
     real(DP), pointer                                :: theta => null()            !< under-relaxation theta
@@ -243,6 +244,7 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%iu, 'IU', this%memoryPath)
     call mem_allocate(this%ttform, 'TTFORM', this%memoryPath)
     call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
+    call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memoryPath)
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
     call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
@@ -284,6 +286,7 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
     !
     ! -- initialize scalars
+    this%isymmetric = 0
     this%id = 0
     this%iu = 0
     this%ttform = DZERO
@@ -477,7 +480,6 @@ subroutine solution_create(filename, id)
     integer(I4B) :: im
     integer(I4B) :: ifdparam, mxvl, npp
     integer(I4B) :: imslinear
-    integer(I4B) :: isymflg=1
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: ival
@@ -820,20 +822,18 @@ subroutine solution_create(filename, id)
       call store_error(errmsg)
     END IF
     !
-    !
-    isymflg = 1
+    ! -- write under-relaxation option
     if ( this%nonmeth > 0 )then
       WRITE(IOUT,*) '**UNDER-RELAXATION WILL BE USED***'
       WRITE(IOUT,*)
-      isymflg = 0
     elseif ( this%nonmeth == 0 )then
       WRITE(IOUT,*) '***UNDER-RELAXATION WILL NOT BE USED***'
       WRITE(IOUT,*)
-    ELSE
+    else
       WRITE(errmsg,'(a)')                                                      &
         'INCORRECT VALUE FOR VARIABLE NONMETH WAS SPECIFIED.'
       call store_error(errmsg)
-    END IF
+    end if
     !
     ! -- ensure gamma is > 0 for simple
     if (this%nonmeth == 1) then
@@ -856,8 +856,9 @@ subroutine solution_create(filename, id)
                                              this%ja, this%amat, this%rhs,       &
                                              this%x, this%nitermax)
       WRITE(IOUT,*)
-      isymflg = 0
-      if ( imslinear.eq.1 ) isymflg = 1
+      if ( imslinear.eq.1 ) then
+        this%isymmetric = 1
+      end if
     !
     ! -- incorrect linear solver flag
     ELSE
@@ -866,9 +867,16 @@ subroutine solution_create(filename, id)
       call store_error(errmsg)
     END IF
     !
+    ! -- write message about matrix symmetry
+    if (this%isymmetric == 1) then
+      write(iout, '(1x,a,/)') 'A symmetric matrix will be solved'  
+    else
+      write(iout, '(1x,a,/)') 'An asymmetric matrix will be solved'  
+    end if
+    !
     ! -- If CG, then go through each model and each exchange and check
     !    for asymmetry
-    if (isymflg == 1) then
+    if (this%isymmetric == 1) then
       !
       ! -- Models
       do i = 1, this%modellist%Count()
@@ -1177,6 +1185,7 @@ subroutine solution_create(filename, id)
     call mem_deallocate(this%iu)
     call mem_deallocate(this%ttform)
     call mem_deallocate(this%ttsoln)
+    call mem_deallocate(this%isymmetric)
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
     call mem_deallocate(this%dvclose)
@@ -2335,6 +2344,7 @@ subroutine solution_create(filename, id)
     integer(I4B) :: i
     integer(I4B) :: i1
     integer(I4B) :: i2
+    integer(I4B) :: jcol
     integer(I4B) :: iptct
     integer(I4B) :: iallowptc
     real(DP) :: adiag
@@ -2353,8 +2363,17 @@ subroutine solution_create(filename, id)
       ! -- store x in temporary location
       this%xtemp(n) = this%x(n)
       !
-      ! -- set dirichlet boundary and no-flow condition
-      if (this%active(n) <= 0) then
+      ! -- make adjustments to the continuity equation for the node
+      ! -- adjust small diagonal coefficient in an active cell
+      if (this%active(n) > 0) then
+        diagval = -DONE
+        adiag = abs(this%amat(this%ia(n)))
+        if (adiag < DEM15) then
+          this%amat(this%ia(n)) = diagval
+          this%rhs(n) = this%rhs(n) + diagval * this%x(n) 
+        endif
+      ! -- Dirichlet boundary or no-flow cell
+      else
         this%amat(this%ia(n)) = DONE
         this%rhs(n) = this%x(n)
         i1 = this%ia(n) + 1
@@ -2362,17 +2381,25 @@ subroutine solution_create(filename, id)
         do i = i1, i2
           this%amat(i) = DZERO
         end do
-      !
-      ! -- take care of the case where there is a zero on the row diagonal
-      else
-        diagval = -DONE
-        adiag = abs(this%amat(this%ia(n)))
-        if (adiag < DEM15) then
-          this%amat(this%ia(n)) = diagval
-          this%rhs(n) = this%rhs(n) + diagval * this%x(n) 
-        endif
-      endif
+      end if
     end do
+    !
+    ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
+    if (this%isymmetric == 1) then
+      do n = 1, this%neq
+        if (this%active(n) > 0) then
+          i1 = this%ia(n) + 1
+          i2 = this%ia(n + 1) - 1
+          do i = i1, i2
+            jcol = this%ja(i)
+            if (this%active(jcol) < 0) then
+              this%rhs(n) = this%rhs(n) - this%amat(i) * this%x(jcol)
+              this%amat(i) = DZERO
+            end if
+          end do
+        end if
+      end do
+    end if
     !
     ! -- pseudo transient continuation
     !
