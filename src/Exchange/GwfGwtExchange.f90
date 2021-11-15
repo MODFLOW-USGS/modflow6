@@ -1,5 +1,4 @@
 module GwfGwtExchangeModule
-  
   use KindModule,              only: DP, I4B
   use ConstantsModule,         only: LENPACKAGENAME
   use ListsModule,                  only: basemodellist, baseexchangelist, baseconnectionlist
@@ -261,9 +260,10 @@ module GwfGwtExchangeModule
     return
   end subroutine exg_ar
   
-  !> @brief Connect GWT connection to GWF connection
+  !> @brief Link GWT connection to GWF connection
   !<
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
+    use SimModule, only: store_error
     class(GwfGwtExchangeType) :: this        !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GwtModelType), pointer :: gwtModel !< the transport model
@@ -288,10 +288,16 @@ module GwfGwtExchangeModule
       end if
     end do
     
-    if (gwfIdx == -1) then
-      ! TODO_MJR:
-      write(*,*) 'Error: ...'
-      call ustop()
+    if (gwtIdx == -1) then
+      ! apparently there are is no connected gwt model, so
+      ! no need to link
+      return
+    end if
+    
+    if (gwtIdx > 0 .and. gwfIdx == -1) then
+      write(errmsg, *) 'Connecting GWT model ', trim(gwtModel%name), &
+                       ' requires GWF connection'
+      call store_error(errmsg)
     end if
     
     conn => GetSpatialModelConnectionFromList(baseconnectionlist,gwtIdx)

@@ -52,7 +52,6 @@ subroutine gwtifmod_cr(this, name, iout, gridConn)
   integer(I4B), intent(in) :: iout                           !< the output unit
   class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection data for creating a DISU
   ! local
-  class(NumericalModelType), pointer :: numMod
   class(*), pointer :: modelPtr
   integer(I4B), target :: inobs
 
