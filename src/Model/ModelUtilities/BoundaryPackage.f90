@@ -823,7 +823,7 @@ module BndModule
       integer(I4B), intent(in) :: icbcfl                         !< flag for cell-by-cell output
       integer(I4B), intent(in) :: ibudfl                         !< flag indication if cell-by-cell data should be saved
       integer(I4B), intent(in) :: icbcun                         !< unit number for cell-by-cell output
-      integer(I4B), dimension(:), optional, intent(in) :: imap   !< mapping vector
+      integer(I4B), dimension(:), optional, intent(in) :: imap   !< mapping vector that converts the 1 to nbound values to lake number, maw number, etc.
       ! -- local variables
       character (len=LINELENGTH) :: title
       character (len=LENPACKAGENAME) :: text
@@ -832,11 +832,21 @@ module BndModule
       ! -- Call generic subroutine to save and print simvals and simtomvr
       title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%packName) // &
                 ') FLOW RATES'
-      call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-        this%outputtab, this%nbound, this%nodelist, this%simvals, &
-        this%ibound, title, this%text, this%ipakcb, this%dis, this%naux, &
-        this%name_model, this%name_model, this%name_model, this%packName, &
-        this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+      if (present(imap)) then
+        call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+          this%outputtab, this%nbound, this%nodelist, this%simvals, &
+          this%ibound, title, this%text, this%ipakcb, this%dis, this%naux, &
+          this%name_model, this%name_model, this%name_model, this%packName, &
+          this%auxname, this%auxvar, this%iout, this%inamedbound, &
+          this%boundname, imap)
+      else
+        call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
+          this%outputtab, this%nbound, this%nodelist, this%simvals, &
+          this%ibound, title, this%text, this%ipakcb, this%dis, this%naux, &
+          this%name_model, this%name_model, this%name_model, this%packName, &
+          this%auxname, this%auxvar, this%iout, this%inamedbound, &
+          this%boundname)
+      end if
       !
       ! -- Set mover flag, and shut off if this is an advanced package.  Advanced
       !    packages must handle mover flows differently by including them in

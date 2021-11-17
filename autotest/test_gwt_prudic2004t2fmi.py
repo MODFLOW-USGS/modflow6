@@ -401,6 +401,15 @@ def run_flow_model():
     head = hobj.get_data()
     hobj.file.close()
 
+    # check node2 values for lake, they should be the lake number (1 or 2)
+    # and not the connection number
+    budgwflak = gwf.output.budget().get_data(text="LAK")
+    budgwflak = budgwflak[0]
+    node2sim = budgwflak["node2"]
+    node2expected = 67 * [1] + 32 * [2]
+    errmsg = f"node2 sim not equal node2 expected\n{node2sim}\n{node2expected}"
+    assert np.array_equal(node2sim, node2expected), errmsg
+
     if lake_on:
         fname = gwfname + ".lak.bin"
         fname = os.path.join(wsf, fname)
