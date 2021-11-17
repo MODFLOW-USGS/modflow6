@@ -289,15 +289,17 @@ module GwfGwtExchangeModule
     end do
     
     if (gwtIdx == -1) then
-      ! apparently there are is no connected gwt model, so
-      ! no need to link
+      ! apparently there is no gwt-gwt exchange, so
+      ! no need to link interface to flow counterpart
       return
     end if
     
     if (gwtIdx > 0 .and. gwfIdx == -1) then
-      write(errmsg, *) 'Connecting GWT model ', trim(gwtModel%name), &
-                       ' requires GWF connection'
-      call store_error(errmsg)
+      write(errmsg, *) 'Connecting GWT model ', trim(gwtModel%name),           &
+                       ' (which has a GWT-GWT exchange) to GWF requires the GWF&
+                       & interface model to be active. (Activate by setting the&
+                       & environmental variable DEV_ALWAYS_USE_IFMOD=1)'
+      call store_error(errmsg, terminate=.true.)
     end if
     
     conn => GetSpatialModelConnectionFromList(baseconnectionlist,gwtIdx)

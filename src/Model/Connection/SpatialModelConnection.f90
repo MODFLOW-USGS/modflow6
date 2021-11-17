@@ -228,7 +228,7 @@ contains ! module procedures
       ! only for connections internal to the owning model
       if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
         cycle
-      end if      
+      end if
       nloc = this%gridConnection%idxToGlobal(n)%index
       
       do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1

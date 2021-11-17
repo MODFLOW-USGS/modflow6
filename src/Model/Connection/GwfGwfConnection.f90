@@ -95,7 +95,7 @@ contains
     call this%allocateScalars()
     
     this%typename = 'GWF-GWF'
-    this%iXt3dOnExchange = 1
+    this%iXt3dOnExchange = 0
     
     allocate(this%gwfInterfaceModel)
     this%interfaceModel => this%gwfInterfaceModel
@@ -110,7 +110,17 @@ contains
   subroutine gwfgwfcon_df(this)
     class(GwfGwfConnectionType) :: this !< this connection    
     ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
     character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
+
+    ! loop over exchange and check for XT3D
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (gwfEx%ixt3d > this%iXt3dOnExchange) then
+        this%iXt3dOnExchange = gwfEx%ixt3d
+      end if
+    end do
 
     if (this%gwfModel%npf%ixt3d > 0) then
       this%internalStencilDepth = 2
@@ -125,7 +135,7 @@ contains
     ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    write(imName,'(a,i5.5)') 'IFM_', this%gwfModel%id
+    write(imName,'(a,i5.5)') 'GWFIM_', this%gwfModel%id
     call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
 
     this%gwfInterfaceModel%npf%satomega = this%gwfModel%npf%satomega

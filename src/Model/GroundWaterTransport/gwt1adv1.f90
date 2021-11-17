@@ -20,6 +20,7 @@ module GwtAdvModule
     
   contains
   
+    procedure :: adv_df
     procedure :: adv_ar
     procedure :: adv_fc
     procedure :: adv_cq
@@ -65,44 +66,24 @@ module GwtAdvModule
     advobj%iout = iout
     advobj%fmi => fmi
     !
-    ! -- Initialize block parser
-    if (inunit > 0) then
-      call advobj%parser%Initialize(advobj%inunit, advobj%iout)
-    end if
-    !
     ! -- Return
     return
   end subroutine adv_cr
 
-  subroutine adv_ar(this, dis, ibound, adv_options)
-! ******************************************************************************
-! adv_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
+  subroutine adv_df(this, adv_options)
     class(GwtAdvType) :: this
-    class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
     type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
-    ! -- local
-    ! -- formats
+    ! local
     character(len=*), parameter :: fmtadv =                                    &
       "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017',                &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------    
-    !
-    ! -- adv pointers to arguments that were passed in
-    this%dis     => dis
-    this%ibound  => ibound
-    !
-    ! -- Allocate arrays (not needed for adv)
-    !call this%allocate_arrays(dis%nodes)
     !
     ! -- Read or set advection options
-    if (.not. present(adv_options)) then
+    if (.not. present(adv_options)) then      
+      !
+      ! -- Initialize block parser (adv has no define, so it's
+      ! not done until here)
+      call this%parser%Initialize(this%inunit, this%iout)
       !
       ! --print a message identifying the advection package.
       write(this%iout, fmtadv) this%inunit
@@ -114,6 +95,31 @@ module GwtAdvModule
       ! --set options from input arg
       this%iadvwt = adv_options%iAdvScheme
     end if
+
+  end subroutine adv_df
+
+  subroutine adv_ar(this, dis, ibound)
+! ******************************************************************************
+! adv_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAdvType) :: this
+    class(DisBaseType), pointer, intent(in) :: dis
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------    
+    !
+    ! -- adv pointers to arguments that were passed in
+    this%dis     => dis
+    this%ibound  => ibound
+    !
+    ! -- Allocate arrays (not needed for adv)
+    !call this%allocate_arrays(dis%nodes)    
     !
     ! -- Return
     return

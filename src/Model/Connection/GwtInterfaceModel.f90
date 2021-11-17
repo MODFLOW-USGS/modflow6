@@ -22,8 +22,6 @@ module GwtInterfaceModelModule
   !! its GWT neighbors. The interface model itself will not be part 
   !! of the solution, it is not being solved. 
   type, public, extends(GwtModelType) :: GwtInterfaceModelType
-    integer(i4B), pointer :: iadv => null()                           !< = 1: the interface model has advection enabled
-    integer(i4B), pointer :: idsp => null()                           !< = 1: the interface model has dispersion enabled
 
     integer(i4B), pointer :: iAdvScheme => null()                     !< the advection scheme: 0 = up, 1 = central, 2 = tvd
 
@@ -54,6 +52,7 @@ subroutine gwtifmod_cr(this, name, iout, gridConn)
   ! local
   class(*), pointer :: modelPtr
   integer(I4B), target :: inobs
+  integer(I4B) :: adv_unit, dsp_unit
 
   this%memoryPath = create_mem_path(name)
   call this%allocate_scalars(name)
@@ -64,16 +63,23 @@ subroutine gwtifmod_cr(this, name, iout, gridConn)
   this%owner => CastAsGwtModel(modelPtr)
   
   inobs = 0
+  adv_unit = 0
+  dsp_unit = 0
+  if (this%owner%inadv > 0) then
+    this%inadv = huge(1_I4B)
+    adv_unit = huge(1_I4B)
+  end if
+  if (this%owner%indsp > 0) then 
+    this%indsp = huge(1_I4B)
+    dsp_unit = huge(1_I4B)
+  end if
 
   ! create dis and packages
   call disu_cr(this%dis, this%name, -1, this%iout)
   call fmi_cr(this%fmi, this%name, 0, this%iout)
-  call adv_cr(this%adv, this%name, 0, this%iout, this%fmi)
-  call dsp_cr(this%dsp, this%name, 0, this%iout, this%fmi)
+  call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi)
+  call dsp_cr(this%dsp, this%name, dsp_unit, this%iout, this%fmi)
   call gwt_obs_cr(this%obs, inobs)
-
-  this%iadv = this%owner%inadv
-  this%idsp = this%owner%indsp
   
 end subroutine gwtifmod_cr
 
@@ -82,13 +88,8 @@ subroutine allocate_scalars(this, modelname)
   character(len=*), intent(in) :: modelname !< the model name
 
   call this%GwtModelType%allocate_scalars(modelname)
-  
-  call mem_allocate(this%iadv , 'IADV',  this%memoryPath)
-  call mem_allocate(this%idsp , 'IDSP',  this%memoryPath)
-  call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
 
-  this%iadv = 0
-  this%idsp = 0
+  call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
 
 end subroutine allocate_scalars
 
@@ -97,19 +98,24 @@ end subroutine allocate_scalars
 subroutine gwtifmod_df(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
   ! local
-  class(*), pointer :: disPtr
+  class(*), pointer :: disPtr  
+  type(GwtAdvOptionsType) :: adv_options
   type(GwtDspOptionsType) :: dsp_options
   integer(I4B) :: i
 
   this%moffset = 0
-  dsp_options%ixt3d = 0
+  adv_options%iAdvScheme = this%owner%adv%iadvwt
+  dsp_options%ixt3d = this%owner%dsp%ixt3d
 
   ! define DISU
   disPtr => this%dis
   call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
   call this%fmi%fmi_df(this%dis, 0)
-
-  if (this%idsp > 0) then
+  
+  if (this%inadv > 0) then
+    call this%adv%adv_df(adv_options)
+  end if
+  if (this%indsp > 0) then
     call this%dsp%dsp_df(this%dis, dsp_options)
   end if
 
@@ -133,26 +139,23 @@ subroutine gwtifmod_df(this)
 end subroutine gwtifmod_df
 
 
-!> @brief Allocate and read the GWT interface model and its packages
-!<
+!> @brief Override allocate and read the GWT interface model and its 
+!! packages so that we can create stuff from memory instead of input 
+!< files
 subroutine gwtifmod_ar(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
   ! local
-  type(GwtAdvOptionsType) :: advecOpt
   type(GwtDspGridDataType) :: dspGridData
 
   call this%fmi%fmi_ar(this%ibound)
-  if (this%iadv > 0) then
-    advecOpt%iAdvScheme = this%owner%adv%iadvwt
-    call this%adv%adv_ar(this%dis, this%ibound, advecOpt)
-    this%inadv = 999 ! TODO_MJR: gwt packages should be creatable without input file
+  if (this%inadv > 0) then
+    call this%adv%adv_ar(this%dis, this%ibound)
   end if
-  if (this%idsp > 0) then
+  if (this%indsp > 0) then
     call dspGridData%construct(this%neq)
     call this%setDspGridData(dspGridData)
     call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)
     this%dsp%idiffc = this%owner%dsp%idiffc
-    this%indsp = 999
   end if
   
 end subroutine gwtifmod_ar
@@ -173,11 +176,11 @@ subroutine setDspGridData(this, gridData)
     idx = this%gridConnection%idxToGlobal(i)%index
 
     gridData%diffc(i) = gwtModel%dsp%diffc(idx)
-    gridData%alh = gwtModel%dsp%alh
-    gridData%alv = gwtModel%dsp%alv
-    gridData%ath1 = gwtModel%dsp%ath1
-    gridData%ath2 = gwtModel%dsp%ath2
-    gridData%atv = gwtModel%dsp%atv
+    gridData%alh(i) = gwtModel%dsp%alh(idx)
+    gridData%alv(i) = gwtModel%dsp%alv(idx)
+    gridData%ath1(i) = gwtModel%dsp%ath1(idx)
+    gridData%ath2(i) = gwtModel%dsp%ath2(idx)
+    gridData%atv(i) = gwtModel%dsp%atv(idx)
   end do
 
 end subroutine setDspGridData
@@ -188,8 +191,6 @@ subroutine gwtifmod_da(this)
   class(GwtInterfaceModelType) :: this !< the GWT interface model
 
   ! this
-  call mem_deallocate(this%iadv)
-  call mem_deallocate(this%idsp)
   call mem_deallocate(this%iAdvScheme)
   call mem_deallocate(this%porosity)
 

@@ -60,7 +60,8 @@ module GridConnectionModule
         
     integer(I4B), pointer :: nrOfCells => null()                                !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()        !< a map from interface index to global coordinate
-    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index
+    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
+                                                                                !! stored in mem. mgr. so can be used for debugging
      
     integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null()  !< (sparse) mapping from regional index to interface ixd
     type(ListType)                      :: regionalModels                       !< the models participating in the interface
@@ -272,7 +273,7 @@ module GridConnectionModule
   !> @brief Extend the connection topology to deal with 
   !! higher levels of connectivity (neighbors-of-neighbors, etc.)
   !!
-  !! The following are steps are taken:
+  !! The following steps are taken:
   !! 1. Recursively add interior neighbors (own model) up to the specified depth
   !! 2. Recursively add exterior neighbors
   !! 3. Allocate a (sparse) mapping table for the region
@@ -548,13 +549,14 @@ module GridConnectionModule
     ! local
     integer(I4B) :: i
     
-    ! traverse the tree, currently two deep but this can be made recursive
+    ! traverse the tree, TODO_MJR: currently two deep but this can be made recursive
     if (associated(model, this%modelWithNbrs%model)) then    
       modelWithNbr => this%modelWithNbrs
     else
       do i = 1, this%modelWithNbrs%nrOfNbrs
         if (associated(model, this%modelWithNbrs%neighbors(i)%model)) then  
           modelWithNbr => this%modelWithNbrs%neighbors(i)
+          exit
         end if
       end do
     end if

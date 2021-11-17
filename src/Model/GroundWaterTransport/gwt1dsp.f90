@@ -93,9 +93,6 @@ module GwtDspModule
     dspobj%iout = iout
     dspobj%fmi => fmi
     !
-    ! -- Initialize block parser
-    call dspobj%parser%Initialize(dspobj%inunit, dspobj%iout)
-    !
     ! -- Return
     return
   end subroutine dsp_cr
@@ -130,7 +127,10 @@ module GwtDspModule
     ! -- Read dispersion options
     if (present(options)) then
       this%ixt3d = options%ixt3d
-    else
+    else      
+      !
+      ! -- Initialize block parser
+      call this%parser%Initialize(this%inunit, this%iout)
       call this%read_options()
     end if
     !

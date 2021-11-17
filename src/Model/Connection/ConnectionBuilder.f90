@@ -91,11 +91,12 @@ module ConnectionBuilderModule
     logical(LGP) :: isNotPeriodic
     integer(I4B) :: status
     logical(LGP) :: alwaysInterfaceModel
+    character(len=16) :: envvar
 
     ! Force use of the interface model
     alwaysInterfaceModel = .false.
-    call get_environment_variable('DEV_ALWAYS_USE_IFMOD', status=status)
-    if (status == 0) then
+    call get_environment_variable('DEV_ALWAYS_USE_IFMOD', value=envvar, status=status)
+    if (status == 0 .and. envvar == '1') then
       alwaysInterfaceModel = .true.
       write(*,'(a,/)') "### Experimental: forcing interface model ###"
     end if
