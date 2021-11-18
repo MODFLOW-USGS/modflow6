@@ -53,6 +53,7 @@ module GwfGwfConnectionModule
     ! local stuff
     procedure, pass(this), private :: allocateScalars
     procedure, pass(this), private :: allocate_arrays
+    procedure, pass(this), private :: setGridExtent
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchanges
@@ -110,24 +111,10 @@ contains
   subroutine gwfgwfcon_df(this)
     class(GwfGwfConnectionType) :: this !< this connection    
     ! local
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
-    character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
+    character(len=LENCOMPONENTNAME) :: imName !< the interface model's name    
 
-    ! loop over exchange and check for XT3D
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (gwfEx%ixt3d > this%iXt3dOnExchange) then
-        this%iXt3dOnExchange = gwfEx%ixt3d
-      end if
-    end do
-
-    if (this%gwfModel%npf%ixt3d > 0) then
-      this%internalStencilDepth = 2
-    end if
-    if (this%iXt3dOnExchange > 0) then
-      this%exchangeStencilDepth = 2
-    end if
+    ! determine the required size of the interface grid
+    call this%setGridExtent()
 
     ! this sets up the GridConnection 
     call this%spatialcon_df()
@@ -151,6 +138,31 @@ contains
     call this%allocate_arrays()
     
   end subroutine gwfgwfcon_df
+
+  !> @brief Set the required size of the interface grid from
+  !< the configuration
+  subroutine setGridExtent(this)
+    class(GwfGwfConnectionType) :: this !< the connection
+    ! local
+    integer(I4B) :: iex
+    class(GwfExchangeType), pointer :: gwfEx
+
+    ! loop over exchange and check for XT3D
+    do iex=1, this%localExchanges%Count()
+      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+      if (gwfEx%ixt3d > this%iXt3dOnExchange) then
+        this%iXt3dOnExchange = gwfEx%ixt3d
+      end if
+    end do
+    
+    if (this%iXt3dOnExchange > 0) then
+      this%exchangeStencilDepth = 2
+      if (this%gwfModel%npf%ixt3d > 0) then
+        this%internalStencilDepth = 2
+      end if
+    end if
+
+  end subroutine setGridExtent
   
   !> @brief allocation of scalars in the connection
   !<

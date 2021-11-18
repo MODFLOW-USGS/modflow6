@@ -128,6 +128,7 @@ subroutine allocate_scalars(this)
   call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
 
   this%iAdvScheme = 0
+  this%ixt3d = 1
 
 end subroutine allocate_scalars
 
@@ -240,15 +241,21 @@ function parse_option(this, keyword, iout) result(parsed)
       this%iAdvScheme = 1
     case('TVD')
       this%iAdvScheme = 2
-
     case default
       errmsg = "Unknown weighting method for advection: '" // trim(subkey) // "'."
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end select
 
-    write(iout,'(4x,a,a)')                                             &
+    write(iout,'(4x,a,a)')                                                      &
       'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
+
+  case ('XT3D_OFF')
+    this%ixt3d = 0
+    write(iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
+  case ('XT3D_RHS')
+    this%ixt3d = 2
+    write(iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
   case default
     parsed = .false.
   end select

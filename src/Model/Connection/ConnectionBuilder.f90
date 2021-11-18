@@ -66,7 +66,6 @@ module ConnectionBuilderModule
     ! replace numerical exchanges in solution with connections
     call this%setConnectionsToSolution(newConnections, numSol)
 
-
     ! clean up local resources
     call newConnections%Clear(destroy=.false.)
 

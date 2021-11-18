@@ -24,8 +24,9 @@ module GwtGwtConnectionModule
 
     type(GwtModelType), pointer :: gwtModel => null()                   !< the model for which this connection exists
     type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
-    integer(I4B), pointer :: iIfaceAdvScheme => null()                       !< the advection scheme at the interface:
+    integer(I4B), pointer :: iIfaceAdvScheme => null()                  !< the advection scheme at the interface:
                                                                         !! 0 = upstream, 1 = central, 2 = TVD
+    integer(I4B), pointer :: iIfaceXt3d => null()                       !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
     real(DP), dimension(:), pointer, contiguous :: exgflowja => null()  !< intercell flows at the interface, coming from
                                                                         !! multiple GWF models
     
@@ -57,6 +58,7 @@ module GwtGwtConnectionModule
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: syncInterfaceModel
+    procedure, pass(this), private :: setGridExtent
 
   end type GwtGwtConnectionType
 
@@ -95,6 +97,7 @@ subroutine gwtGwtConnection_ctor(this, model)
   call this%allocate_scalars()
   this%typename = 'GWT-GWT'
   this%iIfaceAdvScheme = 0
+  this%iIfaceXt3d = 1
 
   allocate(this%gwtInterfaceModel)
   this%interfaceModel => this%gwtInterfaceModel
@@ -107,6 +110,7 @@ subroutine allocate_scalars(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
   call mem_allocate(this%iIfaceAdvScheme, 'IADVSCHEME', this%memoryPath)
+  call mem_allocate(this%iIfaceXt3d, 'IXT3D', this%memoryPath)
 
 end subroutine allocate_scalars
 
@@ -138,27 +142,10 @@ end subroutine allocate_arrays
 subroutine gwtgwtcon_df(this)
   class(GwtGwtConnectionType) :: this !< the connection
   ! local
-  integer(I4B) :: iex
-  class(GwtExchangeType), pointer :: gwtEx
-  
-  character(len=LENCOMPONENTNAME) :: imName  
+  character(len=LENCOMPONENTNAME) :: imName
 
-  ! determine advection scheme (the GWT-GWT exchanges
-  ! have been read at this point)
-  do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
-    if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
-      this%iIfaceAdvScheme = gwtEx%iAdvScheme
-    end if
-  end do
-
-  ! prepare to extend when TVD:
-  if (this%gwtModel%adv%iadvwt == 2) then
-    this%internalStencilDepth = 2
-  end if
-  if (this%iIfaceAdvScheme == 2) then
-    this%exchangeStencilDepth = 2
-  end if
+  ! determine the required size of the interface model grid
+  call this%setGridExtent()
 
   ! now set up the GridConnection
   call this%spatialcon_df()
@@ -185,6 +172,59 @@ subroutine gwtgwtcon_df(this)
   call this%spatialcon_connect()
 
 end subroutine gwtgwtcon_df
+
+!> @brief Set required extent of the interface grid from
+!< the configuration
+subroutine setGridExtent(this)
+  class(GwtGwtConnectionType) :: this !< the connection
+  ! local  
+  logical(LGP) :: hasAdv, hasDsp  
+  integer(I4B) :: iex
+  class(GwtExchangeType), pointer :: gwtEx  
+
+  ! determine advection scheme (the GWT-GWT exchanges
+  ! have been read at this point)
+  do iex = 1, this%localExchanges%Count()
+    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
+      this%iIfaceAdvScheme = gwtEx%iAdvScheme
+    end if
+  end do
+
+  ! determine xt3d setting on interface
+  do iex = 1, this%localExchanges%Count()
+    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    if (gwtEx%ixt3d == 0) then
+      this%iIfaceXt3d = 0
+      exit
+    end if
+    if (gwtEx%ixt3d == 2) then
+      this%iIfaceXt3d = 2 ! no exit, other exchange might have =0 which overrules this
+    end if
+  end do
+
+  hasAdv = this%gwtModel%inadv > 0
+  hasDsp = this%gwtModel%indsp > 0
+
+  if (hasAdv) then    
+    if (this%iIfaceAdvScheme == 2) then
+      this%exchangeStencilDepth = 2
+      if (this%gwtModel%adv%iadvwt == 2) then
+        this%internalStencilDepth = 2
+      end if
+    end if
+  end if
+
+  if (hasDsp) then    
+    if (this%iIfaceXt3d > 0) then
+      this%exchangeStencilDepth = 2
+      if (this%gwtModel%dsp%ixt3d > 0) then
+        this%internalStencilDepth = 2
+      end if
+    end if
+  end if
+
+end subroutine setGridExtent
 
 !> @brief allocate and read/set the connection's data structures
 !<
@@ -400,6 +440,7 @@ subroutine gwtgwtcon_da(this)
 
   ! scalars
   call mem_deallocate(this%iIfaceAdvScheme)
+  call mem_deallocate(this%iIfaceXt3d)
 
   ! arrays
   call mem_deallocate(this%gwfflowja)
