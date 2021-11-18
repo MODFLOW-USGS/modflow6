@@ -219,7 +219,9 @@ def build_model(idx, dir):
     gwf2 = get_gwf_model(sim, "flow2", "flow2", (nlay, nrow, ncol),
                         chdspd=chdspd, welspd=welspd)
 
-    # gwf-gwf
+    # gwf-gwf with XT3D, which doesn't change anything in this
+    # model except that it forces the interface model for GWF
+    # and we need that
     gwfgwf_data = [[(0, 0, ncol - 1), (0, 0, 0), 1, 0.5, 0.5, 1.0, 0.0, 1.0]]
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -228,7 +230,8 @@ def build_model(idx, dir):
         exgmnamea=gwf1.name,
         exgmnameb=gwf2.name,
         exchangedata=gwfgwf_data,
-        auxiliary=["ANGLDEGX", "CDIST"],
+        auxiliary=["ANGLDEGX", "CDIST"],        
+        xt3d=True,
         filename="flow1_flow2.gwfgwf",
     )
 
@@ -306,11 +309,6 @@ def build_model(idx, dir):
         filename="transport.ims",
     )
     sim.register_ims_package(imsgwt, [gwt1.name, gwt2.name])
-    
-    # we need to use the interface model to be active for
-    # the GWF part of the simulation as well (at least for now),
-    # this activates it:
-    os.environ["DEV_ALWAYS_USE_IFMOD"] = "1"    
 
     return sim, None
 
