@@ -625,7 +625,7 @@ module GridConnectionModule
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     integer(I4B), intent(in) :: ifaceIdx             !< unique idx in the interface grid
     type(GlobalCellType), intent(in) :: cell         !< the global cell
-	  ! local
+    ! local
     integer(I4B) :: newSize
     type(GlobalCellType), dimension(:), pointer :: tempMap
 

@@ -6,7 +6,7 @@
 !<
 module SfrModule
   !
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
                              DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2,        &
                              DHALF, DP6, DTWOTHIRDS, DP7, DP9, DP99, DP999,      &
@@ -36,6 +36,7 @@ module SfrModule
                                            get_wetted_perimeter, &
                                            get_cross_section_area, &
                                            get_mannings_section
+  use dag_module, only: dag
   !
   implicit none
   !
@@ -75,6 +76,7 @@ module SfrModule
     real(DP), pointer :: dmaxchg => NULL()                                        !< maximum depth change allowed
     real(DP), pointer :: deps => NULL()                                           !< perturbation value
     ! -- integer vectors
+    integer(I4B), dimension(:), pointer, contiguous :: isfrorder => null()        !< sfr reach order determined from DAG of upstream reaches
     integer(I4B), dimension(:), pointer, contiguous :: ia => null()               !< CRS row pointer for SFR reaches
     integer(I4B), dimension(:), pointer, contiguous :: ja => null()               !< CRS column pointers for SFR reach connections
     ! -- double precision output vectors
@@ -364,7 +366,8 @@ module SfrModule
       call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%memoryPath)
       call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%memoryPath)
       !
-      ! -- connection data
+      ! -- reach order and connection data
+      call mem_allocate(this%isfrorder, this%maxbound, 'ISFRORDER', this%memoryPath)
       call mem_allocate(this%ia, this%maxbound+1, 'IA', this%memoryPath)
       call mem_allocate(this%ja, 0, 'JA', this%memoryPath)
       call mem_allocate(this%idir, 0, 'IDIR', this%memoryPath)
@@ -505,8 +508,8 @@ module SfrModule
       ! -- local variables
       character (len=LINELENGTH) :: keyword
       integer(I4B) :: ierr
-      logical :: isfound
-      logical :: endOfBlock
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
       !
       ! -- initialize dimensions to 0
       this%maxbound = 0
@@ -595,7 +598,7 @@ module SfrModule
       ! -- dummy variables
       class(SfrType),   intent(inout) :: this    !< SfrType object
       character(len=*), intent(inout) :: option  !< option keyword string
-      logical,          intent(inout) :: found   !< boolean indicating if option found
+      logical(LGP),     intent(inout) :: found   !< boolean indicating if option found
       ! -- local variables
       real(DP) :: r
       character(len=MAXCHARLEN) :: fname
@@ -627,7 +630,8 @@ module SfrModule
             this%istageout = getunit()
             call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',        &
                         form, access, 'REPLACE', MNORMAL)
-            write(this%iout,fmtsfrbin) 'STAGE', fname, this%istageout
+            write(this%iout,fmtsfrbin) &
+              'STAGE', trim(adjustl(fname)), this%istageout
             found = .true.
           else
             call store_error('Optional stage keyword must be followed by fileout.')
@@ -639,7 +643,8 @@ module SfrModule
             this%ibudgetout = getunit()
             call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
                           form, access, 'REPLACE', MNORMAL)
-            write(this%iout,fmtsfrbin) 'BUDGET', fname, this%ibudgetout
+            write(this%iout,fmtsfrbin) &
+              'BUDGET', trim(adjustl(fname)), this%ibudgetout
             found = .true.
           else
             call store_error('Optional budget keyword must be ' //                 &
@@ -652,7 +657,8 @@ module SfrModule
             this%ibudcsv = getunit()
             call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
               filstat_opt='REPLACE')
-            write(this%iout,fmtsfrbin) 'BUDGET CSV', fname, this%ibudcsv
+            write(this%iout,fmtsfrbin) &
+              'BUDGET CSV', trim(adjustl(fname)), this%ibudcsv
           else
             call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
               &FILEOUT')
@@ -664,7 +670,8 @@ module SfrModule
             this%ipakcsv = getunit()
             call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
                           filstat_opt='REPLACE', mode_opt=MNORMAL)
-            write(this%iout,fmtsfrbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+            write(this%iout,fmtsfrbin) &
+              'PACKAGE_CONVERGENCE', trim(adjustl(fname)), this%ipakcsv
             found = .true.
           else
             call store_error('Optional package_convergence keyword must be ' //    &
@@ -802,7 +809,8 @@ module SfrModule
       character(len=LENBOUNDNAME) :: ustrfname
       character(len=50), dimension(:), allocatable :: caux
       integer(I4B) :: n, ierr, ival
-      logical :: isfound, endOfBlock
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
       integer(I4B) :: i
       integer(I4B) :: ii
       integer(I4B) :: jj
@@ -1025,8 +1033,8 @@ module SfrModule
       ! -- local variables
       character(len=LINELENGTH) :: keyword
       character(len=LINELENGTH) :: line
-      logical :: isfound
-      logical :: endOfBlock
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
       integer(I4B) :: n
       integer(I4B) :: ierr
       integer(I4B) :: ncrossptstot
@@ -1163,8 +1171,8 @@ module SfrModule
       class(SfrType),intent(inout) :: this  !< SfrType object
       ! -- local variables
       character (len=LINELENGTH) :: line
-      logical :: isfound
-      logical :: endOfBlock
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
       integer(I4B) :: n
       integer(I4B) :: i 
       integer(I4B) :: j
@@ -1176,10 +1184,16 @@ module SfrModule
       integer(I4B) :: idir
       integer(I4B) :: ierr
       integer(I4B) :: nconnmax
+      integer(I4B) :: nup
+      integer(I4B) :: ipos
+      integer(I4B) :: istat
       integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
       integer, allocatable, dimension(:) :: nboundchk
       integer, allocatable, dimension(:,:) :: iconndata
       type(sparsematrix), pointer :: sparse => null()
+      integer(I4B), dimension(:), allocatable :: iup
+      integer(I4B), dimension(:), allocatable :: order
+      type(dag) :: sfr_dag
       !
       ! -- allocate and initialize local variables for reach connections
       allocate(nboundchk(this%maxbound))
@@ -1354,6 +1368,73 @@ module SfrModule
       call sparse%destroy()
       deallocate(sparse)
       !
+      ! -- calculate reach order using DAG
+      !
+      ! -- initialize the DAG
+      call sfr_dag%set_vertices(this%maxbound) 
+      !
+      ! -- fill DAG
+      fill_dag: do n = 1, this%maxbound
+        !
+        ! -- determine the number of upstream reaches
+        nup = 0
+        do j = this%ia(n) + 1, this%ia(n+1) - 1
+          if (this%idir(j) > 0) then
+            nup = nup + 1
+          end if
+        end do
+        !
+        ! -- cycle if nu upstream reacches
+        if (nup == 0) cycle fill_dag
+        !
+        ! -- allocate local storage
+        allocate(iup(nup))
+        !
+        ! -- fill local storage
+        ipos = 1
+        do j = this%ia(n) + 1, this%ia(n+1) - 1
+          if (this%idir(j) > 0) then
+            iup(ipos) = this%ja(j)
+            ipos = ipos + 1
+          end if
+        end do
+        !
+        ! -- add upstream connections to DAG
+        call sfr_dag%set_edges(n, iup) 
+        !
+        ! -- clean up local storage
+        deallocate(iup)
+      end do fill_dag
+      !
+      ! -- perform toposort on DAG
+      call sfr_dag%toposort(order, istat)
+      !
+      ! -- write warning if circular dependency
+      if (istat == -1) then
+        write(warnmsg,'(a)') &
+          trim(adjustl(this%text)) // ' PACKAGE (' //  &
+          trim(adjustl(this%packName)) // ') cannot calculate a ' // &
+          'Directed Asyclic Graph for reach connectivity because ' // &
+          'of circular dependency. Using the reach number for ' // &
+          'solution ordering.'
+        call store_warning(warnmsg)
+      end if
+      !
+      ! -- fill isfrorder 
+      do n = 1, this%maxbound
+        if (istat == 0) then
+          this%isfrorder(n) = order(n)
+        else
+          this%isfrorder(n) = n
+        end if
+      end do
+      !
+      ! -- clean up DAG and remaining local storage
+      call sfr_dag%destroy()
+      if (istat == 0) then
+        deallocate(order)
+      end if
+      !
       ! -- return
       return
     end subroutine sfr_read_connectiondata
@@ -1382,8 +1463,8 @@ module SfrModule
       integer(I4B) :: ndiv
       integer(I4B) :: ndiversions
       integer(I4B) :: idivreach
-      logical :: isfound
-      logical :: endOfBlock
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
       integer(I4B) :: idiv
       integer, allocatable, dimension(:) :: iachk
       integer, allocatable, dimension(:) :: nboundchk
@@ -1583,8 +1664,8 @@ module SfrModule
       integer(I4B) :: ichkustrm
       integer(I4B) :: ichkcross
       integer(I4B) :: ncrossptstot
-      logical :: isfound
-      logical :: endOfBlock
+      logical(LGP) :: isfound
+      logical(LGP) :: endOfBlock
       type(SfrCrossSection), pointer :: cross_data => null()
       ! -- formats
       character(len=*),parameter :: fmtblkerr = &
@@ -1814,12 +1895,12 @@ module SfrModule
     !<
     subroutine sfr_cf(this, reset_mover)
       ! -- dummy variables
-      class(SfrType) :: this                        !< SfrType object
-      logical, intent(in), optional :: reset_mover  !< boolean for resetting mover 
+      class(SfrType) :: this                             !< SfrType object
+      logical(LGP), intent(in), optional :: reset_mover  !< boolean for resetting mover 
       ! -- local variables
       integer(I4B) :: n
       integer(I4B) :: igwfnode
-      logical :: lrm
+      logical(LGP) :: lrm
       !
       ! -- return if no sfr reaches
       if(this%nbound == 0) return
@@ -1862,6 +1943,7 @@ module SfrModule
       real(DP), dimension(:), intent(inout) :: amatsln   !< solution coefficient matrix
       ! -- local variables
       integer(I4B) :: i
+      integer(I4B) :: j
       integer(I4B) :: n
       integer(I4B) :: ipos
       integer(I4B) :: node
@@ -1886,7 +1968,8 @@ module SfrModule
         endif
         !
         ! -- solve for each sfr reach
-        reachsolve: do n = 1, this%nbound
+        reachsolve: do j = 1, this%nbound
+          n = this%isfrorder(j)
           node = this%igwfnode(n)
           if (node > 0) then
             hgwf = this%xnew(node)
@@ -1964,6 +2047,7 @@ module SfrModule
       real(DP), dimension(:), intent(inout) :: amatsln   !< solution coefficient matrix
       ! -- local variables
       integer(I4B) :: i
+      integer(I4B) :: j
       integer(I4B) :: n
       integer(I4B) :: ipos
       real(DP) :: rterm
@@ -1975,7 +2059,8 @@ module SfrModule
       real(DP) :: hgwf
       !
       ! -- Copy package rhs and hcof into solution rhs and amat
-      do i = 1, this%nbound
+      do j = 1, this%nbound
+        i = this%isfrorder(j)
         ! -- skip inactive reaches
         if (this%iboundpak(i) < 1) cycle
         ! -- skip if reach is not connected to gwf
@@ -2459,7 +2544,8 @@ module SfrModule
       call mem_deallocate(this%usflow0)
       call mem_deallocate(this%denseterms)
       !
-      ! -- deallocate connection data
+      ! -- deallocate reach order and connection data
+      call mem_deallocate(this%isfrorder)
       call mem_deallocate(this%ia)
       call mem_deallocate(this%ja)
       call mem_deallocate(this%idir)
@@ -2805,7 +2891,7 @@ module SfrModule
       integer(I4B) :: j
       integer(I4B) :: nn1
       character(len=LENBOUNDNAME) :: bname
-      logical :: jfound
+      logical(LGP) :: jfound
       class(ObserveType),   pointer :: obsrv => null()
       ! -- formats
   10  format('Boundary "',a,'" for observation "',a,                               &
@@ -3140,14 +3226,14 @@ module SfrModule
     !<
     subroutine sfr_solve(this, n, h, hcof, rhs, update)
       ! -- dummy variables
-      class(SfrType) :: this                    !< SfrType object
-      integer(I4B), intent(in) :: n             !< reach number
-      real(DP), intent(in) :: h                 !< groundwater head in cell connected to reach
-      real(DP), intent(inout) :: hcof           !< coefficient term added to the diagonal
-      real(DP), intent(inout) :: rhs            !< right-hand side term
-      logical, intent(in), optional :: update   !< boolean indicating if the reach depth and stage variables should be updated to current iterate
+      class(SfrType) :: this                        !< SfrType object
+      integer(I4B), intent(in) :: n                 !< reach number
+      real(DP), intent(in) :: h                     !< groundwater head in cell connected to reach
+      real(DP), intent(inout) :: hcof               !< coefficient term added to the diagonal
+      real(DP), intent(inout) :: rhs                !< right-hand side term
+      logical(LGP), intent(in), optional :: update  !< boolean indicating if the reach depth and stage variables should be updated to current iterate
       ! -- local variables
-      logical :: lupdate
+      logical(LGP) :: lupdate
       integer(I4B) :: i
       integer(I4B) :: ii
       integer(I4B) :: n2
@@ -4216,6 +4302,7 @@ module SfrModule
       ! -- dummy variables
       class(SfrType) :: this  !< SfrType object
       ! -- local variables
+      logical(LGP) :: lreorder
       character (len= 5) :: crch
       character (len= 5) :: crch2
       character (len=LINELENGTH) :: text
@@ -4225,10 +4312,51 @@ module SfrModule
       integer(I4B) :: nc
       integer(I4B) :: i
       integer(I4B) :: ii
+      integer(I4B) :: j
       integer(I4B) :: ifound
       integer(I4B) :: ierr
       integer(I4B) :: maxconn
       integer(I4B) :: ntabcol
+      !
+      ! -- determine if the reaches have been reordered
+      lreorder = .FALSE.
+      do j = 1, this%MAXBOUND
+        n = this%isfrorder(j)
+        if (n /= j) then
+          lreorder = .TRUE.
+          exit 
+        end if
+      end do
+      !
+      ! -- write message that the solution order h
+      if (lreorder) then
+          write(this%iout, '(/,1x,a)') &
+            trim(adjustl(this%text)) // ' PACKAGE (' // &
+            trim(adjustl(this%packName)) //') REACH SOLUTION HAS BEEN ' // &
+            'REORDERED USING A DAG'
+        !
+        ! -- print table
+        if (this%iprpak /= 0) then
+          !
+          ! -- reset the input table object
+          ntabcol = 2
+          title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+                  trim(adjustl(this%packName)) //') REACH SOLUTION ORDER'
+          call table_cr(this%inputtab, this%packName, title)
+          call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
+          text = 'ORDER'
+          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+          text = 'REACH'
+          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+          !
+          ! -- upstream connection data
+          do j = 1, this%maxbound
+            n = this%isfrorder(j)
+            call this%inputtab%add_term(j)
+            call this%inputtab%add_term(n)
+          end do
+        end if
+      end if
       !
       ! -- create input table for reach connections data
       if (this%iprpak /= 0) then
@@ -4255,7 +4383,7 @@ module SfrModule
       !
       ! -- check the reach connections for simple errors
       ! -- connection check
-      do n = 1, this%maxbound
+      do n = 1, this%MAXBOUND
         write(crch, '(i5)') n
         eachconn: do i = this%ia(n) + 1, this%ia(n+1) - 1
           nn = this%ja(i)
@@ -4569,8 +4697,8 @@ module SfrModule
       ! -- local variables
       character (len=LINELENGTH) :: title
       character (len=LINELENGTH) :: text
-      logical :: lcycle
-      logical :: ladd
+      logical(LGP) :: lcycle
+      logical(LGP) :: ladd
       character (len=5) :: crch
       character (len=5) :: crch2
       character (len=10) :: cval
@@ -5464,8 +5592,8 @@ module SfrModule
       real(DP) :: elevavg
       real(DP) :: d1
       real(DP) :: d2
-      logical :: stage_below_bot
-      logical :: head_below_bot
+      logical(LGP) :: stage_below_bot
+      logical(LGP) :: head_below_bot
       !
       ! -- Set sfr density to sfr density or gwf density
       if (stage >= bots) then
