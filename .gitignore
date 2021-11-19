@@ -121,3 +121,7 @@ msvs/*.fdz
 modflow6.code-workspace
 .vscode/settings.json
 .vscode/launch.json
+
+
+# unittests
+unittests/

@@ -31,17 +31,17 @@ if fc_id == 'gcc'
   # General options
   compile_args += ['-pedantic',
                    '-Wcharacter-truncation',
-                   '-Wno-unused-dummy-argument', # This makes problems with OOP      
+                   '-Wno-unused-dummy-argument', # This makes problems with OOP
                    '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
                    '-Wno-maybe-uninitialized',   # "Uninitialized" flags produce false positives with allocatables
-                   '-Wno-uninitialized',                     
+                   '-Wno-uninitialized',
                    ]
 
   # Options specific to profile
   if profile == 'release'
-    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid'] 
+    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
   elif profile == 'develop'
-    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid,denormal'] 
+    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid,denormal']
   endif
 
   # Define OS with gfortran for OS specific code
@@ -53,11 +53,11 @@ if fc_id == 'gcc'
     compile_args += '-D__APPLE__'
   elif system == 'windows'
     compile_args += '-D_WIN32'
-  endif  
+  endif
 endif
 
 # Command line options for ifort
-if fc_id == 'intel-cl' 
+if fc_id == 'intel-cl'
   # windows
   compile_args += ['/fpe:0',              # Activate all floating point exceptions
                    '/fpp',                # Activate preprocessing
@@ -67,7 +67,7 @@ if fc_id == 'intel-cl'
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
                ]
-elif fc_id == 'intel' 
+elif fc_id == 'intel'
   # linux and macOS
   compile_args += ['-fpe0',              # Activate all floating point exceptions
                   '-diag-disable:7025',  # f2008 warning
@@ -84,3 +84,4 @@ mpi = dependency('mpi', language : 'fortran', required : false)
 subdir('src')
 subdir('srcbmi')
 subdir('utils')
+# subdir('unittests')

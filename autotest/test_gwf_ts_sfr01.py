@@ -93,6 +93,7 @@ def get_model(ws, name, timeseries=False):
         sim,
         modelname=name,
         newtonoptions=newtonoptions,
+        print_input=True,
         save_flows=True,
         print_flows=True,
     )

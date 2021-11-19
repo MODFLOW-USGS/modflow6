@@ -146,6 +146,8 @@
 		<File RelativePath="..\src\Timing\ats.f90"/>
 		<File RelativePath="..\src\Timing\tdis.f90"/></Filter>
 		<Filter Name="Utilities">
+		<Filter Name="Libraries">
+		<File RelativePath="..\src\Utilities\Libraries\daglib\dag_module.f90"/></Filter>
 		<Filter Name="Memory">
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>

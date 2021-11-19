@@ -11,7 +11,7 @@ module MessageModule
   use KindModule, only: LGP, I4B, DP
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DONE,                       &
                              VSUMMARY
-  use GenericUtilitiesModule, only: sim_message  
+  use GenericUtilitiesModule, only: sim_message, write_message  
   use SimVariablesModule,     only: istdout
   use ArrayHandlersModule, only: ExpandArray  
   
@@ -244,124 +244,6 @@ module MessageModule
       return
     end subroutine print_message
 
-    !> @brief Write messages
-    !!
-    !!  Subroutine that formats and writes a single message.
-    !!
-    !<
-    subroutine write_message(message, icount, iwidth, iunit, level)
-    ! -- dummy variables
-    character (len=*), intent(in)           :: message   !< message to be written
-    integer(I4B),      intent(in)           :: icount    !< counter to prepended to the message  
-    integer(I4B),      intent(in)           :: iwidth    !< maximum width of the prepended counter
-    integer(I4B),      intent(in), optional :: iunit     !< the unit number to which the message is written
-    integer(I4B),      intent(in), optional :: level     !< level of message (VSUMMARY, VALL, VDEBUG)
-    ! -- local variables
-    character(len=MAXCHARLEN) :: amessage
-    character(len=20)         :: ablank
-    character(len=16)         :: cfmt
-    character(len=10)         :: cval
-    integer(I4B)              :: jend
-    integer(I4B)              :: nblc
-    integer(I4B)              :: junit
-    integer(I4B)              :: ilevel
-    integer(I4B)              :: leadblank
-    integer(I4B)              :: itake
-    integer(I4B)              :: ipos
-    integer(I4B)              :: i
-    integer(I4B)              :: j
-    !
-    ! -- return if no message is passed
-    if (len_trim(message) < 1) then
-      return
-    end if
-    !
-    ! -- initialize local variables
-    amessage = message
-    junit = istdout
-    ablank = ' '
-    itake = 0
-    j = 0
-    !
-    ! -- ensure that there is at least one blank space at the start of amessage
-    if (amessage(1:1) /= ' ') then
-      amessage = ' ' // trim(amessage)
-    end if
-    !
-    ! -- process optional dummy variables
-    ! -- set the unit number
-    if(present(iunit))then
-      if (iunit > 0) then
-        junit = iunit
-      end if
-    end if
-    !
-    ! -- set the message level
-    if (present(level)) then
-      ilevel = level
-    else
-      ilevel = VSUMMARY
-    end if
-    !
-    ! -- create the counter to prepend to amessage
-    write(cfmt, '(A,I0,A)') '(1X,I', iwidth, ',".")'
-    write(cval, cfmt) icount
-    !
-    ! -- prepend amessage with the counter
-    ipos = len_trim(cval)
-    nblc = len_trim(amessage)
-    amessage = adjustr(amessage(1:nblc+ipos))
-    if (nblc+ipos < len(amessage)) then
-      amessage(nblc+ipos+1:) = ' '
-    end if
-    amessage(1:ipos) = cval(1:ipos)
-    !
-    ! -- set the number of leading blanks
-    leadblank = ipos - 1
-    !
-    ! -- calculate the final length of the message after modification
-    nblc = len_trim(amessage)
-    !
-    ! -- parse the amessage into multiple lines
-5   continue
-    jend = j + 78 - itake
-    if (jend >= nblc) go to 100
-    do i = jend, j+1, -1
-      if (amessage(i:i).eq.' ') then
-        if (itake.eq.0) then
-          call sim_message(amessage(j+1:i), iunit=junit, level=ilevel)
-          itake = 2 + leadblank
-        else
-          call sim_message(ablank(1:leadblank+2)//amessage(j+1:i),               &
-                           iunit=junit, level=ilevel)
-        end if
-        j = i
-        go to 5
-      end if
-    end do
-    if (itake == 0)then
-      call sim_message(amessage(j+1:jend), iunit=junit, level=ilevel)
-      itake = 2 + leadblank
-    else
-      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend),                &
-                       iunit=junit, level=ilevel)
-    end if
-    j = jend
-    go to 5
-    !
-    ! -- last piece of amessage to write to a line
-100 continue
-    jend = nblc
-    if (itake == 0)then
-      call sim_message(amessage(j+1:jend), iunit=junit, level=ilevel)
-    else
-      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend),                &
-                       iunit=junit, level=ilevel)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine write_message
     
   !> @ brief Deallocate message
   !!

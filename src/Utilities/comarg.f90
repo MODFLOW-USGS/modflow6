@@ -3,12 +3,13 @@ module CommandArguments
   use ConstantsModule, only: LINELENGTH, LENHUGELINE,                            &
                              VSUMMARY, VALL, VDEBUG,                             &
                              MVALIDATE
-  use VersionModule,          only: VERSION, MFVNAM, IDEVELOPMODE
+  use VersionModule,          only: VERSION, MFVNAM, IDEVELOPMODE,               &
+                                    FMTDISCLAIMER, FMTLICENSE
   use CompilerVersion
   use SimVariablesModule,     only: istdout, isim_level,                         &
                                     simfile, simlstfile, simstdout,              &
                                     isim_mode
-  use GenericUtilitiesModule, only: sim_message
+  use GenericUtilitiesModule, only: sim_message, write_message
   use SimModule, only: store_error, ustop
   use InputOutputModule, only: upcase, getunit
   !
@@ -169,6 +170,12 @@ module CommandArguments
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', 'all screen output sent to mfsim.stdout'
           call sim_message(line)
+        case('-D', '--DISCLAIMER')
+          lstop = .TRUE.
+          call sim_message('', fmt=FMTDISCLAIMER)
+        case('-LIC', '--LICENSE')
+          lstop = .TRUE.
+          call sim_message('', fmt=FMTLICENSE)
         case('-L', '--LEVEL')
           if (len_trim(clevel) < 1) then
             iarg = iarg + 1
@@ -268,6 +275,8 @@ module CommandArguments
       &' -h, -?    --help           Show this message',/,                        &
       &' -v        --version        Display program version information.',/,     &
       &' -dev      --develop        Display program develop option mode.',/,     &
+      &' -d        --disclaimer     Display program disclaimer.',/,              &
+      &' -lic      --license        Display program license information.',/,     &
       &' -c        --compiler       Display compiler information.',/,            &
       &' -s        --silent         All STDOUT to mfsim.stdout.',/,              &
       &' -l <str>  --level <str>    STDOUT output to screen based on <str>.',/,  &
