@@ -61,6 +61,11 @@ jobs:
       run: |
         .github/common/git-branch-export.sh
 
+    - name: Test make for MODFLOW 6 programs
+      working-directory: ./distribution
+      run: |
+        pytest -v -n=auto build_makefiles.py
+
     - name: Get regression test files
       run: |
         .github/common/get-regression-files.sh

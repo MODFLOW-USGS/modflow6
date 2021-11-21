@@ -60,18 +60,21 @@ You can file new issues by filling out our [new issue form](https://github.com/M
 Before you submit your Pull Request (PR) consider the following guidelines:
 
 1. Search [GitHub](https://github.com/MODFLOW-USGS/modflow6/pulls) for an open or closed PR that relates to your submission. You don't want to duplicate effort.
-1. Fork the MODFLOW-USGS/modflow6 repo.
-1. Make your changes in a new git branch:
+2. Fork the MODFLOW-USGS/modflow6 repo.
+3. Make your changes in a new git branch:
 
      ```shell
      git checkout -b my-fix-branch develop
      ```
 
-1. Create your patch, **including appropriate test cases**.
-1. Follow our [Coding Rules](#rules).
-1. Run the full modflow6 test suite, as described in the [developer documentation][dev-doc],
+4. Create your patch, **including appropriate test cases**.
+5. Follow our [Coding Rules](#rules).
+6. Run `build_makefiles.py` in the `./distribution/` directory if you have
+   added any new sourcefiles, removed any source files, or renamed any 
+   source files.
+7. Run the full modflow6 test suite, as described in the [developer documentation][dev-doc],
   and ensure that all tests pass.
-1. Commit your changes using a descriptive commit message that follows our
+8. Commit your changes using a descriptive commit message that follows our
   [commit message conventions](#commit). Adherence to these conventions
   is necessary because release notes are automatically generated from these messages.
 
@@ -80,13 +83,13 @@ Before you submit your Pull Request (PR) consider the following guidelines:
      ```
     Note: the optional commit `-a` command line option will automatically "add" and "rm" edited files.
 
-1. Push your branch to GitHub:
+9. Push your branch to GitHub:
 
     ```shell
     git push origin my-fix-branch
     ```
 
-1. In GitHub, send a pull request to `modflow6:develop`.
+10. In GitHub, send a pull request to `modflow6:develop`.
 * If we suggest changes then:
   * Make the required updates.
   * Re-run the MODFLOW 6 test suites, in the autotest directory, to ensure tests are still passing. The test suites are run using python nosetests and require [flopy](https://github.com/modflowpy/flopy) and [pymake](https://github.com/modflowpy/pymake).

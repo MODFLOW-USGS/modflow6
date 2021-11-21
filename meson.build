@@ -84,4 +84,6 @@ mpi = dependency('mpi', language : 'fortran', required : false)
 subdir('src')
 subdir('srcbmi')
 subdir('utils')
+
+# add unit test directory
 # subdir('unittests')

@@ -5,7 +5,6 @@ It also explains the basic mechanics of using `git`.
 
 * [Prerequisite Software](#prerequisite-software)
 * [Getting the Sources](#getting-the-sources)
-* [Installing NPM Modules](#installing-npm-modules)
 * [Building](#building)
 * [Running Tests Locally](#running-tests-locally)
 

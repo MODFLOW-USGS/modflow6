@@ -96,6 +96,13 @@ jobs:
         run: |
           .github/common/python-version.sh
 
+      - name: Test make for MODFLOW 6 programs
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        working-directory: ./distribution
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          pytest -v -n=auto build_makefiles.py
+
       - name: Set and print branch name
         run: |
           .github/common/git-branch-export.sh
