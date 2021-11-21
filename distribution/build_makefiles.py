@@ -39,6 +39,11 @@ def run_makefile(target):
     ), f"makefile does not exist in {os.getcwd()}"
 
     base_target = os.path.basename(target)
+    base_message = (
+        f" Rerunning {os.path.basename(__file__)} in the distribution "
+        "directory and recomitting modified makefiles will likely resolve "
+        "CI failures."
+    )
 
     # clean prior to make
     print(f"clean {base_target} with makefile")
@@ -48,9 +53,11 @@ def run_makefile(target):
     print(f"build {base_target} with makefile")
     return_code = os.system(f"make FC={fc}")
 
-    assert return_code == 0, f"could not make '{base_target}'"
+    assert return_code == 0, f"could not make '{base_target}'." + base_message
 
-    assert os.path.isfile(target), f"{base_target} does not exist."
+    assert os.path.isfile(target), (
+        f"{base_target} does not exist." + base_message
+    )
 
     # clean after successful make
     print(f"clean {base_target} with makefile")
