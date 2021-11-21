@@ -49,6 +49,11 @@ jobs:
         gcc --version
         g++ --version
 
+    - name: Test make for MODFLOW 6 programs
+      working-directory: ./distribution
+      run: |
+        pytest -v -n=auto build_makefiles.py
+
     - name: Install python packages
       run: |
         .github/common/install-python-std.sh

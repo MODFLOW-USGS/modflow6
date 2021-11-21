@@ -1,6 +1,5 @@
-# makefile created on 2021-07-30 14:36:28.583060
-# by pymake (version 1.2.1) for the 'zbud6' executable 
-# using the 'gfortran' fortran compiler(s).
+# makefile created on 2021-11-20 17:01:12.993454
+# by pymake (version 1.2.1) for the 'zbud6' executable.
 
 
 include ./makedefaults
@@ -13,27 +12,27 @@ VPATH = \
 ${SOURCEDIR1} \
 ${SOURCEDIR2} 
 
-.SUFFIXES: .f90 .o
+.SUFFIXES: .f90 .F90 .o
 
 OBJECTS = \
+$(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/compilerversion.o \
-$(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/Constants.o \
-$(OBJDIR)/defmacro.o \
 $(OBJDIR)/SimVariables.o \
+$(OBJDIR)/defmacro.o \
 $(OBJDIR)/genericutils.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Message.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Sim.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/InputOutput.o \
-$(OBJDIR)/grb.o \
-$(OBJDIR)/budgetdata.o \
 $(OBJDIR)/Budget.o \
-$(OBJDIR)/BlockParser.o \
+$(OBJDIR)/InputOutput.o \
+$(OBJDIR)/budgetdata.o \
+$(OBJDIR)/sort.o \
 $(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/BlockParser.o \
+$(OBJDIR)/grb.o \
 $(OBJDIR)/zone.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/zbud6.o
@@ -43,6 +42,10 @@ $(PROGRAM) : $(OBJECTS)
 	-$(FC) $(OPTLEVEL) -o $@ $(OBJECTS) $(LDFLAGS)
 
 $(OBJDIR)/%.o : %.f90
+	@mkdir -p $(@D)
+	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
+
+$(OBJDIR)/%.o : %.F90
 	@mkdir -p $(@D)
 	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
 
