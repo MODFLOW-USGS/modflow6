@@ -36,9 +36,14 @@ module VersionModule
       &'The following GNU Lesser General Public License (LGPL) libraries',/,      &
       &'are used this USGS product:',//,                                          &
       &'    SPARSKIT version 2.0',/,                                              &
+      &'      ilut',/,                                                            &
       &'      (https://www-users.cse.umn.edu/~saad/software/SPARSKIT/)',//,       &
-      &'    RCM',/,                                                               &
+      &'    RCM - Reverse Cuthill McKee Ordering',/,                              &
       &'      (https://people.math.sc.edu/Burkardt/f_src/rcm/rcm.html)',//,       &
+      &'    SPARSEKIT - Sparse Matrix Utility Package',/,                         &
+      &'      dperm, dvperm, rperm, and cperm',/,                                     &
+      &'      (https://people.sc.fsu.edu/~jburkardt/f77_src/sparsekit/',          &
+      &'sparsekit.html)',//,       &
       &'The following BSD-3 License libraries are used this USGS product:',//,    &
       &'    Modern Fortran DAG Library',/,                                        &
       &'      Copyright (c) 2018, Jacob Williams',/,                              &

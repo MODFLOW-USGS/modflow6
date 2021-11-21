@@ -13,7 +13,8 @@ MODULE IMSLinearBaseModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearSparseKitModule, only: ims_sk_pcmilut_lusol,                      &
                                       ims_sk_pcmilut
-  use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
+  ! use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
+  use IMSReorderingModule, only: ims_odrv, ims_dperm, ims_vperm
 
   IMPLICIT NONE
 
@@ -602,15 +603,17 @@ MODULE IMSLinearBaseModule
     LORDER(n) = IZERO
     IORDER(n) = IZERO
   END DO
-  ALLOCATE (iwork0(NEQ))
+  ! ALLOCATE (iwork0(NEQ))
   SELECT CASE (IORD)
   CASE (1)
-    ALLOCATE (iwork1(NEQ))
-    CALL ims_genrcm(NEQ, NJA, IA, JA, &
-      LORDER, iwork0, iwork1)
+    ! ALLOCATE (iwork1(NEQ))
+    ! CALL ims_genrcm(NEQ, NJA, IA, JA, &
+    !   LORDER, iwork0, iwork1)
+    CALL rcm(NEQ, NJA, IA, JA, LORDER)
   CASE (2)
     nsp = 3*NEQ + 4*NJA
-    ALLOCATE (iwork1(nsp))
+    allocate(iwork0(NEQ))
+    allocate(iwork1(nsp))
     CALL ims_odrv(NEQ, NJA, nsp, IA, JA, LORDER, iwork0, &
       iwork1, iflag)
     IF (iflag .NE. 0) THEN
@@ -619,15 +622,18 @@ MODULE IMSLinearBaseModule
         'ORDER PERMUTATION '
       call store_error(errmsg)
     END IF
+    !
+    ! -- DEALLOCATE TEMPORARY STORAGE
+    deallocate(iwork0, iwork1)
   END SELECT
   !
   ! -- GENERATE INVERSE OF LORDER
   DO n = 1, NEQ
     IORDER(LORDER(n)) = n
   END DO
-  !
-  ! -- DEALLOCATE TEMPORARY STORAGE
-  DEALLOCATE (iwork0, iwork1)
+  ! !
+  ! ! -- DEALLOCATE TEMPORARY STORAGE
+  ! DEALLOCATE (iwork0, iwork1)
   !
   ! -- terminate if errors occured
   if (count_errors() > 0) then
