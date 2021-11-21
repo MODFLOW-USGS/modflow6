@@ -88,13 +88,6 @@ jobs:
         run: |
           .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
 
-      - name: Test make for MODFLOW 6 programs
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        working-directory: ./distribution
-        run: |
-          source /opt/intel/oneapi/setvars.sh
-          pytest -v -n=auto build_makefiles.py
-
       - name: Install python packages
         run: |
           .github/common/install-python-std.sh
@@ -102,6 +95,13 @@ jobs:
       - name: Print python package versions
         run: |
           .github/common/python-version.sh
+
+      - name: Test make for MODFLOW 6 programs
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        working-directory: ./distribution
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          pytest -v -n=auto build_makefiles.py
 
       - name: Set and print branch name
         run: |
