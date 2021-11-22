@@ -1,19 +1,7 @@
-external_libraries_args = []
-if fc_id == 'gcc'
-  external_libraries_args += '-fdefault-real-8'
-  external_libraries_args += '-fdefault-double-8'
-elif fc_id == 'intel'
-  external_libraries_args += '-i4'
-  external_libraries_args += '-r8'
-  external_libraries_args += '-autodouble'
-elif fc_id == 'intel-cl'
-  external_libraries_args += '/4I4'
-  external_libraries_args += '/real-size:64'
-  external_libraries_args += '/double-size:64'
-endif 
-
 external_libraries = files(
-    'Utilities' / 'Libraries' / 'daglib' / 'dag_module.f90'
+    'Utilities' / 'Libraries' / 'daglib' / 'dag_module.f90',
+    'Utilities' / 'Libraries' / 'rcm' / 'rcm.f90',
+    'Utilities' / 'Libraries' / 'sparsekit' / 'sparsekit.f90',
 )
 
 modflow_sources = files(
@@ -168,7 +156,7 @@ modflow_sources = files(
     'SimulationCreate.f90'
 )
 
-mf6_external_lib = static_library('mf6_external_lib', external_libraries, fortran_args: external_libraries_args)
+mf6_external_lib = static_library('mf6_external_lib', external_libraries)
 
 mf6_internal_lib = static_library('mf6_internal_lib', modflow_sources, link_with: mf6_external_lib)
 

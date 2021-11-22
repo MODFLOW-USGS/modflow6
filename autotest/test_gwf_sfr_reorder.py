@@ -192,9 +192,7 @@ def build_model(idx, ws):
             ("outflow", "ext-outflow", (ioutflow_loc,)),
         ]
     }
-    sfr.obs.initialize(
-        filename=fname, print_input=True, continuous=sfr_obs
-    )
+    sfr.obs.initialize(filename=fname, print_input=True, continuous=sfr_obs)
 
     # output control
     budpth = f"{name}.cbc"
@@ -211,6 +209,7 @@ def build_model(idx, ws):
 
     return sim
 
+
 def build_models(idx, base_ws):
     sim = build_model(idx, base_ws)
 
@@ -218,6 +217,7 @@ def build_models(idx, base_ws):
     mc = build_model(idx, ws)
 
     return sim, mc
+
 
 def eval_flows(sim):
     idx = sim.idxsim
@@ -230,9 +230,7 @@ def eval_flows(sim):
     obs_pth = os.path.join(exdirs[idx], "mf6", f"{name}.sfr.obs.csv")
     obs1 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
-    assert np.allclose(
-        obs0["INFLOW"], obs1["INFLOW"]
-    ), "inflows are not equal"
+    assert np.allclose(obs0["INFLOW"], obs1["INFLOW"]), "inflows are not equal"
 
     assert np.allclose(
         obs0["OUTFLOW"], obs1["OUTFLOW"]
@@ -254,7 +252,9 @@ def eval_flows(sim):
             break
     actual = np.arange(nreaches, dtype=int)[::-1]
 
-    assert np.array_equal(order, actual), "DAG did not correctly reorder reaches."
+    assert np.array_equal(
+        order, actual
+    ), "DAG did not correctly reorder reaches."
 
     return
 

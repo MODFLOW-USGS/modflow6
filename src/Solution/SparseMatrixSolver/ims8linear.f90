@@ -11,7 +11,6 @@ MODULE IMSLinearModule
                                  ims_base_pccrs, ims_base_calc_order,  &
                                  ims_base_scale, ims_base_pcu,         &
                                  ims_base_mv 
-  use IMSReorderingModule, only: ims_dperm, ims_vperm
   use BlockParserModule, only: BlockParserType
 
   IMPLICIT NONE
@@ -915,11 +914,12 @@ MODULE IMSLinearModule
       END IF
       !
       ! -- PERMUTE ROWS, COLUMNS, AND RHS
-      IF (this%IORD.NE.0) THEN
-        CALL ims_dperm(this%NEQ, this%NJA, this%AMAT,this%JA,this%IA, &
-     &                 this%ARO,this%JARO,this%IARO,this%LORDER,this%ID,1)
-        CALL ims_vperm(this%NEQ, this%X, this%LORDER)
-        CALL ims_vperm(this%NEQ, this%RHS, this%LORDER)
+      IF (this%IORD /= 0) THEN
+        CALL dperm(this%NEQ, this%AMAT, this%JA, this%IA, &
+                   this%ARO, this%JARO, this%IARO, &
+                   this%LORDER, this%ID, 1)
+        CALL dvperm(this%NEQ, this%X, this%LORDER)
+        CALL dvperm(this%NEQ, this%RHS, this%LORDER)
         this%IA0 => this%IARO
         this%JA0 => this%JARO
         this%A0  => this%ARO
@@ -999,11 +999,12 @@ MODULE IMSLinearModule
       END IF
       !
       ! -- BACK PERMUTE AMAT, SOLUTION, AND RHS
-      IF (this%IORD.NE.0) THEN
-        CALL ims_dperm(this%NEQ, this%NJA, this%A0, this%JA0, this%IA0,         &
-     &                 this%AMAT, this%JA,this%IA,this%IORDER,this%ID,1)
-        CALL ims_vperm(this%NEQ, this%X, this%IORDER)
-        CALL ims_vperm(this%NEQ, this%RHS, this%IORDER)
+      IF (this%IORD /= 0) THEN
+        CALL dperm(this%NEQ, this%A0, this%JA0, this%IA0, &
+                   this%AMAT, this%JA, this%IA, &
+                   this%IORDER, this%ID, 1)
+        CALL dvperm(this%NEQ, this%X, this%IORDER)
+        CALL dvperm(this%NEQ, this%RHS, this%IORDER)
       END IF
       !
       ! -- UNSCALE PROBLEM
