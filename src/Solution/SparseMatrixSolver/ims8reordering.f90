@@ -1,8 +1,7 @@
   MODULE IMSReorderingModule
     use KindModule, only: DP, I4B
     private
-    ! public :: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
-    public :: ims_odrv, ims_dperm, ims_vperm
+    public :: ims_odrv
   contains
 
       subroutine ims_odrv(n, nja, nsp, ia, ja, p, ip, isp, flag)

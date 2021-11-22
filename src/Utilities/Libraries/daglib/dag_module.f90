@@ -404,7 +404,7 @@
     integer :: iunit, istat
     character(len=:),allocatable :: diagraph
 
-    diagraph = me%generate_digraph(rankdir,dpi)
+    diagraph = me%generate_digraph(rankdir,dpi,edge)
 
     open(newunit=iunit,file=filename,status='REPLACE',iostat=istat)
 

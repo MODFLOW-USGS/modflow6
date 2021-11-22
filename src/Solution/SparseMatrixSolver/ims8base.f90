@@ -13,8 +13,7 @@ MODULE IMSLinearBaseModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearSparseKitModule, only: ims_sk_pcmilut_lusol,                      &
                                       ims_sk_pcmilut
-  ! use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
-  use IMSReorderingModule, only: ims_odrv, ims_dperm, ims_vperm
+  use IMSReorderingModule, only: ims_odrv
 
   IMPLICIT NONE
 
@@ -606,10 +605,7 @@ MODULE IMSLinearBaseModule
   ! ALLOCATE (iwork0(NEQ))
   SELECT CASE (IORD)
   CASE (1)
-    ! ALLOCATE (iwork1(NEQ))
-    ! CALL ims_genrcm(NEQ, NJA, IA, JA, &
-    !   LORDER, iwork0, iwork1)
-    CALL rcm(NEQ, NJA, IA, JA, LORDER)
+    CALL genrcm(NEQ, NJA, IA, JA, LORDER)
   CASE (2)
     nsp = 3*NEQ + 4*NJA
     allocate(iwork0(NEQ))
@@ -631,9 +627,6 @@ MODULE IMSLinearBaseModule
   DO n = 1, NEQ
     IORDER(LORDER(n)) = n
   END DO
-  ! !
-  ! ! -- DEALLOCATE TEMPORARY STORAGE
-  ! DEALLOCATE (iwork0, iwork1)
   !
   ! -- terminate if errors occured
   if (count_errors() > 0) then
