@@ -46,7 +46,6 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_df => gwtgwtcon_df
     procedure, pass(this) :: exg_ac => gwtgwtcon_ac
     procedure, pass(this) :: exg_rp => gwtgwtcon_rp
-    procedure, pass(this) :: exg_ad => gwtgwtcon_ad
     procedure, pass(this) :: exg_cf => gwtgwtcon_cf
     procedure, pass(this) :: exg_fc => gwtgwtcon_fc
     procedure, pass(this) :: exg_da => gwtgwtcon_da
@@ -142,7 +141,30 @@ end subroutine allocate_arrays
 subroutine gwtgwtcon_df(this)
   class(GwtGwtConnectionType) :: this !< the connection
   ! local
-  character(len=LENCOMPONENTNAME) :: imName
+  character(len=LENCOMPONENTNAME) :: imName  
+  integer(I4B) :: iex
+  class(GwtExchangeType), pointer :: gwtEx  
+
+  ! determine advection scheme (the GWT-GWT exchanges
+  ! have been read at this point)
+  do iex = 1, this%localExchanges%Count()
+    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
+      this%iIfaceAdvScheme = gwtEx%iAdvScheme
+    end if
+  end do
+
+  ! determine xt3d setting on interface
+  do iex = 1, this%localExchanges%Count()
+    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    if (gwtEx%ixt3d == 0) then
+      this%iIfaceXt3d = 0
+      exit
+    end if
+    if (gwtEx%ixt3d == 2) then
+      this%iIfaceXt3d = 2 ! no exit, other exchange might have =0 which overrules this
+    end if
+  end do
 
   ! determine the required size of the interface model grid
   call this%setGridExtent()
@@ -178,30 +200,7 @@ end subroutine gwtgwtcon_df
 subroutine setGridExtent(this)
   class(GwtGwtConnectionType) :: this !< the connection
   ! local  
-  logical(LGP) :: hasAdv, hasDsp  
-  integer(I4B) :: iex
-  class(GwtExchangeType), pointer :: gwtEx  
-
-  ! determine advection scheme (the GWT-GWT exchanges
-  ! have been read at this point)
-  do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
-    if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
-      this%iIfaceAdvScheme = gwtEx%iAdvScheme
-    end if
-  end do
-
-  ! determine xt3d setting on interface
-  do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
-    if (gwtEx%ixt3d == 0) then
-      this%iIfaceXt3d = 0
-      exit
-    end if
-    if (gwtEx%ixt3d == 2) then
-      this%iIfaceXt3d = 2 ! no exit, other exchange might have =0 which overrules this
-    end if
-  end do
+  logical(LGP) :: hasAdv, hasDsp
 
   hasAdv = this%gwtModel%inadv > 0
   hasDsp = this%gwtModel%indsp > 0
@@ -283,16 +282,6 @@ subroutine gwtgwtcon_rp(this)
 
 end subroutine gwtgwtcon_rp
 
-subroutine gwtgwtcon_ad(this)
-  class(GwtGwtConnectionType) :: this !< the connection
-  
-  ! copy model data into interface model
-  call this%syncInterfaceModel()
-
-  call this%gwtInterfaceModel%model_ad()
-
-end subroutine gwtgwtcon_ad
-
 subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
   integer(I4B), intent(in) :: kiter   !< the iteration counter
@@ -306,10 +295,14 @@ subroutine gwtgwtcon_cf(this, kiter)
   do i = 1, this%neq
     this%rhs(i) = 0.0_DP
   end do
+  
+  ! copy model data into interface model
+  call this%syncInterfaceModel()
 
   call this%gwtInterfaceModel%model_cf(kiter)
   
 end subroutine gwtgwtcon_cf
+
 
 !> @brief called during advance (*_ad), to copy the data
 !! from the models into the connection's placeholder arrays
@@ -361,6 +354,7 @@ subroutine syncInterfaceModel(this)
   do i = 1, this%gridConnection%nrOfCells      
     idx = this%gridConnection%idxToGlobal(i)%index
     this%x(i) = this%gridConnection%idxToGlobal(i)%model%x(idx)
+    this%gwtInterfaceModel%xold(i) = this%gridConnection%idxToGlobal(i)%model%xold(idx)
   end do
 
   ! copy fmi
@@ -377,6 +371,7 @@ subroutine syncInterfaceModel(this)
   end do
 
 end subroutine syncInterfaceModel
+
 
 subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
   class(GwtGwtConnectionType) :: this               !< the connection

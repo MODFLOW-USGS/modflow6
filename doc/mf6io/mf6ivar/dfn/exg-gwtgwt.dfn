@@ -11,37 +11,12 @@ description an array of auxiliary variable names.  There is no limit on the numb
 
 block options
 name advscheme
-type record upstream central tvd
+type string
+valid upstream central tvd
 reader urword
 optional true
-longname advection scheme
-description none
-
-block options
-name upstream
-in_record true
-type keyword
-reader urword
-longname keyword to activate UPSTREAM advection scheme
-description keyword to activate UPSTREAM advection scheme
-
-block options
-name central
-in_record true
-type keyword
-reader urword
-optional true
-longname keyword to activate CENTRAL advection scheme
-description keyword to activate CENTRAL advection scheme
-
-block options
-name tvd
-in_record true
-type keyword
-reader urword
-optional true
-longname keyword to activate TVD advection scheme
-description keyword to activate TVD advection scheme
+longname advective scheme
+description scheme used to solve the advection term.  Can be upstream, central, or TVD.  If not specified, upstream weighting is the default weighting scheme.
 
 block options
 name xt3d_off

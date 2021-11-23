@@ -7,8 +7,8 @@ model grid of square cells.
 
 import os
 import pytest
-import sys
 import numpy as np
+from matplotlib import pyplot as plt
 
 try:
     import flopy
@@ -21,17 +21,18 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["adv01a_gwtgwt"]
-scheme = ["upstream"]
+ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
+scheme = ["upstream", "central", "tvd"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 ddir = "data"
 
+gdelr = 1.0
 
 def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
-    nlay, nrow, ncol = modelshape
-    delr = 1.0
+    nlay, nrow, ncol, xshift, yshift = modelshape
+    delr = gdelr
     delc = 1.0
     top = 1.0
     botm = [0.0]
@@ -56,6 +57,8 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
         delc=delc,
         top=top,
         botm=botm,
+        xorigin=xshift,
+        yorigin=yshift
     )
 
     # initial conditions
@@ -105,8 +108,8 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     return gwf
 
 
-def get_gwt_model(sim, gwtname, gwtpath, modelshape, sourcerecarray=None):
-    nlay, nrow, ncol = modelshape
+def get_gwt_model(sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None):
+    nlay, nrow, ncol, xshift, yshift = modelshape
     delr = 1.0
     delc = 1.0
     top = 1.0
@@ -127,17 +130,19 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape, sourcerecarray=None):
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
-        delr=delr,
+        delr=gdelr,
         delc=delc,
         top=top,
         botm=botm,
+        xorigin=xshift,
+        yorigin=yshift
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0)
 
     # advection
-    adv = flopy.mf6.ModflowGwtadv(gwt, scheme="upstream")
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme)
 
     # mass storage and transfer
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1)
@@ -210,13 +215,13 @@ def build_model(idx, dir):
     # Create gwf1 model
     welspd = {0: [[(0, 0, 0), 1.0, 1.0]]}
     chdspd = None #{0: [[(0, 0, 99), 0.0000000]]}
-    gwf1 = get_gwf_model(sim, "flow1", "flow1", (nlay, nrow, ncol),
+    gwf1 = get_gwf_model(sim, "flow1", "flow1", (nlay, nrow, ncol, 0.0, 0.0),
                         chdspd=chdspd, welspd=welspd)
 
     # Create gwf2 model
     welspd = None #{0: [[(0, 0, 0), 1.0, 1.0]]}
     chdspd = {0: [[(0, 0, ncol - 1), 0.0000000]]}
-    gwf2 = get_gwf_model(sim, "flow2", "flow2", (nlay, nrow, ncol),
+    gwf2 = get_gwf_model(sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0*gdelr, 0.0),
                         chdspd=chdspd, welspd=welspd)
 
     # gwf-gwf with XT3D, which doesn't change anything in this
@@ -230,8 +235,7 @@ def build_model(idx, dir):
         exgmnamea=gwf1.name,
         exgmnameb=gwf2.name,
         exchangedata=gwfgwf_data,
-        auxiliary=["ANGLDEGX", "CDIST"],        
-        xt3d=True,
+        auxiliary=["ANGLDEGX", "CDIST"],
         filename="flow1_flow2.gwfgwf",
     )
 
@@ -256,18 +260,20 @@ def build_model(idx, dir):
 
     # Create gwt model
     sourcerecarray = [("WEL-1", "AUX", "CONCENTRATION")]
-    gwt1 = get_gwt_model(sim, "transport1", "transport1", (nlay, nrow, ncol),
-                        sourcerecarray=sourcerecarray)
+    gwt1 = get_gwt_model(sim, "transport1", "transport1", (nlay, nrow, ncol, 0.0, 0.0),
+                        scheme[idx], sourcerecarray=sourcerecarray)
 
     # Create gwt model
     sourcerecarray = None
-    gwt2 = get_gwt_model(sim, "transport2", "transport2", (nlay, nrow, ncol),
-                         sourcerecarray=sourcerecarray)
+    gwt2 = get_gwt_model(sim, "transport2", "transport2", (nlay, nrow, ncol, 50.0*gdelr, 0.0),
+                        scheme[idx], sourcerecarray=sourcerecarray)
+
 
     # Create GWT GWT exchange
     gwt1gwt2 = flopy.mf6.ModflowGwtgwt(
         sim,
         exgtype="GWT6-GWT6",
+        advscheme=scheme[idx],
         nexg=len(gwfgwf_data),
         exgmnamea=gwt1.name,
         exgmnameb=gwt2.name,
@@ -337,8 +343,6 @@ def eval_transport(sim):
 
     conc = np.append(conc1, conc2)
     
-    # This is the answer to this problem.  These concentrations are for
-    # time step 200.
     cres1 = [
         [
             [
@@ -447,8 +451,224 @@ def eval_transport(sim):
     ]
     cres1 = np.array(cres1)
 
-    creslist = [cres1]
+    cres2 = [
+        [
+            [
+                9.99996617e-01,
+                1.00001184e00,
+                1.00000294e00,
+                9.99972914e-01,
+                9.99992627e-01,
+                1.00004237e00,
+                1.00002081e00,
+                9.99945149e-01,
+                9.99952654e-01,
+                1.00005669e00,
+                1.00008810e00,
+                9.99966402e-01,
+                9.99865541e-01,
+                9.99967791e-01,
+                1.00015792e00,
+                1.00014755e00,
+                9.99895530e-01,
+                9.99724106e-01,
+                9.99916592e-01,
+                1.00029941e00,
+                1.00038455e00,
+                9.99960678e-01,
+                9.99433053e-01,
+                9.99453350e-01,
+                1.00018163e00,
+                1.00097923e00,
+                1.00093550e00,
+                9.99790199e-01,
+                9.98371554e-01,
+                9.98054584e-01,
+                9.99598363e-01,
+                1.00229288e00,
+                1.00416575e00,
+                1.00323035e00,
+                9.98995210e-01,
+                9.93234271e-01,
+                9.89448228e-01,
+                9.91206357e-01,
+                1.00016889e00,
+                1.01473298e00,
+                1.02990960e00,
+                1.03846239e00,
+                1.03282855e00,
+                1.00710727e00,
+                9.58480908e-01,
+                8.87726436e-01,
+                7.98820097e-01,
+                6.97900399e-01,
+                5.91969549e-01,
+                4.87686471e-01,
+                3.90487541e-01,
+                3.04127133e-01,
+                2.30608327e-01,
+                1.70400015e-01,
+                1.22812141e-01,
+                8.64138068e-02,
+                5.94120233e-02,
+                3.99463958e-02,
+                2.62868102e-02,
+                1.69426845e-02,
+                1.07033555e-02,
+                6.63198283e-03,
+                4.03300421e-03,
+                2.40844447e-03,
+                1.41323306e-03,
+                8.15254552e-04,
+                4.62589305e-04,
+                2.58303233e-04,
+                1.42001900e-04,
+                7.68911977e-05,
+                4.10256980e-05,
+                2.15775541e-05,
+                1.11912143e-05,
+                5.72578796e-06,
+                2.89083689e-06,
+                1.44073067e-06,
+                7.09001789e-07,
+                3.44624235e-07,
+                1.65501321e-07,
+                7.85475047e-08,
+                3.68512253e-08,
+                1.70949923e-08,
+                7.84310280e-09,
+                3.55966819e-09,
+                1.59856594e-09,
+                7.10467596e-10,
+                3.12565151e-10,
+                1.36146377e-10,
+                5.87252052e-11,
+                2.50886169e-11,
+                1.06179506e-11,
+                4.45237718e-12,
+                1.85013624e-12,
+                7.61982955e-13,
+                3.11095972e-13,
+                1.25908830e-13,
+                5.05704707e-14,
+                2.00370648e-14,
+                8.15003576e-15,
+                2.57563506e-15,
+            ]
+        ]
+    ]
+    cres2 = np.array(cres2)
 
+    cres3 = [
+        [
+            [
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                1.00000000e00,
+                9.99999999e-01,
+                9.99999997e-01,
+                9.99999991e-01,
+                9.99999975e-01,
+                9.99999926e-01,
+                9.99999789e-01,
+                9.99999407e-01,
+                9.99998374e-01,
+                9.99995665e-01,
+                9.99988785e-01,
+                9.99971918e-01,
+                9.99932078e-01,
+                9.99841550e-01,
+                9.99643930e-01,
+                9.99229970e-01,
+                9.98398720e-01,
+                9.96800070e-01,
+                9.93857995e-01,
+                9.88681096e-01,
+                9.79978744e-01,
+                9.66015902e-01,
+                9.44652308e-01,
+                9.13514114e-01,
+                8.70328697e-01,
+                8.13410724e-01,
+                7.42224214e-01,
+                6.57879960e-01,
+                5.63390876e-01,
+                4.63530320e-01,
+                3.64233335e-01,
+                2.71628522e-01,
+                1.90935412e-01,
+                1.25541007e-01,
+                7.65316248e-02,
+                4.28052252e-02,
+                2.16851758e-02,
+                9.78976172e-03,
+                3.85613094e-03,
+                1.28872611e-03,
+                3.52070089e-04,
+                7.49188445e-05,
+                1.17688715e-05,
+                1.33952025e-06,
+                1.08174095e-07,
+                -4.82019087e-08,
+                -5.67180537e-08,
+                -4.65251289e-08,
+                -3.25511455e-08,
+                -1.94644548e-08,
+                -9.78876693e-09,
+                -4.07380361e-09,
+                -1.38097809e-09,
+                -3.72934181e-10,
+                -7.83508455e-11,
+                -1.26040926e-11,
+                -1.48260453e-12,
+                4.10392230e-14,
+                2.44993743e-13,
+                2.46295025e-13,
+                1.90964563e-13,
+                1.03476379e-13,
+                3.96502895e-14,
+                1.04500247e-14,
+                2.00830327e-15,
+                4.70831032e-16,
+                3.38440506e-16,
+                2.49848438e-16,
+                1.83245111e-16,
+                1.32361223e-16,
+                9.39406563e-17,
+                6.54891851e-17,
+                4.48667613e-17,
+                3.02333440e-17,
+                2.00567815e-17,
+                1.31110206e-17,
+                8.45177289e-18,
+                5.37610069e-18,
+                3.37597383e-18,
+            ]
+        ]
+    ]
+    cres3 = np.array(cres3)
+
+    creslist = [cres1, cres2, cres3]
+    
     assert np.allclose(
         creslist[sim.idxsim], conc
     ), "simulated concentrations do not match with known solution."

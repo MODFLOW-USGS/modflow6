@@ -430,6 +430,7 @@ contains ! module procedures
     do i = 1, this%neq
       this%x(i) = DZERO
       this%active(i) = 1 ! default is active
+      this%rhs(i) = DZERO
     enddo
     
   end subroutine allocateArrays
