@@ -237,7 +237,9 @@ def build_model(idx, dir):
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="flow1_flow2.gwfgwf",
-        xt3d=True,
+        xt3d=True, # this will go once we can properly activate the interface
+                   # model (or if we will support GWT-GWF between GwtGwtConnection
+                   # and good old GwfExchanges)
     )
 
     # create iterative model solution and register the gwf model with it
