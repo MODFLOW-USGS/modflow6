@@ -148,7 +148,7 @@ subroutine gwtgwtcon_df(this)
   ! determine advection scheme (the GWT-GWT exchanges
   ! have been read at this point)
   do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    gwtEx => GetGwtExchangeFromList(this%localExchanges, iex)
     if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
       this%iIfaceAdvScheme = gwtEx%iAdvScheme
     end if
@@ -156,7 +156,7 @@ subroutine gwtgwtcon_df(this)
 
   ! determine xt3d setting on interface
   do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    gwtEx => GetGwtExchangeFromList(this%localExchanges, iex)
     if (gwtEx%ixt3d == 0) then
       this%iIfaceXt3d = 0
       exit
@@ -457,7 +457,7 @@ subroutine gwtgwtcon_da(this)
 
   ! we need to deallocate the baseexchanges we own:
   do iex=1, this%localExchanges%Count()
-    gwtEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    gwtEx => GetGwtExchangeFromList(this%localExchanges, iex)
     if (associated(gwtEx%model1, this%gwtModel)) then
       call gwtEx%exg_da()
     end if
