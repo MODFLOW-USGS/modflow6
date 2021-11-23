@@ -237,6 +237,7 @@ def build_model(idx, dir):
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="flow1_flow2.gwfgwf",
+        xt3d=True,
     )
 
     # create iterative model solution and register the gwf model with it
