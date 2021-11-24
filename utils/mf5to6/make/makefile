@@ -1,4 +1,4 @@
-# makefile created on 2021-11-21 18:38:49.158619
+# makefile created on 2021-11-23 17:48:29.930731
 # by pymake (version 1.2.1) for the 'mf5to6' executable.
 
 
@@ -28,24 +28,25 @@ ${SOURCEDIR8}
 
 OBJECTS = \
 $(OBJDIR)/GwfEvtModule.o \
-$(OBJDIR)/mach_mod.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/gwf2hfb7_NWT.o \
 $(OBJDIR)/GwfGhbModule.o \
 $(OBJDIR)/GwfFhbModule.o \
 $(OBJDIR)/GwfLgrModule.o \
-$(OBJDIR)/ConverterCommon.o \
-$(OBJDIR)/GwfChdModule.o \
 $(OBJDIR)/ParamModule.o \
+$(OBJDIR)/GwfChdModule.o \
 $(OBJDIR)/GwfMnwModule.o \
 $(OBJDIR)/StressPeriod.o \
 $(OBJDIR)/GwfWelModule.o \
-$(OBJDIR)/kind.o \
 $(OBJDIR)/GwfLpfModule.o \
+$(OBJDIR)/kind.o \
+$(OBJDIR)/ConverterCommon.o \
 $(OBJDIR)/GwfResModule.o \
+$(OBJDIR)/mach_mod.o \
 $(OBJDIR)/GwfBcfModule.o \
-$(OBJDIR)/NWT1_module.o \
 $(OBJDIR)/Constants.o \
+$(OBJDIR)/NWT1_module.o \
+$(OBJDIR)/Global.o \
 $(OBJDIR)/NWT1_xmdlib.o \
 $(OBJDIR)/GwfRivModule.o \
 $(OBJDIR)/GlobalPHMF.o \
@@ -64,22 +65,21 @@ $(OBJDIR)/LakeTributary.o \
 $(OBJDIR)/Connection.o \
 $(OBJDIR)/GlobalVariablesPHMF.o \
 $(OBJDIR)/version.o \
+$(OBJDIR)/LakeOutlet.o \
+$(OBJDIR)/LakeConnection.o \
 $(OBJDIR)/GwfSfrModule.o \
 $(OBJDIR)/Auxiliary.o \
-$(OBJDIR)/CharacterContainer.o \
-$(OBJDIR)/TimeSeriesRecord.o \
-$(OBJDIR)/Global.o \
-$(OBJDIR)/LakeOutlet.o \
-$(OBJDIR)/SimListVariables.o \
-$(OBJDIR)/SfrDiversion.o \
-$(OBJDIR)/ModelPackage.o \
-$(OBJDIR)/GlobalVariables.o \
-$(OBJDIR)/LakeConnection.o \
 $(OBJDIR)/GwfBasModule.o \
 $(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/CharacterContainer.o \
 $(OBJDIR)/NWT1_ilupc_mod.o \
+$(OBJDIR)/TimeSeriesRecord.o \
 $(OBJDIR)/pcgn2.o \
+$(OBJDIR)/SimListVariables.o \
+$(OBJDIR)/SfrDiversion.o \
+$(OBJDIR)/GlobalVariables.o \
 $(OBJDIR)/SfrReach.o \
+$(OBJDIR)/ModelPackage.o \
 $(OBJDIR)/SimPHMF.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/MultiLayerObsModule.o \
@@ -88,12 +88,12 @@ $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/SfrSegment.o \
 $(OBJDIR)/SimVariablesPHMF.o \
 $(OBJDIR)/GwfFhbSubs.o \
+$(OBJDIR)/Lake.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/LineList.o \
 $(OBJDIR)/Utilities.o \
 $(OBJDIR)/ObservePHMF.o \
 $(OBJDIR)/BlockParser.o \
-$(OBJDIR)/Lake.o \
 $(OBJDIR)/ArrayReadersMF5.o \
 $(OBJDIR)/GwfResSubs.o \
 $(OBJDIR)/Table.o \
@@ -110,6 +110,7 @@ $(OBJDIR)/StoWriter.o \
 $(OBJDIR)/MemoryManager.o \
 $(OBJDIR)/TdisVariables.o \
 $(OBJDIR)/DiscretizationBasePHMF.o \
+$(OBJDIR)/NpfWriter.o \
 $(OBJDIR)/DisWriter.o \
 $(OBJDIR)/utl7.o \
 $(OBJDIR)/GwfBasOcSubs.o \
@@ -126,13 +127,11 @@ $(OBJDIR)/gmg7.o \
 $(OBJDIR)/GwfLakSubs.o \
 $(OBJDIR)/obs2chd7.o \
 $(OBJDIR)/GwfDrnSubs.o \
-$(OBJDIR)/NpfWriter.o \
 $(OBJDIR)/GwfEvtSubs.o \
 $(OBJDIR)/GwfRchSubs.o \
 $(OBJDIR)/obs2ghb7.o \
 $(OBJDIR)/obs2drn7.o \
 $(OBJDIR)/Discretization3D.o \
-$(OBJDIR)/GwfHfbSubs_NWT.o \
 $(OBJDIR)/obs2riv7.o \
 $(OBJDIR)/gwf2mnw2i7.o \
 $(OBJDIR)/GwfRivSubs.o \
@@ -141,6 +140,7 @@ $(OBJDIR)/Mover.o \
 $(OBJDIR)/de47.o \
 $(OBJDIR)/ObsBlock.o \
 $(OBJDIR)/pcg7.o \
+$(OBJDIR)/GwfHfbSubs_NWT.o \
 $(OBJDIR)/Preproc.o \
 $(OBJDIR)/gwf2wel7_NWT.o \
 $(OBJDIR)/gwf2mnw17.o \
@@ -149,25 +149,25 @@ $(OBJDIR)/NWT1_xmd.o \
 $(OBJDIR)/obs2bas7.o \
 $(OBJDIR)/NWT1_solver.o \
 $(OBJDIR)/ObsWriter.o \
+$(OBJDIR)/RivObsWriter.o \
 $(OBJDIR)/ChdObsWriter.o \
+$(OBJDIR)/GhbObsWriter.o \
 $(OBJDIR)/PackageWriter.o \
 $(OBJDIR)/DrnPackageWriter.o \
-$(OBJDIR)/RivObsWriter.o \
 $(OBJDIR)/DrnObsWriter.o \
-$(OBJDIR)/RchPackageWriter.o \
-$(OBJDIR)/GhbObsWriter.o \
-$(OBJDIR)/WelPackageWriter.o \
 $(OBJDIR)/RivPackageWriter.o \
+$(OBJDIR)/RchPackageWriter.o \
+$(OBJDIR)/WelPackageWriter.o \
 $(OBJDIR)/ImsPackageWriter.o \
 $(OBJDIR)/MawPackageWriter.o \
+$(OBJDIR)/MvrPackageWriter.o \
 $(OBJDIR)/EvtPackageWriter.o \
 $(OBJDIR)/ChdPackageWriter.o \
 $(OBJDIR)/GhbPackageWriter.o \
-$(OBJDIR)/HfbPackageWriter.o \
-$(OBJDIR)/MvrPackageWriter.o \
 $(OBJDIR)/OutputControlWriter.o \
 $(OBJDIR)/LakPackageWriter.o \
 $(OBJDIR)/SfrPackageWriter.o \
+$(OBJDIR)/HfbPackageWriter.o \
 $(OBJDIR)/UzfPackageWriter.o \
 $(OBJDIR)/FhbPackageWriter.o \
 $(OBJDIR)/Model.o \

@@ -404,7 +404,7 @@ MODULE IMSLinearModule
       IF (this%IPC ==  3 .OR. this%IPC ==  4) THEN
         this%NIAPC = this%NEQ
         IF (this%LEVEL > 0) THEN
-          iwk      = this%NEQ * (this%LEVEL * 2 + 1)
+          iwk = this%NEQ * (this%LEVEL * 2 + 1)
         ELSE
           iwk = 0
           DO n = 1, NEQ
@@ -413,15 +413,15 @@ MODULE IMSLinearModule
               iwk = i
             END IF
           END DO
-          iwk      = this%NEQ * iwk
+          iwk = this%NEQ * iwk
         END IF
         this%NJAPC = iwk
-        ijlu       = iwk
-        ijw        = 2 * this%NEQ
-        iwlu       = this%NEQ + 1
+        ijlu = iwk
+        ijw = 2 * this%NEQ
+        iwlu = this%NEQ + 1
       END IF
       this%NJLU = ijlu
-      this%NJW  = ijw
+      this%NJW = ijw
       this%NWLU = iwlu
       !
       ! -- ALLOCATE BASE PRECONDITIONER VECTORS

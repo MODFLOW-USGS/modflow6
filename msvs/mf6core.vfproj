@@ -137,8 +137,7 @@
 		<Filter Name="IMS">
 		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8base.f90"/>
 		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8linear.f90"/>
-		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8reordering.f90"/>
-		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8sparsekit.f90"/></Filter>
+		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8reordering.f90"/></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
@@ -147,7 +146,9 @@
 		<File RelativePath="..\src\Timing\tdis.f90"/></Filter>
 		<Filter Name="Utilities">
 		<Filter Name="Libraries">
+		<File RelativePath="..\src\Utilities\Libraries\blas\blas1_d.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\daglib\dag_module.f90"/>
+		<File RelativePath="..\src\Utilities\Libraries\sparskit2\ilut.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\rcm\rcm.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\sparsekit\sparsekit.f90"/></Filter>
 		<Filter Name="Memory">
