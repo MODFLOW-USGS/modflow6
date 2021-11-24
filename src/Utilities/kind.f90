@@ -6,15 +6,14 @@
 !!
 !<
 module KindModule
+  use, intrinsic:: iso_fortran_env, only: I4B => int32, &
+                                          I8B => int64,  &
+                                          LGP => int32, &
+                                          DP => real64
   
   implicit none
 
-  public
-  
-  integer, parameter :: DP = KIND(1.0D0)                                         !< Precision of all real variables
-  integer, parameter :: LGP = SELECTED_INT_KIND(8)                               !< Logical kind
-  integer, parameter :: I4B = SELECTED_INT_KIND(8)                               !< Integer kind
-  integer, parameter :: I8B = SELECTED_INT_KIND(18)                              !< Long integer kind
+  public:: I4B, I8B, LGP, DP, write_kindinfo
 
   contains
   
