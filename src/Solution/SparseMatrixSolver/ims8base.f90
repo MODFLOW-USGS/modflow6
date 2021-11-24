@@ -8,11 +8,9 @@ MODULE IMSLinearBaseModule
   ! -- modules
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO,                                  &
-    DZERO, DPREC, DEM6, DHALF, DONE
+    DZERO, DPREC, DEM6, DEM3, DHALF, DONE
   use GenericUtilitiesModule, only: sim_message, is_same
   use BlockParserModule, only: BlockParserType
-  use IMSLinearSparseKitModule, only: ims_sk_pcmilut_lusol,                      &
-                                      ims_sk_pcmilut
   use IMSReorderingModule, only: ims_odrv
 
   IMPLICIT NONE
@@ -120,7 +118,7 @@ MODULE IMSLinearBaseModule
       !
       ! -- ILUT AND MILUT
     CASE (3, 4)
-      CALL ims_sk_pcmilut_lusol(NEQ, D, Z, APC, JLU, IW)
+      CALL lusol(NEQ, D, Z, APC, JLU, IW)
     END SELECT
     rho = ims_base_dotp(NEQ, D, Z)
     !
@@ -384,7 +382,7 @@ MODULE IMSLinearBaseModule
       !
       ! -- ILUT AND MILUT
     CASE (3, 4)
-      CALL ims_sk_pcmilut_lusol(NEQ, P, PHAT, APC, JLU, IW)
+      CALL lusol(NEQ, P, PHAT, APC, JLU, IW)
     END SELECT
     !
     ! -- COMPUTE ITERATES
@@ -435,7 +433,7 @@ MODULE IMSLinearBaseModule
       !
       ! -- ILUT AND MILUT
     CASE (3, 4)
-      CALL ims_sk_pcmilut_lusol(NEQ, Q, QHAT, APC, JLU, IW)
+      CALL lusol(NEQ, Q, QHAT, APC, JLU, IW)
     END SELECT
     !
     ! -- UPDATE T WITH A AND QHAT
@@ -821,15 +819,16 @@ MODULE IMSLinearBaseModule
   real(DP), DIMENSION(NWLU), INTENT(INOUT) :: WLU           !< ILUT/MILUT WLU working vector
   ! -- local variables
   character(len=LINELENGTH) :: errmsg
-  character(len=80), dimension(3) :: cerr
+  character(len=100), dimension(5), parameter :: cerr = &
+    ["Elimination process has generated a row in L or U whose length is > n.", &
+     "The matrix L overflows the array al.                                  ", &
+     "The matrix U overflows the array alu.                                 ", &
+     "Illegal value for lfil.                                               ", &
+     "Zero row encountered.                                                 "]
   integer(I4B) :: ipcflag
   integer(I4B) :: icount
   integer(I4B) :: ierr
   real(DP) :: delta
-  ! -- data
-  DATA cerr/'INCOMPREHENSIBLE ERROR - MATRIX MUST BE WRONG.              ', &
-    'INSUFFICIENT STORAGE IN ARRAYS ALU, JLU TO STORE FACTORS.   ', &
-    'ZERO ROW ENCOUNTERED.                                       '/
   ! -- formats
 2000 FORMAT(/, ' MATRIX IS SEVERELY NON-DIAGONALLY DOMINANT.', &
     /, ' ADDED SMALL VALUE TO PIVOT ', i0, ' TIMES IN', &
@@ -843,32 +842,36 @@ MODULE IMSLinearBaseModule
     SELECT CASE (IPC)
       !
       ! -- ILU0 AND MILU0
-    CASE (1, 2)
-      CALL ims_base_pcilu0(NJA, NEQ, AMAT, IA, JA, &
-        APC, IAPC, JAPC, IW, W, &
-        RELAX, ipcflag, delta)
+      CASE (1, 2)
+        CALL ims_base_pcilu0(NJA, NEQ, AMAT, IA, JA, &
+          APC, IAPC, JAPC, IW, W, &
+          RELAX, ipcflag, delta)
       !
       ! -- ILUT AND MILUT
-    CASE (3, 4)
-      ierr = 0
-      CALL ims_sk_pcmilut(NEQ, AMAT, JA, IA, &
-        LEVEL, DROPTOL, RELAX, &
-        APC, JLU, IW, NJAPC, WLU, JW, ierr, &
-        ipcflag, delta)
-      IF (ierr .NE. 0) THEN
-        write (errmsg, '(a,1x,a)') 'ILUT ERROR: ', cerr(-ierr)
-        call store_error(errmsg)
-        call parser%StoreErrorUnit()
-      END IF
+      CASE (3, 4)
+        ierr = 0
+        CALL ilut(NEQ, AMAT, JA, IA, LEVEL, DROPTOL, &
+                  APC, JLU, IW, NJAPC, WLU, JW, ierr, &
+                  relax, ipcflag, delta)
+        if (ierr /= 0) then
+          if (ierr > 0) then
+            write (errmsg, '(a,1x,i0,1x,a)') &
+              'ILUT: zero pivot encountered at step number', ierr, '.'
+          else
+            write (errmsg, '(a,1x,a)') 'ILUT:', cerr(-ierr)
+          end if
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
+        end if
       !
       ! -- ADDITIONAL PRECONDITIONERS
       CASE DEFAULT
-      ipcflag = 0
+        ipcflag = 0
     END SELECT
     IF (ipcflag < 1) THEN
       EXIT PCSCALE
     END IF
-    delta = 1.5D0*delta + 0.001
+    delta = 1.5d0*delta + DEM3
     ipcflag = 0
     IF (delta > DHALF) THEN
       delta = DHALF

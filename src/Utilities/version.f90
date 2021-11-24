@@ -36,12 +36,15 @@ module VersionModule
       &'The following GNU Lesser General Public License (LGPL) libraries',/,      &
       &'are used this USGS product:',//,                                          &
       &'    SPARSKIT version 2.0',/,                                              &
-      &'      ilut',/,                                                            &
+      &'      ilut, luson, and qsplit ',/,                                        &
       &'      (https://www-users.cse.umn.edu/~saad/software/SPARSKIT/)',//,       &
       &'    RCM - Reverse Cuthill McKee Ordering',/,                              &
       &'      (https://people.math.sc.edu/Burkardt/f_src/rcm/rcm.html)',//,       &
+      &'    BLAS - Basic Linear Algebra Subprograms Level 1',/,                   &
+      &'      (https://people.math.sc.edu/Burkardt/f_src/blas1_d/',               &
+      &'blas1_d.html)',//,                                                        &
       &'    SPARSEKIT - Sparse Matrix Utility Package',/,                         &
-      &'      dperm, dvperm, rperm, and cperm',/,                                     &
+      &'      dperm, dvperm, rperm, and cperm',/,                                 &
       &'      (https://people.sc.fsu.edu/~jburkardt/f77_src/sparsekit/',          &
       &'sparsekit.html)',//,       &
       &'The following BSD-3 License libraries are used this USGS product:',//,    &

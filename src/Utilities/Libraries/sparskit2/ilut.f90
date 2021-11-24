@@ -2,9 +2,9 @@
   !
   !  SPARSKIT VERSION 2 SUBROUTINES INCLUDED INCLUDE:
   !
-  !    1 - IMSLINEARSUB_PCMILUT
-  !    2 - IMSLINEARSUB_PCMILUT_LUSOL
-  !    3 - IMSLINEARSUB_PCMILUT_QSPLIT
+  !    1 - ilut
+  !    2 - luson
+  !    3 - qsplit
   !
   ! ----------------------------------------------------------------------
   !                   S P A R S K I T   V E R S I O N  2.
@@ -44,33 +44,29 @@
   !For more information contact saad@cs.umn.edu
   !
   !
-  MODULE IMSLinearSparseKitModule
-  ! -- modules
-  use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH,                                         &
-                             DZERO, DEM4, DONE,                                  &
-                             VDEBUG
-  use GenericUtilitiesModule, only: sim_message
 
-  IMPLICIT NONE
-
-
-  contains
-
-  SUBROUTINE ims_sk_pcmilut(n, a, ja, ia, lfil, droptol, relax,       &
-    alu, jlu, ju, iwk, w, jw, ierr,           &
-    izero, delta)
+  subroutine ilut(n, a, ja, ia, lfil, droptol, &
+                  alu, jlu, ju, iwk, w, jw, ierr, &
+                  relax, izero, delta)
   ! ----------------------------------------------------------------------
-  integer(I4B) :: n
-  real(DP) :: a(*),alu(*),w(n+1),droptol,relax
-  integer(I4B) :: ja(*),ia(n+1),jlu(*),ju(n),jw(2*n),lfil,iwk,ierr
-  integer(I4B) :: izero
-  real(DP) :: delta
+  implicit none
+  integer(kind=4) :: n
+  real(kind=8) :: a(*),alu(*),w(n+1),droptol
+  integer(kind=4) :: ja(*),ia(n+1),jlu(*),ju(n),jw(2*n),lfil,iwk,ierr
+  real(kind=8) :: relax
+  integer(kind=4) :: izero
+  real(kind=8) :: delta
   ! ---------------------------------------------------------------------*
   !                      *** ILUT preconditioner ***                     *
   !      incomplete LU factorization with dual truncation mechanism      *
   ! ---------------------------------------------------------------------*
   !     Author: Yousef Saad *May, 5, 1990, Latest revision, August 1996  *
+  !     Modified: Joseph Hughes *August, 27, 2017                        *
+  !               1) FORTRAN90 version                                   *
+  !               2) Removed implict typing                              *
+  !               3) Added relaxation for dropped terms (MILUT)          *
+  !               4) Added diagonal scaling for zero pivots based on     *
+  !                  Hill (1990) https://doi.org/10.3133/wri904048       *
   ! ---------------------------------------------------------------------*
   ! PARAMETERS
   ! ----------
@@ -96,6 +92,12 @@
   !           are not big enough to store the ILU factorizations, ilut
   !           will stop with an error message.
   !
+  ! relax   = real. Relaxation factor for dropped terms (dropsum). If 
+  !           relax .eq. 0 then standard ILUT. If relax .eq. 1 then
+  !           MILUT.
+  !
+  ! delta   = real. Diagonal scaling term.
+  !
   ! On return:
   !===========
   !
@@ -118,6 +120,16 @@
   !           ierr  = -3   --> The matrix U overflows the array alu.
   !           ierr  = -4   --> Illegal value for lfil.
   !           ierr  = -5   --> zero row encountered.
+  !
+  ! izero   = integer. Counter for diagonal scaling increment. If izero
+  !           is zero then this is the first call to ILUT and diagonal
+  !           scaling is not applied and izero is set to 1. If izero
+  !           is greater than 1 then diagonal scaling is applied when
+  !           the diagonal is .eq. 0. This is continued until all of 
+  !           the diagonals are .ne. 0. Protection is all provided so
+  !           that the sign of the diagonal does not change with diagonal
+  !           scaling.
+  !
   !
   ! work arrays:
   !=============
@@ -150,10 +162,9 @@
   ! (however, fill-in is then unpredictable).                            *
   ! ---------------------------------------------------------------------*
   !     locals
-  character(len=LINELENGTH) :: line
-  integer(I4B) :: ju0,k,j1,j2,j,ii,i,lenl,lenu,jj,jrow,jpos,ilen
-  real(DP) :: tnorm, t, abs, s, fact
-  real(DP) :: rs, d, sd1, tl
+  integer(kind=4) :: ju0,k,j1,j2,j,ii,i,lenl,lenu,jj,jrow,jpos,ilen
+  real(kind=8) :: tnorm, t, abs, s, fact
+  real(kind=8) :: dropsum, diag, sign_check, diag_working
   !     format
   character(len=*), parameter :: fmterr = "(//,1x,a)"
   !     code
@@ -176,12 +187,12 @@
   main: do ii = 1, n
     j1 = ia(ii)
     j2 = ia(ii+1) - 1
-    rs = DZERO
-    tnorm = DZERO
+    dropsum = 0.0d0
+    tnorm = 0.0d0
     do k = j1, j2
       tnorm = tnorm+abs(a(k))
     end do
-    if (tnorm .eq. DZERO) goto 999
+    if (tnorm .eq. 0.0d0) goto 999
     tnorm = tnorm/real(j2-j1+1)
     !
     !     unpack L-part and U-part of row of A in arrays w
@@ -189,7 +200,7 @@
     lenu = 1
     lenl = 0
     jw(ii) = ii
-    w(ii) = DZERO
+    w(ii) = 0.0d0
     jw(n+ii) = ii
     !
     do j = j1, j2
@@ -255,7 +266,7 @@
     !
     fact = w(jj)*alu(jrow)
     if (abs(fact) .le. droptol) then
-      rs = rs + w(jj)
+      dropsum = dropsum + w(jj)
       goto 150
     end if
     !
@@ -330,17 +341,12 @@
     !
     !     sort by quick-split
     !
-    call IMSLINEARSUB_PCMILUT_QSPLIT(lenl, w, jw, ilen)
+    call qsplit(lenl, w, jw, ilen)
     !
     !     store L-part
     !
     do k = 1, ilen
-      !            if (ju0 .gt. iwk) goto 996
-      if (ju0 .gt. iwk) then
-        write(line, '(2i10)') ju0, iwk
-        call sim_message(line, fmt=fmterr, level=VDEBUG)
-        goto 996
-      end if
+      if (ju0 .gt. iwk) goto 996
       alu(ju0) =  w(k)
       jlu(ju0) =  jw(k)
       ju0 = ju0+1
@@ -359,73 +365,63 @@
         w(ii+ilen) = w(ii+k)
         jw(ii+ilen) = jw(ii+k)
       else
-        rs = rs + w(ii+k)
+        dropsum = dropsum + w(ii+k)
       end if
     end do
     lenu = ilen+1
     ilen = min0(lenu,lfil)
     !
-    call IMSLINEARSUB_PCMILUT_QSPLIT(lenu-1, w(ii+1), jw(ii+1), ilen)
+    call qsplit(lenu-1, w(ii+1), jw(ii+1), ilen)
     !
     !     copy
     !
     t = abs(w(ii))
-    !         if (ilen + ju0 .gt. iwk) goto 997
-    if (ilen + ju0 .gt. iwk) then
-      write(line, '(2i10)') (ilen + ju0), iwk
-      call sim_message(line, fmt=fmterr, level=VDEBUG)
-      goto 997
-    end if
+    if (ilen + ju0 .gt. iwk) goto 997
     do k = ii+1, ii+ilen-1
       jlu(ju0) = jw(k)
       alu(ju0) = w(k)
       t = t + abs(w(k) )
       ju0 = ju0+1
     end do
-    !!
-    !!     add dropped terms to diagonal element
-    !!
-    !IF (relax > DZERO) THEN
-    !  w(ii) = w(ii) + relax * rs
-    !END IF
-    !!
-    !!     store inverse of diagonal element of u
-    !!
-    !if (w(ii) == DZERO) w(ii) = (DEM4 + droptol)*tnorm
-    !!
-    !alu(ii) = DONE / w(ii)
-
+    !
     !    diagonal - calculate inverse of diagonal for solution
-    d   = w(ii)
-    tl  = ( DONE + delta ) * d + ( relax * rs )
-
+    !
+    diag = w(ii)
+    diag_working  = ( 1.0d0 + delta ) * diag + ( relax * dropsum )
+    !
     !    ensure that the sign of the diagonal has not changed
-    sd1 = SIGN(d,tl)
-    IF (sd1.NE.d) THEN
+    !
+    sign_check = SIGN(diag, diag_working)
+    if (sign_check .ne. diag) then
       !  use small value if diagonal scaling is not effective for
-      !    pivots that change the sign of the diagonal
-      IF (izero > 1) THEN
-        tl = SIGN(DONE,d) * (DEM4 + droptol) * tnorm
+      !  pivots that change the sign of the diagonal
+      if (izero > 1) then
+        diag_working = SIGN(1.0d0, diag) * (1.0d-4 + droptol) * tnorm
         !  diagonal scaling continues to be effective
-      ELSE
+      else
         izero = 1
         exit main
-      END IF
-    END IF
+      end if
+    end if
+    !
     !    ensure that the diagonal is not zero
-    IF (ABS(tl) == DZERO) THEN
+    !
+    IF (ABS(diag_working) == 0.0d0) THEN
       !  use small value if diagonal scaling is not effective
       !    zero pivots
       IF (izero > 1) THEN
-        tl = SIGN(DONE,d) * (DEM4 + droptol) * tnorm
+        diag_working = SIGN(1.0d0, diag) * (1.0d-4 + droptol) * tnorm
         !  diagonal scaling continues to be effective
-      ELSE
+      else
         izero = 1
         exit main
-      END IF
-    END IF
-    w(ii) = tl
-    alu(ii) = DONE / w(ii)
+      end if
+    end if
+    w(ii) = diag_working
+    !
+    !     store inverse of diagonal element of u
+    !
+    alu(ii) = 1.0d0 / w(ii)
     !
     !     update pointer to beginning of next row of U.
     !
@@ -463,13 +459,14 @@
   return
   ! ---------------end-of-ilut--------------------------------------------
   ! ----------------------------------------------------------------------
-  END SUBROUTINE ims_sk_pcmilut
+  end subroutine ilut
 
   ! ----------------------------------------------------------------------
-  SUBROUTINE ims_sk_pcmilut_lusol(n, y, x, alu, jlu, ju)
-  integer(I4B) :: n
-  real(DP) :: x(n), y(n), alu(*)
-  integer(I4B) :: jlu(*), ju(*)
+  subroutine lusol(n, y, x, alu, jlu, ju)
+  implicit none
+  integer(kind=4) :: n
+  real(kind=8) :: x(n), y(n), alu(*)
+  integer(kind=4) :: jlu(*), ju(*)
   ! ----------------------------------------------------------------------
   !
   ! This routine solves the system (LU) x = y,
@@ -493,7 +490,7 @@
   ! ----------------------------------------------------------------------
   ! ------local
   !
-  integer(I4B) :: i, k
+  integer(kind=4) :: i, k
   !
   ! forward solve
   !
@@ -514,15 +511,16 @@
   end do
   !
   return
-  ! ---------------end of IMSLINEARSUB_PCMILUT_LUSOL ------------------------------------------
+  ! ---------------end of lusol ------------------------------------------
   ! ----------------------------------------------------------------------
-  END SUBROUTINE ims_sk_pcmilut_lusol
+  end subroutine lusol
 
   ! ----------------------------------------------------------------------
-  SUBROUTINE IMSLINEARSUB_PCMILUT_QSPLIT(n, a, ind, ncut)
-  integer(I4B) :: n
-  real(DP) :: a(n)
-  integer(I4B) :: ind(n), ncut
+  subroutine qsplit(n, a, ind, ncut)
+  implicit none
+  integer(kind=4) :: n
+  real(kind=8) :: a(n)
+  integer(kind=4) :: ind(n), ncut
   ! ----------------------------------------------------------------------
   !     does a quick-sort split of a real array.
   !     on input a(1:n). is a real array
@@ -533,10 +531,10 @@
   !
   !     ind(1:n) is an integer array which permuted in the same way as a(*
   ! ----------------------------------------------------------------------
-  real(DP) :: tmp, abskey
-  integer(I4B) :: itmp, first, last
-  integer(I4B) :: mid
-  integer(I4B) :: j
+  real(kind=8) :: tmp, abskey
+  integer(kind=4) :: itmp, first, last
+  integer(kind=4) :: mid
+  integer(kind=4) :: j
   !-----
   first = 1
   last = n
@@ -578,8 +576,6 @@
     first = mid+1
   end if
   goto 1
-  ! ---------------end-of-IMSLINEARSUB_PCMILUT_QSPLIT------------------------------------------
+  ! ---------------end-of-qsplit------------------------------------------
   ! ----------------------------------------------------------------------
-  END SUBROUTINE IMSLINEARSUB_PCMILUT_QSPLIT
-
-  END MODULE IMSLinearSparseKitModule
+  end subroutine qsplit

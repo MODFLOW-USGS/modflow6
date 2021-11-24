@@ -2,6 +2,8 @@ external_libraries = files(
     'Utilities' / 'Libraries' / 'daglib' / 'dag_module.f90',
     'Utilities' / 'Libraries' / 'rcm' / 'rcm.f90',
     'Utilities' / 'Libraries' / 'sparsekit' / 'sparsekit.f90',
+    'Utilities' / 'Libraries' / 'blas' / 'blas1_d.f90',
+    'Utilities' / 'Libraries' / 'sparskit2' / 'ilut.f90',
 )
 
 modflow_sources = files(
@@ -89,7 +91,6 @@ modflow_sources = files(
     'Solution' / 'SparseMatrixSolver' / 'ims8base.f90',
     'Solution' / 'SparseMatrixSolver' / 'ims8linear.f90',
     'Solution' / 'SparseMatrixSolver' / 'ims8reordering.f90',
-    'Solution' / 'SparseMatrixSolver' / 'ims8sparsekit.f90',
     'Solution' / 'BaseSolution.f90',
     'Solution' / 'NumericalSolution.f90',
     'Solution' / 'SolutionGroup.f90',
