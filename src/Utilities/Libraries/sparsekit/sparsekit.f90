@@ -1,3 +1,63 @@
+subroutine amux ( n, x, y, a, ja, ia )
+
+  !*****************************************************************************80
+  !
+  !! AMUX multiplies a CSR matrix A times a vector.
+  !
+  !  Discussion:
+  !
+  !    This routine multiplies a matrix by a vector using the dot product form.
+  !    Matrix A is stored in compressed sparse row storage.
+  !
+  !  Modified:
+  !
+  !    07 January 2004
+  !
+  !  Author:
+  !
+  !    Youcef Saad
+  !
+  !  Parameters:
+  !
+  !    Input, integer ( kind = 4 ) N, the row dimension of the matrix.
+  !
+  !    Input, real X(*), and array of length equal to the column dimension 
+  !    of A.
+  !
+  !    Input, real A(*), integer ( kind = 4 ) JA(*), IA(NROW+1), the matrix in CSR
+  !    Compressed Sparse Row format.
+  !
+  !    Output, real Y(N), the product A * X.
+  !
+    implicit none
+  
+    integer ( kind = 4 ) n
+  
+    real ( kind = 8 ) a(*)
+    integer ( kind = 4 ) i
+    integer ( kind = 4 ) ia(*)
+    integer ( kind = 4 ) ja(*)
+    integer ( kind = 4 ) k
+    real ( kind = 8 ) t
+    real ( kind = 8 ) x(*)
+    real ( kind = 8 ) y(n)
+  
+    do i = 1, n
+  !
+  !  Compute the inner product of row I with vector X.
+  !
+      t = 0.0D+00
+      do k = ia(i), ia(i+1)-1
+        t = t + a(k) * x(ja(k))
+      end do
+  
+      y(i) = t
+  
+    end do
+  
+    return
+  end
+
 subroutine dvperm ( n, x, perm )
 
   !*****************************************************************************80

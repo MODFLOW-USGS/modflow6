@@ -90,6 +90,7 @@ MODULE IMSLinearBaseModule
   integer(I4B) :: iiter
   integer(I4B) :: xloc, rloc
   integer(I4B) :: im, im0, im1
+  real(DP) :: ddot
   real(DP) :: tv
   real(DP) :: deltax
   real(DP) :: rmax
@@ -120,7 +121,7 @@ MODULE IMSLinearBaseModule
     CASE (3, 4)
       CALL lusol(NEQ, D, Z, APC, JLU, IW)
     END SELECT
-    rho = ims_base_dotp(NEQ, D, Z)
+    rho = ddot(NEQ, D, 1, Z, 1)
     !
     ! -- COMPUTE DIRECTIONAL VECTORS
     IF (IITER == 1) THEN
@@ -137,8 +138,8 @@ MODULE IMSLinearBaseModule
     ! -- COMPUTE ITERATES
     !
     ! -- UPDATE Q
-    CALL ims_base_mv(NJA, NEQ, A0, P, Q, IA0, JA0)
-    denom = ims_base_dotp(NEQ, P, Q)
+    call amux( NEQ, P, Q, A0, JA0, IA0 )
+    denom = ddot(NEQ, P, 1, Q, 1)
     denom = denom + SIGN(DPREC, denom)
     alpha = rho/denom
     !
@@ -228,8 +229,7 @@ MODULE IMSLinearBaseModule
     IF (NORTH > 0) THEN
       lorth = mod(iiter + 1, NORTH) == 0
       IF (lorth) THEN
-        CALL ims_base_mv(NJA, NEQ, A0, X, D, IA0, JA0)
-        CALL ims_base_axpy(NEQ, B, -DONE, D, D)
+        call ims_base_residual(NEQ, NJA, X, B, D, A0, IA0, JA0)
       END IF
     END IF
     !
@@ -327,6 +327,7 @@ MODULE IMSLinearBaseModule
   integer(I4B) :: iiter
   integer(I4B) :: xloc, rloc
   integer(I4B) :: im, im0, im1
+  real(DP) :: ddot
   real(DP) :: tv
   real(DP) :: deltax
   real(DP) :: rmax
@@ -359,7 +360,7 @@ MODULE IMSLinearBaseModule
     NITERC = NITERC + 1
     !
     ! -- CALCULATE rho
-    rho = ims_base_dotp(NEQ, DHAT, D)
+    rho = ddot(NEQ, DHAT, 1, D, 1)
     !
     ! -- COMPUTE DIRECTIONAL VECTORS
     IF (IITER == 1) THEN
@@ -388,10 +389,10 @@ MODULE IMSLinearBaseModule
     ! -- COMPUTE ITERATES
     !
     ! -- UPDATE V WITH A AND PHAT
-    CALL ims_base_mv(NJA, NEQ, A0, PHAT, V, IA0, JA0)
+    call amux( NEQ, PHAT, V, A0, JA0, IA0 )
     !
     ! -- UPDATE alpha WITH DHAT AND V
-    denom = ims_base_dotp(NEQ, DHAT, V)
+    denom = ddot(NEQ, DHAT, 1, V, 1)
     denom = denom + SIGN(DPREC, denom)
     alpha = rho/denom
     !
@@ -437,11 +438,11 @@ MODULE IMSLinearBaseModule
     END SELECT
     !
     ! -- UPDATE T WITH A AND QHAT
-    CALL ims_base_mv(NJA, NEQ, A0, QHAT, T, IA0, JA0)
+    call amux( NEQ, QHAT, T, A0, JA0, IA0 )
     !
     ! -- UPDATE omega
-    numer = ims_base_dotp(NEQ, T, Q)
-    denom = ims_base_dotp(NEQ, T, T)
+    numer = ddot(NEQ, T, 1, Q, 1)
+    denom = ddot(NEQ, T, 1, T, 1)
     denom = denom + SIGN(DPREC, denom)
     omega = numer/denom
     !
@@ -548,8 +549,7 @@ MODULE IMSLinearBaseModule
     IF (NORTH > 0) THEN
       LORTH = mod(iiter + 1, NORTH) == 0
       IF (LORTH) THEN
-        CALL ims_base_mv(NJA, NEQ, A0, X, D, IA0, JA0)
-        CALL ims_base_axpy(NEQ, B, -DONE, D, D)
+        call ims_base_residual(NEQ, NJA, X, B, D, A0, IA0, JA0)
       END IF
     END IF
     !
@@ -1285,224 +1285,35 @@ MODULE IMSLinearBaseModule
   RETURN
   END SUBROUTINE ims_base_isort
 
-  !> @brief Initialize a real vector to a constant
+  !> @brief Calculate residual
   !!
-  !! Subroutine to initialize a real vector to a passed constant.
+  !! Subroutine to calculate the residual.
   !!
-  !! @param[in,out]  D1  resultant vector
   !<
-  SUBROUTINE ims_base_setx(NR, D1, C)
+  SUBROUTINE ims_base_residual(NEQ, NJA, X, B, D, A, IA, JA)
   ! -- dummy variables
-  integer(I4B), INTENT(IN) :: NR                !< length of D1
-  real(DP), DIMENSION(NR), INTENT(INOUT) :: D1  !< vector to initialize to C
-  real(DP), INTENT(IN)                   :: C   !< constant value
-  ! -- local variables
-  INTEGER :: n
-  ! -- code
-  DO n = 1, NR
-    D1(n) = C
-  END DO
-  ! -- --RETURN
-  RETURN
-  END SUBROUTINE ims_base_setx
-
-  !> @brief Copy one real vector to another
-  !!
-  !! Subroutine to copy one real vector to another.
-  !!
-  !! @param[in,out]  R  resultant vector
-  !<
-  SUBROUTINE ims_base_dcopy(NR, V, R)
-  ! -- dummy variables
-  integer(I4B), INTENT(IN) :: NR               !< number of rows in vector V
-  real(DP), DIMENSION(NR), INTENT(IN)    :: V  !< input real vector
-  real(DP), DIMENSION(NR), INTENT(INOUT) :: R  !< resultant real vector
+  integer(I4B), INTENT(IN) :: NEQ                   !< length of vectors
+  integer(I4B), INTENT(IN) :: NJA                   !< length of coefficient matrix
+  real(DP), DIMENSION(NEQ), INTENT(IN) :: X         !< dependent variable
+  real(DP), DIMENSION(NEQ), INTENT(IN) :: B         !< right-hand side
+  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D      !< residual
+  real(DP), DIMENSION(NJA), INTENT(IN) :: A         !< coefficient matrix
+  integer(I4B), DIMENSION(NEQ+1), INTENT(IN) :: IA  !< CRS row pointers
+  integer(I4B), DIMENSION(NJA), INTENT(IN) :: JA    !< CRS column pointers
   ! -- local variables
   integer(I4B) :: n
   ! -- code
-  DO n = 1, NR
-    R(n) = V(n)
-  END DO
   !
-  ! -- return
-  RETURN
-  END SUBROUTINE ims_base_dcopy
-
-  !> @brief Copy one integer vector to another
-  !!
-  !! Subroutine to copy one integer vector to another.
-  !!
-  !! @param[in,out]  R  resultant vector
-  !<
-  SUBROUTINE ims_base_icopy(NR, V, R)
-  ! -- dummy variables
-  integer(I4B), INTENT(IN) :: NR                   !< number of rows in vector V
-  integer(I4B), DIMENSION(NR), INTENT(IN)    :: V  !< input integer vector
-  integer(I4B), DIMENSION(NR), INTENT(INOUT) :: R  !< resultant integer vector
-  ! -- local variables
-  integer(I4B) :: n
-  ! -- code
-  DO n = 1, NR
-    R(n) = V(n)
-  END DO
+  ! -- calculate matrix-vector product
+  call amux(NEQ, X, D, A, JA, IA)
   !
-  ! -- return
-  RETURN
-  END SUBROUTINE ims_base_icopy
-
-  !> @brief Scale a real vector with a constant
-  !!
-  !! Subroutine to multiply a vector times a constant.
-  !!
-  !! @param[in,out]  D1  resultant vector
-  !<
-  SUBROUTINE ims_base_rscale(NR, C, D1)
-  ! -- dummy variables
-  INTEGER, INTENT(IN) :: NR                      !< number of rows in vector D1
-  real(DP), INTENT(IN) :: C                      !< constant
-  real(DP), DIMENSION(NR), INTENT(INOUT) :: D1   !< real vector
-  ! -- local variables
-  INTEGER :: n
-  ! -- code
-  DO n = 1, NR
-    D1(n) = C*D1(n)
-  END DO
-  !
-  ! -- return
-  RETURN
-  END SUBROUTINE ims_base_rscale
-
-  !> @brief Calculate matrix vector product
-  !!
-  !! Subroutine to calculate the matrix vector product of
-  !! A and D1.
-  !!
-  !! @param[in,out]  D2  resultant vector
-  !<
-  SUBROUTINE ims_base_mv(NJA, NEQ, A, D1, D2, IA, JA)
-  ! -- dummy variables
-  integer(I4B), INTENT(IN) :: NJA                    !< number of non-zero values in A
-  integer(I4B), INTENT(IN) :: NEQ                    !< number of equations (rows in A)
-  real(DP), DIMENSION(NJA), INTENT(IN)    :: A       !< coefficient matrix
-  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1      !< input vector
-  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: D2      !< resultant vector
-  integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA !< pointer to start of a row in A
-  integer(I4B), DIMENSION(NJA), INTENT(IN)   :: JA   !< column pointers
-  ! -- local variables
-  integer(I4B) :: ic0, ic1
-  integer(I4B) :: icol
-  integer(I4B) :: m, n
-  real(DP) :: tv
-  ! -- code
+  ! -- subtract matrix-vector product from right-hand side
   DO n = 1, NEQ
-    ! -- ADD DIAGONAL AND OFF-DIAGONAL TERMS
-    tv = DZERO
-    ic0 = IA(n)
-    ic1 = IA(n + 1) - 1
-    DO m = ic0, ic1
-      icol = JA(m)
-      tv = tv + A(m)*D1(icol)
-    END DO
-    D2(n) = tv
+    D(n) = B(n) - D(n)
   END DO
   !
   ! -- return
   RETURN
-  END SUBROUTINE ims_base_mv
-
-  !> @brief Calculate axpy
-  !!
-  !! Subroutine to add two vectors after multiplying the second
-  !! vector by a constant.
-  !!
-  !! @param[in,out]  DR  resultant vector
-  !<
-  SUBROUTINE ims_base_axpy(NEQ, D1, DC, D2, DR)
-  ! -- dummy variables
-  integer(I4B), INTENT(IN) :: NEQ                !< length of vectors
-  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D1  !< first vector
-  real(DP), INTENT(IN) :: DC                     !< constant multiplied by the second vector
-  real(DP), DIMENSION(NEQ), INTENT(IN)    :: D2  !< second vector
-  real(DP), DIMENSION(NEQ), INTENT(INOUT) :: DR  !< resultant vector
-  ! -- local variables
-  integer(I4B) :: n
-  ! -- code
-  DO n = 1, NEQ
-    DR(n) = D1(n) + DC*D2(n)
-  END DO
-  !
-  ! -- return
-  RETURN
-  END SUBROUTINE ims_base_axpy
-
-  !> @brief Calculate the dot product
-  !!
-  !! Function to calculate the dot product of two vectors.
-  !!
-  !! @return      c                dot product of two vectors
-  !<
-  FUNCTION ims_base_dotp(neq, a, b) RESULT(c)
-  ! -- return variable
-  real(DP) :: c                              !< dot product of a and b
-  ! -- dummy variables
-  integer(I4B), intent(in) :: neq            !< size of a and b
-  real(DP), dimension(neq), intent(in) :: a  !< vector a
-  real(DP), dimension(neq), intent(in) :: b  !< vector b
-  ! -- local variables
-  integer(I4B) :: n
-  ! -- code
-  c = DZERO
-  do n = 1, neq
-    c = c + a(n)*b(n)
-  end do
-  ! -- --return
-  return
-  END FUNCTION ims_base_dotp
-
-  !> @brief Calculate the L-2 norm
-  !!
-  !! Function to calculate the L-2 norm of vectors in a scaled form.
-  !! Based on BLAS DNRM2
-  !!
-  !! @return      c                L-2 norm of vector a
-  !<
-  FUNCTION ims_base_rnrm2(neq, a) RESULT(c)
-  ! -- return variable
-  real(DP) :: c                                !< L-2 norm of vector
-  ! -- dummy variables
-  integer(I4B), intent(in) :: neq              !< number of equations
-  real(DP), dimension(neq), intent(in) :: a    !< input vector
-  ! -- local variable
-  integer(I4B) :: n
-  real(DP) :: ssq
-  real(DP) :: scale
-  real(DP) :: norm
-  real(DP) :: absan
-  ! -- code
-  if (neq < 1) then
-    norm = DZERO
-  else if (neq == 1) then
-    norm = ABS(a(1))
-  else
-    scale = DZERO
-    ssq = DONE
-    do n = 1, neq
-      if (a(n) /= DZERO) then
-        absan = abs(a(n))
-        if (scale < absan) then
-          ssq = DONE + ssq*(scale/absan)**2
-          scale = absan
-        else
-          ssq = ssq + (absan/scale)**2
-        end if
-      end if
-    end do
-    norm = scale*sqrt(ssq)
-  END IF
-  c = norm
-  !
-  ! -- return
-  return
-  END FUNCTION ims_base_rnrm2
+  END SUBROUTINE ims_base_residual
 
   END MODULE IMSLinearBaseModule
