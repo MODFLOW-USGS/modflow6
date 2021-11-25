@@ -7,10 +7,10 @@ MODULE IMSLinearModule
                              DHALF, DONE, DTWO,                                &
                              VDEBUG
   use GenericUtilitiesModule, only: sim_message 
-  use IMSLinearBaseModule, only: ims_base_cg, ims_base_bcgs,           &
-                                 ims_base_pccrs, ims_base_calc_order,  &
-                                 ims_base_scale, ims_base_pcu,         &
-                                 ims_base_mv 
+  use IMSLinearBaseModule, only: ims_base_cg, ims_base_bcgs, &
+                                 ims_base_pccrs, ims_base_calc_order, &
+                                 ims_base_scale, ims_base_pcu, &
+                                 ims_base_residual
   use BlockParserModule, only: BlockParserType
 
   IMPLICIT NONE
@@ -889,8 +889,7 @@ MODULE IMSLinearModule
       integer(I4B) :: innerit
       integer(I4B) :: irc
       integer(I4B) :: itmax
-      real(DP) :: tv
-      real(DP) :: rmax
+      real(DP) :: dnrm2
       !
       ! -- set epfact based on timestep
       IF (this%ICNVGOPT ==  2) THEN
@@ -948,21 +947,13 @@ MODULE IMSLinearModule
       END DO
       !
       ! -- CALCULATE INITIAL RESIDUAL
-      CALL ims_base_mv(this%NJA,this%NEQ,this%A0,this%X,this%D,             &
-                           this%IA0,this%JA0)
-      rmax = DZERO
-      this%L2NORM0 = DZERO
-      DO n = 1, this%NEQ
-        tv   = this%D(n)
-        this%D(n) = this%RHS(n) - tv
-        IF (ABS( this%D(n) ) > rmax ) rmax = ABS( this%D(n) )
-        this%L2NORM0 = this%L2NORM0 + this%D(n) * this%D(n)
-      END DO
-      this%L2NORM0 = SQRT(this%L2NORM0)
+      call ims_base_residual(this%NEQ, this%NJA, this%X, this%RHS, this%D, &
+                             this%A0, this%IA0, this%JA0)
+      this%L2NORM0 = dnrm2(this%NEQ, this%D, 1)
       !
       ! -- CHECK FOR EXACT SOLUTION
       itmax = this%ITER1
-      IF (rmax ==  DZERO) THEN
+      IF (this%L2NORM0 ==  DZERO) THEN
         itmax = 0
         ICNVG = 1
       END IF

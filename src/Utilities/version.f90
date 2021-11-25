@@ -44,7 +44,7 @@ module VersionModule
       &'      (https://people.math.sc.edu/Burkardt/f_src/blas1_d/',               &
       &'blas1_d.html)',//,                                                        &
       &'    SPARSEKIT - Sparse Matrix Utility Package',/,                         &
-      &'      dperm, dvperm, rperm, and cperm',/,                                 &
+      &'      amux, dperm, dvperm, rperm, and cperm',/,                           &
       &'      (https://people.sc.fsu.edu/~jburkardt/f77_src/sparsekit/',          &
       &'sparsekit.html)',//,       &
       &'The following BSD-3 License libraries are used this USGS product:',//,    &
