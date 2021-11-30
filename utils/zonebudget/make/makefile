@@ -1,4 +1,4 @@
-# makefile created on 2021-11-23 17:48:29.185689
+# makefile created on 2021-11-30 17:15:16.898963
 # by pymake (version 1.2.1) for the 'zbud6' executable.
 
 
@@ -17,8 +17,8 @@ ${SOURCEDIR2}
 OBJECTS = \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/kind.o \
-$(OBJDIR)/compilerversion.o \
 $(OBJDIR)/Constants.o \
+$(OBJDIR)/compilerversion.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/genericutils.o \
@@ -26,13 +26,13 @@ $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Message.o \
 $(OBJDIR)/Sim.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/budgetdata.o \
 $(OBJDIR)/Budget.o \
+$(OBJDIR)/budgetdata.o \
 $(OBJDIR)/InputOutput.o \
-$(OBJDIR)/grb.o \
-$(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/BlockParser.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/grb.o \
 $(OBJDIR)/zone.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/zbud6.o
