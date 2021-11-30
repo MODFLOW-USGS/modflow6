@@ -61,6 +61,7 @@ if fc_id == 'intel-cl'
   # windows
   compile_args += ['/fpe:0',              # Activate all floating point exceptions
                    '/fpp',                # Activate preprocessing
+                   '/Qdiag-disable:7416', # f2008 warning
                    '/Qdiag-disable:7025', # f2008 warning
                    '/Qdiag-disable:5268', # Line too long
                   ]
@@ -70,6 +71,7 @@ if fc_id == 'intel-cl'
 elif fc_id == 'intel'
   # linux and macOS
   compile_args += ['-fpe0',              # Activate all floating point exceptions
+                  '-diag-disable:7416',  # f2008 warning
                   '-diag-disable:7025',  # f2008 warning
                   '-diag-disable:5268',  # Line too long
                   ]
