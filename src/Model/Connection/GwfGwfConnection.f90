@@ -364,7 +364,7 @@ contains
 
     ! abort on errors
     if(count_errors() > 0) then
-      write(errmsg, '(1x,a)') 'Errors occurred while processing exchange'
+      write(errmsg, '(1x,a)') 'Errors occurred while processing exchange(s)'
       call ustop()
     end if
 

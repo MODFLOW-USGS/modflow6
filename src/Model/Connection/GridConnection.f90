@@ -889,7 +889,8 @@ module GridConnectionModule
   !!
   !! The level indicates the nr of connections away from
   !! the remote neighbor, the diagonal term holds the negated
-  !< value of their nearest connection
+  !! value of their nearest connection. We end with setting
+  !< a normalized mask: 0 or 1
   subroutine createConnectionMask(this)
     class(GridConnectionType), intent(inout) :: this !< instance of this grid connection
     ! local
@@ -904,12 +905,13 @@ module GridConnectionModule
     
     ! remote connections remain masked
     ! now set mask for exchange connections (level == 1)
+    level = 1
     do icell = 1, this%nrOfBoundaryCells  
-      call this%setMaskOnConnection(this%boundaryCells(icell), this%connectedCells(icell), 1)
+      call this%setMaskOnConnection(this%boundaryCells(icell), this%connectedCells(icell), level)
       ! for cross-boundary connections, we need to apply the mask to both n-m and m-n,
       ! because if the upper triangular one is disabled, its transposed (lower triangular)
       ! counter part is skipped in the NPF calculation as well.
-      call this%setMaskOnConnection(this%connectedCells(icell), this%boundaryCells(icell), 1)
+      call this%setMaskOnConnection(this%connectedCells(icell), this%boundaryCells(icell), level)
     end do
     
     ! now extend mask recursively into the internal domain (level > 1)

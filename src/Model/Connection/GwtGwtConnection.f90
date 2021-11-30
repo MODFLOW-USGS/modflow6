@@ -53,6 +53,9 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_bd => gwtgwtcon_bd
     procedure, pass(this) :: exg_ot => gwtgwtcon_ot
 
+    ! overriding 'protected'
+    procedure, pass(this) :: validateConnection
+
     ! local stuff
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
@@ -233,7 +236,11 @@ subroutine gwtgwtcon_ar(this)
   integer(I4B) :: i, idx
   class(GwtModelType), pointer :: gwtModel
   class(*), pointer :: modelPtr
-  ! TODO_MJR: validate
+  
+  ! check if we can construct an interface model
+  ! NB: only makes sense after the models' allocate&read have been
+  ! called, which is why we do it here
+  call this%validateConnection()
 
   ! fill porosity from mst packages, needed for dsp
   if (this%gwtModel%inmst > 0) then
@@ -252,6 +259,28 @@ subroutine gwtgwtcon_ar(this)
   call this%gwtInterfaceModel%model_ar()
 
 end subroutine gwtgwtcon_ar
+
+!> @brief validate this connection prior to constructing 
+!< the interface model
+subroutine validateConnection(this)
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors
+  class(GwtGwtConnectionType) :: this !< this connection
+
+  ! base validation, the spatial/geometry part
+  call this%SpatialModelConnectionType%validateConnection()
+
+  ! GWT related matters
+  ! ...
+
+  ! abort on errors
+  if(count_errors() > 0) then
+    write(errmsg, '(1x,a)') 'Errors occurred while processing exchange(s)'
+    call ustop()
+  end if
+  
+end subroutine validateConnection
+
 
 !> @brief add connections to the global system for
 !< this connection

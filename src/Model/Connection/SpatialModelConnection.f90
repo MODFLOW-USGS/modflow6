@@ -250,7 +250,7 @@ contains ! module procedures
             call ustop()
           end if
           
-          call this%owner%dis%con%set_mask(csrIdx, 0)          
+          call this%owner%dis%con%set_mask(csrIdx, 0)
         end if
       end do
     end do
