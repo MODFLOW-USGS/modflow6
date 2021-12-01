@@ -1,5 +1,4 @@
-# makedefaults created on 2021-11-30 17:15:17.851751
-# by pymake (version 1.2.1) for the 'mf5to6' executable.
+# makedefaults created by pymake (version 1.2.1) for the 'mf5to6' executable.
 
 # determine OS
 ifeq ($(OS), Windows_NT)

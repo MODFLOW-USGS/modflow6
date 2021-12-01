@@ -1,5 +1,4 @@
-# makefile created on 2021-11-30 17:15:17.851751
-# by pymake (version 1.2.1) for the 'mf5to6' executable.
+# makefile created by pymake (version 1.2.1) for the 'mf5to6' executable.
 
 
 include ./makedefaults
@@ -24,158 +23,158 @@ ${SOURCEDIR6} \
 ${SOURCEDIR7} \
 ${SOURCEDIR8} 
 
-.SUFFIXES: .f90 .f .F90 .o
+.SUFFIXES: .F90 .f .f90 .o
 
 OBJECTS = \
-$(OBJDIR)/StressPeriod.o \
-$(OBJDIR)/GwfWelModule.o \
-$(OBJDIR)/GwfLpfModule.o \
-$(OBJDIR)/mach_mod.o \
-$(OBJDIR)/GwfResModule.o \
-$(OBJDIR)/GwfBcfModule.o \
-$(OBJDIR)/NWT1_module.o \
-$(OBJDIR)/NWT1_xmdlib.o \
-$(OBJDIR)/ConverterCommon.o \
-$(OBJDIR)/GlobalPHMF.o \
-$(OBJDIR)/GwfRivModule.o \
-$(OBJDIR)/GwfUzfModule_NWT.o \
-$(OBJDIR)/ConstantsPHMF.o \
-$(OBJDIR)/GwfDrnModule.o \
-$(OBJDIR)/GwfUpwModule.o \
-$(OBJDIR)/GwfEtsModule.o \
-$(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/GwfLakModule.o \
-$(OBJDIR)/GwfRchModule.o \
-$(OBJDIR)/GwfEvtModule.o \
-$(OBJDIR)/kind.o \
-$(OBJDIR)/gwf2hfb7_NWT.o \
-$(OBJDIR)/GlobalVariablesPHMF.o \
 $(OBJDIR)/GwfGhbModule.o \
 $(OBJDIR)/GwfLgrModule.o \
 $(OBJDIR)/GwfFhbModule.o \
 $(OBJDIR)/GwfChdModule.o \
-$(OBJDIR)/ParamModule.o \
 $(OBJDIR)/GwfMnwModule.o \
+$(OBJDIR)/StressPeriod.o \
+$(OBJDIR)/GwfWelModule.o \
+$(OBJDIR)/ConverterCommon.o \
+$(OBJDIR)/GwfLpfModule.o \
+$(OBJDIR)/ParamModule.o \
+$(OBJDIR)/GwfResModule.o \
+$(OBJDIR)/GwfBcfModule.o \
+$(OBJDIR)/GlobalPHMF.o \
+$(OBJDIR)/NWT1_xmdlib.o \
+$(OBJDIR)/GwfRivModule.o \
+$(OBJDIR)/ConstantsPHMF.o \
+$(OBJDIR)/mach_mod.o \
+$(OBJDIR)/GwfUzfModule_NWT.o \
+$(OBJDIR)/GwfDrnModule.o \
+$(OBJDIR)/GwfEtsModule.o \
+$(OBJDIR)/GwfUpwModule.o \
+$(OBJDIR)/GwfLakModule.o \
+$(OBJDIR)/GwfRchModule.o \
+$(OBJDIR)/kind.o \
+$(OBJDIR)/GwfEvtModule.o \
+$(OBJDIR)/OpenSpec.o \
+$(OBJDIR)/GlobalVariablesPHMF.o \
+$(OBJDIR)/gwf2hfb7_NWT.o \
+$(OBJDIR)/NWT1_module.o \
 $(OBJDIR)/Constants.o \
-$(OBJDIR)/Global.o \
-$(OBJDIR)/SimVariables.o \
-$(OBJDIR)/genericutils.o \
 $(OBJDIR)/Connection.o \
-$(OBJDIR)/GwfSfrModule.o \
+$(OBJDIR)/SimVariables.o \
 $(OBJDIR)/compilerversion.o \
-$(OBJDIR)/GwfBasModule.o \
-$(OBJDIR)/ArrayHandlers.o \
-$(OBJDIR)/NWT1_ilupc_mod.o \
-$(OBJDIR)/pcgn2.o \
+$(OBJDIR)/genericutils.o \
 $(OBJDIR)/List.o \
-$(OBJDIR)/SimListVariables.o \
 $(OBJDIR)/SfrDiversion.o \
-$(OBJDIR)/LakeTributary.o \
-$(OBJDIR)/LakeConnection.o \
-$(OBJDIR)/LakeOutlet.o \
-$(OBJDIR)/ModelPackage.o \
+$(OBJDIR)/GwfSfrModule.o \
 $(OBJDIR)/version.o \
-$(OBJDIR)/TimeSeriesRecord.o \
-$(OBJDIR)/CharacterContainer.o \
 $(OBJDIR)/Auxiliary.o \
-$(OBJDIR)/SfrReach.o \
+$(OBJDIR)/CharacterContainer.o \
+$(OBJDIR)/TimeSeriesRecord.o \
 $(OBJDIR)/GlobalVariables.o \
+$(OBJDIR)/LakeTributary.o \
+$(OBJDIR)/Global.o \
+$(OBJDIR)/LakeOutlet.o \
+$(OBJDIR)/SimListVariables.o \
+$(OBJDIR)/LakeConnection.o \
+$(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/GwfBasModule.o \
+$(OBJDIR)/NWT1_ilupc_mod.o \
+$(OBJDIR)/ModelPackage.o \
+$(OBJDIR)/pcgn2.o \
+$(OBJDIR)/SfrReach.o \
 $(OBJDIR)/SimPHMF.o \
-$(OBJDIR)/InputOutput.o \
-$(OBJDIR)/GwfSfrCheck.o \
-$(OBJDIR)/ArrayReadersMF5.o \
-$(OBJDIR)/TableTerm.o \
+$(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/MultiLayerObsModule.o \
-$(OBJDIR)/GwfResSubs.o \
+$(OBJDIR)/GwfSfrCheck.o \
 $(OBJDIR)/SfrSegment.o \
 $(OBJDIR)/SimVariablesPHMF.o \
-$(OBJDIR)/Table.o \
-$(OBJDIR)/GwfFhbSubs.o \
-$(OBJDIR)/MemoryHelper.o \
-$(OBJDIR)/LineList.o \
+$(OBJDIR)/InputOutput.o \
 $(OBJDIR)/Utilities.o \
-$(OBJDIR)/BlockParser.o \
-$(OBJDIR)/Lake.o \
+$(OBJDIR)/LineList.o \
+$(OBJDIR)/GwfFhbSubs.o \
 $(OBJDIR)/ObservePHMF.o \
+$(OBJDIR)/TableTerm.o \
+$(OBJDIR)/Lake.o \
+$(OBJDIR)/BlockParser.o \
+$(OBJDIR)/ArrayReadersMF5.o \
+$(OBJDIR)/GwfResSubs.o \
+$(OBJDIR)/precutls.o \
+$(OBJDIR)/Table.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/TimeSeries.o \
-$(OBJDIR)/ChdType.o \
-$(OBJDIR)/precutls.o \
-$(OBJDIR)/MemoryList.o \
 $(OBJDIR)/File.o \
-$(OBJDIR)/FileWriter.o \
-$(OBJDIR)/MemoryManager.o \
-$(OBJDIR)/DisWriter.o \
-$(OBJDIR)/DiscretizationBasePHMF.o \
+$(OBJDIR)/ChdType.o \
 $(OBJDIR)/FileList.o \
-$(OBJDIR)/TdisWriter.o \
-$(OBJDIR)/NpfWriter.o \
-$(OBJDIR)/IcWriter.o \
-$(OBJDIR)/StoWriter.o \
-$(OBJDIR)/TdisVariables.o \
-$(OBJDIR)/Discretization3D.o \
+$(OBJDIR)/MemoryList.o \
 $(OBJDIR)/utl7.o \
-$(OBJDIR)/GwfEtsSubs.o \
-$(OBJDIR)/obs2riv7.o \
-$(OBJDIR)/GwfRivSubs.o \
-$(OBJDIR)/GwfUzfSubs_NWT.o \
-$(OBJDIR)/obs2chd7.o \
-$(OBJDIR)/NWT1_gmres.o \
-$(OBJDIR)/ObsBlock.o \
-$(OBJDIR)/Mover.o \
-$(OBJDIR)/de47.o \
-$(OBJDIR)/GwfChdSubs.o \
+$(OBJDIR)/parutl7.o \
 $(OBJDIR)/GwfLgrSubs.o \
-$(OBJDIR)/pcg7.o \
 $(OBJDIR)/GwfGhbSubs.o \
-$(OBJDIR)/GwfSfrSubs.o \
-$(OBJDIR)/gmg7.o \
 $(OBJDIR)/sip7.o \
+$(OBJDIR)/gmg7.o \
+$(OBJDIR)/GwfSfrSubs.o \
+$(OBJDIR)/GwfMnwSubs.o \
+$(OBJDIR)/FileWriter.o \
 $(OBJDIR)/GwfDrnSubs.o \
 $(OBJDIR)/GwfLakSubs.o \
-$(OBJDIR)/Preproc.o \
+$(OBJDIR)/obs2chd7.o \
 $(OBJDIR)/GwfEvtSubs.o \
-$(OBJDIR)/parutl7.o \
+$(OBJDIR)/TdisWriter.o \
+$(OBJDIR)/obs2ghb7.o \
+$(OBJDIR)/MemoryManager.o \
+$(OBJDIR)/GwfRchSubs.o \
+$(OBJDIR)/StoWriter.o \
+$(OBJDIR)/TdisVariables.o \
+$(OBJDIR)/obs2drn7.o \
+$(OBJDIR)/gwf2mnw2i7.o \
+$(OBJDIR)/DiscretizationBasePHMF.o \
+$(OBJDIR)/obs2riv7.o \
+$(OBJDIR)/GwfRivSubs.o \
+$(OBJDIR)/Mover.o \
+$(OBJDIR)/de47.o \
+$(OBJDIR)/NWT1_gmres.o \
+$(OBJDIR)/pcg7.o \
 $(OBJDIR)/gwf2wel7_NWT.o \
 $(OBJDIR)/gwf2mnw17.o \
-$(OBJDIR)/GwfRchSubs.o \
-$(OBJDIR)/GwfMnwSubs.o \
 $(OBJDIR)/GwfHfbSubs_NWT.o \
-$(OBJDIR)/obs2ghb7.o \
+$(OBJDIR)/GwfEtsSubs.o \
 $(OBJDIR)/NWT1_xmd.o \
 $(OBJDIR)/obs2bas7.o \
-$(OBJDIR)/obs2drn7.o \
+$(OBJDIR)/DisWriter.o \
 $(OBJDIR)/NWT1_solver.o \
 $(OBJDIR)/GwfBasOcSubs.o \
-$(OBJDIR)/gwf2mnw2i7.o \
+$(OBJDIR)/GwfUzfSubs_NWT.o \
+$(OBJDIR)/GwfChdSubs.o \
+$(OBJDIR)/IcWriter.o \
+$(OBJDIR)/NpfWriter.o \
+$(OBJDIR)/Discretization3D.o \
+$(OBJDIR)/ObsBlock.o \
+$(OBJDIR)/Preproc.o \
 $(OBJDIR)/ObsWriter.o \
 $(OBJDIR)/ChdObsWriter.o \
 $(OBJDIR)/GhbObsWriter.o \
-$(OBJDIR)/RivObsWriter.o \
-$(OBJDIR)/DrnObsWriter.o \
 $(OBJDIR)/PackageWriter.o \
-$(OBJDIR)/GhbPackageWriter.o \
-$(OBJDIR)/WelPackageWriter.o \
-$(OBJDIR)/DrnPackageWriter.o \
-$(OBJDIR)/MvrPackageWriter.o \
-$(OBJDIR)/SfrPackageWriter.o \
+$(OBJDIR)/DrnObsWriter.o \
 $(OBJDIR)/HfbPackageWriter.o \
-$(OBJDIR)/EvtPackageWriter.o \
-$(OBJDIR)/ChdPackageWriter.o \
 $(OBJDIR)/RchPackageWriter.o \
-$(OBJDIR)/FhbPackageWriter.o \
-$(OBJDIR)/OutputControlWriter.o \
+$(OBJDIR)/WelPackageWriter.o \
 $(OBJDIR)/ImsPackageWriter.o \
 $(OBJDIR)/MawPackageWriter.o \
+$(OBJDIR)/MvrPackageWriter.o \
+$(OBJDIR)/RivObsWriter.o \
+$(OBJDIR)/EvtPackageWriter.o \
+$(OBJDIR)/ChdPackageWriter.o \
+$(OBJDIR)/GhbPackageWriter.o \
+$(OBJDIR)/OutputControlWriter.o \
 $(OBJDIR)/LakPackageWriter.o \
-$(OBJDIR)/UzfPackageWriter.o \
 $(OBJDIR)/RivPackageWriter.o \
+$(OBJDIR)/DrnPackageWriter.o \
+$(OBJDIR)/FhbPackageWriter.o \
+$(OBJDIR)/SfrPackageWriter.o \
+$(OBJDIR)/UzfPackageWriter.o \
 $(OBJDIR)/Model.o \
+$(OBJDIR)/Exchange.o \
+$(OBJDIR)/GwfUpwSubs.o \
 $(OBJDIR)/GwfLpfSubs.o \
 $(OBJDIR)/GwfBasSubs.o \
-$(OBJDIR)/GwfUpwSubs.o \
 $(OBJDIR)/GwfBcfSubs.o \
-$(OBJDIR)/Exchange.o \
 $(OBJDIR)/ModelConverter.o \
 $(OBJDIR)/ExchangeWriter.o \
 $(OBJDIR)/SimFileWriter.o \
@@ -185,7 +184,7 @@ $(OBJDIR)/mf5to6.o
 $(PROGRAM) : $(OBJECTS)
 	-$(FC) $(OPTLEVEL) -o $@ $(OBJECTS) $(LDFLAGS)
 
-$(OBJDIR)/%.o : %.f90
+$(OBJDIR)/%.o : %.F90
 	@mkdir -p $(@D)
 	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
 
@@ -193,7 +192,7 @@ $(OBJDIR)/%.o : %.f
 	@mkdir -p $(@D)
 	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
 
-$(OBJDIR)/%.o : %.F90
+$(OBJDIR)/%.o : %.f90
 	@mkdir -p $(@D)
 	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
 

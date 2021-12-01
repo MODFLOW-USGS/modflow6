@@ -138,7 +138,7 @@ mf5to6_sources = files(
 
 executable('mf5to6',
             mf5to6_sources,
-            link_with: mf6_internal_lib,
+            link_with: mf6core,
             install: true,
             override_options: ['fortran_std=none'],
             fortran_args: util_args)
