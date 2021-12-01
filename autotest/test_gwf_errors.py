@@ -210,7 +210,8 @@ def test_disu_errors():
             "1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (",
             "-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be",
             "below cell 1.",
-            "*  ERROR OCCURRED WHILE READING FILE 'test.disu'",
+            "UNIT ERROR REPORT:"
+            "1. ERROR OCCURRED WHILE READING FILE './test.disu'",
         ]
         run_mf6_error(ws, err_str)
 
