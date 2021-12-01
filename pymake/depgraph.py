@@ -9,10 +9,15 @@ except:
     print(msg)
     raise Exception()
 import os
+import shutil
 
 srcpth = os.path.join('..', 'src')
+networkx = False
 deppth = 'dependencies'
-if not os.path.exists(deppth):
-    os.makedirs(deppth)
+if not networkx:
+    deppth += "_std"
+if os.path.exists(deppth):
+    shutil.rmtree(deppth)
+os.makedirs(deppth)
 
-pymake.visualize.make_plots(srcpth, deppth, include_subdir=True)
+pymake.make_plots(srcpth, deppth, include_subdir=True, networkx=networkx)

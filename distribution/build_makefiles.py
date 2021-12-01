@@ -76,6 +76,7 @@ def build_mf6_makefile():
         pm.inplace = True
         pm.dryrun = True
         pm.makefile = True
+        pm.networkx = True
 
         # build the application
         pm.build()
@@ -97,6 +98,7 @@ def build_zbud6_makefile():
         pm.makeclean = True
         pm.dryrun = True
         pm.makefile = True
+        pm.networkx = True
 
         # build the application
         pm.build()
@@ -122,6 +124,7 @@ def build_mf5to6_makefile():
             inplace=True,
             dryrun=True,
             makefile=True,
+            networkx=True,
         )
 
         msg = f"could not create makefile for '{os.path.basename(target)}'."
@@ -152,6 +155,6 @@ if __name__ == "__main__":
     build_mf6_makefile()
     build_zbud6_makefile()
     build_mf5to6_makefile()
-    test_build_mf6_wmake()
-    test_build_zbud6_wmake()
-    test_build_mf5to6_wmake()
+    # test_build_mf6_wmake()
+    # test_build_zbud6_wmake()
+    # test_build_mf5to6_wmake()
