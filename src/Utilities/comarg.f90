@@ -1,6 +1,6 @@
 module CommandArguments
   use KindModule
-  use ConstantsModule, only: LINELENGTH, LENHUGELINE,                            &
+  use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENHUGELINE,                &
                              VSUMMARY, VALL, VDEBUG,                             &
                              MVALIDATE
   use VersionModule,          only: VERSION, MFVNAM, IDEVELOPMODE,               &
@@ -36,9 +36,10 @@ module CommandArguments
     character(len=LINELENGTH) :: header
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cexe
-    character(len=80) :: compiler
+    character(len=LENBIGLINE) :: compiler
     character(len=20) :: cdate
     character(len=17) :: ctyp
+    character(len=LENBIGLINE) :: coptions
     logical :: ltyp
     logical :: lexist
     logical :: lstop
@@ -46,7 +47,6 @@ module CommandArguments
     integer(I4B) :: ipos
     integer(I4B) :: ilen
     integer(I4B) :: iarg
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     lstop = .FALSE.
@@ -154,28 +154,32 @@ module CommandArguments
           lstop = .TRUE.
           write(line, '(2a,2(1x,a))')                                            &
             trim(adjustl(cexe)), ':', trim(adjustl(VERSION)), ctyp
-          call sim_message(line)
+          call write_message(line, skipbefore=1, skipafter=1)
         case('-DEV', '--DEVELOP')
           lstop = .TRUE.
           write(line, '(2a,g0)')                                                 &
             trim(adjustl(cexe)), ': develop version ', ltyp
-          call sim_message(line)
+          call write_message(line, skipbefore=1, skipafter=1)
         case('-C', '--COMPILER') 
           lstop = .TRUE.
           call get_compiler(compiler)
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
-          call sim_message(line)
+          call write_message(line, skipbefore=1, skipafter=1)
         case('-S', '--SILENT')
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', 'all screen output sent to mfsim.stdout'
-          call sim_message(line)
+          call write_message(line, skipbefore=1, skipafter=1)
         case('-D', '--DISCLAIMER')
           lstop = .TRUE.
           call sim_message('', fmt=FMTDISCLAIMER)
         case('-LIC', '--LICENSE')
           lstop = .TRUE.
           call sim_message('', fmt=FMTLICENSE)
+        case('-CO', '--COMPILER-OPT')
+          lstop = .TRUE.
+          call get_compile_options(coptions)
+          call write_message(coptions, skipbefore=1, skipafter=1)
         case('-L', '--LEVEL')
           if (len_trim(clevel) < 1) then
             iarg = iarg + 1
@@ -199,7 +203,7 @@ module CommandArguments
           write(line, '(2a,2(1x,a))')                                            &
             trim(adjustl(cexe)), ':', 'stdout output level',                     &
             trim(adjustl(clevel))
-          call sim_message(line)
+          call write_message(line, skipbefore=1, skipafter=1)
         case('-M', '--MODE')
           if (len_trim(cmode) < 1) then
             iarg = iarg + 1
@@ -221,7 +225,7 @@ module CommandArguments
             trim(adjustl(cmode)) // '. Model input will be checked for all ' //  &
             'stress periods but the matrix equations will not be ' //            &
             'assembled or solved.'
-          call sim_message(line)
+          call write_message(line, skipbefore=1, skipafter=1)
         case default
           lstop = .TRUE.
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
@@ -278,6 +282,7 @@ module CommandArguments
       &' -d        --disclaimer     Display program disclaimer.',/,              &
       &' -lic      --license        Display program license information.',/,     &
       &' -c        --compiler       Display compiler information.',/,            &
+      &' -co       --compiler-opt   Display compiler options.',/,                &
       &' -s        --silent         All STDOUT to mfsim.stdout.',/,              &
       &' -l <str>  --level <str>    STDOUT output to screen based on <str>.',/,  &
       &'                            <str>=summary Limited output to STDOUT.',/,  &
@@ -295,7 +300,6 @@ module CommandArguments
       &'simply even with just :+1:) to show your support for that issue.',/,     &
       &'                                                                    ',/, &
       &'[1] https://github.com/MODFLOW-USGS/modflow6/issues',/)"
-! ------------------------------------------------------------------------------
     !
     ! -- write command line usage information to the screen
     call sim_message(header)

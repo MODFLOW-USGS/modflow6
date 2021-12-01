@@ -407,7 +407,7 @@ module GwfDisuModule
     character(len=*), parameter :: fmtjam = &
       "('Cell ', i0, ' has invalid connection in JA.  Found: ', i0)"
     character(len=*),parameter :: fmterrmsg =                                  &
-      "(' Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
+      "('Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
       &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
       &rules cell ', i0, ' must be below cell ', i0, '.')"    
 ! ------------------------------------------------------------------------------

@@ -157,8 +157,8 @@ modflow_sources = files(
     'SimulationCreate.f90'
 )
 
-mf6_external_lib = static_library('mf6_external_lib', external_libraries)
+mf6_external = static_library('mf6_external', external_libraries)
 
-mf6_internal_lib = static_library('mf6_internal_lib', modflow_sources, link_with: mf6_external_lib)
+mf6core = static_library('mf6core', modflow_sources, link_with: [mf6_external])
 
-executable('mf6', 'mf6.f90', link_with: mf6_internal_lib, install: true)
+executable('mf6', 'mf6.f90', link_with: [mf6core], install: true)

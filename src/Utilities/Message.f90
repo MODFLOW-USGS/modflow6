@@ -219,10 +219,11 @@ module MessageModule
           !
           ! -- write each message
           do i = 1, isize
-            call write_message(this%message(i), i, iwidth=iwidth, level=ilevel)
+            call write_message(this%message(i), icount=i, iwidth=iwidth, &
+                               level=ilevel)
             if (iu > 0) then
-              call write_message(this%message(i), i, iwidth=iwidth, iunit=iu,    &
-                                 level=ilevel)
+              call write_message(this%message(i), icount=i, iwidth=iwidth, &
+                                 iunit=iu, level=ilevel)
             end if
           end do
           !

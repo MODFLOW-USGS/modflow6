@@ -9,8 +9,8 @@ module VersionModule
   use KindModule
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, DZERO
   use SimVariablesModule, only: istdout
-  use GenericUtilitiesModule, only: write_centered
-  use CompilerVersion, only: get_compiler
+  use GenericUtilitiesModule, only: write_centered, write_message
+  use CompilerVersion, only: get_compiler, get_compile_options
   implicit none
   public
     ! -- modflow 6 version
@@ -34,7 +34,7 @@ module VersionModule
       &'through CC0 1.0 Universal Public Domain Dedication ',/,                   &
       &'(https://creativecommons.org/publicdomain/zero/1.0/).',//,                &
       &'The following GNU Lesser General Public License (LGPL) libraries',/,      &
-      &'are used this USGS product:',//,                                          &
+      &'are used in this USGS product:',//,                                       &
       &'    SPARSKIT version 2.0',/,                                              &
       &'      ilut, luson, and qsplit ',/,                                        &
       &'      (https://www-users.cse.umn.edu/~saad/software/SPARSKIT/)',//,       &
@@ -47,7 +47,7 @@ module VersionModule
       &'      amux, dperm, dvperm, rperm, and cperm',/,                           &
       &'      (https://people.sc.fsu.edu/~jburkardt/f77_src/sparsekit/',          &
       &'sparsekit.html)',//,       &
-      &'The following BSD-3 License libraries are used this USGS product:',//,    &
+      &'The following BSD-3 License libraries are used in this USGS product:',//, &
       &'    Modern Fortran DAG Library',/,                                        &
       &'      Copyright (c) 2018, Jacob Williams',/,                              &
       &'      All rights reserved.',/,                                            &
@@ -83,7 +83,8 @@ module VersionModule
         logical(LGP), intent(in), optional :: write_kind_info     !< boolean indicating in program data types should be written
         ! -- local variables
         character(len=LENBIGLINE) :: syscmd
-        character(len=80) :: compiler
+        character(len=LENBIGLINE) :: compiler
+        character(len=LENBIGLINE) :: compiler_options
         integer(I4B) :: iheader_width = 80
         logical(LGP) :: wki
         logical(LGP) :: wsc
@@ -116,6 +117,12 @@ module VersionModule
         ! -- Write license information
         if (iout /= istdout) then
           write(iout, FMTLICENSE)
+        end if
+        !
+        ! -- write compiler options
+        if (iout /= istdout) then
+          call get_compile_options(compiler_options)
+          call write_message(compiler_options, iunit=iout)
         end if
         !
         ! -- Write the system command used to initiate simulation

@@ -8,6 +8,6 @@ zonebudget_sources = files(
 
 executable('zbud6',
            zonebudget_sources,
-           link_with: mf6_internal_lib, 
+           link_with: mf6core, 
            install: true,
            fortran_args: util_args)

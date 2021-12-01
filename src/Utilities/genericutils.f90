@@ -111,28 +111,39 @@ module GenericUtilitiesModule
 
   !> @brief Write messages
   !!
-  !!  Subroutine that formats and writes a single message.
+  !!  Subroutine that formats and writes a single message that 
+  !!  may exceeed 78 characters in length. Messages longer than
+  !!  78 characters are written across multiple lines. When a
+  !!  counter is passed in subsequent lines are indented.
   !!
   !<
-  subroutine write_message(message, icount, iwidth, iunit, level)
+  subroutine write_message(message, icount, iwidth, iunit, level, &
+                           skipbefore, skipafter)
     ! -- dummy variables
-    character (len=*), intent(in)           :: message   !< message to be written
-    integer(I4B),      intent(in)           :: icount    !< counter to prepended to the message  
-    integer(I4B),      intent(in)           :: iwidth    !< maximum width of the prepended counter
-    integer(I4B),      intent(in), optional :: iunit     !< the unit number to which the message is written
-    integer(I4B),      intent(in), optional :: level     !< level of message (VSUMMARY, VALL, VDEBUG)
+    character (len=*), intent(in) :: message          !< message to be written
+    integer(I4B), intent(in), optional :: icount      !< counter to prepended to the message  
+    integer(I4B), intent(in), optional :: iwidth      !< maximum width of the prepended counter
+    integer(I4B), intent(in), optional :: iunit       !< the unit number to which the message is written
+    integer(I4B), intent(in), optional :: level       !< level of message (VSUMMARY, VALL, VDEBUG)
+    integer(I4B), intent(in), optional :: skipbefore  !< optional number of empty lines before message (default=0)
+    integer(I4B), intent(in), optional :: skipafter   !< optional number of empty lines after message (default=0)
     ! -- local variables
+    integer(I4B), parameter    :: len_line=78
     character(len=LENHUGELINE) :: amessage
-    character(len=20)          :: ablank
+    character(len=len_line)    :: line
     character(len=16)          :: cfmt
-    character(len=10)          :: cval
+    character(len=10)          :: counter
+    character(len=5)           :: fmt_first
+    character(len=20)          :: fmt_cont
+    logical(LGP)               :: include_counter
+    integer(I4B)               :: isb
+    integer(I4B)               :: isa
     integer(I4B)               :: jend
-    integer(I4B)               :: nblc
+    integer(I4B)               :: len_str1
+    integer(I4B)               :: len_str2
+    integer(I4B)               :: len_message
     integer(I4B)               :: junit
     integer(I4B)               :: ilevel
-    integer(I4B)               :: leadblank
-    integer(I4B)               :: itake
-    integer(I4B)               :: ipos
     integer(I4B)               :: i
     integer(I4B)               :: j
     !
@@ -143,16 +154,15 @@ module GenericUtilitiesModule
     !
     ! -- initialize local variables
     amessage = message
+    counter = ''
+    fmt_first = '(A)'
+    fmt_cont = '(A)'
+    len_str1 = 0
+    len_str2 = len_line
+    include_counter = .FALSE.
     junit = istdout
-    ablank = ' '
-    itake = 0
     j = 0
-    !
-    ! -- ensure that there is at least one blank space at the start of amessage
-    if (amessage(1:1) /= ' ') then
-      amessage = ' ' // trim(amessage)
-    end if
-    !
+  !
     ! -- process optional dummy variables
     ! -- set the unit number
     if(present(iunit))then
@@ -168,70 +178,96 @@ module GenericUtilitiesModule
       ilevel = VSUMMARY
     end if
     !
-    ! -- create the counter to prepend to amessage
-    if (iwidth > 0) then
-      write(cfmt, '(A,I0,A)') '(1X,I', iwidth, ',".")'
-      write(cval, cfmt) icount
-      ipos = len_trim(cval)
+    ! -- set skip before
+    if (present(skipbefore)) then
+      isb = skipbefore
     else
-      cval = ''
-      ipos = 2
+      isb = 0
     end if
     !
-    ! -- prepend amessage with the counter
-    nblc = len_trim(amessage)
-    amessage = adjustr(amessage(1:nblc+ipos))
-    if (nblc+ipos < len(amessage)) then
-      amessage(nblc+ipos+1:) = ' '
+    ! -- set skip after
+    if (present(skipafter)) then
+      isa = skipafter
+    else
+      isa = 0
     end if
-    amessage(1:ipos) = cval(1:ipos)
     !
-    ! -- set the number of leading blanks
-    leadblank = ipos - 1
+    ! -- create the counter to prepend to the start of the message,
+    !    formats, and variables used to create strings 
+    if (present(iwidth) .and. present(icount)) then
+      include_counter = .TRUE.
+      ! -- write counter
+      write(cfmt, '(A,I0,A)') '(1x,i', iwidth, ',".",1x)'
+      write(counter, cfmt) icount
+      ! -- calculate the length of the first and second string on a line
+      len_str1 = len(trim(counter)) + 1
+      len_str2 = len_line - len_str1
+      ! -- write format for the continuation lines
+      write(fmt_cont, '(a,i0,a)') &
+        '(',len(trim(counter)) + 1, 'x,a)'
+    end if
     !
-    ! -- calculate the final length of the message after modification
-    nblc = len_trim(amessage)
+    ! -- calculate the length of the message
+    len_message = len_trim(amessage)
     !
     ! -- parse the amessage into multiple lines
 5   continue
-    jend = j + 78 - itake
-    if (jend >= nblc) go to 100
+    jend = j + len_str2
+    if (jend >= len_message) go to 100
     do i = jend, j+1, -1
       if (amessage(i:i).eq.' ') then
-        if (itake.eq.0) then
-          call sim_message(amessage(j+1:i), iunit=junit, level=ilevel)
-          itake = 2 + leadblank
+        if (j == 0) then
+          if (include_counter) then
+            line = counter(1:len_str1)//amessage(j+1:i)
+          else
+            line = amessage(j+1:i)
+          end if
+          call sim_message(line, iunit=junit, &
+                           fmt=fmt_first, level=ilevel, &
+                           skipbefore=isb)
         else
-          call sim_message(ablank(1:leadblank+2)//amessage(j+1:i),               &
-                           iunit=junit, level=ilevel)
+          line = adjustl(amessage(j+1:i))
+          call sim_message(line, iunit=junit, &
+                           fmt=fmt_cont, level=ilevel)
         end if
         j = i
         go to 5
       end if
     end do
-    if (itake == 0)then
-      call sim_message(amessage(j+1:jend), iunit=junit, level=ilevel)
-      itake = 2 + leadblank
+    if (j == 0) then
+      if (include_counter) then
+        line = counter(1:len_str1)//amessage(j+1:jend)
+      else
+        line = amessage(j+1:jend)
+      end if
+      call sim_message(line, iunit=junit, &
+                       fmt=fmt_first, level=ilevel, &
+                       skipbefore=isb)
     else
-      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend),                &
-                       iunit=junit, level=ilevel)
+      line = amessage(j+1:jend)
+      call sim_message(line, iunit=junit, &
+                       fmt=fmt_cont, level=ilevel)
     end if
     j = jend
     go to 5
     !
     ! -- last piece of amessage to write to a line
 100 continue
-    jend = nblc
-    if (itake == 0)then
-      call sim_message(amessage(j+1:jend), iunit=junit, level=ilevel)
-    else
-      if (leadblank > 0) then
-        call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend), &
-                         iunit=junit, level=ilevel)
+    jend = len_message
+    if (j == 0) then
+      if (include_counter) then
+        line = counter(1:len_str1)//amessage(j+1:jend)
       else
-        call sim_message(amessage(j+1:jend), &
-                         iunit=junit, level=ilevel)
+        line = amessage(j+1:jend)
       end if
+      call sim_message(line, iunit=junit, &
+                       fmt=fmt_first, level=ilevel, &
+                       skipbefore=isb, skipafter=isa)
+    else
+      line = amessage(j+1:jend)
+      call sim_message(line, iunit=junit, fmt=fmt_cont, &
+                       level=ilevel, &
+                       skipafter=isa)
     end if
     !
     ! -- return
@@ -250,13 +286,14 @@ module GenericUtilitiesModule
     integer(I4B), intent(in) :: linelen             !< length of line to center text in
     integer(I4B), intent(in), optional :: iunit     !< optional file unit to write text (default=stdout)
     ! -- local variables
-    character(len=LINELENGTH) :: newline
-    character(len=LINELENGTH) :: textleft
+    character(len=linelen) :: line
+    character(len=linelen) :: blank
     integer(I4B) :: iu
-    integer(I4B) :: loc1
-    integer(I4B) :: loc2
-    integer(I4B) :: lentext
-    integer(I4B) :: nspaces
+    integer(I4B) :: len_message
+    integer(I4B) :: jend
+    integer(I4B) :: ipad
+    integer(I4B) :: i
+    integer(I4B) :: j
     !
     ! -- process optional parameters
     if (present(iunit)) then
@@ -267,19 +304,40 @@ module GenericUtilitiesModule
     !
     ! -- process text
     if (iu > 0) then
-      textleft = adjustl(text)
-      lentext = len_trim(textleft)
-      nspaces = linelen - lentext
-      loc1 = (nspaces / 2) + 1
-      loc2 = loc1 + lentext - 1
-      newline = ' '
-      newline(loc1:loc2) = textleft
       !
-      ! -- write processed text to iu
-      write(iu,'(a)') trim(newline)
+      ! -- initialize local variables
+      blank = ''
+      len_message = len_trim(adjustl(text))
+      j = 0
+      !
+      ! -- parse the amessage into multiple lines
+5     continue
+      jend = j + linelen
+      if (jend >= len_message) go to 100
+      do i = jend, j+1, -1
+        if (text(i:i).eq.' ') then
+          line = text(j+1:i)
+          ipad = ((linelen - len_trim(line)) / 2) 
+          call sim_message(blank(1:ipad)//line, iunit=iu)
+          j = i
+          go to 5
+        end if
+      end do
+      line = text(j+1:jend)
+      ipad = ((linelen - len_trim(line)) / 2) 
+      call sim_message(blank(1:ipad)//line, iunit=iu)
+      j = jend
+      go to 5
+      !
+      ! -- last piece of amessage to write to a line
+100   continue
+      jend = len_message
+      line = text(j+1:jend)
+      ipad = ((linelen - len_trim(line)) / 2) 
+      call sim_message(blank(1:ipad)//line, iunit=iu)
     end if
     !
-    ! -- retirn
+    ! -- return
     return
   end subroutine write_centered
   
