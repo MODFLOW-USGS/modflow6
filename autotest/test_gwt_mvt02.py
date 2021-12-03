@@ -372,8 +372,9 @@ def build_model(idx, dir):
         # output control
         oc = flopy.mf6.ModflowGwtoc(
             gwt,
-            budget_filerecord="{}.cbc".format(gwtname),
-            concentration_filerecord="{}.ucn".format(gwtname),
+            budget_filerecord=f"{gwtname}.bud",
+            budgetcsv_filerecord=f"{gwtname}.bud.csv",
+            concentration_filerecord=f"{gwtname}.ucn",
             concentrationprintrecord=[
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
@@ -395,10 +396,20 @@ def build_model(idx, dir):
 
 def eval_results(sim):
     print("evaluating results...")
-
-    # ensure sfr concentrations were saved
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
+
+    # Load csv budget and make sure names are correct
+    fname = f"{gwtname}.bud.csv"
+    fname = os.path.join(sim.simpath, fname)
+    budcsv = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
+    answer = ['time', 'STORAGE-AQUEOUS(MST)_IN', 'WEL(SSM_WEL-1)_IN', 'DRN(SSM_DRN-1)_IN', 'DRN-TO-MVR(SSM_DRN-1)_IN',
+              'SFT(SFR-1)_IN', 'STORAGE-AQUEOUS(MST)_OUT', 'WEL(SSM_WEL-1)_OUT', 'DRN(SSM_DRN-1)_OUT',
+              'DRN-TO-MVR(SSM_DRN-1)_OUT', 'SFT(SFR-1)_OUT', 'TOTAL_IN', 'TOTAL_OUT', 'PERCENT_DIFFERENCE']
+    for i, name in enumerate(budcsv.dtype.names[:len(answer)]):
+        assert answer[i] == name
+
+    # ensure sfr concentrations were saved
     fname = gwtname + ".sft.bin"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)

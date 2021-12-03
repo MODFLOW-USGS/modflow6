@@ -20,6 +20,7 @@ module ConstantsModule
   integer(I4B), parameter :: LENMODELNAME = LENCOMPONENTNAME                            !< maximum length of the model name
   integer(I4B), parameter :: LENPACKAGENAME = LENCOMPONENTNAME                          !< maximum length of the package name
   integer(I4B), parameter :: LENEXCHANGENAME = LENCOMPONENTNAME                         !< maximum length of the exchange name
+  integer(I4B), parameter :: LENBUDROWLABEL = 2 * LENPACKAGENAME + 1                    !< maximum length of the rowlabel string used in the budget table
   integer(I4B), parameter :: LENMEMSEPARATOR = 1                                        !< maximum length of the memory path separator used, currently a '/'
   integer(I4B), parameter :: LENMEMPATH = 2*LENCOMPONENTNAME + LENMEMSEPARATOR          !< maximum length of the memory path
   integer(I4B), parameter :: LENMEMADDRESS = LENMEMPATH + LENMEMSEPARATOR + LENVARNAME  !< maximum length of the full memory address, including variable name

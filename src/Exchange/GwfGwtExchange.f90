@@ -1,6 +1,7 @@
 module GwfGwtExchangeModule
   
   use KindModule,              only: DP, I4B
+  use ConstantsModule,         only: LENPACKAGENAME
   use ListsModule,             only: basemodellist, baseexchangelist
   use SimVariablesModule,      only: errmsg
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
@@ -88,8 +89,6 @@ module GwfGwtExchangeModule
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
-    integer(I4B) :: ngwfpack, ip
-    class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
@@ -111,17 +110,6 @@ module GwfGwtExchangeModule
     !
     ! -- setup pointer to gwf variables that were allocated in gwf_df
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
-    ngwfpack = gwfmodel%bndlist%Count()
-    !
-    ! -- allocate arrays in fmi of size ngwfpack
-    call gwtmodel%fmi%allocate_gwfpackages(ngwfpack)
-    !
-    ! -- Assign values in the fmi package
-    do ip = 1, ngwfpack
-      packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%packName)
-      gwtmodel%fmi%flowpacknamearray(ip) = packobj%packName
-    end do
     !
     ! -- return
     return
@@ -321,11 +309,12 @@ module GwfGwtExchangeModule
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
-    integer(I4B) :: ngwfpack, ip
+    integer(I4B) :: ngwfpack, ip, iterm, imover
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
     class(BndType), pointer :: packobj => null()
+    character (len=LENPACKAGENAME) :: text
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
@@ -344,19 +333,37 @@ module GwfGwtExchangeModule
     !
     ! -- Allocate the gwfpackages in fmi and transfer information
     ngwfpack = gwfmodel%bndlist%Count()
+    iterm = 1
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(ip)%set_pointers( &
+      call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
                            packobj%packName, &
                            packobj%text, &
                            packobj%auxname, &
                            packobj%nbound, &
                            packobj%naux, &
                            packobj%nodelist, &
-                           packobj%hcof, &
-                           packobj%rhs, &
-                           packobj%auxvar, &
-                           packobj%xnew)
+                           packobj%simvals, &
+                           packobj%auxvar)
+      iterm = iterm + 1
+      !
+      ! -- Check in mover if it is active and not an advanced stress
+      !    package
+      imover = packobj%imover
+      if (packobj%isadvpak /= 0) imover = 0
+      if (imover /= 0) then
+        text = trim(adjustl(packobj%text)) // '-TO-MVR'
+        call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
+                             packobj%packName, &
+                             text, &
+                             packobj%auxname, &
+                             packobj%nbound, &
+                             packobj%naux, &
+                             packobj%nodelist, &
+                             packobj%simtomvr, &
+                             packobj%auxvar)
+        iterm = iterm + 1
+      end if
     end do
     !
     ! -- return

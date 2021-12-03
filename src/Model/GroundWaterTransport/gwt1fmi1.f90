@@ -52,6 +52,7 @@ module GwtFmiModule
     integer(I4B), pointer                           :: iuhds => null()           !< unit number GWF head file
     integer(I4B), pointer                           :: iumvr => null()           !< unit number GWF mover budget file
     integer(I4B), pointer                           :: nflowpack => null()       !< number of GWF flow packages
+    integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null()     !< flag to indicate that gwf package is a mover term
     type(BudgetFileReaderType)                      :: bfr                       !< budget file reader
     type(HeadFileReaderType)                        :: hfr                       !< head file reader
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages            !< used to get flows between a package and gwf
@@ -81,6 +82,8 @@ module GwtFmiModule
     procedure :: initialize_hfr
     procedure :: advance_hfr
     procedure :: finalize_hfr
+    procedure :: initialize_gwfterms_from_bfr
+    procedure :: initialize_gwfterms_from_gwfbndlist
     procedure :: allocate_gwfpackages
     procedure :: get_package_index
     procedure :: set_aptbudobj_pointer
@@ -173,6 +176,12 @@ module GwtFmiModule
     ! -- Read packagedata options
     if (this%inunit /= 0 .and. this%flows_from_file) then
       call this%read_packagedata()
+      call this%initialize_gwfterms_from_bfr()
+    end if
+    !
+    ! -- If GWF-GWT exchange is active, then setup gwfterms from bndlist
+    if (.not. this%flows_from_file) then
+      call this%initialize_gwfterms_from_gwfbndlist()
     end if
     !
     ! -- Make sure that ssm is on if there are any boundary packages
@@ -533,6 +542,7 @@ module GwtFmiModule
     deallocate(this%aptbudobj)
     call mem_deallocate(this%flowcorrect)
     call mem_deallocate(this%iatp)
+    call mem_deallocate(this%igwfmvrterm)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
       call mem_deallocate(this%gwfflowja)
@@ -945,111 +955,22 @@ module GwtFmiModule
 
   subroutine initialize_bfr(this)
 ! ******************************************************************************
-! initialize_bfr -- initalize the budget file reader and figure out how many
-!   different terms and packages are contained within the file
+! initialize_bfr -- initalize the budget file reader
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    use SimModule, only: store_error, store_error_unit, count_errors
-    ! -- dummy
     class(GwtFmiType) :: this
-    ! -- local
+    ! -- dummy
     integer(I4B) :: ncrbud
-    integer(I4B) :: nflowpack
-    integer(I4B) :: i, ip
-    integer(I4B) :: naux
-    logical :: found_flowja
-    logical :: found_dataspdis
-    logical :: found_datasat
-    logical :: found_stoss
-    logical :: found_stosy
-    integer(I4B), dimension(:), allocatable :: imap
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
     !
-    ! -- Calculate the number of gwf flow packages
-    allocate(imap(this%bfr%nbudterms))
-    imap(:) = 0
-    nflowpack = 0
-    found_flowja = .false.
-    found_dataspdis = .false.
-    found_datasat = .false.
-    found_stoss = .false.
-    found_stosy = .false.
-    do i = 1, this%bfr%nbudterms
-      select case(trim(adjustl(this%bfr%budtxtarray(i))))
-      case ('FLOW-JA-FACE')
-        found_flowja = .true.
-      case ('DATA-SPDIS')
-        found_dataspdis = .true.
-      case ('DATA-SAT')
-        found_datasat = .true.
-      case ('STO-SS')
-        found_stoss = .true.
-        this%igwfstrgss = 1
-      case ('STO-SY')
-        found_stosy = .true.
-        this%igwfstrgsy = 1
-      case default
-        nflowpack = nflowpack + 1
-        imap(i) = 1
-      end select
-    end do
-    !
-    ! -- allocate gwfpackage arrays (gwfpackages, iatp, datp, ...)
-    call this%allocate_gwfpackages(nflowpack)
-    !
-    ! -- Copy the package name and aux names from budget file reader
-    !    to the gwfpackages derived-type variable
-    ip = 1
-    do i = 1, this%bfr%nbudterms
-      if (imap(i) == 0) cycle
-      call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i))
-      naux = this%bfr%nauxarray(i)
-      call this%gwfpackages(ip)%set_auxname(naux, this%bfr%auxtxtarray(1:naux, i))
-      ip = ip + 1
-    end do
-    !
-    ! -- Copy just the package names for the boundary packages into
-    !    the flowpacknamearray
-    ip = 1
-    do i = 1, size(imap)
-      if (imap(i) == 1) then
-        this%flowpacknamearray(ip) = this%bfr%dstpackagenamearray(i)
-        ip = ip + 1
-      end if
-    end do
-    !
-    ! -- Error if specific discharge, saturation or flowja not found
-    if (.not. found_dataspdis) then
-      write(errmsg, '(4x,a)') '***ERROR. SPECIFIC DISCHARGE NOT FOUND IN &
-                              &BUDGET FILE. SAVE_SPECIFIC_DISCHARGE AND &
-                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
-      call store_error(errmsg)
-    end if
-    if (.not. found_datasat) then
-      write(errmsg, '(4x,a)') '***ERROR. SATURATION NOT FOUND IN &
-                              &BUDGET FILE. SAVE_SATURATION AND &
-                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
-      call store_error(errmsg)
-    end if
-    if (.not. found_flowja) then
-      write(errmsg, '(4x,a)') '***ERROR. FLOWJA NOT FOUND IN &
-                              &BUDGET FILE. SAVE_FLOWS MUST &
-                              &BE ACTIVATED IN THE NPF PACKAGE.'
-      call store_error(errmsg)
-    end if
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- return
-    return
+    ! -- todo: need to run through the budget terms
+    !    and do some checking
   end subroutine initialize_bfr
   
   subroutine advance_bfr(this)
@@ -1355,7 +1276,178 @@ module GwtFmiModule
     !
   end subroutine finalize_hfr
   
-  subroutine allocate_gwfpackages(this, nflowpack)
+  subroutine initialize_gwfterms_from_bfr(this)
+! ******************************************************************************
+! initialize_gwfterms_from_bfr -- initalize terms and figure out how many
+!   different terms and packages are contained within the file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    use SimModule, only: store_error, store_error_unit, count_errors
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    integer(I4B) :: nflowpack
+    integer(I4B) :: i, ip
+    integer(I4B) :: naux
+    logical :: found_flowja
+    logical :: found_dataspdis
+    logical :: found_datasat
+    logical :: found_stoss
+    logical :: found_stosy
+    integer(I4B), dimension(:), allocatable :: imap
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate the number of gwf flow packages
+    allocate(imap(this%bfr%nbudterms))
+    imap(:) = 0
+    nflowpack = 0
+    found_flowja = .false.
+    found_dataspdis = .false.
+    found_datasat = .false.
+    found_stoss = .false.
+    found_stosy = .false.
+    do i = 1, this%bfr%nbudterms
+      select case(trim(adjustl(this%bfr%budtxtarray(i))))
+      case ('FLOW-JA-FACE')
+        found_flowja = .true.
+      case ('DATA-SPDIS')
+        found_dataspdis = .true.
+      case ('DATA-SAT')
+        found_datasat = .true.
+      case ('STO-SS')
+        found_stoss = .true.
+        this%igwfstrgss = 1
+      case ('STO-SY')
+        found_stosy = .true.
+        this%igwfstrgsy = 1
+      case default
+        nflowpack = nflowpack + 1
+        imap(i) = 1
+      end select
+    end do
+    !
+    ! -- allocate gwfpackage arrays (gwfpackages, iatp, datp, ...)
+    call this%allocate_gwfpackages(nflowpack)
+    !
+    ! -- Copy the package name and aux names from budget file reader
+    !    to the gwfpackages derived-type variable
+    ip = 1
+    do i = 1, this%bfr%nbudterms
+      if (imap(i) == 0) cycle
+      call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i))
+      naux = this%bfr%nauxarray(i)
+      call this%gwfpackages(ip)%set_auxname(naux, this%bfr%auxtxtarray(1:naux, i))
+      ip = ip + 1
+    end do
+    !
+    ! -- Copy just the package names for the boundary packages into
+    !    the flowpacknamearray
+    ip = 1
+    do i = 1, size(imap)
+      if (imap(i) == 1) then
+        this%flowpacknamearray(ip) = this%bfr%dstpackagenamearray(i)
+        ip = ip + 1
+      end if
+    end do
+    !
+    ! -- Error if specific discharge, saturation or flowja not found
+    if (.not. found_dataspdis) then
+      write(errmsg, '(4x,a)') 'SPECIFIC DISCHARGE NOT FOUND IN &
+                              &BUDGET FILE. SAVE_SPECIFIC_DISCHARGE AND &
+                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (.not. found_datasat) then
+      write(errmsg, '(4x,a)') 'SATURATION NOT FOUND IN &
+                              &BUDGET FILE. SAVE_SATURATION AND &
+                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (.not. found_flowja) then
+      write(errmsg, '(4x,a)') 'FLOWJA NOT FOUND IN &
+                              &BUDGET FILE. SAVE_FLOWS MUST &
+                              &BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine initialize_gwfterms_from_bfr
+  
+  subroutine initialize_gwfterms_from_gwfbndlist(this)
+! ******************************************************************************
+! initialize_gwfterms_from_gwfbndlist -- flows are coming from a gwf-gwt
+!   exchange
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType, GetBndFromList
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    integer(I4B) :: ngwfpack
+    integer(I4B) :: ngwfterms
+    integer(I4B) :: ip
+    integer(I4B) :: imover
+    integer(I4B) :: ntomvr
+    integer(I4B) :: iterm
+    class(BndType), pointer :: packobj => null()
+! ------------------------------------------------------------------------------
+    !
+    ! -- determine size of gwf terms
+    ngwfpack = this%gwfbndlist%Count()
+    !
+    ! -- Count number of to-mvr terms, but do not include advanced packages
+    !    as those mover terms are not losses from the cell, but rather flows
+    !    within the advanced package
+    ntomvr = 0
+    do ip = 1, ngwfpack
+      packobj => GetBndFromList(this%gwfbndlist, ip)
+      imover = packobj%imover
+      if (packobj%isadvpak /= 0) imover = 0
+      if (imover /= 0) then
+        ntomvr = ntomvr + 1
+      end if
+    end do
+    !
+    ! -- Allocate arrays in fmi of size ngwfterms, which is the number of packages
+    !    plus the number of package movers.
+    ngwfterms = ngwfpack + ntomvr
+    call this%allocate_gwfpackages(ngwfterms)
+    !
+    ! -- Assign values in the fmi package
+    iterm = 1
+    do ip = 1, ngwfpack
+      !
+      ! -- set and store names
+      packobj => GetBndFromList(this%gwfbndlist, ip)
+      call this%gwfpackages(iterm)%set_name(packobj%packName)
+      this%flowpacknamearray(iterm) = packobj%packName
+      iterm = iterm + 1
+      !
+      ! -- if this package has a mover associated with it, then add another
+      !    term that corresponds to the mover flows
+      imover = packobj%imover
+      if (packobj%isadvpak /= 0) imover = 0
+      if (imover /= 0) then
+        this%igwfmvrterm(iterm) = 1
+        this%flowpacknamearray(iterm) = packobj%packName
+        iterm = iterm + 1
+      end if
+    end do
+    return
+  end subroutine initialize_gwfterms_from_gwfbndlist
+  
+  subroutine allocate_gwfpackages(this, ngwfterms)
 ! ******************************************************************************
 ! allocate_gwfpackages -- allocate the gwfpackages array
 ! ******************************************************************************
@@ -1363,27 +1455,35 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use ConstantsModule, only: LENMEMPATH
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtFmiType) :: this
-    integer(I4B), intent(in) :: nflowpack
+    integer(I4B), intent(in) :: ngwfterms
     ! -- local
     integer(I4B) :: n
+    character(len=LENMEMPATH) :: memPath
 ! ------------------------------------------------------------------------------
     !
     ! -- direct allocate
-    allocate(this%gwfpackages(nflowpack))
-    allocate(this%flowpacknamearray(nflowpack))
-    allocate(this%datp(nflowpack))
+    allocate(this%gwfpackages(ngwfterms))
+    allocate(this%flowpacknamearray(ngwfterms))
+    allocate(this%datp(ngwfterms))
     !
     ! -- mem_allocate
-    call mem_allocate(this%iatp, nflowpack, 'IATP', this%memoryPath)
+    call mem_allocate(this%iatp, ngwfterms, 'IATP', this%memoryPath)
+    call mem_allocate(this%igwfmvrterm, ngwfterms, 'IGWFMVRTERM', this%memoryPath)
     !
     ! -- initialize
-    this%nflowpack = nflowpack
+    this%nflowpack = ngwfterms
     do n = 1, this%nflowpack
       this%iatp(n) = 0
+      this%igwfmvrterm(n) = 0
       this%flowpacknamearray(n) = ''
+      !
+      ! -- Create a mempath for each individual flow package data set (MODELNAME/FMI-Pn)
+      write(memPath, '(a, i0)') trim(this%memoryPath) // '-P', n
+      call this%gwfpackages(n)%initialize(memPath)
     end do
     !
     ! -- return
@@ -1403,27 +1503,16 @@ module GwtFmiModule
     integer(I4B), intent(inout) :: idx
     ! -- local
     integer(I4B) :: ip
-    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
     ! -- Look through all the packages and return the index with name
     idx = 0
-    if (associated(this%gwfbndlist)) then
-      do ip = 1, this%gwfbndlist%Count()
-        packobj => GetBndFromList(this%gwfbndlist, ip)
-        if (packobj%packName == name) then
-          idx = ip
-          exit
-        end if
-      end do
-    else
-      do ip = 1, size(this%flowpacknamearray)
-        if (this%flowpacknamearray(ip) == name) then
-          idx = ip
-          exit
-        end if
-      end do
-    end if
+    do ip = 1, size(this%flowpacknamearray)
+      if (this%flowpacknamearray(ip) == name) then
+        idx = ip
+        exit
+      end if
+    end do
     if (idx == 0) then
       call store_error('Error in get_package_index.  Could not find '//name, &
                        terminate=.TRUE.)

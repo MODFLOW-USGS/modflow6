@@ -1,7 +1,8 @@
 module PackageBudgetModule
   
   use KindModule
-  use ConstantsModule, only: LENPACKAGENAME, LENAUXNAME
+  use ConstantsModule, only: LENPACKAGENAME, LENAUXNAME, LENMEMPATH
+  use MemoryManagerModule, only: mem_allocate
 
   implicit none
   
@@ -10,6 +11,7 @@ module PackageBudgetModule
   
   type :: PackageBudgetType
     
+    character(len=LENMEMPATH) :: memoryPath = ''                                 !< the location in the memory manager where the variables are stored
     character(len=LENPACKAGENAME) :: name = ''                                   !< name of the package
     character(len=LENPACKAGENAME) :: budtxt = ''                                 !< type of flow (CHD, RCH, RCHA, ...)
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !< auxiliary variable names
@@ -17,14 +19,12 @@ module PackageBudgetModule
     integer(I4B), pointer :: nbound => null()                                    !< number of boundaries for current stress period
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !< vector of reduced node numbers
     real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !< array of package specific boundary numbers
-    real(DP), dimension(:), pointer, contiguous :: hcof => null()                !< diagonal contribution
-    real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !< right-hand side contribution
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !< auxiliary variable array
     real(DP), dimension(:), pointer, contiguous :: flow => null()                !< calculated flow
-    real(DP), dimension(:), pointer, contiguous :: xnew => null()                !< dependent variable (head) for this time step
     
   contains
   
+    procedure :: initialize
     procedure :: set_name
     procedure :: set_auxname
     procedure :: set_pointers
@@ -34,6 +34,25 @@ module PackageBudgetModule
   end type PackageBudgetType  
   
   contains
+  
+  subroutine initialize(this, mempath)
+    class(PackageBudgetType) :: this
+    character(len=*), intent(in) :: mempath
+    this%memoryPath = mempath
+    !
+    ! -- allocate scalars
+    !call mem_allocate(this%name, LENPACKAGENAME, 'NAME', mempath)
+    !call mem_allocate(this%budtxt, LENPACKAGENAME, 'BUDTXT', mempath)
+    !call mem_allocate(this%naux, 'NAUX', mempath)
+    !call mem_allocate(this%nbound, 'NBOUND', mempath)
+    !
+    ! -- initialize
+    !this%name = ''
+    !this%budtxt = ''
+    !this%naux = 0
+    !this%nbound = 0
+    return
+  end subroutine initialize
   
   subroutine set_name(this, name)
     class(PackageBudgetType) :: this
@@ -55,7 +74,7 @@ module PackageBudgetModule
   end subroutine set_auxname
   
   subroutine set_pointers(this, name, budtxt, auxname, nbound, naux, nodelist, &
-                           hcof, rhs, auxvar, xnew)
+                           flow, auxvar)
     class(PackageBudgetType) :: this
     character(len=LENPACKAGENAME) :: name
     character(len=LENPACKAGENAME) :: budtxt
@@ -63,10 +82,8 @@ module PackageBudgetModule
     integer(I4B), target, intent(in) :: nbound
     integer(I4B), target, intent(in) :: naux
     integer(I4B), dimension(:), target, contiguous, intent(in) :: nodelist
-    real(DP), dimension(:), target, contiguous, intent(in):: hcof
-    real(DP), dimension(:), target, contiguous, intent(in) :: rhs
+    real(DP), dimension(:), target, contiguous, intent(in):: flow
     real(DP), dimension(:,:), target, contiguous, intent(in) :: auxvar
-    real(DP), dimension(:), target, contiguous, intent(in) :: xnew
     this%name = name
     this%budtxt = budtxt
     this%naux = naux
@@ -78,10 +95,8 @@ module PackageBudgetModule
     end if
     this%nbound => nbound
     this%nodelist => nodelist
-    this%hcof => hcof
-    this%rhs => rhs
+    this%flow => flow
     this%auxvar => auxvar
-    this%xnew => xnew
   end subroutine set_pointers
 
   subroutine copy_values(this, name, budtxt, auxname, nbound, naux, &
@@ -117,6 +132,8 @@ module PackageBudgetModule
         allocate(this%flow(nbound))
         allocate(this%auxvar(naux, nbound))
     endif
+    !
+    ! -- Copy values into member variables
     do i = 1, nbound
       this%nodelist(i) = nodelist(i)
       this%flow(i) = flow(i)
@@ -128,13 +145,7 @@ module PackageBudgetModule
     class(PackageBudgetType) :: this
     integer(I4B), intent(in) :: i
     real(DP) :: flow
-    integer(I4B) :: n
-    if (associated(this%flow)) then
-      flow = this%flow(i)
-    else
-      n = this%nodelist(i)
-      flow = this%hcof(i) * this%xnew(n) - this%rhs(i)
-    end if
+    flow = this%flow(i)
     return
   end function get_flow
   

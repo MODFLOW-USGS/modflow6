@@ -10,7 +10,7 @@ module GwtSsmModule
   use KindModule,             only: DP, I4B, LGP
   use ConstantsModule,        only: DONE, DZERO, LENAUXNAME, LENFTYPE,         &
                                     LENPACKAGENAME, LINELENGTH,                &
-                                    TABLEFT, TABCENTER
+                                    TABLEFT, TABCENTER, LENBUDROWLABEL
   use SimModule,              only: store_error, count_errors, store_error_unit
   use SimVariablesModule,     only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
@@ -495,7 +495,7 @@ module GwtSsmModule
     integer(I4B), intent(in) :: isuppress_output        !< flag to suppress output
     type(BudgetType), intent(inout) :: model_budget     !< budget object for the GWT model
     ! -- local
-    character(len=LENPACKAGENAME) :: rowlabel  = 'SSM'
+    character(len=LENBUDROWLABEL) :: rowlabel
     integer(I4B) :: ip
     integer(I4B) :: i
     integer(I4B) :: n
@@ -527,8 +527,9 @@ module GwtSsmModule
         !
       enddo
       !
+      rowlabel = 'SSM_' // adjustl(trim(this%fmi%flowpacknamearray(ip)))
       call model_budget%addentry(rin, rout, delt,                              &
-                                 this%fmi%flowpacknamearray(ip),               &
+                                 this%fmi%gwfpackages(ip)%budtxt,              &
                                  isuppress_output, rowlabel=rowlabel)
     enddo
     !
