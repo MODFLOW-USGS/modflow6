@@ -1329,13 +1329,13 @@ module GwfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LENBUDTXT, LENPACKAGENAME
+    use ConstantsModule, only: LENBUDTXT
     use TdisModule, only:delt
     ! -- dummy
     class(GwfModelType) :: this
     real(DP), dimension(:, :), intent(in) :: budterm
     character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt
-    character(len=LENPACKAGENAME), intent(in) :: rowlabel
+    character(len=*), intent(in) :: rowlabel
 ! ------------------------------------------------------------------------------
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)

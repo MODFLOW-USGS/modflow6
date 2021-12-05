@@ -13,15 +13,15 @@
 !! vbvl(2, :) contains cumulative rate out
 !! vbvl(3, :) contains rate in
 !! vbvl(4, :) contains rate out
-!! vbnm(:)    contains a LENPACKAGENAME character text string for each entry
-!! rowlabel(:) contains a LENPACKAGENAME character text string to write as a label for each entry
+!! vbnm(:)    contains a LENBUDTXT character text string for each entry
+!! rowlabel(:) contains a LENBUDROWLABEL character text string to write as a label for each entry
 !!
 !<
 module BudgetModule
 
   use KindModule, only: DP, I4B
   use SimModule,  only: store_error, count_errors
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, DZERO, &
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENBUDROWLABEL, DZERO, &
                              DTWO, DHUNDRED
   
   implicit none
@@ -45,7 +45,7 @@ module BudgetModule
     character(len=LENBUDTXT), dimension(:), pointer, contiguous :: vbnm => null()
     character(len=20), pointer :: bdtype => null()
     character(len=5), pointer :: bddim => null()
-    character(len=LENPACKAGENAME), dimension(:), pointer, contiguous :: rowlabel => null()
+    character(len=LENBUDROWLABEL), dimension(:), pointer, contiguous :: rowlabel => null()
     character(len=16), pointer :: labeltitle => null()
     character(len=20), pointer :: bdzone => null()
     logical, pointer :: labeled => null()
@@ -304,7 +304,7 @@ module BudgetModule
         /5X,18('-'),17X,24('-'),21X,16('-')                                    &
         //11X,'IN:',38X,'IN:'/11X,'---',38X,'---')
     275 FORMAT(1X,3X,A16,' =',A17,6X,A16,' =',A17)
-    276 FORMAT(1X,3X,A16,' =',A17,6X,A16,' =',A17,5X,A16)
+    276 FORMAT(1X,3X,A16,' =',A17,6X,A16,' =',A17,5X,A)
     286 FORMAT(1X,/12X,'TOTAL IN =',A,14X,'TOTAL IN =',A)
     287 FORMAT(1X,/10X,'OUT:',37X,'OUT:'/10X,4('-'),37X,4('-'))
     298 FORMAT(1X,/11X,'TOTAL OUT =',A,13X,'TOTAL OUT =',A)
@@ -378,7 +378,7 @@ module BudgetModule
   !!    text is the name of the entry
   !!    isupress_accumulate is an optional flag.  If specified as 1, then
   !!      the volume is NOT added to the accumulators on vbvl(1, :) and vbvl(2, :).
-  !!    rowlabel is a LENPACKAGENAME character text entry that is written to the 
+  !!    rowlabel is a LENBUDROWLABEL character text entry that is written to the 
   !!      right of the table.  It can be used for adding package names to budget 
   !!      entries.
   !!
@@ -392,7 +392,7 @@ module BudgetModule
     real(DP), intent(in) :: delt                                      !< time step length
     character(len=LENBUDTXT), intent(in) :: text                      !< name of the entry
     integer(I4B), optional, intent(in) :: isupress_accumulate         !< accumulate flag
-    character(len=LENPACKAGENAME), optional, intent(in) :: rowlabel   !< row label
+    character(len=*), optional, intent(in) :: rowlabel                !< row label
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmtbuderr = &
@@ -448,7 +448,7 @@ module BudgetModule
   !!      row in budterm
   !!    isupress_accumulate is an optional flag.  If specified as 1, then
   !!      the volume is NOT added to the accumulators on vbvl(1, :) and vbvl(2, :).
-  !!    rowlabel is a LENPACKAGENAME character text entry that is written to the 
+  !!    rowlabel is a LENBUDROWLABEL character text entry that is written to the 
   !!      right of the table.  It can be used for adding package names to budget 
   !!      entries. For multiple entries, the same rowlabel is used for each entry.
   !!
@@ -461,7 +461,7 @@ module BudgetModule
     real(DP), intent(in) :: delt                                       !< time step length
     character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt       !< name of the entries
     integer(I4B), optional, intent(in) :: isupress_accumulate          !< suppress accumulate
-    character(len=LENPACKAGENAME), optional, intent(in) :: rowlabel    !< row label
+    character(len=*), optional, intent(in) :: rowlabel                 !< row label
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmtbuderr = &
@@ -609,7 +609,7 @@ module BudgetModule
     ! -- local
     real(DP), dimension(:, :), allocatable :: vbvl
     character(len=LENBUDTXT), dimension(:), allocatable :: vbnm
-    character(len=LENPACKAGENAME), dimension(:), allocatable :: rowlabel
+    character(len=LENBUDROWLABEL), dimension(:), allocatable :: rowlabel
     integer(I4B) :: maxsizeold
     !
     ! -- allocate and copy into local storage

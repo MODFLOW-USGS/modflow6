@@ -1,7 +1,7 @@
 module NumericalModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPAKLOC
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
   use SparseModule, only: sparsematrix
@@ -199,7 +199,7 @@ module NumericalModelModule
     class(NumericalModelType) :: this
     real(DP), dimension(:, :), intent(in) :: budterm
     character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt
-    character(len=LENPACKAGENAME), intent(in) :: rowlabel
+    character(len=*), intent(in) :: rowlabel
   end subroutine model_bdentry
 
   subroutine model_fp(this)

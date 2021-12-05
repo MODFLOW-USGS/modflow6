@@ -291,8 +291,9 @@ def run_transport_model():
 
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        budgetcsv_filerecord=f"{gwtname}.cbc.csv",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -305,6 +306,7 @@ def run_transport_model():
     errmsg = "transport model did not terminate successfully\n{}".format(buff)
     assert success, errmsg
 
+    # ensure budget table can be parsed
     fname = gwtname + ".lst"
     fname = os.path.join(wst, fname)
     budl = flopy.utils.Mf6ListBudget(
@@ -312,9 +314,15 @@ def run_transport_model():
     )
     d0 = budl.get_budget()[0]
 
+    # Load the csv representation of the budget
+    fname = f"{gwtname}.cbc.csv"
+    fname = os.path.join(wst, fname)
+    d0 = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
+    print(d0.dtype.names)
+
     for name, _, _ in sourcerecarray[1:]:
-        name = name + "_OUT"
-        a1 = d0["WEL-1_IN"] / 10.0
+        name = f"{name[:3]}(SSM_{name})_OUT"
+        a1 = d0["WEL(SSM_WEL-1)_IN"] / 10.0
         a2 = d0[name]
         print(f"Checking budet term {name} against WEL-1_IN / 10.")
         errmsg = "{} not equal WEL-1_IN / 10.\n{}\n{}".format(name, a1, a2)
