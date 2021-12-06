@@ -1,5 +1,5 @@
 module GwtGwtConnectionModule
-  use KindModule, only: I4B, DP, lGP
+  use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO   
   use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
@@ -7,6 +7,7 @@ module GwtGwtConnectionModule
   use SpatialModelConnectionModule
   use NumericalModelModule
   use GwtModule
+  use DisConnExchangeModule
   use GwtGwtExchangeModule
   use GwtInterfaceModelModule
   use SparseModule, only: sparsematrix
@@ -23,6 +24,9 @@ module GwtGwtConnectionModule
   type, public, extends(SpatialModelConnectionType) :: GwtGwtConnectionType
 
     type(GwtModelType), pointer :: gwtModel => null()                   !< the model for which this connection exists
+    type(GwtExchangeType), pointer :: gwtExchange => null()             !< the primary exchange, cast to GWT-GWT
+    logical(LGP) :: exchangeIsOwned                                     !< there are two connections (in serial) for an exchange,
+                                                                        !! one of them needs to manage/own the exchange (e.g. clean up)
     type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iIfaceAdvScheme => null()                  !< the advection scheme at the interface:
                                                                         !! 0 = upstream, 1 = central, 2 = TVD
@@ -46,6 +50,7 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_df => gwtgwtcon_df
     procedure, pass(this) :: exg_ac => gwtgwtcon_ac
     procedure, pass(this) :: exg_rp => gwtgwtcon_rp
+    procedure, pass(this) :: exg_ad => gwtgwtcon_ad
     procedure, pass(this) :: exg_cf => gwtgwtcon_cf
     procedure, pass(this) :: exg_fc => gwtgwtcon_fc
     procedure, pass(this) :: exg_da => gwtgwtcon_da
@@ -68,33 +73,43 @@ contains
 
 !> @brief Basic construction of the connection
 !<
-subroutine gwtGwtConnection_ctor(this, model)
+subroutine gwtGwtConnection_ctor(this, model, gwtEx)
   use InputOutputModule, only: openfile
-  class(GwtGwtConnectionType) :: this         !< the connection
-  class(NumericalModelType), pointer :: model !< the model owning this connection,
-                                              !! this must be a GwtModelType
+  class(GwtGwtConnectionType) :: this             !< the connection
+  class(NumericalModelType), pointer :: model     !< the model owning this connection,
+                                                  !! this must be a GwtModelType
+  class(DisConnExchangeType), pointer :: gwtEx    !< the GWT-GWT exchange the interface model is created for
   ! local
   character(len=LINELENGTH) :: fname
   character(len=LENCOMPONENTNAME) :: name
-  class(*), pointer :: modelPtr
+  class(*), pointer :: objPtr
 
-  modelPtr => model
-  this%gwtModel => CastAsGwtModel(modelPtr)
+  objPtr => model
+  this%gwtModel => CastAsGwtModel(objPtr)
+  objPtr => gwtEx
+  this%gwtExchange => CastAsGwtExchange(objPtr)
 
-  if (model%id > 99999) then
+  this%exchangeIsOwned = associated(model, gwtEx%model1)
+
+  if (gwtEx%id > 99999) then
     write(*,*) 'Error: running 100000 submodels or more is not yet supported'
     call ustop()
   end if
-  write(name,'(a,i5.5)') 'GTC_', model%id
+  if (this%exchangeIsOwned) then
+    write(name,'(a,i5.5)') 'GWTCON1_', gwtEx%id
+  else
+    write(name,'(a,i5.5)') 'GWTCON2_', gwtEx%id
+  end if
 
   ! .lst file for interface model
-  fname = trim(model%name)//'.im.lst'
+  fname = name//'.im.lst'
   call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
   write(this%iout, '(a,a)') 'Creating GWT-GWT connection for model ',           &
-                            trim(this%gwtModel%name)
+                            trim(this%gwtModel%name), 'from exchange ',         &
+                            trim(gwtEx%name) 
 
   ! first call base constructor
-  call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
+  call this%SpatialModelConnectionType%spatialConnection_ctor(model, gwtEx, name)
 
   call this%allocate_scalars()
   this%typename = 'GWT-GWT'
@@ -144,30 +159,14 @@ end subroutine allocate_arrays
 subroutine gwtgwtcon_df(this)
   class(GwtGwtConnectionType) :: this !< the connection
   ! local
-  character(len=LENCOMPONENTNAME) :: imName  
-  integer(I4B) :: iex
-  class(GwtExchangeType), pointer :: gwtEx  
+  character(len=LENCOMPONENTNAME) :: imName
 
-  ! determine advection scheme (the GWT-GWT exchanges
-  ! have been read at this point)
-  do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwtExchangeFromList(this%localExchanges, iex)
-    if (gwtEx%iAdvScheme > this%iIfaceAdvScheme) then
-      this%iIfaceAdvScheme = gwtEx%iAdvScheme
-    end if
-  end do
+  ! determine advection scheme (the GWT-GWT exchange
+  ! has been read at this point)
+  this%iIfaceAdvScheme = this%gwtExchange%iAdvScheme
 
-  ! determine xt3d setting on interface
-  do iex = 1, this%localExchanges%Count()
-    gwtEx => GetGwtExchangeFromList(this%localExchanges, iex)
-    if (gwtEx%ixt3d == 0) then
-      this%iIfaceXt3d = 0
-      exit
-    end if
-    if (gwtEx%ixt3d == 2) then
-      this%iIfaceXt3d = 2 ! no exit, other exchange might have =0 which overrules this
-    end if
-  end do
+  ! determine xt3d setting on interface  
+  this%iIfaceXt3d = this%gwtExchange%ixt3d
 
   ! determine the required size of the interface model grid
   call this%setGridExtent()
@@ -177,7 +176,11 @@ subroutine gwtgwtcon_df(this)
 
   ! we have to 'catch up' and create the interface model
   ! here, then the remainder of this routine will be define
-  write(imName,'(a,i5.5)') 'GWTIM_', this%gwtModel%id
+  if (this%exchangeIsOwned) then
+    write(imName,'(a,i5.5)') 'GWTIM1_', this%gwtExchange%id
+  else
+    write(imName,'(a,i5.5)') 'GWTIM2_', this%gwtExchange%id
+  end if
   call this%gwtInterfaceModel%gwtifmod_cr(imName, this%iout, this%gridConnection)
   this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
 
@@ -310,6 +313,14 @@ subroutine gwtgwtcon_rp(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
 end subroutine gwtgwtcon_rp
+
+subroutine gwtgwtcon_ad(this)
+  class(GwtGwtConnectionType) :: this !< the connection
+
+  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??
+  call this%gwtInterfaceModel%dsp%dsp_ad()
+
+end subroutine gwtgwtcon_ad
 
 subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
@@ -458,8 +469,6 @@ end subroutine gwtgwtcon_ot
 subroutine gwtgwtcon_da(this)
   class(GwtGwtConnectionType) :: this !< the connection
   ! local
-  class(GwtExchangeType), pointer :: gwtEx
-  integer(I4B) :: iex
   logical(LGP) :: isOpen
 
   ! scalars
@@ -484,13 +493,10 @@ subroutine gwtgwtcon_da(this)
       close(this%iout)
     end if
 
-  ! we need to deallocate the baseexchanges we own:
-  do iex=1, this%localExchanges%Count()
-    gwtEx => GetGwtExchangeFromList(this%localExchanges, iex)
-    if (associated(gwtEx%model1, this%gwtModel)) then
-      call gwtEx%exg_da()
-    end if
-  end do
+  ! we need to deallocate the exchange we own:
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_da()
+  end if
 
 end subroutine gwtgwtcon_da
 

@@ -199,12 +199,40 @@ contains
 
       npfGridData%icelltype(icell) = gwfModel%npf%icelltype(idx)
       npfGridData%k11(icell) = gwfModel%npf%k11(idx)
-      if (npfGridData%ik22 == 1) npfGridData%k22(icell) = gwfModel%npf%k22(idx)
-      if (npfGridData%ik33 == 1) npfGridData%k33(icell) = gwfModel%npf%k33(idx)
-      if (npfGridData%iwetdry == 1) npfGridData%wetdry(icell) = gwfModel%npf%wetdry(idx)
-      if (npfGridData%iangle1 == 1) npfGridData%angle1(icell) = gwfModel%npf%angle1(idx)
-      if (npfGridData%iangle2 == 1) npfGridData%angle2(icell) = gwfModel%npf%angle2(idx)
-      if (npfGridData%iangle3 == 1) npfGridData%angle3(icell) = gwfModel%npf%angle3(idx)
+      npfGridData%k22(icell) = gwfModel%npf%k22(idx)
+      npfGridData%k33(icell) = gwfModel%npf%k33(idx)
+
+      ! the K rotation angles, or default (0.0)
+      if (npfGridData%iangle1 == 1) then 
+        if (gwfModel%npf%iangle1 == 1) then
+          npfGridData%angle1(icell) = gwfModel%npf%angle1(idx) 
+        else
+          npfGridData%angle1(icell) = DZERO
+        end if
+      end if
+      if (npfGridData%iangle2 == 1) then
+        if (gwfModel%npf%iangle2 == 1) then
+          npfGridData%angle2(icell) = gwfModel%npf%angle2(idx)
+        else
+          npfGridData%angle2(icell) = DZERO
+        end if
+      end if
+      if (npfGridData%iangle3 == 1) then
+        if (gwfModel%npf%iangle3 == 1) then
+          npfGridData%angle3(icell) = gwfModel%npf%angle3(idx)
+        else
+          npfGridData%angle3(icell) = DZERO
+        end if
+      end if
+
+      ! wetdry parameter, TODO_MJR: where is it ever set to 1??
+      if (npfGridData%iwetdry == 1) then
+        if (gwfModel%npf%iwetdry == 1) then
+          npfGridData%wetdry(icell) = gwfModel%npf%wetdry(idx)
+        else
+          npfGridData%wetdry(icell) = DZERO
+        end if
+      end if
 
     end do
 

@@ -30,8 +30,8 @@ module SpatialModelConnectionModule
     class(NumericalModelType), pointer  :: owner => null()                !< the model whose connection this is
     class(NumericalModelType), pointer  :: interfaceModel => null()       !< the interface model
     integer(I4B), pointer               :: nrOfConnections => null()      !< total nr. of connected cells (primary)
-    type(ListType), pointer             :: localExchanges => null()       !< all exchanges which directly connect with our model,
-                                                                          !! (we own all that have our owning model as model 1)
+
+    class(DisConnExchangeType), pointer :: primaryExchange => null()      !< the exchange for which the interface model is created
     type(ListType)                      :: globalExchanges                !< all exchanges in the same solution
     integer(I4B), pointer               :: internalStencilDepth => null() !< size of the computational stencil for the interior
                                                                           !! default = 1, xt3d = 2, ...
@@ -58,7 +58,6 @@ module SpatialModelConnectionModule
     ! public
     procedure, pass(this) :: spatialConnection_ctor
     generic :: construct => spatialConnection_ctor
-    procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
 
     ! partly overriding NumericalExchangeType:
     procedure, pass(this) :: exg_df => spatialcon_df    
@@ -83,7 +82,6 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: getNrOfConnections    
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays    
-    procedure, private, pass(this) :: validateDisConnExchange    
     procedure, private, pass(this) :: createCoefficientMatrix    
     procedure, private, pass(this) :: maskOwnerConnections
     
@@ -95,16 +93,19 @@ contains ! module procedures
   !!
   !! This constructor is typically called from a derived class.
   !<
-  subroutine spatialConnection_ctor(this, model, name)
-    class(SpatialModelConnectionType) :: this               !< the connection
-    class(NumericalModelType), intent(in), pointer :: model !< the model that owns the connection
-    character(len=*), intent(in) :: name                    !< the connection name (for memory management mostly)
+  subroutine spatialConnection_ctor(this, model, exchange, name)
+    class(SpatialModelConnectionType) :: this                   !< the connection
+    class(NumericalModelType), intent(in), pointer :: model     !< the model that owns the connection
+    class(DisConnExchangeType), intent(in), pointer :: exchange !< the primary exchange from which 
+                                                                !! the connection is created
+    character(len=*), intent(in) :: name                        !< the connection name (for memory management mostly)
     
     this%name = name
     this%memoryPath = create_mem_path(this%name)
+
     this%owner => model
-    
-    allocate(this%localExchanges)
+    this%primaryExchange => exchange
+
     allocate(this%gridConnection)
     call this%allocateScalars()
 
@@ -117,18 +118,6 @@ contains ! module procedures
         
   end subroutine spatialConnection_ctor
   
-  !> @brief Add exchange to the list of local exchanges
-  !<
-  subroutine addExchangeToSpatialConnection(this, exchange)
-    class(SpatialModelConnectionType) :: this                   !< this connection
-    class(DisConnExchangeType), pointer, intent(in) :: exchange !< the exchange to add
-    ! local
-    class(*), pointer :: exg
-
-    exg => exchange
-    call this%localExchanges%Add(exg)
-    
-  end subroutine addExchangeToSpatialConnection
   
   !> @brief Define this connection, mostly sets up the grid
   !< connection, allocates arrays, and links x,rhs, and ibound
@@ -248,9 +237,18 @@ contains ! module procedures
             
             write(*,*) 'Error: cannot find cell connection in global system'
             call ustop()
+          end if          
+
+          if (this%owner%dis%con%mask(csrIdx) > 0) then
+            call this%owner%dis%con%set_mask(csrIdx, 0)
+          else
+            ! edge case, someone will be calculating this connection
+            ! so we ignore it here (TODO_MJR: add name)
+            write(*,*) 'Debug: overlap detected, ignoring connection ',         &
+                        nloc, ':', mloc, ' for model ', trim(this%owner%name),  &
+                        ' in Exchange ???'
+            call conn%set_mask(ipos, 0)
           end if
-          
-          call this%owner%dis%con%set_mask(csrIdx, 0)
         end if
       end do
     end do
@@ -367,15 +365,14 @@ contains ! module procedures
   subroutine setExchangeConnections(this)
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: iex, iconn
+    integer(I4B) :: iconn
     type(DisConnExchangeType), pointer :: connEx
     
     ! set boundary cells
-    do iex=1, this%localExchanges%Count()
-      connEx => GetDisConnExchangeFromList(this%localExchanges, iex)
-      do iconn=1, connEx%nexg          
-        call this%gridConnection%connectCell(connEx%nodem1(iconn), connEx%model1, connEx%nodem2(iconn), connEx%model2)
-      end do
+    connEx => this%primaryExchange
+    do iconn=1, connEx%nexg          
+      call this%gridConnection%connectCell(connEx%nodem1(iconn), connEx%model1, &
+                                           connEx%nodem2(iconn), connEx%model2)
     end do
     
   end subroutine setExchangeConnections
@@ -441,14 +438,8 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B) :: nrConns    
     !local
-    integer(I4B) :: iex
-    type(DisConnExchangeType), pointer :: connEx
     
-    nrConns = 0
-    do iex = 1, this%localExchanges%Count()
-      connEx => GetDisConnExchangeFromList(this%localExchanges, iex)
-      nrConns = nrConns + connEx%nexg
-    end do
+    nrConns = this%primaryExchange%nexg
     
   end function getNrOfConnections
   
@@ -479,48 +470,30 @@ contains ! module procedures
   !> @brief Validate this connection
   !<
   subroutine validateConnection(this)
-    class(SpatialModelConnectionType) :: this !< this connection
-    ! local
-    integer(I4B) :: iex
-    class(DisConnExchangeType), pointer :: disconnEx
-
-    ! loop over exchanges
-    do iex=1, this%localExchanges%Count()
-      disconnEx => GetDisConnExchangeFromList(this%localExchanges, iex)
-      call this%validateDisConnExchange(disconnEx)
-    end do
-
-  end subroutine validateConnection
-
-  !> @brief Validate the exchange, intercepting those
-  !! cases where two models have to be connected through an interface
-  !! model, where the individual configurations don't allow this
-  !!
-  !! Stops with error message on wrong config.
-  !<
-  subroutine validateDisConnExchange(this, exchange)
     use SimVariablesModule, only: errmsg
     use SimModule, only: store_error
     class(SpatialModelConnectionType) :: this !< this connection
-    class(DisConnExchangeType) :: exchange    !< the discretization connection to validate
+    ! local
+    class(DisConnExchangeType), pointer :: conEx => null()
 
-    if (exchange%ixt3d > 0) then      
+    conEx => this%primaryExchange
+    if (conEx%ixt3d > 0) then      
       ! if XT3D, we need these angles:
-      if (exchange%model1%dis%con%ianglex == 0) then
+      if (conEx%model1%dis%con%ianglex == 0) then
         write(errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ',      &
-              trim(exchange%name), ' but the discretization in model ',          &
-              trim(exchange%model1%name), ' has no ANGLDEGX specified'
+              trim(conEx%name), ' but the discretization in model ',          &
+              trim(conEx%model1%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
-      if (exchange%model2%dis%con%ianglex == 0) then
+      if (conEx%model2%dis%con%ianglex == 0) then
         write(errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ',      &
-              trim(exchange%name), ' but the discretization in model ',          &
-              trim(exchange%model2%name), ' has no ANGLDEGX specified'
+              trim(conEx%name), ' but the discretization in model ',          &
+              trim(conEx%model2%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
     end if
 
-  end subroutine validateDisConnExchange
+  end subroutine validateConnection
 
 
   !> @brief Cast to SpatialModelConnectionType

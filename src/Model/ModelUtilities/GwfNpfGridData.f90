@@ -1,5 +1,6 @@
 module GwfNpfGridDataModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: DZERO
   implicit none
   private 
 
@@ -38,6 +39,8 @@ contains
 subroutine construct(this, nodes)
   class(GwfNpfGridDataType), intent(inout) :: this  !< the NPF grid data, as in the input GRIDDATA block
   integer(I4B) :: nodes                             !< the number of nodes in the solution
+  ! local
+  integer(I4B) :: i
   
   this%ik22 = 0
   this%ik33 = 0
@@ -45,6 +48,7 @@ subroutine construct(this, nodes)
   this%iangle1 = 0
   this%iangle2 = 0
   this%iangle3 = 0
+  
   allocate(this%icelltype(nodes))
   allocate(this%k11(nodes))
   allocate(this%k22(nodes))
@@ -53,6 +57,17 @@ subroutine construct(this, nodes)
   allocate(this%angle1(nodes))
   allocate(this%angle2(nodes))
   allocate(this%angle3(nodes))
+
+  do i = 1, nodes
+    this%icelltype(i) = DZERO
+    this%k11(i) = DZERO
+    this%k22(i) = DZERO
+    this%k33(i) = DZERO
+    this%wetdry(i) = DZERO
+    this%angle1(i) = DZERO
+    this%angle2(i) = DZERO
+    this%angle3(i) = DZERO
+  end do
 
 end subroutine construct
 

@@ -1,5 +1,5 @@
 module GwfGwfConnectionModule
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH  
   use CsrUtilsModule, only: getCSRIndex
   use SparseModule, only:sparsematrix
@@ -8,8 +8,10 @@ module GwfGwfConnectionModule
   use SpatialModelConnectionModule  
   use GwfInterfaceModelModule
   use NumericalModelModule
-  use GwfModule, only: GwfModelType
-  use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList
+  use GwfModule, only: GwfModelType, CastAsGwfModel
+  use DisConnExchangeModule
+  use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList,      &
+                                  CastAsGwfExchange
   use GwfNpfModule, only: GwfNpfType, hcond, vcond
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
@@ -25,6 +27,9 @@ module GwfGwfConnectionModule
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
     type(GwfModelType), pointer :: gwfModel => null()                    !< the model for which this connection exists
+    type(GwfExchangeType), pointer :: gwfExchange => null()              !< the primary exchange, cast to its concrete type
+    logical(LGP) :: exchangeIsOwned                                      !< there are two connections (in serial) for an exchange,
+                                                                         !! one of them needs to manage/own the exchange (e.g. clean up)
     type(GwfInterfaceModelType), pointer  :: gwfInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iXt3dOnExchange => null()                   !< run XT3D on the interface,
                                                                          !! 0 = don't, 1 = matrix, 2 = rhs
@@ -56,7 +61,7 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: setGridExtent
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
-    procedure, pass(this), private :: setFlowToExchanges
+    procedure, pass(this), private :: setFlowToExchange
     procedure, pass(this), private :: printExchangeFlow
     procedure, pass(this), private :: saveExchangeFlows
     
@@ -66,32 +71,44 @@ contains
   
   !> @brief Basic construction of the connection
   !<
-  subroutine gwfGwfConnection_ctor(this, model)
+  subroutine gwfGwfConnection_ctor(this, model, gwfEx)
     use NumericalModelModule, only: NumericalModelType
     use InputOutputModule, only: openfile
-    class(GwfGwfConnectionType) :: this         !< the connection
-    class(NumericalModelType), pointer :: model !< the model owning this connection, 
-                                                !! this must of course be a GwfModelType
+    class(GwfGwfConnectionType) :: this             !< the connection
+    class(NumericalModelType), pointer :: model     !< the model owning this connection, 
+                                                    !! this must of course be a GwfModelType
+    class(DisConnExchangeType), pointer :: gwfEx    !< the exchange the interface model is created for
     ! local
     character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
+    class(*), pointer :: objPtr
 
-    this%gwfModel => CastToGwfModel(model)
+    objPtr => model
+    this%gwfModel => CastAsGwfModel(objPtr)
+    objPtr => gwfEx
+    this%gwfExchange => CastAsGwfExchange(objPtr)
+
+    this%exchangeIsOwned = associated(gwfEx%model1, model)
     
-    if (model%id > 99999) then
+    if (gwfEx%id > 99999) then
       write(*,*) 'Error: running 100000 submodels or more is not yet supported'
       call ustop()
     end if
-    write(name,'(a,i5.5)') 'GFC_', model%id
+    if (this%exchangeIsOwned) then
+      write(name,'(a,i5.5)') 'GWFCON1_', gwfEx%id
+    else
+      write(name,'(a,i5.5)') 'GWFCON2_', gwfEx%id
+    end if
 
     ! .lst file for interface model
-    fname = trim(model%name)//'.im.lst'
+    fname = name//'.im.lst'
     call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
-    write(this%iout, '(a,a)') 'Creating GWF-GWF connection for model ',          &
-                              trim(this%gwfModel%name)
+    write(this%iout, '(a,a)') 'Creating GWF-GWF connection for model ',         &
+                              trim(this%gwfModel%name), ' from exchange ',      &
+                              trim(gwfEx%name)
     
     ! first call base constructor
-    call this%SpatialModelConnectionType%spatialConnection_ctor(model, name)
+    call this%SpatialModelConnectionType%spatialConnection_ctor(model, gwfEx, name)
     
     call this%allocateScalars()
     
@@ -122,7 +139,11 @@ contains
     ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    write(imName,'(a,i5.5)') 'GWFIM_', this%gwfModel%id
+    if(this%exchangeIsOwned) then
+      write(imName,'(a,i5.5)') 'GWFIM1_', this%gwfExchange%id
+    else
+      write(imName,'(a,i5.5)') 'GWFIM2_', this%gwfExchange%id
+    end if
     call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
 
     this%gwfInterfaceModel%npf%satomega = this%gwfModel%npf%satomega
@@ -144,17 +165,8 @@ contains
   subroutine setGridExtent(this)
     class(GwfGwfConnectionType) :: this !< the connection
     ! local
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
 
-    ! loop over exchange and check for XT3D
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (gwfEx%ixt3d > this%iXt3dOnExchange) then
-        this%iXt3dOnExchange = gwfEx%ixt3d
-      end if
-    end do
-    
+    this%iXt3dOnExchange = this%gwfExchange%ixt3d    
     if (this%iXt3dOnExchange > 0) then
       this%exchangeStencilDepth = 2
       if (this%gwfModel%npf%ixt3d > 0) then
@@ -196,9 +208,7 @@ contains
   subroutine gwfgwfcon_ar(this)
   use GridConnectionModule, only: GridConnectionType
     class(GwfGwfConnectionType) :: this !< this connection
-    ! local 
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
+    ! local    
 
     ! check if we can construct an interface model
     ! NB: only makes sense after the models' allocate&read have been
@@ -211,18 +221,15 @@ contains
     ! ... and now the interface model
     call this%gwfInterfaceModel%model_ar()
 
-    ! loop over exchanges and AR the movers and obs
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        if (gwfEx%inmvr > 0) then
-          call gwfEx%mvr%mvr_ar()
-        end if
-        if (gwfEx%inobs > 0) then
-          call gwfEx%obs%obs_ar()
-        end if
+    ! AR the movers and obs through the exchange
+    if (this%exchangeIsOwned) then
+      if (this%gwfExchange%inmvr > 0) then
+        call this%gwfExchange%mvr%mvr_ar()
       end if
-    end do
+      if (this%gwfExchange%inobs > 0) then
+        call this%gwfExchange%obs%obs_ar()
+      end if
+    end if
 
   end subroutine gwfgwfcon_ar
 
@@ -232,20 +239,15 @@ contains
     use TdisModule, only: readnewdata
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
     
     if (.not. readnewdata) return
-
-    ! loop over exchanges and RP the movers
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        if (gwfEx%inmvr > 0) then
-          call gwfEx%mvr%mvr_rp()
-        end if
+    
+    ! RP the movers through the exchange
+    if (this%exchangeIsOwned) then
+      if (this%gwfExchange%inmvr > 0) then
+        call this%gwfExchange%mvr%mvr_rp()
       end if
-    end do
+    end if
 
     return
   end subroutine gwfgwfcon_rp
@@ -305,8 +307,7 @@ contains
     real(DP), dimension(:), intent(inout) ::rhssln    !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag    !< newton-raphson flag
     ! local
-    integer(I4B) :: n, ipos, nglo, iex
-    class(GwfExchangeType), pointer :: gwfEx
+    integer(I4B) :: n, ipos, nglo
     
     ! fill (and add to...) coefficients for interface
     call this%gwfInterfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
@@ -329,15 +330,12 @@ contains
       end do
     end do
 
-    ! loop over exchanges and FC the movers
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        if (gwfEx%inmvr > 0) then
-          call gwfEx%mvr%mvr_fc()
-        end if
+    ! FC the movers through the exchange
+    if (this%exchangeIsOwned) then
+      if (this%gwfExchange%inmvr > 0) then
+        call this%gwfExchange%mvr%mvr_fc()
       end if
-    end do
+    end if
 
   end subroutine gwfgwfcon_fc
 
@@ -350,17 +348,10 @@ contains
     use SimModule, only: count_errors
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
     
     ! base validation (geometry/spatial)
     call this%SpatialModelConnectionType%validateConnection()
-
-    ! loop over exchanges
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      call this%validateGwfExchange(gwfEx)
-    end do
+    call this%validateGwfExchange()
 
     ! abort on errors
     if(count_errors() > 0) then
@@ -376,45 +367,19 @@ contains
   !!
   !! Stops with error message on config mismatch
   !<
-  subroutine validateGwfExchange(this, exchange)
+  subroutine validateGwfExchange(this)
     use SimVariablesModule, only: errmsg
     use SimModule, only: store_error
     use GwfNpfModule, only: GwfNpfType
-    class(GwfGwfConnectionType) :: this !< this connection
-    class(GwfExchangeType) :: exchange  !< the GWF-GWF exchange to validate
+    class(GwfGwfConnectionType) :: this !< this connection    
     ! local
     class(GwfNpfType), pointer :: npf1, npf2
+    class(GwfExchangeType), pointer :: gwfEx => null()
 
-    ! NPF
-    npf1 => exchange%gwfmodel1%npf
-    npf2 => exchange%gwfmodel2%npf
-    if (npf1%iangle1 /= npf2%iangle1 .or. &
-        npf1%iangle2 /= npf2%iangle2 .or. &
-        npf1%iangle3 /= npf2%iangle3) then
-      write(errmsg, '(1x,a,a,a,a,a)') 'Cannot create interface model between ',  &
-                                      trim(exchange%gwfmodel1%name), ' and ',    &
-                                      trim(exchange%gwfmodel2%name),             &
-                                      ', incompatible NPF config (angle)'
-      call store_error(errmsg)
-    end if
-    if (npf1%ik22 /= npf2%ik22 .or. &
-        npf1%ik33 /= npf2%ik33) then
-      write(errmsg, '(1x,a,a,a,a,a)') 'Cannot create interface model between ',  &
-                                      trim(exchange%gwfmodel1%name), ' and ',    &
-                                      trim(exchange%gwfmodel2%name),             &
-                                      ', incompatible NPF config (k22/k33)'
-      call store_error(errmsg)
-    end if
-    if (npf1%iwetdry /= npf2%iwetdry) then
-      write(errmsg, '(1x,a,a,a,a,a)') 'Cannot create interface model between ',  &
-                                      trim(exchange%gwfmodel1%name), ' and ',    &
-                                      trim(exchange%gwfmodel2%name),             &
-                                      ', incompatible NPF config (wetdry)'
-      call store_error(errmsg)
-    end if
+    gwfEx => this%gwfExchange
 
     ! GNC not allowed
-    if (exchange%ingnc /= 0) then
+    if (gwfEx%ingnc /= 0) then
       write(errmsg, '(1x,a)') 'Ghost node correction not supported '//           &
                               'for interface model'
       call store_error(errmsg)
@@ -428,9 +393,7 @@ contains
     use KindModule, only: LGP
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
-    logical(LGP) :: isOpen    
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
+    logical(LGP) :: isOpen
 
     ! scalars
     call mem_deallocate(this%iXt3dOnExchange)
@@ -449,12 +412,9 @@ contains
     end if
 
     ! we need to deallocate the baseexchange we own:
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        call gwfEx%exg_da()
-      end if
-    end do
+    if (this%exchangeIsOwned) then
+      call this%gwfExchange%exg_da()
+    end if
     
   end subroutine gwfgwfcon_da
 
@@ -555,25 +515,24 @@ contains
       end do
     end do
 
-    call this%setFlowToExchanges()
+    call this%setFlowToExchange()
 
     call this%saveExchangeFlows()
 
   end subroutine gwfgwfcon_cq
 
   !> @brief Set the flows (flowja from interface model) to the 
-  !< simvals in the exchanges, leaving the budget calcution in there
-  subroutine setFlowToExchanges(this)
+  !< simvals in the exchange, leaving the budget calcution in there
+  subroutine setFlowToExchange(this)
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: iex, i
+    integer(I4B) :: i
     integer(I4B) :: nIface, mIface, ipos
     class(GwfExchangeType), pointer :: gwfEx
 
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
+    gwfEx => this%gwfExchange
+    if (this%exchangeIsOwned) then    
       do i = 1, gwfEx%nexg
-
         gwfEx%simvals(i) = DZERO
 
         if (gwfEx%gwfmodel1%ibound(gwfEx%nodem1(i)) /= 0 .and.                  &
@@ -586,9 +545,9 @@ contains
 
         end if
       end do
-    end do
+    end if
 
-  end subroutine setFlowToExchanges
+  end subroutine setFlowToExchange
 
   !> @brief Copy interface model flowja between models, to
   !< the local buffer for reuse by, e.g., GWT
@@ -612,56 +571,45 @@ contains
   end subroutine saveExchangeFlows
 
   !> @brief Calculate the budget terms for this connection, this is
-  !! dispatched to the GWF-GWF exchanges.
+  !! dispatched to the GWF-GWF exchange
   subroutine gwfgwfcon_bd(this, icnvg, isuppress_output, isolnid)
     class(GwfGwfConnectionType) :: this           !< this connection
     integer(I4B), intent(inout) :: icnvg          !< convergence flag
     integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
     integer(I4B), intent(in) :: isolnid           !< solution id
     ! local
-    integer(I4B) :: iex
-    class(GwfExchangeType), pointer :: gwfEx
 
-    ! call exchange budget routine, and only call
-    ! it once, remember we have 2 interface models
-    ! per 1 GWF-GWF exchange. This also calls bd
+    ! call exchange budget routine, also calls bd
     ! for movers.
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        call gwfEx%exg_bd(icnvg, isuppress_output, isolnid)
-      end if
-    end do
+    if (this%exchangeIsOwned) then
+      call this%gwfExchange%exg_bd(icnvg, isuppress_output, isolnid)
+    end if
     
   end subroutine gwfgwfcon_bd
 
-  !> @brief Write output for exchanges (and calls
+  !> @brief Write output for exchange (and calls
   !< save on the budget)
   subroutine gwfgwfcon_ot(this)
     class(GwfGwfConnectionType) :: this           !< this connection
     ! local
-    integer(I4B) :: iex
     integer(I4B) :: ibudfl
-    class(GwfExchangeType), pointer :: gwfEx
     
     ! we don't call gwf_gwf_ot here, but
     ! we do want to save the budget
-    do iex=1, this%localExchanges%Count()
-      gwfEx => GetGwfExchangeFromList(this%localExchanges, iex)
-      if (associated(gwfEx%gwfmodel1, this%gwfModel)) then
-        
-        call gwfEx%gwf_gwf_bdsav()
-        
-        if (gwfEx%iprflow /= 0) then
-          call this%printExchangeFlow(gwfEx)
-        end if
-
-        if(gwfEx%inmvr > 0) then
-          ibudfl = 1
-          call gwfEx%mvr%mvr_ot_bdsummary(ibudfl)
-        end if
+    if (this%exchangeIsOwned) then        
+      
+      call this%gwfExchange%gwf_gwf_bdsav()
+      
+      if (this%gwfExchange%iprflow /= 0) then
+        call this%printExchangeFlow(this%gwfExchange)
       end if
-    end do
+
+      if(this%gwfExchange%inmvr > 0) then
+        ibudfl = 1
+        call this%gwfExchange%mvr%mvr_ot_bdsummary(ibudfl)
+      end if      
+
+    end if
 
   end subroutine gwfgwfcon_ot
 
@@ -670,7 +618,7 @@ contains
   subroutine printExchangeFlow(this, gwfEx)
     use SimVariablesModule, only: iout
     class(GwfGwfConnectionType) :: this      !< this connection
-    class(GwfExchangeType), pointer :: gwfEx !< the exchange for printing
+    type(GwfExchangeType), pointer :: gwfEx !< the exchange for printing
     ! local
     integer(I4B) :: i
     character(len=*), parameter :: fmtheader =                                   &
@@ -686,21 +634,5 @@ contains
     end do
     
   end subroutine printExchangeFlow
-
-  
-  !> @brief Cast NumericalModelType to GwfModelType
-  !< TODO_MJR: move this
-  function CastToGwfModel(obj) result(gwfmodel)
-    use NumericalModelModule, only: NumericalModelType
-    class(NumericalModelType), pointer :: obj !< The numerical model to be cast
-    class(GwfModelType), pointer :: gwfmodel  !< The GWF model
-    
-    gwfmodel => null()
-    select type(obj)
-      type is (GwfModelType)
-        gwfmodel => obj
-      end select
-      
-  end function CastToGwfModel
   
 end module GwfGwfConnectionModule

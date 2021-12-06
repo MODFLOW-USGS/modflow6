@@ -46,8 +46,7 @@ name_left = "leftmodel"
 name_right = "rightmodel"
 
 
-def build_model(idx, dir):
-    name = ex[idx]
+def get_model(dir, name):
 
     useXT3D = True
 
@@ -214,7 +213,20 @@ def build_model(idx, dir):
         xt3d=useXT3D,
     )
 
-    return sim, None
+    return sim
+    
+    
+def build_model(idx, dir):
+    # build MODFLOW 6 files
+    ws = dir
+    name = ex[idx]
+    sim = get_model(ws, name)
+
+    # build comparison model
+    ws = os.path.join(dir, "libmf6")
+    sim_compare = get_model(ws, name)
+
+    return sim, sim_compare
 
 
 def api_func(exe, idx, model_ws=None):
@@ -262,11 +274,9 @@ def api_func(exe, idx, model_ws=None):
 
 
 def check_interface_models(mf6):
-
-    mem_addr = mf6.get_var_address("ID", name_left)
-    m_id = mf6.get_value_ptr(mem_addr)[0]
-    ifm_name_left = "IFM_" + str(m_id).zfill(5)
-    gc_name_left = "GFC_" + str(m_id).zfill(5)
+    exchange_id = 1 # we only have 1 exchange  in this case
+    ifm_name_left = "GWFIM1_" + str(exchange_id).zfill(5)
+    gc_name_left = "GWFCON1_" + str(exchange_id).zfill(5)
 
     # XT3D flag should be set to 1
     mem_addr = mf6.get_var_address("IXT3D", ifm_name_left, "NPF")
@@ -323,18 +333,18 @@ def check_interface_models(mf6):
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
+    "idx, dir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, exdir):
+def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, exdir)
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
-    test.run_mf6(Simulation(exdir, idxsim=idx, api_func=api_func))
+    test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
 
 
 def main():
@@ -342,11 +352,11 @@ def main():
     test = testing_framework()
 
     # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(exdir, idxsim=idx, api_func=api_func)
+    for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
+        
     return
 
 

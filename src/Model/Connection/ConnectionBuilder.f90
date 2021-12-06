@@ -73,9 +73,9 @@ module ConnectionBuilderModule
 
   !> @brief Create connections from exchanges
   !!
-  !! If the configuration demands it, this will create
-  !! connections for the exchanges, add them to the global
-  !! list, and return them in @param newConnections
+  !! If the configuration demands it, this will create connections, 
+  !! for the exchanges (one connection per exchange) add them to
+  !! the global list, and return them as @param newConnections
   !<
   subroutine processExchanges(this, exchanges, newConnections)
     use ListsModule, only: baseconnectionlist, baseexchangelist
@@ -87,7 +87,7 @@ module ConnectionBuilderModule
     class(BaseExchangeType), pointer :: baseEx
     integer(I4B) :: iex, ibasex
     class(SpatialModelConnectionType), pointer :: modelConnection
-    logical(LGP) :: isNotPeriodic
+    logical(LGP) :: isPeriodic
     integer(I4B) :: status
     logical(LGP) :: alwaysInterfaceModel
     character(len=16) :: envvar
@@ -111,30 +111,17 @@ module ConnectionBuilderModule
       ! (this will be more generic in the future)      
       if (conEx%use_interface_model() .or. alwaysInterfaceModel) then
 
-        ! fetch connection for model 1:
-        modelConnection => lookupConnection(conEx%model1, conEx%typename)
-        if (.not. associated(modelConnection)) then
-          ! create new model connection
-          modelConnection => createModelConnection(conEx%model1, conEx%typename)
+        ! create new model connection for model 1
+        modelConnection => createModelConnection(conEx%model1, conEx)
+        call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
+        call AddSpatialModelConnectionToList(newConnections, modelConnection)
+
+        ! and for model 2, unless periodic
+        isPeriodic = associated(conEx%model1, conEx%model2)
+        if (.not. isPeriodic) then
+          modelConnection => createModelConnection(conEx%model2, conEx)
           call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
           call AddSpatialModelConnectionToList(newConnections, modelConnection)
-        end if
-          
-        ! add exchange to connection
-        call modelConnection%addExchange(conEx)
-
-        ! and fetch for model 2, unless periodic
-        isNotPeriodic = .not. associated(conEx%model1, conEx%model2)
-        if (isNotPeriodic) then
-          modelConnection => lookupConnection(conEx%model2, conEx%typename)
-          if (.not. associated(modelConnection)) then
-            ! create new model connection
-            modelConnection => createModelConnection(conEx%model2, conEx%typename)
-            call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-            call AddSpatialModelConnectionToList(newConnections, modelConnection)
-          end if
-          ! add exchange to connection
-          call modelConnection%addExchange(conEx)
         end if
 
         ! remove this exchange from the base list, ownership
@@ -157,15 +144,15 @@ module ConnectionBuilderModule
   !! This is a factory method to create the various types
   !! of model connections
   !<
-  function createModelConnection(model, connectionType) result(connection)
+  function createModelConnection(model, exchange) result(connection)
     use SimModule, only: ustop
     use GwfGwfConnectionModule, only: GwfGwfConnectionType
     use GwtGwtConnectionModule, only: GwtGwtConnectionType
     use GwfModule, only: GwfModelType
     
-    class(NumericalModelType), pointer , intent(in) :: model          !< the model for which the connection will be created
-    character(len=*), intent(in)                    :: connectionType !< the type of connection
-    class(SpatialModelConnectionType), pointer :: connection          !< the created connection
+    class(NumericalModelType), pointer , intent(in) :: model    !< the model for which the connection will be created
+    class(DisConnExchangeType), pointer, intent(in) :: exchange !< the type of connection
+    class(SpatialModelConnectionType), pointer :: connection    !< the created connection
     
     ! different concrete connection types:
     class(GwfGwfConnectionType), pointer :: flowConnection => null()
@@ -174,15 +161,15 @@ module ConnectionBuilderModule
     connection => null()
     
     ! select on type of connection to create
-    select case(connectionType)       
-      case('GWF-GWF')      
+    select case(exchange%typename)
+      case('GWF-GWF')
         allocate(GwfGwfConnectionType :: flowConnection)
-        call flowConnection%construct(model)
+        call flowConnection%construct(model, exchange)
         connection => flowConnection
         flowConnection => null()        
       case('GWT-GWT')
         allocate(GwtGwtConnectionType :: transportConnection)
-        call transportConnection%construct(model)
+        call transportConnection%construct(model, exchange)
         connection => transportConnection
         transportConnection => null()
       case default
@@ -193,35 +180,6 @@ module ConnectionBuilderModule
   end function createModelConnection
   
   
-  !> @brief This function gets an existing connection for a
-  !! model, based on the type of exchange. Returns null()
-  !! when not found
-  !<
-  function lookupConnection(model, exchangeType) result(connection)
-    use ListsModule, only: baseconnectionlist    
-    class(NumericalModelType), pointer  :: model              !< the model to get the connection for
-    character(len=*)                    :: exchangeType       !< the type of the connection
-    class(SpatialModelConnectionType), pointer :: connection  !< the connection 
-    
-    ! locals
-    integer(I4B) :: i
-    class(SpatialModelConnectionType), pointer :: candidate
-    
-    connection => null()
-    
-    call baseconnectionlist%Reset()
-    do i = 1, baseconnectionlist%Count()      
-      candidate => GetSpatialModelConnectionFromList(baseconnectionlist,i)      
-      if (candidate%typename == exchangeType) then
-        if (associated(candidate%owner, model)) then
-          connection => candidate
-          return
-        end if
-      end if      
-    end do
-    
-  end function lookupConnection
-
   !> @brief Set connections to the solution
   !!
   !! This adds the connections to the solution and removes 
@@ -233,13 +191,10 @@ module ConnectionBuilderModule
     class(NumericalSolutionType), pointer, intent(in) :: solution !< the solution to which the connections are set
     ! local
     type(ListType) :: keepList
-    class(*), pointer :: exPtr, connPtr
-    procedure(isEqualIface), pointer :: equalFct
+    class(*), pointer :: exPtr, exPtr2, connPtr
     class(SpatialModelConnectionType), pointer :: conn
     integer(I4B) :: iex, iconn
     logical(LGP) :: keepExchange
-
-    equalFct => arePointersEqual
 
     ! first add all exchanges not replaced by the connections to a list
     do iex = 1, solution%exchangelist%Count()
@@ -248,7 +203,8 @@ module ConnectionBuilderModule
       keepExchange = .true.
       do iconn = 1, connections%Count()
         conn => GetSpatialModelConnectionFromList(connections,iconn)
-        if (conn%localExchanges%ContainsObject(exPtr, equalFct)) then
+        exPtr2 => conn%primaryExchange
+        if (associated(exPtr2, exPtr)) then
           ! if so, don't add it to the list
           keepExchange = .false.
           exit

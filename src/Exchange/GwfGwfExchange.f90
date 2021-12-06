@@ -24,6 +24,7 @@ module GwfGwfExchangeModule
   public :: GwfExchangeType
   public :: gwfexchange_create
   public :: GetGwfExchangeFromList
+  public :: CastAsGwfExchange
 
   type, extends(DisConnExchangeType) :: GwfExchangeType
     type(GwfModelType), pointer                      :: gwfmodel1   => null()    !< pointer to GWF Model 1
@@ -2142,7 +2143,7 @@ contains
     return
   end subroutine gwf_gwf_process_obsID
 
-  function CastAsGwfExchangeClass(obj) result (res)
+  function CastAsGwfExchange(obj) result (res)
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(GwfExchangeType), pointer :: res
@@ -2155,7 +2156,7 @@ contains
       res => obj
     end select
     return
-  end function CastAsGwfExchangeClass
+  end function CastAsGwfExchange
 
   function GetGwfExchangeFromList(list, idx) result (res)
     implicit none
@@ -2167,7 +2168,7 @@ contains
     class(*), pointer :: obj
     !
     obj => list%GetItem(idx)
-    res => CastAsGwfExchangeClass(obj)
+    res => CastAsGwfExchange(obj)
     !
     return
   end function GetGwfExchangeFromList

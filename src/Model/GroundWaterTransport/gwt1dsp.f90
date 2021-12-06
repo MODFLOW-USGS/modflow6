@@ -97,7 +97,7 @@ module GwtDspModule
     return
   end subroutine dsp_cr
 
-  subroutine dsp_df(this, dis, options)
+  subroutine dsp_df(this, dis, dspOptions)
 ! ******************************************************************************
 ! dsp_df -- Allocate and Read
 ! ******************************************************************************
@@ -108,8 +108,8 @@ module GwtDspModule
     ! -- dummy
     class(GwtDspType) :: this
     class(DisBaseType), pointer :: dis
-    type(GwtDspOptionsType), optional, intent(in) :: options !< the optional DSP options, used when not
-                                                             !! creating DSP from file
+    type(GwtDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
+                                                                !! creating DSP from file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
@@ -125,8 +125,8 @@ module GwtDspModule
     this%ixt3d = 1
     !
     ! -- Read dispersion options
-    if (present(options)) then
-      this%ixt3d = options%ixt3d
+    if (present(dspOptions)) then
+      this%ixt3d = dspOptions%ixt3d
     else      
       !
       ! -- Initialize block parser

@@ -47,7 +47,7 @@ module GridConnectionModule
     integer(I4B) :: internalStencilDepth !< stencil size for the interior
     integer(I4B) :: exchangeStencilDepth !< stencil size at the interface
 
-    class(NumericalModelType), pointer :: model => null()
+    class(NumericalModelType), pointer :: model => null()                       !< the model for which this grid connection exists
     
     integer(I4B), pointer :: linkCapacity => null()
     
@@ -107,7 +107,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: fillConnectionDataInternal
     procedure, private, pass(this) :: fillConnectionDataFromExchanges
     procedure, private, pass(this) :: createConnectionMask
-    procedure, private, pass(this) :: maskConnections
+    procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
   end type
   
@@ -294,16 +294,16 @@ module GridConnectionModule
       localDepth = remoteDepth
     end if
     
-    ! first add the neighbors for the interior, localOnly because 
-    ! connections crossing model boundary will be added anyway
+    ! first add the neighbors for the interior 
+    ! (possibly extending into other models)
     do icell = 1, this%nrOfBoundaryCells
       call this%addNeighbors(this%boundaryCells(icell), localDepth,             &
-                             this%connectedCells(icell)%cell, local=.true.)
+                             this%connectedCells(icell)%cell, .true.)
     end do
     ! and for the exterior
     do icell = 1, this%nrOfBoundaryCells
       call this%addNeighbors(this%connectedCells(icell), remoteDepth,           &
-                             this%boundaryCells(icell)%cell)
+                             this%boundaryCells(icell)%cell, .false.)
     end do
     
     ! set up mapping for the region (models participating in interface model grid)
@@ -376,7 +376,7 @@ module GridConnectionModule
     
      ! create connections object
     allocate(this%connections)
-    conn => this%connections
+    conn => this%connections    
     call conn%allocate_scalars(this%memoryPath)
     conn%nodes = this%nrOfCells
     conn%nja = sparse%nnz
@@ -409,25 +409,18 @@ module GridConnectionModule
     
   !< @brief Routine for finding neighbors-of-neighbors, recursively
   !<
-  recursive subroutine addNeighbors(this, cellNbrs, depth, mask, local)
+  recursive subroutine addNeighbors(this, cellNbrs, depth, mask, interior)
     use SimModule, only: ustop
     class(GridConnectionType), intent(inout)  :: this     !< this grid connection
     type(CellWithNbrsType), intent(inout)     :: cellNbrs !< cell to add to    
     integer(I4B), intent(inout)               :: depth    !< current depth (typically decreases in recursion)
     type(GlobalCellType), optional            :: mask     !< mask to excluded back-and-forth connection between cells
-    logical, optional                         :: local    !< controls whether only local (within the same model) neighbors are added
+    logical(LGP)                              :: interior !< when true, we are adding from the exchange back into the model
     ! local
     integer(I4B)                              :: nbrIdx, ipos, inbr
     type(ConnectionsType), pointer            :: conn
     integer(I4B)                              :: newDepth
-    type(ModelWithNbrsType), pointer          :: modelWithNbrs
-    logical                                   :: localOnly
-    
-    if (.not. present(local)) then
-      localOnly = .false. ! default
-    else
-      localOnly = local
-    end if
+    type(ModelWithNbrsType), pointer          :: modelWithNbrs    
     
     ! if depth == 1, then we are not adding neighbors but use
     ! the boundary and connected cell only
@@ -446,15 +439,23 @@ module GridConnectionModule
         
     ! find and add remote nbr (from a different model, and
     ! not going back into the main model)
-    if (.not. localOnly) then
-      call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
-      call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
-    end if
+    call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
+    call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
     
     ! now find nbr-of-nbr
     do inbr=1, cellNbrs%nrOfNbrs
+
+      ! are we leaving the model through another exchange?
+      if (interior .and. associated(cellNbrs%cell%model, this%model)) then
+        if (.not. associated(cellNbrs%neighbors(inbr)%cell%model, this%model)) then
+          ! decrement by 1, because the connection we are crossing is not
+          ! calculated by this interface
+          newDepth = newDepth - 1
+        end if        
+      end if
+      ! and add neigbors with the new depth
       call this%addNeighbors(cellNbrs%neighbors(inbr), newDepth,                &
-                             cellNbrs%cell, local)
+                             cellNbrs%cell, interior)
     end do
     
   end subroutine addNeighbors
@@ -920,7 +921,7 @@ module GridConnectionModule
       do inbr = 1, cell%nrOfNbrs
         nbrCell => this%boundaryCells(icell)%neighbors(inbr)
         level = 2 ! this is incremented within the recursion
-        call this%maskConnections(this%boundaryCells(icell), this%boundaryCells(icell)%neighbors(inbr), level)
+        call this%maskInternalConnections(this%boundaryCells(icell), this%boundaryCells(icell)%neighbors(inbr), level)
       end do      
     end do
     
@@ -947,7 +948,7 @@ module GridConnectionModule
   
   !> @brief Recursively mask connections, increasing the level as we go
   !<
-  recursive subroutine maskConnections(this, cell, nbrCell, level)
+  recursive subroutine maskInternalConnections(this, cell, nbrCell, level)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cell    !< cell 1 in the connection to mask
     type(CellWithNbrsType), intent(inout) :: nbrCell !< cell 2 in the connection to mask
@@ -955,17 +956,22 @@ module GridConnectionModule
     ! local
     integer(I4B) :: inbr, newLevel
     
-    ! this will set a mask on both diagonal, and both cross terms
-    call this%setMaskOnConnection(cell, nbrCell, level)
-    call this%setMaskOnConnection(nbrCell, cell, level)
+    ! only set the mask for internal connections, leaving the
+    ! others at 0
+    if (associated(cell%cell%model, this%model) .and.                           &
+        associated(nbrCell%cell%model, this%model)) then
+      ! this will set a mask on both diagonal, and both cross terms
+      call this%setMaskOnConnection(cell, nbrCell, level)
+      call this%setMaskOnConnection(nbrCell, cell, level)
+    end if
     
     ! recurse on nbrs-of-nbrs
     newLevel = level + 1
     do inbr = 1, nbrCell%nrOfNbrs        
-      call this%maskConnections(nbrCell, nbrCell%neighbors(inbr), newLevel)
+      call this%maskInternalConnections(nbrCell, nbrCell%neighbors(inbr), newLevel)
     end do
     
-  end subroutine maskConnections
+  end subroutine maskInternalConnections
   
   !> @brief Set a mask on the connection from a cell to its neighbor,
   !! (and not the transposed!) not overwriting the current level

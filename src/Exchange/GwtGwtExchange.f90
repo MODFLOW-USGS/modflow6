@@ -18,6 +18,7 @@ module GwtGwtExchangeModule
   public :: gwtexchange_create
   public :: GwtExchangeType
   public :: GetGwtExchangeFromList
+  public :: CastAsGwtExchange
 
   !> Data structure to hold the spatial connection data
   !! between two GWT models. The logic to get the coefficients
@@ -274,7 +275,7 @@ subroutine gwtgwt_da(this)
 
 end subroutine gwtgwt_da
 
-function CastAsGwtExchangeClass(obj) result (res)
+function CastAsGwtExchange(obj) result (res)
   class(*), pointer, intent(inout) :: obj
   class(GwtExchangeType), pointer :: res
   
@@ -286,7 +287,7 @@ function CastAsGwtExchangeClass(obj) result (res)
     res => obj
   end select
   return
-end function CastAsGwtExchangeClass
+end function CastAsGwtExchange
 
 function GetGwtExchangeFromList(list, idx) result (res)
   type(ListType), intent(inout) :: list
@@ -296,7 +297,7 @@ function GetGwtExchangeFromList(list, idx) result (res)
   class(*), pointer :: obj
   
   obj => list%GetItem(idx)
-  res => CastAsGwtExchangeClass(obj)
+  res => CastAsGwtExchange(obj)
   
   return
 end function GetGwtExchangeFromList
