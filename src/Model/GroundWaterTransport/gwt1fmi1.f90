@@ -537,15 +537,15 @@ module GwtFmiModule
     !
     ! -- deallocate fmi arrays
     if (associated(this%datp)) then
-    deallocate(this%datp)
-    deallocate(this%gwfpackages)
-    deallocate(this%flowpacknamearray)
+      deallocate(this%datp)
+      deallocate(this%gwfpackages)
+      deallocate(this%flowpacknamearray)
       call mem_deallocate(this%iatp)
+      call mem_deallocate(this%igwfmvrterm)
     end if
 
     deallocate(this%aptbudobj)
     call mem_deallocate(this%flowcorrect)
-    call mem_deallocate(this%igwfmvrterm)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
       call mem_deallocate(this%gwfflowja)

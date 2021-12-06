@@ -373,7 +373,6 @@ contains
     use GwfNpfModule, only: GwfNpfType
     class(GwfGwfConnectionType) :: this !< this connection    
     ! local
-    class(GwfNpfType), pointer :: npf1, npf2
     class(GwfExchangeType), pointer :: gwfEx => null()
 
     gwfEx => this%gwfExchange
