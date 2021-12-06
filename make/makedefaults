@@ -1,6 +1,4 @@
-# makedefaults created on 2021-12-06 11:32:24.533931
-# by pymake (version 1.2.1) for the 'mf6' executable 
-# using the 'gfortran' fortran compiler(s).
+# makedefaults created by pymake (version 1.2.2) for the 'mf6' executable.
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -17,9 +15,9 @@ endif
 
 # Define the directories for the object and module files
 # and the executable and its path.
-BINDIR = ..\bin
-OBJDIR = .\obj_temp
-MODDIR = .\mod_temp
+BINDIR = ../bin
+OBJDIR = ./obj_temp
+MODDIR = ./mod_temp
 INCSWITCH = -I $(OBJDIR)
 MODSWITCH = -J $(MODDIR)
 
@@ -62,10 +60,10 @@ ifeq ($(detected_OS), Windows)
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -static -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
+		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -fpp
+		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fpp
 		MODSWITCH = -module $(MODDIR)
 	endif
 endif
@@ -77,16 +75,29 @@ ifeq ($(detected_OS), Windows)
 	endif
 else
 	ifeq ($(FC), gfortran)
-		LDFLAGS ?= -static -static-libgfortran -static-libgcc -static-libstdc++ -lm -lc
+		LDFLAGS ?= -lc
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		LDFLAGS ?= -static -static-libgfortran -static-libgcc -static-libstdc++ -lm -lc
+		LDFLAGS ?= -lc
+	endif
+endif
+
+# check for Windows error condition
+ifeq ($(detected_OS), Windows)
+	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
+		WINDOWSERROR = $(FC)
 	endif
 endif
 
 # Define task functions
 # Create the bin directory and compile and link the program
-all: makedirs | $(PROGRAM)
+all: windowscheck makedirs | $(PROGRAM)
+
+# test for windows error
+windowscheck:
+ifdef WINDOWSERROR
+	$(error cannot use makefile on windows with $(WINDOWSERROR))
+endif
 
 # Make the bin directory for the executable
 makedirs:
