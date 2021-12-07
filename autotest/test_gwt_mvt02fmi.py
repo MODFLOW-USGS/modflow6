@@ -275,6 +275,7 @@ def run_transport_model():
         exe_name=exe_name_mf6,
         sim_ws=wst,
         continue_=False,
+        memory_print_option=["ALL"],
     )
 
     # create tdis package

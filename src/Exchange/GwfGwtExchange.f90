@@ -337,14 +337,16 @@ module GwfGwtExchangeModule
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
       call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
-                           packobj%packName, &
+                           !packobj%packName, &
                            packobj%text, &
-                           packobj%auxname, &
-                           packobj%nbound, &
-                           packobj%naux, &
-                           packobj%nodelist, &
-                           packobj%simvals, &
-                           packobj%auxvar)
+                           !packobj%auxname, &
+                           !packobj%nbound, &
+                           !packobj%naux, &
+                           !packobj%nodelist, &
+                           !packobj%simvals, &
+                           !packobj%auxvar, &
+                           'SIMVALS', &
+                           packobj%memoryPath)
       iterm = iterm + 1
       !
       ! -- Check in mover if it is active and not an advanced stress
@@ -354,14 +356,16 @@ module GwfGwtExchangeModule
       if (imover /= 0) then
         text = trim(adjustl(packobj%text)) // '-TO-MVR'
         call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
-                             packobj%packName, &
+                             !packobj%packName, &
                              text, &
-                             packobj%auxname, &
-                             packobj%nbound, &
-                             packobj%naux, &
-                             packobj%nodelist, &
-                             packobj%simtomvr, &
-                             packobj%auxvar)
+                             !packobj%auxname, &
+                             !packobj%nbound, &
+                             !packobj%naux, &
+                             !packobj%nodelist, &
+                             !packobj%simtomvr, &
+                             !packobj%auxvar, &
+                             'SIMTOMVR', &
+                             packobj%memoryPath)
         iterm = iterm + 1
       end if
     end do

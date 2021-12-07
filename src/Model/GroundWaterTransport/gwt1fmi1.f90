@@ -85,6 +85,7 @@ module GwtFmiModule
     procedure :: initialize_gwfterms_from_bfr
     procedure :: initialize_gwfterms_from_gwfbndlist
     procedure :: allocate_gwfpackages
+    procedure :: deallocate_gwfpackages
     procedure :: get_package_index
     procedure :: set_aptbudobj_pointer
   
@@ -534,6 +535,9 @@ module GwtFmiModule
     class(GwtFmiType) :: this
 ! ------------------------------------------------------------------------------
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
+    !
+    ! -- deallocate any memory stored with gwfpackages
+    call this%deallocate_gwfpackages()
     !
     ! -- deallocate fmi arrays
     deallocate(this%datp)
@@ -1489,6 +1493,29 @@ module GwtFmiModule
     ! -- return
     return
   end subroutine allocate_gwfpackages
+  
+  subroutine deallocate_gwfpackages(this)
+! ******************************************************************************
+! deallocate_gwfpackages -- memory in the gwfpackages array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    do n = 1, this%nflowpack
+      call this%gwfpackages(n)%da()
+    end do
+    !
+    ! -- return
+    return
+  end subroutine deallocate_gwfpackages
   
   subroutine get_package_index(this, name, idx)
 ! ******************************************************************************
