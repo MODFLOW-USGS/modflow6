@@ -1,7 +1,7 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
-  use ConstantsModule, only: LENMEMPATH
+  use ConstantsModule, only: LENMEMPATH, DZERO
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface, arePointersEqual
@@ -109,6 +109,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: createConnectionMask
     procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
+    procedure, private, pass(this) :: transformToGlobalXY
   end type
   
   contains
@@ -1077,7 +1078,7 @@ module GridConnectionModule
     ! local
     integer(I4B) :: icell, nrOfCells, idx
     type(NumericalModelType), pointer :: model
-    real(DP) :: x,y    
+    real(DP) :: x,y,xglo,yglo    
           
     ! the following is similar to dis_df
     nrOfCells = this%nrOfCells
@@ -1108,11 +1109,11 @@ module GridConnectionModule
       idx = this%idxToGlobal(icell)%index
       model => this%idxToGlobal(icell)%model
       call model%dis%get_cellxy(idx, x, y)
-      ! we need to have the origins in here explicitly since
-      ! we are merging grids with possibly different origins
-      ! TODO_MJR: how 'bout rotation?
-      disu%cellxy(1,icell) = x + model%dis%xorigin
-      disu%cellxy(2,icell) = y + model%dis%yorigin
+      ! we are merging grids with possibly (likely) different origins,
+      ! transform:
+      call this%transformToGlobalXY(x, y, model, xglo, yglo)
+      disu%cellxy(1,icell) = xglo
+      disu%cellxy(2,icell) = yglo
     end do
 
     ! if vertices will be needed, it will look like this:
@@ -1125,6 +1126,32 @@ module GridConnectionModule
     ! 6. generate ia/ja from sparse
     
   end subroutine getDiscretization
+
+  !> @brief Transform x,y to global x,y using xorigin, yorigin,
+  !! and angrot from DIS
+  !<
+  subroutine transformToGlobalXY(this, x, y, model, gx, gy)
+    class(GridConnectionType) :: this                       !< this grid connection instance
+    real(DP), intent(in) :: x                               !< local x coordinate
+    real(DP), intent(in) :: y                               !< local y coordinate
+    type(NumericalModelType), intent(in), pointer :: model  !< the model where x,y lies
+    real(DP), intent(out) :: gx                             !< the global x coordinate
+    real(DP), intent(out) :: gy                             !< the global y coordinate
+    ! local
+    real(DP) :: ang
+
+    ! translate
+    gx = x + model%dis%xorigin
+    gy = y + model%dis%yorigin
+
+    ! rotate
+    ang = model%dis%angrot
+    if (ang /= DZERO) then
+      gx = x*cos(ang) - y*sin(ang)
+      gy = x*sin(ang) + y*cos(ang)
+    end if
+
+  end subroutine transformToGlobalXY
   
   !> @brief Deallocate grid connection resources
   !<
