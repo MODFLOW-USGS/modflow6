@@ -60,10 +60,12 @@ module PackageBudgetModule
     return
   end subroutine initialize
   
-  subroutine set_name(this, name)
+  subroutine set_name(this, name, budtxt)
     class(PackageBudgetType) :: this
-    character(len=LENPACKAGENAME) :: name
+    character(len=LENPACKAGENAME) :: name     !< name of the package (WEL-1, DRN-4, etc.)
+    character(len=LENPACKAGENAME) :: budtxt   !< name of budget term (CHD, RCH, EVT, DRN-TO-MVR, etc.)
     this%name = name
+    this%budtxt = budtxt
     return
   end subroutine set_name
   
@@ -77,14 +79,12 @@ module PackageBudgetModule
     return
   end subroutine set_auxname
   
-  subroutine set_pointers(this, budtxt, flowvarname, mem_path_target)
+  subroutine set_pointers(this, flowvarname, mem_path_target)
     class(PackageBudgetType) :: this
-    character(len=*), intent(in) :: budtxt            !< name of budget term (CHD, RCH, EVT, etc.)
     character(len=*), intent(in) :: flowvarname       !< name of variable storing flow (SIMVALS, SIMTOMVR)
     character(len=*), intent(in) :: mem_path_target   !< path where target variable is stored
     !
     ! -- Reassign pointers to variables in the flow model
-    this%budtxt = budtxt
     call mem_reassignptr(this%nbound, 'NBOUND', this%memoryPath, &
                          'NBOUND', mem_path_target)
     call mem_reassignptr(this%nodelist, 'NODELIST', this%memoryPath, &
@@ -96,23 +96,15 @@ module PackageBudgetModule
     return    
   end subroutine set_pointers
 
-  subroutine copy_values(this, name, budtxt, auxname, nbound, naux, &
-                         nodelist, flow, auxvar)
+  subroutine copy_values(this, nbound, nodelist, flow, auxvar)
     class(PackageBudgetType) :: this
-    character(len=LENPACKAGENAME), intent(in) :: name
-    character(len=LENPACKAGENAME), intent(in) :: budtxt
-    character(len=LENAUXNAME), contiguous, dimension(:), intent(in) :: auxname
     integer(I4B), intent(in) :: nbound
-    integer(I4B), intent(in) :: naux
     integer(I4B), dimension(:), contiguous, intent(in) :: nodelist
     real(DP), dimension(:), contiguous, intent(in) :: flow
     real(DP), dimension(:,:), contiguous, intent(in) :: auxvar
     integer(I4B) :: i
     !
     ! -- Assign variables
-    this%name = name
-    this%budtxt = budtxt
-    this%naux = naux
     this%nbound = nbound
     !
     ! -- Lists are not large enough (maxbound is not known), so need to
@@ -120,7 +112,7 @@ module PackageBudgetModule
     if (size(this%nodelist) < nbound) then
       call mem_reallocate(this%nodelist, nbound, 'NODELIST', this%memoryPath)
       call mem_reallocate(this%flow, nbound, 'FLOW', this%memoryPath)
-      call mem_reallocate(this%auxvar, naux, nbound, 'AUXVAR', this%memoryPath)
+      call mem_reallocate(this%auxvar, this%naux, nbound, 'AUXVAR', this%memoryPath)
     endif
     !
     ! -- Copy values into member variables

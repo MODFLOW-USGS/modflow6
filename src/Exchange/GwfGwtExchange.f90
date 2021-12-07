@@ -108,7 +108,8 @@ module GwfGwtExchangeModule
     ! -- Tell transport model fmi flows are not read from file
     gwtmodel%fmi%flows_from_file = .false.
     !
-    ! -- setup pointer to gwf variables that were allocated in gwf_df
+    ! -- Set a pointer to the GWF bndlist.  This will allow the transport model
+    !    to look through the flow packages and establish a link to GWF flows
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
     !
     ! -- return
@@ -314,7 +315,6 @@ module GwfGwtExchangeModule
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
     class(BndType), pointer :: packobj => null()
-    character (len=LENPACKAGENAME) :: text
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
@@ -331,41 +331,25 @@ module GwfGwtExchangeModule
       gwtmodel => mb
     end select
     !
-    ! -- Allocate the gwfpackages in fmi and transfer information
+    ! -- Call routines in FMI that will set pointers to the necessary flow
+    !    data (SIMVALS and SIMTOMVR) stored within each GWF flow package
     ngwfpack = gwfmodel%bndlist%Count()
     iterm = 1
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
-                           !packobj%packName, &
-                           packobj%text, &
-                           !packobj%auxname, &
-                           !packobj%nbound, &
-                           !packobj%naux, &
-                           !packobj%nodelist, &
-                           !packobj%simvals, &
-                           !packobj%auxvar, &
-                           'SIMVALS', &
-                           packobj%memoryPath)
+      call gwtmodel%fmi%gwfpackages(iterm)%set_pointers(                       &
+                                                        'SIMVALS',             &
+                                                         packobj%memoryPath)
       iterm = iterm + 1
       !
-      ! -- Check in mover if it is active and not an advanced stress
-      !    package
+      ! -- If a mover is active for this package, then establish a separate
+      !    pointer link for the mover flows stored in SIMTOMVR
       imover = packobj%imover
       if (packobj%isadvpak /= 0) imover = 0
       if (imover /= 0) then
-        text = trim(adjustl(packobj%text)) // '-TO-MVR'
-        call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
-                             !packobj%packName, &
-                             text, &
-                             !packobj%auxname, &
-                             !packobj%nbound, &
-                             !packobj%naux, &
-                             !packobj%nodelist, &
-                             !packobj%simtomvr, &
-                             !packobj%auxvar, &
-                             'SIMTOMVR', &
-                             packobj%memoryPath)
+        call gwtmodel%fmi%gwfpackages(iterm)%set_pointers(                     &
+                                                          'SIMTOMVR',          &
+                                                          packobj%memoryPath)
         iterm = iterm + 1
       end if
     end do
