@@ -47,6 +47,13 @@ optional false
 longname file keyword
 description keyword to specify that an input filename is expected next.
 
+block options
+name dev_interfacemodel_on
+type keyword
+reader urword
+optional true
+longname activate interface model on exchange
+description activates the interface model mechanism for calculating the coefficients at (and possibly near) the exchange. This keyword should only be used for development purposes.
 
 # --------------------- exg gwtgwt dimensions ---------------------
 

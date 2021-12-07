@@ -43,6 +43,7 @@ type, extends(NumericalExchangeType) :: DisConnExchangeType
   integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
 
   integer(I4B), pointer                            :: ixt3d       => null()    !< flag indicating if XT3D should be applied on the interface
+  logical(LGP)                                     :: dev_ifmod_on             !< development option, forces interface model for this exchange 
     
   type(BlockParserType)                            :: parser                   !< block parser for input file (controlled from derived type)
 
@@ -113,6 +114,9 @@ function parse_option(this, keyword, iout) result(parsed)
   case ('XT3D')
     this%ixt3d = 1
     write(iout, '(4x,a)') 'XT3D will be applied on the interface'
+  case('DEV_INTERFACEMODEL_ON')
+    call this%parser%DevOpt()
+    this%dev_ifmod_on = .true.
   case default
     ! not parsed here, assuming it is in derived type
     parsed = .false.
@@ -311,6 +315,8 @@ subroutine allocate_scalars(this)
   this%ianglex = 0
   this%icdist = 0
   this%ixt3d = 0
+
+  this%dev_ifmod_on = .false.
 
 end subroutine allocate_scalars
 

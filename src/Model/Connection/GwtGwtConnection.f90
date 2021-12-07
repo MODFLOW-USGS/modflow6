@@ -317,8 +317,8 @@ end subroutine gwtgwtcon_rp
 subroutine gwtgwtcon_ad(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
-  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??
-  call this%gwtInterfaceModel%dsp%dsp_ad()
+  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??  
+  call this%gwtInterfaceModel%model_ad()
 
 end subroutine gwtgwtcon_ad
 

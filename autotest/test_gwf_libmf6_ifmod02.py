@@ -274,7 +274,7 @@ def get_model(dir, name):
         exgmnameb=name_tr,
         exchangedata=gwfgwf_data_exg1,
         auxiliary=["ANGLDEGX", "CDIST"],
-        xt3d=True,
+        xt3d=True, # this will activate the interface model
     )
     
     # exchange between top-left and bottom-left (Exg2)
@@ -303,7 +303,7 @@ def get_model(dir, name):
         exgmnameb=name_bl,
         exchangedata=gwfgwf_data_exg2,
         auxiliary=["ANGLDEGX", "CDIST"],
-        xt3d=False,
+        dev_interfacemodel_on=True, # by default no interface model, we force it here
     )
 
     return sim

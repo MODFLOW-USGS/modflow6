@@ -224,9 +224,7 @@ def build_model(idx, dir):
     gwf2 = get_gwf_model(sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0*gdelr, 0.0),
                         chdspd=chdspd, welspd=welspd)
 
-    # gwf-gwf with XT3D, which doesn't change anything in this
-    # model except that it forces the interface model for GWF
-    # and we need that
+    # gwf-gwf with interface model enabled
     gwfgwf_data = [[(0, 0, ncol - 1), (0, 0, 0), 1, 0.5, 0.5, 1.0, 0.0, 1.0]]
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -237,9 +235,7 @@ def build_model(idx, dir):
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="flow1_flow2.gwfgwf",
-        xt3d=True, # this will go once we can properly activate the interface
-                   # model (or if we will support GWT-GWF between GwtGwtConnection
-                   # and good old GwfExchanges)
+        dev_interfacemodel_on=True,
     )
 
     # create iterative model solution and register the gwf model with it

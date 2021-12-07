@@ -190,6 +190,13 @@ optional false
 longname obs6 input filename
 description is the file name of the observations input file for this exchange. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:gwf-obstypetable} lists observation type(s) supported by the GWF-GWF package.
 
+block options
+name dev_interfacemodel_on
+type keyword
+reader urword
+optional true
+longname activate interface model on exchange
+description activates the interface model mechanism for calculating the coefficients at (and possibly near) the exchange. This keyword should only be used for development purposes.
 
 # --------------------- exg gwfgwf dimensions ---------------------
 

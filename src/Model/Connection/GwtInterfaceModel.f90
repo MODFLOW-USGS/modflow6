@@ -35,6 +35,7 @@ module GwtInterfaceModelModule
     procedure, pass(this) :: gwtifmod_cr
     procedure, pass(this) :: model_df => gwtifmod_df
     procedure, pass(this) :: model_ar => gwtifmod_ar
+    procedure, pass(this) :: model_ad => gwtifmod_ad
     procedure, pass(this) :: model_da => gwtifmod_da
     procedure :: allocate_scalars
     procedure :: setDspGridData
@@ -159,6 +160,18 @@ subroutine gwtifmod_ar(this)
   end if
   
 end subroutine gwtifmod_ar
+
+!> @brief advance the interface model
+!<
+subroutine gwtifmod_ad(this)
+  class(GwtInterfaceModelType) :: this !< the GWT interface model
+
+  ! currently only advance dsp, for the ellipse and dispcoef
+  if (this%indsp > 0) then
+    call this%dsp%dsp_ad()
+  end if
+
+end subroutine gwtifmod_ad
 
 !> @brief set dsp grid data from models
 !<

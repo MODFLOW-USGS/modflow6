@@ -89,14 +89,14 @@ module ConnectionBuilderModule
     class(SpatialModelConnectionType), pointer :: modelConnection
     logical(LGP) :: isPeriodic
     integer(I4B) :: status
-    logical(LGP) :: alwaysInterfaceModel
+    logical(LGP) :: dev_always_ifmod
     character(len=16) :: envvar
 
     ! Force use of the interface model
-    alwaysInterfaceModel = .false.
+    dev_always_ifmod = .false.
     call get_environment_variable('DEV_ALWAYS_USE_IFMOD', value=envvar, status=status)
     if (status == 0 .and. envvar == '1') then
-      alwaysInterfaceModel = .true.
+      dev_always_ifmod = .true.
       write(*,'(a,/)') "### Experimental: forcing interface model ###"
     end if
 
@@ -109,7 +109,8 @@ module ConnectionBuilderModule
     
       ! for now, if we have XT3D on the interface, we use a connection,
       ! (this will be more generic in the future)      
-      if (conEx%use_interface_model() .or. alwaysInterfaceModel) then
+      if (conEx%use_interface_model() .or. conEx%dev_ifmod_on                   &
+          .or. dev_always_ifmod) then
 
         ! create new model connection for model 1
         modelConnection => createModelConnection(conEx%model1, conEx)
