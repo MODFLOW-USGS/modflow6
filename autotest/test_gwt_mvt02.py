@@ -60,7 +60,8 @@ def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws,
+        memory_print_option=["ALL"],
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(

@@ -77,7 +77,8 @@ module MemoryManagerModule
   end interface mem_copyptr
 
   interface mem_reassignptr
-    module procedure reassignptr_int1d, reassignptr_int2d,                       &
+    module procedure reassignptr_int,                                            &
+                     reassignptr_int1d, reassignptr_int2d,                       &
                      reassignptr_dbl1d, reassignptr_dbl2d
   end interface mem_reassignptr
 
@@ -1500,6 +1501,39 @@ module MemoryManagerModule
     return
   end subroutine copy_dbl1d
   
+  !> @brief Set the pointer for an integer scalar to 
+  !< a target array already stored in the memory manager
+  subroutine reassignptr_int(sclr, name, mem_path, name_target, mem_path_target)
+    integer(I4B), pointer, intent(inout) :: sclr                            !< pointer to integer scalar
+    character(len=*), intent(in) :: name                                    !< variable name
+    character(len=*), intent(in) :: mem_path                                !< path where variable is stored
+    character(len=*), intent(in) :: name_target                             !< name of target variable
+    character(len=*), intent(in) :: mem_path_target                         !< path where target variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    type(MemoryType), pointer :: mt2
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    if (associated(sclr)) then
+      nvalues_aint = nvalues_aint - 1
+      deallocate(sclr)
+    end if
+    sclr => mt2%intsclr
+    mt%intsclr => sclr
+    mt%isize = 1 
+    write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name_target
+    mt%masterPath = mem_path_target
+    !
+    ! -- return
+    return
+  end subroutine reassignptr_int
+
   !> @brief Set the pointer for a 1-dimensional integer array to 
   !< a target array already stored in the memory manager
   subroutine reassignptr_int1d(aint, name, mem_path, name_target, mem_path_target)

@@ -884,14 +884,14 @@ module BndModule
       class(BndType) :: this  !< BndType object
       !
       ! -- deallocate arrays
-      call mem_deallocate(this%nodelist)
-      call mem_deallocate(this%noupdateauxvar)
-      call mem_deallocate(this%bound)
-      call mem_deallocate(this%hcof)
-      call mem_deallocate(this%rhs)
-      call mem_deallocate(this%simvals)
-      call mem_deallocate(this%simtomvr)
-      call mem_deallocate(this%auxvar)
+      call mem_deallocate(this%nodelist, 'NODELIST', this%memoryPath)
+      call mem_deallocate(this%noupdateauxvar, 'NOUPDATEAUXVAR', this%memoryPath)
+      call mem_deallocate(this%bound, 'BOUND', this%memoryPath)
+      call mem_deallocate(this%hcof, 'HCOF', this%memoryPath)
+      call mem_deallocate(this%rhs, 'RHS', this%memoryPath)
+      call mem_deallocate(this%simvals, 'SIMVALS', this%memoryPath)
+      call mem_deallocate(this%simtomvr, 'SIMTOMVR', this%memoryPath)
+      call mem_deallocate(this%auxvar, 'AUXVAR', this%memoryPath)
       call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
       call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
       nullify(this%icelltype)

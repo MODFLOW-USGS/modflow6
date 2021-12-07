@@ -1,7 +1,8 @@
 module GwtFmiModule
   
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT
+  use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT, &
+                                    LENPACKAGENAME
   use SimModule,              only: store_error, store_error_unit
   use SimVariablesModule,     only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
@@ -85,6 +86,7 @@ module GwtFmiModule
     procedure :: initialize_gwfterms_from_bfr
     procedure :: initialize_gwfterms_from_gwfbndlist
     procedure :: allocate_gwfpackages
+    procedure :: deallocate_gwfpackages
     procedure :: get_package_index
     procedure :: set_aptbudobj_pointer
   
@@ -534,6 +536,9 @@ module GwtFmiModule
     class(GwtFmiType) :: this
 ! ------------------------------------------------------------------------------
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
+    !
+    ! -- deallocate any memory stored with gwfpackages
+    call this%deallocate_gwfpackages()
     !
     ! -- deallocate fmi arrays
     deallocate(this%datp)
@@ -1099,15 +1104,11 @@ module GwtFmiModule
               this%gwfstrgsy(nr) = this%bfr%flow(nu)
             end do
           case default
-            call this%gwfpackages(ip)%copy_values( &
-                                                 this%bfr%dstpackagename, &
-                                                 this%bfr%budtxt, &
-                                                 this%bfr%auxtxt, &
-                                                 this%bfr%nlist, &
-                                                 this%bfr%naux, &
-                                                 this%bfr%nodesrc, &
-                                                 this%bfr%flow, &
-                                                 this%bfr%auxvar)
+            call this%gwfpackages(ip)%copy_values(                             &
+                                                  this%bfr%nlist,              &
+                                                  this%bfr%nodesrc,            &
+                                                  this%bfr%flow,               &
+                                                  this%bfr%auxvar)
             do i = 1, this%gwfpackages(ip)%nbound
               nu = this%gwfpackages(ip)%nodelist(i)
               nr = this%dis%get_nodenumber(nu, 0)
@@ -1338,7 +1339,8 @@ module GwtFmiModule
     ip = 1
     do i = 1, this%bfr%nbudterms
       if (imap(i) == 0) cycle
-      call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i))
+      call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i), &
+                                         this%bfr%budtxtarray(i))
       naux = this%bfr%nauxarray(i)
       call this%gwfpackages(ip)%set_auxname(naux, this%bfr%auxtxtarray(1:naux, i))
       ip = ip + 1
@@ -1400,6 +1402,7 @@ module GwtFmiModule
     integer(I4B) :: imover
     integer(I4B) :: ntomvr
     integer(I4B) :: iterm
+    character (len=LENPACKAGENAME) :: budtxt
     class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
@@ -1419,8 +1422,8 @@ module GwtFmiModule
       end if
     end do
     !
-    ! -- Allocate arrays in fmi of size ngwfterms, which is the number of packages
-    !    plus the number of package movers.
+    ! -- Allocate arrays in fmi of size ngwfterms, which is the number of 
+    !    packages plus the number of packages with mover terms.
     ngwfterms = ngwfpack + ntomvr
     call this%allocate_gwfpackages(ngwfterms)
     !
@@ -1430,7 +1433,8 @@ module GwtFmiModule
       !
       ! -- set and store names
       packobj => GetBndFromList(this%gwfbndlist, ip)
-      call this%gwfpackages(iterm)%set_name(packobj%packName)
+      budtxt = adjustl(packobj%text)
+      call this%gwfpackages(iterm)%set_name(packobj%packName, budtxt)
       this%flowpacknamearray(iterm) = packobj%packName
       iterm = iterm + 1
       !
@@ -1439,8 +1443,10 @@ module GwtFmiModule
       imover = packobj%imover
       if (packobj%isadvpak /= 0) imover = 0
       if (imover /= 0) then
-        this%igwfmvrterm(iterm) = 1
+        budtxt = trim(adjustl(packobj%text)) // '-TO-MVR'
+        call this%gwfpackages(iterm)%set_name(packobj%packName, budtxt)
         this%flowpacknamearray(iterm) = packobj%packName
+        this%igwfmvrterm(iterm) = 1
         iterm = iterm + 1
       end if
     end do
@@ -1449,7 +1455,9 @@ module GwtFmiModule
   
   subroutine allocate_gwfpackages(this, ngwfterms)
 ! ******************************************************************************
-! allocate_gwfpackages -- allocate the gwfpackages array
+! allocate_gwfpackages -- gwfpackages is an array of PackageBudget objects.  
+!   This routine allocates gwfpackages to the proper size and initializes some
+!   member variables.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1481,14 +1489,38 @@ module GwtFmiModule
       this%igwfmvrterm(n) = 0
       this%flowpacknamearray(n) = ''
       !
-      ! -- Create a mempath for each individual flow package data set (MODELNAME/FMI-Pn)
-      write(memPath, '(a, i0)') trim(this%memoryPath) // '-P', n
+      ! -- Create a mempath for each individual flow package data set 
+      !    of the form, MODELNAME/FMI-FTn
+      write(memPath, '(a, i0)') trim(this%memoryPath) // '-FT', n
       call this%gwfpackages(n)%initialize(memPath)
     end do
     !
     ! -- return
     return
   end subroutine allocate_gwfpackages
+  
+  subroutine deallocate_gwfpackages(this)
+! ******************************************************************************
+! deallocate_gwfpackages -- memory in the gwfpackages array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    do n = 1, this%nflowpack
+      call this%gwfpackages(n)%da()
+    end do
+    !
+    ! -- return
+    return
+  end subroutine deallocate_gwfpackages
   
   subroutine get_package_index(this, name, idx)
 ! ******************************************************************************
