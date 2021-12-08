@@ -1,7 +1,8 @@
 module BaseDisModule
   
   use KindModule,              only: DP, I4B
-  use ConstantsModule,         only: LENMODELNAME, LENAUXNAME, LINELENGTH, DZERO, LENMEMPATH
+  use ConstantsModule,         only: LENMODELNAME, LENAUXNAME, LINELENGTH,      &
+                                     DZERO, LENMEMPATH, DPIO180
   use SmoothingModule,         only: sQuadraticSaturation
   use ConnectionsModule,       only: ConnectionsType
   use InputOutputModule,       only: URWORD, ubdsv1
@@ -101,6 +102,8 @@ module BaseDisModule
     procedure, public  :: nlarray_to_nodelist
     procedure, public  :: highest_active
     procedure, public  :: get_area
+    procedure, public  :: transform_xy
+    
   end type DisBaseType
   
   contains
@@ -516,7 +519,35 @@ module BaseDisModule
     call store_error('Program error: get_cellxy not implemented.', &
                       terminate=.TRUE.)
     
-  end subroutine get_cellxy     
+  end subroutine get_cellxy
+  
+  !> @brief get the x,y for a node transformed into
+  !! 'global coordinates' using xorigin, yorigin, angrot,
+  !< analogously to how flopy does this. 
+  subroutine transform_xy(this, x, y, xglo, yglo)
+    class(DisBaseType), intent(in) :: this !< this DIS
+    real(DP), intent(in)           :: x    !< the cell-x coordinate to transform
+    real(DP), intent(in)           :: y    !< the cell-y coordinate to transform
+    real(DP), intent(out)          :: xglo !< the global cell-x coordinate
+    real(DP), intent(out)          :: yglo !< the global cell-y coordinate
+    ! local
+    real(DP) :: ang
+    
+    xglo = x
+    yglo = y
+
+    ! first _rotate_ to 'real world'
+    ang = this%angrot*DPIO180
+    if (ang /= DZERO) then
+      xglo = x*cos(ang) - y*sin(ang)
+      yglo = x*sin(ang) + y*cos(ang)
+    end if
+
+    ! then _translate_
+    xglo = xglo + this%xorigin
+    yglo = yglo + this%yorigin
+
+  end subroutine transform_xy
   
   ! return discretization type
   subroutine get_dis_type(this, dis_type)

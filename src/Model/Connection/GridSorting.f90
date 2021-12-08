@@ -30,28 +30,28 @@ contains
           logical(LGP) :: isLess
           ! local
           type(GlobalCellType), pointer :: gcn, gcm
+          real(DP) :: xnloc, ynloc, xmloc, ymloc
           real(DP) :: xn, yn, zn, xm, ym, zm
             
           ! get coordinates
           gcn => idxToGlobal(array(n))
           gcm => idxToGlobal(array(m))
   
-          call gcn%model%dis%get_cellxy(gcn%index, xn, yn)
-          xn = xn + gcn%model%dis%xorigin
-          yn = yn + gcn%model%dis%yorigin
+          ! convert coordinates
+          call gcn%model%dis%get_cellxy(gcn%index, xnloc, ynloc)
+          call gcn%model%dis%transform_xy(xnloc, ynloc, xn, yn)
           zn = DHALF*(gcn%model%dis%top(gcn%index) + gcn%model%dis%bot(gcn%index))
   
-          call gcm%model%dis%get_cellxy(gcm%index, xm, ym)
-          xm = xm + gcm%model%dis%xorigin
-          ym = ym + gcm%model%dis%yorigin
+          call gcm%model%dis%get_cellxy(gcm%index, xmloc, ymloc)
+          call gcm%model%dis%transform_xy(xmloc, ymloc, xm, ym)
           zm = DHALF*(gcm%model%dis%top(gcm%index) + gcm%model%dis%bot(gcm%index))
   
           ! compare
-          if (.not. is_same(zn, zm, epsilon(zn))) then
+          if (.not. is_same(zn, zm, 10*epsilon(zn))) then
             isLess = zn > zm
-          else if (.not. is_same(yn, ym, epsilon(yn))) then
+          else if (.not. is_same(yn, ym, 10*epsilon(yn))) then
             isLess = yn > ym
-          else if (.not. is_same(xn, xm, epsilon(xn))) then
+          else if (.not. is_same(xn, xm, 10*epsilon(xn))) then
             isLess = xn < xm
           else
             isLess = .false.
