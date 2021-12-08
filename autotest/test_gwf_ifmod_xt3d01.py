@@ -327,7 +327,7 @@ def eval_heads(sim):
                     " exceeds solver tolerance (x10) {}"
                     " for row {} and col {}\n"
                     "(should be {}, was {})".format(
-                        diff, 10 * hclose, irow, icol, exact(xc), h
+                        diff, 10 * hclose, irow+1, icol+1, exact(xc), h
                     )
                 )
 
@@ -344,7 +344,7 @@ def eval_heads(sim):
                     "Difference in spec. dis. for parent {}"
                     " exceeds solver tolerance (x10) {}"
                     " for row {} and col {}".format(
-                        diff, 10 * hclose, irow, icol
+                        diff, 10 * hclose, irow+1, icol+1
                     )
                 )
 
@@ -359,7 +359,7 @@ def eval_heads(sim):
                     "Head difference in child model {}"
                     " exceeds solver tolerance (x10) {}"
                     " for row {} and col {}".format(
-                        diff, 10 * hclose, irow, icol
+                        diff, 10 * hclose, irow+1, icol+1
                     )
                 )
 
@@ -376,7 +376,7 @@ def eval_heads(sim):
                     "Difference in spec. dis. for child {}"
                     " exceeds solver tolerance (x10) {}"
                     " for row {} and col {}".format(
-                        diff, 10 * hclose, irow, icol
+                        diff, 10 * hclose, irow+1, icol+1
                     )
                 )
 

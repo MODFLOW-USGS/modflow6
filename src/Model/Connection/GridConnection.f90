@@ -357,6 +357,7 @@ module GridConnectionModule
                       'IDXTOGLOBALIDX', this%memoryPath)
     
     ! create sparse data structure, to temporarily hold connections
+    ! TODO_MJR: get rid of MaxNeighbors
     allocate(sparse)
     allocate(nnz(this%nrOfCells))
     nnz = MaxNeighbors+1
@@ -580,23 +581,9 @@ module GridConnectionModule
         return
       end if
     end if
-    
-    ! TODO_MJR: dynamic memory
-    if (.not. associated(cellNbrs%neighbors)) then
-      allocate(cellNbrs%neighbors(MaxNeighbors))
-    end if
-    
-    nbrCnt = cellNbrs%nrOfNbrs
-    if (nbrCnt + 1 > MaxNeighbors) then
-       write(*,*) "Error extending connections in GridConnection, &
-                  &max. nr. of neighbors exceeded: terminating..."
-       call ustop()
-    end if
-        
-    cellNbrs%neighbors(nbrCnt + 1)%cell%index = newNbrIdx
-    cellNbrs%neighbors(nbrCnt + 1)%cell%model => nbrModel
-    cellNbrs%nrOfNbrs = nbrCnt + 1
-  end subroutine  
+    call cellNbrs%addNbr(newNbrIdx, nbrModel)
+
+  end subroutine addNeighborCell
  
   !> @brief Recursively set interface cell indexes and
   !< add to the region-to-interface loopup table

@@ -1,6 +1,6 @@
 """
 MODFLOW 6 Autotest
-Test the interface model approach for coupling two DISU
+Test the interface model approach for coupling two DIS
 models where one is translated and rotated in space:
 
      'model A'              'model B'
