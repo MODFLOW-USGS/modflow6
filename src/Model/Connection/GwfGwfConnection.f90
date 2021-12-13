@@ -101,7 +101,7 @@ contains
     end if
 
     ! .lst file for interface model
-    fname = name//'.im.lst'
+    fname = trim(name)//'.im.lst'
     call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
     write(this%iout, '(a,a)') 'Creating GWF-GWF connection for model ',         &
                               trim(this%gwfModel%name), ' from exchange ',      &

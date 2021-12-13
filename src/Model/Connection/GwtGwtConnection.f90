@@ -102,7 +102,7 @@ subroutine gwtGwtConnection_ctor(this, model, gwtEx)
   end if
 
   ! .lst file for interface model
-  fname = name//'.im.lst'
+  fname = trim(name)//'.im.lst'
   call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
   write(this%iout, '(a,a)') 'Creating GWT-GWT connection for model ',           &
                             trim(this%gwtModel%name), 'from exchange ',         &

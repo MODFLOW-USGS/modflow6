@@ -167,7 +167,6 @@ contains
     npfOptions%wetfct = this%owner%npf%wetfct
     npfOptions%iwetit = this%owner%npf%iwetit
     npfOptions%ihdwet = this%owner%npf%ihdwet
-    npfOptions%ixt3d = this%owner%npf%ixt3d
 
   end subroutine setNpfOptions
 
