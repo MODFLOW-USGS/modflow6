@@ -190,6 +190,11 @@ contains
     npfGridData%iangle1 = this%owner%npf%iangle1
     npfGridData%iangle2 = this%owner%npf%iangle2
     npfGridData%iangle3 = this%owner%npf%iangle3
+    if (this%npf%ixt3d > 0) then
+      npfGridData%iangle1 = 1
+      npfGridData%iangle2 = 1
+      npfGridData%iangle3 = 1
+    end if
     
     do icell = 1, this%gridConnection%nrOfCells
       idx = this%gridConnection%idxToGlobal(icell)%index

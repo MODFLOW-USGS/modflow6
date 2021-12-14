@@ -291,7 +291,7 @@ def check_interface_models(mf6):
     addr = mf6.get_var_address("CELLXY", ifm, "DIS")
     cellxy = mf6.get_value_ptr(addr)
     
-    assert cellxy.size == 4
+    assert np.size(cellxy, 0) == 4
     
     xmin = np.min(cellxy[:,0])
     ymin = np.min(cellxy[:,1])

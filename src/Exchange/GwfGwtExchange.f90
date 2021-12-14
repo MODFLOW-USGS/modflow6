@@ -298,7 +298,7 @@ module GwfGwtExchangeModule
       write(errmsg, *) 'Connecting GWT model ', trim(gwtModel%name),           &
                        ' (which has a GWT-GWT exchange) to GWF requires the GWF&
                        & interface model to be active. (Activate by setting the&
-                       & environmental variable DEV_ALWAYS_USE_IFMOD=1)'
+                       & option DEV_INTERFACEMODEL_ON in the exchange file)'
       call store_error(errmsg, terminate=.true.)
     end if
     

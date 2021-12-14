@@ -18,7 +18,6 @@ module GwfNpfOptionsModule
     real(DP)     :: wetfct      !< same as npf variable
     integer(I4B) :: iwetit      !< same as npf variable
     integer(I4B) :: ihdwet      !< same as npf variable
-    integer(I4B) :: ixt3d       !< same as npf variable
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: destroy
@@ -40,7 +39,6 @@ contains
     this%wetfct = DONE
     this%iwetit = 1
     this%ihdwet = 0
-    this%ixt3d = 0
 
   end subroutine construct
 
