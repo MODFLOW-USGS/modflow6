@@ -574,7 +574,6 @@ module GridConnectionModule
     class(NumericalModelType), pointer    :: nbrModel  !< the model where the new neighbor lives
     type(GlobalCellType), optional        :: mask      !< don't add connections to this cell (optional) 
     ! local
-    integer(I4B) :: nbrCnt
     
     if (present(mask)) then
       if (newNbrIdx == mask%index .and. associated(nbrModel, mask%model)) then
