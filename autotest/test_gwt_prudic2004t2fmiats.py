@@ -26,6 +26,8 @@ except:
     raise Exception(msg)
 
 
+from framework import set_teardown_test
+
 import targets
 
 exe_name_mf6 = targets.target_dict["mf6"]
@@ -850,8 +852,10 @@ def test_prudic2004t2fmiats():
     run_flow_model()
     run_transport_model()
     d = os.path.join(testdir, testgroup)
-    #    if os.path.isdir(d):
-    #        shutil.rmtree(d)
+    teardowntest = set_teardown_test()
+    if teardowntest:
+        if os.path.isdir(d):
+            shutil.rmtree(d)
     return
 
 

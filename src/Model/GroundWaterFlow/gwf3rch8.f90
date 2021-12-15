@@ -5,6 +5,7 @@ module RchModule
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit
+  use SimVariablesModule, only: errmsg
   use ObsModule, only: DefaultObsIdProcessor
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -195,7 +196,7 @@ module RchModule
     ! -- dummy
     class(RchType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- format
@@ -294,10 +295,10 @@ module RchModule
     integer(I4B) :: inirch, inrech
     logical :: isfound
     logical :: supportopenclose
-    character(len=LINELENGTH) :: line, errmsg
+    character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*),parameter :: fmtblkerr =                                  &
-      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp =                                     &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd =                                    &
@@ -523,8 +524,8 @@ module RchModule
         ! -- Nothing found
         if(.not. found) then
           call this%parser%GetCurrentLine(line)
-          call store_error('****ERROR. LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
-          call store_error(trim(line))
+          errmsg = 'LOOKING FOR VALID VARIABLE NAME.  FOUND: ' // trim(line)
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         endif
         !
