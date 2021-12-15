@@ -267,14 +267,28 @@ end subroutine gwtgwtcon_ar
 !< the interface model
 subroutine validateConnection(this)
   use SimVariablesModule, only: errmsg
-  use SimModule, only: count_errors
+  use SimModule, only: count_errors, store_error
   class(GwtGwtConnectionType) :: this !< this connection
 
   ! base validation, the spatial/geometry part
   call this%SpatialModelConnectionType%validateConnection()
 
   ! GWT related matters
-  ! ...
+  if ((this%gwtExchange%gwtmodel1%inadv > 0 .and. this%gwtExchange%gwtmodel2%inadv == 0) .or.                    &
+      (this%gwtExchange%gwtmodel2%inadv > 0 .and. this%gwtExchange%gwtmodel1%inadv == 0)) then
+    write(errmsg, '(1x,a,a,a)') 'Cannot connect GWT models in exchange ', &
+      trim(this%gwtExchange%name), ' because one model is configured with ADV &
+      &and the other one is not' 
+    call store_error(errmsg)
+  end if
+
+  if ((this%gwtExchange%gwtmodel1%indsp > 0 .and. this%gwtExchange%gwtmodel2%indsp == 0) .or.                    &
+      (this%gwtExchange%gwtmodel2%indsp > 0 .and. this%gwtExchange%gwtmodel1%indsp == 0)) then
+    write(errmsg, '(1x,a,a,a)') 'Cannot connect GWT models in exchange ', &
+      trim(this%gwtExchange%name), ' because one model is configured with DSP &
+      &and the other one is not' 
+    call store_error(errmsg)
+  end if
 
   ! abort on errors
   if(count_errors() > 0) then
