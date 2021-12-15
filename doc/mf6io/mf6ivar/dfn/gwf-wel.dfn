@@ -78,7 +78,7 @@ reader urword
 tagged true
 optional false
 longname budget keyword
-description keyword to specify that record corresponds to the AUTO_FLOW_REDUCE output option in which a new record is written for each well and for each time step in which the user-requested extraction rate is reduced by the program.
+description keyword to specify that record corresponds to the AUTO\_FLOW\_REDUCE output option in which a new record is written for each well and for each time step in which the user-requested extraction rate is reduced by the program.
 
 block options
 name fileout
