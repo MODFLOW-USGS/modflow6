@@ -753,7 +753,7 @@ module BndModule
 
     !> @ brief Output advanced package flow terms.
     !!
-    !!  Output advanced boundart package flow terms. This method only needs to
+    !!  Output advanced boundary package flow terms. This method only needs to
     !!  be overridden for advanced packages that save flow terms than contribute 
     !!  to the continuity equation for each control volume.
     !!
