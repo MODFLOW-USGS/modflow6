@@ -301,8 +301,8 @@ def check_interface_models(mf6):
     # interface model extents in x direction only,
     # over 4 connected cells (it wouldn't without
     # a proper coordinate transformation)
-    assert abs((xmax-xmin) - 3*global_delr) < 10e-9
-    assert abs(ymax-ymin) < 10e-9
+    assert abs((xmax-xmin) - 3*global_delr) < 1e-6
+    assert abs(ymax-ymin) < 1e-6
     
 
 # - No need to change any code below
