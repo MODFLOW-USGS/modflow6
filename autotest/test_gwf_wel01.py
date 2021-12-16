@@ -142,6 +142,7 @@ def build_model(idx, ws):
         print_flows=True,
         auto_flow_reduce="auto_flow_reduce 0.5",
         stress_period_data=wel_spd,
+        afrcsv_filerecord=f"{name}.afr.csv",
     )
     welobs = wel.obs.initialize(
         digits=25,
@@ -183,6 +184,19 @@ def eval_obs(sim):
     else:
         sim.success = True
         print("    " + msg)
+
+    # MODFLOW 6 AFR CSV output file
+    fpth = os.path.join(sim.simpath, "wel01.afr.csv")
+    try:
+        afroutput = np.genfromtxt(fpth, names=True, delimiter=",", deletechars="")
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+
+    a1 = afroutput["rate-requested"]
+    a2 = afroutput["rate-actual"] + afroutput["wel-reduction"]
+    errmsg = f"Auto flow reduce requested rate must equal actual rate plus reduced rate.\n"
+    errmsg += f"{a1} /= {a2}"
+    assert np.allclose(a1, a2), errmsg
 
     return
 

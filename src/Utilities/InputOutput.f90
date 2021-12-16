@@ -2321,7 +2321,7 @@ module InputOutputModule
   subroutine get_line(lun, line, iostat)
 ! ******************************************************************************
 ! Read an unlimited length line from unit number lun into a deferred-length
-! characater string (line).  Tack on a single space to the end so that 
+! character string (line).  Tack on a single space to the end so that 
 ! routines like URWORD continue to function as before.
 ! ******************************************************************************
 !

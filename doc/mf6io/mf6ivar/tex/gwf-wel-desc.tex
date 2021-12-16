@@ -17,6 +17,12 @@
 
 \item \texttt{auto\_flow\_reduce}---keyword and real value that defines the fraction of the cell thickness used as an interval for smoothly adjusting negative pumping rates to 0 in cells with head values less than or equal to the bottom of the cell. Negative pumping rates are adjusted to 0 or a smaller negative value when the head in the cell is equal to or less than the calculated interval above the cell bottom. AUTO\_FLOW\_REDUCE is set to 0.1 if the specified value is less than or equal to zero. By default, negative pumping rates are not reduced during a simulation.
 
+\item \texttt{AUTO\_FLOW\_REDUCE\_CSV}---keyword to specify that record corresponds to the AUTO\_FLOW\_REDUCE output option in which a new record is written for each well and for each time step in which the user-requested extraction rate is reduced by the program.
+
+\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
+
+\item \texttt{afrcsvfile}---name of the comma-separated value (CSV) output file to write information about well extraction rates that have been reduced by the program.  Entries are only written if the extraction rates are reduced.
+
 \item \texttt{TS6}---keyword to specify that record corresponds to a time-series file.
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.

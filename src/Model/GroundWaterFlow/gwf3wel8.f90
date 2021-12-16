@@ -6,6 +6,7 @@
 !!   - bnd_cf (AUTO_FLOW_REDUCE)
 !!   - bnd_fc (AUTO_FLOW_REDUCE)
 !!   - bnd_fn (AUTO_FLOW_REDUCE Newton-Raphson terms)
+!!   - bnd_ot_package_flows (write AUTO_FLOW_REDUCE terms to csv file)
 !!   - bnd_da (deallocate AUTO_FLOW_REDUCE variables)
 !!   - bnd_bd_obs (wel-reduction observation added)
 !!
@@ -14,7 +15,7 @@
 module WelModule
   ! -- modules used by WelModule methods
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DNODATA
+  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DNODATA, MAXCHARLEN
   use SimVariablesModule,           only: errmsg
   use SimModule,                    only: store_error
   use MemoryHelperModule, only: create_mem_path
@@ -25,6 +26,7 @@ module WelModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use InputOutputModule, only: GetUnit, openfile
   !
   implicit none
   !
@@ -37,6 +39,7 @@ module WelModule
   type, extends(BndType) :: WelType
     integer(I4B), pointer :: iflowred => null()    !< flag indicating if the AUTO_FLOW_REDUCE option is active
     real(DP), pointer :: flowred => null()         !< AUTO_FLOW_REDUCE variable
+    integer(I4B), pointer :: ioutafrcsv => null()  !< unit number for CSV output file containing wells with reduced puping rates
   contains
     procedure :: allocate_scalars => wel_allocate_scalars
     procedure :: bnd_options => wel_options
@@ -51,6 +54,9 @@ module WelModule
     procedure, public :: bnd_bd_obs => wel_bd_obs
     ! -- methods for time series
     procedure, public :: bnd_rp_ts => wel_rp_ts
+    ! -- afr
+    procedure, private :: wel_afr_csv_init
+    procedure, private :: wel_afr_csv_write
   end type weltype
 
 contains
@@ -115,6 +121,7 @@ contains
       ! -- scalars
       call mem_deallocate(this%iflowred)
       call mem_deallocate(this%flowred)
+      call mem_deallocate(this%ioutafrcsv)
       !
       ! -- return
       return
@@ -138,9 +145,11 @@ contains
       ! -- allocate the object and assign values to object variables
       call mem_allocate(this%iflowred, 'IFLOWRED', this%memoryPath)
       call mem_allocate(this%flowred, 'FLOWRED', this%memoryPath)
+      call mem_allocate(this%ioutafrcsv, 'IOUTAFRCSV', this%memoryPath)
       !
       ! -- Set values
       this%iflowred = 0
+      this%ioutafrcsv = 0
       this%flowred = DZERO
       !
       ! -- return
@@ -161,6 +170,8 @@ contains
       logical,          intent(inout) :: found    !< boolean indicating if option found
       ! -- local variables
       real(DP) :: r
+      character(len=MAXCHARLEN) :: fname
+      character(len=MAXCHARLEN) :: keyword
       ! -- formats
       character(len=*),parameter :: fmtflowred = &
         "(4x, 'AUTOMATIC FLOW REDUCTION OF WELLS IMPLEMENTED.')"
@@ -184,6 +195,15 @@ contains
             write(this%iout, fmtflowred)
             write(this%iout, fmtflowredv) this%flowred
           found = .true.
+        case('AUTO_FLOW_REDUCE_CSV')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            call this%wel_afr_csv_init(fname)
+          else
+            call store_error('OPTIONAL AUTO_FLOW_REDUCE_CSV KEYWORD MUST BE &
+              &FOLLOWED BY FILEOUT')
+          end if
         case('MOVER')
           this%imover = 1
           write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
@@ -351,7 +371,54 @@ contains
       return
     end subroutine wel_fn
 
-
+    !> @brief Initialize the auto flow reduce csv output file
+    subroutine wel_afr_csv_init(this, fname)
+      ! -- dummy variables
+      class(WelType), intent(inout) :: this !< WelType object
+      character(len=*), intent(in) :: fname
+      ! -- format
+      character(len=*),parameter :: fmtafrcsv = &
+        "(4x, 'AUTO FLOW REDUCE INFORMATION WILL BE SAVED TO FILE: ', a, /4x, &
+      &'OPENED ON UNIT: ', I0)"
+      
+      this%ioutafrcsv = getunit()
+      call openfile(this%ioutafrcsv, this%iout, fname, 'CSV', &
+        filstat_opt='REPLACE')
+      write(this%iout,fmtafrcsv) trim(adjustl(fname)), &
+                                  this%ioutafrcsv
+      write(this%ioutafrcsv, '(a)') &
+        'time,period,step,boundnumber,cellnumber,rate-requested,rate-actual,wel-reduction'
+      return
+    end subroutine wel_afr_csv_init
+    
+    !> @brief Write out auto flow reductions only when & where they occur
+    subroutine wel_afr_csv_write(this)
+      ! -- modules
+      use TdisModule, only: totim, kstp, kper
+      ! -- dummy variables
+      class(WelType), intent(inout) :: this !< WelType object
+      ! -- local
+      integer(I4B) :: i
+      integer(I4B) :: nodereduced
+      integer(I4B) :: nodeuser
+      real(DP) :: v
+      ! -- format
+      do i = 1, this%nbound
+        nodereduced = this%nodelist(i)
+        !
+        ! -- test if node is constant or inactive
+        if(this%ibound(nodereduced) <= 0) then
+          cycle
+        end if
+        v = this%bound(1,i) + this%rhs(i)
+        if (v < DZERO) then
+          nodeuser = this%dis%get_nodeuser(nodereduced)
+          write(this%ioutafrcsv,'(*(G0,:,","))') &
+            totim, kper, kstp, i, nodeuser, this%bound(1,i), this%simvals(i), v
+        end if
+      enddo
+      end subroutine wel_afr_csv_write
+    
     !> @ brief Define the list label for the package
     !!
     !!  Method defined the list label for the WEL package. The list label is
@@ -482,6 +549,11 @@ contains
           call this%obs%SaveOneSimval(obsrv, DNODATA)
         endif
       end do
+      !
+      ! -- Write the auto flow reduce csv file entries for this step
+      if (this%ioutafrcsv > 0) then
+        call this%wel_afr_csv_write()
+      end if
       !
       ! -- return
       return
