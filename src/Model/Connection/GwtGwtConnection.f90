@@ -330,6 +330,9 @@ end subroutine gwtgwtcon_rp
 
 subroutine gwtgwtcon_ad(this)
   class(GwtGwtConnectionType) :: this !< the connection
+  
+  ! copy model data into interface model
+  call this%syncInterfaceModel()
 
   ! TODO_MJR: this can go again once the issue on dsp_ad is settled??  
   call this%gwtInterfaceModel%model_ad()
@@ -349,9 +352,6 @@ subroutine gwtgwtcon_cf(this, kiter)
   do i = 1, this%neq
     this%rhs(i) = 0.0_DP
   end do
-  
-  ! copy model data into interface model
-  call this%syncInterfaceModel()
 
   call this%gwtInterfaceModel%model_cf(kiter)
   
