@@ -50,7 +50,6 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_df => gwtgwtcon_df
     procedure, pass(this) :: exg_ac => gwtgwtcon_ac
     procedure, pass(this) :: exg_rp => gwtgwtcon_rp
-    procedure, pass(this) :: exg_ad => gwtgwtcon_ad
     procedure, pass(this) :: exg_cf => gwtgwtcon_cf
     procedure, pass(this) :: exg_fc => gwtgwtcon_fc
     procedure, pass(this) :: exg_da => gwtgwtcon_da
@@ -328,22 +327,17 @@ subroutine gwtgwtcon_rp(this)
 
 end subroutine gwtgwtcon_rp
 
-subroutine gwtgwtcon_ad(this)
-  class(GwtGwtConnectionType) :: this !< the connection
-  
-  ! copy model data into interface model
-  call this%syncInterfaceModel()
-
-  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??  
-  call this%gwtInterfaceModel%model_ad()
-
-end subroutine gwtgwtcon_ad
-
 subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
   integer(I4B), intent(in) :: kiter   !< the iteration counter
   ! local
   integer(I4B) :: i
+
+ ! copy model data into interface model
+  call this%syncInterfaceModel()
+
+  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??  
+  call this%gwtInterfaceModel%model_ad()
 
   ! reset interface system
   do i = 1, this%nja
