@@ -671,8 +671,42 @@ def eval_transport(sim):
     assert np.allclose(
         creslist[sim.idxsim], conc
     ), "simulated concentrations do not match with known solution."
+    
+    # check budget
+    for mname in ["transport1", "transport2"]:
+        fpth = os.path.join(sim.simpath, mname, "{}.lst".format(mname))
+        for line in open(fpth):
+            if line.lstrip().startswith("PERCENT"):
+                cumul_balance_error = float(line.split()[3])
+                assert (
+                    abs(cumul_balance_error) < 0.00001
+                ), "Cumulative balance error = {} for {}, should equal 0.0".format(
+                    cumul_balance_error, mname
+                )
+            
+        # get grid data (from GWF)    
+        gwfname = "flow1" if mname == "transport1" else "flow2"
+        fpth = os.path.join(sim.simpath, gwfname, "{}.dis.grb".format(gwfname))
+        grb = flopy.mf6.utils.MfGrdFile(fpth)
+                
+        # Check on residual, which is stored in diagonal position of
+        # flow-ja-face.  Residual should be less than convergence tolerance,
+        # or this means the residual term is not added correctly.
+        fpth = os.path.join(sim.simpath, mname, "{}.cbc".format(mname))
+        cbb = flopy.utils.CellBudgetFile(fpth)
+        flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
+        ia = grb._datadict["IA"] - 1
+        for fjf in flow_ja_face:
+            fjf = fjf.flatten()
+            res = fjf[ia[:-1]]
+            errmsg = "min or max flowja residual too large {} {}".format(
+                res.min(), res.max()
+            )
+            # TODO: this is not implemented yet:
+            #assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
+    
 
 
 # - No need to change any code below

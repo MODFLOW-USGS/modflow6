@@ -49,14 +49,15 @@ module GridConnectionModule
 
     class(NumericalModelType), pointer :: model => null()                       !< the model for which this grid connection exists
     
-    integer(I4B), pointer :: linkCapacity => null()
-    
     integer(I4B), pointer :: nrOfBoundaryCells => null()                        !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()    !< cells on our side of the primary connections
-    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection
-    type(ModelWithNbrsType), pointer :: modelWithNbrs => null()                 !< tree structure with the neigboring model topology
+    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection    
+    type(ModelWithNbrsType), pointer :: modelWithNbrs => null()                 !< tree structure with the neigboring model topology    
     type(ListType) :: exchanges                                                 !< all relevant exchanges for this connection, up to
                                                                                 !! the required depth
+
+    integer, dimension(:), pointer :: primConnections => null()                 !< table mapping the index in the boundaryCells/connectedCells
+                                                                                !< arrays into a connection index for e.g. access to flowja
         
     integer(I4B), pointer :: nrOfCells => null()                                !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()        !< a map from interface index to global coordinate
@@ -109,6 +110,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: createConnectionMask
     procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
+    procedure, private, pass(this) :: createLookupTable
   end type
   
   contains
@@ -116,11 +118,11 @@ module GridConnectionModule
   !> @brief Construct the GridConnection and allocate
   !! the data structures for the primary connections
   !<
-  subroutine construct(this, model, nCapacity, connectionName)
-    class(GridConnectionType), intent(inout) :: this
-    class(NumericalModelType), pointer, intent(in) :: model
-    integer(I4B) :: nCapacity ! reserves memory
-    character(len=*) :: connectionName
+  subroutine construct(this, model, nrOfPrimaries, connectionName)
+    class(GridConnectionType), intent(inout) :: this         !> this instance
+    class(NumericalModelType), pointer, intent(in) :: model  !> the model for which the interface is constructed
+    integer(I4B) :: nrOfPrimaries                            !> the number of primary connections between the two models
+    character(len=*) :: connectionName                       !> the name, for memory management mostly
     ! local
 
     this%model => model
@@ -129,14 +131,14 @@ module GridConnectionModule
     call this%allocateScalars()
     
     allocate(this%modelWithNbrs)
-    allocate(this%boundaryCells(nCapacity))
-    allocate(this%connectedCells(nCapacity))
-    allocate(this%idxToGlobal(2*nCapacity))
+    allocate(this%boundaryCells(nrOfPrimaries))
+    allocate(this%connectedCells(nrOfPrimaries))
+    allocate(this%primConnections(nrOfPrimaries))
+    allocate(this%idxToGlobal(2*nrOfPrimaries))
     
     this%modelWithNbrs%model => model
     call this%addToRegionalModels(model)
     
-    this%linkCapacity = nCapacity
     this%nrOfBoundaryCells = 0
 
     this%internalStencilDepth = 1
@@ -156,7 +158,7 @@ module GridConnectionModule
     class(NumericalModelType), pointer    :: model2 !< model of cell 2
             
     this%nrOfBoundaryCells = this%nrOfBoundaryCells + 1    
-    if (this%nrOfBoundaryCells > this%linkCapacity) then
+    if (this%nrOfBoundaryCells > size(this%boundaryCells)) then
       write(*,*) 'Error: nr of cell connections exceeds capacity in grid connection, terminating...'
       call ustop()
     end if
@@ -404,6 +406,9 @@ module GridConnectionModule
     
     ! set the masks on connections
     call this%createConnectionMask()
+
+    ! create lookup table(s)
+    call this%createLookupTable()
     
   end subroutine buildConnections 
 
@@ -618,19 +623,22 @@ module GridConnectionModule
     integer(I4B), intent(in) :: ifaceIdx             !< unique idx in the interface grid
     type(GlobalCellType), intent(in) :: cell         !< the global cell
     ! local
-    integer(I4B) :: newSize
+    integer(I4B) :: i, currentSize, newSize
     type(GlobalCellType), dimension(:), pointer :: tempMap
 
-    if (ifaceIdx > size(this%idxToGlobal)) then
-      newSize = 2*size(this%idxToGlobal)
-      allocate(tempMap(size(this%idxToGlobal)))
-      tempMap(1:size(this%idxToGlobal)) = this%idxToGlobal(1:size(this%idxToGlobal))
-
+    ! inflate?
+    currentSize = size(this%idxToGlobal)
+    if (ifaceIdx > currentSize) then
+      newSize = nint(1.5*currentSize)
+      allocate(tempMap(newSize))
+      do i = 1, currentSize
+        tempMap(i) = this%idxToGlobal(i)
+      end do
+      
       deallocate(this%idxToGlobal)
-      allocate(this%idxToGlobal(newSize))
-      this%idxToGlobal(1:size(tempMap)) = tempMap(1:size(tempMap))
-      deallocate(tempMap)
+      this%idxToGlobal => tempMap
     end if
+
     this%idxToGlobal(ifaceIdx) = cell
 
   end subroutine addToGlobalMap
@@ -931,6 +939,26 @@ module GridConnectionModule
     end do
     
   end subroutine createConnectionMask
+
+  !> @brief Create lookup tables for efficient access  
+  !< (this needs the connections object to be available)
+  subroutine createLookupTable(this)
+    use CsrUtilsModule, only: getCSRIndex
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    ! local
+    integer(I4B) :: i, n1, n2, ipos
+
+    do i = 1, this%nrOfBoundaryCells
+      n1 = this%getInterfaceIndexByIndexModel(this%boundaryCells(i)%cell%index, &
+                                              this%boundaryCells(i)%cell%model)
+      n2 = this%getInterfaceIndexByIndexModel(this%connectedCells(i)%cell%index,&
+                                              this%connectedCells(i)%cell%model)
+      
+      ipos = getCSRIndex(n1, n2, this%connections%ia, this%connections%ja)
+      this%primConnections(i) = ipos
+    end do   
+
+  end subroutine createLookupTable
   
   !> @brief Recursively mask connections, increasing the level as we go
   !<
@@ -1045,7 +1073,6 @@ module GridConnectionModule
     use MemoryManagerModule, only: mem_allocate
     class(GridConnectionType) :: this !< this grid connection instance
       
-    call mem_allocate(this%linkCapacity, 'LINKCAP', this%memoryPath)
     call mem_allocate(this%nrOfBoundaryCells, 'NRBNDCELLS', this%memoryPath)
     call mem_allocate(this%indexCount, 'IDXCOUNT', this%memoryPath)
     call mem_allocate(this%nrOfCells, 'NRCELLS', this%memoryPath)
@@ -1120,7 +1147,6 @@ module GridConnectionModule
   use MemoryManagerModule, only: mem_deallocate
     class(GridConnectionType) :: this !< this grid connection instance
     
-    call mem_deallocate(this%linkCapacity)
     call mem_deallocate(this%nrOfBoundaryCells)
     call mem_deallocate(this%indexCount)
     call mem_deallocate(this%nrOfCells)
@@ -1130,6 +1156,7 @@ module GridConnectionModule
     deallocate(this%modelWithNbrs)
     deallocate(this%boundaryCells)
     deallocate(this%connectedCells)
+    deallocate(this%primConnections)
 
     call mem_deallocate(this%idxToGlobalIdx)
     

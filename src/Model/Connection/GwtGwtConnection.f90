@@ -1,6 +1,6 @@
 module GwtGwtConnectionModule
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO   
+  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO, LENBUDTXT   
   use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
@@ -23,23 +23,24 @@ module GwtGwtConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwtGwtConnectionType
 
-    type(GwtModelType), pointer :: gwtModel => null()                   !< the model for which this connection exists
-    type(GwtExchangeType), pointer :: gwtExchange => null()             !< the primary exchange, cast to GWT-GWT
-    logical(LGP) :: exchangeIsOwned                                     !< there are two connections (in serial) for an exchange,
-                                                                        !! one of them needs to manage/own the exchange (e.g. clean up)
-    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
-    integer(I4B), pointer :: iIfaceAdvScheme => null()                  !< the advection scheme at the interface:
-                                                                        !! 0 = upstream, 1 = central, 2 = TVD
-    integer(I4B), pointer :: iIfaceXt3d => null()                       !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null()  !< intercell flows at the interface, coming from
-                                                                        !! multiple GWF models
+    type(GwtModelType), pointer :: gwtModel => null()                     !< the model for which this connection exists
+    type(GwtExchangeType), pointer :: gwtExchange => null()               !< the primary exchange, cast to GWT-GWT
+    logical(LGP) :: exchangeIsOwned                                       !< there are two connections (in serial) for an exchange,
+                                                                          !! one of them needs to manage/own the exchange (e.g. clean up)
+    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null()   !< the interface model
+    integer(I4B), pointer :: iIfaceAdvScheme => null()                    !< the advection scheme at the interface:
+                                                                          !! 0 = upstream, 1 = central, 2 = TVD
+    integer(I4B), pointer :: iIfaceXt3d => null()                         !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
+    real(DP), dimension(:), pointer, contiguous :: exgflowja => null()    !< intercell flows at the interface, coming from GWF interface model
+    real(DP), dimension(:), pointer, contiguous :: exgflowjaGwt => null() !< gwt-flowja at the interface (this is a subset of the GWT
+                                                                          !! interface model flowja's)
     
-    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null()     !< flowja for the interface model
-    real(DP), dimension(:), pointer, contiguous :: gwfsat => null()     !< gwfsat for the interface model
-    real(DP), dimension(:), pointer, contiguous :: gwfhead => null()    !< gwfhead for the interface model
-    real(DP), dimension(:,:), pointer, contiguous :: gwfspdis => null() !< gwfspdis for the interface model
-
-    integer(I4B) :: iout                                                !< the list file for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null()    !< gwfflowja for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfsat => null()       !< gwfsat for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfhead => null()      !< gwfhead for the interface model
+    real(DP), dimension(:,:), pointer, contiguous :: gwfspdis => null()   !< gwfspdis for the interface model
+  
+    integer(I4B) :: iout                                                  !< the list file for the interface model
 
   contains
 
@@ -137,11 +138,14 @@ subroutine allocate_arrays(this)
   ! local
   integer(I4B) :: i
 
-  call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'FLOWJA',         &
+  call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA',       &
                     this%memoryPath)
   call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
   call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
   call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
+
+  call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells,   &
+                    'EXGFLOWJAGWT', this%memoryPath)
 
   do i = 1, size(this%gwfflowja)
     this%gwfflowja = 0.0_DP
@@ -462,10 +466,38 @@ subroutine gwtgwtcon_cq(this, icnvg, isuppress_output, isolnid)
 end subroutine gwtgwtcon_cq
 
 subroutine gwtgwtcon_bd(this, icnvg, isuppress_output, isolnid)
+  use BudgetModule, only: rate_accumulator
+  use TdisModule, only: delt
   class(GwtGwtConnectionType) :: this           !< the connection
   integer(I4B), intent(inout) :: icnvg          !< convergence flag
   integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
   integer(I4B), intent(in) :: isolnid           !< solution id
+  ! local
+  character(len=LENBUDTXT), dimension(1) :: budtxt
+  real(DP), dimension(2, 1) :: budterm
+  real(DP) :: ratin, ratout
+  integer(I4B) :: i, iposExg
+
+  ! -- initialize
+  budtxt(1) = '    FLOW-JA-FACE'
+  !
+  ! -- Calculate ratin/ratout and pass to model budgets
+  do i = 1, this%gridConnection%nrOfBoundaryCells
+    iposExg = this%gridConnection%primConnections(i)
+    this%exgflowjaGwt(i) = this%gwtInterfaceModel%flowja(iposExg)
+  end do
+  call rate_accumulator(this%exgflowjaGwt, ratin, ratout)
+  !
+  ! -- Add the budget terms to the correct model
+  budterm(1, 1) = ratin
+  budterm(2, 1) = ratout
+  if (associated(this%gwtModel, this%gwtExchange%gwtmodel2)) then
+    budterm(1, 1) = ratout
+    budterm(2, 1) = ratin
+  end if
+
+  call this%gwtmodel%budget%addentry(ratin, ratout, delt, budtxt(1),            &
+                                     isuppress_output, this%gwtExchange%name)
 
 end subroutine gwtgwtcon_bd
 
@@ -488,6 +520,7 @@ subroutine gwtgwtcon_da(this)
   call mem_deallocate(this%gwfsat)
   call mem_deallocate(this%gwfhead)
   call mem_deallocate(this%gwfspdis)
+  call mem_deallocate(this%exgflowjaGwt)
 
   ! interface model
   call this%gwtInterfaceModel%model_da()
