@@ -5,6 +5,7 @@ module GwtAdvModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
+  use GwtAdvOptionsModule,    only: GwtAdvOptionsType
 
   implicit none
   private
@@ -13,12 +14,13 @@ module GwtAdvModule
 
   type, extends(NumericalPackageType) :: GwtAdvType
     
-    integer(I4B), pointer                            :: iadvwt => null()        ! advection scheme (0 up, 1 central, 2 tvd)
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
+    integer(I4B), pointer                            :: iadvwt => null()        !< advection scheme (0 up, 1 central, 2 tvd)
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        !< pointer to model ibound
+    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
     
   contains
   
+    procedure :: adv_df
     procedure :: adv_ar
     procedure :: adv_fc
     procedure :: adv_cq
@@ -64,12 +66,37 @@ module GwtAdvModule
     advobj%iout = iout
     advobj%fmi => fmi
     !
-    ! -- Initialize block parser
-    call advobj%parser%Initialize(advobj%inunit, advobj%iout)
-    !
     ! -- Return
     return
   end subroutine adv_cr
+
+  subroutine adv_df(this, adv_options)
+    class(GwtAdvType) :: this
+    type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
+    ! local
+    character(len=*), parameter :: fmtadv =                                    &
+      "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017',                &
+      &' INPUT READ FROM UNIT ', i0, //)"
+    !
+    ! -- Read or set advection options
+    if (.not. present(adv_options)) then      
+      !
+      ! -- Initialize block parser (adv has no define, so it's
+      ! not done until here)
+      call this%parser%Initialize(this%inunit, this%iout)
+      !
+      ! --print a message identifying the advection package.
+      write(this%iout, fmtadv) this%inunit
+      !
+      ! --read options from file
+      call this%read_options()
+    else
+      !
+      ! --set options from input arg
+      this%iadvwt = adv_options%iAdvScheme
+    end if
+
+  end subroutine adv_df
 
   subroutine adv_ar(this, dis, ibound)
 ! ******************************************************************************
@@ -85,23 +112,14 @@ module GwtAdvModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtadv =                                    &
-      "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017',                &
-      &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
-    !
-    ! --print a message identifying the advection package.
-    write(this%iout, fmtadv) this%inunit
+! ------------------------------------------------------------------------------    
     !
     ! -- adv pointers to arguments that were passed in
     this%dis     => dis
     this%ibound  => ibound
     !
     ! -- Allocate arrays (not needed for adv)
-    !call this%allocate_arrays(dis%nodes)
-    !
-    ! -- Read advection options
-    call this%read_options()
+    !call this%allocate_arrays(dis%nodes)    
     !
     ! -- Return
     return
@@ -133,6 +151,7 @@ module GwtAdvModule
       if (this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        if (this%dis%con%mask(ipos) == 0) cycle
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
@@ -174,6 +193,7 @@ module GwtAdvModule
     !
     ! -- Loop through each n connection.  This will
     do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+      if (this%dis%con%mask(ipos) == 0) cycle
       m = this%dis%con%ja(ipos)
       if (m > n .and. this%ibound(m) /= 0) then
         qtvd = this%advqtvd(n, m, ipos, cnew)

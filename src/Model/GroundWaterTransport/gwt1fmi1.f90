@@ -104,7 +104,7 @@ module GwtFmiModule
     ! -- dummy
     type(GwtFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(inout) :: inunit
+    integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
@@ -541,13 +541,16 @@ module GwtFmiModule
     call this%deallocate_gwfpackages()
     !
     ! -- deallocate fmi arrays
-    deallocate(this%datp)
-    deallocate(this%gwfpackages)
-    deallocate(this%flowpacknamearray)
+    if (associated(this%datp)) then
+      deallocate(this%datp)
+      deallocate(this%gwfpackages)
+      deallocate(this%flowpacknamearray)
+      call mem_deallocate(this%iatp)
+      call mem_deallocate(this%igwfmvrterm)
+    end if
+
     deallocate(this%aptbudobj)
     call mem_deallocate(this%flowcorrect)
-    call mem_deallocate(this%iatp)
-    call mem_deallocate(this%igwfmvrterm)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
       call mem_deallocate(this%gwfflowja)

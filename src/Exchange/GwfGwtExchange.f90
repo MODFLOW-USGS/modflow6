@@ -1,10 +1,12 @@
 module GwfGwtExchangeModule
-  
   use KindModule,              only: DP, I4B
   use ConstantsModule,         only: LENPACKAGENAME
-  use ListsModule,             only: basemodellist, baseexchangelist
+  use ListsModule,                  only: basemodellist, baseexchangelist, baseconnectionlist
   use SimVariablesModule,      only: errmsg
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
+  use SpatialModelConnectionModule, only: SpatialModelConnectionType, GetSpatialModelConnectionFromList
+  use GwtGwtConnectionModule,       only: GwtGwtConnectionType
+  use GwfGwfConnectionModule,       only: GwfGwfConnectionType
   use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use GwfModule,               only: GwfModelType
   use GwtModule,               only: GwtModelType
@@ -28,6 +30,7 @@ module GwfGwtExchangeModule
     procedure, private :: set_model_pointers
     procedure, private :: allocate_scalars
     procedure, private :: gwfbnd2gwtfmi
+    procedure, private :: gwfconn2gwtconn
     
   end type GwfGwtExchangeType
   
@@ -251,9 +254,71 @@ module GwfGwtExchangeModule
       gwtmodel%fmi%mvrbudobj => gwfmodel%mvr%budobj
     end if
     !
+    ! -- connect Connections
+    call this%gwfconn2gwtconn(gwfmodel, gwtmodel)    
+    !
     ! -- return
     return
   end subroutine exg_ar
+  
+  !> @brief Link GWT connection to GWF connection
+  !<
+  subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
+    use SimModule, only: store_error
+    class(GwfGwtExchangeType) :: this        !< this exchange
+    type(GwfModelType), pointer :: gwfModel !< the flow model
+    type(GwtModelType), pointer :: gwtModel !< the transport model
+    ! local
+    class(SpatialModelConnectionType), pointer :: conn => null()    
+    class(GwtGwtConnectionType), pointer :: gwtConn => null()
+    class(GwfGwfConnectionType), pointer :: gwfConn => null()    
+    integer(I4B) :: ic, gwfIdx, gwtIdx
+
+    gwtIdx = -1
+    gwfIdx = -1
+    do ic = 1, baseconnectionlist%Count()
+      conn => GetSpatialModelConnectionFromList(baseconnectionlist,ic)
+      if (associated(conn%owner, gwtModel)) then
+        gwtIdx = ic
+      end if
+      if (associated(conn%owner, gwfModel)) then
+        gwfIdx = ic
+      end if
+      if (gwfIdx > 0 .and. gwtIdx > 0) then
+        exit
+      end if
+    end do
+    
+    if (gwtIdx == -1) then
+      ! apparently there is no gwt-gwt exchange, so
+      ! no need to link interface to flow counterpart
+      return
+    end if
+    
+    if (gwtIdx > 0 .and. gwfIdx == -1) then
+      write(errmsg, *) 'Connecting GWT model ', trim(gwtModel%name),           &
+                       ' (which has a GWT-GWT exchange) to GWF requires the GWF&
+                       & interface model to be active. (Activate by setting the&
+                       & option DEV_INTERFACEMODEL_ON in the exchange file)'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    
+    conn => GetSpatialModelConnectionFromList(baseconnectionlist,gwtIdx)
+    select type(conn)
+    type is (GwtGwtConnectionType)
+      gwtConn => conn
+    end select
+    conn => GetSpatialModelConnectionFromList(baseconnectionlist,gwfIdx)
+    select type(conn)
+    type is (GwfGwfConnectionType)
+      gwfConn => conn
+    end select
+    gwtConn%exgflowja => gwfConn%exgflowja
+
+    ! fmi flows are not read from file
+    gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
+
+  end subroutine gwfconn2gwtconn
   
   subroutine exg_da(this)
 ! ******************************************************************************

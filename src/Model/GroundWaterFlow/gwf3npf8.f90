@@ -1515,7 +1515,6 @@ module GwfNpfModule
       this%wetfct = options%wetfct
       this%iwetit = options%iwetit
       this%ihdwet = options%ihdwet
-      this%ixt3d = options%ixt3d
 
   end subroutine set_options
 

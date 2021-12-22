@@ -1,15 +1,29 @@
 """
 MODFLOW 6 Autotest
-Test the interface model approach for coupling two gwf models.
-We need the API for this, as the interface model is hidden and
-not present in any of the output. The setup is two coupled
-(3-layer) models with XT3D at the interface:
+Test the interface model approach for coupling two DIS
+models where one is translated and rotated in space:
 
-     'leftmodel'           'rightmodel'
+     'model A'              'model B'
+                               06     
+                               07                     
+                      exg      08                     
+                               09
+    01 02 03 04 05             10
+   
+ where exg couples 05 with 06 and has XT3D enabled, and model B 
+ is translated and rotated
+ 
+ The physical setup therefore is
 
-    1  1  1  1  1         1  1  1  1  1
-                    <=>
-    1  1  1  1  1         1  1  1  1  1
+      'model A'              'modelB'
+   01 02 03 04 05   exg   06 07 08 09 10
+   
+ where the interface model grid (2x) is
+ 
+   04 05 06 07
+
+                 
+ and x -->
 
 """
 import os
@@ -36,19 +50,17 @@ except:
 from framework import testing_framework
 from simulation import Simulation, api_return
 
-ex = ["libgwf_ifmod01"]
+ex = ["libgwf_ifmod03"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
 # global convenience...
-name_left = "leftmodel"
-name_right = "rightmodel"
-
+name_left = "left"
+name_right = "right"
+global_delr = 8.0
 
 def get_model(dir, name):
-
-    useXT3D = True
 
     # parameters and spd
     # tdis
@@ -59,24 +71,21 @@ def get_model(dir, name):
 
     # solver data
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 10 - 9, 1e-3, 0.97
+    hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
     # model spatial discretization
-    nlay = 3
+    nlay = 1
     ncol = 5
-    nrow = 2
+    nrow = 1    
 
     # cell spacing
-    delr = 10.0
-    delc = 10.0
+    delr = global_delr
+    delc = 13.0
+        
     area = delr * delc
 
-    # shift
-    shift_x = 5 * delr
-    shift_y = 0.0
-
     # top/bot of the aquifer
-    tops = [0.0, -5.0, -10.0, -15.0]
+    tops = [0.0, -5.0]
 
     # hydraulic conductivity
     k11 = 10.0
@@ -86,10 +95,14 @@ def get_model(dir, name):
     h_right = -2.0
 
     # initial head
-    h_start = -2.0
+    h_start = -2.1
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
+        sim_name=name, 
+        version="mf6", 
+        exe_name="mf6", 
+        sim_ws=dir,
+        memory_print_option="all",
     )
 
     tdis = flopy.mf6.ModflowTdis(
@@ -109,14 +122,17 @@ def get_model(dir, name):
         relaxation_factor=relax,
     )
 
-    # submodel on the left:
-    left_chd = [
-        [(ilay, irow, 0), h_left]
-        for irow in range(nrow)
-        for ilay in range(nlay)
-    ]
+    # boundary for submodels on the left:
+    left_chd = [[(0, 0, 0), h_left]]
     chd_spd_left = {0: left_chd}
-
+    
+    # boundary for submodel on the right:
+    right_chd = [[(0, nrow-1, 0), h_right]]
+    chd_spd_right = {0: right_chd}
+    
+    # --------------------------------------
+    # left model
+    # --------------------------------------
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name_left, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -132,7 +148,6 @@ def get_model(dir, name):
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
-        xt3doptions=useXT3D,
         save_flows=True,
         icelltype=0,
         k=k11,
@@ -144,34 +159,29 @@ def get_model(dir, name):
         budget_filerecord="{}.cbc".format(name_left),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )
-
-    # submodel on the right:
-    right_chd = [
-        [(ilay, irow, ncol - 1), h_right]
-        for irow in range(nrow)
-        for ilay in range(nlay)
-    ]
-    chd_spd_right = {0: right_chd}
-
+    )  
+    
+    # --------------------------------------
+    # right model
+    # --------------------------------------
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name_right, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        delr=delr,
-        delc=delc,
-        xorigin=shift_x,
-        yorigin=shift_y,
+        nrow=ncol, # reversed!
+        ncol=nrow, # reversed!
+        delr=delc, # reversed!
+        delc=delr, # reversed!
         top=tops[0],
         botm=tops[1:],
+        xorigin=2*(5*delr), # note this should be twice the extent
+        yorigin=0.0,
+        angrot=90.0,
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
-        xt3doptions=useXT3D,
         save_flows=True,
         icelltype=0,
         k=k11,
@@ -183,34 +193,31 @@ def get_model(dir, name):
         budget_filerecord="{}.cbc".format(name_right),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )
-
-    # exchangedata
+    )    
+    
+    # exchange between left right
     angldegx = 0.0
     cdist = delr
-    gwfgwf_data = [
-        [
-            (ilay, irow, ncol - 1),
-            (ilay, irow, 0),
+    gwfgwf_data = [[
+            (0, 0, ncol-1),
+            (0, 0, 0),
             1,
             delr / 2.0,
             delr / 2.0,
             delc,
             angldegx,
             cdist,
-        ]
-        for irow in range(nrow)
-        for ilay in range(nlay)
-    ]
-    gwfgwf = flopy.mf6.ModflowGwfgwf(
+        ]]
+    exg1 = flopy.mf6.ModflowGwfgwf(
         sim,
+        filename=name_left + "-" + name_right + ".gwfgwf",
         exgtype="GWF6-GWF6",
         nexg=len(gwfgwf_data),
         exgmnamea=name_left,
         exgmnameb=name_right,
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        xt3d=useXT3D,
+        xt3d=True,
     )
 
     return sim
@@ -274,62 +281,29 @@ def api_func(exe, idx, model_ws=None):
 
 
 def check_interface_models(mf6):
-    exchange_id = 1 # we only have 1 exchange  in this case
-    ifm_name_left = "GWFIM1_" + str(exchange_id).zfill(5)
-    gc_name_left = "GWFCON1_" + str(exchange_id).zfill(5)
-
-    # XT3D flag should be set to 1
-    mem_addr = mf6.get_var_address("IXT3D", ifm_name_left, "NPF")
-    ixt3d = mf6.get_value_ptr(mem_addr)[0]
-    assert (
-        ixt3d == 1
-    ), "Interface model for {} should have XT3D enabled".format(name_left)
-
-    # check if n2 > n1, then cell 1 is below 2
-    mem_addr = mf6.get_var_address("TOP", ifm_name_left, "DIS")
-    top = mf6.get_value_ptr(mem_addr)
-    mem_addr = mf6.get_var_address("BOT", ifm_name_left, "DIS")
-    bot = mf6.get_value_ptr(mem_addr)
-    zc = (bot + top) / 2
-    assert all(
-        [zc[i] >= zc[i + 1] for i in range(len(zc) - 1)]
-    ), "Interface model for {} contains incorrectly numbered cells".format(
-        name_left
-    )
-
-    # confirm some properties for the 'left' interface
-    # model, looping over the models that contribute:
-    for name in [name_left, name_right]:
-        mem_addr = mf6.get_var_address("IDXTOGLOBALIDX", gc_name_left, "GC")
-        to_global = mf6.get_value_ptr(mem_addr)
-        mem_addr = mf6.get_var_address("MOFFSET", name)
-        m_offset = mf6.get_value_ptr(mem_addr)[0]
-        mem_addr = mf6.get_var_address("NODES", name, "DIS")
-        nr_nodes = mf6.get_value_ptr(mem_addr)[0]
-
-        for i, global_id in enumerate(to_global):
-            iface_idx = i + 1
-            if global_id > m_offset and global_id <= m_offset + nr_nodes:
-                local_id = global_id - m_offset
-
-                # NPF/K11
-                mem_addr = mf6.get_var_address("K11", name, "NPF")
-                k11_model = mf6.get_value_ptr(mem_addr)
-                mem_addr = mf6.get_var_address("K11", ifm_name_left, "NPF")
-                k11_interface = mf6.get_value_ptr(mem_addr)
-                assert (
-                    k11_model[local_id - 1] == k11_interface[iface_idx - 1]
-                ), "K11 in interface model does not match"
-
-                # DIS/AREA
-                mem_addr = mf6.get_var_address("AREA", name, "DIS")
-                area_model = mf6.get_value_ptr(mem_addr)
-                mem_addr = mf6.get_var_address("AREA", ifm_name_left, "DIS")
-                area_interface = mf6.get_value_ptr(mem_addr)
-                assert (
-                    area_model[local_id - 1] == area_interface[iface_idx - 1]
-                ), "AREA in interface model does not match"
-
+    # interface model and connection for exchange
+    exg_id = 1
+    ifm = "GWFIM1_" + str(exg_id).zfill(5)
+    gfc = "GWFCON1_" + str(exg_id).zfill(5)
+    
+    # check extent for interface model, it's always
+    # DISU so we have cellxy:
+    addr = mf6.get_var_address("CELLXY", ifm, "DIS")
+    cellxy = mf6.get_value_ptr(addr)
+    
+    assert np.size(cellxy, 0) == 4
+    
+    xmin = np.min(cellxy[:,0])
+    ymin = np.min(cellxy[:,1])
+    xmax = np.max(cellxy[:,0])
+    ymax = np.max(cellxy[:,1])
+    
+    # interface model extents in x direction only,
+    # over 4 connected cells (it wouldn't without
+    # a proper coordinate transformation)
+    assert abs((xmax-xmin) - 3*global_delr) < 1e-6
+    assert abs(ymax-ymin) < 1e-6
+    
 
 # - No need to change any code below
 @pytest.mark.parametrize(

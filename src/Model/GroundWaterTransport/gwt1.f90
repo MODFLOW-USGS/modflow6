@@ -31,6 +31,7 @@ module GwtModule
   private
   public :: gwt_cr
   public :: GwtModelType
+  public :: CastAsGwtModel
 
   type, extends(NumericalModelType) :: GwtModelType
     
@@ -285,6 +286,7 @@ module GwtModule
     call this%dis%dis_df()
     call this%fmi%fmi_df(this%dis, this%inssm)
     if (this%inmvt > 0) call this%mvt%mvt_df(this%dis)
+    if (this%inadv > 0) call this%adv%adv_df()
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
@@ -1229,6 +1231,18 @@ module GwtModule
     return
   end subroutine ftype_check
 
-
+  !> @brief Cast to GwtModelType
+  function CastAsGwtModel(model) result(gwtmodel)
+    class(*), pointer :: model               !< The object to be cast
+    class(GwtModelType), pointer :: gwtmodel !< The GWT model
+    
+    gwtmodel => null()
+    if (.not. associated(model)) return
+    select type(model)
+    type is (GwtModelType)
+      gwtmodel => model
+    end select
+      
+  end function CastAsGwtModel
   
 end module GwtModule

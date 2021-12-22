@@ -50,6 +50,7 @@
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwtExchange.f90"/>
+		<File RelativePath="..\src\Exchange\GwtGwtExchange.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
@@ -59,6 +60,8 @@
 		<File RelativePath="..\src\Model\Connection\GridSorting.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>
+		<File RelativePath="..\src\Model\Connection\GwtGwtConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\GwtInterfaceModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\Topology.f90"/></Filter>
@@ -122,6 +125,9 @@
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfGridData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfStorageUtils.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\GwtAdvOptions.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\GwtDspGridData.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\GwtDspOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>

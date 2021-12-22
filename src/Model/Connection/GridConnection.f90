@@ -1,11 +1,12 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
-  use ConstantsModule, only: LENMEMPATH
+  use ConstantsModule, only: LENMEMPATH, DZERO, DPIO180
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface, arePointersEqual
   use NumericalModelModule
+  use GwfDisuModule
   use DisConnExchangeModule
   use TopologyModule
   use ConnectionsModule  
@@ -17,7 +18,7 @@ module GridConnectionModule
   integer(I4B), parameter :: MaxNeighbors = 7
   
   !> This class is used to construct the connections object for 
-  !! the interface model's spatial discretization/grid. 
+  !! the interface model's spatial discretization/grid.
   !! 
   !! It works as follows:
   !!
@@ -46,20 +47,22 @@ module GridConnectionModule
     integer(I4B) :: internalStencilDepth !< stencil size for the interior
     integer(I4B) :: exchangeStencilDepth !< stencil size at the interface
 
-    class(NumericalModelType), pointer :: model => null()
-    
-    integer(I4B), pointer :: linkCapacity => null()
+    class(NumericalModelType), pointer :: model => null()                       !< the model for which this grid connection exists
     
     integer(I4B), pointer :: nrOfBoundaryCells => null()                        !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()    !< cells on our side of the primary connections
-    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection
-    type(ModelWithNbrsType), pointer :: modelWithNbrs => null()                 !< tree structure with the neigboring model topology
+    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection    
+    type(ModelWithNbrsType), pointer :: modelWithNbrs => null()                 !< tree structure with the neigboring model topology    
     type(ListType) :: exchanges                                                 !< all relevant exchanges for this connection, up to
                                                                                 !! the required depth
+
+    integer, dimension(:), pointer :: primConnections => null()                 !< table mapping the index in the boundaryCells/connectedCells
+                                                                                !< arrays into a connection index for e.g. access to flowja
         
     integer(I4B), pointer :: nrOfCells => null()                                !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()        !< a map from interface index to global coordinate
-    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index
+    integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
+                                                                                !! stored in mem. mgr. so can be used for debugging
      
     integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null()  !< (sparse) mapping from regional index to interface ixd
     type(ListType)                      :: regionalModels                       !< the models participating in the interface
@@ -78,6 +81,8 @@ module GridConnectionModule
     procedure, pass(this) :: extendConnection
     generic :: getInterfaceIndex => getInterfaceIndexByCell, &
                                     getInterfaceIndexByIndexModel
+
+    procedure, pass(this) :: getDiscretization
     
     ! 'protected'
     procedure, pass(this) :: isPeriodic
@@ -103,8 +108,9 @@ module GridConnectionModule
     procedure, private, pass(this) :: fillConnectionDataInternal
     procedure, private, pass(this) :: fillConnectionDataFromExchanges
     procedure, private, pass(this) :: createConnectionMask
-    procedure, private, pass(this) :: maskConnections
+    procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
+    procedure, private, pass(this) :: createLookupTable
   end type
   
   contains
@@ -112,11 +118,11 @@ module GridConnectionModule
   !> @brief Construct the GridConnection and allocate
   !! the data structures for the primary connections
   !<
-  subroutine construct(this, model, nCapacity, connectionName)
-    class(GridConnectionType), intent(inout) :: this
-    class(NumericalModelType), pointer, intent(in) :: model
-    integer(I4B) :: nCapacity ! reserves memory
-    character(len=*) :: connectionName
+  subroutine construct(this, model, nrOfPrimaries, connectionName)
+    class(GridConnectionType), intent(inout) :: this         !> this instance
+    class(NumericalModelType), pointer, intent(in) :: model  !> the model for which the interface is constructed
+    integer(I4B) :: nrOfPrimaries                            !> the number of primary connections between the two models
+    character(len=*) :: connectionName                       !> the name, for memory management mostly
     ! local
 
     this%model => model
@@ -125,14 +131,14 @@ module GridConnectionModule
     call this%allocateScalars()
     
     allocate(this%modelWithNbrs)
-    allocate(this%boundaryCells(nCapacity))
-    allocate(this%connectedCells(nCapacity))
-    allocate(this%idxToGlobal(2*nCapacity))
+    allocate(this%boundaryCells(nrOfPrimaries))
+    allocate(this%connectedCells(nrOfPrimaries))
+    allocate(this%primConnections(nrOfPrimaries))
+    allocate(this%idxToGlobal(2*nrOfPrimaries))
     
     this%modelWithNbrs%model => model
     call this%addToRegionalModels(model)
     
-    this%linkCapacity = nCapacity
     this%nrOfBoundaryCells = 0
 
     this%internalStencilDepth = 1
@@ -152,7 +158,7 @@ module GridConnectionModule
     class(NumericalModelType), pointer    :: model2 !< model of cell 2
             
     this%nrOfBoundaryCells = this%nrOfBoundaryCells + 1    
-    if (this%nrOfBoundaryCells > this%linkCapacity) then
+    if (this%nrOfBoundaryCells > size(this%boundaryCells)) then
       write(*,*) 'Error: nr of cell connections exceeds capacity in grid connection, terminating...'
       call ustop()
     end if
@@ -269,7 +275,7 @@ module GridConnectionModule
   !> @brief Extend the connection topology to deal with 
   !! higher levels of connectivity (neighbors-of-neighbors, etc.)
   !!
-  !! The following are steps are taken:
+  !! The following steps are taken:
   !! 1. Recursively add interior neighbors (own model) up to the specified depth
   !! 2. Recursively add exterior neighbors
   !! 3. Allocate a (sparse) mapping table for the region
@@ -290,16 +296,16 @@ module GridConnectionModule
       localDepth = remoteDepth
     end if
     
-    ! first add the neighbors for the interior, localOnly because 
-    ! connections crossing model boundary will be added anyway
+    ! first add the neighbors for the interior 
+    ! (possibly extending into other models)
     do icell = 1, this%nrOfBoundaryCells
       call this%addNeighbors(this%boundaryCells(icell), localDepth,             &
-                             this%connectedCells(icell)%cell, local=.true.)
+                             this%connectedCells(icell)%cell, .true.)
     end do
     ! and for the exterior
     do icell = 1, this%nrOfBoundaryCells
       call this%addNeighbors(this%connectedCells(icell), remoteDepth,           &
-                             this%boundaryCells(icell)%cell)
+                             this%boundaryCells(icell)%cell, .false.)
     end do
     
     ! set up mapping for the region (models participating in interface model grid)
@@ -353,6 +359,7 @@ module GridConnectionModule
                       'IDXTOGLOBALIDX', this%memoryPath)
     
     ! create sparse data structure, to temporarily hold connections
+    ! TODO_MJR: get rid of MaxNeighbors
     allocate(sparse)
     allocate(nnz(this%nrOfCells))
     nnz = MaxNeighbors+1
@@ -372,7 +379,7 @@ module GridConnectionModule
     
      ! create connections object
     allocate(this%connections)
-    conn => this%connections
+    conn => this%connections    
     call conn%allocate_scalars(this%memoryPath)
     conn%nodes = this%nrOfCells
     conn%nja = sparse%nnz
@@ -399,31 +406,27 @@ module GridConnectionModule
     
     ! set the masks on connections
     call this%createConnectionMask()
+
+    ! create lookup table(s)
+    call this%createLookupTable()
     
   end subroutine buildConnections 
 
     
   !< @brief Routine for finding neighbors-of-neighbors, recursively
   !<
-  recursive subroutine addNeighbors(this, cellNbrs, depth, mask, local)
+  recursive subroutine addNeighbors(this, cellNbrs, depth, mask, interior)
     use SimModule, only: ustop
     class(GridConnectionType), intent(inout)  :: this     !< this grid connection
     type(CellWithNbrsType), intent(inout)     :: cellNbrs !< cell to add to    
     integer(I4B), intent(inout)               :: depth    !< current depth (typically decreases in recursion)
     type(GlobalCellType), optional            :: mask     !< mask to excluded back-and-forth connection between cells
-    logical, optional                         :: local    !< controls whether only local (within the same model) neighbors are added
+    logical(LGP)                              :: interior !< when true, we are adding from the exchange back into the model
     ! local
     integer(I4B)                              :: nbrIdx, ipos, inbr
     type(ConnectionsType), pointer            :: conn
     integer(I4B)                              :: newDepth
-    type(ModelWithNbrsType), pointer          :: modelWithNbrs
-    logical                                   :: localOnly
-    
-    if (.not. present(local)) then
-      localOnly = .false. ! default
-    else
-      localOnly = local
-    end if
+    type(ModelWithNbrsType), pointer          :: modelWithNbrs    
     
     ! if depth == 1, then we are not adding neighbors but use
     ! the boundary and connected cell only
@@ -442,15 +445,23 @@ module GridConnectionModule
         
     ! find and add remote nbr (from a different model, and
     ! not going back into the main model)
-    if (.not. localOnly) then
-      call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
-      call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
-    end if
+    call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
+    call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
     
     ! now find nbr-of-nbr
     do inbr=1, cellNbrs%nrOfNbrs
+
+      ! are we leaving the model through another exchange?
+      if (interior .and. associated(cellNbrs%cell%model, this%model)) then
+        if (.not. associated(cellNbrs%neighbors(inbr)%cell%model, this%model)) then
+          ! decrement by 1, because the connection we are crossing is not
+          ! calculated by this interface
+          newDepth = newDepth - 1
+        end if        
+      end if
+      ! and add neigbors with the new depth
       call this%addNeighbors(cellNbrs%neighbors(inbr), newDepth,                &
-                             cellNbrs%cell, local)
+                             cellNbrs%cell, interior)
     end do
     
   end subroutine addNeighbors
@@ -545,13 +556,14 @@ module GridConnectionModule
     ! local
     integer(I4B) :: i
     
-    ! traverse the tree, currently two deep but this can be made recursive
+    ! traverse the tree, TODO_MJR: currently two deep but this can be made recursive
     if (associated(model, this%modelWithNbrs%model)) then    
       modelWithNbr => this%modelWithNbrs
     else
       do i = 1, this%modelWithNbrs%nrOfNbrs
         if (associated(model, this%modelWithNbrs%neighbors(i)%model)) then  
           modelWithNbr => this%modelWithNbrs%neighbors(i)
+          exit
         end if
       end do
     end if
@@ -567,30 +579,15 @@ module GridConnectionModule
     class(NumericalModelType), pointer    :: nbrModel  !< the model where the new neighbor lives
     type(GlobalCellType), optional        :: mask      !< don't add connections to this cell (optional) 
     ! local
-    integer(I4B) :: nbrCnt
     
     if (present(mask)) then
       if (newNbrIdx == mask%index .and. associated(nbrModel, mask%model)) then
         return
       end if
     end if
-    
-    ! TODO_MJR: dynamic memory
-    if (.not. associated(cellNbrs%neighbors)) then
-      allocate(cellNbrs%neighbors(MaxNeighbors))
-    end if
-    
-    nbrCnt = cellNbrs%nrOfNbrs
-    if (nbrCnt + 1 > MaxNeighbors) then
-       write(*,*) "Error extending connections in GridConnection, &
-                  &max. nr. of neighbors exceeded: terminating..."
-       call ustop()
-    end if
-        
-    cellNbrs%neighbors(nbrCnt + 1)%cell%index = newNbrIdx
-    cellNbrs%neighbors(nbrCnt + 1)%cell%model => nbrModel
-    cellNbrs%nrOfNbrs = nbrCnt + 1
-  end subroutine  
+    call cellNbrs%addNbr(newNbrIdx, nbrModel)
+
+  end subroutine addNeighborCell
  
   !> @brief Recursively set interface cell indexes and
   !< add to the region-to-interface loopup table
@@ -626,19 +623,22 @@ module GridConnectionModule
     integer(I4B), intent(in) :: ifaceIdx             !< unique idx in the interface grid
     type(GlobalCellType), intent(in) :: cell         !< the global cell
     ! local
-    integer(I4B) :: newSize
+    integer(I4B) :: i, currentSize, newSize
     type(GlobalCellType), dimension(:), pointer :: tempMap
 
-    if (ifaceIdx > size(this%idxToGlobal)) then
-      newSize = 2*size(this%idxToGlobal)
-      allocate(tempMap(size(this%idxToGlobal)))
-      tempMap(1:size(this%idxToGlobal)) = this%idxToGlobal(1:size(this%idxToGlobal))
-
+    ! inflate?
+    currentSize = size(this%idxToGlobal)
+    if (ifaceIdx > currentSize) then
+      newSize = nint(1.5*currentSize)
+      allocate(tempMap(newSize))
+      do i = 1, currentSize
+        tempMap(i) = this%idxToGlobal(i)
+      end do
+      
       deallocate(this%idxToGlobal)
-      allocate(this%idxToGlobal(newSize))
-      this%idxToGlobal(1:size(tempMap)) = tempMap(1:size(tempMap))
-      deallocate(tempMap)
+      this%idxToGlobal => tempMap
     end if
+
     this%idxToGlobal(ifaceIdx) = cell
 
   end subroutine addToGlobalMap
@@ -884,7 +884,8 @@ module GridConnectionModule
   !!
   !! The level indicates the nr of connections away from
   !! the remote neighbor, the diagonal term holds the negated
-  !< value of their nearest connection
+  !! value of their nearest connection. We end with setting
+  !< a normalized mask: 0 or 1
   subroutine createConnectionMask(this)
     class(GridConnectionType), intent(inout) :: this !< instance of this grid connection
     ! local
@@ -899,12 +900,13 @@ module GridConnectionModule
     
     ! remote connections remain masked
     ! now set mask for exchange connections (level == 1)
+    level = 1
     do icell = 1, this%nrOfBoundaryCells  
-      call this%setMaskOnConnection(this%boundaryCells(icell), this%connectedCells(icell), 1)
+      call this%setMaskOnConnection(this%boundaryCells(icell), this%connectedCells(icell), level)
       ! for cross-boundary connections, we need to apply the mask to both n-m and m-n,
       ! because if the upper triangular one is disabled, its transposed (lower triangular)
       ! counter part is skipped in the NPF calculation as well.
-      call this%setMaskOnConnection(this%connectedCells(icell), this%boundaryCells(icell), 1)
+      call this%setMaskOnConnection(this%connectedCells(icell), this%boundaryCells(icell), level)
     end do
     
     ! now extend mask recursively into the internal domain (level > 1)
@@ -913,7 +915,7 @@ module GridConnectionModule
       do inbr = 1, cell%nrOfNbrs
         nbrCell => this%boundaryCells(icell)%neighbors(inbr)
         level = 2 ! this is incremented within the recursion
-        call this%maskConnections(this%boundaryCells(icell), this%boundaryCells(icell)%neighbors(inbr), level)
+        call this%maskInternalConnections(this%boundaryCells(icell), this%boundaryCells(icell)%neighbors(inbr), level)
       end do      
     end do
     
@@ -937,10 +939,30 @@ module GridConnectionModule
     end do
     
   end subroutine createConnectionMask
+
+  !> @brief Create lookup tables for efficient access  
+  !< (this needs the connections object to be available)
+  subroutine createLookupTable(this)
+    use CsrUtilsModule, only: getCSRIndex
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    ! local
+    integer(I4B) :: i, n1, n2, ipos
+
+    do i = 1, this%nrOfBoundaryCells
+      n1 = this%getInterfaceIndexByIndexModel(this%boundaryCells(i)%cell%index, &
+                                              this%boundaryCells(i)%cell%model)
+      n2 = this%getInterfaceIndexByIndexModel(this%connectedCells(i)%cell%index,&
+                                              this%connectedCells(i)%cell%model)
+      
+      ipos = getCSRIndex(n1, n2, this%connections%ia, this%connections%ja)
+      this%primConnections(i) = ipos
+    end do   
+
+  end subroutine createLookupTable
   
   !> @brief Recursively mask connections, increasing the level as we go
   !<
-  recursive subroutine maskConnections(this, cell, nbrCell, level)
+  recursive subroutine maskInternalConnections(this, cell, nbrCell, level)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cell    !< cell 1 in the connection to mask
     type(CellWithNbrsType), intent(inout) :: nbrCell !< cell 2 in the connection to mask
@@ -948,17 +970,22 @@ module GridConnectionModule
     ! local
     integer(I4B) :: inbr, newLevel
     
-    ! this will set a mask on both diagonal, and both cross terms
-    call this%setMaskOnConnection(cell, nbrCell, level)
-    call this%setMaskOnConnection(nbrCell, cell, level)
+    ! only set the mask for internal connections, leaving the
+    ! others at 0
+    if (associated(cell%cell%model, this%model) .and.                           &
+        associated(nbrCell%cell%model, this%model)) then
+      ! this will set a mask on both diagonal, and both cross terms
+      call this%setMaskOnConnection(cell, nbrCell, level)
+      call this%setMaskOnConnection(nbrCell, cell, level)
+    end if
     
     ! recurse on nbrs-of-nbrs
     newLevel = level + 1
     do inbr = 1, nbrCell%nrOfNbrs        
-      call this%maskConnections(nbrCell, nbrCell%neighbors(inbr), newLevel)
+      call this%maskInternalConnections(nbrCell, nbrCell%neighbors(inbr), newLevel)
     end do
     
-  end subroutine maskConnections
+  end subroutine maskInternalConnections
   
   !> @brief Set a mask on the connection from a cell to its neighbor,
   !! (and not the transposed!) not overwriting the current level
@@ -1046,12 +1073,73 @@ module GridConnectionModule
     use MemoryManagerModule, only: mem_allocate
     class(GridConnectionType) :: this !< this grid connection instance
       
-    call mem_allocate(this%linkCapacity, 'LINKCAP', this%memoryPath)
     call mem_allocate(this%nrOfBoundaryCells, 'NRBNDCELLS', this%memoryPath)
     call mem_allocate(this%indexCount, 'IDXCOUNT', this%memoryPath)
     call mem_allocate(this%nrOfCells, 'NRCELLS', this%memoryPath)
     
   end subroutine allocateScalars
+
+  !> @brief Sets the discretization (DISU) after all
+  !! preprocessing by this grid connection has been done,
+  !< this comes after disu_cr
+  subroutine getDiscretization(this, disu)  
+    use ConnectionsModule 
+    use SparseModule, only: sparsematrix
+    class(GridConnectionType) :: this   !< the grid connection
+    class(GwfDisuType), pointer :: disu !< the target disu object 
+    ! local
+    integer(I4B) :: icell, nrOfCells, idx
+    type(NumericalModelType), pointer :: model
+    real(DP) :: x, y, xglo, yglo
+          
+    ! the following is similar to dis_df
+    nrOfCells = this%nrOfCells
+    disu%nodes = nrOfCells
+    disu%nodesuser = nrOfCells
+    disu%nja = this%connections%nja
+
+    call disu%allocate_arrays()
+    ! these are otherwise allocated in dis%read_dimensions    
+    call disu%allocate_arrays_mem()
+    
+    ! fill data
+    do icell = 1, nrOfCells
+      idx = this%idxToGlobal(icell)%index
+      model => this%idxToGlobal(icell)%model
+      
+      disu%top(icell) = model%dis%top(idx)
+      disu%bot(icell) = model%dis%bot(idx)
+      disu%area(icell) = model%dis%area(idx)
+    end do
+     
+    ! grid connections follow from GridConnection:
+    disu%con => this%connections
+    disu%njas =  disu%con%njas
+    
+    ! copy cell x,y
+    do icell = 1, nrOfCells
+      idx = this%idxToGlobal(icell)%index
+      model => this%idxToGlobal(icell)%model
+      call model%dis%get_cellxy(idx, x, y)
+
+      ! we are merging grids with possibly (likely) different origins,
+      ! transform:
+      call model%dis%transform_xy(x, y, xglo, yglo)
+      disu%cellxy(1,icell) = xglo
+      disu%cellxy(2,icell) = yglo
+    end do
+
+    ! if vertices will be needed, it will look like this:
+    !
+    ! 1. determine total nr. of verts
+    ! 2. allocate vertices list
+    ! 3. create sparse
+    ! 4. get vertex data per cell, add functions to base
+    ! 5. add vertex (x,y) to list and connectivity to sparse
+    ! 6. generate ia/ja from sparse
+    
+  end subroutine getDiscretization
+
   
   !> @brief Deallocate grid connection resources
   !<
@@ -1059,7 +1147,6 @@ module GridConnectionModule
   use MemoryManagerModule, only: mem_deallocate
     class(GridConnectionType) :: this !< this grid connection instance
     
-    call mem_deallocate(this%linkCapacity)
     call mem_deallocate(this%nrOfBoundaryCells)
     call mem_deallocate(this%indexCount)
     call mem_deallocate(this%nrOfCells)
@@ -1069,6 +1156,7 @@ module GridConnectionModule
     deallocate(this%modelWithNbrs)
     deallocate(this%boundaryCells)
     deallocate(this%connectedCells)
+    deallocate(this%primConnections)
 
     call mem_deallocate(this%idxToGlobalIdx)
     
