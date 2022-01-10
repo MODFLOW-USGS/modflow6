@@ -637,6 +637,7 @@ if __name__ == '__main__':
                   'sim-tdis',  # dfn completed  tex updated
                   'exg-gwfgwf',  # dfn completed  tex updated
                   'exg-gwfgwt',
+                  'exg-gwtgwt',
                   'sln-ims',  # dfn completed  tex updated
                   'gwf-nam',  # dfn completed  tex updated
                   'gwf-dis',  # dfn completed  tex updated

@@ -28,8 +28,14 @@ jobs:
         working-directory: ${{env.working-directory}}
 
       - name: Install additional python packages
+        working-directory: ./auto
         run: |
           .github/common/install-python-std.sh
+
+      - name: Test building files from dfn's for LaTeX
+        working-directory: autotest
+        run: |
+          pytest -v build_mfio_tex.py
 
       - name: Setup symbolic links on Linux
         run: |

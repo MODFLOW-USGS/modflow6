@@ -291,7 +291,7 @@ def run_model(app, app0, example, fmd, silent=True, pool=False):
     if os.path.isdir(prev_dir):
         shutil.rmtree(prev_dir)
 
-    return
+    return success
 
 
 def cleanup():
@@ -299,7 +299,6 @@ def cleanup():
     if not _is_dryrun():
         b = True
     return
-
 
 if __name__ == "__main__":
     _get_previous_version()
@@ -313,9 +312,6 @@ if __name__ == "__main__":
     print(
         "previous app: {}\ncurrent app: {}".format(previous_app, current_app)
     )
-
-    # get examples
-    example_dirs = get_examples()
 
     # open markdown table
     f = open("run-time-comparison.md", "w")
@@ -345,9 +341,13 @@ if __name__ == "__main__":
     line += "| :---------- | :----------: | :----------: | :----------: |\n"
     f.write(line)
 
+    # get examples
+    example_dirs = get_examples()
+
     # run models
     for idx, example in enumerate(example_dirs):
-        run_model(current_app, previous_app, example, f, silent=False)
+        success = run_model(current_app, previous_app, example, f, silent=False, )
+        assert success, f"{example} run failed"
 
     # close the markdown file
     f.close()

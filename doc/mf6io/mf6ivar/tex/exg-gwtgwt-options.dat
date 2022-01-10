@@ -1,0 +1,6 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [ADVSCHEME <advscheme>]
+  [XT3D_OFF]
+  [XT3D_RHS]
+END OPTIONS
