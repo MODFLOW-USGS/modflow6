@@ -19,6 +19,7 @@ except:
 from framework import set_teardown_test
 
 import targets
+
 exe_name_mf6 = targets.target_dict["mf6"]
 exe_name_mf6 = os.path.abspath(exe_name_mf6)
 
@@ -426,10 +427,23 @@ def run_transport_model():
     fname = f"{gwtname}.bud.csv"
     fname = os.path.join(gwt.model_ws, fname)
     budcsv = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
-    answer = ['time', 'STORAGE-AQUEOUS(MST)_IN', 'WEL(SSM_WEL-1)_IN', 'DRN(SSM_DRN-1)_IN', 'DRN-TO-MVR(SSM_DRN-1)_IN',
-              'SFT(SFR-1)_IN', 'STORAGE-AQUEOUS(MST)_OUT', 'WEL(SSM_WEL-1)_OUT', 'DRN(SSM_DRN-1)_OUT',
-              'DRN-TO-MVR(SSM_DRN-1)_OUT', 'SFT(SFR-1)_OUT', 'TOTAL_IN', 'TOTAL_OUT', 'PERCENT_DIFFERENCE']
-    for i, name in enumerate(budcsv.dtype.names[:len(answer)]):
+    answer = [
+        "time",
+        "STORAGE-AQUEOUS(MST)_IN",
+        "WEL(SSM_WEL-1)_IN",
+        "DRN(SSM_DRN-1)_IN",
+        "DRN-TO-MVR(SSM_DRN-1)_IN",
+        "SFT(SFR-1)_IN",
+        "STORAGE-AQUEOUS(MST)_OUT",
+        "WEL(SSM_WEL-1)_OUT",
+        "DRN(SSM_DRN-1)_OUT",
+        "DRN-TO-MVR(SSM_DRN-1)_OUT",
+        "SFT(SFR-1)_OUT",
+        "TOTAL_IN",
+        "TOTAL_OUT",
+        "PERCENT_DIFFERENCE",
+    ]
+    for i, name in enumerate(budcsv.dtype.names[: len(answer)]):
         assert answer[i] == name
 
     # ensure sfr concentrations were saved

@@ -31,6 +31,19 @@ jobs:
         run: |
           .github/common/install-python-std.sh
 
+      - name: Install TeX Live
+        run: |
+          sudo apt install texlive-latex-extra texlive-science
+
+      - name: Clone USGS LaTeX repo
+        run: |
+          git clone https://github.com/MODFLOW-USGS/usgslatex.git usgslatex
+
+      - name: Install USGS LaTeX style files and Univers font
+        working-directory: ./usgslatex/usgsLaTeX
+        run: |
+          sudo ./install.sh --all-users
+
       - name: Test building files from dfn's for LaTeX
         working-directory: autotest
         run: |
