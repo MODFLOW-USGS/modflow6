@@ -108,9 +108,9 @@ def get_model(dir, name):
     h_start = -2.1
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, 
-        version="mf6", 
-        exe_name="mf6", 
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
         sim_ws=dir,
         memory_print_option="all",
     )
@@ -139,15 +139,15 @@ def get_model(dir, name):
         for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
-    
+
     # boundary for submodel on the right:
     right_chd = [
         [(ilay, irow, ncol - 1), h_right]
         for irow in range(nrow)
         for ilay in range(nlay)
-    ]    
+    ]
     chd_spd_right = {0: right_chd}
-    
+
     # --------------------------------------
     # top-left model
     # --------------------------------------
@@ -178,8 +178,8 @@ def get_model(dir, name):
         budget_filerecord="{}.cbc".format(name_tl),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )   
-    
+    )
+
     # --------------------------------------
     # bottom-left model
     # --------------------------------------
@@ -187,7 +187,7 @@ def get_model(dir, name):
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         xorigin=0.0,
-        yorigin=-2*delc,
+        yorigin=-2 * delc,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -213,14 +213,14 @@ def get_model(dir, name):
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
-    
+
     # --------------------------------------
     # top-right model
     # --------------------------------------
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name_tr, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
-        xorigin=5*delr,
+        xorigin=5 * delr,
         yorigin=0.0,
         nlay=nlay,
         nrow=nrow,
@@ -246,7 +246,7 @@ def get_model(dir, name):
         budget_filerecord="{}.cbc".format(name_tr),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )    
+    )
 
     # exchange between top-left and top-right (Exg1)
     angldegx = 0.0
@@ -274,15 +274,15 @@ def get_model(dir, name):
         exgmnameb=name_tr,
         exchangedata=gwfgwf_data_exg1,
         auxiliary=["ANGLDEGX", "CDIST"],
-        xt3d=True, # this will activate the interface model
+        xt3d=True,  # this will activate the interface model
     )
-    
+
     # exchange between top-left and bottom-left (Exg2)
     angldegx = 270.0
     cdist = delc
     gwfgwf_data_exg2 = [
         [
-            (ilay, nrow-1, icol),
+            (ilay, nrow - 1, icol),
             (ilay, 0, icol),
             1,
             delc / 2.0,
@@ -303,12 +303,12 @@ def get_model(dir, name):
         exgmnameb=name_bl,
         exchangedata=gwfgwf_data_exg2,
         auxiliary=["ANGLDEGX", "CDIST"],
-        dev_interfacemodel_on=True, # by default no interface model, we force it here
+        dev_interfacemodel_on=True,  # by default no interface model, we force it here
     )
 
     return sim
-    
-    
+
+
 def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
@@ -374,38 +374,53 @@ def check_interface_models(mf6):
     exg2_id = 2
     ifm_topleft_2 = "GWFIM1_" + str(exg2_id).zfill(5)
     gfc_topleft_2 = "GWFCON1_" + str(exg2_id).zfill(5)
-    
+
     # interface model nr.1
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_1, "GC")
     idxToGlobalIdx_1 = mf6.get_value_ptr(addr)
     assert np.size(idxToGlobalIdx_1) == 12
-    assert np.array_equal(idxToGlobalIdx_1, [3,4,5,21,22,8,9,10,26,27,14,15])
+    assert np.array_equal(
+        idxToGlobalIdx_1, [3, 4, 5, 21, 22, 8, 9, 10, 26, 27, 14, 15]
+    )
     addr = mf6.get_var_address("ia", gfc_topleft_1, "gc/con")
     ia_1 = mf6.get_value_ptr(addr)
     addr = mf6.get_var_address("ja", gfc_topleft_1, "gc/con")
     ja_1 = mf6.get_value_ptr(addr)
     addr = mf6.get_var_address("mask", gfc_topleft_1, "gc/con")
     mask_1 = mf6.get_value_ptr(addr)
-    
+
     # we have the following connections to calculate,
     # check if the mask is set correctly
-    connections = [(2,3),(3,2),(3,4),(4,3),(3,8),(8,3),(7,8),(8,7),(8,9),(9,8)]
-    for n in range(1,13):
-        for ipos in range(ia_1[n-1]+1,ia_1[n]):
-            m = ja_1[ipos-1]            
-            mask_nm = mask_1[ipos-1]
+    connections = [
+        (2, 3),
+        (3, 2),
+        (3, 4),
+        (4, 3),
+        (3, 8),
+        (8, 3),
+        (7, 8),
+        (8, 7),
+        (8, 9),
+        (9, 8),
+    ]
+    for n in range(1, 13):
+        for ipos in range(ia_1[n - 1] + 1, ia_1[n]):
+            m = ja_1[ipos - 1]
+            mask_nm = mask_1[ipos - 1]
             if mask_nm > 0:
-                assert (n,m) in connections
-                connections.remove((n,m))
-                
+                assert (n, m) in connections
+                connections.remove((n, m))
+
     # so now the list should be empty again
     assert len(connections) == 0
-    
+
     # interface model nr.2
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_2, "GC")
     idxToGlobalIdx_2 = mf6.get_value_ptr(addr)
     assert np.size(idxToGlobalIdx_2) == 10
-    assert np.array_equal(idxToGlobalIdx_2, [6,7,8,9,10,11,12,13,14,15])
+    assert np.array_equal(
+        idxToGlobalIdx_2, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    )
 
 
 # - No need to change any code below
@@ -433,7 +448,7 @@ def main():
         test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
-        
+
     return
 
 

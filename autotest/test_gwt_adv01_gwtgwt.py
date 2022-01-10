@@ -30,6 +30,7 @@ ddir = "data"
 
 gdelr = 1.0
 
+
 def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = gdelr
@@ -58,7 +59,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
         top=top,
         botm=botm,
         xorigin=xshift,
-        yorigin=yshift
+        yorigin=yshift,
     )
 
     # initial conditions
@@ -76,7 +77,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     if chdspd is not None:
         chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
             gwf,
-            #maxbound=len(c),
+            # maxbound=len(c),
             stress_period_data=chdspd,
             save_flows=False,
             pname="CHD-1",
@@ -88,7 +89,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
             gwf,
             print_input=True,
             print_flows=True,
-            #maxbound=len(w),
+            # maxbound=len(w),
             stress_period_data=welspd,
             save_flows=False,
             auxiliary="CONCENTRATION",
@@ -108,7 +109,9 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     return gwf
 
 
-def get_gwt_model(sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None):
+def get_gwt_model(
+    sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None
+):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = 1.0
     delc = 1.0
@@ -135,7 +138,7 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None
         top=top,
         botm=botm,
         xorigin=xshift,
-        yorigin=yshift
+        yorigin=yshift,
     )
 
     # initial conditions
@@ -155,7 +158,9 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -202,8 +207,9 @@ def build_model(idx, dir):
         sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper,
-                                 perioddata=tdis_rc, pname="sim.tdis")
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc, pname="sim.tdis"
+    )
 
     # solver settings
     nouter, ninner = 100, 300
@@ -214,15 +220,27 @@ def build_model(idx, dir):
 
     # Create gwf1 model
     welspd = {0: [[(0, 0, 0), 1.0, 1.0]]}
-    chdspd = None #{0: [[(0, 0, 99), 0.0000000]]}
-    gwf1 = get_gwf_model(sim, "flow1", "flow1", (nlay, nrow, ncol, 0.0, 0.0),
-                        chdspd=chdspd, welspd=welspd)
+    chdspd = None  # {0: [[(0, 0, 99), 0.0000000]]}
+    gwf1 = get_gwf_model(
+        sim,
+        "flow1",
+        "flow1",
+        (nlay, nrow, ncol, 0.0, 0.0),
+        chdspd=chdspd,
+        welspd=welspd,
+    )
 
     # Create gwf2 model
-    welspd = None #{0: [[(0, 0, 0), 1.0, 1.0]]}
+    welspd = None  # {0: [[(0, 0, 0), 1.0, 1.0]]}
     chdspd = {0: [[(0, 0, ncol - 1), 0.0000000]]}
-    gwf2 = get_gwf_model(sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0*gdelr, 0.0),
-                        chdspd=chdspd, welspd=welspd)
+    gwf2 = get_gwf_model(
+        sim,
+        "flow2",
+        "flow2",
+        (nlay, nrow, ncol, 50.0 * gdelr, 0.0),
+        chdspd=chdspd,
+        welspd=welspd,
+    )
 
     # gwf-gwf with interface model enabled
     gwfgwf_data = [[(0, 0, ncol - 1), (0, 0, 0), 1, 0.5, 0.5, 1.0, 0.0, 1.0]]
@@ -256,17 +274,27 @@ def build_model(idx, dir):
     )
     sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
 
-
     # Create gwt model
     sourcerecarray = [("WEL-1", "AUX", "CONCENTRATION")]
-    gwt1 = get_gwt_model(sim, "transport1", "transport1", (nlay, nrow, ncol, 0.0, 0.0),
-                        scheme[idx], sourcerecarray=sourcerecarray)
+    gwt1 = get_gwt_model(
+        sim,
+        "transport1",
+        "transport1",
+        (nlay, nrow, ncol, 0.0, 0.0),
+        scheme[idx],
+        sourcerecarray=sourcerecarray,
+    )
 
     # Create gwt model
     sourcerecarray = None
-    gwt2 = get_gwt_model(sim, "transport2", "transport2", (nlay, nrow, ncol, 50.0*gdelr, 0.0),
-                        scheme[idx], sourcerecarray=sourcerecarray)
-
+    gwt2 = get_gwt_model(
+        sim,
+        "transport2",
+        "transport2",
+        (nlay, nrow, ncol, 50.0 * gdelr, 0.0),
+        scheme[idx],
+        sourcerecarray=sourcerecarray,
+    )
 
     # Create GWT GWT exchange
     gwt1gwt2 = flopy.mf6.ModflowGwtgwt(
@@ -278,7 +306,7 @@ def build_model(idx, dir):
         exgmnameb=gwt2.name,
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="transport1_transport2.gwtgwt",    
+        filename="transport1_transport2.gwtgwt",
     )
 
     # GWF GWT exchange
@@ -325,23 +353,26 @@ def eval_transport(sim):
 
     fpth = os.path.join(sim.simpath, gwtname, f"{gwtname}.ucn")
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc1 = cobj.get_data()
     except:
         assert False, f'could not load data from "{fpth}"'
-        
+
     gwtname = "transport2"
 
     fpth = os.path.join(sim.simpath, gwtname, f"{gwtname}.ucn")
     try:
-        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="CONCENTRATION"
+        )
         conc2 = cobj.get_data()
     except:
         assert False, f'could not load data from "{fpth}"'
 
-
     conc = np.append(conc1, conc2)
-    
+
     cres1 = [
         [
             [
@@ -667,11 +698,11 @@ def eval_transport(sim):
     cres3 = np.array(cres3)
 
     creslist = [cres1, cres2, cres3]
-    
+
     assert np.allclose(
         creslist[sim.idxsim], conc
     ), "simulated concentrations do not match with known solution."
-    
+
     # check budget
     for mname in ["transport1", "transport2"]:
         fpth = os.path.join(sim.simpath, mname, "{}.lst".format(mname))
@@ -683,12 +714,12 @@ def eval_transport(sim):
                 ), "Cumulative balance error = {} for {}, should equal 0.0".format(
                     cumul_balance_error, mname
                 )
-            
-        # get grid data (from GWF)    
+
+        # get grid data (from GWF)
         gwfname = "flow1" if mname == "transport1" else "flow2"
         fpth = os.path.join(sim.simpath, gwfname, "{}.dis.grb".format(gwfname))
         grb = flopy.mf6.utils.MfGrdFile(fpth)
-                
+
         # Check on residual, which is stored in diagonal position of
         # flow-ja-face.  Residual should be less than convergence tolerance,
         # or this means the residual term is not added correctly.
@@ -703,10 +734,9 @@ def eval_transport(sim):
                 res.min(), res.max()
             )
             # TODO: this is not implemented yet:
-            #assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+            # assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
-    
 
 
 # - No need to change any code below

@@ -28,6 +28,7 @@ ddir = "data"
 
 gdelr = 1.0
 
+
 def get_gwf_model(sim, gwfname, gwfpath, modelshape):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = gdelr
@@ -56,7 +57,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape):
         top=top,
         botm=botm,
         xorigin=xshift,
-        yorigin=yshift
+        yorigin=yshift,
     )
 
     # initial conditions
@@ -110,14 +111,14 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
         top=top,
         botm=botm,
         xorigin=xshift,
-        yorigin=yshift
+        yorigin=yshift,
     )
 
     # initial conditions
     initial_conc = np.zeros(50)
     if gwtname == "transport1":
-        initial_conc[40] = 100.
-    
+        initial_conc[40] = 100.0
+
     ic = flopy.mf6.ModflowGwtic(gwt, strt=initial_conc)
 
     # dispersion
@@ -140,7 +141,9 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
         gwt,
         budget_filerecord="{}.cbc".format(gwtname),
         concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -166,8 +169,9 @@ def build_model(idx, dir):
         sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper,
-                                 perioddata=tdis_rc, pname="sim.tdis")
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc, pname="sim.tdis"
+    )
 
     # solver settings
     nouter, ninner = 100, 300
@@ -180,7 +184,9 @@ def build_model(idx, dir):
     gwf1 = get_gwf_model(sim, "flow1", "flow1", (nlay, nrow, ncol, 0.0, 0.0))
 
     # Create gwf2 model
-    gwf2 = get_gwf_model(sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0*gdelr, 0.0))
+    gwf2 = get_gwf_model(
+        sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0 * gdelr, 0.0)
+    )
 
     # gwf-gwf with interface model enabled
     gwfgwf_data = [[(0, 0, ncol - 1), (0, 0, 0), 1, 0.5, 0.5, 1.0, 0.0, 1.0]]
@@ -214,13 +220,15 @@ def build_model(idx, dir):
     )
     sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
 
+    # Create gwt model
+    gwt1 = get_gwt_model(
+        sim, "transport1", "transport1", (nlay, nrow, ncol, 0.0, 0.0)
+    )
 
     # Create gwt model
-    gwt1 = get_gwt_model(sim, "transport1", "transport1", (nlay, nrow, ncol, 0.0, 0.0))
-
-    # Create gwt model
-    gwt2 = get_gwt_model(sim, "transport2", "transport2", (nlay, nrow, ncol, 50.0*gdelr, 0.0))
-
+    gwt2 = get_gwt_model(
+        sim, "transport2", "transport2", (nlay, nrow, ncol, 50.0 * gdelr, 0.0)
+    )
 
     # Create GWT GWT exchange
     gwt1gwt2 = flopy.mf6.ModflowGwtgwt(
@@ -231,7 +239,7 @@ def build_model(idx, dir):
         exgmnameb=gwt2.name,
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="transport1_transport2.gwtgwt",    
+        filename="transport1_transport2.gwtgwt",
     )
 
     # GWF GWT exchange
@@ -282,7 +290,7 @@ def eval_transport(sim):
         conc1 = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-        
+
     gwtname = "transport2"
     fpth = os.path.join(sim.simpath, "transport2", "{}.ucn".format(gwtname))
     try:
@@ -292,11 +300,11 @@ def eval_transport(sim):
         conc2 = cobj.get_data()
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-        
+
     # diffusion across both sub-models:
     assert np.all(conc1 > 0.0)
     assert np.all(conc2 > 0.0)
-    
+
     # no loss of solute
     assert abs(np.sum(conc1) + np.sum(conc2) - 100.0) < 1e-6
 

@@ -223,7 +223,7 @@ def get_model(idx, dir):
         botmp,
         idomainp,
         ncpp=ref_fct,
-        ncppl=[1,0,0],
+        ncppl=[1, 0, 0],
     )
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
@@ -251,21 +251,26 @@ def build_model(idx, exdir):
 
 def eval_heads(sim):
     print("comparing heads  for child model to analytical result...")
-    
+
     fpth = os.path.join(sim.simpath, "{}.hds".format(child_name))
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
-    
+
     fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
-    
+
     # (note that without XT3D on the exchange, the 'error'
-    # is of order 1e-3!!)    
-    deviations = np.array([np.std(heads_c[0,:,icol]) for icol in range(grb_c.ncol)])
-    assert np.any(deviations < 1e-12), "head values deviate too much from theory"    
-    
+    # is of order 1e-3!!)
+    deviations = np.array(
+        [np.std(heads_c[0, :, icol]) for icol in range(grb_c.ncol)]
+    )
+    assert np.any(
+        deviations < 1e-12
+    ), "head values deviate too much from theory"
+
     return
-    
+
+
 @pytest.mark.parametrize(
     "idx, exdir",
     list(enumerate(exdirs)),

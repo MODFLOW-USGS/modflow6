@@ -1,5 +1,0 @@
-BEGIN TABLES
-  <rno> TAB6 FILEIN <tab6_filename>
-  <rno> TAB6 FILEIN <tab6_filename>
-  ...
-END TABLES

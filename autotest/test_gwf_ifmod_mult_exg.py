@@ -51,6 +51,7 @@ g_hleft = 120.0
 g_hright = 190.0
 g_hclose = 10e-12
 
+
 def get_model(idx, dir):
     name = ex[idx]
 
@@ -131,9 +132,9 @@ def get_model(idx, dir):
     chd_data = left_chd + right_chd
     chd_spd = {0: chd_data}
 
-    # idomain    
+    # idomain
     idomain = np.ones((nlay, nrow, ncol))
-    idomain[:, 1: 5, 2: 6] = 0
+    idomain[:, 1:5, 2:6] = 0
 
     # --------------------------------------
     # parent model
@@ -148,7 +149,7 @@ def get_model(idx, dir):
         delc=delc,
         top=tops[0],
         botm=tops[1:],
-        idomain=idomain
+        idomain=idomain,
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
@@ -227,8 +228,12 @@ def get_model(idx, dir):
     )
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
-    exgdata_north = [e for e in exgdata if (e[0])[1] < 3]  # northern three rows
-    exgdata_south = [e for e in exgdata if (e[0])[1] > 2]  # southern three rows
+    exgdata_north = [
+        e for e in exgdata if (e[0])[1] < 3
+    ]  # northern three rows
+    exgdata_south = [
+        e for e in exgdata if (e[0])[1] > 2
+    ]  # southern three rows
 
     # north, has XT3D
     flopy.mf6.ModflowGwfgwf(
@@ -242,7 +247,7 @@ def get_model(idx, dir):
         xt3d=True,
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="north_xt3d.gwfgwf"
+        filename="north_xt3d.gwfgwf",
     )
 
     # south, no XT3D
@@ -257,7 +262,7 @@ def get_model(idx, dir):
         xt3d=False,
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="south_noxt3d.gwfgwf"
+        filename="south_noxt3d.gwfgwf",
     )
 
     return sim
@@ -301,7 +306,7 @@ def eval_heads(sim):
     maxdiff_parent_north = 0.0
     for icol in range(mg.ncol):
         xc = xyc[0][icol]
-        h = heads[0, 1, icol] # second row
+        h = heads[0, 1, icol]  # second row
         if h != 1e30:
             diff = abs(h - exact(xc))
             if diff > maxdiff_parent_north:

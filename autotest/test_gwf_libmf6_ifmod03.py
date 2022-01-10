@@ -60,6 +60,7 @@ name_left = "left"
 name_right = "right"
 global_delr = 8.0
 
+
 def get_model(dir, name):
 
     # parameters and spd
@@ -76,12 +77,12 @@ def get_model(dir, name):
     # model spatial discretization
     nlay = 1
     ncol = 5
-    nrow = 1    
+    nrow = 1
 
     # cell spacing
     delr = global_delr
     delc = 13.0
-        
+
     area = delr * delc
 
     # top/bot of the aquifer
@@ -98,9 +99,9 @@ def get_model(dir, name):
     h_start = -2.1
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, 
-        version="mf6", 
-        exe_name="mf6", 
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
         sim_ws=dir,
         memory_print_option="all",
     )
@@ -125,11 +126,11 @@ def get_model(dir, name):
     # boundary for submodels on the left:
     left_chd = [[(0, 0, 0), h_left]]
     chd_spd_left = {0: left_chd}
-    
+
     # boundary for submodel on the right:
-    right_chd = [[(0, nrow-1, 0), h_right]]
+    right_chd = [[(0, nrow - 1, 0), h_right]]
     chd_spd_right = {0: right_chd}
-    
+
     # --------------------------------------
     # left model
     # --------------------------------------
@@ -159,8 +160,8 @@ def get_model(dir, name):
         budget_filerecord="{}.cbc".format(name_left),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )  
-    
+    )
+
     # --------------------------------------
     # right model
     # --------------------------------------
@@ -168,13 +169,13 @@ def get_model(dir, name):
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
-        nrow=ncol, # reversed!
-        ncol=nrow, # reversed!
-        delr=delc, # reversed!
-        delc=delr, # reversed!
+        nrow=ncol,  # reversed!
+        ncol=nrow,  # reversed!
+        delr=delc,  # reversed!
+        delc=delr,  # reversed!
         top=tops[0],
         botm=tops[1:],
-        xorigin=2*(5*delr), # note this should be twice the extent
+        xorigin=2 * (5 * delr),  # note this should be twice the extent
         yorigin=0.0,
         angrot=90.0,
     )
@@ -193,13 +194,14 @@ def get_model(dir, name):
         budget_filerecord="{}.cbc".format(name_right),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )    
-    
+    )
+
     # exchange between left right
     angldegx = 0.0
     cdist = delr
-    gwfgwf_data = [[
-            (0, 0, ncol-1),
+    gwfgwf_data = [
+        [
+            (0, 0, ncol - 1),
             (0, 0, 0),
             1,
             delr / 2.0,
@@ -207,7 +209,8 @@ def get_model(dir, name):
             delc,
             angldegx,
             cdist,
-        ]]
+        ]
+    ]
     exg1 = flopy.mf6.ModflowGwfgwf(
         sim,
         filename=name_left + "-" + name_right + ".gwfgwf",
@@ -221,8 +224,8 @@ def get_model(dir, name):
     )
 
     return sim
-    
-    
+
+
 def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
@@ -285,25 +288,25 @@ def check_interface_models(mf6):
     exg_id = 1
     ifm = "GWFIM1_" + str(exg_id).zfill(5)
     gfc = "GWFCON1_" + str(exg_id).zfill(5)
-    
+
     # check extent for interface model, it's always
     # DISU so we have cellxy:
     addr = mf6.get_var_address("CELLXY", ifm, "DIS")
     cellxy = mf6.get_value_ptr(addr)
-    
+
     assert np.size(cellxy, 0) == 4
-    
-    xmin = np.min(cellxy[:,0])
-    ymin = np.min(cellxy[:,1])
-    xmax = np.max(cellxy[:,0])
-    ymax = np.max(cellxy[:,1])
-    
+
+    xmin = np.min(cellxy[:, 0])
+    ymin = np.min(cellxy[:, 1])
+    xmax = np.max(cellxy[:, 0])
+    ymax = np.max(cellxy[:, 1])
+
     # interface model extents in x direction only,
     # over 4 connected cells (it wouldn't without
     # a proper coordinate transformation)
-    assert abs((xmax-xmin) - 3*global_delr) < 1e-6
-    assert abs(ymax-ymin) < 1e-6
-    
+    assert abs((xmax - xmin) - 3 * global_delr) < 1e-6
+    assert abs(ymax - ymin) < 1e-6
+
 
 # - No need to change any code below
 @pytest.mark.parametrize(
@@ -330,7 +333,7 @@ def main():
         test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
-        
+
     return
 
 

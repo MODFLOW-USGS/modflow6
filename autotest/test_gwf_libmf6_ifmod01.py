@@ -214,8 +214,8 @@ def get_model(dir, name):
     )
 
     return sim
-    
-    
+
+
 def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
@@ -274,7 +274,7 @@ def api_func(exe, idx, model_ws=None):
 
 
 def check_interface_models(mf6):
-    exchange_id = 1 # we only have 1 exchange  in this case
+    exchange_id = 1  # we only have 1 exchange  in this case
     ifm_name_left = "GWFIM1_" + str(exchange_id).zfill(5)
     gc_name_left = "GWFCON1_" + str(exchange_id).zfill(5)
 
@@ -356,7 +356,7 @@ def main():
         test.build_mf6_models(build_model, idx, dir)
         sim = Simulation(dir, idxsim=idx, api_func=api_func)
         test.run_mf6(sim)
-        
+
     return
 
 

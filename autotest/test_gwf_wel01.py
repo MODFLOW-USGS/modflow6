@@ -188,7 +188,9 @@ def eval_obs(sim):
     # MODFLOW 6 AFR CSV output file
     fpth = os.path.join(sim.simpath, "wel01.afr.csv")
     try:
-        afroutput = np.genfromtxt(fpth, names=True, delimiter=",", deletechars="")
+        afroutput = np.genfromtxt(
+            fpth, names=True, delimiter=",", deletechars=""
+        )
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 

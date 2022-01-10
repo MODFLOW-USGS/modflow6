@@ -60,7 +60,10 @@ def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws,
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
+        sim_ws=ws,
         memory_print_option=["ALL"],
     )
     # create tdis package
@@ -404,10 +407,23 @@ def eval_results(sim):
     fname = f"{gwtname}.bud.csv"
     fname = os.path.join(sim.simpath, fname)
     budcsv = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
-    answer = ['time', 'STORAGE-AQUEOUS(MST)_IN', 'WEL(SSM_WEL-1)_IN', 'DRN(SSM_DRN-1)_IN', 'DRN-TO-MVR(SSM_DRN-1)_IN',
-              'SFT(SFR-1)_IN', 'STORAGE-AQUEOUS(MST)_OUT', 'WEL(SSM_WEL-1)_OUT', 'DRN(SSM_DRN-1)_OUT',
-              'DRN-TO-MVR(SSM_DRN-1)_OUT', 'SFT(SFR-1)_OUT', 'TOTAL_IN', 'TOTAL_OUT', 'PERCENT_DIFFERENCE']
-    for i, name in enumerate(budcsv.dtype.names[:len(answer)]):
+    answer = [
+        "time",
+        "STORAGE-AQUEOUS(MST)_IN",
+        "WEL(SSM_WEL-1)_IN",
+        "DRN(SSM_DRN-1)_IN",
+        "DRN-TO-MVR(SSM_DRN-1)_IN",
+        "SFT(SFR-1)_IN",
+        "STORAGE-AQUEOUS(MST)_OUT",
+        "WEL(SSM_WEL-1)_OUT",
+        "DRN(SSM_DRN-1)_OUT",
+        "DRN-TO-MVR(SSM_DRN-1)_OUT",
+        "SFT(SFR-1)_OUT",
+        "TOTAL_IN",
+        "TOTAL_OUT",
+        "PERCENT_DIFFERENCE",
+    ]
+    for i, name in enumerate(budcsv.dtype.names[: len(answer)]):
         assert answer[i] == name
 
     # ensure sfr concentrations were saved

@@ -1,7 +1,9 @@
 import os
-import sys
 import subprocess
 from contextlib import contextmanager
+
+# base name for mf6io LaTeX document
+base_name = "mf6io"
 
 
 @contextmanager
@@ -26,9 +28,9 @@ def test_clean_latex():
 
     # remove existing files
     files = [
-        "mf6io.nightlybuild.pdf",
-        "mf6io.nightlybuild.aux",
-        "mf6io.nightlybuild.bbl",
+        f"{base_name}.pdf",
+        f"{base_name}.aux",
+        f"{base_name}.bbl",
     ]
     delete_files(files, pth, allow_failure=True)
     return
@@ -110,28 +112,28 @@ def test_build_mfio():
 
     with cwd(npth):
         # build pdf
-        argv = ["pdflatex", "mf6io.nightlybuild.tex"]
+        argv = ["pdflatex", f"{base_name}.tex"]
         buff, ierr = run_command(argv, pth)
         msg = "\nERROR {}: could not run {} on {}".format(
             ierr, argv[0], argv[1]
         )
         assert ierr == 0, buff + msg
 
-        argv = ["bibtex", "mf6io.nightlybuild.aux"]
+        argv = ["bibtex", f"{base_name}.aux"]
         buff, ierr = run_command(argv, pth)
         msg = "\nERROR {}: could not run {} on {}".format(
             ierr, argv[0], argv[1]
         )
         assert ierr == 0, buff + msg
 
-        argv = ["pdflatex", "mf6io.nightlybuild.tex"]
+        argv = ["pdflatex", f"{base_name}.tex"]
         buff, ierr = run_command(argv, pth)
         msg = "\nERROR {}: could not run {} on {}".format(
             ierr, argv[0], argv[1]
         )
         assert ierr == 0, buff + msg
 
-        argv = ["pdflatex", "mf6io.nightlybuild.tex"]
+        argv = ["pdflatex", f"{base_name}.tex"]
         buff, ierr = run_command(argv, pth)
         msg = "\nERROR {}: could not run {} on {}".format(
             ierr, argv[0], argv[1]
@@ -151,8 +153,8 @@ def test_pdf():
 
     pth = os.path.join("..", "doc", "mf6io")
 
-    msg = "mf6io.nightlybuild.pdf does not exist"
-    assert os.path.isfile(os.path.join(pth, "mf6io.nightlybuild.pdf")), msg
+    msg = "mf6io.pdf does not exist"
+    assert os.path.isfile(os.path.join(pth, f"{base_name}.pdf")), msg
 
 
 def delete_files(files, pth, allow_failure=False):
