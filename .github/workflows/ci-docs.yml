@@ -28,7 +28,6 @@ jobs:
         working-directory: ${{env.working-directory}}
 
       - name: Install additional python packages
-        working-directory: ./auto
         run: |
           .github/common/install-python-std.sh
 
