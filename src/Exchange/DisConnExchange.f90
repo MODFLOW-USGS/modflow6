@@ -53,11 +53,12 @@ type, extends(NumericalExchangeType) :: DisConnExchangeType
   procedure :: allocate_arrays
   procedure :: disconnex_da
   procedure :: use_interface_model
+  procedure :: is_equal
 
   ! protected
   procedure, pass(this) :: parse_option
   procedure, pass(this) :: read_dimensions
-  procedure, pass(this) :: read_data
+  procedure, pass(this) :: read_data  
 
 end type DisConnExchangeType
 
@@ -356,7 +357,21 @@ function use_interface_model(this) result(useIM)
 
   useIM = .false.
 
-end function
+end function use_interface_model
+
+!> @brief Check if the two exchanges are equal 
+!< (though not the same, could be different objects)
+function is_equal(this, other) result(areEqual)
+  class(DisConnExchangeType) :: this  !< instance of exchange object
+  class(DisConnExchangeType) :: other !< the exchange to compare
+  logical(LGP) :: areEqual
+
+  ! for now, connecting the same nodes will be 
+  ! sufficient evidence of equality
+  areEqual = all(this%nodem1 == other%nodem1)
+  areEqual = areEqual .and. all(this%nodem2 == other%nodem2)
+
+end function is_equal
 
 !> @brief Clean up all scalars and arrays
 !<
