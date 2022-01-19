@@ -1,5 +1,5 @@
 module GwfGwtExchangeModule
-  use KindModule,              only: DP, I4B
+  use KindModule,              only: DP, I4B, LGP
   use ConstantsModule,         only: LENPACKAGENAME
   use ListsModule,                  only: basemodellist, baseexchangelist, baseconnectionlist
   use SimVariablesModule,      only: errmsg
@@ -274,6 +274,7 @@ module GwfGwtExchangeModule
     class(SpatialModelConnectionType), pointer :: conn2 => null()
     integer(I4B) :: ic1, ic2
     integer(I4B) :: gwfIdx, gwtIdx
+    logical(LGP) :: areEqual
 
     gwtloop: do ic1 = 1, baseconnectionlist%Count()
       
@@ -290,8 +291,14 @@ module GwfGwtExchangeModule
           conn2 => GetSpatialModelConnectionFromList(baseconnectionlist,ic2)
           
           if (associated(conn2%owner, gwfModel)) then
-            if (conn2%primaryExchange%is_equal(conn1%primaryExchange)) then
-              ! same model, same exchange: link and go to next GWT conn.
+            ! for now, connecting the same nodes nrs will be 
+            ! sufficient evidence of equality
+            areEqual = all(conn2%primaryExchange%nodem1 ==                      &
+                              conn1%primaryExchange%nodem1)
+            areEqual = areEqual .and. all(conn2%primaryExchange%nodem2 ==       &
+                              conn1%primaryExchange%nodem2)
+            if (areEqual) then
+              ! same DIS, same exchange: link and go to next GWT conn.
               gwfIdx = ic2
               call this%link_connections(gwtIdx, gwfIdx)
               exit gwfloop
@@ -316,7 +323,8 @@ module GwfGwtExchangeModule
 
     end do gwtloop
 
-  end subroutine gwfconn2gwtconn
+  end subroutine gwfconn2gwtconn  
+
 
   !> @brief Links a GWT connection to its GWF counterpart
   !<
