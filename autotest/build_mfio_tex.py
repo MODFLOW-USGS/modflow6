@@ -18,7 +18,7 @@ def cwd(path):
 
 def test_clean_latex():
     """
-    Clean mf6io.nightlybuild files
+    Clean mf6io files
     """
     # do not build latex on osx
     #    if sys.platform == 'darwin':
@@ -38,7 +38,7 @@ def test_clean_latex():
 
 def test_rebuild_from_dfn():
     """
-    Rebuild mf6io.nightlybuild TeX files from dfn files
+    Rebuild mf6io TeX files from dfn files
     """
     # do not build latex on osx
     #    if sys.platform == 'darwin':
@@ -99,7 +99,7 @@ def test_rebuild_from_dfn():
 
 def test_build_mfio():
     """
-    Build mf6io.nightlybuild.pdf from LaTeX files
+    Build mf6io.pdf from LaTeX files
     """
     # do not build latex on osx
     #    if sys.platform == 'darwin':
@@ -145,7 +145,7 @@ def test_build_mfio():
 
 def test_pdf():
     """
-    Test if mf6io.nightlybuild.pdf exists
+    Test if mf6io.pdf exists
     """
     # do not build latex on osx
     #    if sys.platform == 'darwin':
