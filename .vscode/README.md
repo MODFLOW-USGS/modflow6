@@ -27,7 +27,7 @@ Install the following VSCode extensions:
   https://marketplace.visualstudio.com/items?itemName=ekibun.fortranbreaker
 
 Now, configure the VSCode files for the modflow6 directory. Open the `modflow6`
-directory in VSCode. Make sure that this setting points toward your Python executable.
+directory in VSCode. Copy `.vscode/settings_template.json` to (untracked) `.vscode/settings.json` and make sure that in the copy, the following setting points toward your Python executable.
 
 ```json
 {
@@ -39,7 +39,7 @@ In order to compile run:
 
 * Press `Ctrl + Shift + P` in VSCode.
 * Type `Tasks`.
-* Select `Run Tasks` (press Enter).
+* Select `Run Task` (press Enter).
 * Select the suitable task for your situation.
 
 
