@@ -393,14 +393,13 @@ def delete_files(files, pth, allow_failure=False):
 
 
 def run_command(argv, pth, timeout=None):
-    buff = ""
-    ierr = 0
     with subprocess.Popen(
         argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=pth
     ) as process:
         try:
             output, unused_err = process.communicate(timeout=timeout)
             buff = output.decode("utf-8")
+            ierr = process.returncode
         except subprocess.TimeoutExpired:
             process.kill()
             output, unused_err = process.communicate()
