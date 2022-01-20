@@ -57,7 +57,7 @@ type, extends(NumericalExchangeType) :: DisConnExchangeType
   ! protected
   procedure, pass(this) :: parse_option
   procedure, pass(this) :: read_dimensions
-  procedure, pass(this) :: read_data
+  procedure, pass(this) :: read_data  
 
 end type DisConnExchangeType
 
@@ -356,7 +356,7 @@ function use_interface_model(this) result(useIM)
 
   useIM = .false.
 
-end function
+end function use_interface_model
 
 !> @brief Clean up all scalars and arrays
 !<

@@ -33,6 +33,7 @@ jobs:
 
       - name: Install TeX Live
         run: |
+          sudo apt-get update
           sudo apt install texlive-latex-extra texlive-science
 
       - name: Clone USGS LaTeX repo
