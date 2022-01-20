@@ -13,6 +13,7 @@ module GwfGwfConnectionModule
   use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList,      &
                                   CastAsGwfExchange
   use GwfNpfModule, only: GwfNpfType, hcond, vcond
+  use GwfBuyModule, only: GwfBuyType
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
   use TopologyModule, only: GlobalCellType
@@ -373,15 +374,69 @@ contains
     use GwfNpfModule, only: GwfNpfType
     class(GwfGwfConnectionType) :: this !< this connection    
     ! local
-    class(GwfExchangeType), pointer :: gwfEx => null()
+    class(GwfExchangeType), pointer :: gwfEx
+    class(*), pointer :: modelPtr
+    class(GwfModelType), pointer :: gwfModel1
+    class(GwfModelType), pointer :: gwfModel2
+    type(GwfBuyType), pointer :: buy1, buy2
+    logical(LGP) :: compatible
 
     gwfEx => this%gwfExchange
+    modelPtr => this%gwfExchange%model1
+    gwfModel1 => CastAsGwfModel(modelPtr)
+    modelPtr => this%gwfExchange%model2
+    gwfModel2 => CastAsGwfModel(modelPtr)
 
     ! GNC not allowed
     if (gwfEx%ingnc /= 0) then
-      write(errmsg, '(1x,a)') 'Ghost node correction not supported '//           &
-                              'for interface model'
+      write(errmsg, '(1x,2a)') 'Ghost node correction not supported '//         &
+                              'with interface model for exchange',              &
+                              trim(gwfEx%name)
       call store_error(errmsg)
+    end if
+
+    if ((gwfModel1%inbuy > 0 .and. gwfModel2%inbuy == 0) .or.                   &
+        (gwfModel1%inbuy == 0 .and. gwfModel2%inbuy > 0)) then
+      write(errmsg, '(1x,2a)') 'Buoyancy package should be enabled/disabled '// &
+                              'simultaneously in models connected with the '//  &
+                              'interface model for exchange ',                  &
+                              trim(gwfEx%name)
+      call store_error(errmsg)
+
+    end if
+
+    if (gwfModel1%inbuy > 0 .and. gwfModel2%inbuy > 0) then
+      ! does not work with XT3D
+      if (this%iXt3dOnExchange > 0) then
+        write(errmsg, '(1x,2a)') 'Connecting models with BUY package not '//    &
+                              'allowed with XT3D enabled on exchange ',         &
+                              trim(gwfEx%name)
+         call store_error(errmsg)
+      end if
+
+      ! check compatibility of buoyancy
+      compatible = .true.
+      buy1 => gwfModel1%buy
+      buy2 => gwfModel2%buy
+      if (buy1%iform /= buy2%iform) compatible = .false.
+      if (buy1%denseref /= buy2%denseref) compatible = .false.
+      if (buy1%nrhospecies /= buy2%nrhospecies) compatible = .false.
+      if (.not. all(buy1%drhodc == buy2%drhodc)) compatible = .false.
+      if (.not. all(buy1%crhoref == buy2%crhoref)) compatible = .false.
+      if (.not. all(buy1%cauxspeciesname == buy2%cauxspeciesname)) then
+        compatible = .false.
+      end if
+
+      if (.not. compatible) then
+        write(errmsg, '(1x,6a)') 'Buoyancy packages in model ',                 &
+                                trim(gwfEx%model1%name), ' and ',               &
+                                trim(gwfEx%model2%name),                        &
+                                ' should be equivalent to construct an '//      &
+                                ' interface model for exchange ',               &
+                                trim(gwfEx%name)
+        call store_error(errmsg)
+      end if
+
     end if
 
   end subroutine validateGwfExchange
