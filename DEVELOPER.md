@@ -61,11 +61,10 @@ Intel fortran can be used to compile MODFLOW 6 and associated utilities and gene
 Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
 Documentation describing how to set the intel envrionment variables can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html).
 
-### LaTeX (optional)
+### Doxygen & LaTeX (optional)
 
-[LaTeX](https://www.latex-project.org/) which is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
-JLM: should this be more specific? I even believe the installs are in .github/workflow
-JLM: what about doxygen+graphivz? looks like only linux installs
+[Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://modflow-usgs.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
+These programs can be installed from various sources, including by conda, macports, or from individual sources such as https://www.tug.org/. Details about USGS LaTeX libraries can be seen in addition to linux installs in the CI workflow for the docs (`.github/workflows/ci-docs.yml`).
 
 ## Getting the Sources
 
