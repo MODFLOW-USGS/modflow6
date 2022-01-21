@@ -166,7 +166,7 @@ module GwfBuyModule
     ! -- store pointers to arguments that were passed in
     this%dis => dis
 
-    if (present(buy_input)) then
+    if (.not. present(buy_input)) then
       !
       ! -- Read buoyancy options
       call this%read_options()
@@ -182,7 +182,7 @@ module GwfBuyModule
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
 
-    if (present(buy_input)) then
+    if (.not. present(buy_input)) then
       !
       ! -- Read buoyancy packagedata
       call this%read_packagedata()
