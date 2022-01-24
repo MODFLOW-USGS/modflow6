@@ -46,6 +46,7 @@ module GwfGwfConnectionModule
     procedure, pass(this) :: exg_df => gwfgwfcon_df    
     procedure, pass(this) :: exg_ar => gwfgwfcon_ar
     procedure, pass(this) :: exg_rp => gwfgwfcon_rp
+    procedure, pass(this) :: exg_ad => gwfgwfcon_ad
     procedure, pass(this) :: exg_cf => gwfgwfcon_cf
     procedure, pass(this) :: exg_fc => gwfgwfcon_fc
     procedure, pass(this) :: exg_da => gwfgwfcon_da
@@ -239,7 +240,6 @@ contains
   subroutine gwfgwfcon_rp(this)
     use TdisModule, only: readnewdata
     class(GwfGwfConnectionType) :: this !< this connection
-    ! local
     
     if (.not. readnewdata) return
     
@@ -252,6 +252,15 @@ contains
 
     return
   end subroutine gwfgwfcon_rp
+
+  !> @brief Advance this connection
+  !<
+  subroutine gwfgwfcon_ad(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+
+    call this%gwfInterfaceModel%model_ad()
+
+  end subroutine gwfgwfcon_ad
 
   !> @brief Calculate (or adjust) matrix coefficients,
   !! in this case those which are determined or affected
