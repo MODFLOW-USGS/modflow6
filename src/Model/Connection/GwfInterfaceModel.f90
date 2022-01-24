@@ -140,7 +140,7 @@ contains
     class(GwfInterfaceModelType) :: this !< the GWF interface model
 
     ! this will update densities
-    call this%buy%buy_ad()
+    if (this%inbuy > 0) call this%buy%buy_ad()
 
   end subroutine gwfifm_ad
   
