@@ -13,6 +13,7 @@ module GwfBuyModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwfNpfModule,           only: GwfNpfType
+  use GwfBuyInputDataModule,  only: GwfBuyInputDataType
   
   implicit none
 
@@ -28,7 +29,7 @@ module GwfBuyModule
   type, extends(NumericalPackageType) :: GwfBuyType
     type(GwfNpfType), pointer                   :: npf        => null()         ! npf object
     integer(I4B), pointer                       :: ioutdense  => null()         ! unit number for saving density
-    integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 freshwater head, 1 hydraulic head, 2 hh rhs
+    integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 freshwater head, 1 hh rhs, 2 hydraulic head
     integer(I4B), pointer                       :: ireadelev  => null()         ! if 1 then elev has been allocated and filled
     integer(I4B), pointer                       :: ireadconcbuy => null()       ! if 1 then dense has been read from this buy input file
     integer(I4B), pointer                       :: iconcset   => null()         ! if 1 then conc is pointed to a gwt model%x
@@ -59,8 +60,6 @@ module GwfBuyModule
     procedure :: buy_ot_dv
     procedure :: buy_cq
     procedure :: buy_da
-    procedure, private :: read_dimensions
-    procedure, private :: read_packagedata
     procedure, private :: calcbuy
     procedure, private :: calchhterms
     procedure, private :: buy_calcdens
@@ -68,6 +67,10 @@ module GwfBuyModule
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
+    procedure, private :: set_options    
+    procedure, private :: read_dimensions
+    procedure, private :: read_packagedata
+    procedure, private :: set_packagedata
     procedure :: set_concentration_pointer
   end type GwfBuyType
   
@@ -136,7 +139,9 @@ module GwfBuyModule
     return
   end subroutine buy_cr
 
-  subroutine buy_df(this, dis)
+  !> @brief Read options and package data, or set from argument
+  !<  
+  subroutine buy_df(this, dis, buy_input)
 ! ******************************************************************************
 ! buy_df -- Allocate and Read
 ! ******************************************************************************
@@ -145,8 +150,9 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfBuyType) :: this
-    class(DisBaseType), pointer, intent(in) :: dis
+    class(GwfBuyType) :: this                                    !< this buoyancy package
+    class(DisBaseType), pointer, intent(in) :: dis               !< pointer to discretization
+    type(GwfBuyInputDataType), optional, intent(in) :: buy_input !< optional buy input data, otherwise read from file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtbuy =                                    &
@@ -159,18 +165,31 @@ module GwfBuyModule
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
-    !
-    ! -- Read buoyancy options
-    call this%read_options()
-    !
-    ! -- Read buoyancy dimensions
-    call this%read_dimensions()
+
+    if (.not. present(buy_input)) then
+      !
+      ! -- Read buoyancy options
+      call this%read_options()
+      !
+      ! -- Read buoyancy dimensions
+      call this%read_dimensions()
+    else
+      ! set from input data instead
+      call this%set_options(buy_input)
+      this%nrhospecies = buy_input%nrhospecies
+    end if
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
-    !
-    ! -- Read buoyancy packagedata
-    call this%read_packagedata()
+
+    if (.not. present(buy_input)) then
+      !
+      ! -- Read buoyancy packagedata
+      call this%read_packagedata()
+    else
+      ! set from input data instead
+      call this%set_packagedata(buy_input)
+    end if
     !
     ! -- Return
     return
@@ -1142,7 +1161,7 @@ module GwfBuyModule
     !
     ! -- check dimension
     if (this%nrhospecies < 1) then
-      call store_error('NRHOSPECIES MUST BE GREATER THAN ONE.')
+      call store_error('NRHOSPECIES MUST BE GREATER THAN ZERO.')
       call this%parser%StoreErrorUnit()
     endif
     !
@@ -1173,7 +1192,7 @@ module GwfBuyModule
     ! -- format
     character(len=*),parameter :: fmterr = &
       "('INVALID VALUE FOR IRHOSPEC (',i0,') DETECTED IN BUY PACKAGE. &
-      &IRHOSPEC MUST BE > 0 AND < NRHOSPECIES, AND DUPLICATE VALUES &
+      &IRHOSPEC MUST BE > 0 AND <= NRHOSPECIES, AND DUPLICATE VALUES &
       &ARE NOT ALLOWED.')"
 ! ------------------------------------------------------------------------------
     !
@@ -1241,6 +1260,24 @@ module GwfBuyModule
     ! -- return
     return
   end subroutine read_packagedata
+
+  !> @brief Sets package data instead of reading from file
+  !<
+  subroutine set_packagedata(this, input_data)
+    class(GwfBuyType) :: this                           !< this buyoancy pkg
+    type(GwfBuyInputDataType), intent(in) :: input_data !< the input data to be set
+    ! local
+    integer(I4B) :: ispec
+
+    do ispec = 1, this%nrhospecies
+      this%drhodc(ispec) = input_data%drhodc(ispec)
+      this%crhoref(ispec) = input_data%crhoref(ispec)
+      this%cmodelname(ispec) = input_data%cmodelname(ispec)
+      this%cauxspeciesname(ispec) = input_data%cauxspeciesname(ispec)
+    end do
+
+
+  end subroutine set_packagedata
   
   subroutine calcbuy(this, n, m, icon, hn, hm, buy)
 ! ******************************************************************************
@@ -1662,6 +1699,23 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine read_options
+
+  !> @brief Sets options as opposed to reading them from a file
+  !<
+  subroutine set_options(this, input_data)
+    class(GwfBuyType) :: this
+    type(GwfBuyInputDataType), intent(in) :: input_data !< the input data to be set
+
+    this%iform = input_data%iform
+    this%denseref = input_data%denseref
+
+    ! derived option:
+    ! if not iform==2, there is no asymmetry 
+    if (this%iform == 0 .or. this%iform == 1) then
+      this%iasym = 0
+    end if
+
+  end subroutine set_options
 
   subroutine set_concentration_pointer(this, modelname, conc, icbund)
 ! ******************************************************************************

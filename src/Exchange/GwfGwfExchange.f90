@@ -1404,10 +1404,6 @@ contains
       call openfile(this%inmvr, iout, fname, 'MVR')
       write(iout,'(4x,a)')                                               &
         'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
-    case ('BOUNDNAMES')
-      this%inamedbound = 1
-      write(iout,'(4x,a)') 'EXCHANGE BOUNDARIES HAVE NAMES' // &
-                                ' IN LAST COLUMN.'
     case ('OBS6')
       call this%parser%GetStringCaps(subkey)
       if(subkey /= 'FILEIN') then
@@ -1707,7 +1703,6 @@ contains
     this%ingnc = 0
     this%inmvr = 0
     this%inobs = 0
-    this%inamedbound = 0
     this%satomega = DZERO
     !
     ! -- return

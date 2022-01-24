@@ -113,7 +113,10 @@ function parse_option(this, keyword, iout) result(parsed)
       'THE LIST OF EXCHANGES WILL BE PRINTED.'
   case ('XT3D')
     this%ixt3d = 1
-    write(iout, '(4x,a)') 'XT3D will be applied on the interface'
+    write(iout, '(4x,a)') 'XT3D WILL BE APPLIED ON THE INTERFACE'
+  case ('BOUNDNAMES')
+    this%inamedbound = 1
+    write(iout, '(4x,a)') 'EXCHANGE BOUNDARIES HAVE NAMES IN LAST COLUMN'
   case('DEV_INTERFACEMODEL_ON')
     call this%parser%DevOpt()
     this%dev_ifmod_on = .true.
@@ -314,7 +317,8 @@ subroutine allocate_scalars(this)
   this%naux = 0
   this%ianglex = 0
   this%icdist = 0
-  this%ixt3d = 0
+  this%ixt3d = 0  
+  this%inamedbound = 0
 
   this%dev_ifmod_on = .false.
 

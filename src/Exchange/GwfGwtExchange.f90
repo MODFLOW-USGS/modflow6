@@ -353,7 +353,14 @@ module GwfGwtExchangeModule
     ! fmi flows are not read from file
     gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
 
+    ! set concentration pointer for buoyancy
+    call gwfConn%gwfInterfaceModel%buy%set_concentration_pointer(               &
+                        gwtConn%gwtModel%name,                                  &
+                        gwtConn%conc,                                           &
+                        gwtConn%icbound)
+
   end subroutine link_connections
+
   
   subroutine exg_da(this)
 ! ******************************************************************************

@@ -39,6 +39,9 @@ module GwtGwtConnectionModule
     real(DP), dimension(:), pointer, contiguous :: gwfsat => null()       !< gwfsat for the interface model
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null()      !< gwfhead for the interface model
     real(DP), dimension(:,:), pointer, contiguous :: gwfspdis => null()   !< gwfspdis for the interface model
+
+    real(DP), dimension(:), pointer, contiguous :: conc => null()         !< pointer to concentration array
+    integer(I4B), dimension(:), pointer, contiguous :: icbound => null()  !< store pointer to gwt ibound array
   
     integer(I4B) :: iout                                                  !< the list file for the interface model
 
@@ -199,6 +202,10 @@ subroutine gwtgwtcon_df(this)
   this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
   this%gwtInterfaceModel%fmi%gwfspdis => this%gwfspdis
   
+  ! connect pointers (used by BUY)
+  this%conc => this%gwtInterfaceModel%x
+  this%icbound => this%gwtInterfaceModel%ibound
+
   ! add connections from the interface model to solution matrix
   call this%spatialcon_connect()
 
