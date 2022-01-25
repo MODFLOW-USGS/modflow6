@@ -1,16 +1,20 @@
 module GwfGwtExchangeModule
-  use KindModule,              only: DP, I4B, LGP
-  use ConstantsModule,         only: LENPACKAGENAME
-  use ListsModule,                  only: basemodellist, baseexchangelist, baseconnectionlist
-  use SimVariablesModule,      only: errmsg
-  use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
-  use SpatialModelConnectionModule, only: SpatialModelConnectionType, GetSpatialModelConnectionFromList
-  use GwtGwtConnectionModule,       only: GwtGwtConnectionType
-  use GwfGwfConnectionModule,       only: GwfGwfConnectionType
-  use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
-  use GwfModule,               only: GwfModelType
-  use GwtModule,               only: GwtModelType
-  use BndModule,               only: BndType, GetBndFromList
+  use KindModule,                   only: DP, I4B, LGP
+  use ConstantsModule,              only: LENPACKAGENAME
+  use ListsModule,                  only: basemodellist, baseexchangelist,      &
+                                          baseconnectionlist
+  use SimVariablesModule,           only: errmsg
+  use BaseExchangeModule,           only: BaseExchangeType, AddBaseExchangeToList
+  use SpatialModelConnectionModule, only: SpatialModelConnectionType,           &
+                                          GetSpatialModelConnectionFromList
+  use GwtGwtConnectionModule,       only: GwtGwtConnectionType, CastAsGwtGwtConnection
+  use GwfGwfConnectionModule,       only: GwfGwfConnectionType, CastAsGwfGwfConnection
+  use GwfGwfExchangeModule,         only: GwfExchangeType,                      &
+                                          GetGwfExchangeFromList
+  use BaseModelModule,              only: BaseModelType, GetBaseModelFromList
+  use GwfModule,                    only: GwfModelType
+  use GwtModule,                    only: GwtModelType
+  use BndModule,                    only: BndType, GetBndFromList
 
   
   implicit none
@@ -256,69 +260,108 @@ module GwfGwtExchangeModule
     end if
     !
     ! -- connect Connections
-    call this%gwfconn2gwtconn(gwfmodel, gwtmodel)    
+    call this%gwfconn2gwtconn(gwfmodel, gwtmodel)
     !
     ! -- return
     return
   end subroutine exg_ar
   
-  !> @brief Link GWT connection to GWF connection
+  !> @brief Link GWT connections to GWF connections or exchanges
   !<
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
     use SimModule, only: store_error
+    use SimVariablesModule, only: iout
     class(GwfGwtExchangeType) :: this       !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GwtModelType), pointer :: gwtModel !< the transport model
-    ! local
-    class(SpatialModelConnectionType), pointer :: conn1 => null()
-    class(SpatialModelConnectionType), pointer :: conn2 => null()
-    integer(I4B) :: ic1, ic2
-    integer(I4B) :: gwfIdx, gwtIdx
+    ! local  
+    class(SpatialModelConnectionType), pointer :: conn => null()  
+    class(*), pointer :: objPtr => null()
+    class(GwtGwtConnectionType), pointer :: gwtConn => null()
+    class(GwfGwfConnectionType), pointer :: gwfConn => null()
+    class(GwfExchangeType), pointer :: gwfEx => null()
+    integer(I4B) :: ic1, ic2, iex
+    integer(I4B) :: gwfConnIdx, gwfExIdx
     logical(LGP) :: areEqual
 
+    ! loop over all connections
     gwtloop: do ic1 = 1, baseconnectionlist%Count()
-      
-      gwtIdx = -1
-      gwfIdx = -1          
-      conn1 => GetSpatialModelConnectionFromList(baseconnectionlist,ic1)
+
+      conn => GetSpatialModelConnectionFromList(baseconnectionlist,ic1)
+      if (.not. associated(conn%owner, gwtModel)) cycle gwtloop
 
       ! start with a GWT conn.
-      if (associated(conn1%owner, gwtModel)) then
-        gwtIdx = ic1
+      objPtr => conn
+      gwtConn => CastAsGwtGwtConnection(objPtr)
+      gwfConnIdx = -1
+      gwfExIdx = -1
 
-        ! find matching GWF conn. in same list
-        gwfloop: do ic2 = 1, baseconnectionlist%Count()
-          conn2 => GetSpatialModelConnectionFromList(baseconnectionlist,ic2)
-          
-          if (associated(conn2%owner, gwfModel)) then
-            ! for now, connecting the same nodes nrs will be 
+      ! find matching GWF conn. in same list
+      gwfloop: do ic2 = 1, baseconnectionlist%Count()
+        conn => GetSpatialModelConnectionFromList(baseconnectionlist,ic2)
+        
+        if (associated(conn%owner, gwfModel)) then
+          objPtr => conn
+          gwfConn => CastAsGwfGwfConnection(objPtr)          
+
+          ! for now, connecting the same nodes nrs will be 
+          ! sufficient evidence of equality
+          areEqual = all(gwfConn%primaryExchange%nodem1 ==                      &
+                            gwtConn%primaryExchange%nodem1)
+          areEqual = areEqual .and. all(gwfConn%primaryExchange%nodem2 ==       &
+                            gwtConn%primaryExchange%nodem2)
+          if (areEqual) then
+            ! same DIS, same exchange: link and go to next GWT conn.
+            write(iout,'(/6a)') 'Linking exchange ',                           &
+                                trim(gwtConn%primaryExchange%name),             &
+                                ' to ', trim(gwfConn%primaryExchange%name),     &
+                                ' (using interface model) for GWT model ',      &
+                                trim(gwtModel%name)
+            gwfConnIdx = ic2
+            call this%link_connections(gwtConn, gwfConn)
+            exit gwfloop
+          end if
+        end if
+      end do gwfloop
+
+      ! fallback option: coupling to old gwfgwf exchange,
+      ! (this will go obsolete at some point)
+      if (gwfConnIdx == -1) then
+        gwfloopexg: do iex = 1, baseexchangelist%Count()
+          gwfEx => GetGwfExchangeFromList(baseexchangelist, iex)
+
+          if (associated(gwfEx%model1, gwfModel) .or.                           &
+              associated(gwfEx%model2, gwfModel)) then
+            ! again, connecting the same nodes nrs will be 
             ! sufficient evidence of equality
-            areEqual = all(conn2%primaryExchange%nodem1 ==                      &
-                              conn1%primaryExchange%nodem1)
-            areEqual = areEqual .and. all(conn2%primaryExchange%nodem2 ==       &
-                              conn1%primaryExchange%nodem2)
-            if (areEqual) then
-              ! same DIS, same exchange: link and go to next GWT conn.
-              gwfIdx = ic2
-              call this%link_connections(gwtIdx, gwfIdx)
-              exit gwfloop
+            areEqual = all(gwfEx%nodem1 == gwtConn%primaryExchange%nodem1)
+            areEqual = areEqual .and.                                           &
+                        all(gwfEx%nodem2 == gwtConn%primaryExchange%nodem2)
+            if (areEqual) then 
+              ! link exchange to connection
+              write(iout,'(/6a)') 'Linking exchange ',                          &
+                                trim(gwtConn%primaryExchange%name),             &
+                                ' to ', trim(gwfEx%name), ' for GWT model ',    &
+                                trim(gwtModel%name)
+              gwfExIdx = iex
+              gwtConn%exgflowja => gwfEx%simvals
+              if (associated(gwfEx%model2, gwfModel)) gwtConn%exgflowSign = -1
+              gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
+
+              exit gwfloopexg
             end if
           end if
-        end do gwfloop
 
-        if (gwfIdx == -1) then
-          ! none found, report
-          write(errmsg, *) 'Missing GWF connection. Connecting GWT model ',       &
-              trim(gwtModel%name), ' with exchange ',                             &
-              trim(conn1%primaryExchange%name),                                   &
-              ' to GWF requires the GWF interface model to be active. (Activate by&     
-              & setting DEV_INTERFACEMODEL_ON in the exchange file)'
-          call store_error(errmsg, terminate=.true.)
-        end if
+        end do gwfloopexg
+      end if
 
-      else
-        ! not a GWT conn., next
-        cycle gwtloop
+      if (gwfConnIdx == -1 .and. gwfExIdx == -1) then
+        ! none found, report
+        write(errmsg, '(/6a)') 'Missing GWF-GWF exchange when connecting GWT'// &
+            ' model ', trim(gwtModel%name), ' with exchange ',                  &
+            trim(gwtConn%primaryExchange%name), ' to GWF model ',               &
+            trim(gwfModel%name)
+        call store_error(errmsg, terminate=.true.)
       end if
 
     end do gwtloop
@@ -328,25 +371,10 @@ module GwfGwtExchangeModule
 
   !> @brief Links a GWT connection to its GWF counterpart
   !<
-  subroutine link_connections(this, gwtidx, gwfidx)
-    class(GwfGwtExchangeType) :: this !< this exchange
-    integer(I4B) :: gwtIdx            !< index of GWT connection in base list
-    integer(I4B) :: gwfIdx            !< index of GWF connection in base list
-    ! local
-    class(SpatialModelConnectionType), pointer :: conn => null()
-    class(GwtGwtConnectionType), pointer :: gwtConn => null()
-    class(GwfGwfConnectionType), pointer :: gwfConn => null()
-    
-    conn => GetSpatialModelConnectionFromList(baseconnectionlist,gwtIdx)
-    select type(conn)
-    type is (GwtGwtConnectionType)
-      gwtConn => conn
-    end select
-    conn => GetSpatialModelConnectionFromList(baseconnectionlist,gwfIdx)
-    select type(conn)
-    type is (GwfGwfConnectionType)
-      gwfConn => conn
-    end select
+  subroutine link_connections(this, gwtConn, gwfConn)
+    class(GwfGwtExchangeType) :: this      !< this exchange
+    class(GwtGwtConnectionType), pointer :: gwtConn !< GWT connection
+    class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 
     gwtConn%exgflowja => gwfConn%exgflowja
 
