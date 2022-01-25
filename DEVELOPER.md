@@ -1,7 +1,7 @@
 # Building and Testing MODFLOW 6
 
 This document describes how to set up your development environment to build and test MODFLOW 6.
-It also explains the basic mechanics of using `git`.
+It also explains the basic mechanics of using `git`. Details on how to contribute your code to the repository are found in the separate document [CONTRIBUTING.md](CONTRIBUTING.md)
 
 * [Prerequisite Software](#prerequisite-software)
 * [Getting the Sources](#getting-the-sources)
@@ -59,10 +59,12 @@ Then install all packages necessary to run the tests either by executing [instal
 
 Intel fortran can be used to compile MODFLOW 6 and associated utilities and generate distributable files (if not using gfortran).
 Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
+Documentation describing how to set the intel envrionment variables can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html).
 
-### LaTeX (optional)
+### Doxygen & LaTeX (optional)
 
-[LaTeX](https://www.latex-project.org/) which is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
+[Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://modflow-usgs.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
+These programs can be installed from various sources, including by conda, macports, or from individual sources such as https://www.tug.org/. Details about USGS LaTeX libraries can be seen in addition to linux installs in the CI workflow for the docs (`.github/workflows/ci-docs.yml`).
 
 ## Getting the Sources
 
@@ -139,10 +141,9 @@ For the build instructions we refer to the [GNU Make Manual](https://www.gnu.org
 
 ## Running Tests Locally
 
-For complete testing as done on the CI, clone the modflow6-testmodels repository:
+For complete testing as done on the CI, clone your fork of the modflow6-testmodels repository (via either ssh or https, ssh shown here):
 
 ```shell
-# Clone your GitHub repository:
 git clone git@github.com:<github username>/modflow6-testmodels.git
 ```
 * The modflow6-testmodels repository must be cloned in the same directory that contains the modflow6 repository.
@@ -185,12 +186,11 @@ pytest -v test_z01_testmodels_mf6.py
 pytest -v test_z02_testmodels_mf5to6.py
 ```
 
-By adding the flag "-n" the tests can even be run in parallel:
+The tests can be run in parallel by adding the flag "-n" which accepts an argument for the specific number of processes to use or "auto" to let pytest decide:
 
 ```shell
 pytest -v -n auto
 ```
-
 
 You should execute the test suites before submitting a PR to Github.
 All the tests are executed on our Continuous Integration infrastructure and a pull request can only be merged once all tests pass.
