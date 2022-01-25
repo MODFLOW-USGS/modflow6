@@ -101,16 +101,14 @@ module GwfModule
 
   contains
 
+  !> @brief Create a new groundwater flow model object
+  !!
+  !! (1) creates model object and add to modellist
+  !! (2) assign values
+  !!
+  !<  
   subroutine gwf_cr(filename, id, modelname, smr)
-! ******************************************************************************
-! gwf_cr -- Create a new groundwater flow model object
-! Subroutine: (1) creates model object and add to modellist
-!             (2) assign values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
+   ! -- modules
     use ListsModule,                only: basemodellist
     use MemoryHelperModule,         only: create_mem_path
     use BaseModelModule,            only: AddBaseModelToList
@@ -293,15 +291,13 @@ module GwfModule
     return
   end subroutine gwf_cr
 
+  !> @brief Define packages of the model
+  !!  
+  !! (1) call df routines for each package
+  !! (2) set gwf variables and pointers
+  !!
+  !<
   subroutine gwf_df(this)
-! ******************************************************************************
-! gwf_df -- Define packages of the model
-! Subroutine: (1) call df routines for each package
-!             (2) set gwf variables and pointers
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwfModelType) :: this
@@ -341,13 +337,8 @@ module GwfModule
     return
   end subroutine gwf_df
 
+  !> @brief Add the internal connections of this model to the sparse matrix
   subroutine gwf_ac(this, sparse)
-! ******************************************************************************
-! gwf_ac -- Add the internal connections of this model to the sparse matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
@@ -377,14 +368,10 @@ module GwfModule
     return
   end subroutine gwf_ac
 
+  !> @brief Map the positions of this models connections in the
+  !! numerical solution coefficient matrix.
+  !<
   subroutine gwf_mc(this, iasln, jasln)
-! ******************************************************************************
-! gwf_mc -- Map the positions of this models connections in the
-! numerical solution coefficient matrix.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
@@ -415,15 +402,13 @@ module GwfModule
     return
   end subroutine gwf_mc
 
+  !> @brief GroundWater Flow Model Allocate and Read
+  !!
+  !! (1) allocates and reads packages part of this model,
+  !! (2) allocates memory for arrays part of this model object 
+  !!
+  !<
   subroutine gwf_ar(this)
-! ******************************************************************************
-! gwf_ar -- GroundWater Flow Model Allocate and Read
-! Subroutine: (1) allocates and reads packages part of this model,
-!             (2) allocates memory for arrays part of this model object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
     ! -- locals
@@ -462,14 +447,12 @@ module GwfModule
     return
   end subroutine gwf_ar
 
+  !> @brief GroundWater Flow Model Read and Prepare
+  !!  
+  !! (1) calls package read and prepare routines 
+  !!
+  !<    
   subroutine gwf_rp(this)
-! ******************************************************************************
-! gwf_rp -- GroundWater Flow Model Read and Prepare
-! Subroutine: (1) calls package read and prepare routines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: readnewdata
     ! -- dummy
@@ -500,14 +483,12 @@ module GwfModule
     return
   end subroutine gwf_rp
 
+  !> @brief GroundWater Flow Model Time Step Advance
+  !!
+  !! (1) calls package advance subroutines
+  !!
+  !<
   subroutine gwf_ad(this)
-! ******************************************************************************
-! gwf_ad -- GroundWater Flow Model Time Step Advance
-! Subroutine: (1) calls package advance subroutines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: isimcheck, iFailedStepRetry
     ! -- dummy
@@ -557,13 +538,8 @@ module GwfModule
     return
   end subroutine gwf_ad
 
+  !> @brief GroundWater Flow Model calculate coefficients
   subroutine gwf_cf(this, kiter)
-! ******************************************************************************
-! gwf_cf -- GroundWater Flow Model calculate coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B),intent(in) :: kiter
@@ -585,13 +561,8 @@ module GwfModule
     return
   end subroutine gwf_cf
 
+  !> @brief GroundWater Flow Model fill coefficients
   subroutine gwf_fc(this, kiter, amatsln, njasln, inwtflag)
-! ******************************************************************************
-! gwf_fc -- GroundWater Flow Model fill coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: kiter
@@ -688,14 +659,12 @@ module GwfModule
     return
   end subroutine gwf_fc
 
+  !> @brief GroundWater Flow Model Final Convergence Check for Boundary Packages
+  !!
+  !! (1) calls package cc routines
+  !! 
+  !<
   subroutine gwf_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
-! ******************************************************************************
-! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
-! Subroutine: (1) calls package cc routines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B),intent(in) :: innertot
@@ -733,15 +702,12 @@ module GwfModule
     return
   end subroutine gwf_cc
   
+  !> @brief check if pseudo-transient continuation factor should be used
+  !!
+  !! (1) Check if pseudo-transient continuation factor should be used
+  !!
+  !<
   subroutine gwf_ptcchk(this, iptc)
-! ******************************************************************************
-! gwf_ptcchk -- check if pseudo-transient continuation factor should be used
-! Subroutine: (1) Check if pseudo-transient continuation factor should be used
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! modules
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(inout) :: iptc
@@ -762,16 +728,14 @@ module GwfModule
     return
   end subroutine gwf_ptcchk
 
+  !> @brief calculate maximum pseudo-transient continuation factor
+  !!
+  !! (1) Calculate maximum pseudo-transient continuation factor
+  !! for the current outer iteration
+  !!
+  !<
   subroutine gwf_ptc(this, kiter, neqsln, njasln, ia, ja,                       &
                      x, rhs, amatsln, iptc, ptcf)
-! ******************************************************************************
-! gwf_ptc -- calculate maximum pseudo-transient continuation factor
-! Subroutine: (1) Calculate maximum pseudo-transient continuation factor
-!                 for the current outer iteration
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! modules
     use ConstantsModule, only: DONE, DP9
     ! -- dummy
@@ -872,16 +836,14 @@ module GwfModule
     return
   end subroutine gwf_ptc
 
+  !> @brief under-relaxation
+  !!
+  !! (1) Under-relaxation of Groundwater Flow Model Heads for current
+  !! outer iteration using the cell bottoms at the bottom of the
+  !! model
+  !!
+  !<
   subroutine gwf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
-! ******************************************************************************
-! gwf_nur -- under-relaxation
-! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
-!                 outer iteration using the cell bottoms at the bottom of the
-!                 model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! modules
     use ConstantsModule, only: DONE, DP9
     ! -- dummy
@@ -925,14 +887,12 @@ module GwfModule
     return
   end subroutine gwf_nur
 
+  !> @brief Groundwater flow model calculate flow
+  !!
+  !! (1) Calculate intercell flows (flowja)
+  !!
+  !<
   subroutine gwf_cq(this, icnvg, isuppress_output)
-! ******************************************************************************
-! gwf_cq --Groundwater flow model calculate flow
-! Subroutine: (1) Calculate intercell flows (flowja)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwfModelType) :: this
@@ -975,14 +935,12 @@ module GwfModule
     return
   end subroutine gwf_cq
   
+  !> @brief GroundWater Flow Model Budget
+  !!
+  !! (1) Calculate stress package contributions to model budget
+  !!
+  !<
   subroutine gwf_bd(this, icnvg, isuppress_output)
-! ******************************************************************************
-! gwf_bd --GroundWater Flow Model Budget
-! Subroutine: (1) Calculate stress package contributions to model budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: csr_diagsum
     ! -- dummy
@@ -1027,13 +985,8 @@ module GwfModule
     return
   end subroutine gwf_bd
 
+  !> @brief GroundWater Flow Model Output
   subroutine gwf_ot(this)
-! ******************************************************************************
-! gwf_ot -- GroundWater Flow Model Output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
@@ -1223,13 +1176,8 @@ module GwfModule
     
   end subroutine gwf_ot_bdsummary
   
+  !> @brief Final processing
   subroutine gwf_fp(this)
-! ******************************************************************************
-! gwf_fp -- Final processing
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwfModelType) :: this
@@ -1244,13 +1192,8 @@ module GwfModule
     return
   end subroutine gwf_fp
 
+  !> @brief Deallocate
   subroutine gwf_da(this)
-! ******************************************************************************
-! gwf_da -- Deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -1317,18 +1260,16 @@ module GwfModule
     ! -- return
     return
   end subroutine gwf_da
-  
+
+  !> @brief GroundWater Flow Model Budget Entry
+  !!
+  !! This subroutine adds a budget entry to the flow budget.  It was added as
+  !! a method for the gwf3 model object so that the exchange object could add its
+  !! contributions.
+  !!
+  !! (1) adds the entry to the budget object
+  !<
   subroutine gwf_bdentry(this, budterm, budtxt, rowlabel)
-! ******************************************************************************
-! gwf_bdentry -- GroundWater Flow Model Budget Entry
-! This subroutine adds a budget entry to the flow budget.  It was added as
-! a method for the gwf3 model object so that the exchange object could add its
-! contributions.
-! Subroutine: (1) adds the entry to the budget object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     use TdisModule, only:delt
@@ -1345,14 +1286,10 @@ module GwfModule
     return
   end subroutine gwf_bdentry
 
+  !> @brief return 1 if any package causes the matrix to be asymmetric.
+  !! Otherwise return 0.
+  !<  
   function gwf_get_iasym(this) result (iasym)
-! ******************************************************************************
-! gwf_get_iasym -- return 1 if any package causes the matrix to be asymmetric.
-!   Otherwise return 0.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(GwfModelType) :: this
     ! -- local
     integer(I4B) :: iasym
@@ -1384,13 +1321,8 @@ module GwfModule
     return
   end function gwf_get_iasym
 
+  !> @brief Allocate memory for non-allocatable members
   subroutine allocate_scalars(this, modelname)
-! ******************************************************************************
-! allocate_scalars -- Allocate memory for non-allocatable members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -1432,16 +1364,14 @@ module GwfModule
     return
   end subroutine allocate_scalars
 
+  !> @brief Create boundary condition packages for this model
+  !!
+  !! (1) create new-style package
+  !! (2) add a pointer to the package
+  !!
+  !<
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit,    &
                             iout)
-! ******************************************************************************
-! package_create -- Create boundary condition packages for this model
-! Subroutine: (1) create new-style package
-!             (2) add a pointer to the package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
@@ -1519,13 +1449,8 @@ module GwfModule
     return
   end subroutine package_create
 
+  !> @brief Check to make sure required input files have been specified
   subroutine ftype_check(this, namefile_obj, indis)
-! ******************************************************************************
-! ftype_check -- Check to make sure required input files have been specified
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: store_error, count_errors
