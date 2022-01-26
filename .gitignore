@@ -58,6 +58,7 @@ doc/XT3DReport/*.pdf
 doc/UserGuide/*.pdf
 doc/ConverterGuide/*.pdf
 doc/zonebudget/*.pdf
+doc/SuppTechInfo/*.pdf
 
 bin/**
 
