@@ -20,14 +20,14 @@ v^z = \sum_{k=1}^{N_H} \phi_k^z v_k^z,
 
 The development in this section closely parallels the development in equations 9 through 16 in \cite{modflow6xt3d}. The present development has been adapted specifically for interpolation of the velocity vector at a cell center in $\left( x, y, z \right)$ model coordinates and is simplified by the separate treatment of the $z$ component described in the previous section.
 
-The vertical interfaces of a cell (those along the "sides" of the cell), which are locally indexed by $i = 1, ..., N_V$, provide normal-component information that is used to estimated the $x$ and $y$ components of the velocity at the cell center. By definition, $v_i^n$, the normal component of velocity ($L/T$) at vertical interface $i$, is related to the three-dimensional velocity vector by
+The vertical interfaces of a cell (those along the ``sides'' of the cell), which are locally indexed by $i = 1, ..., N_V$, provide normal-component information that is used to estimated the $x$ and $y$ components of the velocity at the cell center. By definition, $v_i^n$, the normal component of velocity ($L/T$) at vertical interface $i$, is related to the three-dimensional velocity vector by
 
 \begin{equation}
 \label{eqn:nivi}
 \matr{n_i^T} \matr{v_i} = v_i^n,
 \end{equation}
 
-\noindent where superscript "$\matr{T}$" indicates the transpose, and the left-hand side of equation~\ref{eqn:nivi} is the scalar product (or "dot product") of $\matr{n_i}$, the unit vector (unitless) normal to interface $i$, and $\matr{v_i}$, the velocity vector ($L/T$) at interface $i$. Expanding equation~\ref{eqn:nivi} in terms of vector components gives
+\noindent where superscript ``$\matr{T}$'' indicates the transpose, and the left-hand side of equation~\ref{eqn:nivi} is the scalar product (or ``dot product'') of $\matr{n_i}$, the unit vector (unitless) normal to interface $i$, and $\matr{v_i}$, the velocity vector ($L/T$) at interface $i$. Expanding equation~\ref{eqn:nivi} in terms of vector components gives
 
 \begin{equation}
 \label{eqn:nivi2}
@@ -54,7 +54,7 @@ v^x = \sum_{i=1}^{N_V} \phi_i^x v_i^x = \sum_{i=1}^{N_V} \frac{\phi_i^x v_i^n}{n
 v^y = \sum_{i=1}^{N_V} \phi_i^y v_i^y = \sum_{i=1}^{N_V} \frac{\phi_i^y v_i^n}{n_i^y} - \left( \sum_{i=1}^{N_V} \frac{\phi_i^y n_i^x}{n_i^y}  \right ) v^x,
 \end{equation}
 
-\noindent where $\phi_i^y$ is the weight (unitless) assigned to $v_i^y$. (Weights are discussed in detail in the \hyperref[sec:weights]{"Weights"} section below.) There are now two equations, \ref{eqn:vx} and \ref{eqn:vy}, that can be solved for the two unknowns, $v^x$ and $v^y$, to give
+\noindent where $\phi_i^y$ is the weight (unitless) assigned to $v_i^y$. (Weights are discussed in detail in the \hyperref[sec:weights]{``Weights''} section below.) There are now two equations, \ref{eqn:vx} and \ref{eqn:vy}, that can be solved for the two unknowns, $v^x$ and $v^y$, to give
 
 \begin{equation}
 \label{eqn:vxAB}

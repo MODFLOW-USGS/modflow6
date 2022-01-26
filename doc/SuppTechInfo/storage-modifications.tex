@@ -179,7 +179,7 @@ The approaches used to incorporate the contribution from specific storage into t
 
 \subsubsection{Standard Formulation}
 
-Adding the cell number subscript "$n$" to cellwise quantities in equation~\ref{eqn:STOeq-rev} and adding specific storage terms dependent on the current value of head and known terms to the left- and right-hand sides of the discretized groundwater flow equation \citep[eq. 6--1]{modflow6gwf}, respectively, results in
+Adding the cell number subscript ``$n$'' to cellwise quantities in equation~\ref{eqn:STOeq-rev} and adding specific storage terms dependent on the current value of head and known terms to the left- and right-hand sides of the discretized groundwater flow equation \citep[eq. 6--1]{modflow6gwf}, respectively, results in
 
 \begin{equation}
 	\label{eqn:STOeq-rev-fd}
@@ -200,7 +200,7 @@ Adding the cell number subscript "$n$" to cellwise quantities in equation~\ref{e
 
 \subsubsection{Newton-Raphson Formulation}
 
-Adding the cell number subscript "$n$" to cellwise quantities in equation~\ref{eqn:STOeq-rev} and rearranging the equation to facilitate differentiation with respect to the current value of head, $h_n^t$, results in
+Adding the cell number subscript ``$n$'' to cellwise quantities in equation~\ref{eqn:STOeq-rev} and rearranging the equation to facilitate differentiation with respect to the current value of head, $h_n^t$, results in
 
 \begin{equation}
 	\label{eqn:STOeq-rev-2}
@@ -214,7 +214,7 @@ Adding the cell number subscript "$n$" to cellwise quantities in equation~\ref{e
 	\frac{\partial Q_{SS_n}}{\partial h_n} = -\frac{SC1}{\Delta t} S_{F_n}^\skmo - \frac{SC1}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1}{\Delta t} \Delta z_n S_{F_n}^\skmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} ,
 \end{equation}
 
-\noindent where the superscript "$t$" has been omitted for clarity, and the superscript "$k-1$" indicates quantities evaluated on the previous outer iteration of the solution procedure. The fully implicit form of the Newton-Raphson formulation for the contribution of specific storage in the cell in the form of equation 2--30 in \cite{modflow6gwf} is
+\noindent where the superscript ``$t$'' has been omitted for clarity, and the superscript ``$k-1$'' indicates quantities evaluated on the previous outer iteration of the solution procedure. The fully implicit form of the Newton-Raphson formulation for the contribution of specific storage in the cell in the form of equation 2--30 in \cite{modflow6gwf} is
 
 \begin{equation}
 	\label{eqn:STOeq-nr}
