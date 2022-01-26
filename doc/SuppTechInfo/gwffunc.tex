@@ -1,0 +1,104 @@
+\newcounter{chapno}
+\setcounter{chapno}{0}
+
+\newcounter{appendixno}
+\setcounter{appendixno}{0}
+
+
+\newcommand{\incchap}{%
+\addtocounter{chapno}{1}%
+\renewcommand{\theequation}{\thechapno--\arabic{equation}}%
+\setcounter{equation}{0}%
+\renewcommand{\thefigure}{\thechapno--\arabic{figure}}%
+\setcounter{figure}{0}%
+\renewcommand{\thetable}{\thechapno--\arabic{table}}%
+\setcounter{table}{0}%
+\renewcommand{\thepage}{\thechapno--\arabic{page}}%
+\setcounter{page}{1}%
+}
+
+\newcommand{\inreferences}{%
+\renewcommand{\theequation}{R--\arabic{equation}}%
+\setcounter{equation}{0}%
+\renewcommand{\thefigure}{R--\arabic{figure}}%
+\setcounter{figure}{0}%
+\renewcommand{\thetable}{R--\arabic{table}}%
+\setcounter{table}{0}%
+\renewcommand{\thepage}{R--\arabic{page}}%
+\setcounter{page}{1}%
+}
+
+
+\newcommand{\inappendix}{%
+\addtocounter{appendixno}{1}%
+\renewcommand{\theequation}{\Alph{appendixno}--\arabic{equation}}%
+\setcounter{equation}{0}%
+\renewcommand{\thefigure}{\Alph{appendixno}--\arabic{figure}}%
+\setcounter{figure}{0}%
+\renewcommand{\thetable}{\Alph{appendixno}--\arabic{table}}%
+\setcounter{table}{0}%
+\renewcommand{\thepage}{\Alph{appendixno}--\arabic{page}}%
+\setcounter{page}{1}%
+}
+
+
+%to get correct equation, figure, and table hyperlinks
+\renewcommand{\theHequation}{\thechapno.\theHsection.\arabic{equation}}
+\renewcommand{\theHfigure}{\thechapno.\theHsection.\arabic{equation}}
+\renewcommand{\theHtable}{\thechapno.\theHsection.\arabic{equation}}
+
+\newcommand{\MF}{MODFLOW\xspace}
+\newcommand{\mf}{MODFLOW~6\xspace}
+\newcommand{\mff}{MODFLOW-2005\xspace}
+\newcommand{\mfn}{MODFLOW-NWT\xspace}
+\newcommand{\mfu}{MODFLOW-USG\xspace}
+
+%generic command for creating matrix and vector notation \matr{}
+% http://tex.stackexchange.com/questions/199789/which-bold-style-is-recommended-for-matrix-notation
+\newcommand{\sign}{\text{sign}}
+\newcommand{\matr}[1]{\mathbf{#1}}
+
+%convience commands for ijk subscripts
+\newcommand{\ijk}{$i$,$j$,$k$}
+\newcommand{\ipjk}{$i+1$,$j$,$k$}
+\newcommand{\ijpk}{$i$,$j+1$,$k$}
+\newcommand{\ijkp}{$i$,$j$,$k+1$}
+\newcommand{\imjk}{$i-1$,$j$,$k$}
+\newcommand{\ijmk}{$i$,$j-1$,$k$}
+\newcommand{\ijkm}{$i$,$j$,$k-1$}
+
+\newcommand{\iphjk}{$i+1/2$,$j$,$k$}
+\newcommand{\ijphk}{$i$,$j+1/2$,$k$}
+\newcommand{\ijkph}{$i$,$j$,$k+1/2$}
+\newcommand{\imhjk}{$i-1/2$,$j$,$k$}
+\newcommand{\ijmhk}{$i$,$j-1/2$,$k$}
+\newcommand{\ijkmh}{$i$,$j$,$k-1/2$}
+
+\newcommand{\mli}[1]{\mathit{#1}}
+\renewcommand{\le}{\varleq}
+\renewcommand{\ge}{\vargeq}
+
+\newcommand{\st}{{\ast t}}
+\newcommand{\told}{{t_\mathit{\kern -0.07em old}}}
+\newcommand{\stold}{{\ast t_\mathit{\kern -0.07em old}}}
+\newcommand{\sps}{{S_{\kern -.1em s}}}
+\newcommand{\spsn}{{S_{ \kern -.1em s_n}}}
+\newcommand{\sco}{{S \kern -0.05em C \kern -0.03em 1}}
+\newcommand{\botc}{{B \kern -0.05em O \kern -0.05em T}}
+\newcommand{\topc}{{T \kern -0.05em O \kern -0.05em P}}
+\newcommand{\zwts}{{z_{wt}^*}}
+\newcommand{\kmo}{{k-1}}
+\newcommand{\skmo}{{\ast k-1}}
+
+
+\newcommand{\ult}{$L T^{-1}$}
+\newcommand{\ulct}{$L^3 T^{-1}$}
+\newcommand{\ulst}{$L^2 T^{-1}$}
+\newcommand{\ulc}{$L^3$}
+\newcommand{\ulcinv}{$L^{-3}$}
+\newcommand{\uls}{$L^2$}
+\newcommand{\ulsinv}{$L^{-2}$}
+\newcommand{\ul}{$L$}
+\newcommand{\ulinv}{$L^{-1}$}
+\newcommand{\uts}{$T^2$}
+\newcommand{\utsinv}{$T^{-2}$}

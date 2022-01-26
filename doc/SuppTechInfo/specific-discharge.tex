@@ -1,0 +1,155 @@
+%\noindent \textcolor{red}{CHRIS: Does this interpolation use only cell-cell interfaces, or can it include flows across "exterior" cell faces, as well? I'm guessing the former, as is currently the case in XT3D, but if the latter, then some of the wording will need to be updated.}
+% The approach has not yet been modified to handle exterior faces, but this is something that we need to do to improve cell-centered velocities on our edges.
+
+A \mf flow simulation calculates the flow of water across all interfaces between cells. The flow reported for a given cell-cell interface is the component of the flow vector normal to the interface. The normal component of the specific discharge ($L/T$), or Darcy velocity, which we shorten here to "velocity," is obtained by dividing the normal component of flow by the interface area. The velocity vector at the center of a cell can then be estimated by interpolating component information from all the interfaces of the cell.
+
+The velocity interpolation scheme presented here is an adaptation and simplification of the gradient interpolation scheme used in the XT3D capability of \mf \citep{modflow6xt3d}. In XT3D, the three-dimensional head-gradient vector is estimated at a point on the interface between two cells using gradient-component information from the connections between each of those two cells and its neighboring cells. In this velocity interpolation scheme, the three-dimensional velocity vector is estimated at the center of a cell using velocity-component information from the cell-cell interfaces of the cell. (The scheme does not currently include velocity-component information from "external" faces of a cell but could be modified to do so.) The assembly of component information and the weighting scheme in the velocity interpolation are similar to those in the XT3D gradient interpolation: the greatest weight is given to component information from points that are closest to the cell center and whose directions are most closely aligned with the desired velocity component. In XT3D, gradient components are initially estimated in a coordinate system aligned with the connection between two cells, whereas in the velocity interpolation the components are estimated directly in $\left( x, y, z \right)$ model coordinates. This simplifies the notation somewhat and, more importantly, allows the $z$ component to be treated separately from the $x$ and $y$ components using information only from the horizontal interfaces of the cell (those along the top or bottom of the cell), which are the only interfaces that provide $z$-component information.
+
+\subsection{Estimating the $z$ Component of Velocity (Specific Discharge)}
+
+The $z$ component of velocity ($L/T$) at the cell center, $v^z$, is estimated by calculating a weighted average of the $z$ components of velocity at the horizontal interfaces of the cell:
+
+\begin{equation}
+\label{eqn:vz}
+v^z = \sum_{k=1}^{N_H} \phi_k^z v_k^z,
+\end{equation}
+
+\noindent where the summation is over the horizontal interfaces of the cell, which are locally indexed by $k = 1, ..., N_H$, $v_k^z$ is the $z$ component of velocity ($L/T$) at horizontal interface $k$, and $\phi_k^z$ is the weight (unitless) assigned to $v_k^z$. (Weights are discussed in detail in the \hyperref[sec:weights]{"Weights"} section below.)
+
+\subsection{Estimating the $x$ and $y$ Components of Velocity (Specific Discharge)}
+
+The development in this section closely parallels the development in equations 9 through 16 in \cite{modflow6xt3d}. The present development has been adapted specifically for interpolation of the velocity vector at a cell center in $\left( x, y, z \right)$ model coordinates and is simplified by the separate treatment of the $z$ component described in the previous section.
+
+The vertical interfaces of a cell (those along the ``sides'' of the cell), which are locally indexed by $i = 1, ..., N_V$, provide normal-component information that is used to estimated the $x$ and $y$ components of the velocity at the cell center. By definition, $v_i^n$, the normal component of velocity ($L/T$) at vertical interface $i$, is related to the three-dimensional velocity vector by
+
+\begin{equation}
+\label{eqn:nivi}
+\matr{n_i^T} \matr{v_i} = v_i^n,
+\end{equation}
+
+\noindent where superscript ``$\matr{T}$'' indicates the transpose, and the left-hand side of equation~\ref{eqn:nivi} is the scalar product (or ``dot product'') of $\matr{n_i}$, the unit vector (unitless) normal to interface $i$, and $\matr{v_i}$, the velocity vector ($L/T$) at interface $i$. Expanding equation~\ref{eqn:nivi} in terms of vector components gives
+
+\begin{equation}
+\label{eqn:nivi2}
+n_i^x v_i^x + n_i^y v_i^y + n_i^z v_i^z = v_i^n.
+\end{equation}
+
+\noindent where $n_i^x$, $n_i^y$, and $n_i^z$ are, respectively, the $x$, $y$, and $z$ components of $\matr{n_i}$, and $v_i^x$, $v_i^y$, and $v_i^z$ are, respectively, the $x$, $y$, and $z$ components of $\matr{v_i}$. Recognizing that $n_i^z = 0$  for a vertical interface and solving equation~\ref{eqn:nivi2} for the $x$ component of velocity gives
+
+\begin{equation}
+\label{eqn:vix}
+v_i^x = \left ( v_i^n - n_i^y v_i^y \right ) / n_i^x.
+\end{equation}
+
+\noindent The expression for $v_i^x$ in equation~\ref{eqn:vix} is based on information solely from vertical interface $i$. However, the $y$ component, $v_i^y$, which appears on the right-hand side of equation~\ref{eqn:vix}, is unknown and cannot be deduced based on information from interface $i$ alone. Therefore, it is assumed that the $y$ component of velocity ($L/T$) at the cell center, $v^y$, which is also unknown at this point but will eventually be estimated, may be substituted into equation~\ref{eqn:vix} as an approximation to $v_i^y$. The $x$ component of velocity ($L/T$) at the cell center, $v^x$, is then estimated by calculating a weighted average of the $x$ components of velocity at all the vertical interfaces:
+
+\begin{equation}
+\label{eqn:vx}
+v^x = \sum_{i=1}^{N_V} \phi_i^x v_i^x = \sum_{i=1}^{N_V} \frac{\phi_i^x v_i^n}{n_i^x} - \left( \sum_{i=1}^{N_V} \frac{\phi_i^x n_i^y}{n_i^x}  \right ) v^y,
+\end{equation}
+
+\noindent where $\phi_i^x$ is the weight (unitless) assigned to $v_i^x$. Analogous consideration of the $y$ component of velocity ($L/T$) at the cell center, $v^y$, produces the weighted average
+\begin{equation}
+\label{eqn:vy}
+v^y = \sum_{i=1}^{N_V} \phi_i^y v_i^y = \sum_{i=1}^{N_V} \frac{\phi_i^y v_i^n}{n_i^y} - \left( \sum_{i=1}^{N_V} \frac{\phi_i^y n_i^x}{n_i^y}  \right ) v^x,
+\end{equation}
+
+\noindent where $\phi_i^y$ is the weight (unitless) assigned to $v_i^y$. (Weights are discussed in detail in the \hyperref[sec:weights]{``Weights''} section below.) There are now two equations, \ref{eqn:vx} and \ref{eqn:vy}, that can be solved for the two unknowns, $v^x$ and $v^y$, to give
+
+\begin{equation}
+\label{eqn:vxAB}
+v^x = \frac{1}{1 - A^{xy} A^{yx}} \sum_{i=1}^{N_V}  \left( B_i^x - A^{xy} B_i^y \right ) v_i^n
+\end{equation}
+
+\begin{equation}
+\label{eqn:vyAB}
+v^y = \frac{1}{1 - A^{xy} A^{yx}} \sum_{i=1}^{N_V}  \left( B_i^y - A^{yx} B_i^x \right ) v_i^n,
+\end{equation}
+
+\noindent where
+
+\begin{equation}
+\label{eqn:Axy}
+A^{xy} = \sum_{i=1}^{N_V} B_i^x n_i^y
+\end{equation}
+
+\begin{equation}
+\label{eqn:Ayx}
+A^{yx} = \sum_{i=1}^{N_V} B_i^y n_i^x,
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:Bix}
+B_i^x = \frac{\phi_i^x}{n_i^x}
+\end{equation}
+
+\begin{equation}
+\label{eqn:Biy}
+B_i^y = \frac{\phi_i^y}{n_i^y}.
+\end{equation}
+
+\noindent Equations~\ref{eqn:vxAB} and~\ref{eqn:vyAB}, with the coefficients given by equations~\ref{eqn:Axy} through~\ref{eqn:Biy}, are the expressions used to estimate the $x$ and $y$ components of the velocity vector at the cell center based on normal-component information at the vertical interfaces of the cell.
+
+\subsection{Weights} \label{sec:weights}
+
+For estimation of the $z$ component of velocity as a weighted average, we define a set of weights (unitless) based on the shortest distance ($L$), $D_k$, from the cell center to each horizontal interface $k$ as follows:
+
+\begin{equation}
+\label{eqn:omegaz}
+\omega_k^z = 1 - \frac{D_k}{\sum_{m=1}^{N_H} D_m}.
+\end{equation}
+
+\noindent Interfaces that are closest to the cell center receive the greatest weights. Before incorporating the weights into equation~\ref{eqn:vz}, we normalize them so they sum to 1:
+
+\begin{equation}
+\label{eqn:phiz}
+\phi_k^z = \frac{\omega_k^z}{{N_H} - 1} = \frac{1}{{N_H} - 1} \left (1 - \frac{D_k}{\sum_{m=1}^{N_H} D_m} \right ).
+\end{equation}
+
+For estimation of the $x$ and $y$ components of velocity, we define a set of weights (unitless) that take into account not only distance from the cell center, but also how closely the normal-component information at each vertical interface aligns with the velocity component ($x$ or $y$) being expressed as a weighted average. For the $x$ component of velocity the weights are
+
+\begin{equation}
+\label{eqn:omegax}
+\omega_i^x = \left [ 1 - \frac{D_i \left | n_i^x \right | }{\sum_{l=1}^{N_V}{} D_l  \left | n_l^x \right | } \right ] \left | n_i^x \right | = \left [ \frac{\sum_{l=1}^{N_V} D_l  \left | n_l^x \right |  - D_i \left | n_i^x \right | }{\sum_{l=1}^{N_V} D_l  \left | n_l^x \right | } \right ] \left | n_i^x \right |,
+\end{equation}
+
+\noindent and for the $y$ component of velocity the weights are
+
+\begin{equation}
+\label{eqn:omegay}
+\omega_i^y = \left [ 1 - \frac{D_i \left | n_i^y \right | }{\sum_{l=1}^{N_V} D_l  \left | n_l^y \right | } \right ] \left | n_i^y \right | = \left [ \frac{\sum_{l=1}^{N_V} D_l  \left | n_l^y \right | - D_i \left | n_i^y \right | }{\sum_{l=1}^{N_V} D_l  \left | n_l^y \right | } \right ] \left | n_i^y \right |.
+\end{equation}
+
+\noindent Interfaces that are closest to the cell center and align most closely with the component direction ($x$ or $y$) for which they are being used receive the greatest weights. The corresponding normalized weights used in equations~\ref{eqn:Bix} and~\ref{eqn:Biy} are:
+
+\begin{equation}
+\label{eqn:phix}
+\phi_i^x =  \frac{\omega_i^x \left | n_i^x \right | }{\sum_{l=1}^{N_V} \omega_l^x  \left | n_l^x \right | }
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:phiy}
+\phi_i^y =  \frac{\omega_i^y \left | n_i^y \right | }{\sum_{l=1}^{N_V} \omega_l^y  \left | n_l^y \right | } ,
+\end{equation}
+
+\noindent respectively. Substitution of equations~\ref{eqn:omegax} and~\ref{eqn:omegay} into equations~\ref{eqn:phix} and~\ref{eqn:phiy}, followed by substitution of equations~\ref{eqn:phix} and~\ref{eqn:phiy} into equations~\ref{eqn:Bix} and~\ref{eqn:Biy}, and simplification results in the following expressions for the coefficients $B_i^x$ and $B_i^y$:
+
+\begin{equation}
+\label{eqn:bx2}
+B_i^x =  \frac{\left [ \sum_{l=1}^{N_V} D_l  \left | n_l^x \right |  - D_i \left | n_i^x \right |  \right ] \left | n_i^x \right | \sign (n_i^x)  }{\sum_{j=1}^{N_V} \left [ \sum_{l=1}^{N_V} D_l  \left | n_l^x \right |  - D_j \left | n_j^x \right | \right ] \left | n_j^x \right |  \left | n_j^x \right | }
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:bx2}
+B_i^y =  \frac{\left [ \sum_{l=1}^{N_V} D_l  \left | n_l^y \right |  - D_i \left | n_i^y \right |  \right ] \left | n_i^y \right | \sign (n_i^y)  }{\sum_{j=1}^{N_V} \left [ \sum_{l=1}^{N_V} D_l  \left | n_l^y \right |  - D_j \left | n_j^y \right | \right ] \left | n_j^y \right |  \left | n_j^y \right | } ,
+\end{equation}
+
+\noindent where $\sign (n)$ equals +1, 0, or -1 when $n$ is positive, zero, or negative, respectively.
+
+
