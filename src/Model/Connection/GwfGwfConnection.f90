@@ -21,6 +21,8 @@ module GwfGwfConnectionModule
   implicit none
   private
 
+  public :: CastAsGwfGwfConnection
+
   !> Connecting a GWF model to other models in space, implements 
   !! NumericalExchangeType so the solution can used this object to determine 
   !! the coefficients for the coupling between two adjacent models.
@@ -698,4 +700,21 @@ contains
     
   end subroutine printExchangeFlow
   
+  !> @brief Cast to GwfGwfConnectionType
+  !<
+  function CastAsGwfGwfConnection(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj     !< object to be cast
+    class(GwfGwfConnectionType), pointer :: res !< the GwfGwfConnection
+    
+    res => null()
+    if (.not. associated(obj)) return
+    
+    select type (obj)
+    class is (GwfGwfConnectionType)
+      res => obj
+    end select
+    return
+  end function CastAsGwfGwfConnection
+
 end module GwfGwfConnectionModule

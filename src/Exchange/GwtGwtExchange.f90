@@ -4,6 +4,7 @@ module GwtGwtExchangeModule
   use ListModule, only: ListType
   use InputOutputModule, only: getunit, openfile
   use SimModule, only: store_error
+  use SimVariablesModule, only: errmsg
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
@@ -40,6 +41,7 @@ module GwtGwtExchangeModule
     procedure :: connects_model => gwtgwt_connects_model
     procedure :: use_interface_model
     procedure :: allocate_scalars
+    procedure :: validate_exchange
 
   end type GwtExchangeType
 
@@ -165,10 +167,30 @@ subroutine gwtgwt_df(this)
   call this%read_data(iout)
 
   ! increase_edge_count equivalent?
+
+  call this%validate_exchange()
   
   close(inunit)
 
 end subroutine gwtgwt_df
+
+!> @brief validate exchange configuration after reading
+!<
+subroutine validate_exchange(this)
+  class(GwtExchangeType) :: this   !< this exchange
+
+  ! TODO_MJR:
+  ! can we have periodic BCs here? (This would (at least) require
+  ! to refactor GridConnection)
+  if (associated(this%model1, this%model2)) then
+    write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
+                          ' is a periodic boundary condition which is '//   &
+                          ' currently not supported.'
+    call store_error(errmsg, terminate=.TRUE.)
+  end if
+
+end subroutine validate_exchange
+
 
 !> @brief Read options block from input file
 !<

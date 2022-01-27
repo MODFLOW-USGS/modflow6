@@ -13,10 +13,9 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-# General test for the interface model approach.
+# Test compatibility of GWT-GWT with the 'classic' GWF exchange.
 # It compares the result of a single reference model
-# to the equivalent case where the domain is decomposed
-# and joined by a GWF-GWF exchange.
+# to the equivalent case where the domain is decomposed:
 #
 #        'refmodel'              'leftmodel'     'rightmodel'
 #
@@ -35,7 +34,9 @@ from simulation import Simulation
 # specific discharges. All models are part of the same solution 
 # for convenience. Finally, the budget error is checked.
 
-ex = ["ifmod_buy01"]
+ex = ["gwtgwt_oldexg"]
+use_ifmod = False
+
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -225,14 +226,6 @@ def add_refmodel(sim):
         k=k11,
     )
 
-    # buy
-    pd = [(0, 0.7, 0.0, mname_gwtref, "CONCENTRATION")]
-    buy = flopy.mf6.ModflowGwfbuy(
-        gwf,
-        packagedata=pd,
-        denseref=1000.0,
-    )
-
     # chd file
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
 
@@ -279,12 +272,6 @@ def add_leftmodel(sim):
         save_flows=True,
         icelltype=0,
         k=k11,
-    )
-    pd = [(0, 0.7, 0.0, mname_gwtleft, "CONCENTRATION")]
-    buy = flopy.mf6.ModflowGwfbuy(
-        gwf,
-        packagedata=pd,
-        denseref=1000.0,
     )
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
@@ -333,12 +320,6 @@ def add_rightmodel(sim):
         icelltype=0,
         k=k11,
     )
-    pd = [(0, 0.7, 0.0, mname_gwtright, "CONCENTRATION")]
-    buy = flopy.mf6.ModflowGwfbuy(
-        gwf,
-        packagedata=pd,
-        denseref=1000.0,
-    )
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
@@ -380,7 +361,7 @@ def add_gwfexchange(sim):
         exgmnameb=mname_right,
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        dev_interfacemodel_on=True,
+        dev_interfacemodel_on=use_ifmod,
     )
 
 
@@ -604,6 +585,11 @@ def qxqyqz(fname, nlay, nrow, ncol):
 
 
 def compare_to_ref(sim):
+    compare_gwf_to_ref(sim)
+    compare_gwt_to_ref(sim)
+
+
+def compare_gwf_to_ref(sim):
     print("comparing heads and spec. discharge to single model reference...")
 
     fpth = os.path.join(sim.simpath, "{}.hds".format(mname_ref))
@@ -704,6 +690,44 @@ def compare_to_ref(sim):
                     cumul_balance_error, mname
                 )
 
+    return
+
+
+def compare_gwt_to_ref(sim):
+    print("comparing concentration  to single model reference...")
+
+    fpth = os.path.join(sim.simpath, "{}.ucn".format(mname_gwtref))
+    cnc = flopy.utils.HeadFile(fpth, text="CONCENTRATION")
+    conc = cnc.get_data()
+    fpth = os.path.join(sim.simpath, "{}.ucn".format(mname_gwtleft))
+    cnc = flopy.utils.HeadFile(fpth, text="CONCENTRATION")
+    conc_left = cnc.get_data()
+    fpth = os.path.join(sim.simpath, "{}.ucn".format(mname_gwtright))
+    cnc = flopy.utils.HeadFile(fpth, text="CONCENTRATION")
+    conc_right = cnc.get_data()
+
+    conc_2models = np.append(conc_left[0], conc_right[0], axis=1)
+
+    # compare concentrations
+    maxdiff = np.amax(abs(conc - conc_2models))
+    assert (
+            maxdiff < 10 * hclose_check
+    ), "Max. concentration diff. {} should \
+                     be within solver tolerance (x10): {}".format(
+        maxdiff, 10 * hclose_check
+    )
+
+    # check budget error from .lst file
+    for mname in [mname_gwtref, mname_gwtleft, mname_gwtright]:
+        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        for line in open(fpth):
+            if line.lstrip().startswith("PERCENT"):
+                cumul_balance_error = float(line.split()[3])
+                assert (
+                        abs(cumul_balance_error) < 0.00001
+                ), "Cumulative balance error = {} for {}, should equal 0.0".format(
+                    cumul_balance_error, mname
+                )
     return
 
 
