@@ -54,6 +54,7 @@
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
+		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
 		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
@@ -63,8 +64,7 @@
 		<File RelativePath="..\src\Model\Connection\GwtGwtConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtInterfaceModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
-		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/>
-		<File RelativePath="..\src\Model\Connection\Topology.f90"/></Filter>
+		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
