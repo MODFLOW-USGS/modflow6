@@ -1,7 +1,7 @@
 module GridSorting  
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: DHALF
-  use TopologyModule, only: GlobalCellType
+  use CellWithNbrsModule, only: GlobalCellType
   use GenericUtilitiesModule, only: is_same
   implicit none
   private

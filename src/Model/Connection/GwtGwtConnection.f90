@@ -12,7 +12,7 @@ module GwtGwtConnectionModule
   use GwtInterfaceModelModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
-  use TopologyModule, only: GlobalCellType
+  use CellWithNbrsModule, only: GlobalCellType
 
   implicit none
   private

@@ -8,16 +8,16 @@ module GridConnectionModule
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
-  use TopologyModule
+  use CellWithNbrsModule
   use ConnectionsModule  
   use SparseModule, only: sparsematrix
   implicit none
   private
   
-  ! TODO_MJR: this will disappear when we introduce dyn. mem.
-  integer(I4B), parameter :: MaxNeighbors = 7
+  ! Initial nr of neighbors for sparse matrix allocation
+  integer(I4B), parameter :: InitNrNeighbors = 7
   
-  !> This class is used to construct the connections object for 
+  !> This class is used to construct the connections object for
   !! the interface model's spatial discretization/grid.
   !! 
   !! It works as follows:
@@ -51,8 +51,7 @@ module GridConnectionModule
     
     integer(I4B), pointer :: nrOfBoundaryCells => null()                        !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()    !< cells on our side of the primary connections
-    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection    
-    type(ModelWithNbrsType), pointer :: modelWithNbrs => null()                 !< tree structure with the neigboring model topology    
+    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection
     type(ListType) :: exchanges                                                 !< all relevant exchanges for this connection, up to
                                                                                 !! the required depth
 
@@ -77,7 +76,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: allocateScalars
     procedure, public, pass(this) :: destroy
     procedure, pass(this) :: connectCell
-    procedure, pass(this) :: addModelLink 
+    procedure, pass(this) :: findModelNeighbors
     procedure, pass(this) :: extendConnection
     generic :: getInterfaceIndex => getInterfaceIndexByCell, &
                                     getInterfaceIndexByIndexModel
@@ -92,13 +91,11 @@ module GridConnectionModule
     procedure, private, pass(this) :: addNeighbors
     procedure, private, pass(this) :: addNeighborCell
     procedure, private, pass(this) :: addRemoteNeighbors
-    procedure, private, pass(this) :: connectModels
+    procedure, private, pass(this) :: addModelNeighbors
     procedure, private, pass(this) :: addToRegionalModels
     procedure, private, pass(this) :: getRegionalModelOffset
     procedure, private, pass(this) :: getInterfaceIndexByCell
     procedure, private, pass(this) :: getInterfaceIndexByIndexModel
-    procedure, private, pass(this) :: getModelWithNbrs
-    procedure, private, pass(this) :: getExchangeData
     procedure, private, pass(this) :: registerInterfaceCells
     procedure, private, pass(this) :: addToGlobalMap
     procedure, private, pass(this) :: compressGlobalMap
@@ -130,13 +127,11 @@ module GridConnectionModule
 
     call this%allocateScalars()
     
-    allocate(this%modelWithNbrs)
     allocate(this%boundaryCells(nrOfPrimaries))
     allocate(this%connectedCells(nrOfPrimaries))
     allocate(this%primConnections(nrOfPrimaries))
     allocate(this%idxToGlobal(2*nrOfPrimaries))
     
-    this%modelWithNbrs%model => model
     call this%addToRegionalModels(model)
     
     this%nrOfBoundaryCells = 0
@@ -181,79 +176,94 @@ module GridConnectionModule
     end if
   
   end subroutine connectCell
-  
-  !> @brief Extend the model topology (up to the specified depth)
-  !! by calling this routine for all exchanges in the solution
-  !!
-  !! TODO_MJR: assumption here is only 1 exchange exists between 
-  !! any two models, we should change that
-  !<
-  subroutine addModelLink(this, connEx)
-    class(GridConnectionType), intent(inout)  :: this !< this grid connection
-    class(DisConnExchangeType), pointer     :: connEx !< the exchange data coupling 2 models
+
+
+  !> @brief Create the tree structure with all model nbrs, nbrs-of-nbrs,
+  !< etc. for this model up to the specified depth
+  subroutine findModelNeighbors(this, globalExchanges, depth)
+    class(GridConnectionType), intent(inout) :: this !< this grid connection
+    type(ListType), intent(inout) :: globalExchanges !< list with global exchanges
+    integer(I4B) :: depth                            !< the maximal number of exchanges between
+                                                     !! any two models in the topology
+
+    call this%addModelNeighbors(this%model, globalExchanges, depth)
+
+  end subroutine findModelNeighbors
+
+
+  !> @brief Add neighbors and nbrs-of-nbrs to the model tree
+  !< 
+  recursive subroutine addModelNeighbors(this, model, globalExchanges, depth, mask)
+    class(GridConnectionType), intent(inout) :: this           !< this grid connection
+    class(NumericalModelType), pointer, intent(inout) :: model !< the model to add neighbors for
+    type(ListType), intent(inout) :: globalExchanges           !< list with all exchanges
+    integer(I4B) :: depth                                      !< the maximal number of exchanges between
+    class(NumericalModelType), pointer, optional :: mask       !< don't add this one a neighbor
     ! local
-        
-    call this%connectModels(this%modelWithNbrs, connEx, this%exchangeStencilDepth)
-    
-  end subroutine addModelLink
-  
-  !> @brief Recursive function to add a model to the tree
-  !! of connected models. First, it checks if it is a direct
-  !! neighbor, then, recursively, if it is a connection to
-  !< any of its connected neighbors.
-  recursive subroutine connectModels(this, modelNbrs, connEx, depth)
-    class(GridConnectionType), intent(inout)   :: this   !< this grid connection
-    class(ModelWithNbrsType), intent(inout) :: modelNbrs !< a model and its (current) neighbors
-    class(DisConnExchangeType), pointer     :: connEx    !< the exchange data coupling 2 models
-    integer(I4B)                            :: depth     !< the specified depth, =1 for direct neigbors, 
-                                                         !! =2 for neighbors of neighbors, etc.
-    ! local
-    integer(I4B) :: inbr, newDepth
-    class(NumericalModelType), pointer      :: neighborModel
-    class(*), pointer :: exObjPtr
+    integer(I4B) :: i, n
+    class(DisConnExchangeType), pointer :: connEx
+    class(NumericalModelType), pointer :: neighborModel
+    class(NumericalModelType), pointer :: modelMask    
+    type(ListType) :: nbrModels
+    class(*), pointer :: objPtr
     procedure(isEqualIface), pointer :: areEqualMethod
-    
-    if (depth < 1) then
-      return
+
+    if (.not. present(mask)) then
+      modelMask => null()
+    else
+      modelMask => mask
     end if
-    
-    neighborModel => null()    
-    
-    ! is it a direct neighbor:
-    if (associated(modelNbrs%model, connEx%model1)) then
-      neighborModel => connEx%model2
-    else if (associated(modelNbrs%model, connEx%model2)) then
-      neighborModel => connEx%model1
-    end if
-    
-    ! and/or maybe its connected to one of the neighbors:
-    newDepth = depth - 1
-    do inbr = 1, modelNbrs%nrOfNbrs
-      call this%connectModels(modelNbrs%neighbors(inbr), connEx, newDepth)
+
+    ! first find all direct neighbors of the model and add them, 
+    ! avoiding duplicates
+    do i = 1, globalExchanges%Count()
+
+      neighborModel => null()
+      connEx => GetDisConnExchangeFromList(globalExchanges, i)
+      if (associated(model, connEx%model1)) then
+        neighborModel => connEx%model2
+      else if (associated(model, connEx%model2)) then
+        neighborModel => connEx%model1
+      end if
+
+      ! check if there is a neighbor, and it is not masked
+      ! (to prevent back-and-forth connections)
+      if (associated(neighborModel) .and. .not.                                 &
+          associated(neighborModel, modelMask)) then
+
+        ! add to neighbors
+        objPtr => neighborModel
+        if (.not. nbrModels%ContainsObject(objPtr, areEqualMethod)) then
+          call nbrModels%Add(objPtr)
+        end if
+
+        ! add to list of regional models
+        call this%addToRegionalModels(neighborModel)
+
+        ! add to list of relevant exchanges
+        objPtr => connEx
+        areEqualMethod => arePointersEqual
+        if (.not. this%exchanges%ContainsObject(objPtr, areEqualMethod)) then
+          call this%exchanges%Add(objPtr)
+        end if
+
+      end if
     end do
     
-    ! do not add until here, after the recursion, to prevent 
-    ! back-and-forth connecting of models...
-    if (associated(neighborModel)) then           
-      if (.not. associated(modelNbrs%neighbors)) then
-        allocate(modelNbrs%neighbors(MaxNeighbors))
-        modelNbrs%nrOfNbrs = 0
-      end if
-      modelNbrs%neighbors(modelNbrs%nrOfNbrs + 1)%model => neighborModel
-      modelNbrs%nrOfNbrs = modelNbrs%nrOfNbrs + 1
-      
-      ! add to array of all neighbors
-      call this%addToRegionalModels(neighborModel)
-      
-      ! add to list of exchanges
-      exObjPtr => connEx
-      areEqualMethod => arePointersEqual
-      if (.not. this%exchanges%ContainsObject(exObjPtr, areEqualMethod)) then
-        call AddDisConnExchangeToList(this%exchanges, connEx)
-      end if
-    end if
+    ! now recurse on the neighbors up to the specified depth
+    depth = depth - 1
+    if (depth == 0) return
     
-  end subroutine connectModels
+    do n = 1, nbrModels%Count()
+      neighborModel => GetNumericalModelFromList(nbrModels, n)
+      call this%addModelNeighbors(neighborModel, globalExchanges, depth, model)
+    end do
+
+    ! clear list
+    call nbrModels%Clear(destroy=.false.)
+
+  end subroutine addModelNeighbors
+
   
   !> @brief Add a model to a list of all regional models
   !<
@@ -359,10 +369,9 @@ module GridConnectionModule
                       'IDXTOGLOBALIDX', this%memoryPath)
     
     ! create sparse data structure, to temporarily hold connections
-    ! TODO_MJR: get rid of MaxNeighbors
     allocate(sparse)
     allocate(nnz(this%nrOfCells))
-    nnz = MaxNeighbors+1
+    nnz = InitNrNeighbors+1
     call sparse%init(this%nrOfCells, this%nrOfCells, nnz)
     
     ! now (recursively) add connections to sparse, start with 
@@ -425,8 +434,7 @@ module GridConnectionModule
     ! local
     integer(I4B)                              :: nbrIdx, ipos, inbr
     type(ConnectionsType), pointer            :: conn
-    integer(I4B)                              :: newDepth
-    type(ModelWithNbrsType), pointer          :: modelWithNbrs    
+    integer(I4B)                              :: newDepth   
     
     ! if depth == 1, then we are not adding neighbors but use
     ! the boundary and connected cell only
@@ -443,10 +451,8 @@ module GridConnectionModule
       call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, mask)
     end do
         
-    ! find and add remote nbr (from a different model, and
-    ! not going back into the main model)
-    call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
-    call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
+    ! add remote nbr using the data from the exchanges
+    call this%addRemoteNeighbors(cellNbrs, mask)
     
     ! now find nbr-of-nbr
     do inbr=1, cellNbrs%nrOfNbrs
@@ -466,32 +472,22 @@ module GridConnectionModule
     
   end subroutine addNeighbors
   
-  !> @brief Take neighboring models, find the associated exchange
-  !! data structure, and add neighboring cells from the n-m pairs 
-  !< in there
-  subroutine addRemoteNeighbors(this, cellNbrs, modelWithNbrs, mask)
+  !> @brief Add cell neighbors across models using the stored exchange
+  !! data structures
+  subroutine addRemoteNeighbors(this, cellNbrs, mask)
     class(GridConnectionType), intent(inout)      :: this          !< this grid connection instance
     type(CellWithNbrsType), intent(inout)         :: cellNbrs      !< cell to add to
-    type(ModelWithNbrsType), intent(in), pointer  :: modelWithNbrs !< the model (with neighbors) where the cell exists
     type(GlobalCellType), optional                :: mask          !< a mask to exclude back-and-forth connections
     ! local
-    integer(I4B) :: inbr, iexg
+    integer(I4B) :: ix, iexg
     type(DisConnExchangeType), pointer :: connEx
     
-    do inbr = 1, modelWithNbrs%nrOfNbrs
-      connEx => this%getExchangeData(cellNbrs%cell%model,                       &
-                                     modelWithNbrs%neighbors(inbr)%model)
-      if (.not. associated(connEx)) then
-        write(*,*) "Error finding exchange data for models, &
-                    &should never happen: terminating..."
-        call ustop()
-      end if
-      
+    ! loop over all exchanges 
+    do ix = 1, this%exchanges%Count()      
+      connEx => GetDisConnExchangeFromList(this%exchanges, ix)
+
       ! loop over n-m links in the exchange
       if (associated(cellNbrs%cell%model, connEx%model1)) then
-        ! we were outside, no need to go back into this%model: 
-        ! those cells will be added anyhow
-        if (associated(connEx%model2, this%model)) cycle 
         do iexg = 1, connEx%nexg
           if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
@@ -502,9 +498,6 @@ module GridConnectionModule
       end if
       ! and the reverse
       if (associated(cellNbrs%cell%model, connEx%model2)) then
-        ! we were outside, no need to go back into this%model: 
-        ! those cells will be added anyhow
-        if (associated(connEx%model1, this%model)) cycle
         do iexg = 1, connEx%nexg
           if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
@@ -517,58 +510,7 @@ module GridConnectionModule
     end do
     
   end subroutine addRemoteNeighbors
-  
-  !> @brief Get the exchange data for a pair of models  
-  !< TODO_MJR: multiple exchanges per two models
-  function getExchangeData(this, model1, model2) result(connEx)
-    class(GridConnectionType), intent(inout)        :: this           !< this grid connection instance
-    class(NumericalModelType), pointer, intent(in)  :: model1         !< one model to get the exchange data for
-    class(NumericalModelType), pointer, intent(in)  :: model2         !< the other model to get the exchange data for
-    type(DisConnExchangeType), pointer              :: connEx         !< the exchange data
-    ! local
-    type(DisConnExchangeType), pointer              :: connExLocal    
-    integer(I4B) :: i
-    
-    connEx => null()
-        
-    do i = 1, this%exchanges%Count()
-      connExLocal => GetDisConnExchangeFromList(this%exchanges, i)
-      if (associated(model1, connExLocal%model1) .and.                          &
-          associated(model2, connExLocal%model2)) then
-        connEx => connExLocal
-        exit
-      end if
-      if (associated(model1, connExLocal%model2) .and.                          &
-          associated(model2, connExLocal%model1)) then
-        connEx => connExLocal
-        exit
-      end if
-    end do
-    
-  end function getExchangeData
-  
-  !> @brief Get the model-with-neighbors tree structure
-  !<
-  subroutine getModelWithNbrs(this, model, modelWithNbr)
-    class(GridConnectionType), intent(in)           :: this         !< this grid connection instance
-    class(NumericalModelType), pointer, intent(in)  :: model        !< the root model to get the tree structure for
-    type(ModelWithNbrsType), pointer, intent(out)   :: modelWithNbr !< the tree structure with model connections
-    ! local
-    integer(I4B) :: i
-    
-    ! traverse the tree, TODO_MJR: currently two deep but this can be made recursive
-    if (associated(model, this%modelWithNbrs%model)) then    
-      modelWithNbr => this%modelWithNbrs
-    else
-      do i = 1, this%modelWithNbrs%nrOfNbrs
-        if (associated(model, this%modelWithNbrs%neighbors(i)%model)) then  
-          modelWithNbr => this%modelWithNbrs%neighbors(i)
-          exit
-        end if
-      end do
-    end if
-    
-  end subroutine getModelWithNbrs
+
   
   !> @brief Add neighboring cell to tree structure
   !<
@@ -585,7 +527,7 @@ module GridConnectionModule
         return
       end if
     end if
-    call cellNbrs%addNbr(newNbrIdx, nbrModel)
+    call cellNbrs%addNbrCell(newNbrIdx, nbrModel)
 
   end subroutine addNeighborCell
  
@@ -1153,7 +1095,6 @@ module GridConnectionModule
 
     ! arrays
     deallocate(this%idxToGlobal)
-    deallocate(this%modelWithNbrs)
     deallocate(this%boundaryCells)
     deallocate(this%connectedCells)
     deallocate(this%primConnections)

@@ -78,7 +78,6 @@ module SpatialModelConnectionModule
     ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: setExchangeConnections
-    procedure, private, pass(this) :: findModelNeighbors
     procedure, private, pass(this) :: getNrOfConnections    
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays    
@@ -353,7 +352,8 @@ contains ! module procedures
     call this%setExchangeConnections()
     
     ! create topology of models
-    call this%findModelNeighbors()
+    call this%gridConnection%findModelNeighbors(this%globalExchanges,           &
+                                                this%exchangeStencilDepth)
     
     ! now scan for nbr-of-nbrs and create final data structures    
     call this%gridConnection%extendConnection()
@@ -376,25 +376,7 @@ contains ! module procedures
     end do
     
   end subroutine setExchangeConnections
-  
-  !> @brief Create the topology of connected models
-  !!
-  !! Needed when we deal with cases where the stencil
-  !< covers more than 2 models
-  subroutine findModelNeighbors(this)
-    class(SpatialModelConnectionType) :: this !< this connection
-    ! local   
-    integer(I4B) :: i
-    class(DisConnExchangeType), pointer :: connEx
-      
-    ! loop over all exchanges in solution with same conn. type
-    do i=1, this%globalExchanges%Count()
-        connEx => GetDisConnExchangeFromList(this%globalExchanges, i)
-        ! (possibly) add connection between models
-        call this%gridConnection%addModelLink(connEx)
-    end do
-      
-  end subroutine findModelNeighbors
+
   
   !> @brief Allocation of scalars
   !<

@@ -1,5 +1,5 @@
-module TopologyModule
-  use KindModule, only: I4B
+module CellWithNbrsModule
+  use KindModule, only: I4B, LGP
   use NumericalModelModule, only: NumericalModelType
   implicit none
   private
@@ -20,22 +20,15 @@ module TopologyModule
     integer(I4B) :: nrOfNbrs = 0
     type(CellWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
   contains
-    procedure :: addNbr
-  end type
-  
-  ! a model with neighbors
-  type, public :: ModelWithNbrsType
-      class(NumericalModelType), pointer :: model => null()
-      integer(I4B) :: nrOfNbrs = 0
-      type(ModelWithNbrsType), dimension(:), pointer, contiguous :: neighbors => null()
+    procedure :: addNbrCell
   end type
 
   contains
 
-  subroutine addNbr(this, index, model)
+  subroutine addNbrCell(this, index, modelToAdd)
     class(CellWithNbrsType) :: this
     integer(I4B) :: index
-    class(NumericalModelType), pointer :: model
+    class(NumericalModelType), pointer :: modelToAdd
     ! local
     integer(I4B) :: nbrCnt, currentSize, i
     type(CellWithNbrsType), dimension(:), pointer,  contiguous :: newNeighbors
@@ -64,9 +57,9 @@ module TopologyModule
     end if
         
     this%neighbors(nbrCnt + 1)%cell%index = index
-    this%neighbors(nbrCnt + 1)%cell%model => model
+    this%neighbors(nbrCnt + 1)%cell%model => modelToAdd
     this%nrOfNbrs = nbrCnt + 1
     
-  end subroutine addNbr
+  end subroutine addNbrCell
 
 end module

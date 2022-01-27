@@ -16,7 +16,7 @@ module GwfGwfConnectionModule
   use GwfBuyModule, only: GwfBuyType
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
-  use TopologyModule, only: GlobalCellType
+  use CellWithNbrsModule, only: GlobalCellType
   
   implicit none
   private
