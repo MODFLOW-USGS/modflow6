@@ -166,6 +166,6 @@ modflow_sources = files(
 
 mf6_external = static_library('mf6_external', external_libraries)
 
-mf6core = static_library('mf6core', modflow_sources, link_with: [mf6_external])
+mf6core = static_library('mf6core', modflow_sources, dependencies: dependencies, link_with: [mf6_external])
 
 executable('mf6', 'mf6.f90', link_with: [mf6core], install: true)

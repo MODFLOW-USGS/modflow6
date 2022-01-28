@@ -82,7 +82,9 @@ endif
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
-mpi = dependency('mpi', language : 'fortran', required : false)
+mpi = dependency('mpi', language : 'fortran')
+petsc = dependency('PETSc')
+dependencies = [mpi, petsc]
 
 subdir('src')
 subdir('srcbmi')
