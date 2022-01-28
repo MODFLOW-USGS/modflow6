@@ -31,6 +31,7 @@ link_args = []
 if fc_id == 'gcc'
   # General options
   compile_args += ['-pedantic',
+                   '-cpp',                       # Enable preprocessing
                    '-Wcharacter-truncation',
                    '-Wno-unused-dummy-argument', # This makes problems with OOP
                    '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
