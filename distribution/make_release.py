@@ -1,6 +1,39 @@
 #!/usr/bin/python
 
-from __future__ import print_function
+"""
+make_release.py: Update files in this modflow6 repository according to relase information.
+
+This script is used to update several files in the modflow6 repository, including:
+
+  ../version.txt
+  ../doc/version.tex
+  ../README.md
+  ../DISCLAIMER.md
+  ../code.json
+  ../src/Utiliteis/version.f90
+
+Information in these files include version number (major.minor.micro), build date, whether or not
+the release is a release candidate or an actual release, whether the source code should be compiled
+in develop mode or in release mode, and the approval status.
+
+This information is determined using the following logic:
+
+  If the branch name is master or release, then it assumes this version is approved, which will
+  result in use of the approved disclaimer.  Otherwise it is assumed to be provisional and a
+  release candidate.  The approval status can be overridden using the --isApproved command
+  line argument.  The release status can be overridden and set to release canddiate using
+  the --releaseCandidate command line argument.
+
+  The version number is read in from ../version.txt, which contains major, minor, and micro version
+  numbers.  These numbers will be propogated through the source code, latex files, markdown files,
+  etc.  The version numbers can be overridden using the command line argument --version major.minor.macro.
+
+Once this script is run, these updated files will be used in compilation, latex documents, and
+other parts of the repo to mark the overall status.
+
+"""
+
+
 import subprocess
 import os
 import sys
@@ -107,15 +140,23 @@ def get_disclaimer():
 
 
 def get_disclaimerfmt():
-    # get current branch
-    branch = get_branch()
 
-    if "release" in branch.lower() or "master" in branch.lower():
-        disclaimer = approvedfmt
-        is_approved = True
-    else:
-        disclaimer = preliminaryfmt
-        is_approved = False
+    is_approved = None
+
+    # override if --isApproved argument was set
+    for idx, arg in enumerate(sys.argv):
+        if arg == "--isApproved":
+            is_approved = True
+
+    if is_approved is None:
+        # get current branch
+        branch = get_branch()
+        if "release" in branch.lower() or "master" in branch.lower():
+            disclaimer = approvedfmt
+            is_approved = True
+        else:
+            disclaimer = preliminaryfmt
+            is_approved = False
 
     return is_approved, disclaimer
 
@@ -177,22 +218,31 @@ def get_tag(v0, v1, v2):
 
 
 def update_version():
-    branch = get_branch(verbose=True)
+    vmajor = None
+    vminor = None
+    vmicro = None
+
+    # override if --version argument was set
+    for idx, arg in enumerate(sys.argv):
+        if arg == "--version":
+            t = sys.argv[idx + 1]
+            t = t.split('.')
+            vmajor = int(t[0])
+            vminor = int(t[1])
+            vmicro = int(t[2])
+
     try:
         fpth = os.path.join(paths[0], files[0])
-
-        vmajor = 0
-        vminor = 0
-        vmicro = 0
         lines = [line.rstrip("\n") for line in open(fpth, "r")]
-        for line in lines:
-            t = line.split()
-            if "major =" in line:
-                vmajor = int(t[2])
-            elif "minor =" in line:
-                vminor = int(t[2])
-            elif "micro =" in line:
-                vmicro = int(t[2])
+        if vmajor is None:
+            for line in lines:
+                t = line.split()
+                if "major =" in line:
+                    vmajor = int(t[2])
+                elif "minor =" in line:
+                    vminor = int(t[2])
+                elif "micro =" in line:
+                    vmicro = int(t[2])
     except:
         msg = "There was a problem updating the version file"
         raise IOError(msg)
@@ -209,9 +259,9 @@ def update_version():
             + "{}\n".format(now.strftime("%B %d, %Y %H:%M:%S"))
         )
         f.write("\n")
-        f.write("major = {}\n".format(vmajor))
-        f.write("minor = {}\n".format(vminor))
-        f.write("micro = {}\n".format(vmicro))
+        f.write(f"major = {vmajor}\n")
+        f.write(f"minor = {vminor}\n")
+        f.write(f"micro = {vmicro}\n")
         f.write("__version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)\n")
         f.close()
         print("Successfully updated version.py")
@@ -261,21 +311,48 @@ def update_version():
 
 
 def get_version_type(branch):
-    version_type = " "
-    if branch is not None:
-        if "release" not in branch.lower() and "master" not in branch.lower():
+
+    # override if --releaseCandidate argument was set
+    version_type = None
+    for idx, arg in enumerate(sys.argv):
+        if arg == "--releaseCandidate":
             version_type = " release candidate "
+
+    if version_type is None:
+        version_type = " "
+        if branch is not None:
+            if "release" not in branch.lower() and "master" not in branch.lower():
+                version_type = " release candidate "
+
     return version_type
 
 
+def get_develop_mode(branch):
+
+    # override if --releaseCandidate argument was set
+    idevelop = None
+    for idx, arg in enumerate(sys.argv):
+        if arg == "--developMode":
+            idevelop = 1
+
+    if idevelop is None:
+        idevelop = 0
+        if "release" not in branch.lower() and "master" not in branch.lower():
+            idevelop = 1
+
+    return idevelop
+
+
 def update_mf6_version(vmajor, vminor, vmicro):
+
+    # get branch
     branch = get_branch()
 
     # create version
     version = get_tag(vmajor, vminor, vmicro)
-    idevelopmode = 0
-    if "release" not in branch.lower() and "master" not in branch.lower():
-        idevelopmode = 1
+
+    # get develop mode
+    idevelopmode = get_develop_mode(branch)
 
     # get version type
     version_type = get_version_type(branch)
