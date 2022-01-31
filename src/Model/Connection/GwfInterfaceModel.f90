@@ -33,7 +33,6 @@ module GwfInterfaceModelModule
     procedure, pass(this) :: gwfifm_cr
     procedure :: model_df => gwfifm_df
     procedure :: model_ar => gwfifm_ar
-    procedure :: model_ad => gwfifm_ad
     procedure :: model_da => gwfifm_da    
 
     ! private
@@ -133,16 +132,6 @@ contains
     
   end subroutine gwfifm_ar
 
-
-  !> @brief Advance (a subset of) the interface model
-  !<
-  subroutine gwfifm_ad(this)
-    class(GwfInterfaceModelType) :: this !< the GWF interface model
-
-    ! this will update densities
-    if (this%inbuy > 0) call this%buy%buy_ad()
-
-  end subroutine gwfifm_ad
   
   !> @brief Clean up
   !<
