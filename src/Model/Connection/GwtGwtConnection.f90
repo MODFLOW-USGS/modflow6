@@ -352,8 +352,8 @@ subroutine gwtgwtcon_cf(this, kiter)
  ! copy model data into interface model
   call this%syncInterfaceModel()
 
-  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??  
-  call this%gwtInterfaceModel%model_ad()
+  ! recalculate dispersion ellipse 
+  if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
 
   ! reset interface system
   do i = 1, this%nja

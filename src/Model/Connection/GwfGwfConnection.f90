@@ -68,6 +68,7 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: setFlowToExchange
     procedure, pass(this), private :: printExchangeFlow
     procedure, pass(this), private :: saveExchangeFlows
+    procedure, pass(this), private :: setNpfEdgeProps
     
   end type GwfGwfConnectionType
 
@@ -260,8 +261,6 @@ contains
   subroutine gwfgwfcon_ad(this)
     class(GwfGwfConnectionType) :: this !< this connection
 
-    call this%gwfInterfaceModel%model_ad()
-
   end subroutine gwfgwfcon_ad
 
   !> @brief Calculate (or adjust) matrix coefficients,
@@ -283,7 +282,10 @@ contains
     
     ! copy model data into interface model
     call this%syncInterfaceModel()
-    
+
+    ! this triggers the BUY density calculation
+    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+
     ! calculate (wetting/drying, saturation)
     call this%gwfInterfaceModel%model_cf(kiter)
     
@@ -305,6 +307,8 @@ contains
       model => this%gridConnection%idxToGlobal(icell)%model
       
       this%x(icell) = model%x(idx)
+      this%gwfInterfaceModel%ibound(icell) = model%ibound(idx)
+      this%gwfInterfaceModel%xold(icell) = model%xold(idx)
     end do
   
   end subroutine syncInterfaceModel
@@ -492,97 +496,18 @@ contains
     integer(I4B), intent(inout) :: icnvg         !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
     integer(I4B), intent(in) :: isolnid          !< solution id
-    ! local
-    integer(I4B) :: n, m, ipos, isym
-    integer(I4B) :: nLoc, mLoc, iposLoc
-    integer(I4B) :: ihc
-    real(DP) :: rrate
-    real(DP) :: area
-    real(DP) :: satThick
-    real(DP) :: nx, ny, nz
-    real(DP) :: cx, cy, cz
-    real(DP) :: conLen
-    real(DP) :: dist
-    logical :: nozee
-    type(ConnectionsType), pointer :: imCon                 !< interface model connections
-    class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
-    class(DisBaseType), pointer :: imDis                    !< interface model discretization
-    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
-
-    ! for readability
-    imDis => this%gwfInterfaceModel%dis
-    imCon => this%gwfInterfaceModel%dis%con
-    imNpf => this%gwfInterfaceModel%npf
-    toGlobal => this%gridConnection%idxToGlobal
-
-    call this%gwfInterfaceModel%model_cq(icnvg, isuppress_output)
-
-    if (this%gwfModel%npf%icalcspdis /= 1) return
-
-    nozee = .false.
-    if (imNpf%ixt3d > 0) then
-      nozee = imNpf%xt3d%nozee
-    end if
-
-    ! loop over flowja in the interface model and set edge properties
-    ! for flows crossing the boundary, and set flowja for internal
-    ! flows affected by the connection.
-    do n = 1, this%neq
-      if (.not. associated(toGlobal(n)%model, this%owner)) then
-        ! only add flows to own model
-        cycle
-      end if
-
-      nLoc = toGlobal(n)%index
-
-      do ipos = imCon%ia(n)+1, imCon%ia(n+1) - 1
-        if (imCon%mask(ipos) < 1) then
-          ! skip this connection, it's masked so not determined by us
-          cycle
-        end if
-
-        m = imCon%ja(ipos)
-        mLoc =  toGlobal(m)%index
-
-        if (.not. associated(toGlobal(m)%model, this%owner)) then
-          ! boundary connection, set edge properties
-          isym = imCon%jas(ipos)
-          ihc = imCon%ihc(isym)
-          area = imCon%hwva(isym)          
-          satThick = imNpf%calcSatThickness(n, m, ihc)
-          rrate = this%gwfInterfaceModel%flowja(ipos)
-
-          call imDis%connection_normal(n, m, ihc, nx, ny, nz, ipos)   
-          call imDis%connection_vector(n, m, nozee, imNpf%sat(n), imNpf%sat(m), &
-                                       ihc, cx, cy, cz, conLen)
-
-          if (ihc == 0) then
-            ! check if n is below m
-            if (nz > 0) rrate = -rrate
-          else
-            area = area * satThick
-          end if
-
-          dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
-          call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
-                                                     nx, ny, dist)
-          ! correct flowja diagonal                                                     
-          this%gwfModel%flowja(this%gwfModel%ia(nLoc)) =                        &
-            this%gwfModel%flowja(this%gwfModel%ia(nLoc)) + rrate
-        else
-          ! internal, need to set flowja for n-m
-          ! TODO_MJR: should we mask the flowja calculation in the model?
-          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
-
-          ! update flowja with correct value
-          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
-        end if
-      end do
-    end do
+    
+    call this%gwfInterfaceModel%model_cq(icnvg, isuppress_output)    
 
     call this%setFlowToExchange()
 
     call this%saveExchangeFlows()
+
+    ! if needed, we add the edge properties to the model's NPF
+    ! package for its spdis calculation:
+    if (this%gwfModel%npf%icalcspdis == 1) then    
+      call this%setNpfEdgeProps()
+    end if
 
   end subroutine gwfgwfcon_cq
 
@@ -634,6 +559,96 @@ contains
     end do
 
   end subroutine saveExchangeFlows
+
+  !> @brief Set flowja as edge properties in the model,
+  !< so it can be used for e.g. specific discharge calculation
+  subroutine setNpfEdgeProps(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: n, m, ipos, isym
+    integer(I4B) :: nLoc, mLoc, iposLoc
+    integer(I4B) :: ihc
+    real(DP) :: rrate
+    real(DP) :: area
+    real(DP) :: satThick
+    real(DP) :: nx, ny, nz
+    real(DP) :: cx, cy, cz
+    real(DP) :: conLen
+    real(DP) :: dist
+    logical :: nozee
+    type(ConnectionsType), pointer :: imCon                 !< interface model connections
+    class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
+    class(DisBaseType), pointer :: imDis                    !< interface model discretization
+    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
+
+    ! for readability
+    imDis => this%gwfInterfaceModel%dis
+    imCon => this%gwfInterfaceModel%dis%con
+    imNpf => this%gwfInterfaceModel%npf
+    toGlobal => this%gridConnection%idxToGlobal
+
+    nozee = .false.
+    if (imNpf%ixt3d > 0) then
+      nozee = imNpf%xt3d%nozee
+    end if
+
+    ! loop over flowja in the interface model and set edge properties
+    ! for flows crossing the boundary, and set flowja for internal
+    ! flows affected by the connection.
+    do n = 1, this%neq
+      if (.not. associated(toGlobal(n)%model, this%owner)) then
+        ! only add flows to own model
+        cycle
+      end if
+
+      nLoc = toGlobal(n)%index
+
+      do ipos = imCon%ia(n)+1, imCon%ia(n+1) - 1
+        if (imCon%mask(ipos) < 1) then
+          ! skip this connection, it's masked so not determined by us
+          cycle
+        end if
+
+        m = imCon%ja(ipos)
+        mLoc =  toGlobal(m)%index
+
+        if (.not. associated(toGlobal(m)%model, this%owner)) then
+          ! boundary connection, set edge properties
+          isym = imCon%jas(ipos)
+          ihc = imCon%ihc(isym)
+          area = imCon%hwva(isym)          
+          satThick = imNpf%calcSatThickness(n, m, ihc)
+          rrate = this%gwfInterfaceModel%flowja(ipos)
+
+          call imDis%connection_normal(n, m, ihc, nx, ny, nz, ipos)   
+          call imDis%connection_vector(n, m, nozee, imNpf%sat(n), imNpf%sat(m), &
+                                      ihc, cx, cy, cz, conLen)
+
+          if (ihc == 0) then
+            ! check if n is below m
+            if (nz > 0) rrate = -rrate
+          else
+            area = area * satThick
+          end if
+
+          dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
+          call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
+                                                    nx, ny, dist)
+          ! correct flowja diagonal                                                     
+          this%gwfModel%flowja(this%gwfModel%ia(nLoc)) =                        &
+            this%gwfModel%flowja(this%gwfModel%ia(nLoc)) + rrate
+        else
+          ! internal, need to set flowja for n-m
+          ! TODO_MJR: should we mask the flowja calculation in the model?
+          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
+
+          ! update flowja with correct value
+          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
+        end if
+      end do
+    end do
+
+  end subroutine setNpfEdgeProps
 
   !> @brief Calculate the budget terms for this connection, this is
   !! dispatched to the GWF-GWF exchange
