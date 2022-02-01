@@ -3,6 +3,13 @@ module AttributesModule
   use ConstantsModule,         only: LENATTRNAME, NATTRS
   use HashTableModule,         only: HashTableType, hash_table_cr, hash_table_da  
 
+  ! JLM: should this be included in the class?
+  ! Can define a base set of attributes to be used everywhere.
+  ! These could be extended via subclass.
+  ! https://xarray.pydata.org/en/stable/generated/xarray.DataArray.html
+  ! Examples of metadata to include:
+  !   varname, longname, units, dimensions, gridname, pro/dia-gnosticity,
+  !   public/private, internal/external, ...
   ! JLM set or check the keys/columns somewhere with this?
   character(len=LENATTRNAME), dimension(NATTRS), parameter :: &
        attr_keys = [character(len=LENATTRNAME) :: 'varname', 'longname', 'units']
@@ -28,10 +35,14 @@ contains
     character(len=LENATTRNAME) :: the_key
     ! ---
     attrs_vec_len = size(attrs_vector)
-    this%n_vars = attrs_vec_len / nattrs  !! n_vars, JLM: ensure remainder is zero
+    this%n_vars = attrs_vec_len / NATTRS / 2  !! n_vars, JLM: ensure remainder is zero
     allocate(this%vector(attrs_vec_len))
-    this%vector = attrs_vector
+    this%vector = attrs_vector  ! i suppose this could be a pointer?
+    write(*,*) 'attrs_vec_len: ', attrs_vec_len
+    write(*,*) 'this%n_vars: ', this%n_vars
+
     call hash_table_cr(this%hash)
+
     do vv = 1, this%n_vars
       ! Always calculate the index outside the hash
       ! *2 is because of the key:val pairs
@@ -41,7 +52,7 @@ contains
       call this%hash%add_entry(the_key, vv)
     end do
     
-    write(*, *) 'df', this%vector  ! just verifying, JLM: use for test?
+    write(*, *) 'attrs%df internal: ', this%vector  ! just verifying, JLM: use for test?
     
     return
   end subroutine df
@@ -62,7 +73,7 @@ contains
       res = this%vector(start:end)
     endif
 
-    write(*, *) 'get_var internal', res  ! just verifying, JLM: use for test?
+    write(*, *) 'attrs%get_var_vec internal: ', res  ! just verifying, JLM: use for test?
     
     return
   end function get_var_vec

@@ -244,8 +244,9 @@ subroutine solution_create(filename, id)
     ! -- dummy variables
     class(NumericalSolutionType) :: this
     ! -- local
-    character(len=LENATTRNAME), dimension(4*NATTRS*2) :: attrs_vector
-    character(len=LENATTRNAME), dimension(6) :: foo
+    integer(I4B) :: n_scalar_vars = 44
+    character(len=LENATTRNAME), dimension(2 * NATTRS * 44) :: attrs_vector
+    character(len=LENATTRNAME), dimension(6) :: foo  ! JLM: just for testing
     !
     ! --- Build the metadata vector
     ! JLM: I kinda hate this but it is readable. Could also have in an external namelist, but it
@@ -253,17 +254,59 @@ subroutine solution_create(filename, id)
     ! JLM: configurable at runtime or i would say use a namelist.
     ! JLM: what does the doxygen look like for this block, anything?
     ! JLM: remove the keys? would be less readable.
+    ! Correct length is assured by the compiler.
     attrs_vector = [character(len=LENATTRNAME) ::             &
-         'varname','ID',      'longname','identity',      'units','-',  &
-         'varname','IU',      'longname','integer unit',  'units','-',  &
-         'varname','TTFORM',  'longname','form',          'units','-',  &
-         'varname','TTSOLN',  'longname','soln',          'units','-'    ]
+         'varname','ID',                'longname','identity',      'units','-',  &  ! 1
+         'varname','IU',                'longname','integer unit',  'units','-',  &
+         'varname','TTFORM',            'longname','form',          'units','-',  &
+         'varname','TTSOLN',            'longname','soln',          'units','-',  &
+         'varname','ISYMMETRIC',        'longname','',              'units','-',  &
+         'varname','NEQ',               'longname','',              'units','-',  &
+         'varname','NJA',               'longname','',              'units','-',  &
+         'varname','DVCLOSE',           'longname','',              'units','-',  &
+         'varname','BIGCHOLD',          'longname','',              'units','-',  &
+         'varname','BIGCH',             'longname','',              'units','-',  &  ! 10
+         'varname','RELAXOLD',          'longname','',              'units','-',  &
+         'varname','RES_PREV',          'longname','',              'units','-',  &
+         'varname','RES_NEW',           'longname','',              'units','-',  &
+         'varname','ICNVG',             'longname','',              'units','-',  &
+         'varname','ITERTOT_TIMESTEP',  'longname','',              'units','-',  &
+         'varname','IOUTTOT_TIMESTEP',  'longname','',              'units','-',  &
+         'varname','INNERTOT_SIM',      'longname','',              'units','-',  &
+         'varname','MXITER',            'longname','',              'units','-',  &
+         'varname','LINMETH',           'longname','',              'units','-',  &
+         'varname','NONMETH',           'longname','',              'units','-',  &  ! 20
+         'varname','IPRIMS',            'longname','',              'units','-',  &
+         'varname','THETA',             'longname','',              'units','-',  &
+         'varname','AKAPPA',            'longname','',              'units','-',  &
+         'varname','GAMMA',             'longname','',              'units','-',  &
+         'varname','AMOMENTUM',         'longname','',              'units','-',  &
+         'varname','BREDUC',            'longname','',              'units','-',  &
+         'varname','BTOL',              'longname','',              'units','-',  &
+         'varname','RES_LIM',           'longname','',              'units','-',  &
+         'varname','NUMTRACK',          'longname','',              'units','-',  &
+         'varname','IBFLAG',            'longname','',              'units','-',  &  ! 30
+         'varname','ICSVOUTEROUT',      'longname','',              'units','-',  &
+         'varname','ICSVINNEROUT',      'longname','',              'units','-',  &
+         'varname','NITERMAX',          'longname','',              'units','-',  &
+         'varname','CONVMOD',           'longname','',              'units','-',  &
+         'varname','IALLOWPTC',         'longname','',              'units','-',  &
+         'varname','IPTCOPT',           'longname','',              'units','-',  &
+         'varname','IPTCOUT',           'longname','',              'units','-',  &
+         'varname','L2NORM0',           'longname','',              'units','-',  &
+         'varname','PTCDEL',            'longname','',              'units','-',  &
+         'varname','PTCDEL0',           'longname','',              'units','-',  &  ! 40
+         'varname','PTCEXP',            'longname','',              'units','-',  &
+         'varname','PTCTHRESH',         'longname','',              'units','-',  &
+         'varname','PTCRAT',            'longname','',              'units','-',  &
+         'varname','ATSFRAC',           'longname','',              'units','-'    ]
+    
     call this%attrs_scalars%df(attrs_vector)
     foo = this%attrs_scalars%get_var_vec('IU')    ! testing - do this inside mem_allocate
     write(*, *) 'get_scalar_var: ', foo           ! testing
     !
     ! -- allocate scalars
-    call mem_allocate(this%id, 'ID', this%memoryPath)
+    call mem_allocate(this%id, 'ID', this%memoryPath)  ! 1
     call mem_allocate(this%iu, 'IU', this%memoryPath)
     call mem_allocate(this%ttform, 'TTFORM', this%memoryPath)
     call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
@@ -272,7 +315,7 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
     call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
     call mem_allocate(this%bigchold, 'BIGCHOLD', this%memoryPath)
-    call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)
+    call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)  ! 10
     call mem_allocate(this%relaxold, 'RELAXOLD', this%memoryPath)
     call mem_allocate(this%res_prev, 'RES_PREV', this%memoryPath)
     call mem_allocate(this%res_new, 'RES_NEW', this%memoryPath)
@@ -282,7 +325,7 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
     call mem_allocate(this%mxiter, 'MXITER', this%memoryPath)
     call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
-    call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)
+    call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)  ! 20
     call mem_allocate(this%iprims, 'IPRIMS', this%memoryPath)
     call mem_allocate(this%theta, 'THETA', this%memoryPath)
     call mem_allocate(this%akappa, 'AKAPPA', this%memoryPath)
@@ -292,7 +335,7 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%btol, 'BTOL', this%memoryPath)
     call mem_allocate(this%res_lim, 'RES_LIM', this%memoryPath)
     call mem_allocate(this%numtrack, 'NUMTRACK', this%memoryPath)
-    call mem_allocate(this%ibflag, 'IBFLAG', this%memoryPath)
+    call mem_allocate(this%ibflag, 'IBFLAG', this%memoryPath)  ! 30
     call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', this%memoryPath)
     call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memoryPath)
     call mem_allocate(this%nitermax, 'NITERMAX', this%memoryPath)
@@ -302,11 +345,11 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%iptcout, 'IPTCOUT', this%memoryPath)
     call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
     call mem_allocate(this%ptcdel, 'PTCDEL', this%memoryPath)
-    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)
+    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)  ! 40
     call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
     call mem_allocate(this%ptcthresh, 'PTCTHRESH', this%memoryPath)
     call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
-    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
+    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)  ! 44
     !
     ! -- initialize scalars
     this%isymmetric = 0
