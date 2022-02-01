@@ -14,7 +14,8 @@ module MemoryManagerModule
   use MemoryListModule,       only: MemoryListType
   use MemoryHelperModule,     only: mem_check_length, split_mem_path
   use TableModule,            only: TableType, table_cr
-  
+  use AttributesModule,       only: Attrs, empty_var_attrs
+
   implicit none
   private
   public :: mem_allocate
@@ -28,7 +29,7 @@ module MemoryManagerModule
   public :: mem_da
   public :: mem_set_print_option
   public :: get_from_memorylist
-  
+
   public :: get_mem_type
   public :: get_mem_rank
   public :: get_mem_elem_size
@@ -37,7 +38,7 @@ module MemoryManagerModule
   public :: copy_dbl1d
 
   public :: memorylist
-  
+
   type(MemoryListType) :: memorylist
   type(TableType), pointer :: memtab => null()
   integer(I8B) :: nvalues_alogical = 0
@@ -54,23 +55,23 @@ module MemoryManagerModule
                      allocate_dbl, allocate_dbl1d, allocate_dbl2d,               &
                      allocate_dbl3d
   end interface mem_allocate
-  
+
   interface mem_checkin
     module procedure checkin_int1d,                                              &
                      checkin_dbl1d
   end interface mem_checkin
-  
+
   interface mem_reallocate
     module procedure reallocate_int1d, reallocate_int2d, reallocate_dbl1d,       &
                      reallocate_dbl2d, reallocate_str1d
   end interface mem_reallocate
-  
+
   interface mem_setptr
     module procedure setptr_logical,                                             &
                      setptr_int, setptr_int1d, setptr_int2d, setptr_int3d,       &
                      setptr_dbl, setptr_dbl1d, setptr_dbl2d, setptr_dbl3d
   end interface mem_setptr
-  
+
   interface mem_copyptr
     module procedure copyptr_int1d, copyptr_int2d,                               &
                      copyptr_dbl1d, copyptr_dbl2d
@@ -92,7 +93,7 @@ module MemoryManagerModule
   end interface mem_deallocate
 
   contains
-  
+
   !> @ brief Get the variable memory type
   !!
   !! Returns any of 'LOGICAL', 'INTEGER', 'DOUBLE', 'STRING'.
@@ -105,7 +106,7 @@ module MemoryManagerModule
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    ! -- code    
+    ! -- code
     mt => null()
     var_type = 'UNKNOWN'
     call get_from_memorylist(name, mem_path, mt, found)
@@ -116,7 +117,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine get_mem_type
-  
+
   !> @ brief Get the variable rank
   !!
   !! Returns rank = -1 when not found.
@@ -128,7 +129,7 @@ module MemoryManagerModule
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
-    ! -- code    
+    ! -- code
     !
     ! -- initialize rank to a value to communicate failure
     rank = -1
@@ -145,14 +146,14 @@ module MemoryManagerModule
       if(associated(mt%aint2d)) rank = 2
       if(associated(mt%aint3d)) rank = 3
       if(associated(mt%adbl1d)) rank = 1
-      if(associated(mt%adbl2d)) rank = 2 
-      if(associated(mt%adbl3d)) rank = 3 
-    end if    
+      if(associated(mt%adbl2d)) rank = 2
+      if(associated(mt%adbl3d)) rank = 3
+    end if
     !
     ! -- return
     return
-  end subroutine get_mem_rank 
-    
+  end subroutine get_mem_rank
+
   !> @ brief Get the memory size of a single element of the stored variable
   !!
   !! Memory size in bytes, returns size = -1 when not found.
@@ -173,7 +174,7 @@ module MemoryManagerModule
     call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- set memory size
-    if (found) then      
+    if (found) then
       select case(mt%memtype(1:index(mt%memtype,' ')))
       case ('STRING')
         size = 1
@@ -183,13 +184,13 @@ module MemoryManagerModule
         size = 4
       case ('DOUBLE')
         size = 8
-      end select 
+      end select
     end if
     !
     ! -- return
     return
   end subroutine get_mem_elem_size
-  
+
   !> @ brief Get the variable memory shape
   !!
   !! Returns an integer array with the shape (Fortran ordering),
@@ -209,7 +210,7 @@ module MemoryManagerModule
     !
     ! -- set shape
     if (found) then
-      if(associated(mt%logicalsclr)) mem_shape = shape(mt%logicalsclr) 
+      if(associated(mt%logicalsclr)) mem_shape = shape(mt%logicalsclr)
       if(associated(mt%intsclr)) mem_shape = shape(mt%logicalsclr)
       if(associated(mt%dblsclr)) mem_shape = shape(mt%dblsclr)
       if(associated(mt%aint1d)) mem_shape = shape(mt%aint1d)
@@ -226,7 +227,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine get_mem_shape
-  
+
   !> @ brief Get the number of elements for this variable
   !!
   !! Returns with isize = -1 when not found.
@@ -238,7 +239,7 @@ module MemoryManagerModule
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
-    ! -- code    
+    ! -- code
     !
     ! -- initialize isize to a value to communicate failure
     isize = -1
@@ -254,7 +255,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine get_isize
-  
+
   !> @ brief Get a memory type entry from the memory list
   !!
   !! Default value for @par check is .true. which means that this
@@ -300,7 +301,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine get_from_memorylist
-  
+
   !> @brief Issue allocation error message and stop program execution
   !<
   subroutine allocate_error(varname, mem_path, istat, isize)
@@ -309,8 +310,8 @@ module MemoryManagerModule
     integer(I4B), intent(in) :: istat         !< status code
     integer(I4B), intent(in) :: isize         !< size of allocation
     ! -- local
-    character(len=20) :: csize                
-    character(len=20) :: cstat 
+    character(len=20) :: csize
+    character(len=20) :: cstat
     ! -- code
     !
     ! -- initialize character variables
@@ -325,7 +326,7 @@ module MemoryManagerModule
     !
     ! -- store error and stop program execution
     call store_error(errmsg, terminate=.TRUE.)
-  end subroutine allocate_error  
+  end subroutine allocate_error
 
   !> @brief Allocate a logical scalar
   !<
@@ -382,7 +383,7 @@ module MemoryManagerModule
     !
     ! -- make sure ilen is greater than 0
     if (ilen < 1) then
-      errmsg = 'Programming error in allocate_str. ILEN must be greater than 0.' 
+      errmsg = 'Programming error in allocate_str. ILEN must be greater than 0.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
@@ -416,8 +417,8 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_str
-  
-  !> @brief Allocate a 1-dimensional defined length string array 
+
+  !> @brief Allocate a 1-dimensional defined length string array
   !<
   subroutine allocate_str1d(astr, ilen, nrow, name, mem_path)
     integer(I4B), intent(in) :: ilen                                                !< string length
@@ -439,7 +440,7 @@ module MemoryManagerModule
     ! -- make sure ilen is greater than 0
     if (ilen < 1) then
       errmsg = 'Programming error in allocate_str1d. ' //                        &
-        'ILEN must be greater than 0.' 
+        'ILEN must be greater than 0.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
@@ -483,15 +484,15 @@ module MemoryManagerModule
 
   !> @brief Allocate a integer scalar
   !<
-  subroutine allocate_int(sclr, name, mem_path)
+  subroutine allocate_int(sclr, name, mem_path, attrs_all)
     integer(I4B), pointer, intent(inout) :: sclr  !< variable for allocation
     character(len=*), intent(in) :: name          !< variable name
     character(len=*), intent(in) :: mem_path      !< path where the variable is stored
+    type(Attrs), optional, intent(in) :: attrs_all
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
     ! -- code
-    !
     ! -- check variable name length
     call mem_check_length(name, LENVARNAME, "variable")
     !
@@ -512,6 +513,12 @@ module MemoryManagerModule
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
+    if (present(attrs_all)) then
+      mt%attrs_vec = attrs_all%get_var_vec(name)
+    else
+        mt%attrs_vec = empty_var_attrs
+    end if
+    !
     write(mt%memtype, "(a)") 'INTEGER'
     !
     ! -- add memory type to the memory list
@@ -520,7 +527,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_int
-  
+
   !> @brief Allocate a 1-dimensional integer array
   !<
   subroutine allocate_int1d(aint, nrow, name, mem_path)
@@ -565,14 +572,14 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_int1d
-  
+
   !> @brief Allocate a 2-dimensional integer array
   !<
   subroutine allocate_int2d(aint, ncol, nrow, name, mem_path)
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint   !< variable for allocation
     integer(I4B), intent(in) :: ncol                                            !< number of columns
     integer(I4B), intent(in) :: nrow                                            !< number of rows
-    character(len=*), intent(in) :: name                                        !< variable name  
+    character(len=*), intent(in) :: name                                        !< variable name
     character(len=*), intent(in) :: mem_path                                    !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
@@ -603,20 +610,20 @@ module MemoryManagerModule
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
-    write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow    
+    write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
     !
     ! -- return
   end subroutine allocate_int2d
-    
+
   !> @brief Allocate a 3-dimensional integer array
   !<
   subroutine allocate_int3d(aint, ncol, nrow, nlay, name, mem_path)
     integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint  !< variable for allocation
     integer(I4B), intent(in) :: ncol                                              !< number of columns
-    integer(I4B), intent(in) :: nrow                                              !< number of rows 
+    integer(I4B), intent(in) :: nrow                                              !< number of rows
     integer(I4B), intent(in) :: nlay                                              !< number of layers
     character(len=*), intent(in) :: name                                          !< variable name
     character(len=*), intent(in) :: mem_path                                      !< path where variable is stored
@@ -638,7 +645,7 @@ module MemoryManagerModule
       call allocate_error(name, mem_path, istat, isize)
     end if
     !
-    ! -- update counter 
+    ! -- update counter
     nvalues_aint = nvalues_aint + isize
     !
     ! -- allocate memory type
@@ -650,7 +657,7 @@ module MemoryManagerModule
     mt%name = name
     mt%path = mem_path
     write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
-                                                       nrow, nlay    
+                                                       nrow, nlay
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)
@@ -698,7 +705,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_dbl
-  
+
   !> @brief Allocate a 1-dimensional real array
   !<
   subroutine allocate_dbl1d(adbl, nrow, name, mem_path)
@@ -743,7 +750,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_dbl1d
-  
+
   !> @brief Allocate a 2-dimensional real array
   !<
   subroutine allocate_dbl2d(adbl, ncol, nrow, name, mem_path)
@@ -789,7 +796,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_dbl2d
-  
+
   !> @brief Allocate a 3-dimensional real array
   !<
   subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, mem_path)
@@ -837,7 +844,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine allocate_dbl3d
-  
+
   !> @brief Check in an existing 1d integer array with a new address (name + path)
   !<
   subroutine checkin_int1d(aint, name, mem_path, name2, mem_path2)
@@ -919,7 +926,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine checkin_dbl1d
-  
+
   !> @brief Reallocate a 1-dimensional defined length string array
   !<
   subroutine reallocate_str1d(astr, ilen, nrow, name, mem_path)
@@ -980,7 +987,7 @@ module MemoryManagerModule
       !
       ! -- fill the reallocate character array
       do n = 1, nrow
-        astr(n) = astrtemp(n) 
+        astr(n) = astrtemp(n)
       end do
       !
       ! -- deallocate temporary storage
@@ -1002,7 +1009,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine reallocate_str1d
-  
+
   !> @brief Reallocate a 1-dimensional integer array
   !<
   subroutine reallocate_int1d(aint, nrow, name, mem_path)
@@ -1046,7 +1053,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine reallocate_int1d
-  
+
   !> @brief Reallocate a 2-dimensional integer array
   !<
   subroutine reallocate_int2d(aint, ncol, nrow, name, mem_path)
@@ -1095,7 +1102,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine reallocate_int2d
-  
+
   !> @brief Reallocate a 1-dimensional real array
   !<
   subroutine reallocate_dbl1d(adbl, nrow, name, mem_path)
@@ -1140,7 +1147,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine reallocate_dbl1d
-  
+
   !> @brief Reallocate a 2-dimensional real array
   !<
   subroutine reallocate_dbl2d(adbl, ncol, nrow, name, mem_path)
@@ -1189,7 +1196,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine reallocate_dbl2d
-  
+
   !> @brief Set pointer to a logical scalar
   !<
   subroutine setptr_logical(sclr, name, mem_path)
@@ -1200,13 +1207,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     sclr => mt%logicalsclr
     !
     ! -- return
     return
   end subroutine setptr_logical
-  
+
   !> @brief Set pointer to integer scalar
   !<
   subroutine setptr_int(sclr, name, mem_path)
@@ -1217,13 +1224,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     sclr => mt%intsclr
     !
     ! -- return
     return
   end subroutine setptr_int
-  
+
   !> @brief Set pointer to 1d integer array
   !<
   subroutine setptr_int1d(aint, name, mem_path)
@@ -1234,13 +1241,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     aint => mt%aint1d
     !
     ! -- return
     return
   end subroutine setptr_int1d
-  
+
   !> @brief Set pointer to 2d integer array
   !<
   subroutine setptr_int2d(aint, name, mem_path)
@@ -1251,13 +1258,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     aint => mt%aint2d
     !
     ! -- return
     return
   end subroutine setptr_int2d
-  
+
   !> @brief Set pointer to 3d integer array
   !<
   subroutine setptr_int3d(aint, name, mem_path)
@@ -1268,13 +1275,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     aint => mt%aint3d
     !
     ! -- return
     return
   end subroutine setptr_int3d
-    
+
   !> @brief Set pointer to a real scalar
   !<
   subroutine setptr_dbl(sclr, name, mem_path)
@@ -1285,13 +1292,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     sclr => mt%dblsclr
     !
     ! -- return
     return
   end subroutine setptr_dbl
-  
+
   !> @brief Set pointer to a 1d real array
   !<
   subroutine setptr_dbl1d(adbl, name, mem_path)
@@ -1302,13 +1309,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     adbl => mt%adbl1d
     !
     ! -- return
     return
   end subroutine setptr_dbl1d
-  
+
   !> @brief Set pointer to a 2d real array
   !<
   subroutine setptr_dbl2d(adbl, name, mem_path)
@@ -1319,13 +1326,13 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     adbl => mt%adbl2d
     !
     ! -- return
     return
   end subroutine setptr_dbl2d
-  
+
    !> @brief Set pointer to a 3d real array
   !<
   subroutine setptr_dbl3d(adbl, name, mem_path)
@@ -1336,7 +1343,7 @@ module MemoryManagerModule
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     adbl => mt%adbl3d
     !
     ! -- return
@@ -1350,14 +1357,14 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name                                    !< variable name
     character(len=*), intent(in) :: mem_path                                !< path where variable is stored
     character(len=*), intent(in), optional :: mem_path_copy                 !< optional path where the copy wil be stored,
-                                                                            !! if passed then the copy is added to the 
+                                                                            !! if passed then the copy is added to the
                                                                             !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     aint => null()
     ! -- check the copy into the memory manager
     if (present(mem_path_copy)) then
@@ -1381,7 +1388,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name                                      !< variable name
     character(len=*), intent(in) :: mem_path                                  !< path where variable is stored
     character(len=*), intent(in), optional :: mem_path_copy                   !< optional path where the copy wil be stored,
-                                                                              !! if passed then the copy is added to the 
+                                                                              !! if passed then the copy is added to the
                                                                               !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
@@ -1391,7 +1398,7 @@ module MemoryManagerModule
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     aint => null()
     ncol = size(mt%aint2d, dim=1)
     nrow = size(mt%aint2d, dim=2)
@@ -1419,14 +1426,14 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name                                !< variable name
     character(len=*), intent(in) :: mem_path                            !< path where variable is stored
     character(len=*), intent(in), optional :: mem_path_copy             !< optional path where the copy wil be stored,
-                                                                        !! if passed then the copy is added to the 
+                                                                        !! if passed then the copy is added to the
                                                                         !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     adbl => null()
     ! -- check the copy into the memory manager
     if (present(mem_path_copy)) then
@@ -1450,7 +1457,7 @@ module MemoryManagerModule
     character(len=*), intent(in) :: name                                  !< variable name
     character(len=*), intent(in) :: mem_path                              !< path where variable is stored
     character(len=*), intent(in), optional :: mem_path_copy               !< optional path where the copy wil be stored,
-                                                                          !! if passed then the copy is added to the 
+                                                                          !! if passed then the copy is added to the
                                                                           !! memory manager
     ! -- local
     type(MemoryType), pointer :: mt
@@ -1460,7 +1467,7 @@ module MemoryManagerModule
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)    
+    call get_from_memorylist(name, mem_path, mt, found)
     adbl => null()
     ncol = size(mt%adbl2d, dim=1)
     nrow = size(mt%adbl2d, dim=2)
@@ -1480,7 +1487,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine copyptr_dbl2d
-  
+
   !> @brief Copy values from a 1-dimensional real array in the memory
   !< manager to a passed 1-dimensional real array
   subroutine copy_dbl1d(adbl, name, mem_path)
@@ -1500,8 +1507,8 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine copy_dbl1d
-  
-  !> @brief Set the pointer for an integer scalar to 
+
+  !> @brief Set the pointer for an integer scalar to
   !< a target array already stored in the memory manager
   subroutine reassignptr_int(sclr, name, mem_path, name_target, mem_path_target)
     integer(I4B), pointer, intent(inout) :: sclr                            !< pointer to integer scalar
@@ -1522,7 +1529,7 @@ module MemoryManagerModule
     end if
     sclr => mt2%intsclr
     mt%intsclr => sclr
-    mt%isize = 1 
+    mt%isize = 1
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     !
     ! -- set master information
@@ -1534,7 +1541,7 @@ module MemoryManagerModule
     return
   end subroutine reassignptr_int
 
-  !> @brief Set the pointer for a 1-dimensional integer array to 
+  !> @brief Set the pointer for a 1-dimensional integer array to
   !< a target array already stored in the memory manager
   subroutine reassignptr_int1d(aint, name, mem_path, name_target, mem_path_target)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint  !< pointer to 1d integer array
@@ -1555,7 +1562,7 @@ module MemoryManagerModule
     end if
     aint => mt2%aint1d
     mt%aint1d => aint
-    mt%isize = size(aint) 
+    mt%isize = size(aint)
     write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     !
     ! -- set master information
@@ -1567,7 +1574,7 @@ module MemoryManagerModule
     return
   end subroutine reassignptr_int1d
 
-  !> @brief Set the pointer for a 2-dimensional integer array to 
+  !> @brief Set the pointer for a 2-dimensional integer array to
   !< a target array already stored in the memory manager
   subroutine reassignptr_int2d(aint, name, mem_path, name_target, mem_path_target)
     integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint  !< pointer to 2d integer array
@@ -1604,7 +1611,7 @@ module MemoryManagerModule
     return
   end subroutine reassignptr_int2d
 
-  !> @brief Set the pointer for a 1-dimensional real array to 
+  !> @brief Set the pointer for a 1-dimensional real array to
   !< a target array already stored in the memory manager
   subroutine reassignptr_dbl1d(adbl, name, mem_path, name_target, mem_path_target)
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl  !< pointer to 1d real array
@@ -1625,7 +1632,7 @@ module MemoryManagerModule
     end if
     adbl => mt2%adbl1d
     mt%adbl1d => adbl
-    mt%isize = size(adbl) 
+    mt%isize = size(adbl)
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
     !
     ! -- set master information
@@ -1637,7 +1644,7 @@ module MemoryManagerModule
     return
   end subroutine reassignptr_dbl1d
 
-  !> @brief Set the pointer for a 2-dimensional real array to 
+  !> @brief Set the pointer for a 2-dimensional real array to
   !< a target array already stored in the memory manager
   subroutine reassignptr_dbl2d(adbl, name, mem_path, name_target, mem_path_target)
     real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl  !< pointer to 2d real array
@@ -1696,7 +1703,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_str
-  
+
   !> @brief Deallocate an array of variable-length character strings
   !!
   !! @todo confirm this description versus the previous doc
@@ -1756,7 +1763,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_logical
-  
+
   !> @brief Deallocate a integer scalar
   !<
   subroutine deallocate_int(sclr)
@@ -1788,7 +1795,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_int
-  
+
   !> @brief Deallocate a real scalar
   !<
   subroutine deallocate_dbl(sclr)
@@ -1820,7 +1827,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_dbl
-  
+
   !> @brief Deallocate a 1-dimensional integer array
   !<
   subroutine deallocate_int1d(aint, name, mem_path)
@@ -1861,7 +1868,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_int1d
-  
+
   !> @brief Deallocate a 2-dimensional integer array
   !<
   subroutine deallocate_int2d(aint, name, mem_path)
@@ -1902,7 +1909,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_int2d
-  
+
   !> @brief Deallocate a 3-dimensional integer array
   !<
   subroutine deallocate_int3d(aint, name, mem_path)
@@ -1943,7 +1950,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_int3d
-  
+
   !> @brief Deallocate a 1-dimensional real array
   !<
   subroutine deallocate_dbl1d(adbl, name, mem_path)
@@ -1984,7 +1991,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_dbl1d
-  
+
   !> @brief Deallocate a 2-dimensional real array
   !<
   subroutine deallocate_dbl2d(adbl, name, mem_path)
@@ -2025,7 +2032,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine deallocate_dbl2d
-  
+
   !> @brief Deallocate a 3-dimensional real array
   !<
   subroutine deallocate_dbl3d(adbl, name, mem_path)
@@ -2094,7 +2101,7 @@ module MemoryManagerModule
     end select
     return
   end subroutine mem_set_print_option
-  
+
   !> @brief Create a table if memory_print_option is 'SUMMARY'
   !<
   subroutine mem_summary_table(iout, nrows, cunits)
@@ -2143,9 +2150,9 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine mem_summary_table 
-  
-  !> @brief Create a table if memory_print_option is 'ALL' 
+  end subroutine mem_summary_table
+
+  !> @brief Create a table if memory_print_option is 'ALL'
   !<
   subroutine mem_detailed_table(iout, nrows)
     integer(I4B), intent(in) :: iout    !< unit number for mfsim.lst
@@ -2187,8 +2194,8 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine mem_detailed_table  
-  
+  end subroutine mem_detailed_table
+
   !> @brief Write a row for the memory_print_option 'SUMMARY' table
   !<
   subroutine mem_summary_line(component, rchars, rlog, rint, rreal, bytes)
@@ -2211,7 +2218,7 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine mem_summary_line 
+  end subroutine mem_summary_line
 
   !> @brief Determine appropriate memory unit and conversion factor
   !<
@@ -2238,16 +2245,16 @@ module MemoryManagerModule
     else if (bytes < DEP9) then
       fact = DEM6
       cunits = 'MEGABYTES'
-    else 
+    else
       fact = DEM9
       cunits = 'GIGABYTES'
     end if
     !
     ! -- return
     return
-  end subroutine mem_units 
-  
-  !> @brief Create and fill a table with the total allocated memory 
+  end subroutine mem_units
+
+  !> @brief Create and fill a table with the total allocated memory
   !< in the memory manager
   subroutine mem_summary_total(iout, bytes)
     integer(I4B), intent(in) :: iout  !< unit number for mfsim.lst
@@ -2318,8 +2325,8 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine mem_summary_total  
-  
+  end subroutine mem_summary_total
+
   !> @brief Generic function to clean a memory manager table
   !<
   subroutine mem_cleanup_table()
@@ -2332,9 +2339,9 @@ module MemoryManagerModule
     !
     ! -- return
     return
-  end subroutine mem_cleanup_table 
-  
-  !> @brief Write memory manager memory usage based on the 
+  end subroutine mem_cleanup_table
+
+  !> @brief Write memory manager memory usage based on the
   !! user-specified memory_print_option
   !!
   !! The total memory usage by data types (int, real, etc.)
@@ -2432,7 +2439,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine mem_write_usage
-  
+
   !> @brief Deallocate memory in the memory manager
   !<
   subroutine mem_da()
@@ -2477,7 +2484,7 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine mem_da
-  
+
   !> @brief Create a array with unique first components from all memory paths.
   !! Only the first component of the memory path is evaluated.
   !<
@@ -2511,5 +2518,5 @@ module MemoryManagerModule
     ! -- return
     return
   end subroutine mem_unique_origins
-  
+
 end module MemoryManagerModule

@@ -1,23 +1,26 @@
 module MemoryTypeModule
-  
+
   use KindModule, only: DP, LGP, I4B
   use ConstantsModule, only: LENMEMPATH, LENMEMADDRESS, LENTIMESERIESNAME,       &
                              LENVARNAME, MAXMEMRANK, LENMEMTYPE,                 &
+                             LENATTRNAME, NATTRS,                                &
                              TABSTRING, TABINTEGER,                              &
                              TABCENTER, TABLEFT, TABRIGHT
   use TableModule, only: TableType
   use MemoryHelperModule, only: create_mem_address
-  
+  use AttributesModule, only: Attrs
+
   implicit none
   private
   public :: MemoryType
- 
+
   type MemoryType
     character(len=LENVARNAME)                              :: name                   !< name of the array
     character(len=LENVARNAME)                              :: mastername = 'none'    !< name of the master array
     character(len=LENMEMPATH)                              :: path                   !< path to memory object
     character(len=LENMEMPATH)                              :: masterPath = 'none'    !< path to master memory object
     character(len=LENMEMTYPE)                              :: memtype                !< type (INTEGER or DOUBLE)
+    character(len=LENATTRNAME), dimension(2*NATTRS)        :: attrs_vec = ''         !< JLM: vector or attr object?
     integer(I4B)                                           :: id                     !< id, not used
     integer(I4B)                                           :: nrealloc = 0           !< number of times reallocated
     integer(I4B)                                           :: isize                  !< size of the array
@@ -36,9 +39,9 @@ module MemoryTypeModule
     procedure :: table_entry
     procedure :: mt_associated
   end type
-  
+
   contains
-  
+
   subroutine table_entry(this, memtab)
     ! -- dummy
     class(MemoryType) :: this
@@ -86,8 +89,8 @@ module MemoryTypeModule
     if(associated(this%aint2d)) al = .true.
     if(associated(this%aint3d)) al = .true.
     if(associated(this%adbl1d)) al = .true.
-    if(associated(this%adbl2d)) al = .true. 
-    if(associated(this%adbl3d)) al = .true. 
+    if(associated(this%adbl2d)) al = .true.
+    if(associated(this%adbl3d)) al = .true.
   end function mt_associated
-  
+
 end module MemoryTypeModule

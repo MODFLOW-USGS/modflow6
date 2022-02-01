@@ -12,7 +12,7 @@ module NumericalSolutionModule
                                      LENATTRNAME, NATTRS,                      &
                                      LENMEMPATH
   use AttributesModule,        only: Attrs
-  use MemoryHelperModule,      only: create_mem_path                                     
+  use MemoryHelperModule,      only: create_mem_path
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: is_same, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
@@ -34,7 +34,7 @@ module NumericalSolutionModule
 
   implicit none
   private
-  
+
   public :: solution_create
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
@@ -44,6 +44,8 @@ module NumericalSolutionModule
     character(len=LINELENGTH)                        :: fname                 !< input file name
     type(ListType), pointer                          :: modellist             !< list of models in solution
     type(ListType), pointer                          :: exchangelist          !< list of exchanges in solution
+    type(Attrs)                                      :: attrs_scalars         !< metadata obj for scalars
+    type(Attrs)                                      :: attrs_arrays          !< metadata obj for arrays
     integer(I4B), pointer                            :: id                    !< solution number
     integer(I4B), pointer                            :: iu                    !< input file unit
     real(DP), pointer                                :: ttform                !< timer - total formulation time
@@ -60,8 +62,6 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous      :: xtemp => null()       !< temporary vector for previous dependent-variable iterate
     type(BlockParserType) :: parser                                           !< block parser object
     !
-    ! Attributes/metdata
-    type(Attrs) :: attrs_scalars, attrs_arrays
     !
     ! -- sparse matrix data
     real(DP), pointer                                :: theta => null()            !< under-relaxation theta
@@ -96,7 +96,7 @@ module NumericalSolutionModule
     !
     ! -- convergence summary information
     character(len=31), dimension(:), pointer, contiguous :: caccel => null()               !< convergence string
-    integer(I4B), pointer                                :: icsvouterout => null()         !< Picard iteration CSV output flag and file unit 
+    integer(I4B), pointer                                :: icsvouterout => null()         !< Picard iteration CSV output flag and file unit
     integer(I4B), pointer                                :: icsvinnerout => null()         !< Inner iteration CSV output flag and file unit
     integer(I4B), pointer                                :: nitermax => null()             !< maximum number of iterations in a time step (maxiter * maxinner)
     integer(I4B), pointer                                :: convnmod => null()             !< number of models in the solution
@@ -114,13 +114,13 @@ module NumericalSolutionModule
     ! -- pseudo-transient continuation
     integer(I4B), pointer                                :: iallowptc => null()            !< flag indicating if ptc applied this time step
     integer(I4B), pointer                                :: iptcopt => null()              !< option for how to calculate the initial PTC value (ptcdel0)
-    integer(I4B), pointer                                :: iptcout => null()              !< PTC output flag and file unit 
+    integer(I4B), pointer                                :: iptcout => null()              !< PTC output flag and file unit
     real(DP), pointer                                    :: l2norm0 => null()              !< L-2 norm at the start of the first Picard iteration
     real(DP), pointer                                    :: ptcdel => null()               !< PTC delta value
     real(DP), pointer                                    :: ptcdel0 => null()              !< initial PTC delta value
     real(DP), pointer                                    :: ptcexp => null()               !< PTC exponent
     real(DP), pointer                                    :: ptcthresh => null()            !< PTC threshold value (0.001)
-    real(DP), pointer                                    :: ptcrat => null()               !< ratio of the PTC value and the minimum of the diagonal of AMAT used to determine if the PTC effect has decayed 
+    real(DP), pointer                                    :: ptcrat => null()               !< ratio of the PTC value and the minimum of the diagonal of AMAT used to determine if the PTC effect has decayed
     !
     ! -- adaptive time step
     real(DP), pointer                                    :: atsfrac => null()              !< adaptive time step faction
@@ -170,19 +170,19 @@ module NumericalSolutionModule
     procedure, private :: sln_buildsystem
     procedure, private :: writeCSVHeader
     procedure, private :: writePTCInfoToFile
-    
+
     ! Expose these for use through the BMI/XMI:
     procedure, public :: prepareSolve
     procedure, public :: solve
     procedure, public :: finalizeSolve
-  
+
   end type NumericalSolutionType
 
 contains
 
 !> @ brief Create a new solution
 !!
-!!  Create a new solution using the data in filename, assign this new 
+!!  Create a new solution using the data in filename, assign this new
 !!  solution an id number and store the solution in the basesolutionlist.
 !!  Also open the filename for later reading.
 !!
@@ -246,68 +246,66 @@ subroutine solution_create(filename, id)
     ! -- local
     integer(I4B) :: n_scalar_vars = 44
     character(len=LENATTRNAME), dimension(2 * NATTRS * 44) :: attrs_vector
-    character(len=LENATTRNAME), dimension(6) :: foo  ! JLM: just for testing
-    !
+
     ! --- Build the metadata vector
     ! JLM: I kinda hate this but it is readable. Could also have in an external namelist, but it
     ! JLM: is tied to the internal/hardcoded variables so i think this makes sense. Ie it is not
     ! JLM: configurable at runtime or i would say use a namelist.
+    ! JLM: Could also remove the redundancy in keys buy having collated key and value vectors. That's
+    ! JLM: probably the thing to do, but then the following is less readable.
     ! JLM: what does the doxygen look like for this block, anything?
-    ! JLM: remove the keys? would be less readable.
-    ! Correct length is assured by the compiler.
+    ! Note that correct length is assured by the compilers (gnu and intel).
     attrs_vector = [character(len=LENATTRNAME) ::             &
-         'varname','ID',                'longname','identity',      'units','-',  &  ! 1
-         'varname','IU',                'longname','integer unit',  'units','-',  &
-         'varname','TTFORM',            'longname','form',          'units','-',  &
-         'varname','TTSOLN',            'longname','soln',          'units','-',  &
-         'varname','ISYMMETRIC',        'longname','',              'units','-',  &
-         'varname','NEQ',               'longname','',              'units','-',  &
-         'varname','NJA',               'longname','',              'units','-',  &
-         'varname','DVCLOSE',           'longname','',              'units','-',  &
-         'varname','BIGCHOLD',          'longname','',              'units','-',  &
-         'varname','BIGCH',             'longname','',              'units','-',  &  ! 10
-         'varname','RELAXOLD',          'longname','',              'units','-',  &
-         'varname','RES_PREV',          'longname','',              'units','-',  &
-         'varname','RES_NEW',           'longname','',              'units','-',  &
-         'varname','ICNVG',             'longname','',              'units','-',  &
-         'varname','ITERTOT_TIMESTEP',  'longname','',              'units','-',  &
-         'varname','IOUTTOT_TIMESTEP',  'longname','',              'units','-',  &
-         'varname','INNERTOT_SIM',      'longname','',              'units','-',  &
-         'varname','MXITER',            'longname','',              'units','-',  &
-         'varname','LINMETH',           'longname','',              'units','-',  &
-         'varname','NONMETH',           'longname','',              'units','-',  &  ! 20
-         'varname','IPRIMS',            'longname','',              'units','-',  &
-         'varname','THETA',             'longname','',              'units','-',  &
-         'varname','AKAPPA',            'longname','',              'units','-',  &
-         'varname','GAMMA',             'longname','',              'units','-',  &
-         'varname','AMOMENTUM',         'longname','',              'units','-',  &
-         'varname','BREDUC',            'longname','',              'units','-',  &
-         'varname','BTOL',              'longname','',              'units','-',  &
-         'varname','RES_LIM',           'longname','',              'units','-',  &
-         'varname','NUMTRACK',          'longname','',              'units','-',  &
-         'varname','IBFLAG',            'longname','',              'units','-',  &  ! 30
-         'varname','ICSVOUTEROUT',      'longname','',              'units','-',  &
-         'varname','ICSVINNEROUT',      'longname','',              'units','-',  &
-         'varname','NITERMAX',          'longname','',              'units','-',  &
-         'varname','CONVMOD',           'longname','',              'units','-',  &
-         'varname','IALLOWPTC',         'longname','',              'units','-',  &
-         'varname','IPTCOPT',           'longname','',              'units','-',  &
-         'varname','IPTCOUT',           'longname','',              'units','-',  &
-         'varname','L2NORM0',           'longname','',              'units','-',  &
-         'varname','PTCDEL',            'longname','',              'units','-',  &
-         'varname','PTCDEL0',           'longname','',              'units','-',  &  ! 40
-         'varname','PTCEXP',            'longname','',              'units','-',  &
-         'varname','PTCTHRESH',         'longname','',              'units','-',  &
-         'varname','PTCRAT',            'longname','',              'units','-',  &
-         'varname','ATSFRAC',           'longname','',              'units','-'    ]
-    
+         'varname','ID',                'longname','solution number',                 'units','-',  &  ! 1
+         'varname','IU',                'longname','input file unit',                 'units','-',  &
+         'varname','TTFORM',            'longname','timer - total formulation time',  'units','-',  &
+         'varname','TTSOLN',            'longname','timer - total solution time',     'units','-',  &
+         'varname','ISYMMETRIC',        'longname','matrix symmetry required flag',   'units','-',  &
+         'varname','NEQ',               'longname','number of equations',             'units','-',  &
+         'varname','NJA',               'longname','number of non-zero entries',      'units','-',  &
+         'varname','DVCLOSE',           'longname','',                                'units','-',  &
+         'varname','BIGCHOLD',          'longname','',                                'units','-',  &
+         'varname','BIGCH',             'longname','',                                'units','-',  &  ! 10
+         'varname','RELAXOLD',          'longname','',                                'units','-',  &
+         'varname','RES_PREV',          'longname','',                                'units','-',  &
+         'varname','RES_NEW',           'longname','',                                'units','-',  &
+         'varname','ICNVG',             'longname','',                                'units','-',  &
+         'varname','ITERTOT_TIMESTEP',  'longname','',                                'units','-',  &
+         'varname','IOUTTOT_TIMESTEP',  'longname','',                                'units','-',  &
+         'varname','INNERTOT_SIM',      'longname','',                                'units','-',  &
+         'varname','MXITER',            'longname','',                                'units','-',  &
+         'varname','LINMETH',           'longname','',                                'units','-',  &
+         'varname','NONMETH',           'longname','',                                'units','-',  &  ! 20
+         'varname','IPRIMS',            'longname','',                                'units','-',  &
+         'varname','THETA',             'longname','',                                'units','-',  &
+         'varname','AKAPPA',            'longname','',                                'units','-',  &
+         'varname','GAMMA',             'longname','',                                'units','-',  &
+         'varname','AMOMENTUM',         'longname','',                                'units','-',  &
+         'varname','BREDUC',            'longname','',                                'units','-',  &
+         'varname','BTOL',              'longname','',                                'units','-',  &
+         'varname','RES_LIM',           'longname','',                                'units','-',  &
+         'varname','NUMTRACK',          'longname','',                                'units','-',  &
+         'varname','IBFLAG',            'longname','',                                'units','-',  &  ! 30
+         'varname','ICSVOUTEROUT',      'longname','',                                'units','-',  &
+         'varname','ICSVINNEROUT',      'longname','',                                'units','-',  &
+         'varname','NITERMAX',          'longname','',                                'units','-',  &
+         'varname','CONVMOD',           'longname','',                                'units','-',  &
+         'varname','IALLOWPTC',         'longname','',                                'units','-',  &
+         'varname','IPTCOPT',           'longname','',                                'units','-',  &
+         'varname','IPTCOUT',           'longname','',                                'units','-',  &
+         'varname','L2NORM0',           'longname','',                                'units','-',  &
+         'varname','PTCDEL',            'longname','',                                'units','-',  &
+         'varname','PTCDEL0',           'longname','',                                'units','-',  &  ! 40
+         'varname','PTCEXP',            'longname','',                                'units','-',  &
+         'varname','PTCTHRESH',         'longname','',                                'units','-',  &
+         'varname','PTCRAT',            'longname','',                                'units','-',  &
+         'varname','ATSFRAC',           'longname','',                                'units','-'    ]
+
     call this%attrs_scalars%df(attrs_vector)
-    foo = this%attrs_scalars%get_var_vec('IU')    ! testing - do this inside mem_allocate
-    write(*, *) 'get_scalar_var: ', foo           ! testing
-    !
+
     ! -- allocate scalars
-    call mem_allocate(this%id, 'ID', this%memoryPath)  ! 1
-    call mem_allocate(this%iu, 'IU', this%memoryPath)
+    call mem_allocate(this%id, 'ID', this%memoryPath, this%attrs_scalars)  ! 1
+    call mem_allocate(this%iu, 'IU', this%memoryPath, this%attrs_scalars)
     call mem_allocate(this%ttform, 'TTFORM', this%memoryPath)
     call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
     call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memoryPath)
@@ -340,7 +338,7 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memoryPath)
     call mem_allocate(this%nitermax, 'NITERMAX', this%memoryPath)
     call mem_allocate(this%convnmod, 'CONVNMOD', this%memoryPath)
-    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memoryPath) 
+    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memoryPath)
     call mem_allocate(this%iptcopt, 'IPTCOPT', this%memoryPath)
     call mem_allocate(this%iptcout, 'IPTCOUT', this%memoryPath)
     call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
@@ -350,7 +348,9 @@ subroutine solution_create(filename, id)
     call mem_allocate(this%ptcthresh, 'PTCTHRESH', this%memoryPath)
     call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
     call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)  ! 44
-    !
+
+    call this%attrs_scalars%da()
+
     ! -- initialize scalars
     this%isymmetric = 0
     this%id = 0
@@ -395,8 +395,7 @@ subroutine solution_create(filename, id)
     this%ptcthresh = DEM3
     this%ptcrat = DZERO
     this%atsfrac = DONETHIRD
-    !
-    ! -- return
+
     return
   end subroutine allocate_scalars
 
@@ -419,8 +418,7 @@ subroutine solution_create(filename, id)
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)  !, attrs_scalars)
-    ! pass the attrs here: how should it look? attrs_scalar is a hash table, then mem_allocates gets the atts by key
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)  !, attrs_arrays)
     call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
@@ -471,10 +469,10 @@ subroutine solution_create(filename, id)
 
   !> @ brief Define the solution
   !!
-  !!  Define a new solution. Must be called after the models and exchanges have 
+  !!  Define a new solution. Must be called after the models and exchanges have
   !!  been added to solution. The order of the steps is (1) Allocate neq and nja,
-  !!  (2) Assign model offsets and solution ids, (3) Allocate and initialize 
-  !!  the solution arrays, (4) Point each model's x and rhs arrays, and 
+  !!  (2) Assign model offsets and solution ids, (3) Allocate and initialize
+  !!  the solution arrays, (4) Point each model's x and rhs arrays, and
   !!  (5) Initialize the sparsematrix instance
   !!
   !<
@@ -911,7 +909,7 @@ subroutine solution_create(filename, id)
       end if
     end if
     !
-    ! -- call secondary subroutine to initialize and read linear 
+    ! -- call secondary subroutine to initialize and read linear
     !    solver parameters IMSLINEAR solver
     if ( this%linmeth == 1 )then
       allocate(this%imslinear)
@@ -936,9 +934,9 @@ subroutine solution_create(filename, id)
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
-      write(iout, '(1x,a,/)') 'A symmetric matrix will be solved'  
+      write(iout, '(1x,a,/)') 'A symmetric matrix will be solved'
     else
-      write(iout, '(1x,a,/)') 'An asymmetric matrix will be solved'  
+      write(iout, '(1x,a,/)') 'An asymmetric matrix will be solved'
     end if
     !
     ! -- If CG, then go through each model and each exchange and check
@@ -1102,13 +1100,13 @@ subroutine solution_create(filename, id)
       fact_upper = this%mxiter - fact_lower
       if (this%iouttot_timestep < int(fact_lower)) then
         ! -- increase delt according to tsfactats
-        idir = 1 
+        idir = 1
       else if (this%iouttot_timestep > int(fact_upper)) then
         ! -- decrease delt according to tsfactats
-        idir = -1 
+        idir = -1
       else
         ! -- do not change delt
-        idir = 0  
+        idir = 0
       end if
       !
       ! -- submit stable dt for upcoming step
@@ -1117,7 +1115,7 @@ subroutine solution_create(filename, id)
     !
     return
   end subroutine sln_calculate_delt
-  
+
   !> @ brief Advance solution
   !!
   !!  Advance solution.
@@ -1133,18 +1131,18 @@ subroutine solution_create(filename, id)
     if (kper == 1 .and. kstp == 1) then
       call this%writeCSVHeader()
     end if
-      
+
     ! write PTC info on models to iout
     call this%writePTCInfoToFile(kper)
-            
+
     ! reset convergence flag and inner solve counter
     this%icnvg = 0
-    this%itertot_timestep = 0   
-    this%iouttot_timestep = 0   
-    
+    this%itertot_timestep = 0
+    this%iouttot_timestep = 0
+
     return
   end subroutine sln_ad
-  
+
   !> @ brief Output solution
   !!
   !!  Output solution data. Currently does nothing.
@@ -1169,7 +1167,7 @@ subroutine solution_create(filename, id)
     ! -- dummy variables
     class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
     !
-    ! -- write timer output 
+    ! -- write timer output
     if (IDEVELOPMODE == 1) then
       write(this%imslinear%iout, '(//1x,a,1x,a,1x,a)')                         &
         'Solution', trim(adjustl(this%name)), 'summary'
@@ -1314,10 +1312,10 @@ subroutine solution_create(filename, id)
     integer(I4B) :: im
     integer(I4B) :: kiter   ! non-linear iteration counter
 ! ------------------------------------------------------------------------------
-    
+
     ! advance the models, exchanges, and solution
     call this%prepareSolve()
-    
+
     select case (isim_mode)
       case (MVALIDATE)
         line = 'mode="validation" -- Skipping matrix assembly and solution.'
@@ -1329,32 +1327,32 @@ subroutine solution_create(filename, id)
       case(MNORMAL)
         ! nonlinear iteration loop for this solution
         outerloop: do kiter = 1, this%mxiter
-           
+
           ! perform a single iteration
-          call this%solve(kiter)     
-        
+          call this%solve(kiter)
+
           ! exit if converged
           if (this%icnvg == 1) then
             exit outerloop
           end if
-        
+
         end do outerloop
-      
+
         ! finish up, write convergence info, CSV file, budgets and flows, ...
-        call this%finalizeSolve(kiter, isgcnvg, isuppress_output)   
+        call this%finalizeSolve(kiter, isgcnvg, isuppress_output)
     end select
     !
     ! -- return
     return
-    
+
   end subroutine sln_ca
-       
+
   !> @ brief CSV header
   !!
   !!  Write header for solver output to comma-separated value files.
   !!
   !<
-  subroutine writeCSVHeader(this)  
+  subroutine writeCSVHeader(this)
     class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
     ! local variables
     integer(I4B) :: im
@@ -1399,7 +1397,7 @@ subroutine solution_create(filename, id)
     ! -- return
     return
   end subroutine writeCSVHeader
-  
+
   !> @ brief PTC header
   !!
   !!  Write header for pseudo-transient continuation information to a file.
@@ -1412,7 +1410,7 @@ subroutine solution_create(filename, id)
     ! -- local variable
     integer(I4B) :: n, im, iallowptc, iptc
     class(NumericalModelType), pointer :: mp => null()
-    
+
     ! -- determine if PTC will be used in any model
     n = 1
     do im = 1, this%modellist%Count()
@@ -1442,9 +1440,9 @@ subroutine solution_create(filename, id)
           trim(adjustl(mp%name)), '") DURING THIS TIME STEP'
       end if
     enddo
-    
+
   end subroutine writePTCInfoToFile
-  
+
   !> @ brief prepare to solve
   !!
   !!  Prepare for the system solve by advancing the simulation.
@@ -1458,29 +1456,29 @@ subroutine solution_create(filename, id)
     integer(I4B) :: im
     class(NumericalExchangeType), pointer :: cp => null()
     class(NumericalModelType), pointer :: mp => null()
-    
+
      ! -- Exchange advance
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_ad()
     enddo
-    
+
     ! -- Model advance
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
       call mp%model_ad()
     enddo
-    
+
     ! advance solution
     call this%sln_ad()
-    
+
   end subroutine prepareSolve
-  
+
   !> @ brief Build and solve the simulation
   !!
-  !! Builds and solve the system for this numerical solution. 
+  !! Builds and solve the system for this numerical solution.
   !! It roughly consists of the following steps
-  !! (1) backtracking, (2) reset amat and rhs (3) calculate matrix 
+  !! (1) backtracking, (2) reset amat and rhs (3) calculate matrix
   !! terms (*_cf), (4) add coefficients to matrix (*_fc), (6) newton-raphson,
   !! (6) PTC, (7) linear solve, (8) convergence checks, (9) write output,
   !! and (10) underrelaxation
@@ -1494,7 +1492,7 @@ subroutine solution_create(filename, id)
     integer(I4B), intent(in) :: kiter       !< Picard iteration number
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
-    class(NumericalExchangeType), pointer :: cp => null()    
+    class(NumericalExchangeType), pointer :: cp => null()
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: line
@@ -1505,16 +1503,16 @@ subroutine solution_create(filename, id)
     character(len=25) :: cval
     character(len=7) :: cmsg
     integer(I4B) :: ic
-    integer(I4B) :: im    
+    integer(I4B) :: im
     integer(I4B) :: icsv0
     integer(I4B) :: kcsv0
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
-    integer(I4B) :: i0, i1    
+    integer(I4B) :: i0, i1
     integer(I4B) :: itestmat, n
-    integer(I4B) :: iter    
-    integer(I4B) :: inewtonur    
-    integer(I4B) :: locmax_nur    
+    integer(I4B) :: iter
+    integer(I4B) :: inewtonur
+    integer(I4B) :: locmax_nur
     integer(I4B) :: iend
     integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
@@ -1580,12 +1578,12 @@ subroutine solution_create(filename, id)
     if (this%numtrack > 0) then
       call this%sln_backtracking(mp, cp, kiter)
     end if
-    
+
     call code_timer(0, ttform, this%ttform)
-        
+
     ! (re)build the solution matrix
     call this%sln_buildsystem(kiter, inewton=1)
-    
+
     !
     ! -- Add exchange Newton-Raphson terms to solution
     do ic=1,this%exchangelist%Count()
@@ -1616,8 +1614,8 @@ subroutine solution_create(filename, id)
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
     !
-    ! -- increment counters storing the total number of linear and 
-    !    non-linear iterations for this timestep and the total 
+    ! -- increment counters storing the total number of linear and
+    !    non-linear iterations for this timestep and the total
     !    number of linear iterations for all timesteps
     this%itertot_timestep = this%itertot_timestep + iter
     this%iouttot_timestep = this%iouttot_timestep + 1
@@ -1635,7 +1633,7 @@ subroutine solution_create(filename, id)
       call stop_with_error()
     end if
     !-------------------------------------------------------
-    !    
+    !
     ! -- check convergence of solution
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
     if (this%icnvg /= 0) then
@@ -1715,7 +1713,7 @@ subroutine solution_create(filename, id)
         ipos0 = index(cpak, '-', back=.true.)
         ipos1 = len_trim(cpak)
         write(cpakout, '(a,a,"-(",i0,")",a)')                                    &
-          trim(cmod), cpak(1:ipos0-1), ipak, cpak(ipos0:ipos1) 
+          trim(cmod), cpak(1:ipos0-1), ipak, cpak(ipos0:ipos1)
       else
         cpakout = ' '
       end if
@@ -1796,7 +1794,7 @@ subroutine solution_create(filename, id)
           ! -- reset outer dependent-variable change and location for output
           call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
           !
-          ! -- write revised dependent-variable change data after 
+          ! -- write revised dependent-variable change data after
           !    newton under-relaxation
           if (this%iprims > 0) then
             cval = 'Newton under-relaxation'
@@ -1827,7 +1825,7 @@ subroutine solution_create(filename, id)
       ! -- set outer dependent-variable change variable
       outer_hncg = this%hncg(kiter)
       !
-      ! -- model convergence error 
+      ! -- model convergence error
       if (abs(outer_hncg) > abs(dpak)) then
         !
         ! -- get model number and user node number
@@ -1858,9 +1856,9 @@ subroutine solution_create(filename, id)
       call this%csv_convergence_summary(this%icsvinnerout, totim, kper, kstp,    &
                                         kiter, iter, icsv0, kcsv0)
     end if
-    
+
   end subroutine solve
-  
+
   !> @ brief finalize a solution
   !!
   !!  Finalize the solution. Called after the outer iteration loop.
@@ -1878,13 +1876,13 @@ subroutine solution_create(filename, id)
     integer(I4B) :: ic, im
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
-    ! -- formats for convergence info 
+    ! -- formats for convergence info
     character(len=*), parameter :: fmtnocnvg =                                 &
       &"(1X,'Solution ', i0, ' did not converge for stress period ', i0,       &
       &' and time step ', i0)"
     character(len=*), parameter :: fmtcnvg =                                   &
       &"(1X, I0, ' CALLS TO NUMERICAL SOLUTION ', 'IN TIME STEP ', I0,         &
-      &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')" 
+      &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')"
     !
     ! -- finalize the outer iteration table
     if (this%iprims > 0) then
@@ -1943,15 +1941,15 @@ subroutine solution_create(filename, id)
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_bd(isgcnvg, isuppress_output, this%id)
     enddo
-    
+
   end subroutine finalizeSolve
-  
+
   ! helper routine to calculate coefficients and setup the solution matrix
   subroutine sln_buildsystem(this, kiter, inewton)
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: inewton
-    
+
     ! local
     integer(I4B) :: im, ic
     class(NumericalModelType), pointer :: mp
@@ -1959,7 +1957,7 @@ subroutine solution_create(filename, id)
     !
     ! -- Set amat and rhs to zero
     call this%sln_reset()
-    
+
     !
     ! -- Calculate the matrix terms for each exchange
     do ic=1,this%exchangelist%Count()
@@ -1984,9 +1982,9 @@ subroutine solution_create(filename, id)
       mp => GetNumericalModelFromList(this%modellist, im)
       call mp%model_fc(kiter, this%amat, this%nja, inewton)
     enddo
-    
+
   end subroutine sln_buildsystem
-  
+
   !> @ brief Solution convergence summary
   !!
   !!  Save convergence summary to a File.
@@ -2202,7 +2200,7 @@ subroutine solution_create(filename, id)
 
   !> @ brief Save solution data to a file
   !!
-  !!  Save solution ia vector, ja vector , coefficient matrix, right-hand side 
+  !!  Save solution ia vector, ja vector , coefficient matrix, right-hand side
   !!  vector, and the dependent-variable vector to a file.
   !!
   !<
@@ -2304,12 +2302,12 @@ subroutine solution_create(filename, id)
     exchanges => this%exchangelist
 
   end function get_exchanges
-    
+
   !> @ brief Assign solution connections
   !!
-  !!  Assign solution connections. This is the main workhorse method for a 
-  !!  solution. The method goes through all the models and all the connections 
-  !!  and builds up the sparse matrix. Steps are (1) add internal model 
+  !!  Assign solution connections. This is the main workhorse method for a
+  !!  solution. The method goes through all the models and all the connections
+  !!  and builds up the sparse matrix. Steps are (1) add internal model
   !!  connections, (2) add cross terms, (3) allocate solution arrays, (4) create
   !!  mapping arrays, and (5) fill cross term values if necessary.
   !!
@@ -2337,7 +2335,7 @@ subroutine solution_create(filename, id)
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_ac(this%sparse)
     enddo
-    !    
+    !
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
     this%nja=this%sparse%nnz
@@ -2367,7 +2365,7 @@ subroutine solution_create(filename, id)
 
   !> @ brief Reset the solution
   !!
-  !!  Reset the solution by setting the coefficient matrix and right-hand side 
+  !!  Reset the solution by setting the coefficient matrix and right-hand side
   !!  vectors to zero.
   !!
   !<
@@ -2437,7 +2435,7 @@ subroutine solution_create(filename, id)
         adiag = abs(this%amat(this%ia(n)))
         if (adiag < DEM15) then
           this%amat(this%ia(n)) = diagval
-          this%rhs(n) = this%rhs(n) + diagval * this%x(n) 
+          this%rhs(n) = this%rhs(n) + diagval * this%x(n)
         endif
       ! -- Dirichlet boundary or no-flow cell
       else
@@ -2675,7 +2673,7 @@ subroutine solution_create(filename, id)
   !> @ brief Perform backtracking
   !!
   !!  Perform backtracking on the solution in the maximum number of backtrack
-  !!  iterations (nbtrack) is greater than 0 and the backtracking criteria 
+  !!  iterations (nbtrack) is greater than 0 and the backtracking criteria
   !!  are exceeded.
   !!
   !<
@@ -2695,11 +2693,11 @@ subroutine solution_create(filename, id)
     !
     ! -- initialize local variables
     ibflag = 0
-    
+
     !
     ! -- refill amat and rhs with standard conductance
     call this%sln_buildsystem(kiter, inewton=0)
-       
+
     !
     ! -- calculate initial l2 norm
     if (kiter == 1) then
@@ -2731,10 +2729,10 @@ subroutine solution_create(filename, id)
           end if
           !
           ibtcnt = nb
-          
+
           ! recalculate linear system (amat and rhs)
           call this%sln_buildsystem(kiter, inewton=0)
-                    
+
           !
           ! -- calculate updated l2norm
           call this%sln_l2norm(this%neq, this%nja,                             &
@@ -2922,7 +2920,7 @@ subroutine solution_create(filename, id)
     class(NumericalSolutionType), intent(inout) :: this  !< NumericalSolutionType instance
     integer(I4B), intent(in) :: neq                      !< number of equations
     integer(I4B), dimension(neq), intent(in) :: active   !< active cell flag (1)
-    real(DP), dimension(neq), intent(in) :: x            !< current dependent-variable 
+    real(DP), dimension(neq), intent(in) :: x            !< current dependent-variable
     real(DP), dimension(neq), intent(in) :: xtemp        !< previous dependent-variable
     real(DP), dimension(neq), intent(inout) :: dx        !< dependent-variable change
     ! -- local
@@ -3081,7 +3079,7 @@ subroutine solution_create(filename, id)
 
   !> @ brief Determine maximum dependent-variable change
   !!
-  !!  Determine the maximum dependent-variable change at the end of a 
+  !!  Determine the maximum dependent-variable change at the end of a
   !!  Picard iteration.
   !!
   !<
@@ -3226,7 +3224,7 @@ subroutine solution_create(filename, id)
     ! -- return
     return
   end function CastAsNumericalSolutionClass
-  
+
   !> @ brief Get a numerical solution
   !!
   !!  Get a numerical solution from a list.
