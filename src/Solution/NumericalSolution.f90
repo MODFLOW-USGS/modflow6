@@ -9,7 +9,9 @@ module NumericalSolutionModule
                                      DONE, DTHREE, DEP3, DEP6, DEP20, DNODATA, &
                                      TABLEFT, TABRIGHT,                        &
                                      MNORMAL, MVALIDATE,                       &
+                                     LENATTRNAME, NATTRS,                      &
                                      LENMEMPATH
+  use AttributesModule,        only: Attrs
   use MemoryHelperModule,      only: create_mem_path                                     
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: is_same, sim_message, stop_with_error
@@ -36,7 +38,7 @@ module NumericalSolutionModule
   public :: solution_create
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
-  
+
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LENMEMPATH)                        :: memoryPath            !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH)                        :: fname                 !< input file name
@@ -57,6 +59,9 @@ module NumericalSolutionModule
     integer(I4B), dimension(:), pointer, contiguous  :: active => null()      !< active cell array
     real(DP), dimension(:), pointer, contiguous      :: xtemp => null()       !< temporary vector for previous dependent-variable iterate
     type(BlockParserType) :: parser                                           !< block parser object
+    !
+    ! Attributes/metdata
+    type(Attrs) :: attrs_scalars, attrs_arrays
     !
     ! -- sparse matrix data
     real(DP), pointer                                :: theta => null()            !< under-relaxation theta
@@ -238,6 +243,24 @@ subroutine solution_create(filename, id)
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(NumericalSolutionType) :: this
+    ! -- local
+    character(len=LENATTRNAME), dimension(4*NATTRS*2) :: attrs_vector
+    character(len=LENATTRNAME), dimension(6) :: foo
+    !
+    ! --- Build the metadata vector
+    ! JLM: I kinda hate this but it is readable. Could also have in an external namelist, but it
+    ! JLM: is tied to the internal/hardcoded variables so i think this makes sense. Ie it is not
+    ! JLM: configurable at runtime or i would say use a namelist.
+    ! JLM: what does the doxygen look like for this block, anything?
+    ! JLM: remove the keys? would be less readable.
+    attrs_vector = [character(len=LENATTRNAME) ::             &
+         'varname','ID',      'longname','identity',      'units','-',  &
+         'varname','IU',      'longname','integer unit',  'units','-',  &
+         'varname','TTFORM',  'longname','form',          'units','-',  &
+         'varname','TTSOLN',  'longname','soln',          'units','-'    ]
+    call this%attrs_scalars%df(attrs_vector)
+    foo = this%attrs_scalars%get_var_vec('IU')    ! testing - do this inside mem_allocate
+    write(*, *) 'get_scalar_var: ', foo           ! testing
     !
     ! -- allocate scalars
     call mem_allocate(this%id, 'ID', this%memoryPath)
@@ -353,7 +376,8 @@ subroutine solution_create(filename, id)
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)  !, attrs_scalars)
+    ! pass the attrs here: how should it look? attrs_scalar is a hash table, then mem_allocates gets the atts by key
     call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
@@ -3179,4 +3203,5 @@ subroutine solution_create(filename, id)
     !
     return
   end function GetNumericalSolutionFromList
+
 end module NumericalSolutionModule

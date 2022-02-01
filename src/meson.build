@@ -158,6 +158,7 @@ modflow_sources = files(
     'Utilities' / 'Table.f90',
     'Utilities' / 'TableTerm.f90',
     'Utilities' / 'Timer.f90',
+    'Utilities' / 'Attributes.f90',
     'Utilities' / 'version.f90',
     'mf6core.f90',
     'mf6lists.f90',

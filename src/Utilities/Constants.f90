@@ -24,6 +24,8 @@ module ConstantsModule
   integer(I4B), parameter :: LENMEMSEPARATOR = 1                                        !< maximum length of the memory path separator used, currently a '/'
   integer(I4B), parameter :: LENMEMPATH = 2*LENCOMPONENTNAME + LENMEMSEPARATOR          !< maximum length of the memory path
   integer(I4B), parameter :: LENMEMADDRESS = LENMEMPATH + LENMEMSEPARATOR + LENVARNAME  !< maximum length of the full memory address, including variable name
+  integer(I4B), parameter :: LENATTRNAME = 32                                           !< maximum length of a varaible attribute str
+  integer(I4B), parameter :: NATTRS = 3                                                 !< Currently: varname, longname, units
   integer(I4B), parameter :: LENAUXNAME = 16                                            !< maximum length of a aux variable
   integer(I4B), parameter :: LENBOUNDNAME = 40                                          !< maximum length of a bound name
   integer(I4B), parameter :: LENBUDTXT = 16                                             !< maximum length of a budget component names
