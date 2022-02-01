@@ -12,6 +12,13 @@ This script is used to update several files in the modflow6 repository, includin
   ../code.json
   ../src/Utiliteis/version.f90
 
+Command line switches for overriding settings include:
+
+  --version <x.y.z>
+  --developMode <idevelop>
+  --isApproved
+  --releaseCandidate
+
 Information in these files include version number (major.minor.micro), build date, whether or not
 the release is a release candidate or an actual release, whether the source code should be compiled
 in develop mode or in release mode, and the approval status.
@@ -21,11 +28,11 @@ This information is determined using the following logic:
   If the branch name is master or release, then it assumes this version is approved, which will
   result in use of the approved disclaimer.  Otherwise it is assumed to be provisional and a
   release candidate.  The approval status can be overridden using the --isApproved command
-  line argument.  The release status can be overridden and set to release canddiate using
+  line argument.  The release status can be overridden and set to release candidate using
   the --releaseCandidate command line argument.
 
   The version number is read in from ../version.txt, which contains major, minor, and micro version
-  numbers.  These numbers will be propogated through the source code, latex files, markdown files,
+  numbers.  These numbers will be propagated through the source code, latex files, markdown files,
   etc.  The version numbers can be overridden using the command line argument --version major.minor.macro.
 
 Once this script is run, these updated files will be used in compilation, latex documents, and
@@ -333,7 +340,9 @@ def get_develop_mode(branch):
     idevelop = None
     for idx, arg in enumerate(sys.argv):
         if arg == "--developMode":
-            idevelop = 1
+            ival = sys.argv[idx + 1]
+            ival = int(ival)
+            idevelop = ival
 
     if idevelop is None:
         idevelop = 0
