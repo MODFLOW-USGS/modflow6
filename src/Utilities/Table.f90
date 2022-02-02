@@ -495,6 +495,9 @@ module TableModule
     ! -- write the final table separator
     call this%print_separator(iextralines=1)
     !
+    ! -- flush file
+    flush(this%iout)
+    !
     ! -- reinitialize variables
     call this%reset()
     !
