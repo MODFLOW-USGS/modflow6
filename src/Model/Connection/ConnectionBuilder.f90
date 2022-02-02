@@ -112,18 +112,23 @@ module ConnectionBuilderModule
       if (conEx%use_interface_model() .or. conEx%dev_ifmod_on                   &
           .or. dev_always_ifmod) then
 
+        ! we should not get period connections here
+        isPeriodic = associated(conEx%model1, conEx%model2)
+        if (isPeriodic) then
+          write(*,*) 'Error (which should never happen): interface model '//    &
+                     'does not support periodic boundary condition'
+          call ustop()
+        end if
+
         ! create new model connection for model 1
         modelConnection => createModelConnection(conEx%model1, conEx)
         call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
         call AddSpatialModelConnectionToList(newConnections, modelConnection)
 
-        ! and for model 2, unless periodic
-        isPeriodic = associated(conEx%model1, conEx%model2)
-        if (.not. isPeriodic) then
-          modelConnection => createModelConnection(conEx%model2, conEx)
-          call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-          call AddSpatialModelConnectionToList(newConnections, modelConnection)
-        end if
+        ! and for model 2, unless periodic 
+        modelConnection => createModelConnection(conEx%model2, conEx)
+        call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
+        call AddSpatialModelConnectionToList(newConnections, modelConnection)
 
         ! remove this exchange from the base list, ownership
         ! now lies with the connection

@@ -1,0 +1,168 @@
+
+The \mf Time-Varying Hydraulic Conductivity (TVK) and Time-Varying Storage (TVS) packages allow hydraulic conductivity, specific storage and specific yield properties of model cells to be varied transiently throughout a simulation. This can be useful for modeling caved rock, void and spoil in mining applications, or for other physical changes to a system that can reasonably be represented by changing material properties.
+
+Changes are made on a cell-by-cell basis in TVK and TVS package input files by specifying new values for elements of NPF package arrays K, K22 and K33, and STO package arrays SS and SY. New values may be applied at the start of each stress period, or alternatively interpolated via time series to determine new values at each time step. Changes are only made to those model cells explicitly specified in the TVK and TVS package input files; other cells retain their original NPF and STO values. Additionally, a change may be made to a cell's value for one property independently without affecting other property values at the same cell, e.g. SS may be changed for a cell without affecting SY, if desired.
+
+Where a property value change is given by a time series, the value continues to change at each time step until the last entry in the time series is reached. Otherwise, once a cell property value has been changed, it remains at its new value until subsequently changed in the TVK or TVS files for a later period, or until the end of the simulation if no further changes are enacted.
+
+By default, when the TVS package is used to change SS or SY values, the \mf storage formulation is modified to integrate these changes such that the head solution correctly reflects changes in pressure due to the corresponding increase or decrease in stored water volume. The modifications are described in the \hyperref[sec:sci-ss]{``Storage Change Integration: Specific Storage''} and \hyperref[sec:sci-sy]{``Storage Change Integration: Specific Yield''} sections below. If this functionality is not desired, storage change integration may be disabled by activating the DISABLE\_STORAGE\_CHANGE\_INTEGRATION option in the TVS package input file.
+
+
+
+\subsection{Storage Change Integration: Specific Storage} \label{sec:sci-ss}
+
+Revisiting the derivation of the revised storage formulation in the \hyperref[ch:sto-mod]{Storage Package Modifications chapter}, changes in specific storage are introduced by first separating equation~\ref{eqn:storage-ss-final} into two separate equations:
+
+\begin{equation}
+	\label{eqn:tvs-vss-old}
+	V_{SS}^\told = SC1^\told \, S_F^\told \left( h^\told - BOT - \frac{\Delta z}{2} S_F^\told \right) ,
+\end{equation}
+
+\noindent giving the volume of water in compressible storage at time $\told$, and
+
+\begin{equation}
+	\label{eqn:tvs-vss-new}
+	V_{SS}^t = SC1^t \, S_F^t \left( h^t - BOT - \frac{\Delta z}{2} S_F^t \right) ,
+\end{equation}
+
+\noindent giving the volume of water in compressible storage at time $t$. The volumetric flow rate from compressible storage taking into account changes in specific storage is then
+
+\begin{equation}
+	\label{eqn:tvs-qss}
+	\begin{aligned}
+	Q_{SS} = & \frac{V_{SS}^\told - V_{SS}^t}{\Delta t} \\
+	       = & \frac{SC1^\told}{\Delta t} \, S_F^\told \left( h^\told - BOT - \frac{\Delta z}{2} S_F^\told \right) - \frac{SC1^t}{\Delta t} \, S_F^t \left( h^t - BOT - \frac{\Delta z}{2} S_F^t \right) .
+	\end{aligned}
+\end{equation}
+
+
+\subsubsection{Standard Formulation}
+
+Following the same process used to arrive at equation~\ref{eqn:STOeq-rev-fd} in the \hyperref[ch:sto-mod]{Storage Package Modifications chapter}, equation~\ref{eqn:tvs-qss} leads to the following additions to the left- and right-hand sides of the discretized groundwater flow equation:
+
+\begin{equation}
+	\label{eqn:tvs-Ab-std}
+	\begin{aligned}
+		A_{n,n} \leftarrow & A_{n,n} - \frac{SC1_n^t}{\Delta t} S_{F_n}^\kmo \\
+		b_n \leftarrow & b_n - \frac{SC1_n^\told}{\Delta t} \, S_{F_n}^\told \left( h_n^\told - BOT_n - \frac{\Delta z_n}{2} S_{F_n}^\told \right) + \frac{SC1_n^t}{\Delta t} \, S_{F_n}^\kmo \left( BOT_n + \frac{\Delta z_n}{2} S_{F_n}^\kmo \right) .
+	\end{aligned}
+\end{equation}
+
+\noindent Note that in the absence of specific storage changes, i.e. for $SC1_n^\told = SC1_n^t = SC1_n$, equation~\ref{eqn:tvs-Ab-std} simplifies to equation~\ref{eqn:STOeq-rev-fd}.
+
+
+\subsubsection{Newton-Raphson Formulation}
+
+Evaluating equation~\ref{eqn:tvs-qss} cellwise with subscript $n$ and applying quadratically smoothed cell saturations $S_F^*$ results in
+
+\begin{equation}
+	\label{eqn:tvs-qss-n}
+	Q_{SS_n} = \frac{SC1_n^\told}{\Delta t} \, S_{F_n}^\stold \left( h_n^\told - BOT_n - \frac{\Delta z_n}{2} S_{F_n}^\stold \right) - \frac{SC1_n^t}{\Delta t} \left[ S_{F_n}^\st \left( h_n^t - BOT_n \right) + \frac{\Delta z_n}{2} \left( S_{F_n}^\st \right)^2 \right] .
+\end{equation}
+
+\noindent The derivative of equation~\ref{eqn:tvs-qss-n} with respect to $h_n$ is identical to that of the base case with no transient specific storage changes, as all terms involving $SC1_n^\told$ disappear after differentiation. As such, the result is equivalent to equation~\ref{eqn:STOeq-rev-derv-simp} with $SC1 = SC1_n^t$:
+
+\begin{equation}
+	\label{eqn:tvs-qss-nr-deriv}
+	\frac{\partial Q_{SS_n}}{\partial h_n} = -\frac{SC1_n^t}{\Delta t} S_{F_n}^\skmo - \frac{SC1_n^t}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1_n^t}{\Delta t} \Delta z_n S_{F_n}^\skmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} .
+\end{equation}
+
+\noindent Substituting equations~\ref{eqn:tvs-qss-n} and~\ref{eqn:tvs-qss-nr-deriv} into equation~\ref{eqn:STOeq-nr} yields the following contributions to $A_{n,n}$ and $b_n$:
+
+\begin{equation}
+	\label{eqn:tvs-Ab-nr}
+	\begin{aligned}
+		A_{n,n} \leftarrow & A_{n,n} + \biggl[ - \frac{SC1_n^t}{\Delta t} S_{F_n}^\skmo - \frac{SC1_n^t}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1_n^t}{\Delta t} \Delta z_n S_{F_n}^\skmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] \\
+		b_n \leftarrow & b_n - \frac{SC1_n^\told}{\Delta t} \, S_{F_n}^\told \left( h_n^\told - BOT_n - \frac{\Delta z_n}{2} S_{F_n}^\told \right) + \frac{SC1_n^t}{\Delta t} \, S_{F_n}^\skmo \left( BOT_n + \frac{\Delta z_n}{2} S_{F_n}^\skmo \right) \\
+		& \phantom{b_n} + \biggl[ - \frac{SC1_n^t}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1_n^t}{\Delta t} \Delta z_n S_{F_n}^\skmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] h_n^\kmo .
+	\end{aligned}
+\end{equation}
+
+\noindent Once again, in the absence of storage changes ($SC1_n^\told = SC1_n^t = SC1_n$), this collapses to the base case formulation in equation~\ref{eqn:STOeq-rev-nr-simp}.
+
+
+
+\subsection{Storage Change Integration: Specific Yield} \label{sec:sci-sy}
+
+The standard \mf specific yield contribution to groundwater flow \citep[eq. 5--10]{modflow6gwf} is calculated as
+
+\begin{equation}
+	\label{eqn:tvs-qsy-original}
+	Q_{Sy_n} = \frac{SC2_n \, \Delta z_n}{\Delta t} \left( S_{F_n}^\told - S_{F_n}^t \right) ,
+\end{equation}
+
+\noindent where $Q_{Sy_n}$ is the volumetric flow rate from specific yield ($L^3/T$) and $SC2_n = Sy_n \cdot A_n$ is the secondary storage capacity for cell $n$ with specific yield $Sy_n$ and horizontal cell area $A_n$.
+
+When specific yield changes transiently, the secondary storage capacity term is split into its new value $SC2_n^t$ and its old value $SC2_n^\told$, resulting in
+
+\begin{equation}
+	\label{eqn:tvs-qsy-new}
+	Q_{Sy_n} = \frac{SC2_n^\told \, \Delta z_n}{\Delta t} \, S_{F_n}^\told - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \, S_{F_n}^t .
+\end{equation}
+
+
+\subsubsection{Standard Formulation}
+
+Rearranging equation~\ref{eqn:tvs-qsy-new} for solution at the current iteration $k$ in terms of $h_n^k$ instead of saturation $S_{F_n}^t$ gives
+
+\begin{equation}
+	\label{eqn:tvs-qsy-new-k}
+	Q_{Sy_n}^k = \frac{SC2_n^\told \, \Delta z_n}{\Delta t} \, S_{F_n}^\told - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{h_n^k - BOT_n}{\Delta z_n} ,
+\end{equation}
+
+\noindent which results in the following contributions to $A_{n,n}$ and $b_n$:
+
+\begin{equation}
+	\label{eqn:tvs-sy-Ab-std}
+	\begin{aligned}
+		A_{n,n} \leftarrow & A_{n,n} - \frac{SC2_n^t}{\Delta t} \\
+		b_n \leftarrow & b_n - \frac{SC2_n^\told}{\Delta t} \, \Delta z_n \, S_{F_n}^\told - \frac{SC2_n^t}{\Delta t} \, BOT_n .
+	\end{aligned}
+\end{equation}
+
+\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the beginning of the time step is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
+
+\begin{equation}
+	\label{eqn:tvs-sy-b-fullsat}
+	b_n \leftarrow b_n - \frac{SC2_n^\told}{\Delta t} \, \Delta z_n \, S_{F_n}^\told + \frac{SC2_n^t}{\Delta t} \, \Delta z_n .
+\end{equation}
+
+
+\subsubsection{Newton-Raphson Formulation}
+
+As all $SC2_n^\told$ terms are eliminated by differentiation, the derivative of equation~\ref{eqn:tvs-qsy-new} at iteration $k$, and with quadratically smoothed cell saturations $S_F^*$ applied, is equivalent to that of the base formulation \citep[eq. 5--14]{modflow6gwf} with $SC2_n = SC2_n^t$:
+
+\begin{equation}
+	\label{eqn:tvs-qsy-nr-deriv}
+	\frac{\partial Q_{Sy_n}}{\partial h_n} = - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} .
+\end{equation}
+
+\noindent The fully implicit Newton-Raphson formulation for specific yield storage contribution in cell $n$ is
+
+\begin{equation}
+	\label{eqn:tvs-sy-nr}
+	\frac{\partial Q_{Sy_n}}{\partial h_n} h_n^k = -Q_{Sy_n}^k + \frac{\partial Q_{Sy_n}}{\partial h_n} h_n^\kmo .
+\end{equation}
+
+\noindent Substitution of equations~\ref{eqn:tvs-qsy-new} and~\ref{eqn:tvs-qsy-nr-deriv} into equation~\ref{eqn:tvs-sy-nr} results in the following general expression of the Newton-Raphson formulation for the contribution of specific yield storage to cell $n$:
+
+\begin{equation}
+	\label{eqn:tvs-sy-nr}
+	\begin{aligned}
+		\biggl[ - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] h_n^k =
+		& - \biggl[ \frac{SC2_n^\told \, \Delta z_n}{\Delta t} \, S_{F_n}^\stold - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \, S_{F_n}^\skmo \biggr] \\
+		& + \biggl[ - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] h_n^\kmo ,
+	\end{aligned}
+\end{equation}
+
+\noindent which yields the following contributions to $A_{n,n}$ and $b_n$:
+
+\begin{equation}
+	\label{eqn:tvs-sy-Ab-std}
+	\begin{aligned}
+		A_{n,n} \leftarrow & A_{n,n} - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \\
+		b_n \leftarrow & b_n - \frac{SC2_n^\told \, \Delta z_n}{\Delta t} \, S_{F_n}^\stold + \frac{SC2_n^t \, \Delta z_n}{\Delta t} \, S_{F_n}^\skmo - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} h_n^\kmo .
+	\end{aligned}
+\end{equation}
+
+\noindent For cells where the head at the beginning of the time step is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.

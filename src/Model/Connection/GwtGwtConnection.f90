@@ -12,10 +12,12 @@ module GwtGwtConnectionModule
   use GwtInterfaceModelModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
-  use TopologyModule, only: GlobalCellType
+  use CellWithNbrsModule, only: GlobalCellType
 
   implicit none
   private
+
+  public :: CastAsGwtGwtConnection
 
   !> Connects a GWT model to other GWT models in space. Derives
   !! from NumericalExchangeType so the solution can use it to
@@ -32,6 +34,7 @@ module GwtGwtConnectionModule
                                                                           !! 0 = upstream, 1 = central, 2 = TVD
     integer(I4B), pointer :: iIfaceXt3d => null()                         !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
     real(DP), dimension(:), pointer, contiguous :: exgflowja => null()    !< intercell flows at the interface, coming from GWF interface model
+    integer(I4B), pointer :: exgflowSign => null()                        !< indicates the flow direction of exgflowja
     real(DP), dimension(:), pointer, contiguous :: exgflowjaGwt => null() !< gwt-flowja at the interface (this is a subset of the GWT
                                                                           !! interface model flowja's)
     
@@ -118,6 +121,7 @@ subroutine gwtGwtConnection_ctor(this, model, gwtEx)
   this%typename = 'GWT-GWT'
   this%iIfaceAdvScheme = 0
   this%iIfaceXt3d = 1
+  this%exgflowSign = 1
 
   allocate(this%gwtInterfaceModel)
   this%interfaceModel => this%gwtInterfaceModel
@@ -131,6 +135,7 @@ subroutine allocate_scalars(this)
 
   call mem_allocate(this%iIfaceAdvScheme, 'IADVSCHEME', this%memoryPath)
   call mem_allocate(this%iIfaceXt3d, 'IXT3D', this%memoryPath)
+  call mem_allocate(this%exgflowSign, 'EXGFLOWSIGN', this%memoryPath)
 
 end subroutine allocate_scalars
 
@@ -347,8 +352,8 @@ subroutine gwtgwtcon_cf(this, kiter)
  ! copy model data into interface model
   call this%syncInterfaceModel()
 
-  ! TODO_MJR: this can go again once the issue on dsp_ad is settled??  
-  call this%gwtInterfaceModel%model_ad()
+  ! recalculate dispersion ellipse 
+  if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
 
   ! reset interface system
   do i = 1, this%nja
@@ -404,9 +409,9 @@ subroutine syncInterfaceModel(this)
     m = this%gridConnection%getInterfaceIndex(connectedCell%index,            &
                                               connectedCell%model)
     ipos = getCSRIndex(n, m, imCon%ia, imCon%ja)
-    this%gwfflowja(ipos) = this%exgflowja(i)
+    this%gwfflowja(ipos) = this%exgflowja(i) * this%exgflowSign
     ipos = getCSRIndex(m, n, imCon%ia, imCon%ja)
-    this%gwfflowja(ipos) = -this%exgflowja(i)
+    this%gwfflowja(ipos) = -this%exgflowja(i) * this%exgflowSign
   end do
 
   ! copy concentrations
@@ -521,6 +526,7 @@ subroutine gwtgwtcon_da(this)
   ! scalars
   call mem_deallocate(this%iIfaceAdvScheme)
   call mem_deallocate(this%iIfaceXt3d)
+  call mem_deallocate(this%exgflowSign)
 
   ! arrays
   call mem_deallocate(this%gwfflowja)
@@ -547,5 +553,22 @@ subroutine gwtgwtcon_da(this)
   end if
 
 end subroutine gwtgwtcon_da
+
+!> @brief Cast to GwtGwtConnectionType
+!<
+function CastAsGwtGwtConnection(obj) result (res)
+  implicit none
+  class(*), pointer, intent(inout) :: obj     !< object to be cast
+  class(GwtGwtConnectionType), pointer :: res !< the GwtGwtConnection
+  
+  res => null()
+  if (.not. associated(obj)) return
+  
+  select type (obj)
+  class is (GwtGwtConnectionType)
+    res => obj
+  end select
+  return
+end function CastAsGwtGwtConnection
 
 end module

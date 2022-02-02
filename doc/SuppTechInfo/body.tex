@@ -1,0 +1,52 @@
+%Introduction
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Introduction}
+\customlabel{ch:intro}{\thechapno}
+\input{introduction.tex}
+
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Specific Discharge}
+\customlabel{ch:spdis}{\thechapno}
+\input{specific-discharge.tex}
+
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Drain Package Discharge Scaling}
+\customlabel{ch:drn}{\thechapno}
+\input{drain-discharge-scaling.tex}
+
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Multi-Aquifer Well Package Connection Flow Correction}
+\customlabel{ch:maw-qcorr}{\thechapno}
+\input{maw-connection-flow-correction.tex}
+
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Storage Package Modifications}
+\customlabel{ch:sto-mod}{\thechapno}
+\input{storage-modifications.tex}
+
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Time-Varying Hydraulic Conductivity and Storage}
+\customlabel{ch:tvk-tvs}{\thechapno}
+\input{tvk-tvs.tex}
+
+\newpage
+\incchap
+\SECTION{Chapter \thechapno. Interface Model and GWT-GWT Exchange}
+\customlabel{ch:ifmod}{\thechapno}
+\input{interface-model.tex}
+
+
+\newpage
+\ifx\usgsdirector\undefined
+\addcontentsline{toc}{section}{\hspace{1.5em}\bibname}
+\else
+\inreferences
+\REFSECTION
+\fi
+\input{bibliography.tex}

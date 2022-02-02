@@ -1,7 +1,8 @@
 module GwfGwfExchangeModule
 
-  use KindModule, only: DP, I4B, LGP
-  use SimVariablesModule, only: errmsg
+  use KindModule,              only: DP, I4B, LGP
+  use SimVariablesModule,      only: errmsg  
+  use SimModule,               only: store_error
   use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
@@ -90,6 +91,7 @@ module GwfGwfExchangeModule
     procedure, public  :: gwf_gwf_save_simvals
     procedure, private :: gwf_gwf_calc_simvals
     procedure, public  :: gwf_gwf_set_spdis
+    procedure, private :: validate_exchange
   end type GwfExchangeType
 
 contains
@@ -221,11 +223,75 @@ contains
     !
     ! -- Store obs
     call this%gwf_gwf_df_obs()
-    call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
+    call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)    
+    !
+    ! -- validate
+    call this%validate_exchange()
     !
     ! -- return
     return
   end subroutine gwf_gwf_df
+
+  !> @brief validate exchange data after reading
+  !<
+  subroutine validate_exchange(this)
+    class(GwfExchangeType) :: this
+    ! local
+    
+    ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
+    if (associated(this%model1, this%model2)) then
+      if (this%ixt3d > 0) then
+        write(errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name),             &
+                             ' is a periodic boundary condition which cannot'// &
+                             ' be configured with XT3D'
+        call store_error(errmsg, terminate=.TRUE.)
+      end if
+    end if
+
+    ! Check to see if horizontal anisotropy is in either model1 or model2.
+    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! GWF-GWF exchange (this%ianglex > 0).
+    if(this%gwfmodel1%npf%ik22 /= 0 .or. this%gwfmodel2%npf%ik22 /= 0) then
+      if(this%ianglex == 0) then
+        write(errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name),             &
+                             ' requires that ANGLDEGX be specified as an'//     &
+                             ' auxiliary variable because K22 was specified'//  &
+                             ' in one or both groundwater models.'
+        call store_error(errmsg, terminate=.TRUE.)
+      endif
+    endif
+    
+    ! Check to see if specific discharge is needed for model1 or model2.
+    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! GWF-GWF exchange (this%ianglex > 0).
+    if(this%gwfmodel1%npf%icalcspdis /= 0 .or. &
+       this%gwfmodel2%npf%icalcspdis /= 0) then
+      if(this%ianglex == 0) then
+        write(errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name),             &
+                             ' requires that ANGLDEGX be specified as an'//     &
+                             ' auxiliary variable because specific discharge'// &
+                             ' is being calculated in one or both'//            &
+                             ' groundwater models.'
+        call store_error(errmsg, terminate=.TRUE.)
+      endif
+      if(this%icdist == 0) then
+        write(errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name),             &
+                             ' requires that CDIST be specified as an'//        &
+                             ' auxiliary variable because specific discharge'// &
+                             ' is being calculated in one or both'//            &
+                             ' groundwater models.'
+        call store_error(errmsg, terminate=.TRUE.)
+      endif
+    endif
+
+    if (this%ixt3d > 0 .and. this%ianglex == 0) then
+      write(errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name),               &
+                           ' requires that ANGLDEGX be specified as an'//       &
+                           ' auxiliary variable because XT3D is enabled'
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
+
+  end subroutine validate_exchange
 
   subroutine gwf_gwf_ac(this, sparse)
 ! ******************************************************************************
@@ -317,7 +383,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-    use SimModule, only: store_error
     use GwfNpfModule, only: condmean, vcond, hcond
     ! -- dummy
     class(GwfExchangeType) :: this
@@ -337,46 +402,6 @@ contains
     ! -- If mover is active, then call ar routine
     if(this%inmvr > 0) call this%mvr%mvr_ar()
     !
-    ! -- Check to see if horizontal anisotropy is in either model1 or model2.
-    !    If so, then ANGLDEGX must be provided as an auxiliary variable for this
-    !    GWF-GWF exchange (this%ianglex > 0).
-    if(this%gwfmodel1%npf%ik22 /= 0 .or. this%gwfmodel2%npf%ik22 /= 0) then
-      if(this%ianglex == 0) then
-        write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //             &
-                             'specified as an auxiliary variable because ' //    &
-                             'K22 was specified in one or both ' //              &
-                             'groundwater models.'
-        call store_error(errmsg, terminate=.TRUE.)
-      endif
-    endif
-    !
-    ! -- Check to see if specific discharge is needed for model1 or model2.
-    !    If so, then ANGLDEGX must be provided as an auxiliary variable for this
-    !    GWF-GWF exchange (this%ianglex > 0).
-    if(this%gwfmodel1%npf%icalcspdis /= 0 .or. &
-       this%gwfmodel2%npf%icalcspdis /= 0) then
-      if(this%ianglex == 0) then
-        write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //             &
-                             'specified as an auxiliary variable because ' //    &
-                             'specific discharge is being calculated in' //      &
-                             ' one or both groundwater models.'
-        call store_error(errmsg, terminate=.TRUE.)
-      endif
-      if(this%icdist == 0) then
-        write(errmsg, '(a)') 'GWF-GWF requires that CDIST be ' //                &
-                             'specified as an auxiliary variable because ' //    &
-                             'specific discharge is being calculated in' //      &
-                             ' one or both groundwater models.'
-        call store_error(errmsg, terminate=.TRUE.)
-      endif
-    endif
-    !
-    if (this%ixt3d > 0 .and. this%ianglex == 0) then
-      write(errmsg, '(a)') 'GWF-GWF requires that ANGLDEGX be ' //               &
-                           'specified as an auxiliary variable because ' //      &
-                           'XT3D is enabled on the exchange.'
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
     ! -- Go through each connection and calculate the saturated conductance
     do iexg = 1, this%nexg
       !
@@ -451,7 +476,8 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwf_gwf_ar
+  end subroutine gwf_gwf_ar  
+
 
   subroutine gwf_gwf_rp(this)
 ! ******************************************************************************
