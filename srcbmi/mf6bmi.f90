@@ -23,7 +23,7 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr, &
                            c_f_pointer
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, LENVARNAME
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME, LENATTRNAME, NATTRS
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
                                  memorylist, get_from_memorylist
@@ -31,6 +31,7 @@ module mf6bmi
   use MemoryHelperModule, only: create_mem_address
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
+  use AttributesModule, only: attrs_keys
   implicit none
 
   integer(c_int), bind(C, name="ISTDOUTTOFILE") :: istdout_to_file = 1  !< output control: =0 to screen, >0 to file
@@ -240,8 +241,8 @@ contains
   function get_input_var_names(c_names) result(bmi_status) bind(C, name="get_input_var_names")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_input_var_names
     ! -- dummy variables
-    character(kind=c_char, len=1), intent(inout) :: c_names(*) !< array with memory paths for input variables
-    integer(kind=c_int) :: bmi_status                         !< BMI status code
+    character(kind=c_char, len=1), intent(inout) :: c_names(*)  !< array with memory paths for input variables
+    integer(kind=c_int) :: bmi_status                           !< BMI status code
     ! -- local variables
     integer(I4B) :: imem, start, i
     type(MemoryType), pointer :: mt => null()
@@ -271,8 +272,8 @@ contains
   function get_output_var_names(c_names) result(bmi_status) bind(C, name="get_output_var_names")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_output_var_names
     ! -- dummy variables
-    character(kind=c_char, len=1), intent(inout) :: c_names(*) !< array with memory paths for output variables
-    integer(kind=c_int) :: bmi_status                         !< BMI status code
+    character(kind=c_char, len=1), intent(inout) :: c_names(*)  !< array with memory paths for output variables
+    integer(kind=c_int) :: bmi_status                           !< BMI status code
     ! -- local variables
     integer(I4B) :: imem, start, i
     type(MemoryType), pointer :: mt => null()
@@ -292,6 +293,46 @@ contains
     bmi_status = BMI_SUCCESS
 
   end function get_output_var_names
+
+  !> @brief Get the number of attributes on a the variables
+  !!
+  !! This number is constant for all variables stored in the memory manager
+  !<
+  function get_attrs_item_count(count) result(bmi_status) bind(C, name="get_attrs_item_count")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_attrs_item_count
+    integer(kind=c_int), intent(out) :: count !< the number of variable attributes
+    integer(kind=c_int) :: bmi_status         !< BMI status code
+    count = NATTRS  ! JLM safe... probably need a function?
+    bmi_status = BMI_SUCCESS
+  end function get_attrs_item_count
+
+  ! get_attrs_keys
+  !> @brief Get the keys of the variable attributes
+  !!
+  !! The keys are the same for all variables stored in the memory manager
+  !<
+  function get_attrs_keys(c_names) result(bmi_status) bind(C, name="get_attrs_keys")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_attrs_keys
+    character(kind=c_char, len=1), intent(inout) :: c_names(*)  !< array with memory paths for output variables
+    integer(kind=c_int) :: bmi_status                           !< BMI status code
+    ! -- local variables
+    integer(I4B) :: kk, ii, start
+    character(LENATTRNAME) :: key
+
+    start = 1
+    do kk = 1, size(attrs_keys)
+      key = attrs_keys(kk)
+      do ii = 1, len(trim(key))
+        c_names(start + ii - 1) = key(ii:ii)
+      end do
+      c_names(start + ii) = c_null_char
+      start = start + BMI_LENATTRNAME
+    end do
+
+    bmi_status = BMI_SUCCESS
+  end function get_attrs_keys
+
+  ! get_var_attrs
 
   !> @brief Get the size (in bytes) of a single element of a variable
   !<

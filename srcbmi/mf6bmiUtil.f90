@@ -4,7 +4,8 @@
 module mf6bmiUtil
   use mf6bmiError
   use iso_c_binding, only: c_int, c_char, c_null_char
-  use ConstantsModule, only: MAXCHARLEN, LENMEMPATH, LENVARNAME, &
+  use ConstantsModule, only: MAXCHARLEN, LENMEMPATH, LENVARNAME,   &
+                             LENATTRNAME,                          &
                              LENMODELNAME, LINELENGTH, LENMEMTYPE, &
                              LENMEMADDRESS, LENCOMPONENTNAME
   use KindModule, only: DP, I4B, LGP
@@ -30,6 +31,9 @@ module mf6bmiUtil
   !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENGRIDTYPE
 
   integer(c_int), bind(C, name="BMI_LENVARADDRESS") :: BMI_LENVARADDRESS = LENMEMADDRESS + 1 !< max. length for the variable's address C-string
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
+
+  integer(c_int), bind(C, name="BMI_LENATTRNAME") :: BMI_LENATTRNAME = LENATTRNAME + 1 !< max. length for the variable's address C-string  ! JLM: why + 1?
   !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
 
   integer(c_int), bind(C, name="BMI_LENCOMPONENTNAME") :: BMI_LENCOMPONENTNAME = 256 !< component name length, i.e. 'MODFLOW 6'

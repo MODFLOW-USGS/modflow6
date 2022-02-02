@@ -11,7 +11,7 @@ module AttributesModule
   !   varname, longname, units, dimensions, gridname, pro/dia-gnosticity,
   !   public/private, internal/external, type, ...
   ! JLM set or check the keys/columns somewhere with this?
-  character(len=LENATTRNAME), dimension(NATTRS), parameter :: attr_keys = &
+  character(len=LENATTRNAME), dimension(NATTRS), parameter :: attrs_keys = &
        [character(len=LENATTRNAME) :: 'varname', 'longname', 'units']
 
   character(len=LENATTRNAME), dimension(2*NATTRS), parameter :: empty_var_attrs = &
