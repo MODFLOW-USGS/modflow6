@@ -43,15 +43,15 @@ contains
     character(len=LENATTRNAME), dimension(NATTRS) :: keys_passed
     ! ---
     attrs_vec_len = size(attrs_vector((NATTRS+1):))
-    write(*,*) 'attrs_vec_len: ', attrs_vec_len
     this%n_vars = attrs_vec_len / NATTRS  !! n_vars, JLM: ensure remainder is zero
     this%vector => attrs_vector((NATTRS+1):)
 
     call hash_table_cr(this%hash)
 
     keys_passed = attrs_vector(1:NATTRS)
+    ! Check that the header matches.
     do kk = 1, size(keys_passed)
-      write(*,*) 'assert: ', keys_passed(kk) == attrs_keys(kk)
+      write(*,*) 'assert: ', keys_passed(kk) == attrs_keys(kk)  ! JLM: actually check/assert this
     end do
 
     do vv = 1, this%n_vars
