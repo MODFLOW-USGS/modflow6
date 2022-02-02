@@ -273,13 +273,13 @@ module MemoryManagerModule
     integer(I4B) :: aa
     !
     do aa = 1, NATTRS
-      attrs(aa) = empty_var_attrs(2*aa)
+      attrs(aa) = empty_var_attrs(aa)
     end do
     mt => null()
     call get_from_memorylist(name, mem_path, mt, found)
     if (found) then
       do aa = 1, NATTRS
-        attrs(aa) = mt%attrs_vec(2*aa)
+        attrs(aa) = mt%attrs_vec(aa)
       end do
     end if
     !

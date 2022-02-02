@@ -245,61 +245,61 @@ subroutine solution_create(filename, id)
     class(NumericalSolutionType) :: this
     ! -- local
     integer(I4B) :: n_scalar_vars = 44
-    character(len=LENATTRNAME), dimension(2 * NATTRS * 44) :: attrs_vector
+    character(len=LENATTRNAME), dimension(NATTRS * (44 + 1)) :: attrs_vector  ! +1 for header row
 
     ! --- Build the metadata vector
     ! JLM: I kinda hate this but it is readable. Could also have in an external namelist, but it
     ! JLM: is tied to the internal/hardcoded variables so i think this makes sense. Ie it is not
     ! JLM: configurable at runtime or i would say use a namelist.
-    ! JLM: Could also remove the redundancy in keys buy having collated key and value vectors. That's
-    ! JLM: probably the thing to do, but then the following is less readable.
     ! JLM: what does the doxygen look like for this block, anything?
     ! Note that correct length is assured by the compilers (gnu and intel).
-    attrs_vector = [character(len=LENATTRNAME) ::             &
-         'varname','ID',                'longname','solution number',                 'units','-',  &  ! 1
-         'varname','IU',                'longname','input file unit',                 'units','-',  &
-         'varname','TTFORM',            'longname','timer - total formulation time',  'units','-',  &
-         'varname','TTSOLN',            'longname','timer - total solution time',     'units','-',  &
-         'varname','ISYMMETRIC',        'longname','matrix symmetry required flag',   'units','-',  &
-         'varname','NEQ',               'longname','number of equations',             'units','-',  &
-         'varname','NJA',               'longname','number of non-zero entries',      'units','-',  &
-         'varname','DVCLOSE',           'longname','',                                'units','-',  &
-         'varname','BIGCHOLD',          'longname','',                                'units','-',  &
-         'varname','BIGCH',             'longname','',                                'units','-',  &  ! 10
-         'varname','RELAXOLD',          'longname','',                                'units','-',  &
-         'varname','RES_PREV',          'longname','',                                'units','-',  &
-         'varname','RES_NEW',           'longname','',                                'units','-',  &
-         'varname','ICNVG',             'longname','',                                'units','-',  &
-         'varname','ITERTOT_TIMESTEP',  'longname','',                                'units','-',  &
-         'varname','IOUTTOT_TIMESTEP',  'longname','',                                'units','-',  &
-         'varname','INNERTOT_SIM',      'longname','',                                'units','-',  &
-         'varname','MXITER',            'longname','',                                'units','-',  &
-         'varname','LINMETH',           'longname','',                                'units','-',  &
-         'varname','NONMETH',           'longname','',                                'units','-',  &  ! 20
-         'varname','IPRIMS',            'longname','',                                'units','-',  &
-         'varname','THETA',             'longname','',                                'units','-',  &
-         'varname','AKAPPA',            'longname','',                                'units','-',  &
-         'varname','GAMMA',             'longname','',                                'units','-',  &
-         'varname','AMOMENTUM',         'longname','',                                'units','-',  &
-         'varname','BREDUC',            'longname','',                                'units','-',  &
-         'varname','BTOL',              'longname','',                                'units','-',  &
-         'varname','RES_LIM',           'longname','',                                'units','-',  &
-         'varname','NUMTRACK',          'longname','',                                'units','-',  &
-         'varname','IBFLAG',            'longname','',                                'units','-',  &  ! 30
-         'varname','ICSVOUTEROUT',      'longname','',                                'units','-',  &
-         'varname','ICSVINNEROUT',      'longname','',                                'units','-',  &
-         'varname','NITERMAX',          'longname','',                                'units','-',  &
-         'varname','CONVMOD',           'longname','',                                'units','-',  &
-         'varname','IALLOWPTC',         'longname','',                                'units','-',  &
-         'varname','IPTCOPT',           'longname','',                                'units','-',  &
-         'varname','IPTCOUT',           'longname','',                                'units','-',  &
-         'varname','L2NORM0',           'longname','',                                'units','-',  &
-         'varname','PTCDEL',            'longname','',                                'units','-',  &
-         'varname','PTCDEL0',           'longname','',                                'units','-',  &  ! 40
-         'varname','PTCEXP',            'longname','',                                'units','-',  &
-         'varname','PTCTHRESH',         'longname','',                                'units','-',  &
-         'varname','PTCRAT',            'longname','',                                'units','-',  &
-         'varname','ATSFRAC',           'longname','',                                'units','-'    ]
+    attrs_vector = [character(len=LENATTRNAME) ::                          &
+         'variable name',     'long name',                       'units',  &  ! Header/keys row
+         !--------------------------------------------------------------------------------
+         'ID',                'solution number',                 '-',      &  ! 1st variable attrs
+         'IU',                'input file unit',                 '-',      &
+         'TTFORM',            'timer - total formulation time',  '-',      &
+         'TTSOLN',            'timer - total solution time',     '-',      &
+         'ISYMMETRIC',        'matrix symmetry required flag',   '-',      &
+         'NEQ',               'number of equations',             '-',      &
+         'NJA',               'number of non-zero entries',      '-',      &
+         'DVCLOSE',           '',                                '-',      &
+         'BIGCHOLD',          '',                                '-',      &
+         'BIGCH',             '',                                '-',      &  ! 10
+         'RELAXOLD',          '',                                '-',      &
+         'RES_PREV',          '',                                '-',      &
+         'RES_NEW',           '',                                '-',      &
+         'ICNVG',             '',                                '-',      &
+         'ITERTOT_TIMESTEP',  '',                                '-',      &
+         'IOUTTOT_TIMESTEP',  '',                                '-',      &
+         'INNERTOT_SIM',      '',                                '-',      &
+         'MXITER',            '',                                '-',      &
+         'LINMETH',           '',                                '-',      &
+         'NONMETH',           '',                                '-',      &  ! 20
+         'IPRIMS',            '',                                '-',      &
+         'THETA',             '',                                '-',      &
+         'AKAPPA',            '',                                '-',      &
+         'GAMMA',             '',                                '-',      &
+         'AMOMENTUM',         '',                                '-',      &
+         'BREDUC',            '',                                '-',      &
+         'BTOL',              '',                                '-',      &
+         'RES_LIM',           '',                                '-',      &
+         'NUMTRACK',          '',                                '-',      &
+         'IBFLAG',            '',                                '-',      &  ! 30
+         'ICSVOUTEROUT',      '',                                '-',      &
+         'ICSVINNEROUT',      '',                                '-',      &
+         'NITERMAX',          '',                                '-',      &
+         'CONVMOD',           '',                                '-',      &
+         'IALLOWPTC',         '',                                '-',      &
+         'IPTCOPT',           '',                                '-',      &
+         'IPTCOUT',           '',                                '-',      &
+         'L2NORM0',           '',                                '-',      &
+         'PTCDEL',            '',                                '-',      &
+         'PTCDEL0',           '',                                '-',      &  ! 40
+         'PTCEXP',            '',                                '-',      &
+         'PTCTHRESH',         '',                                '-',      &
+         'PTCRAT',            '',                                '-',      &
+         'ATSFRAC',           '',                                '-'        ]
 
     call this%attrs_scalars%df(attrs_vector)
 

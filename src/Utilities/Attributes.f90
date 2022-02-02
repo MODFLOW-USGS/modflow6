@@ -16,10 +16,9 @@ module AttributesModule
   !   public/private, internal/external, type, ...
   ! JLM set or check the keys/columns somewhere with this?
   character(len=LENATTRNAME), dimension(NATTRS), parameter :: attrs_keys = &
-       [character(len=LENATTRNAME) :: 'varname', 'longname', 'units']
+       [character(len=LENATTRNAME) :: 'variable name', 'long name', 'units']
 
-  character(len=LENATTRNAME), dimension(2*NATTRS), parameter :: empty_var_attrs = &
-       [character(len=LENATTRNAME) :: 'varname','',  'longname','',  'units','']
+  character(len=LENATTRNAME), dimension(NATTRS), parameter :: empty_var_attrs = ''
 
   ! JLM Document
   type :: Attrs
@@ -39,21 +38,26 @@ contains
     class(Attrs), intent(inout) :: this                                !< Attrs instance
     character(len=LENATTRNAME), intent(in), target :: attrs_vector(:)  !< attribtes str array
     ! --- local
-    integer(I4B) :: attrs_vec_len, vv
+    integer(I4B) :: attrs_vec_len, vv, kk
     character(len=LENATTRNAME) :: the_key
+    character(len=LENATTRNAME), dimension(NATTRS) :: keys_passed
     ! ---
-    attrs_vec_len = size(attrs_vector)
-    this%n_vars = attrs_vec_len / NATTRS / 2  !! n_vars, JLM: ensure remainder is zero
-    this%vector => attrs_vector
+    attrs_vec_len = size(attrs_vector((NATTRS+1):))
+    write(*,*) 'attrs_vec_len: ', attrs_vec_len
+    this%n_vars = attrs_vec_len / NATTRS  !! n_vars, JLM: ensure remainder is zero
+    this%vector => attrs_vector((NATTRS+1):)
 
     call hash_table_cr(this%hash)
 
+    keys_passed = attrs_vector(1:NATTRS)
+    do kk = 1, size(keys_passed)
+      write(*,*) 'assert: ', keys_passed(kk) == attrs_keys(kk)
+    end do
+
     do vv = 1, this%n_vars
       ! Always calculate the index outside the hash
-      ! *2 is because of the key:val pairs
-      ! +2 is the value for varname:value
-      the_key = this%vector(((vv - 1) * 2 * NATTRS) + 2)
-      ! write(*, *) 'the_key:>', the_key, '<'  ! JLM: remove
+      the_key = this%vector(((vv - 1) * NATTRS) + 1)
+      write(*, *) 'the_key:>', the_key, '<'  ! JLM: remove
       call this%hash%add_entry(the_key, vv)
     end do
 
@@ -64,17 +68,17 @@ contains
 
   ! JLM DOCUMENT
   function get_var_vec(this, varname) result(res)
-    class(Attrs), intent(in) :: this                           !< Attrs instance
-    character(len=*), intent(in) :: varname                    !< variable name for which to get attrs vector
-    character(len=LENATTRNAME), dimension(2 * NATTRS) :: res   !< vector of attrs (copy)
+    class(Attrs), intent(in) :: this                       !< Attrs instance
+    character(len=*), intent(in) :: varname                !< variable name for which to get attrs vector
+    character(len=LENATTRNAME), dimension(NATTRS) :: res   !< vector of attrs (copy)
     ! --- local
     integer(I4B) :: indx, start, end
     !
     res(:) = ''  ! default is all zero-len stringsm JLM: good choice for no matching key? use empty_var_attrs?
     indx = this%hash%get_index(varname)
     ! Always calculate the index outside the hash
-    start = ((indx - 1) * 2 * NATTRS) + 1
-    end = start + (2 * NATTRS) - 1
+    start = ((indx - 1) * NATTRS) + 1
+    end = start + (NATTRS) - 1
     if (indx > 0) then
       res = this%vector(start:end)
     endif

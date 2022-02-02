@@ -20,7 +20,7 @@ module MemoryTypeModule
     character(len=LENMEMPATH)                              :: path                   !< path to memory object
     character(len=LENMEMPATH)                              :: masterPath = 'none'    !< path to master memory object
     character(len=LENMEMTYPE)                              :: memtype                !< type (INTEGER or DOUBLE)
-    character(len=LENATTRNAME), dimension(2*NATTRS)        :: attrs_vec = ''         !< JLM: vector or attr object?
+    character(len=LENATTRNAME), dimension(NATTRS)          :: attrs_vec = ''         !< JLM: vector or attr object?
     integer(I4B)                                           :: id                     !< id, not used
     integer(I4B)                                           :: nrealloc = 0           !< number of times reallocated
     integer(I4B)                                           :: isize                  !< size of the array
