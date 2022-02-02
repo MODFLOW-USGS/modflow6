@@ -4,6 +4,7 @@ module MemoryManagerModule
   use ConstantsModule,        only: DZERO, DONE,                                 &
                                     DEM3, DEM6, DEM9, DEP3, DEP6, DEP9,          &
                                     LENMEMPATH, LENMEMSEPARATOR, LENVARNAME,     &
+                                    LENATTRNAME, NATTRS,                         &
                                     LENCOMPONENTNAME, LINELENGTH, LENMEMTYPE,    &
                                     LENMEMADDRESS, TABSTRING, TABUCSTRING,       &
                                     TABINTEGER, TABREAL, TABCENTER, TABLEFT,     &
@@ -35,6 +36,7 @@ module MemoryManagerModule
   public :: get_mem_elem_size
   public :: get_mem_shape
   public :: get_isize
+  public :: get_mem_attrs
   public :: copy_dbl1d
 
   public :: memorylist
@@ -256,6 +258,34 @@ module MemoryManagerModule
     return
   end subroutine get_isize
 
+  !> @ brief Get the variable memory attributes
+  !!
+  !! Returns a string vector of len NATTRS with string length LENATTRNAME
+  !! returns all empty string attributes when the requested variable is not found
+  !<
+  subroutine get_mem_attrs(name, mem_path, attrs)
+    character(len=*), intent(in) :: name                !< variable name
+    character(len=*), intent(in) :: mem_path            !< path where the variable is stored
+    character(len=LENATTRNAME), dimension(NATTRS), intent(out) :: attrs  !< attributes string vector
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    integer(I4B) :: aa
+    !
+    do aa = 1, NATTRS
+      attrs(aa) = empty_var_attrs(2*aa)
+    end do
+    mt => null()
+    call get_from_memorylist(name, mem_path, mt, found)
+    if (found) then
+      do aa = 1, NATTRS
+        attrs(aa) = mt%attrs_vec(2*aa)
+      end do
+    end if
+    !
+    return
+  end subroutine get_mem_attrs
+
   !> @ brief Get a memory type entry from the memory list
   !!
   !! Default value for @par check is .true. which means that this
@@ -330,10 +360,11 @@ module MemoryManagerModule
 
   !> @brief Allocate a logical scalar
   !<
-  subroutine allocate_logical(sclr, name, mem_path)
+  subroutine allocate_logical(sclr, name, mem_path, attrs_all)
     logical(LGP), pointer, intent(inout) :: sclr  !< variable for allocation
     character(len=*), intent(in) :: name          !< variable name
     character(len=*), intent(in) :: mem_path      !< path where the variable is stored
+    type(Attrs), optional, intent(in) :: attrs_all
     ! -- local
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
@@ -359,6 +390,11 @@ module MemoryManagerModule
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
+    if (present(attrs_all)) then
+      mt%attrs_vec = attrs_all%get_var_vec(name)
+    else
+        mt%attrs_vec = empty_var_attrs
+    end if
     write(mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
@@ -370,11 +406,12 @@ module MemoryManagerModule
 
   !> @brief Allocate a character string
   !<
-  subroutine allocate_str(sclr, ilen, name, mem_path)
+  subroutine allocate_str(sclr, ilen, name, mem_path, attrs_all)
     integer(I4B), intent(in) :: ilen                    !< string length
     character(len=ilen), pointer, intent(inout) :: sclr !< variable for allocation
     character(len=*), intent(in) :: name                !< variable name
     character(len=*), intent(in) :: mem_path            !< path where the variable is stored
+    type(Attrs), optional, intent(in) :: attrs_all
     ! -- local
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
@@ -409,6 +446,11 @@ module MemoryManagerModule
     mt%isize = ilen
     mt%name = name
     mt%path = mem_path
+    if (present(attrs_all)) then
+      mt%attrs_vec = attrs_all%get_var_vec(name)
+    else
+        mt%attrs_vec = empty_var_attrs
+    end if
     write(mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
@@ -668,10 +710,11 @@ module MemoryManagerModule
 
   !> @brief Allocate a real scalar
   !<
-  subroutine allocate_dbl(sclr, name, mem_path)
+  subroutine allocate_dbl(sclr, name, mem_path, attrs_all)
     real(DP), pointer, intent(inout) :: sclr      !< variable for allocation
     character(len=*), intent(in) :: name          !< variable name
     character(len=*), intent(in) :: mem_path      !< path where variable is stored
+    type(Attrs), optional, intent(in) :: attrs_all
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -698,6 +741,11 @@ module MemoryManagerModule
     mt%name = name
     mt%path = mem_path
     write(mt%memtype, "(a)") 'DOUBLE'
+    if (present(attrs_all)) then
+      mt%attrs_vec = attrs_all%get_var_vec(name)
+    else
+        mt%attrs_vec = empty_var_attrs
+    end if
     !
     ! -- add memory type to the memory list
     call memorylist%add(mt)

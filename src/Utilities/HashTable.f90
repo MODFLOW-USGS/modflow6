@@ -16,7 +16,7 @@ module HashTableModule
 
   private
   public HashTableType
-  public hash_table_cr  ! JLM: this could be made more OO, but it would probably break existing code
+  public hash_table_cr  ! JLM: could this be made more OO? it would probably break existing code
   public hash_table_da
 
   integer, parameter, private :: HASH_SIZE  = 4993

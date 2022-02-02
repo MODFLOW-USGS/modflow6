@@ -24,9 +24,9 @@ module mf6bmi
                            c_f_pointer
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, LENATTRNAME, NATTRS
-  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
-                                 get_mem_rank, get_mem_shape, get_mem_type, &
-                                 memorylist, get_from_memorylist
+  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize,    &
+                                 get_mem_rank, get_mem_shape, get_mem_type,   &
+                                 get_mem_attrs, memorylist, get_from_memorylist
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_address
   use SimVariablesModule, only: simstdout, istdout
@@ -311,10 +311,10 @@ contains
   !!
   !! The keys are the same for all variables stored in the memory manager
   !<
-  function get_attrs_keys(c_names) result(bmi_status) bind(C, name="get_attrs_keys")
+  function get_attrs_keys(c_keys) result(bmi_status) bind(C, name="get_attrs_keys")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_attrs_keys
-    character(kind=c_char, len=1), intent(inout) :: c_names(*)  !< array with memory paths for output variables
-    integer(kind=c_int) :: bmi_status                           !< BMI status code
+    character(kind=c_char, len=1), intent(out) :: c_keys(*)  !< array with memory paths for output variables
+    integer(kind=c_int) :: bmi_status                        !< BMI status code
     ! -- local variables
     integer(I4B) :: kk, ii, start
     character(LENATTRNAME) :: key
@@ -323,16 +323,57 @@ contains
     do kk = 1, size(attrs_keys)
       key = attrs_keys(kk)
       do ii = 1, len(trim(key))
-        c_names(start + ii - 1) = key(ii:ii)
+        c_keys(start + ii - 1) = key(ii:ii)
       end do
-      c_names(start + ii) = c_null_char
+      c_keys(start + ii) = c_null_char
       start = start + BMI_LENATTRNAME
     end do
 
     bmi_status = BMI_SUCCESS
   end function get_attrs_keys
 
-  ! get_var_attrs
+  !> @brief Get attributes for a given variable
+  !!
+  !! The attribute values for a named variable. These are in the
+  !! same order as the keys from get_attrs_keys.
+  !! There' no distinction between input/ouput in mf6, so this just gets
+  !! info from the memory manager for a variable from input=output vars.
+  !<
+  function get_var_attrs(c_var_address, c_attrs) result(bmi_status) bind(C, name="get_var_attrs")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_var_attrs
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*)      !< memory address string of the variable
+    character(kind=c_char, len=1), intent(out) :: c_attrs(*)    !< array with memory paths for output variables
+    integer(kind=c_int) :: bmi_status                           !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    integer(I4B) :: start, aa, ii
+    character(len=LENATTRNAME), dimension(NATTRS) :: attrs
+    character(len=LENATTRNAME) :: attr
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    call get_mem_attrs(var_name, mem_path, attrs)
+    ! No need to trap this an empty attribute vector
+
+    start = 1
+    do aa = 1, NATTRS
+      attr = attrs(aa)
+      do ii = 1, len(trim(attr))
+        c_attrs(start + ii - 1) = attr(ii:ii)
+      end do
+      c_attrs(start + ii) = c_null_char
+      start = start + BMI_LENATTRNAME
+    end do
+
+    bmi_status = BMI_SUCCESS
+  end function get_var_attrs
 
   !> @brief Get the size (in bytes) of a single element of a variable
   !<
