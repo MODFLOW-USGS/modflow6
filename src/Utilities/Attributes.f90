@@ -57,7 +57,6 @@ contains
     do vv = 1, this%n_vars
       ! Always calculate the index outside the hash
       the_key = this%vector(((vv - 1) * NATTRS) + 1)
-      write(*, *) 'the_key:>', the_key, '<'  ! JLM: remove
       call this%hash%add_entry(the_key, vv)
     end do
 
