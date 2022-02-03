@@ -581,6 +581,7 @@ module SimModule
       ! -- local variables
       integer(I4B) :: i
       logical :: opened
+      character(len=7) :: output_file
       !
       ! -- close all open file units
       do i = iustart, iunext - 1
@@ -591,6 +592,12 @@ module SimModule
         ! -- skip file units that are no longer open
         if(.not. opened) then
           cycle
+        end if
+        !
+        ! -- flush the file if it can be written to
+        inquire(unit=i, write=output_file)
+        if (trim(adjustl(output_file)) == 'YES') then 
+          flush(i)
         end if
         !
         ! -- close file unit i
