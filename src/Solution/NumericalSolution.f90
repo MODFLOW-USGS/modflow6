@@ -2551,6 +2551,9 @@ subroutine solution_create(filename, id)
                                           this%convlocdv, this%convlocdr,      &
                                           this%dvmax, this%drmax,              &
                                           this%convdvmax, this%convdrmax)
+    ! -- PETSc solver - linmeth option 2
+    else if (this%linmeth == 2) then
+      call this%petsc_solver%petcs_solver_execute()
     end if
     !
     ! -- ptc finalize - set ratio of ptc value added to the diagonal and the

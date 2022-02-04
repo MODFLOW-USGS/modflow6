@@ -6,6 +6,7 @@
 program mf6
   ! -- modules
   use Mf6CoreModule
+! `#include` must not be indented
 #include <petsc/finclude/petscsys.h>
   use petscsys
 
