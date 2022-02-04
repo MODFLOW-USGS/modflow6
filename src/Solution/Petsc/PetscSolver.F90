@@ -15,15 +15,15 @@ MODULE PetscSolverModule
   TYPE, PUBLIC :: PetscSolverDataType
     character(len=LENMEMPATH) :: memoryPath                              !< the path for storing variables in the memory manager
     integer(I4B), POINTER :: iout => NULL()                              !< simulation listing file unit
-    integer(I4B), POINTER :: IPRIMS => NULL()                            !< print flag
+    integer(I4B), POINTER :: iprims => NULL()                            !< print flag
     ! -- pointers to solution variables
-    integer(I4B), POINTER :: NEQ => NULL()                               !< number of equations (rows in matrix)
-    integer(I4B), POINTER :: NJA => NULL()                               !< number of non-zero values in amat
-    integer(I4B), dimension(:), pointer, contiguous :: IA => NULL()      !< position of start of each row
-    integer(I4B), dimension(:), pointer, contiguous :: JA => NULL()      !< column pointer
-    real(DP), dimension(:), pointer, contiguous :: AMAT => NULL()        !< coefficient matrix
-    real(DP), dimension(:), pointer, contiguous :: RHS => NULL()         !< right-hand side of equation
-    real(DP), dimension(:), pointer, contiguous :: X => NULL()           !< dependent variable
+    integer(I4B), POINTER :: neq => NULL()                               !< number of equations (rows in matrix)
+    integer(I4B), POINTER :: nja => NULL()                               !< number of non-zero values in amat
+    integer(I4B), dimension(:), pointer, contiguous :: ia => NULL()      !< position of start of each row
+    integer(I4B), dimension(:), pointer, contiguous :: ja => NULL()      !< column pointer
+    real(DP), dimension(:), pointer, contiguous :: amat => NULL()        !< coefficient matrix
+    real(DP), dimension(:), pointer, contiguous :: rhs => NULL()         !< right-hand side of equation
+    real(DP), dimension(:), pointer, contiguous :: x => NULL()           !< dependent variable
     
     ! PROCEDURES (METHODS)
     CONTAINS
@@ -38,23 +38,19 @@ MODULE PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    SUBROUTINE petcs_solver_allocate_read(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                            IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X,         &
-                            NINNER, LFINDBLOCK)
+    SUBROUTINE petcs_solver_allocate_read(this, name, parser, IOUT, IPRIMS,     &
+                            NEQ, NJA, IA, JA, AMAT, RHS, X)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
       use MemoryHelperModule,  only: create_mem_path
       use SimModule, only: store_error, count_errors,            &
                            deprecation_warning
       ! -- dummy variables
-      CLASS(PetscSolverDataType), INTENT(INOUT) :: this            !< PetscSolverDataType instance
-      CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME        !< solution name
+      CLASS(PetscSolverDataType), INTENT(INOUT) :: this          !< PetscSolverDataType instance
+      CHARACTER (LEN=lensolutionname), INTENT(IN) :: name        !< solution name
       type(BlockParserType) :: parser                            !< block parser
-      integer(I4B), INTENT(IN) :: IOUT                           !< simulation listing file unit
-      integer(I4B), TARGET, INTENT(IN) :: IPRIMS                 !< print option
-      integer(I4B), INTENT(IN) :: MXITER                         !< maximum outer iterations
-      integer(I4B), INTENT(IN) :: IFDPARAM                       !< complexity option
-      integer(I4B), INTENT(INOUT) :: IMSLINEARM                  !< linear method option (1) CG (2) BICGSTAB 
+      integer(I4B), INTENT(IN) :: iout                           !< simulation listing file unit
+      integer(I4B), TARGET, INTENT(IN) :: iprims                 !< print option
       integer(I4B), TARGET, INTENT(IN) :: NEQ                    !< number of equations
       integer(I4B), TARGET, INTENT(IN) :: NJA                    !< number of non-zero entries in the coefficient matrix
       integer(I4B), DIMENSION(NEQ+1), TARGET, INTENT(IN) :: IA   !< pointer to the start of a row in the coefficient matrix
@@ -62,25 +58,14 @@ MODULE PetscSolverModule
       real(DP), DIMENSION(NJA), TARGET, INTENT(IN) :: AMAT       !< coefficient matrix
       real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS     !< right-hand side
       real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X       !< dependent variables
-      integer(I4B), TARGET, INTENT(INOUT) :: NINNER              !< maximum number of inner iterations
-      integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK           !< flag indicating if the linear block is present (1) or missing (0)
 
-           ! -- local variables
+      ! -- local variables
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg
       character(len=LINELENGTH) :: keyword
       integer(I4B) :: ierr
       logical :: isfound, endOfBlock
 
-      IF (PRESENT(LFINDBLOCK)) THEN
-        IF (LFINDBLOCK < 1) THEN
-          lreaddata = .FALSE.
-        ELSE
-          lreaddata = .TRUE.
-        END IF
-      ELSE
-        lreaddata = .TRUE.
-      END IF
       !
       ! -- DEFINE NAME      
       this%memoryPath = create_mem_path(name, 'PetscSolver')
@@ -142,6 +127,20 @@ MODULE PetscSolverModule
       use MemoryManagerModule, only: mem_deallocate
       ! -- dummy variables
       class(PetscSolverDataType), intent(inout) :: this !< linear datatype instance
+      
+      ! -- scalars
+      call mem_deallocate(this%iout)
+      
+      ! -- nullify pointers
+      nullify(this%iprims)
+      nullify(this%neq)
+      nullify(this%nja)
+      nullify(this%ia)
+      nullify(this%ja)
+      nullify(this%amat)
+      nullify(this%rhs)
+      nullify(this%x)
+      
       ! -- return
       return
     end subroutine petcs_solver_deallocate

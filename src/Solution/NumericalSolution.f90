@@ -29,6 +29,7 @@ module NumericalSolutionModule
   use SimVariablesModule,      only: iout, isim_mode
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
+  use PetscSolverModule,       only: PetscSolverDataType
 
   implicit none
   private
@@ -122,6 +123,8 @@ module NumericalSolutionModule
     !
     ! -- linear accelerator storage
     type(ImsLinearDataType), pointer                     :: imslinear => null()            !< IMS linear acceleration object
+    ! -- PETSc solver object
+    type(PetscSolverDataType), pointer                   :: petsc_solver => null()         !< PETSc solver object
     !
     ! -- sparse object
     type(sparsematrix)                                   :: sparse                         !< sparse object
@@ -859,6 +862,15 @@ subroutine solution_create(filename, id)
       if ( imslinear.eq.1 ) then
         this%isymmetric = 1
       end if
+    else if (this%linmeth == 2 ) then
+      allocate(this%imslinear)
+      write(iout,*) '***PETSC SOLVER WILL BE USED***'
+      call this%petsc_solver%petcs_solver_allocate_read(this%name, this%parser, IOUT,       &
+                                                        this%iprims,                        &
+                                                        this%neq, this%nja, this%ia,        &
+                                                        this%ja, this%amat, this%rhs,       &
+                                                        this%x)
+      WRITE(IOUT,*)
     !
     ! -- incorrect linear solver flag
     ELSE
@@ -1131,6 +1143,10 @@ subroutine solution_create(filename, id)
     ! -- IMSLinearModule
     call this%imslinear%imslinear_da()
     deallocate(this%imslinear)
+    !
+    ! -- PETSc
+    call this%petsc_solver%petcs_solver_deallocate()
+    deallocate(this%petsc_solver)    
     !
     ! -- lists
     call this%modellist%Clear()
