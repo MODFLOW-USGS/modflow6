@@ -261,6 +261,12 @@ contains
   subroutine gwfgwfcon_ad(this)
     class(GwfGwfConnectionType) :: this !< this connection
 
+    ! copy model data into interface model
+    call this%syncInterfaceModel()
+
+    ! this triggers the BUY density calculation
+    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+
   end subroutine gwfgwfcon_ad
 
   !> @brief Calculate (or adjust) matrix coefficients,
@@ -281,10 +287,8 @@ contains
     end do
     
     ! copy model data into interface model
-    call this%syncInterfaceModel()
-
-    ! this triggers the BUY density calculation
-    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+    ! (when kiter == 1, this is already done in _ad)
+    if (kiter > 1) call this%syncInterfaceModel()
 
     ! calculate (wetting/drying, saturation)
     call this%gwfInterfaceModel%model_cf(kiter)
