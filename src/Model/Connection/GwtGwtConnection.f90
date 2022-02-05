@@ -57,6 +57,7 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: exg_df => gwtgwtcon_df
     procedure, pass(this) :: exg_ac => gwtgwtcon_ac
     procedure, pass(this) :: exg_rp => gwtgwtcon_rp
+    procedure, pass(this) :: exg_ad => gwtgwtcon_ad
     procedure, pass(this) :: exg_cf => gwtgwtcon_cf
     procedure, pass(this) :: exg_fc => gwtgwtcon_fc
     procedure, pass(this) :: exg_da => gwtgwtcon_da
@@ -194,7 +195,7 @@ subroutine gwtgwtcon_df(this)
   end if
   call this%gwtInterfaceModel%gwtifmod_cr(imName, this%iout, this%gridConnection)
   this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
-
+  this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
   call this%gwtInterfaceModel%model_df()
 
   call this%allocate_arrays()
@@ -343,17 +344,30 @@ subroutine gwtgwtcon_rp(this)
 
 end subroutine gwtgwtcon_rp
 
+
+!> @brief Advance this connection
+  !<
+subroutine gwtgwtcon_ad(this)
+  class(GwtGwtConnectionType) :: this !< this connection
+
+  ! copy model data into interface model
+  call this%syncInterfaceModel()
+
+  ! recalculate dispersion ellipse 
+  if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
+
+end subroutine gwtgwtcon_ad
+
+
 subroutine gwtgwtcon_cf(this, kiter)
   class(GwtGwtConnectionType) :: this !< the connection
   integer(I4B), intent(in) :: kiter   !< the iteration counter
   ! local
   integer(I4B) :: i
 
- ! copy model data into interface model
-  call this%syncInterfaceModel()
-
-  ! recalculate dispersion ellipse 
-  if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
+  ! copy model data into interface model
+  ! (when kiter == 1, this is already done in _ad)
+  if (kiter > 1) call this%syncInterfaceModel()
 
   ! reset interface system
   do i = 1, this%nja

@@ -74,7 +74,9 @@ subroutine gwtexchange_create(filename, id, m1id, m2id)
   call exchange%allocate_scalars()
   exchange%filename = filename
   exchange%typename = 'GWT-GWT'
-  !
+  exchange%iAdvScheme = 0
+  exchange%ixt3d = 1
+    
   ! set models
   mb => GetBaseModelFromList(basemodellist, m1id)    
   select type (mb)
@@ -129,9 +131,6 @@ subroutine allocate_scalars(this)
 
   call this%DisConnExchangeType%allocate_scalars()
   call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
-
-  this%iAdvScheme = 0
-  this%ixt3d = 1
 
 end subroutine allocate_scalars
 
