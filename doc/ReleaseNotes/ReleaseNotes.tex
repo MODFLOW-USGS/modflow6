@@ -158,15 +158,18 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
+	        \item \textcolor{red}{Allow the XT3D option to be applied to GWF-GWF Exchanges.  XT3D is a powerful alternative to the ghost-node correction approach.  XT3D can now be optionally activated for a GWF-GWT Exchange by specifying the XT3D keyword in the OPTIONS block.}
+	        \item \textcolor{red}{GWT-GWT XXX provided description here...}
+	        \item This release introduces the Time-Varying hydraulic conductivity (TVK) and the Time-Varying Storage (TVS) options for the Node Property Flow (NPF) and Storage (STO) Packages, respectively, of the GWF Model.  The TVK option is activated by specifying the TVK6 keyword in the OPTIONS block of the NPF Package and by providing a TVK6 input file.  The TVS option is activated by specifying the TVS6 keyword in the OPTIONS block of the STO Package, and by providing a TVS6 input file.  The TVK6 and TVS6 input files are described in input and output guide (mf6io.pdf).  Technical information about the TVK and TVS options is provided in the Supplemental Technical Information report that is provided with the distribution.
 	        \item The option already existed to provide binary budget and head file information from a GWF simulation for only the first time step of a given stress period, in which case that information will be used for all time steps in that stress period in a GWT simulation that reads from those files. The behavior of this option has been extended such that if the binary budget and head file information provided for the final stress period of the GWF simulation is for only one time step, that information will be used for any subsequent time steps and stress periods in the GWT simulation. This extended behavior includes as a special case the use of binary budget and head file information from only one time step in only one stress period (for example, a single steady-state GWF stress period) for all time steps in all stress periods in a GWT simulation.
 	        \item Added new file-based input capability for the GWT Source and Sink Mixing (SSM) Package.  The SSM Package previously required that all source and sink concentrations be provided as auxiliary variables for corresponding GWF stress packages.  The SSM Package now supports an optional new FILEINPUT block, which can be provided with package names and file names.  Files referenced in the FILEINPUT block can be used to provide time-varying source and sink concentrations.  A description of this new Stress Package Concentration (SPC) Input file is described in the input and output guide under a new section titled ``File Input for Boundary Concentrations.''  If used, a single SSMI file can be provided for a corresponding GWF stress package.  Either an SPC file or the auxiliary variable approach can be used to supply concentrations for a single GWF stress package, but not both.
-	        \item Added BUDGETCSV option to GWF and GWT model output control.  If activated, this option will cause a comma-separated value (CSV) file of the model budget terms to be written to a user-specified output file.
+	        \item Added BUDGETCSV option to GWF and GWT model output control and to advanced packages that produce summary tables of budget information.  If activated, this option will cause a comma-separated value (CSV) file of the model budget terms to be written to a user-specified output file.
 	        \item Added option to use irregular cross sections to define the reach geometry for individual reaches in the SFR Package. Cross-section data for irregular cross-sections are defined in a separate Cross-Section Table Input File. The station-elevation data for an irregular cross section are specified as xfraction and height data, which is converted to station position using the specified reach width (RWID) and elevation using the specified bottom elevation of the reach (RTP). Manning's roughness coefficient fractions can optionally be specified with the xfraction-height data for a irregular cross section to represent roughness coefficient variations in a channel (for example, different channel and overbank Manning's roughness coefficients). SFR Package irregular cross sections and the method used to solve for streamflow in a reach with non-uniform Manning's roughness coefficients is a generalization of the methods used for 8-point cross-sections in the SFR Package for previous versions of MODFLOW \citep{modflowsfr1pack}. 
 	\end{itemize}
 	
 	\underline{EXAMPLES}
 	\begin{itemize}
-	        \item --
+	        \item -- \textcolor{red}{GWT-GWT Example}
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
@@ -175,6 +178,11 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	        \item Fixed a bug that caused the last binary budget and head file information provided by a GWF simulation in a given stress period to be used for all subsequent GWT simulation time steps in that stress period, even if binary budget and head file information was provided for more than one time step in that stress period. In that situation, the GWF time steps must match the GWT time steps one-for-one.
 	        \item Boundary packages, such as WEL, DRN and GHB, for example, read lists of data using a general list reader.  For text input, the list of data would not be read correctly if it was longer than 300 characters wide.  Most lists would normally be less than 300 characters unless a large number of auxiliary variables were specified.  In this case, information beyond 300 characters would not be read.  The list reader was modified to use an unlimited character length so that any number of auxiliary variables can be specified.
 	        \item The Observation (OBS) functionality can optionally write simulated values to a comma-separated value (CSV) output file.  The OBS input file contains a DIGITS option, which controls the number of digits written to the CSV output file.  In some cases the ``E'' character was not written, making it difficult to read the CSV output file with other programs.  New functionality was programmed to write observations using the maximum number of digits stored internally by the program using the G0 Fortran specifier.  The default value for DIGITS was five, but this has been changed to this maximum number of digits.  This maximum number of digits can also be activated by specifying a zero for DIGITS.  For most applications, observations should be written with the default number of digits so that no precision is lost in the output.
+	        \item Added a check to the Flow Model Interface (FMI) Package of the GWT Model that will cause the program to terminate with an error if flow and budget files needed from a flow model cannot be located.
+	        \item The Output Control Package did not correctly determine if the end of a stress period was reached if the Adaptive Time Stepping (ATS) option was active.  Output Control works correctly now with ATS.
+	        \item Budget information for individual boundary package entries can be written to the model list file in a table form.  The table no longer includes boundaries that are in cells that are dry.
+	        \item When the simulated concentration in a cell is negative, which can occur erroneously due to numerical methods, then any sinks present in the cell should not add or remove any mass.  The program was modified so that sinks are deactivated if the simulated concentration in a cell is negative.
+	        \item Correct parsing of observation input so that observation names can have spaces if the observation name is enclosed in quotations.
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
@@ -187,13 +195,12 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-	        \item The Streamflow Routing (SFR) Package would die with a floating point error when calculating the stream depth as a function of flow rate, if the flow rate was slightly negative.  Added a conditional check to ensure that the stream depth is calculated as zero if the calculated flow rate is zero or less.
+	        \item The Streamflow Routing (SFR) Package would terminate with a floating point error when calculating the stream depth as a function of flow rate, if the flow rate was slightly negative.  Added a conditional check to ensure that the stream depth is calculated as zero if the calculated flow rate is zero or less.
 	\end{itemize}
 
 	\underline{SOLUTION}
 	\begin{itemize}
-	        \item xxx  
-	        \item xxx  
+	        \item The way in which constant head and constant concentration boundary conditions are handled when the conjugate gradient method is used for the linear solve was modified.  In previous versions, constant head and concentration conditions would result in an asymmetric coefficient matrix.  The program has been modified so that if the conjugate gradient method is selected for the linear solution, then matrix symmetry is preserved by adding adding flows into and out of constant head and concentration cells to the right-hand side of connected cells.
 	\end{itemize}
 
 \end{itemize}
