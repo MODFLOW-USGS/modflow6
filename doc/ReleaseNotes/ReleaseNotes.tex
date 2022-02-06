@@ -158,8 +158,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-	        \item Allow the XT3D option to be applied to GWF-GWF Exchanges.  XT3D is a powerful alternative to the ghost-node correction approach.  XT3D can now be optionally activated for a GWF-GWT Exchange by specifying the XT3D keyword in the OPTIONS block.
-	        \item GWT-GWT XXX provided description here...
+	        \item \textcolor{red}{Allow the XT3D option to be applied to GWF-GWF Exchanges.  XT3D is a powerful alternative to the ghost-node correction approach.  XT3D can now be optionally activated for a GWF-GWT Exchange by specifying the XT3D keyword in the OPTIONS block.}
+	        \item \textcolor{red}{GWT-GWT XXX provided description here...}
 	        \item This release introduces the Time-Varying hydraulic conductivity (TVK) and the Time-Varying Storage (TVS) options for the Node Property Flow (NPF) and Storage (STO) Packages, respectively, of the GWF Model.  The TVK option is activated by specifying the TVK6 keyword in the OPTIONS block of the NPF Package and by providing a TVK6 input file.  The TVS option is activated by specifying the TVS6 keyword in the OPTIONS block of the STO Package, and by providing a TVS6 input file.  The TVK6 and TVS6 input files are described in input and output guide (mf6io.pdf).  Technical information about the TVK and TVS options is provided in the Supplemental Technical Information report that is provided with the distribution.
 	        \item The option already existed to provide binary budget and head file information from a GWF simulation for only the first time step of a given stress period, in which case that information will be used for all time steps in that stress period in a GWT simulation that reads from those files. The behavior of this option has been extended such that if the binary budget and head file information provided for the final stress period of the GWF simulation is for only one time step, that information will be used for any subsequent time steps and stress periods in the GWT simulation. This extended behavior includes as a special case the use of binary budget and head file information from only one time step in only one stress period (for example, a single steady-state GWF stress period) for all time steps in all stress periods in a GWT simulation.
 	        \item Added new file-based input capability for the GWT Source and Sink Mixing (SSM) Package.  The SSM Package previously required that all source and sink concentrations be provided as auxiliary variables for corresponding GWF stress packages.  The SSM Package now supports an optional new FILEINPUT block, which can be provided with package names and file names.  Files referenced in the FILEINPUT block can be used to provide time-varying source and sink concentrations.  A description of this new Stress Package Concentration (SPC) Input file is described in the input and output guide under a new section titled ``File Input for Boundary Concentrations.''  If used, a single SSMI file can be provided for a corresponding GWF stress package.  Either an SPC file or the auxiliary variable approach can be used to supply concentrations for a single GWF stress package, but not both.
@@ -169,7 +169,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	
 	\underline{EXAMPLES}
 	\begin{itemize}
-	        \item -- GWT-GWT Example
+	        \item -- \textcolor{red}{GWT-GWT Example}
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
@@ -200,8 +200,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{SOLUTION}
 	\begin{itemize}
-	        \item xxx  
-	        \item xxx  
+	        \item The way in which constant head and constant concentration boundary conditions are handled when the conjugate gradient method is used for the linear solve was modified.  In previous versions, constant head and concentration conditions would result in an asymmetric coefficient matrix.  The program has been modified so that if the conjugate gradient method is selected for the linear solution, then matrix symmetry is preserved by adding adding flows into and out of constant head and concentration cells to the right-hand side of connected cells.
 	\end{itemize}
 
 \end{itemize}
