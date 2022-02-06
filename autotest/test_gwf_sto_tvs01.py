@@ -172,7 +172,7 @@ def build_model(idx, dir):
     tvsspd[kper - 1] = spd
 
     tvs = flopy.mf6.ModflowUtltvs(
-        gwf, perioddata=tvsspd, filename=tvs_filename
+        gwf, print_input=True, perioddata=tvsspd, filename=tvs_filename
     )
 
     # output control
