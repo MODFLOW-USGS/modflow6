@@ -30,6 +30,8 @@ module PetscSolverModule
       procedure :: petsc_solver_allocate_read
       procedure :: petsc_solver_execute
       procedure :: petsc_solver_deallocate
+      ! -- PRIVATE PROCEDURES
+      procedure, private :: allocate_scalars
   end type PetscSolverDataType
   
   
@@ -79,6 +81,9 @@ module PetscSolverModule
       this%AMAT => AMAT
       this%RHS => RHS
       this%X => X
+
+      ! -- ALLOCATE SCALAR VARIABLES
+      call this%allocate_scalars()
       !
       ! -- initialize iout
       this%iout = iout
@@ -183,7 +188,7 @@ module PetscSolverModule
       PetscInt  i,j,II,JJ,m,n,its
       PetscInt  Istart,Iend,ione
       PetscErrorCode ierr
-      PetscMPIInt     rank,size
+      PetscMPIInt     rank, size_
       PetscBool   flg
       PetscScalar v,one,neg_one
       Vec         x,b,u
@@ -214,7 +219,7 @@ module PetscSolverModule
       call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-m',m,flg,ierr)
       call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',n,flg,ierr)
       call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
-      call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr)
+      call MPI_Comm_size(PETSC_COMM_WORLD,size_,ierr)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !      Compute the matrix and right-hand-side vector that define
@@ -227,7 +232,7 @@ module PetscSolverModule
 !  determined by PETSc at runtime.
 
       call MatCreate(PETSC_COMM_WORLD,A,ierr)
-      call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*n,m*n,ierr)
+      call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,this%neq,size(this%x),ierr)
       call MatSetFromOptions(A,ierr)
       call MatSetUp(A,ierr)
 
@@ -376,5 +381,26 @@ module PetscSolverModule
       call VecDestroy(b,ierr)
       call MatDestroy(A,ierr)
     END SUBROUTINE petsc_solver_execute
+
+    !> @ brief Allocate and initialize scalars
+    !!
+    !!  Allocate and inititialize linear accelerator scalars
+    !!
+    !<
+    subroutine allocate_scalars(this)
+      ! -- modules
+      use MemoryManagerModule, only: mem_allocate
+      ! -- dummy variables
+      class(PetscSolverDataType), intent(inout) :: this  !< PetscSolverDataType instance
+      !
+      ! -- allocate scalars
+      call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+      !
+      ! -- initialize scalars
+      this%iout = 0
+      !
+      ! -- return
+      return
+    end subroutine allocate_scalars
 
 END MODULE PetscSolverModule

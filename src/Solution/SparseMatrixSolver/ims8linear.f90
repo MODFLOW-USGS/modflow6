@@ -91,8 +91,8 @@ MODULE IMSLinearModule
       procedure :: imslinear_summary
       PROCEDURE :: IMSLINEAR_APPLY => imslinear_ap
       procedure :: IMSLINEAR_DA => imslinear_da
-      procedure, private :: allocate_scalars
       ! -- PRIVATE PROCEDURES
+      procedure, private :: allocate_scalars
       PROCEDURE, PRIVATE :: SET_IMSLINEAR_INPUT => imslinear_set_input
   END TYPE ImsLinearDataType
   

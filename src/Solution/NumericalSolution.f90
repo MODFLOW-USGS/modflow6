@@ -78,7 +78,7 @@ module NumericalSolutionModule
     integer(I4B), pointer                            :: iouttot_timestep => null() !< total nr. of outer iterations per call to sln_ca
     integer(I4B), pointer                            :: itertot_sim => null()      !< total nr. of inner iterations for simulation
     integer(I4B), pointer                            :: mxiter => null()           !< maximum number of Picard iterations
-    integer(I4B), pointer                            :: linmeth => null()          !< linear acceleration method used
+    integer(I4B), pointer                            :: linmeth => null()          !< linear acceleration method used: (1) internal routine, (2) PETSc
     integer(I4B), pointer                            :: nonmeth => null()          !< under-relaxation method used
     integer(I4B), pointer                            :: numtrack => null()         !< maximum number of backtracks
     integer(I4B), pointer                            :: iprims => null()           !< solver print option
@@ -306,7 +306,7 @@ subroutine solution_create(filename, id)
     this%iouttot_timestep = 0
     this%itertot_sim = 0
     this%mxiter = 0
-    this%linmeth = 1
+    this%linmeth = 2
     this%nonmeth = 0
     this%iprims = 0
     this%theta = DONE
@@ -863,7 +863,7 @@ subroutine solution_create(filename, id)
         this%isymmetric = 1
       end if
     else if (this%linmeth == 2 ) then
-      allocate(this%imslinear)
+      allocate(this%petsc_solver)
       write(iout,*) '***PETSC SOLVER WILL BE USED***'
       call this%petsc_solver%petsc_solver_allocate_read(this%name, this%parser, IOUT,       &
                                                         this%iprims,                        &
@@ -948,9 +948,11 @@ subroutine solution_create(filename, id)
     &      /1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
     &      /1X,'BACKTRACKING REDUCTION FACTOR             (BREDUC) = ', E15.6, &
     &      /1X,'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
-    !
-    ! -- linear solver data
-    call this%imslinear%imslinear_summary(this%mxiter)
+    
+    if (this%linmeth == 1) then
+      ! -- linear solver data
+      call this%imslinear%imslinear_summary(this%mxiter)
+    end if
 
     ! -- write summary of solver error messages
     ierr = count_errors()
