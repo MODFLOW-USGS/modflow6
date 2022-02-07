@@ -27,9 +27,9 @@ module PetscSolverModule
     
     ! procedures (methods)
     contains
-      procedure :: petcs_solver_allocate_read
-      procedure :: petcs_solver_execute
-      procedure :: petcs_solver_deallocate
+      procedure :: petsc_solver_allocate_read
+      procedure :: petsc_solver_execute
+      procedure :: petsc_solver_deallocate
   end type PetscSolverDataType
   
   
@@ -38,7 +38,7 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine petcs_solver_allocate_read(this, name, parser, IOUT, IPRIMS,     &
+    subroutine petsc_solver_allocate_read(this, name, parser, IOUT, IPRIMS,     &
                             NEQ, NJA, IA, JA, AMAT, RHS, X)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
@@ -115,14 +115,14 @@ module PetscSolverModule
       
       ! -- RETURN
       RETURN
-    END SUBROUTINE petcs_solver_allocate_read
+    END SUBROUTINE petsc_solver_allocate_read
 
     !> @brief Deallocate memory
     !!
     !!  Deallocate linear accelerator memory.
     !!
     !<
-    subroutine petcs_solver_deallocate(this)
+    subroutine petsc_solver_deallocate(this)
       ! -- modules
       use MemoryManagerModule, only: mem_deallocate
       ! -- dummy variables
@@ -143,13 +143,13 @@ module PetscSolverModule
       
       ! -- return
       return
-    end subroutine petcs_solver_deallocate
+    end subroutine petsc_solver_deallocate
     
 
     !> @brief Solve linear equation
     !!
     !< 
-    SUBROUTINE petcs_solver_execute(this)
+    SUBROUTINE petsc_solver_execute(this)
 #include <petsc/finclude/petscksp.h>
       use petscksp
 !
@@ -375,6 +375,6 @@ module PetscSolverModule
       call VecDestroy(x,ierr)
       call VecDestroy(b,ierr)
       call MatDestroy(A,ierr)
-    END SUBROUTINE petcs_solver_execute
+    END SUBROUTINE petsc_solver_execute
 
 END MODULE PetscSolverModule

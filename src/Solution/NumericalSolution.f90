@@ -865,7 +865,7 @@ subroutine solution_create(filename, id)
     else if (this%linmeth == 2 ) then
       allocate(this%imslinear)
       write(iout,*) '***PETSC SOLVER WILL BE USED***'
-      call this%petsc_solver%petcs_solver_allocate_read(this%name, this%parser, IOUT,       &
+      call this%petsc_solver%petsc_solver_allocate_read(this%name, this%parser, IOUT,       &
                                                         this%iprims,                        &
                                                         this%neq, this%nja, this%ia,        &
                                                         this%ja, this%amat, this%rhs,       &
@@ -1139,14 +1139,16 @@ subroutine solution_create(filename, id)
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
     class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
-    !
+
+    if ( this%linmeth == 1 ) then
     ! -- IMSLinearModule
-    call this%imslinear%imslinear_da()
-    deallocate(this%imslinear)
-    !
+      call this%imslinear%imslinear_da()
+      deallocate(this%imslinear)
+    else if (this%linmeth == 2 ) then
     ! -- PETSc
-    call this%petsc_solver%petcs_solver_deallocate()
-    deallocate(this%petsc_solver)    
+      call this%petsc_solver%petsc_solver_deallocate()
+      deallocate(this%petsc_solver)  
+    end if  
     !
     ! -- lists
     call this%modellist%Clear()
@@ -2553,7 +2555,7 @@ subroutine solution_create(filename, id)
                                           this%convdvmax, this%convdrmax)
     ! -- PETSc solver - linmeth option 2
     else if (this%linmeth == 2) then
-      call this%petsc_solver%petcs_solver_execute()
+      call this%petsc_solver%petsc_solver_execute()
     end if
     !
     ! -- ptc finalize - set ratio of ptc value added to the diagonal and the
