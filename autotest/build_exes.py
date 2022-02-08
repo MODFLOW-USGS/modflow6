@@ -68,7 +68,7 @@ def get_compiler_envvar(fc):
 
 def build_mf6(srcdir=None, appdir=None):
     pm = pymake.Pymake()
-    pm.target = "mf6" + eext
+    pm.target = f"mf6{eext}"
     if srcdir is None:
         srcdir = os.path.join("..", "src")
     pm.srcdir = srcdir
@@ -95,7 +95,7 @@ def build_mf6(srcdir=None, appdir=None):
 
 def build_mf6_so():
     pm = pymake.Pymake(verbose=True)
-    pm.target = "libmf6" + soext
+    pm.target = f"libmf6{soext}"
     pm.srcdir = os.path.join("..", "srcbmi")
     pm.srcdir2 = os.path.join("..", "src")
     pm.appdir = os.path.join("..", "bin")
@@ -136,8 +136,8 @@ def build_mf5to6():
 
     # set source and target paths
     srcdir = os.path.join("..", "utils", "mf5to6", "src")
-    target = os.path.join("..", "bin", "mf5to6")
-    target += eext
+    appdir = os.path.join("..", "bin")
+    target = f"mf5to6{eext}"
     extrafiles = os.path.join(
         "..", "utils", "mf5to6", "pymake", "extrafiles.txt"
     )
@@ -152,15 +152,17 @@ def build_mf5to6():
         include_subdirs=True,
         extrafiles=extrafiles,
         inplace=True,
+        appdir=appdir,
+        makeclean=True,
     )
-
-    msg = "{} does not exist.".format(relpath_fallback(target))
-    assert os.path.isfile(target), msg
+    target_pth = os.path.join(appdir, target)
+    msg = f"{relpath_fallback(target_pth)} does not exist."
+    assert os.path.isfile(target_pth), msg
 
 
 def build_zbud6():
     pm = pymake.Pymake()
-    pm.target = "zbud6" + eext
+    pm.target = f"zbud6{eext}"
     pm.srcdir = os.path.join("..", "utils", "zonebudget", "src")
     pm.appdir = os.path.join("..", "bin")
     pm.extrafiles = os.path.join(
