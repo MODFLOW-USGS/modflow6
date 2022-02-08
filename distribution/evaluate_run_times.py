@@ -28,9 +28,7 @@ def _get_version():
             version = sys.argv[idx + 1]
             break
     if version is None:
-        version = pymake.repo_latest_version(
-            github_repo=github_repo, verify=VERIFY
-        )
+        version = pymake.repo_latest_version(github_repo=github_repo, verify=VERIFY)
     return version
 
 
@@ -63,9 +61,7 @@ def _get_previous_version():
         github_repo
     ) + "/releases/download/{0}/mf{0}.zip".format(version)
     if not _is_dryrun():
-        pymake.download_and_unzip(
-            url, pth=working_dir, verbose=True, verify=VERIFY
-        )
+        pymake.download_and_unzip(url, pth=working_dir, verbose=True, verify=VERIFY)
 
     return version, "mf{}".format(version)
 
@@ -156,9 +152,7 @@ def revert_files(app, example):
                     with open(fpth, "w") as f:
                         for line in lines:
                             if replace[0] in line.lower():
-                                line = line.lower().replace(
-                                    replace[0], replace[1]
-                                )
+                                line = line.lower().replace(replace[0], replace[1])
                             f.write(line)
     return
 
@@ -193,9 +187,7 @@ def elapsed_string_to_real(elt_str):
 
 def get_examples():
     examples_repo = "MODFLOW-USGS/modflow6-examples"
-    version = pymake.repo_latest_version(
-        github_repo=examples_repo, verify=VERIFY
-    )
+    version = pymake.repo_latest_version(github_repo=examples_repo, verify=VERIFY)
     print("current examples version: {}".format(version))
     url = "https://github.com/{}".format(
         examples_repo
@@ -300,6 +292,7 @@ def cleanup():
         b = True
     return
 
+
 if __name__ == "__main__":
     _get_previous_version()
 
@@ -309,9 +302,7 @@ if __name__ == "__main__":
 
     # compile the current version
     current_app = build_current_version()
-    print(
-        "previous app: {}\ncurrent app: {}".format(previous_app, current_app)
-    )
+    print("previous app: {}\ncurrent app: {}".format(previous_app, current_app))
 
     # open markdown table
     f = open("run-time-comparison.md", "w")
@@ -346,7 +337,13 @@ if __name__ == "__main__":
 
     # run models
     for idx, example in enumerate(example_dirs):
-        success = run_model(current_app, previous_app, example, f, silent=False, )
+        success = run_model(
+            current_app,
+            previous_app,
+            example,
+            f,
+            silent=False,
+        )
         assert success, f"{example} run failed"
 
     # close the markdown file

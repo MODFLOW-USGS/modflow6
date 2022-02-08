@@ -178,9 +178,7 @@ def change_version_module(fname, version):
             found2 = True
         newlines.append(newline)
     if not found1 or not found2:
-        raise Exception(
-            "could not replace version or developmode in source code"
-        )
+        raise Exception("could not replace version or developmode in source code")
     with open(fname, "w") as f:
         for line in newlines:
             f.write(line.strip() + "\n")
@@ -458,11 +456,7 @@ def rebuild_tex_from_dfn():
     with cwd(npth):
 
         # get list of TeX files
-        files = [
-            f
-            for f in os.listdir("tex")
-            if os.path.isfile(os.path.join("tex", f))
-        ]
+        files = [f for f in os.listdir("tex") if os.path.isfile(os.path.join("tex", f))]
         for f in files:
             fpth = os.path.join("tex", f)
             os.remove(fpth)
@@ -470,9 +464,7 @@ def rebuild_tex_from_dfn():
         # run python
         argv = ["python", "mf6ivar.py"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} with {}".format(
-            ierr, argv[0], argv[1]
-        )
+        msg = "\nERROR {}: could not run {} with {}".format(ierr, argv[0], argv[1])
         assert ierr == 0, buff + msg
 
         # get list for dfn files
@@ -606,33 +598,25 @@ def build_latex_docs():
             print("  Pass 1/4...")
             cmd = pdflatexcmd
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(
-                ierr, cmd[0], cmd[1]
-            )
+            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
             assert ierr == 0, buff + msg
 
             cmd = ["bibtex", os.path.splitext(t)[0] + ".aux"]
             print("  Pass 2/4...")
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(
-                ierr, cmd[0], cmd[1]
-            )
+            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
             assert ierr == 0, buff + msg
 
             print("  Pass 3/4...")
             cmd = pdflatexcmd
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(
-                ierr, cmd[0], cmd[1]
-            )
+            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
             assert ierr == 0, buff + msg
 
             print("  Pass 4/4...")
             cmd = pdflatexcmd
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(
-                ierr, cmd[0], cmd[1]
-            )
+            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
             assert ierr == 0, buff + msg
 
             fname = os.path.splitext(t)[0] + ".pdf"
@@ -658,9 +642,7 @@ def update_latex_releaseinfo(examples_folder):
     assert ierr == 0, buff + msg
 
     for f in files:
-        assert os.path.isfile(os.path.join(pth, f)), (
-            "File does not exist: " + f
-        )
+        assert os.path.isfile(os.path.join(pth, f)), "File does not exist: " + f
 
     return
 
@@ -894,9 +876,7 @@ if __name__ == "__main__":
             "mf6suptechinfo.pdf",
         ],
         [
-            os.path.join(
-                "..", "..", "modflow6-examples.git", "doc", "mf6examples.pdf"
-            ),
+            os.path.join("..", "..", "modflow6-examples.git", "doc", "mf6examples.pdf"),
             "mf6examples.pdf",
         ],
     ]

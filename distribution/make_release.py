@@ -233,7 +233,7 @@ def update_version():
     for idx, arg in enumerate(sys.argv):
         if arg == "--version":
             t = sys.argv[idx + 1]
-            t = t.split('.')
+            t = t.split(".")
             vmajor = int(t[0])
             vminor = int(t[1])
             vmicro = int(t[2])
@@ -261,10 +261,7 @@ def update_version():
             "# {} version file automatically ".format(prod)
             + "created using...{}\n".format(os.path.basename(__file__))
         )
-        f.write(
-            "# created on..."
-            + "{}\n".format(now.strftime("%B %d, %Y %H:%M:%S"))
-        )
+        f.write("# created on..." + "{}\n".format(now.strftime("%B %d, %Y %H:%M:%S")))
         f.write("\n")
         f.write(f"major = {vmajor}\n")
         f.write(f"minor = {vminor}\n")
@@ -276,9 +273,7 @@ def update_version():
         # update version.py in doc directory
         shutil.copyfile(
             os.path.abspath(fpth),
-            os.path.join(
-                "..", "doc", os.path.basename(fpth.replace(".txt", ".py"))
-            ),
+            os.path.join("..", "doc", os.path.basename(fpth.replace(".txt", ".py"))),
         )
 
         # update latex version file
@@ -387,14 +382,12 @@ def update_mf6_version(vmajor, vminor, vmicro):
                 skip = False
             continue
         elif ":: IDEVELOPMODE =" in line:
-            line = (
-                "  integer(I4B), parameter :: "
-                + "IDEVELOPMODE = {}".format(idevelopmode)
+            line = "  integer(I4B), parameter :: " + "IDEVELOPMODE = {}".format(
+                idevelopmode
             )
         elif ":: VERSION =" in line:
-            line = (
-                "  character(len=40), parameter :: "
-                + "VERSION = '{}{}{}'".format(version, version_type, sdate)
+            line = "  character(len=40), parameter :: " + "VERSION = '{}{}{}'".format(
+                version, version_type, sdate
             )
         elif ":: FMTDISCLAIMER =" in line:
             line = disclaimerfmt
