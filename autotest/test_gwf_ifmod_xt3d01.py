@@ -245,6 +245,16 @@ def get_model(idx, dir):
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
     )
+    gwfgwfobs = {
+        "gwf_obs.csv": [
+            ("f1", "FLOW-JA-FACE", (0,2,1), (0,0,0)),
+        ],
+    }
+    fname = "gwfgwf.obs"
+    gwfgwf.obs.initialize(
+        filename=fname, digits=25, print_input=True, continuous=gwfgwfobs
+    )
+
 
     return sim
 
