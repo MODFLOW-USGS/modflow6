@@ -136,11 +136,11 @@ def get_model(idx, dir):
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
-        outer_hclose=hclose,
+        outer_dvclose=hclose,
         outer_maximum=nouter,
         under_relaxation="DBD",
         inner_maximum=ninner,
-        inner_hclose=hclose,
+        inner_dvclose=hclose,
         rcloserecord=rclose,
         linear_acceleration="BICGSTAB",
         relaxation_factor=relax,
@@ -233,6 +233,21 @@ def get_model(idx, dir):
     )
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
+    exgdata_withbname = []
+    for exg in exgdata:
+        l = exg
+        angle = l[-2]
+        if angle == 0:
+            bname = "left"
+        elif angle == 90.:
+            bname = "bottom"
+        elif angle == 180.:
+            bname = "right"
+        elif angle == 270.:
+            bname = "top"
+        l.append(bname)
+        exgdata_withbname.append(l)
+    print(exgdata_withbname)
 
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -242,19 +257,30 @@ def get_model(idx, dir):
         exgmnameb=child_name,
         exchangedata=exgdata,
         xt3d=useXT3D,
+        print_input=True,
         print_flows=True,
+        save_flows=True,
+        boundnames=True,
         auxiliary=["ANGLDEGX", "CDIST"],
     )
-    gwfgwfobs = {
-        "gwf_obs.csv": [
-            ("f1", "FLOW-JA-FACE", (0,2,1), (0,0,0)),
-        ],
-    }
+    obslist = []
+    obstype = "FLOW-JA-FACE"
+    for iexg, exg_connection in enumerate(exgdata):
+        obslist.append((f"f{iexg + 1}", obstype, (iexg,) ))
+
+    gwfgwfobs = {}
+    gwfgwfobs["gwf_obs.csv"] = obslist
+    gwfgwfobs["gwf_obs_boundnames.csv"] = [
+        ["OBSLEFT", "FLOW-JA-FACE", "LEFT"],
+        ["OBSRIGHT", "FLOW-JA-FACE", "RIGHT"],
+        ["OBSTOP", "FLOW-JA-FACE", "TOP"],
+        ["OBSBOTTOM", "FLOW-JA-FACE", "BOTTOM"],
+    ]
+
     fname = "gwfgwf.obs"
     gwfgwf.obs.initialize(
         filename=fname, digits=25, print_input=True, continuous=gwfgwfobs
     )
-
 
     return sim
 
@@ -408,7 +434,7 @@ def eval_heads(sim):
     # or this means the residual term is not added correctly.
     fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
     cbb = flopy.utils.CellBudgetFile(fpth)
-    flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
+    flow_ja_face = cbb.get_data(kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="NPF")
     ia = grb._datadict["IA"] - 1
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
@@ -417,6 +443,37 @@ def eval_heads(sim):
             res.min(), res.max()
         )
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
+    # Read gwf-gwf observations values
+    fpth = os.path.join(sim.simpath, "gwf_obs.csv")
+    with open(fpth) as f:
+        lines = f.readlines()
+    obsnames = [name for name in lines[0].strip().split(",")[1:]]
+    obsvalues = [float(v) for v in lines[1].strip().split(",")[1:]]
+
+    # Extract the gwf-gwf flows stored in parent budget file
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
+    cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
+    parent_exchange_flows = cbb.get_data(kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1")[0]
+    parent_exchange_flows = parent_exchange_flows["q"]
+
+    # Extract the gwf-gwf flows stored in child budget file
+    fpth = os.path.join(sim.simpath, "{}.cbc".format(child_name))
+    cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
+    child_exchange_flows = cbb.get_data(kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1")[0]
+    child_exchange_flows = child_exchange_flows["q"]
+
+    # Ensure observations are the same as parent exchange flows and negative child exchange flows
+    assert np.allclose(obsvalues, parent_exchange_flows), "exchange observations do not match parent exchange flows"
+    assert np.allclose(obsvalues, -child_exchange_flows), "exchange observations do not match chile exchange flows"
+
+    # Read the lumped boundname observations values
+    fpth = os.path.join(sim.simpath, "gwf_obs_boundnames.csv")
+    with open(fpth) as f:
+        lines = f.readlines()
+    obsnames = [name for name in lines[0].strip().split(",")[1:]]
+    obsvalues = [float(v) for v in lines[1].strip().split(",")[1:]]
+    assert np.allclose(obsvalues, [-50., 50., 0, 0.]), "boundname observations do not match expected results"
 
     return
 
