@@ -166,7 +166,7 @@ module PetscSolverModule
 !     ksp     - linear solver context
 !     ksp      - Krylov subspace method context
 !     pc       - preconditioner context
-!     x, b, u  - approx solution, right-hand-side, exact solution vectors
+!     x, rhs  - approx solution, right-hand-side, exact solution vectors
 !     A        - matrix that defines linear system
 !     its      - iterations for convergence
 !     norm     - norm of error in solution
@@ -184,17 +184,16 @@ module PetscSolverModule
       CLASS(PetscSolverDataType), INTENT(INOUT) :: this                       !< PetscSolverDataType instance
 
       ! -- local variables
-      PetscReal  norm
-      PetscInt  i,j,II,JJ,m,n,its
-      PetscInt  Istart,Iend,ione
+      PetscInt  m,n
+      PetscInt  ione
       PetscErrorCode ierr
-      PetscMPIInt     rank, size_
+      PetscMPIInt rank, size_
       PetscBool   flg
-      PetscScalar v,one,neg_one
-      Vec         x,b,u
+      PetscScalar one,neg_one
+      Vec         x,rhs,u
       Mat         A
       KSP         ksp
-      PetscRandom rctx
+      integer(I4B) :: row, ipos
 
 !  These variables are not currently used.
 !      PC          pc
@@ -206,24 +205,23 @@ module PetscSolverModule
 !                 Beginning of program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
       m = 3
       n = 3
       one  = 1.0
       neg_one = -1.0
       ione    = 1
       call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-m',m,flg,ierr)
+      CHKERRQ(ierr)
       call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',n,flg,ierr)
+      CHKERRQ(ierr)
       call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
+      CHKERRQ(ierr)
       call MPI_Comm_size(PETSC_COMM_WORLD,size_,ierr)
+      CHKERRQ(ierr)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !      Compute the matrix and right-hand-side vector that define
-!      the linear system, Ax = b.
+!      the linear system, Ax = rhs.
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 !  Create parallel matrix, specifying only its global dimensions.
@@ -232,52 +230,21 @@ module PetscSolverModule
 !  determined by PETSc at runtime.
 
       call MatCreate(PETSC_COMM_WORLD,A,ierr)
+      CHKERRQ(ierr)
       call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,this%neq,size(this%x),ierr)
+      CHKERRQ(ierr)
       call MatSetFromOptions(A,ierr)
+      CHKERRQ(ierr)
       call MatSetUp(A,ierr)
+      CHKERRQ(ierr)
 
-!  Currently, all PETSc parallel matrix formats are partitioned by
-!  contiguous chunks of rows across the processors.  Determine which
-!  rows of the matrix are locally owned.
-
-      call MatGetOwnershipRange(A,Istart,Iend,ierr)
-
-!  Set matrix elements for the 2-D, five-point stencil in parallel.
-!   - Each processor needs to insert only elements that it owns
-!     locally (but any non-local elements will be sent to the
-!     appropriate processor during matrix assembly).
-!   - Always specify global row and columns of matrix entries.
-!   - Note that MatSetValues() uses 0-based row and column numbers
-!     in Fortran as well as in C.
-
-!     Note: this uses the less common natural ordering that orders first
-!     all the unknowns for x = h then for x = 2h etc; Hence you see JH = II +- n
-!     instead of JJ = II +- m as you might expect. The more standard ordering
-!     would first do all variables for y = h, then y = 2h etc.
-
-      do 10, II=Istart,Iend-1
-        v = -1.0
-        i = II/n
-        j = II - i*n
-        if (i.gt.0) then
-          JJ = II - n
-          call MatSetValues(A,ione,II,ione,JJ,v,INSERT_VALUES,ierr)
-        endif
-        if (i.lt.m-1) then
-          JJ = II + n
-          call MatSetValues(A,ione,II,ione,JJ,v,INSERT_VALUES,ierr)
-        endif
-        if (j.gt.0) then
-          JJ = II - 1
-          call MatSetValues(A,ione,II,ione,JJ,v,INSERT_VALUES,ierr)
-        endif
-        if (j.lt.n-1) then
-          JJ = II + 1
-          call MatSetValues(A,ione,II,ione,JJ,v,INSERT_VALUES,ierr)
-        endif
-        v = 4.0
-        call  MatSetValues(A,ione,II,ione,II,v,INSERT_VALUES,ierr)
- 10   continue
+!  Fill matrix
+      do row = 1, this%neq
+        do ipos = this%ia(row), this%ia(row+1) - 1
+          call MatSetValues(A, ione, row-1, ione, this%ja(ipos)-1, this%amat(ipos), INSERT_VALUES, ierr)
+          CHKERRQ(ierr)
+        end do
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()
@@ -285,7 +252,9 @@ module PetscSolverModule
 !  by placing code between these two statements.
 
       call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+      CHKERRQ(ierr)
       call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+      CHKERRQ(ierr)
 
 !  Create parallel vectors.
 !   - Here, the parallel partitioning of the vector is determined by
@@ -295,35 +264,33 @@ module PetscSolverModule
 !     be partitioned accordingly.  PETSc automatically generates
 !     appropriately partitioned matrices and vectors when MatCreate()
 !     and VecCreate() are used with the same communicator.
-!   - Note: We form 1 vector from scratch and then duplicate as needed.
+!   - Note: We form 1 vector from scratch and then duplicate as needed
 
-      call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,m*n,u,ierr)
+      ! create x
+      call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,size(this%x),x,ierr)
+      CHKERRQ(ierr)
       call VecSetFromOptions(u,ierr)
-      call VecDuplicate(u,b,ierr)
-      call VecDuplicate(b,x,ierr)
+      CHKERRQ(ierr)
+      do ipos = 1, size(this%x)
+        call VecSetValues(x, ione, ipos-1, this%x(ipos),INSERT_VALUES, ierr)
+        CHKERRQ(ierr)
+      end do
+      call VecAssemblyBegin(x,ierr)
+      CHKERRQ(ierr)
+      call VecAssemblyEnd(x,ierr)
+      CHKERRQ(ierr)
 
-!  Set exact solution; then compute right-hand-side vector.
-!  By default we use an exact solution of a vector with all
-!  elements of 1.0;  Alternatively, using the runtime option
-!  -random_sol forms a solution vector with random components.
-
-      call PetscOptionsHasName(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-random_exact_sol',flg,ierr)
-      if (flg) then
-         call PetscRandomCreate(PETSC_COMM_WORLD,rctx,ierr)
-         call PetscRandomSetFromOptions(rctx,ierr)
-         call VecSetRandom(u,rctx,ierr)
-         call PetscRandomDestroy(rctx,ierr)
-      else
-         call VecSet(u,one,ierr)
-      endif
-      call MatMult(A,u,b,ierr)
-
-!  View the exact solution vector if desired
-
-      call PetscOptionsHasName(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-view_exact_sol',flg,ierr)
-      if (flg) then
-         call VecView(u,PETSC_VIEWER_STDOUT_WORLD,ierr)
-      endif
+      ! create rhs
+      call VecDuplicate(x,rhs,ierr)
+      CHKERRQ(ierr)
+      do ipos = 1, size(this%rhs)
+        call VecSetValues(rhs, ione, ipos-1, this%rhs(ipos),INSERT_VALUES, ierr)
+        CHKERRQ(ierr)
+      end do
+      call VecAssemblyBegin(rhs,ierr)
+      CHKERRQ(ierr)
+      call VecAssemblyEnd(rhs,ierr)
+      CHKERRQ(ierr)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !         Create the linear solver and set various options
@@ -332,11 +299,13 @@ module PetscSolverModule
 !  Create linear solver context
 
       call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
+      CHKERRQ(ierr)
 
 !  Set operators. Here the matrix that defines the linear system
 !  also serves as the preconditioning matrix.
 
       call KSPSetOperators(ksp,A,A,ierr)
+      CHKERRQ(ierr)
 
 
 !  Set runtime options, e.g.,
@@ -346,40 +315,34 @@ module PetscSolverModule
 !  routines.
 
       call KSPSetFromOptions(ksp,ierr)
+      CHKERRQ(ierr)
 
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                      Solve the linear system
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call KSPSolve(ksp,b,x,ierr)
+      call KSPSolve(ksp,rhs,x,ierr)
+      CHKERRQ(ierr)
 
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!                     Check solution and clean up
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-!  Check the error
-      call VecAXPY(x,neg_one,u,ierr)
-      call VecNorm(x,NORM_2,norm,ierr)
-      call KSPGetIterationNumber(ksp,its,ierr)
-      if (rank .eq. 0) then
-        if (norm .gt. 1.e-12) then
-           write(6,100) norm,its
-        else
-           write(6,110) its
-        endif
-      endif
-  100 format('Norm of error ',e11.4,' iterations ',i5)
-  110 format('Norm of error < 1.e-12 iterations ',i5)
+      ! TODO: Copy `x` to `this%x`
+      
+
 
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
 
       call KSPDestroy(ksp,ierr)
+      CHKERRQ(ierr)
       call VecDestroy(u,ierr)
+      CHKERRQ(ierr)
       call VecDestroy(x,ierr)
-      call VecDestroy(b,ierr)
+      CHKERRQ(ierr)
+      call VecDestroy(rhs,ierr)
+      CHKERRQ(ierr)
       call MatDestroy(A,ierr)
+      CHKERRQ(ierr)
     END SUBROUTINE petsc_solver_execute
 
     !> @ brief Allocate and initialize scalars
