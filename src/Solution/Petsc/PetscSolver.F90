@@ -190,9 +190,10 @@ module PetscSolverModule
       PetscMPIInt rank, size_
       PetscBool   flg
       PetscScalar one,neg_one
-      Vec         x,rhs,u
+      Vec         x,rhs
       Mat         A
       KSP         ksp
+      PetscScalar,pointer :: x_pointer(:)
       integer(I4B) :: row, ipos
 
 !  These variables are not currently used.
@@ -269,7 +270,7 @@ module PetscSolverModule
       ! create x
       call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,size(this%x),x,ierr)
       CHKERRQ(ierr)
-      call VecSetFromOptions(u,ierr)
+      call VecSetFromOptions(x,ierr)
       CHKERRQ(ierr)
       do ipos = 1, size(this%x)
         call VecSetValues(x, ione, ipos-1, this%x(ipos),INSERT_VALUES, ierr)
@@ -325,8 +326,16 @@ module PetscSolverModule
       call KSPSolve(ksp,rhs,x,ierr)
       CHKERRQ(ierr)
 
+      ! copy `x` to `this%x`
+      call VecGetArrayReadF90(x, x_pointer, ierr)
+      CHKERRQ(ierr)
 
-      ! TODO: Copy `x` to `this%x`
+      do ipos = 1, size(this%x)
+        this%x(ipos) = x_pointer(ipos)
+      end do
+
+      call VecRestoreArrayReadF90(x, x_pointer, ierr)
+      CHKERRQ(ierr)
       
 
 
@@ -334,8 +343,6 @@ module PetscSolverModule
 !  are no longer needed.
 
       call KSPDestroy(ksp,ierr)
-      CHKERRQ(ierr)
-      call VecDestroy(u,ierr)
       CHKERRQ(ierr)
       call VecDestroy(x,ierr)
       CHKERRQ(ierr)
