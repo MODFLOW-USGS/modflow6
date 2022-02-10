@@ -34,7 +34,7 @@ module mf6bmiUtil
   !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
 
   integer(c_int), bind(C, name="BMI_LENATTRNAME") :: BMI_LENATTRNAME = LENATTRNAME + 1 !< max. length for the variable's address C-string
-  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVARADDRESS
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENATTRNAME
 
   integer(c_int), bind(C, name="BMI_LENCOMPONENTNAME") :: BMI_LENCOMPONENTNAME = 256 !< component name length, i.e. 'MODFLOW 6'
   !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENCOMPONENTNAME
