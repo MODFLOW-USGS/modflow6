@@ -1,3 +1,5 @@
+../../../src/Utilities/HashTable.f90
+../../../src/Utilities/Attributes.f90
 ../../../src/Utilities/Memory/MemoryList.f90
 ../../../src/Utilities/Memory/MemoryManager.f90
 ../../../src/Utilities/Memory/MemoryHelper.f90

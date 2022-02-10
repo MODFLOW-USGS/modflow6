@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.2) for the 'mf5to6' executable.
+# makefile created by pymake (version 1.2.3) for the 'mf5to6' executable.
 
 
 include ./makedefaults
@@ -9,9 +9,9 @@ SOURCEDIR2=../src/NWT
 SOURCEDIR3=../src/LGR
 SOURCEDIR4=../src/Preproc
 SOURCEDIR5=../src/MF2005
-SOURCEDIR6=../../../src/Utilities/Memory
-SOURCEDIR7=../../../src/Utilities/TimeSeries
-SOURCEDIR8=../../../src/Utilities
+SOURCEDIR6=../../../src/Utilities
+SOURCEDIR7=../../../src/Utilities/Memory
+SOURCEDIR8=../../../src/Utilities/TimeSeries
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -39,8 +39,10 @@ $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/SimPHMF.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
+$(OBJDIR)/HashTable.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
+$(OBJDIR)/Attributes.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \

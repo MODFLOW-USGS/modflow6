@@ -244,8 +244,8 @@ subroutine solution_create(filename, id)
     ! -- dummy variables
     class(NumericalSolutionType) :: this
     ! -- local
-    integer(I4B) :: n_scalar_vars = 44
-    character(len=LENATTRNAME), dimension(NATTRS * (44 + 1)) :: attrs_vector  ! +1 for header row
+    integer(I4B), parameter :: n_scalar_vars = 44
+    character(len=LENATTRNAME), dimension(NATTRS * (n_scalar_vars + 1)) :: attrs_vector  ! +1 for header row
 
     ! --- Build the metadata vector
     ! JLM: I kinda hate this but it is readable. Could also have in an external namelist, but it
