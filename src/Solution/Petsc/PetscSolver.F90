@@ -1,4 +1,6 @@
 module PetscSolverModule
+#include <petsc/finclude/petscksp.h>
+  use petscksp
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, LENMEMPATH,          &
@@ -24,7 +26,10 @@ module PetscSolverModule
     real(DP), dimension(:), pointer, contiguous :: amat => NULL()        !< coefficient matrix
     real(DP), dimension(:), pointer, contiguous :: rhs => NULL()         !< right-hand side of equation
     real(DP), dimension(:), pointer, contiguous :: x => NULL()           !< dependent variable
-    
+    Mat         Amat_petsc
+    Vec         x_petsc
+    Vec         rhs_petsc
+
     ! procedures (methods)
     contains
       procedure :: petsc_solver_allocate_read
@@ -43,6 +48,8 @@ module PetscSolverModule
     subroutine petsc_solver_allocate_read(this, name, parser, IOUT, IPRIMS,     &
                             NEQ, NJA, IA, JA, AMAT, RHS, X)
       ! -- modules
+#include <petsc/finclude/petscksp.h>
+      use petscksp
       use MemoryManagerModule, only: mem_allocate
       use MemoryHelperModule,  only: create_mem_path
       use SimModule, only: store_error, count_errors,            &
@@ -65,8 +72,10 @@ module PetscSolverModule
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg
       character(len=LINELENGTH) :: keyword
-      integer(I4B) :: ierr
+      integer(I4B) :: err
       logical :: isfound, endOfBlock
+      PetscErrorCode ierr
+
 
       !
       ! -- DEFINE NAME      
@@ -87,13 +96,44 @@ module PetscSolverModule
       !
       ! -- initialize iout
       this%iout = iout
+      
+      !  Create parallel matrix, specifying only its global dimensions.
+      !  When using MatCreate(), the matrix format can be specified at
+      !  runtime. Also, the parallel partitioning of the matrix is
+      !  determined by PETSc at runtime.
+
+      call MatCreate(PETSC_COMM_WORLD,this%Amat_petsc,ierr)
+      CHKERRQ(ierr)
+      call MatSetSizes(this%Amat_petsc,PETSC_DECIDE,PETSC_DECIDE,this%neq,size(this%x),ierr)
+      CHKERRQ(ierr)
+      call MatSetFromOptions(this%Amat_petsc,ierr)
+      CHKERRQ(ierr)
+      call MatSetUp(this%Amat_petsc,ierr)
+      CHKERRQ(ierr)
+
+      !  Create parallel vectors.
+      !   - Here, the parallel partitioning of the vector is determined by
+      !     PETSc at runtime.  We could also specify the local dimensions
+      !     if desired -- or use the more general routine VecCreate().
+      !   - When solving a linear system, the vectors and matrices MUST
+      !     be partitioned accordingly.  PETSc automatically generates
+      !     appropriately partitioned matrices and vectors when MatCreate()
+      !     and VecCreate() are used with the same communicator.
+      !   - Note: We form 1 vector from scratch and then duplicate as needed
+      call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,size(this%x),this%x_petsc,ierr)
+      CHKERRQ(ierr)
+      call VecSetFromOptions(this%x_petsc,ierr)
+      CHKERRQ(ierr)
+      call VecDuplicate(this%x_petsc,this%rhs_petsc,ierr)
+      CHKERRQ(ierr)
+
       !
       ! -- SET DEFAULT PARAMETERS (TODO)
       
       !
       ! -- get PETSC block
       if (lreaddata) then
-        call parser%GetBlock('PETSC', isfound, ierr, &
+        call parser%GetBlock('PETSC', isfound, err, &
           supportOpenClose=.true., blockRequired=.FALSE.)
       else
         isfound = .FALSE.
@@ -129,10 +169,14 @@ module PetscSolverModule
     !<
     subroutine petsc_solver_deallocate(this)
       ! -- modules
+#include <petsc/finclude/petscksp.h>
+      use petscksp
       use MemoryManagerModule, only: mem_deallocate
       ! -- dummy variables
       class(PetscSolverDataType), intent(inout) :: this !< linear datatype instance
-      
+      ! -- local variables
+      PetscErrorCode ierr
+
       ! -- scalars
       call mem_deallocate(this%iout)
       
@@ -145,6 +189,13 @@ module PetscSolverModule
       nullify(this%amat)
       nullify(this%rhs)
       nullify(this%x)
+
+      call MatDestroy(this%Amat_petsc,ierr)
+      CHKERRQ(ierr)
+      call VecDestroy(this%x_petsc,ierr)
+      CHKERRQ(ierr)
+      call VecDestroy(this%rhs_petsc,ierr)
+      CHKERRQ(ierr)
       
       ! -- return
       return
@@ -190,8 +241,7 @@ module PetscSolverModule
       PetscMPIInt rank, size_
       PetscBool   flg
       PetscScalar one,neg_one
-      Vec         x,rhs
-      Mat         A
+
       KSP         ksp
       PetscScalar,pointer :: x_pointer(:)
       integer(I4B) :: row, ipos
@@ -225,24 +275,12 @@ module PetscSolverModule
 !      the linear system, Ax = rhs.
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-!  Create parallel matrix, specifying only its global dimensions.
-!  When using MatCreate(), the matrix format can be specified at
-!  runtime. Also, the parallel partitioning of the matrix is
-!  determined by PETSc at runtime.
 
-      call MatCreate(PETSC_COMM_WORLD,A,ierr)
-      CHKERRQ(ierr)
-      call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,this%neq,size(this%x),ierr)
-      CHKERRQ(ierr)
-      call MatSetFromOptions(A,ierr)
-      CHKERRQ(ierr)
-      call MatSetUp(A,ierr)
-      CHKERRQ(ierr)
 
 !  Fill matrix
       do row = 1, this%neq
         do ipos = this%ia(row), this%ia(row+1) - 1
-          call MatSetValues(A, ione, row-1, ione, this%ja(ipos)-1, this%amat(ipos), INSERT_VALUES, ierr)
+          call MatSetValues(this%Amat_petsc, ione, row-1, ione, this%ja(ipos)-1, this%amat(ipos), INSERT_VALUES, ierr)
           CHKERRQ(ierr)
         end do
       end do
@@ -252,45 +290,30 @@ module PetscSolverModule
 !  Computations can be done while messages are in transition,
 !  by placing code between these two statements.
 
-      call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+      call MatAssemblyBegin(this%Amat_petsc,MAT_FINAL_ASSEMBLY,ierr)
       CHKERRQ(ierr)
-      call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+      call MatAssemblyEnd(this%Amat_petsc,MAT_FINAL_ASSEMBLY,ierr)
       CHKERRQ(ierr)
 
-!  Create parallel vectors.
-!   - Here, the parallel partitioning of the vector is determined by
-!     PETSc at runtime.  We could also specify the local dimensions
-!     if desired -- or use the more general routine VecCreate().
-!   - When solving a linear system, the vectors and matrices MUST
-!     be partitioned accordingly.  PETSc automatically generates
-!     appropriately partitioned matrices and vectors when MatCreate()
-!     and VecCreate() are used with the same communicator.
-!   - Note: We form 1 vector from scratch and then duplicate as needed
 
-      ! create x
-      call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,size(this%x),x,ierr)
-      CHKERRQ(ierr)
-      call VecSetFromOptions(x,ierr)
-      CHKERRQ(ierr)
       do ipos = 1, size(this%x)
-        call VecSetValues(x, ione, ipos-1, this%x(ipos),INSERT_VALUES, ierr)
+        call VecSetValues(this%x_petsc, ione, ipos-1, this%x(ipos),INSERT_VALUES, ierr)
         CHKERRQ(ierr)
       end do
-      call VecAssemblyBegin(x,ierr)
+      call VecAssemblyBegin(this%x_petsc,ierr)
       CHKERRQ(ierr)
-      call VecAssemblyEnd(x,ierr)
+      call VecAssemblyEnd(this%x_petsc,ierr)
       CHKERRQ(ierr)
 
       ! create rhs
-      call VecDuplicate(x,rhs,ierr)
-      CHKERRQ(ierr)
+
       do ipos = 1, size(this%rhs)
-        call VecSetValues(rhs, ione, ipos-1, this%rhs(ipos),INSERT_VALUES, ierr)
+        call VecSetValues(this%rhs_petsc, ione, ipos-1, this%rhs(ipos),INSERT_VALUES, ierr)
         CHKERRQ(ierr)
       end do
-      call VecAssemblyBegin(rhs,ierr)
+      call VecAssemblyBegin(this%rhs_petsc,ierr)
       CHKERRQ(ierr)
-      call VecAssemblyEnd(rhs,ierr)
+      call VecAssemblyEnd(this%rhs_petsc,ierr)
       CHKERRQ(ierr)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -305,7 +328,7 @@ module PetscSolverModule
 !  Set operators. Here the matrix that defines the linear system
 !  also serves as the preconditioning matrix.
 
-      call KSPSetOperators(ksp,A,A,ierr)
+      call KSPSetOperators(ksp,this%Amat_petsc,this%Amat_petsc,ierr)
       CHKERRQ(ierr)
 
 
@@ -323,18 +346,18 @@ module PetscSolverModule
 !                      Solve the linear system
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call KSPSolve(ksp,rhs,x,ierr)
+      call KSPSolve(ksp,this%rhs_petsc,this%x_petsc,ierr)
       CHKERRQ(ierr)
 
       ! copy `x` to `this%x`
-      call VecGetArrayReadF90(x, x_pointer, ierr)
+      call VecGetArrayReadF90(this%x_petsc, x_pointer, ierr)
       CHKERRQ(ierr)
 
       do ipos = 1, size(this%x)
         this%x(ipos) = x_pointer(ipos)
       end do
 
-      call VecRestoreArrayReadF90(x, x_pointer, ierr)
+      call VecRestoreArrayReadF90(this%x_petsc, x_pointer, ierr)
       CHKERRQ(ierr)
       
 
@@ -344,12 +367,8 @@ module PetscSolverModule
 
       call KSPDestroy(ksp,ierr)
       CHKERRQ(ierr)
-      call VecDestroy(x,ierr)
-      CHKERRQ(ierr)
-      call VecDestroy(rhs,ierr)
-      CHKERRQ(ierr)
-      call MatDestroy(A,ierr)
-      CHKERRQ(ierr)
+
+
     END SUBROUTINE petsc_solver_execute
 
     !> @ brief Allocate and initialize scalars
