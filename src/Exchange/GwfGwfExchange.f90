@@ -108,6 +108,7 @@ module GwfGwfExchangeModule
     procedure, private :: gwf_gwf_calc_simvals
     procedure, public  :: gwf_gwf_set_spdis
     procedure, private :: validate_exchange
+    procedure          :: gwf_gwf_add_to_flowja
   end type GwfExchangeType
 
 contains
@@ -760,10 +761,12 @@ contains
     ! -- calculate specific discharge and set to model
     call this%gwf_gwf_set_spdis()
     !
+    ! -- add exchange flow to model 1 and 2 flowja array diagonal position
+    call this%gwf_gwf_add_to_flowja()
+    !
     ! -- return
     return
   end subroutine gwf_gwf_cq
-
 
   !> @brief Calculate flow rates for the exchanges and
   !< store them in a member array
@@ -794,6 +797,33 @@ contains
     return
   end subroutine gwf_gwf_calc_simvals
 
+  !> @brief Add exchange flow to each model flowja diagonal
+  !< position so that residual is calculated correctly.
+  subroutine gwf_gwf_add_to_flowja(this)
+    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    ! local
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: flow
+
+    do i = 1, this%nexg
+      
+      flow = this%simvals(i)
+      n = this%nodem1(i)
+      idiag = this%gwfmodel1%ia(n)
+      this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+      
+      flow = -this%simvals(i)
+      n = this%nodem2(i)
+      idiag = this%gwfmodel2%ia(n)
+      this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+      
+    end do
+    
+    return
+  end subroutine gwf_gwf_add_to_flowja
+
   !> @brief Calculate specific discharge from flow rates
   !< and set them to the models
   subroutine gwf_gwf_set_spdis(this)
@@ -820,7 +850,6 @@ contains
     real(DP) :: thksat
     real(DP) :: angle
 
-    !cdl todo: the flowja update in this routine needs to always happen
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
@@ -887,9 +916,6 @@ contains
       if (this%gwfmodel1%npf%icalcspdis == 1) then
         call this%gwfmodel1%npf%set_edge_properties(n1, ihc, rrate, area,      &
                                                     nx, ny, distance)
-        !cdl todo: this following line needs to be done even if icalcspdis == 0
-        this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) =                         &
-          this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) + rrate
       endif
       !
       ! -- Submit this connection and flow information to the npf
@@ -904,9 +930,6 @@ contains
         if (ihc /= 0) rrate = -rrate
         call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,      &
                                                     -nx, -ny, distance)
-        !cdl todo: this following line needs to be done even if icalcspdis == 0
-        this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) =                         &
-          this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) + rrate
       endif
       !
     enddo

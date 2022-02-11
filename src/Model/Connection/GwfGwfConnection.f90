@@ -513,6 +513,15 @@ contains
     if (this%gwfModel%npf%icalcspdis == 1) then    
       call this%setNpfEdgeProps()
     end if
+
+    ! Add exchange flows to each model flowja diagonal.  This used
+    ! to be done in setNpfEdgeProps, but there was a sign issue
+    ! and flowja was only updated if icalcspdis was 1 (it should
+    ! always be updated.
+    if (this%exchangeIsOwned) then
+      call this%gwfExchange%gwf_gwf_add_to_flowja()
+    end if
+
     
   end subroutine gwfgwfcon_cq
 
@@ -639,9 +648,6 @@ contains
           dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
           call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
                                                     nx, ny, dist)
-          ! correct flowja diagonal                                                     
-          this%gwfModel%flowja(this%gwfModel%ia(nLoc)) =                        &
-            this%gwfModel%flowja(this%gwfModel%ia(nLoc)) + rrate
         else
           ! internal, need to set flowja for n-m
           ! TODO_MJR: should we mask the flowja calculation in the model?
