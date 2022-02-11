@@ -189,14 +189,6 @@ def get_model(idx, dir):
 
 
 def add_refmodel(sim):
-    global mname_ref
-    global mname_gwtref
-    global nlay, nrow, ncol
-    global delr, delc
-    global shift_some_x
-    global h_start
-    global k11
-    global chd_spd
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_ref, save_flows=True)
 
@@ -249,14 +241,6 @@ def add_refmodel(sim):
 
 
 def add_leftmodel(sim):
-    global mname_left
-    global nlay, nrow, ncol_left
-    global delr, delc
-    global tops
-    global h_start
-    global h_left
-    global left_chd
-    global k11
 
     left_chd = [[(0, irow, 0), h_left] for irow in range(nrow)]
     chd_spd_left = {0: left_chd}
@@ -299,15 +283,6 @@ def add_leftmodel(sim):
 
 
 def add_rightmodel(sim):
-    global mname_right
-    global nlay, nrow, ncol_right
-    global h_right
-    global delr, delc
-    global tops
-    global h_start
-    global right_chd
-    global k11
-    global shift_x, shift_y
 
     right_chd = [[(0, irow, ncol_right - 1), h_right] for irow in range(nrow)]
     chd_spd_right = {0: right_chd}
@@ -352,10 +327,6 @@ def add_rightmodel(sim):
 
 
 def add_gwfexchange(sim):
-    global mname_left, mname_right
-    global nrow
-    global delc, delr
-    global ncol_left
 
     angldegx = 0.0
     cdist = delr
@@ -385,12 +356,6 @@ def add_gwfexchange(sim):
 
 
 def add_gwtrefmodel(sim):
-    global mname_gwtref
-    global nlay, nrow, ncol
-    global delr, delc
-    global tops
-    global c_strt
-    global porosity
 
     gwt = flopy.mf6.ModflowGwt(sim, modelname=mname_gwtref)
 
@@ -438,12 +403,6 @@ def add_gwtrefmodel(sim):
 
 
 def add_gwtleftmodel(sim):
-    global mname_gwtleft
-    global nlay, nrow, ncol_left
-    global delr, delc
-    global tops
-    global c_strt
-    global porosity
 
     gwt = flopy.mf6.ModflowGwt(sim, modelname=mname_gwtleft)
 
@@ -491,13 +450,6 @@ def add_gwtleftmodel(sim):
 
 
 def add_gwtrightmodel(sim):
-    global mname_gwtright
-    global nlay, nrow, ncol_right
-    global delr, delc
-    global shift_x, shift_y
-    global tops
-    global c_strt
-    global porosity
 
     gwt = flopy.mf6.ModflowGwt(sim, modelname=mname_gwtright)
 
@@ -547,10 +499,6 @@ def add_gwtrightmodel(sim):
 
 
 def add_gwtexchange(sim):
-    global mname_gwtleft, mname_gwtright
-    global nrow
-    global delc, delr
-    global ncol_left
 
     angldegx = 0.0
     cdist = delr

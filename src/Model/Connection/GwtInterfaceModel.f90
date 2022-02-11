@@ -24,6 +24,7 @@ module GwtInterfaceModelModule
   type, public, extends(GwtModelType) :: GwtInterfaceModelType
 
     integer(i4B), pointer :: iAdvScheme => null()                     !< the advection scheme: 0 = up, 1 = central, 2 = tvd
+    integer(i4B), pointer :: ixt3d => null()                          !< xt3d setting: 0 = off, 1 = lhs, 2 = rhs
 
     class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the interface grid
     class(GwtModelType), private, pointer :: owner => null()          !< the real GWT model for which the exchange coefficients
@@ -56,6 +57,10 @@ subroutine gwtifmod_cr(this, name, iout, gridConn)
 
   this%memoryPath = create_mem_path(name)
   call this%allocate_scalars(name)
+
+  ! defaults
+  this%iAdvScheme = 0
+  this%ixt3d = 0
 
   this%iout = iout
   this%gridConnection => gridConn
@@ -90,6 +95,7 @@ subroutine allocate_scalars(this, modelname)
   call this%GwtModelType%allocate_scalars(modelname)
 
   call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
+  call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
 
 end subroutine allocate_scalars
 
@@ -104,8 +110,8 @@ subroutine gwtifmod_df(this)
   integer(I4B) :: i
 
   this%moffset = 0
-  adv_options%iAdvScheme = this%owner%adv%iadvwt
-  dsp_options%ixt3d = this%owner%dsp%ixt3d
+  adv_options%iAdvScheme = this%iAdvScheme
+  dsp_options%ixt3d = this%ixt3d
 
   ! define DISU
   disPtr => this%dis
@@ -152,10 +158,11 @@ subroutine gwtifmod_ar(this)
     call this%adv%adv_ar(this%dis, this%ibound)
   end if
   if (this%indsp > 0) then
+    this%dsp%idiffc = this%owner%dsp%idiffc
+    this%dsp%idisp = this%owner%dsp%idisp
     call dspGridData%construct(this%neq)
     call this%setDspGridData(dspGridData)
-    call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)
-    this%dsp%idiffc = this%owner%dsp%idiffc
+    call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)    
   end if
   
 end subroutine gwtifmod_ar
@@ -176,12 +183,17 @@ subroutine setDspGridData(this, gridData)
     gwtModel => CastAsGwtModel(modelPtr)
     idx = this%gridConnection%idxToGlobal(i)%index
 
-    gridData%diffc(i) = gwtModel%dsp%diffc(idx)
-    gridData%alh(i) = gwtModel%dsp%alh(idx)
-    gridData%alv(i) = gwtModel%dsp%alv(idx)
-    gridData%ath1(i) = gwtModel%dsp%ath1(idx)
-    gridData%ath2(i) = gwtModel%dsp%ath2(idx)
-    gridData%atv(i) = gwtModel%dsp%atv(idx)
+    if (this%dsp%idiffc > 0) then
+      gridData%diffc(i) = gwtModel%dsp%diffc(idx)
+    end if
+    if (this%dsp%idisp > 0) then
+      gridData%alh(i) = gwtModel%dsp%alh(idx)
+      gridData%alv(i) = gwtModel%dsp%alv(idx)
+      gridData%ath1(i) = gwtModel%dsp%ath1(idx)
+      gridData%ath2(i) = gwtModel%dsp%ath2(idx)
+      gridData%atv(i) = gwtModel%dsp%atv(idx)
+    end if
+
   end do
 
 end subroutine setDspGridData
@@ -193,6 +205,7 @@ subroutine gwtifmod_da(this)
 
   ! this
   call mem_deallocate(this%iAdvScheme)
+  call mem_deallocate(this%ixt3d)
   call mem_deallocate(this%porosity)
 
   ! gwt packages

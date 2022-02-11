@@ -6,7 +6,7 @@ module GwfGwfExchangeModule
   use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
-                                     TABCENTER, TABLEFT, LENAUXNAME
+                                     TABCENTER, TABLEFT, LENAUXNAME, DNODATA
   use ListModule,              only: ListType
   use ListsModule,             only: basemodellist
   use DisConnExchangeModule,   only: DisConnExchangeType
@@ -16,6 +16,7 @@ module GwfGwfExchangeModule
   use ObserveModule,           only: ObserveType
   use ObsModule,               only: ObsType
   use SimModule,               only: count_errors, store_error, store_error_unit
+  use SimVariablesModule,      only: errmsg
   use BlockParserModule,       only: BlockParserType
   use TableModule,             only: TableType, table_cr
 
@@ -1252,20 +1253,20 @@ contains
       do iexg = 1, this%nexg
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
-        flow = this%cond(iexg) * (this%gwfmodel2%x(n2) - this%gwfmodel1%x(n1))
+        flow = this%simvals(iexg)
         call this%gwfmodel1%dis%noder_to_string(n1, node1str)
         call this%gwfmodel2%dis%noder_to_string(n2, node2str)
         if(this%ingnc > 0) then
           deltaqgnc = this%gnc%deltaqgnc(iexg)
           write(iout, fmtdata) trim(adjustl(node1str)),                        &
                                trim(adjustl(node2str)),                        &
-                               this%cond(iexg), this%gwfmodel1%x(n1), this%gwfmodel2%x(n2),  &
-                               deltaqgnc, flow + deltaqgnc
+                               this%cond(iexg), this%gwfmodel1%x(n1),          &
+                               this%gwfmodel2%x(n2), deltaqgnc, flow
         else
           write(iout, fmtdata) trim(adjustl(node1str)),                        &
                                trim(adjustl(node2str)),                        &
-                               this%cond(iexg), this%gwfmodel1%x(n1), this%gwfmodel2%x(n2),  &
-                               flow
+                               this%cond(iexg), this%gwfmodel1%x(n1),          &
+                               this%gwfmodel2%x(n2), flow
         endif
       enddo
     endif
@@ -1814,7 +1815,7 @@ contains
     class(GwfExchangeType) :: this
     ! -- local
     character(len=LINELENGTH) :: text
-    integer(I4B) :: ntabcol
+    integer(I4B) :: ntabcol, i
 ! ------------------------------------------------------------------------------
     !
     call this%DisConnExchangeType%allocate_arrays()
@@ -1824,6 +1825,11 @@ contains
     call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)    !
     call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
     call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
+    !
+    ! -- Initialize
+    do i = 1, this%nexg
+      this%cond(i) = DNODATA
+    end do
     !
     ! -- allocate and initialize the output table
     if (this%iprflow /= 0) then
@@ -1910,10 +1916,11 @@ contains
     integer(I4B) :: j
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
-    character(len=1000) :: ermsg
     logical :: jfound
     ! -- formats
-10  format('Error: Boundary "',a,'" for observation "',a,               &
+10  format('Exchange "',a,'" for observation "',a,               &
+           '" is invalid in package "',a,'"')
+20  format('Exchange id "',i0,'" for observation "',a,               &
            '" is invalid in package "',a,'"')
 ! ------------------------------------------------------------------------------
     !
@@ -1941,18 +1948,22 @@ contains
           endif
         enddo
         if (.not. jfound) then
-          write(ermsg,10)trim(bname)
-          call store_error(ermsg)
+          write(errmsg, 10) trim(bname), trim(obsrv%ObsTypeId) , trim(this%name)
+          call store_error(errmsg)
         endif
       else
         ! -- Observation location is a single exchange number
-        if (obsrv%intPak1 <= this%nexg) then
+        if (obsrv%intPak1 <= this%nexg .and. obsrv%intPak1 > 0) then
           jfound = .true.
           obsrv%BndFound = .true.
           obsrv%CurrentTimeStepEndValue = DZERO
           call obsrv%AddObsIndex(obsrv%intPak1)
         else
           jfound = .false.
+        endif
+        if (.not. jfound) then
+          write(errmsg, 20) obsrv%intPak1, trim(obsrv%ObsTypeId) , trim(this%name)
+          call store_error(errmsg)
         endif
       endif
     enddo
@@ -2101,10 +2112,7 @@ contains
           case ('FLOW-JA-FACE')
             n1 = this%nodem1(iexg)
             n2 = this%nodem2(iexg)
-            v = this%cond(iexg) * (this%gwfmodel2%x(n2) - this%gwfmodel1%x(n1))
-            if(this%ingnc > 0) then
-              v = v + this%gnc%deltaqgnc(iexg)
-            endif
+            v = this%simvals(iexg)
           case default
             msg = 'Error: Unrecognized observation type: ' //                  &
                   trim(obsrv%ObsTypeId)

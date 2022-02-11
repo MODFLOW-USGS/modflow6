@@ -42,7 +42,7 @@ type, extends(NumericalExchangeType) :: DisConnExchangeType
   integer(I4B), pointer                            :: iprpak      => null()    !< print input flag      
   integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
 
-  integer(I4B), pointer                            :: ixt3d       => null()    !< flag indicating if XT3D should be applied on the interface
+  integer(I4B), pointer                            :: ixt3d       => null()    !< flag indicating if XT3D should be applied on the interface: 0 = off, 1 = lhs, 2 = rhs
   logical(LGP)                                     :: dev_ifmod_on             !< development option, forces interface model for this exchange 
     
   type(BlockParserType)                            :: parser                   !< block parser for input file (controlled from derived type)

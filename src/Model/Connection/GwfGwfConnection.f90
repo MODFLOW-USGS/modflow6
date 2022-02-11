@@ -66,7 +66,6 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchange
-    procedure, pass(this), private :: printExchangeFlow
     procedure, pass(this), private :: saveExchangeFlows
     procedure, pass(this), private :: setNpfEdgeProps
     
@@ -241,16 +240,11 @@ contains
   !> @brief Read time varying data when required
   !<
   subroutine gwfgwfcon_rp(this)
-    use TdisModule, only: readnewdata
     class(GwfGwfConnectionType) :: this !< this connection
     
-    if (.not. readnewdata) return
-    
-    ! RP the movers through the exchange
+    ! Call exchange rp routines
     if (this%exchangeIsOwned) then
-      if (this%gwfExchange%inmvr > 0) then
-        call this%gwfExchange%mvr%mvr_rp()
-      end if
+      call this%gwfExchange%exg_rp()
     end if
 
     return
@@ -260,6 +254,16 @@ contains
   !<
   subroutine gwfgwfcon_ad(this)
     class(GwfGwfConnectionType) :: this !< this connection
+
+    ! copy model data into interface model
+    call this%syncInterfaceModel()
+
+    ! this triggers the BUY density calculation
+    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+    
+    if (this%exchangeIsOwned) then
+      call this%gwfExchange%exg_ad()
+    end if
 
   end subroutine gwfgwfcon_ad
 
@@ -281,10 +285,8 @@ contains
     end do
     
     ! copy model data into interface model
-    call this%syncInterfaceModel()
-
-    ! this triggers the BUY density calculation
-    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+    ! (when kiter == 1, this is already done in _ad)
+    if (kiter > 1) call this%syncInterfaceModel()
 
     ! calculate (wetting/drying, saturation)
     call this%gwfInterfaceModel%model_cf(kiter)
@@ -346,7 +348,8 @@ contains
       end do
     end do
 
-    ! FC the movers through the exchange
+    ! FC the movers through the exchange; we cannot call
+    ! exg_fc() directly because it calculates matrix terms
     if (this%exchangeIsOwned) then
       if (this%gwfExchange%inmvr > 0) then
         call this%gwfExchange%mvr%mvr_fc()
@@ -672,49 +675,16 @@ contains
   subroutine gwfgwfcon_ot(this)
     class(GwfGwfConnectionType) :: this           !< this connection
     ! local
-    integer(I4B) :: ibudfl
     
-    ! we don't call gwf_gwf_ot here, but
-    ! we do want to save the budget
-    if (this%exchangeIsOwned) then        
-      
-      call this%gwfExchange%gwf_gwf_bdsav()
-      
-      if (this%gwfExchange%iprflow /= 0) then
-        call this%printExchangeFlow(this%gwfExchange)
-      end if
-
-      if(this%gwfExchange%inmvr > 0) then
-        ibudfl = 1
-        call this%gwfExchange%mvr%mvr_ot_bdsummary(ibudfl)
-      end if      
-
+    ! Call exg_ot() here as it handles all output processing
+    ! based on gwfExchange%simvals(:), which was correctly
+    ! filled from gwfgwfcon
+    if (this%exchangeIsOwned) then
+      call this%gwfExchange%exg_ot()
     end if
 
   end subroutine gwfgwfcon_ot
 
-  !> @brief Print realized exchanged flow for this GWF-GWF
-  !< Exchange to screen
-  subroutine printExchangeFlow(this, gwfEx)
-    use SimVariablesModule, only: iout
-    class(GwfGwfConnectionType) :: this      !< this connection
-    type(GwfExchangeType), pointer :: gwfEx !< the exchange for printing
-    ! local
-    integer(I4B) :: i
-    character(len=*), parameter :: fmtheader =                                   &
-      "(/1x, 'Exchange rates for connection between models ', a, ' and ', a)"
-    character(len=*), parameter :: fmtbody = "(/1x, 2a16, f16.5)"
-    character(len=LINELENGTH) :: node1str, node2str
-
-    write(iout, fmtheader) trim(gwfEx%model1%name), trim(gwfEx%model2%name)
-    do i = 1, gwfEx%nexg
-      call gwfEx%model1%dis%noder_to_string(gwfEx%nodem1(i), node1str)
-      call gwfEx%model2%dis%noder_to_string(gwfEx%nodem2(i), node2str)
-      write(iout, fmtbody) trim(node1str), trim(node2str), gwfEx%simvals(i)
-    end do
-    
-  end subroutine printExchangeFlow
-  
   !> @brief Cast to GwfGwfConnectionType
   !<
   function CastAsGwfGwfConnection(obj) result (res)

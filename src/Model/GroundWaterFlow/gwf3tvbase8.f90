@@ -255,6 +255,9 @@ contains
         end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
+          case ('PRINT_INPUT')
+            this%iprpak = 1
+            write(this%iout,'(4x,a)') 'TIME-VARYING INPUT WILL BE PRINTED.'
           case ('TS6')
             !
             ! -- Add a time series file
@@ -383,9 +386,11 @@ contains
                                            varName)
         !
         ! -- Report value change
-        write(this%iout, fmtvalchg) &
-          trim(adjustl(this%packName)), trim(varName), trim(cellid), &
-          kper, bndElem
+        if (this%iprpak /= 0) then
+          write(this%iout, fmtvalchg) &
+            trim(adjustl(this%packName)), trim(varName), trim(cellid), &
+            kper, bndElem
+        end if
         !
         ! -- Validate the new property value
         call this%validate_change(node, varName)
