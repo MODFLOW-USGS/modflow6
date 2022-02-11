@@ -376,7 +376,9 @@ module GwfGwtExchangeModule
     class(GwtGwtConnectionType), pointer :: gwtConn !< GWT connection
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 
-    gwtConn%exgflowja => gwfConn%exgflowja
+    !gwtConn%exgflowja => gwfConn%exgflowja
+    gwtConn%exgflowja => gwfConn%gwfExchange%simvals
+    if (associated(gwfConn%gwfExchange%model2, gwfConn%owner)) gwtConn%exgflowSign = -1
 
     ! fmi flows are not read from file
     gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
