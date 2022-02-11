@@ -1,5 +1,9 @@
 BEGIN OPTIONS
   [AUXILIARY <auxiliary(naux)>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
   [ADVSCHEME <advscheme>]
   [XT3D_OFF]
   [XT3D_RHS]
