@@ -113,11 +113,11 @@ def get_model(dir, name):
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
-        outer_hclose=hclose,
+        outer_dvclose=hclose,
         outer_maximum=nouter,
         under_relaxation="DBD",
         inner_maximum=ninner,
-        inner_hclose=hclose,
+        inner_dvclose=hclose,
         rcloserecord=rclose,
         linear_acceleration="BICGSTAB",
         relaxation_factor=relax,
