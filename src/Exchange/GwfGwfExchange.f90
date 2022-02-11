@@ -820,6 +820,7 @@ contains
     real(DP) :: thksat
     real(DP) :: angle
 
+    !cdl todo: the flowja update in this routine needs to always happen
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
@@ -886,6 +887,7 @@ contains
       if (this%gwfmodel1%npf%icalcspdis == 1) then
         call this%gwfmodel1%npf%set_edge_properties(n1, ihc, rrate, area,      &
                                                     nx, ny, distance)
+        !cdl todo: this following line needs to be done even if icalcspdis == 0
         this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) =                         &
           this%gwfmodel1%flowja(this%gwfmodel1%ia(n1)) + rrate
       endif
@@ -902,6 +904,7 @@ contains
         if (ihc /= 0) rrate = -rrate
         call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,      &
                                                     -nx, -ny, distance)
+        !cdl todo: this following line needs to be done even if icalcspdis == 0
         this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) =                         &
           this%gwfmodel2%flowja(this%gwfmodel2%ia(n2)) + rrate
       endif
@@ -910,7 +913,6 @@ contains
     !
     return
   end subroutine gwf_gwf_set_spdis
-  
   
   !> @ brief Budget
   !!

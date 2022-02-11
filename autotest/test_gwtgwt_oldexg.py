@@ -690,6 +690,28 @@ def compare_gwf_to_ref(sim):
                     cumul_balance_error, mname
                 )
 
+    # check flowja residual
+    for mname in [mname_ref, mname_left, mname_right]:
+        print(f"Checking flowja residual for model {mname}")
+
+        fpth = os.path.join(sim.simpath, f"{mname}.dis.grb")
+        grb = flopy.mf6.utils.MfGrdFile(fpth)
+        ia = grb._datadict["IA"] - 1
+
+        fpth = os.path.join(sim.simpath, "{}.cbc".format(mname))
+        assert os.path.isfile(fpth)
+        cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
+        flow_ja_face = cbb.get_data(idx=0)
+        assert len(flow_ja_face) > 0, "Could not check residuals as flow-ja-face could not be found"
+
+        for fjf in flow_ja_face:
+            fjf = fjf.flatten()
+            res = fjf[ia[:-1]]
+            errmsg = "min or max residual too large {} {}".format(
+                res.min(), res.max()
+            )
+            assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
     return
 
 

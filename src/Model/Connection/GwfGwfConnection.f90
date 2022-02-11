@@ -506,12 +506,14 @@ contains
 
     call this%saveExchangeFlows()
 
+    !cdl Could we allow GwfExchange to do this instead, using
+    !    simvals?
     ! if needed, we add the edge properties to the model's NPF
     ! package for its spdis calculation:
     if (this%gwfModel%npf%icalcspdis == 1) then    
       call this%setNpfEdgeProps()
     end if
-
+    
   end subroutine gwfgwfcon_cq
 
   !> @brief Set the flows (flowja from interface model) to the 
