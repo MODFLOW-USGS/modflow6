@@ -280,8 +280,9 @@ subroutine gwtgwtcon_ar(this)
 
   ! AR the movers and obs through the exchange
   if (this%exchangeIsOwned) then
-    !cdl if (this%gwtExchange%inmvr > 0) then
-    !cdl   call this%gwtExchange%mvr%mvr_ar()
+    !cdl implement this when MVT is ready
+    !cdl if (this%gwtExchange%inmvt > 0) then
+    !cdl   call this%gwtExchange%mvt%mvt_ar()
     !cdl end if
     if (this%gwtExchange%inobs > 0) then
       call this%gwtExchange%obs%obs_ar()
@@ -499,14 +500,11 @@ subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     end do
   end do
 
-  !cdl implement this when MVT ready
-  ! FC the movers through the exchange; we cannot call
-  ! exg_fc() directly because it calculates matrix terms
-  !cdl if (this%exchangeIsOwned) then
-  !cdl   if (this%gwtExchange%inmvr > 0) then
-  !cdl     call this%gwtExchange%mvr%mvr_fc()
-  !cdl   end if
-  !cdl end if
+  ! FC the movers through the exchange; we can call
+  ! exg_fc() directly because it only handles mover terms (unlike in GwfExchange%exg_fc)
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_fc(kiter, iasln, amatsln, rhssln, inwtflag)
+  end if
 
 end subroutine gwtgwtcon_fc
 
@@ -551,37 +549,10 @@ end subroutine gwtgwtcon_cq
 
 subroutine gwtgwtcon_bd(this, icnvg, isuppress_output, isolnid)
   use BudgetModule, only: rate_accumulator
-  !cdl use TdisModule, only: delt
   class(GwtGwtConnectionType) :: this           !< the connection
   integer(I4B), intent(inout) :: icnvg          !< convergence flag
   integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
   integer(I4B), intent(in) :: isolnid           !< solution id
-  ! local
-  !cdl character(len=LENBUDTXT), dimension(1) :: budtxt
-  !cdl real(DP), dimension(2, 1) :: budterm
-  !cdl real(DP) :: ratin, ratout
-  !cdl integer(I4B) :: i, iposExg
-
-  !cdl! -- initialize
-  !cdlbudtxt(1) = '    FLOW-JA-FACE'
-  !cdl!
-  !cdl! -- Calculate ratin/ratout and pass to model budgets
-  !cdldo i = 1, this%gridConnection%nrOfBoundaryCells
-  !cdl  iposExg = this%gridConnection%primConnections(i)
-  !cdl  this%exgflowjaGwt(i) = this%gwtInterfaceModel%flowja(iposExg)
-  !cdlend do
-  !cdlcall rate_accumulator(this%exgflowjaGwt, ratin, ratout)
-  !cdl!
-  !cdl! -- Add the budget terms to the correct model
-  !cdlbudterm(1, 1) = ratin
-  !cdlbudterm(2, 1) = ratout
-  !cdlif (associated(this%gwtModel, this%gwtExchange%gwtmodel2)) then
-  !cdl  budterm(1, 1) = ratout
-  !cdl  budterm(2, 1) = ratin
-  !cdlend if
-  !cdl
-  !cdlcall this%gwtmodel%budget%addentry(ratin, ratout, delt, budtxt(1),            &
-  !cdl                                   isuppress_output, this%gwtExchange%name)
   
   ! call exchange budget routine, also calls bd
   ! for movers.

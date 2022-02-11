@@ -20,8 +20,7 @@ module GwtGwtExchangeModule
   use ListsModule,             only: basemodellist
   use DisConnExchangeModule,   only: DisConnExchangeType
   use GwtModule,               only: GwtModelType
-  !cdl use GhostNodeModule,         only: GhostNodeType
-  !cdl use GwtMvrModule,            only: GwtMvrType
+  !cdl use GwtMvtModule,            only: GwtMvtType
   use ObserveModule,           only: ObserveType
   use ObsModule,               only: ObsType
   use SimModule,               only: count_errors, store_error, store_error_unit
@@ -53,12 +52,6 @@ module GwtGwtExchangeModule
     integer(I4B), pointer                            :: iAdvScheme               !< the advection scheme at the interface:
                                                                                  !! 0 = upstream, 1 = central, 2 = TVD
 
-    !cdl integer(I4B), pointer                            :: inewton     => null()    !< newton flag (1 newton is on)
-    !cdl integer(I4B), pointer                            :: icellavg    => null()    !< cell averaging
-    !cdl integer(I4B), pointer                            :: ivarcv      => null()    !< variable cv
-    !cdl integer(I4B), pointer                            :: idewatcv    => null()    !< dewatered cv
-    !cdl integer(I4B), pointer                            :: ingnc       => null()    !< unit number for gnc (0 if off)
-    !cdl type(GhostNodeType), pointer                     :: gnc         => null()    !< gnc object
     !cdl integer(I4B), pointer                            :: inmvr       => null()    !< unit number for mover (0 if off)
     !cdl type(GwtMvrType), pointer                        :: mvr         => null()    !< water mover object
     integer(I4B), pointer                            :: inobs       => null()    !< unit number for GWT-GWT observations
@@ -66,10 +59,6 @@ module GwtGwtExchangeModule
     !
     ! -- internal data
     real(DP), dimension(:), pointer, contiguous      :: cond        => null()    !< conductance
-    !cdl real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    !< saturated conductance
-    !cdl integer(I4B), dimension(:), pointer, contiguous  :: idxglo      => null()    !< mapping to global (solution) amat
-    !cdl integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo   => null()    !< mapping to global (solution) symmetric amat
-    !cdl real(DP), pointer                                :: satomega    => null()    !< saturation smoothing
     real(DP), dimension(:), pointer, contiguous      :: simvals     => null()    !< simulated flow rate for each exchange
     !
     ! -- table objects
@@ -79,37 +68,26 @@ module GwtGwtExchangeModule
   contains
 
     procedure          :: exg_df      => gwt_gwt_df
-    !cdl procedure          :: exg_ac      => gwt_gwt_ac
-    !cdl procedure          :: exg_mc      => gwt_gwt_mc
     procedure          :: exg_ar      => gwt_gwt_ar
     procedure          :: exg_rp      => gwt_gwt_rp
     procedure          :: exg_ad      => gwt_gwt_ad
-    !cdl procedure          :: exg_cf      => gwt_gwt_cf
-    !cdl procedure          :: exg_fc      => gwt_gwt_fc
-    !cdl procedure          :: exg_fn      => gwt_gwt_fn
-    !cdl procedure          :: exg_cq      => gwt_gwt_cq
+    procedure          :: exg_fc      => gwt_gwt_fc
     procedure          :: exg_bd      => gwt_gwt_bd
     procedure          :: exg_ot      => gwt_gwt_ot
     procedure          :: exg_da      => gwt_gwt_da
     procedure          :: exg_fp      => gwt_gwt_fp
-    !cdl procedure          :: get_iasym   => gwt_gwt_get_iasym
     procedure          :: connects_model => gwt_gwt_connects_model
     procedure          :: use_interface_model
     procedure          :: allocate_scalars
     procedure          :: allocate_arrays
     procedure          :: read_options
     procedure          :: parse_option
-    !cdl procedure          :: read_gnc
+    !cdl Implement when MVT is ready
     !cdl procedure          :: read_mvr
-    !cdl procedure, private :: condcalc
-    !cdl procedure, private :: rewet
-    !cdl procedure, private :: qcalc
     procedure          :: gwt_gwt_bdsav
     procedure, private :: gwt_gwt_df_obs
     procedure, private :: gwt_gwt_rp_obs
     procedure, public  :: gwt_gwt_save_simvals
-    !cdl procedure, private :: gwt_gwt_calc_simvals
-    !cdl procedure, public  :: gwt_gwt_set_spdis
     procedure, private :: validate_exchange
   end type GwtExchangeType
 
@@ -222,19 +200,10 @@ contains
     ! -- read exchange data
     call this%read_data(iout)
     !
-    ! -- call each model and increase the edge count
-    !cdl call this%gwtmodel1%npf%increase_edge_count(this%nexg)
-    !cdl call this%gwtmodel2%npf%increase_edge_count(this%nexg)
-    !
-    ! -- Create and read ghost node information
-    !cdl if(this%ingnc > 0) then
-    !cdl   call gnc_cr(this%gnc, this%name, this%ingnc, iout)
-    !cdl   call this%read_gnc()
-    !cdl endif
-    !cdl !
+    !cdl  Implment when MVT is ready
     !cdl ! -- Read mover information
-    !cdl if(this%inmvr > 0) then
-    !cdl   call this%read_mvr(iout)
+    !cdl if(this%inmvt > 0) then
+    !cdl   call this%read_mvt(iout)
     !cdl endif
     !
     ! -- close the file
@@ -267,41 +236,18 @@ contains
       end if
     end if
 
-    !cdl ! Check to see if horizontal anisotropy is in either model1 or model2.
-    !cdl ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
-    !cdl ! GWT-GWT exchange (this%ianglex > 0).
-    !cdl if(this%gwtmodel1%npf%ik22 /= 0 .or. this%gwtmodel2%npf%ik22 /= 0) then
-    !cdl   if(this%ianglex == 0) then
-    !cdl     write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
-    !cdl                          ' requires that ANGLDEGX be specified as an'//     &
-    !cdl                          ' auxiliary variable because K22 was specified'//  &
-    !cdl                          ' in one or both groundwater models.'
-    !cdl     call store_error(errmsg, terminate=.TRUE.)
-    !cdl   endif
-    !cdl endif
-    !cdl 
-    !cdl ! Check to see if specific discharge is needed for model1 or model2.
-    !cdl ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
-    !cdl ! GWT-GWT exchange (this%ianglex > 0).
-    !cdl if(this%gwtmodel1%npf%icalcspdis /= 0 .or. &
-    !cdl    this%gwtmodel2%npf%icalcspdis /= 0) then
-    !cdl   if(this%ianglex == 0) then
-    !cdl     write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
-    !cdl                          ' requires that ANGLDEGX be specified as an'//     &
-    !cdl                          ' auxiliary variable because specific discharge'// &
-    !cdl                          ' is being calculated in one or both'//            &
-    !cdl                          ' groundwater models.'
-    !cdl     call store_error(errmsg, terminate=.TRUE.)
-    !cdl   endif
-    !cdl   if(this%icdist == 0) then
-    !cdl     write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
-    !cdl                          ' requires that CDIST be specified as an'//        &
-    !cdl                          ' auxiliary variable because specific discharge'// &
-    !cdl                          ' is being calculated in one or both'//            &
-    !cdl                          ' groundwater models.'
-    !cdl     call store_error(errmsg, terminate=.TRUE.)
-    !cdl   endif
-    !cdl endif
+    ! Check to see if dispersion is on in either model1 or model2.
+    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! GWT-GWT exchange (this%ianglex > 0).
+    if(this%gwtmodel1%indsp /= 0 .or. this%gwtmodel2%indsp /= 0) then
+      if(this%ianglex == 0) then
+        write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
+                             ' requires that ANGLDEGX be specified as an'//     &
+                             ' auxiliary variable because dispersion was '//    &
+                             'specified in one or both transport models.'
+        call store_error(errmsg, terminate=.TRUE.)
+      endif
+    endif
 
     if (this%ixt3d > 0 .and. this%ianglex == 0) then
       write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),               &
@@ -312,81 +258,6 @@ contains
 
   end subroutine validate_exchange
 
-  !> @ brief Add connections
-  !!
-  !! override parent exg_ac so that gnc can add connections here.
-  !!
-  !<
-  !cdl subroutine gwt_gwt_ac(this, sparse)
-  !cdl   ! -- modules
-  !cdl   use SparseModule, only:sparsematrix
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   type(sparsematrix), intent(inout) :: sparse
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: n, iglo, jglo
-  !cdl   !
-  !cdl   ! -- add exchange connections
-  !cdl   do n = 1, this%nexg
-  !cdl     iglo = this%nodem1(n) + this%gwtmodel1%moffset
-  !cdl     jglo = this%nodem2(n) + this%gwtmodel2%moffset
-  !cdl     call sparse%addconnection(iglo, jglo, 1)
-  !cdl     call sparse%addconnection(jglo, iglo, 1)
-  !cdl   enddo
-  !cdl   !
-  !cdl   ! -- add gnc connections
-  !cdl   if(this%ingnc > 0) then
-  !cdl     call this%gnc%gnc_ac(sparse)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine gwt_gwt_ac
-  !cdl 
-  !cdl !> @ brief Map connections
-  !cdl !!
-  !cdl !! Map the connections in the global matrix
-  !cdl !!
-  !cdl !<
-  !cdl subroutine gwt_gwt_mc(this, iasln, jasln)
-  !cdl   ! -- modules
-  !cdl   use SparseModule, only:sparsematrix
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), dimension(:), intent(in) :: iasln
-  !cdl   integer(I4B), dimension(:), intent(in) :: jasln
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: n, iglo, jglo, ipos
-  !cdl   !
-  !cdl   ! -- map exchange connections
-  !cdl   do n = 1, this%nexg
-  !cdl     iglo = this%nodem1(n)+this%gwtmodel1%moffset
-  !cdl     jglo = this%nodem2(n)+this%gwtmodel2%moffset
-  !cdl     ! -- find jglobal value in row iglo and store in idxglo
-  !cdl     do ipos = iasln(iglo), iasln(iglo + 1) - 1
-  !cdl       if(jglo == jasln(ipos)) then
-  !cdl         this%idxglo(n) = ipos
-  !cdl         exit
-  !cdl       endif
-  !cdl     enddo
-  !cdl     ! -- find and store symmetric location
-  !cdl     do ipos = iasln(jglo), iasln(jglo + 1) - 1
-  !cdl       if(iglo == jasln(ipos)) then
-  !cdl         this%idxsymglo(n) = ipos
-  !cdl         exit
-  !cdl       endif
-  !cdl     enddo
-  !cdl   enddo
-  !cdl   !
-  !cdl   ! -- map gnc connections
-  !cdl   if(this%ingnc > 0) then
-  !cdl     call this%gnc%gnc_mc(iasln, jasln)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine gwt_gwt_mc
-
   !> @ brief Allocate and read
   !!
   !! Allocated and read and calculate saturated conductance
@@ -394,93 +265,13 @@ contains
   !<
   subroutine gwt_gwt_ar(this)
     ! -- modules
-    !cdl use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-    !cdl use GwtNpfModule, only: condmean, vcond, hcond
     ! -- dummy
     class(GwtExchangeType) :: this  !<  GwtExchangeType
-    !cdl ! -- local
-    !cdl integer(I4B) :: iexg
-    !cdl integer(I4B) :: n, m, ihc
-    !cdl real(DP) :: topn, topm
-    !cdl real(DP) :: botn, botm
-    !cdl real(DP) :: satn, satm
-    !cdl real(DP) :: thickn, thickm
-    !cdl real(DP) :: angle, hyn, hym
-    !cdl real(DP) :: csat
-    !cdl real(DP) :: fawidth
-    !cdl real(DP), dimension(3) :: vg
+    ! -- local
     !
+    !cdl Implement when MVT is ready
     ! -- If mover is active, then call ar routine
-    !cdl if(this%inmvr > 0) call this%mvr%mvr_ar()
-    !
-    ! -- Go through each connection and calculate the saturated conductance
-    !cdl do iexg = 1, this%nexg
-    !cdl   !
-    !cdl   ihc = this%ihc(iexg)
-    !cdl   n = this%nodem1(iexg)
-    !cdl   m = this%nodem2(iexg)
-    !cdl   topn = this%gwtmodel1%dis%top(n)
-    !cdl   topm = this%gwtmodel2%dis%top(m)
-    !cdl   botn = this%gwtmodel1%dis%bot(n)
-    !cdl   botm = this%gwtmodel2%dis%bot(m)
-    !cdl   satn = this%gwtmodel1%npf%sat(n)
-    !cdl   satm = this%gwtmodel2%npf%sat(m)
-    !cdl   thickn = (topn - botn) * satn
-    !cdl   thickm = (topm - botm) * satm
-    !cdl   !
-    !cdl   ! -- Calculate conductance depending on connection orientation
-    !cdl   if(ihc == 0) then
-    !cdl     !
-    !cdl     ! -- Vertical conductance for fully saturated conditions
-    !cdl     vg(1) = DZERO
-    !cdl     vg(2) = DZERO
-    !cdl     vg(3) = DONE
-    !cdl     hyn = this%gwtmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-    !cdl     hym = this%gwtmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-    !cdl     csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE,                                &
-    !cdl                   botn, botm,                                              &
-    !cdl                   hyn, hym,                                                &
-    !cdl                   satn, satm,                                              &
-    !cdl                   topn, topm,                                              &
-    !cdl                   botn, botm,                                              &
-    !cdl                   this%hwva(iexg))
-    !cdl   else
-    !cdl     !
-    !cdl     ! -- Calculate horizontal conductance
-    !cdl     hyn = this%gwtmodel1%npf%k11(n)
-    !cdl     hym = this%gwtmodel2%npf%k11(m)
-    !cdl     !
-    !cdl     ! -- Check for anisotropy in models, and recalculate hyn and hym
-    !cdl     if(this%ianglex > 0) then
-    !cdl       angle = this%auxvar(this%ianglex, iexg) * DPIO180
-    !cdl       vg(1) = abs(cos(angle))
-    !cdl       vg(2) = abs(sin(angle))
-    !cdl       vg(3) = DZERO
-    !cdl       !
-    !cdl       ! -- anisotropy in model 1
-    !cdl       if(this%gwtmodel1%npf%ik22 /= 0) then
-    !cdl         hyn = this%gwtmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-    !cdl       endif
-    !cdl       !
-    !cdl       ! -- anisotropy in model 2
-    !cdl       if(this%gwtmodel2%npf%ik22 /= 0) then
-    !cdl         hym = this%gwtmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-    !cdl       endif
-    !cdl     endif
-    !cdl     !
-    !cdl     fawidth = this%hwva(iexg)
-    !cdl     csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc,                        &
-    !cdl                   this%icellavg, 0, 0, DONE,                              &
-    !cdl                   topn, topm, satn, satm, hyn, hym,                       &
-    !cdl                   topn, topm,                                             &
-    !cdl                   botn, botm,                                             &
-    !cdl                   this%cl1(iexg), this%cl2(iexg),                         &
-    !cdl                   fawidth, this%satomega)
-    !cdl   endif
-    !cdl   !
-    !cdl   ! -- store csat in condsat
-    !cdl   this%condsat(iexg) = csat
-    !cdl enddo
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_ar()
     !
     ! -- Observation AR
     call this%obs%obs_ar()
@@ -504,8 +295,9 @@ contains
     ! -- Check with TDIS on whether or not it is time to RP
     if (.not. readnewdata) return
     !
+    !cdl Implement when MVT is ready
     ! -- Read and prepare for mover
-    !cdl if(this%inmvr > 0) call this%mvr%mvr_rp()
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_rp()
     !
     ! -- Read and prepare for observations
     call this%gwt_gwt_rp_obs()
@@ -525,8 +317,9 @@ contains
     class(GwtExchangeType) :: this  !<  GwtExchangeType
     ! -- local
     !
+    !cdl Implement when MVT is ready
     ! -- Advance mover
-    !cdl if(this%inmvr > 0) call this%mvr%mvr_ad()
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_ad()
     !
     ! -- Push simulated values to preceding time step
     call this%obs%obs_ad()
@@ -535,388 +328,30 @@ contains
     return
   end subroutine gwt_gwt_ad
 
-  !> @ brief Calculate coefficients
-  !!
-  !! Rewet as necessary
-  !!
-  !<
-  !cdl subroutine gwt_gwt_cf(this, kiter)
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(in) :: kiter
-  !cdl   ! -- local
-  !cdl   !
-  !cdl   ! -- Rewet cells across models using the wetdry parameters in each model's
-  !cdl   !    npf package, and the head in the connected model.
-  !cdl   call this%rewet(kiter)
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine gwt_gwt_cf
-  
   !> @ brief Fill coefficients
   !!
   !! Calculate conductance and fill coefficient matrix
   !!
   !<
-  !cdl subroutine gwt_gwt_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
-  !cdl   ! -- modules
-  !cdl   use ConstantsModule, only: DHALF
-  !cdl   use GwtNpfModule, only: hcond, vcond
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(in) :: kiter
-  !cdl   integer(I4B), dimension(:), intent(in) :: iasln
-  !cdl   real(DP), dimension(:), intent(inout) :: amatsln
-  !cdl   real(DP), dimension(:), intent(inout) ::rhssln
-  !cdl   integer(I4B), optional, intent(in) :: inwtflag
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: inwt, iexg
-  !cdl   integer(I4B) :: i, nodem1sln, nodem2sln, idiagsln
-  !cdl   integer(I4B) :: njasln
-  !cdl   !
-  !cdl   ! -- calculate the conductance for each exchange connection
-  !cdl   call this%condcalc()
-  !cdl   !
-  !cdl   ! -- if gnc is active, then copy cond into gnc cond (might consider a
-  !cdl   !    pointer here in the future)
-  !cdl   if(this%ingnc > 0) then
-  !cdl     do iexg = 1, this%nexg
-  !cdl       this%gnc%cond(iexg) = this%cond(iexg)
-  !cdl     enddo
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Put this%cond into amatsln
-  !cdl   do i = 1, this%nexg
-  !cdl     amatsln(this%idxglo(i)) = this%cond(i)
-  !cdl     amatsln(this%idxsymglo(i)) = this%cond(i)
-  !cdl     nodem1sln = this%nodem1(i) + this%gwtmodel1%moffset
-  !cdl     nodem2sln = this%nodem2(i) + this%gwtmodel2%moffset
-  !cdl     idiagsln = iasln(nodem1sln)
-  !cdl     amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
-  !cdl     idiagsln = iasln(nodem2sln)
-  !cdl     amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
-  !cdl   enddo
-  !cdl   !
-  !cdl   ! -- Fill the gnc terms in the solution matrix
-  !cdl   if(this%ingnc > 0) then
-  !cdl     call this%gnc%gnc_fc(kiter, amatsln)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Call mvr fc routine
-  !cdl   if(this%inmvr > 0) call this%mvr%mvr_fc()
-  !cdl   !
-  !cdl   ! -- Set inwt to exchange newton, but shut off if requested by caller
-  !cdl   inwt = this%inewton
-  !cdl   if(present(inwtflag)) then
-  !cdl     if (inwtflag == 0) inwt = 0
-  !cdl   endif
-  !cdl   if (inwt /= 0) then
-  !cdl     call this%exg_fn(kiter, iasln, amatsln)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Ghost node Newton-Raphson
-  !cdl   if (this%ingnc > 0) then
-  !cdl     if (inwt /= 0) then
-  !cdl       njasln = size(amatsln)
-  !cdl       call this%gnc%gnc_fn(kiter, njasln, amatsln, this%condsat,             &
-  !cdl         ihc_opt=this%ihc, ivarcv_opt=this%ivarcv,                            &
-  !cdl         ictm1_opt=this%gwtmodel1%npf%icelltype,                              &
-  !cdl         ictm2_opt=this%gwtmodel2%npf%icelltype)
-  !cdl     endif
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine gwt_gwt_fc
+  subroutine gwt_gwt_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+    ! -- modules
+    ! -- dummy
+    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), dimension(:), intent(in) :: iasln
+    real(DP), dimension(:), intent(inout) :: amatsln
+    real(DP), dimension(:), intent(inout) ::rhssln
+    integer(I4B), optional, intent(in) :: inwtflag
+    ! -- local
+    !
+    !cdl Implement when MVT is ready
+    ! -- Call mvt fc routine
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_fc()
+    !
+    ! -- Return
+    return
+  end subroutine gwt_gwt_fc
 
-  !> @ brief Fill Newton
-  !!
-  !! Fill amatsln with Newton terms
-  !!
-  !<
-  !cdl subroutine gwt_gwt_fn(this, kiter, iasln, amatsln)
-  !cdl   ! -- modules
-  !cdl   use SmoothingModule, only: sQuadraticSaturationDerivative
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(in) :: kiter
-  !cdl   integer(I4B), dimension(:), intent(in) :: iasln
-  !cdl   real(DP), dimension(:), intent(inout) :: amatsln
-  !cdl   ! -- local
-  !cdl   logical :: nisup
-  !cdl   integer(I4B) :: iexg
-  !cdl   integer(I4B) :: n, m
-  !cdl   integer(I4B) :: nodensln, nodemsln
-  !cdl   integer(I4B) :: ibdn, ibdm
-  !cdl   integer(I4B) :: idiagnsln, idiagmsln
-  !cdl   real(DP) :: topn, topm
-  !cdl   real(DP) :: botn, botm
-  !cdl   real(DP) :: topup, botup
-  !cdl   real(DP) :: hn, hm
-  !cdl   real(DP) :: hup, hdn
-  !cdl   real(DP) :: cond
-  !cdl   real(DP) :: term
-  !cdl   real(DP) :: consterm
-  !cdl   real(DP) :: derv
-  !cdl   !
-  !cdl   do iexg = 1, this%nexg
-  !cdl     n = this%nodem1(iexg)
-  !cdl     m = this%nodem2(iexg)
-  !cdl     nodensln = this%nodem1(iexg) + this%gwtmodel1%moffset
-  !cdl     nodemsln = this%nodem2(iexg) + this%gwtmodel2%moffset
-  !cdl     ibdn = this%gwtmodel1%ibound(n)
-  !cdl     ibdm = this%gwtmodel2%ibound(m)
-  !cdl     topn = this%gwtmodel1%dis%top(n)
-  !cdl     topm = this%gwtmodel2%dis%top(m)
-  !cdl     botn = this%gwtmodel1%dis%bot(n)
-  !cdl     botm = this%gwtmodel2%dis%bot(m)
-  !cdl     hn = this%gwtmodel1%x(n)
-  !cdl     hm = this%gwtmodel2%x(m)
-  !cdl     if(this%ihc(iexg) == 0) then
-  !cdl       ! -- vertical connection, newton not supported
-  !cdl     else
-  !cdl       ! -- determine upstream node
-  !cdl       nisup = .false.
-  !cdl       if(hm < hn) nisup = .true.
-  !cdl       !
-  !cdl       ! -- set upstream top and bot
-  !cdl       if(nisup) then
-  !cdl         topup = topn
-  !cdl         botup = botn
-  !cdl         hup = hn
-  !cdl         hdn = hm
-  !cdl       else
-  !cdl         topup = topm
-  !cdl         botup = botm
-  !cdl         hup = hm
-  !cdl         hdn = hn
-  !cdl       endif
-  !cdl       !
-  !cdl       ! -- no newton terms if upstream cell is confined
-  !cdl       if (nisup) then
-  !cdl         if (this%gwtmodel1%npf%icelltype(n) == 0) cycle
-  !cdl       else
-  !cdl         if (this%gwtmodel2%npf%icelltype(m) == 0) cycle
-  !cdl       end if
-  !cdl       !
-  !cdl       ! -- set topup and botup
-  !cdl       if(this%ihc(iexg) == 2) then
-  !cdl         topup = min(topn, topm)
-  !cdl         botup = max(botn, botm)
-  !cdl       endif
-  !cdl       !
-  !cdl       ! get saturated conductivity for derivative
-  !cdl       cond = this%condsat(iexg)
-  !cdl       !
-  !cdl       ! -- TO DO deal with MODFLOW-NWT upstream weighting option
-  !cdl       !
-  !cdl       ! -- compute terms
-  !cdl       consterm = -cond * (hup - hdn)
-  !cdl       derv = sQuadraticSaturationDerivative(topup, botup, hup)
-  !cdl       idiagnsln = iasln(nodensln)
-  !cdl       idiagmsln = iasln(nodemsln)
-  !cdl       if(nisup) then
-  !cdl         !
-  !cdl         ! -- fill jacobian with n being upstream
-  !cdl         term = consterm * derv
-  !cdl         this%gwtmodel1%rhs(n) = this%gwtmodel1%rhs(n) + term * hn
-  !cdl         this%gwtmodel2%rhs(m) = this%gwtmodel2%rhs(m) - term * hn
-  !cdl         amatsln(idiagnsln) = amatsln(idiagnsln) + term
-  !cdl         if(ibdm > 0) then
-  !cdl           amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
-  !cdl         endif
-  !cdl       else
-  !cdl         !
-  !cdl         ! -- fill jacobian with m being upstream
-  !cdl         term = -consterm * derv
-  !cdl         this%gwtmodel1%rhs(n) = this%gwtmodel1%rhs(n) + term * hm
-  !cdl         this%gwtmodel2%rhs(m) = this%gwtmodel2%rhs(m) - term * hm
-  !cdl         amatsln(idiagmsln) = amatsln(idiagmsln) - term
-  !cdl         if(ibdn > 0) then
-  !cdl           amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
-  !cdl         endif
-  !cdl       endif
-  !cdl     endif
-  !cdl   enddo
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine gwt_gwt_fn
-
-  !> @ brief Calculate flow
-  !!
-  !! Calculate flow between two cells and store in simvals, also set
-  !! information needed for specific discharge calculation
-  !!
-  !<
-  !cdl subroutine gwt_gwt_cq(this, icnvg, isuppress_output, isolnid)
-  !cdl   ! -- modules
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(inout) :: icnvg
-  !cdl   integer(I4B), intent(in) :: isuppress_output
-  !cdl   integer(I4B), intent(in) :: isolnid
-  !cdl   ! -- local
-  !cdl   !
-  !cdl   ! -- calculate flow and store in simvals
-  !cdl   call this%gwt_gwt_calc_simvals()    
-  !cdl   !
-  !cdl   ! -- calculate specific discharge and set to model
-  !cdl   call this%gwt_gwt_set_spdis()
-  !cdl   !
-  !cdl   ! -- return
-  !cdl   return
-  !cdl end subroutine gwt_gwt_cq
-
-
-  !> @brief Calculate flow rates for the exchanges and
-  !< store them in a member array
-  !cdl subroutine gwt_gwt_calc_simvals(this)
-  !cdl   use ConstantsModule, only: DZERO
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   ! local
-  !cdl   integer(I4B) :: i
-  !cdl   integer(I4B) :: n1, n2
-  !cdl   integer(I4B) :: ibdn1, ibdn2
-  !cdl   real(DP) :: rrate
-  !cdl 
-  !cdl   do i = 1, this%nexg
-  !cdl     rrate = DZERO
-  !cdl     n1 = this%nodem1(i)
-  !cdl     n2 = this%nodem2(i)
-  !cdl     ibdn1 = this%gwtmodel1%ibound(n1)
-  !cdl     ibdn2 = this%gwtmodel2%ibound(n2)
-  !cdl     if(ibdn1 /= 0 .and. ibdn2 /= 0) then
-  !cdl       rrate = this%qcalc(i, n1, n2)
-  !cdl       if(this%ingnc > 0) then
-  !cdl         rrate = rrate + this%gnc%deltaqgnc(i)
-  !cdl       endif
-  !cdl     endif
-  !cdl     this%simvals(i) = rrate
-  !cdl   end do
-  !cdl   
-  !cdl   return
-  !cdl end subroutine gwt_gwt_calc_simvals
-
-  !> @brief Calculate specific discharge from flow rates
-  !< and set them to the models
-  !cdl subroutine gwt_gwt_set_spdis(this)
-  !cdl   use ConstantsModule, only: DZERO, DPIO180
-  !cdl   use GwtNpfModule, only: thksatnm
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   ! local
-  !cdl   integer(I4B) :: iusg
-  !cdl   integer(I4B) :: i
-  !cdl   integer(I4B) :: n1, n2
-  !cdl   integer(I4B) :: ibdn1, ibdn2
-  !cdl   integer(I4B) :: ictn1, ictn2
-  !cdl   integer(I4B) :: ihc
-  !cdl   real(DP) :: rrate
-  !cdl   real(DP) :: topn1, topn2
-  !cdl   real(DP) :: botn1, botn2
-  !cdl   real(DP) :: satn1, satn2
-  !cdl   real(DP) :: hn1, hn2
-  !cdl   real(DP) :: nx, ny
-  !cdl   real(DP) :: distance
-  !cdl   real(DP) :: dltot
-  !cdl   real(DP) :: hwva
-  !cdl   real(DP) :: area
-  !cdl   real(DP) :: thksat
-  !cdl   real(DP) :: angle
-  !cdl 
-  !cdl   ! -- Return if there neither model needs to calculate specific discharge
-  !cdl   if (this%gwtmodel1%npf%icalcspdis == 0 .and. &
-  !cdl       this%gwtmodel2%npf%icalcspdis == 0) return
-  !cdl   !
-  !cdl   ! -- initialize
-  !cdl   iusg = 0
-  !cdl   !
-  !cdl   ! -- Loop through all exchanges using the flow rate 
-  !cdl   !    stored in simvals 
-  !cdl   do i = 1, this%nexg
-  !cdl     rrate = this%simvals(i)
-  !cdl     n1 = this%nodem1(i)
-  !cdl     n2 = this%nodem2(i)
-  !cdl     ihc = this%ihc(i)
-  !cdl     hwva = this%hwva(i)
-  !cdl     ibdn1 = this%gwtmodel1%ibound(n1)
-  !cdl     ibdn2 = this%gwtmodel2%ibound(n2)
-  !cdl     ictn1 = this%gwtmodel1%npf%icelltype(n1)
-  !cdl     ictn2 = this%gwtmodel2%npf%icelltype(n2)
-  !cdl     topn1 = this%gwtmodel1%dis%top(n1)
-  !cdl     topn2 = this%gwtmodel2%dis%top(n2)
-  !cdl     botn1 = this%gwtmodel1%dis%bot(n1)
-  !cdl     botn2 = this%gwtmodel2%dis%bot(n2)
-  !cdl     satn1 = this%gwtmodel1%npf%sat(n1)
-  !cdl     satn2 = this%gwtmodel2%npf%sat(n2)
-  !cdl     hn1 = this%gwtmodel1%x(n1)
-  !cdl     hn2 = this%gwtmodel2%x(n2)
-  !cdl     !
-  !cdl     ! -- Calculate face normal components
-  !cdl     if(ihc == 0) then
-  !cdl       nx = DZERO
-  !cdl       ny = DZERO
-  !cdl       area = hwva
-  !cdl       if (botn1 < botn2) then
-  !cdl         ! -- n1 is beneath n2, so rate is positive downward.  Flip rate
-  !cdl         !    upward so that points in positive z direction
-  !cdl         rrate = - rrate
-  !cdl       endif
-  !cdl     else
-  !cdl       if(this%ianglex > 0) then
-  !cdl         angle = this%auxvar(this%ianglex, i) * DPIO180
-  !cdl         nx = cos(angle)
-  !cdl         ny = sin(angle)
-  !cdl       else
-  !cdl         ! error?
-  !cdl         call store_error('error in gwt_gwt_cq', terminate=.TRUE.)
-  !cdl       endif
-  !cdl       !
-  !cdl       ! -- Calculate the saturated thickness at interface between n1 and n2
-  !cdl       thksat = thksatnm(ibdn1, ibdn2, ictn1, ictn2, this%inewton, ihc,       & 
-  !cdl                         iusg, hn1, hn2, satn1, satn2,                        &
-  !cdl                         topn1, topn2, botn1, botn2, this%satomega)
-  !cdl       area = hwva * thksat
-  !cdl     endif
-  !cdl     !
-  !cdl     ! -- Submit this connection and flow information to the npf
-  !cdl     !    package of gwtmodel1
-  !cdl     if(this%icdist > 0) then
-  !cdl       dltot = this%auxvar(this%icdist, i)
-  !cdl     else
-  !cdl       call store_error('error in gwt_gwt_cq', terminate=.TRUE.)
-  !cdl     endif
-  !cdl     distance = dltot * this%cl1(i) / (this%cl1(i) + this%cl2(i))
-  !cdl     if (this%gwtmodel1%npf%icalcspdis == 1) then
-  !cdl       call this%gwtmodel1%npf%set_edge_properties(n1, ihc, rrate, area,      &
-  !cdl                                                   nx, ny, distance)
-  !cdl       this%gwtmodel1%flowja(this%gwtmodel1%ia(n1)) =                         &
-  !cdl         this%gwtmodel1%flowja(this%gwtmodel1%ia(n1)) + rrate
-  !cdl     endif
-  !cdl     !
-  !cdl     ! -- Submit this connection and flow information to the npf
-  !cdl     !    package of gwtmodel2
-  !cdl     if(this%icdist > 0) then
-  !cdl       dltot = this%auxvar(this%icdist, i)
-  !cdl     else
-  !cdl       call store_error('error in gwt_gwt_cq', terminate=.TRUE.)
-  !cdl     endif
-  !cdl     if (this%gwtmodel2%npf%icalcspdis == 1) then
-  !cdl       distance = dltot * this%cl2(i) / (this%cl1(i) + this%cl2(i))
-  !cdl       if (ihc /= 0) rrate = -rrate
-  !cdl       call this%gwtmodel2%npf%set_edge_properties(n2, ihc, rrate, area,      &
-  !cdl                                                   -nx, -ny, distance)
-  !cdl       this%gwtmodel2%flowja(this%gwtmodel2%ia(n2)) =                         &
-  !cdl         this%gwtmodel2%flowja(this%gwtmodel2%ia(n2)) + rrate
-  !cdl     endif
-  !cdl     !
-  !cdl   enddo
-  !cdl   !
-  !cdl   return
-  !cdl end subroutine gwt_gwt_set_spdis
-  
-  
   !> @ brief Budget
   !!
   !! Accumulate budget terms
@@ -953,8 +388,9 @@ contains
     budterm(2, 1) = ratin
     call this%gwtmodel2%model_bdentry(budterm, budtxt, this%name)
     !
-    ! -- Call mvr bd routine
-    !cdl if(this%inmvr > 0) call this%mvr%mvr_bd()
+    !cdl Implement when MVT is ready
+    ! -- Call mvt bd routine
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_bd()
     !
     ! -- return
     return
@@ -1186,8 +622,9 @@ contains
     icbcfl = 1
     ibudfl = 1
     !
+    !cdl Implement when MVT is ready
     ! -- Call mvr bd routine
-    !cdl if(this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, isuppress_output)
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_bdsav(icbcfl, ibudfl, isuppress_output)
     !
     ! -- Calculate and write simulated values for observations
     if(this%inobs /= 0) then
@@ -1211,8 +648,8 @@ contains
     class(GwtExchangeType) :: this  !<  GwtExchangeType
     ! -- local
     integer(I4B) :: iexg, n1, n2
-    !cdl integer(I4B) :: ibudfl
-    real(DP) :: flow  !cdl , deltaqgnc
+    integer(I4B) :: ibudfl
+    real(DP) :: flow
     character(len=LINELENGTH) :: node1str, node2str
     ! -- format
     character(len=*), parameter :: fmtheader =                                 &
@@ -1227,43 +664,27 @@ contains
     ! -- Call bdsave
     call this%gwt_gwt_bdsav()
     !
-    ! -- Initialize
-    !cdl deltaqgnc = DZERO
-    !
     ! -- Write a table of exchanges
     if(this%iprflow /= 0) then
-      !cdl if(this%ingnc > 0) then
-      !cdl   write(iout, fmtheader) trim(adjustl(this%name)), this%id, 'NODEM1',    &
-      !cdl                        'NODEM2', 'COND', 'X_M1', 'X_M2', 'DELTAQGNC',    &
-      !cdl                        'FLOW'
-      !cdl else
-        write(iout, fmtheader2) trim(adjustl(this%name)), this%id, 'NODEM1',   &
-                             'NODEM2', 'COND', 'X_M1', 'X_M2', 'FLOW'
-      !cdl endif
+      write(iout, fmtheader2) trim(adjustl(this%name)), this%id, 'NODEM1',     &
+                            'NODEM2', 'COND', 'X_M1', 'X_M2', 'FLOW'
       do iexg = 1, this%nexg
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
         flow = this%simvals(iexg)
         call this%gwtmodel1%dis%noder_to_string(n1, node1str)
         call this%gwtmodel2%dis%noder_to_string(n2, node2str)
-        !cdl if(this%ingnc > 0) then
-        !cdl   deltaqgnc = this%gnc%deltaqgnc(iexg)
-        !cdl   write(iout, fmtdata) trim(adjustl(node1str)),                        &
-        !cdl                        trim(adjustl(node2str)),                        &
-        !cdl                        this%cond(iexg), this%gwtmodel1%x(n1),          &
-        !cdl                        this%gwtmodel2%x(n2), deltaqgnc, flow
-        !cdl else
-          write(iout, fmtdata) trim(adjustl(node1str)),                        &
-                               trim(adjustl(node2str)),                        &
-                               this%cond(iexg), this%gwtmodel1%x(n1),          &
-                               this%gwtmodel2%x(n2), flow
-        !cdl endif
+        write(iout, fmtdata) trim(adjustl(node1str)),                          &
+                              trim(adjustl(node2str)),                         &
+                              this%cond(iexg), this%gwtmodel1%x(n1),           &
+                              this%gwtmodel2%x(n2), flow
       enddo
     endif
     !
+    !cdl Implement when MVT is ready
     ! -- Mover budget output
-    !cdl ibudfl = 1
-    !cdl if(this%inmvr > 0) call this%mvr%mvr_ot_bdsummary(ibudfl)
+    ibudfl = 1
+    !cdl if(this%inmvt > 0) call this%mvt%mvt_ot_bdsummary(ibudfl)
     !
     ! -- OBS output
     call this%obs%obs_ot()
@@ -1324,11 +745,6 @@ contains
       write(iout,'(1x,a)') 'END OF GWT-GWT EXCHANGE OPTIONS'
     end if
     !
-    ! -- set omega value used for saturation calculations
-    !cdl if (this%inewton > 0) then
-    !cdl   this%satomega = DEM6
-    !cdl end if
-    !
     ! -- return
     return
   end subroutine read_options
@@ -1342,6 +758,7 @@ contains
     integer(I4B), intent(in) :: iout                 !< for logging    
     logical(LGP) :: parsed                           !< true when parsed
     ! local    
+    !cdl Implement when MVT is ready
     !cdl character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs
     character(len=LINELENGTH) :: subkey
@@ -1357,65 +774,21 @@ contains
       this%ipakcb = -1
       write(iout,'(4x,a)') &
         'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
-    !cdl case ('ALTERNATIVE_CELL_AVERAGING')
-    !cdl   call this%parser%GetStringCaps(subkey)
-    !cdl   select case(subkey)
-    !cdl   case('LOGARITHMIC')
-    !cdl     this%icellavg = 1
-    !cdl   case('AMT-LMK')
-    !cdl     this%icellavg = 2
-    !cdl   case default
-    !cdl     errmsg = "Unknown cell averaging method '" // trim(subkey) // "'."
-    !cdl     call store_error(errmsg)
-    !cdl     call this%parser%StoreErrorUnit()
-    !cdl   end select
-    !cdl   write(iout,'(4x,a,a)')                                             &
-    !cdl     'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    !cdl case ('VARIABLECV')
-    !cdl   this%ivarcv = 1
-    !cdl   write(iout,'(4x,a)')                                               &
-    !cdl     'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
-    !cdl   call this%parser%GetStringCaps(subkey)
-    !cdl   if(subkey == 'DEWATERED') then
-    !cdl     this%idewatcv = 1
-    !cdl     write(iout,'(4x,a)')                                             &
-    !cdl       'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   ' // &
-    !cdl       'AN UNDERLYING CELL.'
-    !cdl   endif
-    !cdl case ('NEWTON')
-    !cdl   this%inewton = 1
-    !cdl   write(iout, '(4x,a)')                                              &
-    !cdl                    'NEWTON-RAPHSON method used for unconfined cells'          
-    !cdl case ('GNC6')
+    !cdl Implement when MVT is ready
+    !cdl case ('MVT6')
     !cdl   call this%parser%GetStringCaps(subkey)
     !cdl   if(subkey /= 'FILEIN') then
-    !cdl     call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY ' //          &
+    !cdl     call store_error('MVT6 KEYWORD MUST BE FOLLOWED BY ' //          &
     !cdl       '"FILEIN" then by filename.')
     !cdl     call this%parser%StoreErrorUnit()
     !cdl   endif
     !cdl   call this%parser%GetString(fname)
     !cdl   if(fname == '') then
-    !cdl     call store_error('NO GNC6 FILE SPECIFIED.')
-    !cdl     call this%parser%StoreErrorUnit()
-    !cdl   endif
-    !cdl   this%ingnc = getunit()
-    !cdl   call openfile(this%ingnc, iout, fname, 'GNC')
-    !cdl   write(iout,'(4x,a)')                                               &
-    !cdl     'GHOST NODES WILL BE READ FROM ', trim(fname)
-    !cdl case ('MVR6')
-    !cdl   call this%parser%GetStringCaps(subkey)
-    !cdl   if(subkey /= 'FILEIN') then
-    !cdl     call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY ' //          &
-    !cdl       '"FILEIN" then by filename.')
-    !cdl     call this%parser%StoreErrorUnit()
-    !cdl   endif
-    !cdl   call this%parser%GetString(fname)
-    !cdl   if(fname == '') then
-    !cdl     call store_error('NO MVR6 FILE SPECIFIED.')
+    !cdl     call store_error('NO MVT6 FILE SPECIFIED.')
     !cdl     call this%parser%StoreErrorUnit()
     !cdl   endif
     !cdl   this%inmvr = getunit()
-    !cdl   call openfile(this%inmvr, iout, fname, 'MVR')
+    !cdl   call openfile(this%inmvt, iout, fname, 'MVT')
     !cdl   write(iout,'(4x,a)')                                               &
     !cdl     'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
     case ('OBS6')
@@ -1460,72 +833,15 @@ contains
 
   end function parse_option
   
-  !> @ brief Read ghost nodes
-  !!
-  !! Read and process ghost nodes 
-  !!
-  !<
-  !cdl subroutine read_gnc(this)
-  !cdl   ! -- modules
-  !cdl   use SimModule, only: store_error, store_error_unit, count_errors
-  !cdl   use ConstantsModule, only: LINELENGTH
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: i, nm1, nm2, nmgnc1, nmgnc2
-  !cdl   character(len=*), parameter :: fmterr = &
-  !cdl     "('EXCHANGE NODES ', i0, ' AND ', i0,"  // &
-  !cdl     "' NOT CONSISTENT WITH GNC NODES ', i0, ' AND ', i0)"
-  !cdl   !
-  !cdl   ! -- If exchange has ghost nodes, then initialize ghost node object
-  !cdl   !    This will read the ghost node blocks from the gnc input file.
-  !cdl   call this%gnc%gnc_df(this%gwtmodel1, m2=this%gwtmodel2)
-  !cdl   !
-  !cdl   ! -- Verify gnc is implicit if exchange has Newton Terms
-  !cdl   if(.not. this%gnc%implicit .and. this%inewton /= 0) then
-  !cdl     call store_error('GNC IS EXPLICIT, BUT GWT EXCHANGE HAS ACTIVE NEWTON.')
-  !cdl     call store_error('ADD IMPLICIT OPTION TO GNC OR REMOVE NEWTON FROM ' // &
-  !cdl       'GWT EXCHANGE.')
-  !cdl     call store_error_unit(this%ingnc)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Perform checks to ensure GNCs match with GWT-GWT nodes
-  !cdl   if(this%nexg /= this%gnc%nexg) then
-  !cdl     call store_error('NUMBER OF EXCHANGES DOES NOT MATCH NUMBER OF GNCs')
-  !cdl     call store_error_unit(this%ingnc)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- Go through each entry and confirm
-  !cdl   do i = 1, this%nexg
-  !cdl     if(this%nodem1(i) /= this%gnc%nodem1(i) .or.                             &
-  !cdl         this%nodem2(i) /= this%gnc%nodem2(i) ) then
-  !cdl       nm1 = this%gwtmodel1%dis%get_nodeuser(this%nodem1(i))
-  !cdl       nm2 = this%gwtmodel2%dis%get_nodeuser(this%nodem2(i))
-  !cdl       nmgnc1 = this%gwtmodel1%dis%get_nodeuser(this%gnc%nodem1(i))
-  !cdl       nmgnc2 = this%gwtmodel2%dis%get_nodeuser(this%gnc%nodem2(i))
-  !cdl       write(errmsg, fmterr) nm1, nm2, nmgnc1, nmgnc2
-  !cdl       call store_error(errmsg)
-  !cdl     endif
-  !cdl   enddo
-  !cdl   if(count_errors() > 0) then
-  !cdl     call store_error_unit(this%ingnc)
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- close the file
-  !cdl   close(this%ingnc)
-  !cdl   !
-  !cdl   ! -- return
-  !cdl   return
-  !cdl end subroutine read_gnc
-  
   !> @ brief Read mover
   !!
   !! Read and process movers
   !!
   !<
-  !cdl subroutine read_mvr(this, iout)
+  !cdl Implement when MVT is ready
+  !cdl subroutine read_mvt(this, iout)
   !cdl   ! -- modules
-  !cdl   use GwtMvrModule, only: mvr_cr
+  !cdl   use GwtMvtModule, only: mvt_cr
   !cdl   ! -- dummy
   !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
   !cdl   integer(I4B), intent(in) :: iout
@@ -1537,163 +853,13 @@ contains
   !cdl   !    the dis object does not convert from reduced to user node numbers. 
   !cdl   !    So in this case, the dis object is just writing unconverted package
   !cdl   !    numbers to the binary budget file.
-  !cdl   call mvr_cr(this%mvr, this%name, this%inmvr, iout, this%gwtmodel1%dis,     &
+  !cdl   call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%dis,     &
   !cdl               iexgmvr=1)
   !cdl   !
   !cdl   ! -- Return
   !cdl   return
-  !cdl end subroutine read_mvr
+  !cdl end subroutine read_mvt
   
-  !> @ brief Rewet
-  !!
-  !! Check if rewetting should propagate from one model to another
-  !!
-  !<
-  !cdl subroutine rewet(this, kiter)
-  !cdl   ! -- modules
-  !cdl   use TdisModule, only: kper, kstp
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(in) :: kiter
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: iexg
-  !cdl   integer(I4B) :: n, m
-  !cdl   integer(I4B) :: ibdn, ibdm
-  !cdl   integer(I4B) :: ihc
-  !cdl   real(DP) :: hn, hm
-  !cdl   integer(I4B) :: irewet
-  !cdl   character(len=30) :: nodestrn, nodestrm
-  !cdl   character(len=*),parameter :: fmtrwt =                                     &
-  !cdl     "(1x, 'CELL ',A,' REWET FROM GWT MODEL ',A,' CELL ',A,                   &
-  !cdl      &' FOR ITER. ',I0, ' STEP ',I0, ' PERIOD ', I0)"
-  !cdl   !
-  !cdl   ! -- Use model 1 to rewet model 2 and vice versa
-  !cdl   do iexg = 1, this%nexg
-  !cdl     n = this%nodem1(iexg)
-  !cdl     m = this%nodem2(iexg)
-  !cdl     hn = this%gwtmodel1%x(n)
-  !cdl     hm = this%gwtmodel2%x(m)
-  !cdl     ibdn = this%gwtmodel1%ibound(n)
-  !cdl     ibdm = this%gwtmodel2%ibound(m)
-  !cdl     ihc = this%ihc(iexg)
-  !cdl     call this%gwtmodel1%npf%rewet_check(kiter, n, hm, ibdm, ihc,             &
-  !cdl       this%gwtmodel1%x, irewet)
-  !cdl     if(irewet == 1) then
-  !cdl       call this%gwtmodel1%dis%noder_to_string(n, nodestrn)
-  !cdl       call this%gwtmodel2%dis%noder_to_string(m, nodestrm)
-  !cdl       write(this%gwtmodel1%iout, fmtrwt) trim(nodestrn),                     &
-  !cdl         trim(this%gwtmodel2%name), trim(nodestrm), kiter, kstp, kper
-  !cdl     endif
-  !cdl     call this%gwtmodel2%npf%rewet_check(kiter, m, hn, ibdn, ihc,             &
-  !cdl       this%gwtmodel2%x, irewet)
-  !cdl     if(irewet == 1) then
-  !cdl       call this%gwtmodel1%dis%noder_to_string(n, nodestrm)
-  !cdl       call this%gwtmodel2%dis%noder_to_string(m, nodestrn)
-  !cdl       write(this%gwtmodel2%iout, fmtrwt) trim(nodestrn),                     &
-  !cdl         trim(this%gwtmodel1%name), trim(nodestrm), kiter, kstp, kper
-  !cdl     endif
-  !cdl     !
-  !cdl   enddo
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine rewet
-  
-  !> @ brief Calculate the conductance
-  !!
-  !! Calculate the conductance based on state
-  !!
-  !<
-  !cdl subroutine condcalc(this)
-  !cdl   ! -- modules
-  !cdl   use ConstantsModule, only: DHALF, DZERO, DONE
-  !cdl   use GwtNpfModule, only: hcond, vcond
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: iexg
-  !cdl   integer(I4B) :: n, m, ihc
-  !cdl   integer(I4B) :: ibdn, ibdm
-  !cdl   integer(I4B) :: ictn, ictm
-  !cdl   real(DP) :: topn, topm
-  !cdl   real(DP) :: botn, botm
-  !cdl   real(DP) :: satn, satm
-  !cdl   real(DP) :: hyn, hym
-  !cdl   real(DP) :: angle
-  !cdl   real(DP) :: hn, hm
-  !cdl   real(DP) :: cond
-  !cdl   real(DP) :: fawidth
-  !cdl   real(DP), dimension(3) :: vg
-  !cdl   !
-  !cdl   ! -- Calculate conductance and put into amat
-  !cdl   do iexg = 1, this%nexg
-  !cdl     ihc = this%ihc(iexg)
-  !cdl     n = this%nodem1(iexg)
-  !cdl     m = this%nodem2(iexg)
-  !cdl     ibdn = this%gwtmodel1%ibound(n)
-  !cdl     ibdm = this%gwtmodel2%ibound(m)
-  !cdl     ictn = this%gwtmodel1%npf%icelltype(n)
-  !cdl     ictm = this%gwtmodel2%npf%icelltype(m)
-  !cdl     topn = this%gwtmodel1%dis%top(n)
-  !cdl     topm = this%gwtmodel2%dis%top(m)
-  !cdl     botn = this%gwtmodel1%dis%bot(n)
-  !cdl     botm = this%gwtmodel2%dis%bot(m)
-  !cdl     satn = this%gwtmodel1%npf%sat(n)
-  !cdl     satm = this%gwtmodel2%npf%sat(m)
-  !cdl     hn = this%gwtmodel1%x(n)
-  !cdl     hm = this%gwtmodel2%x(m)
-  !cdl     !
-  !cdl     ! -- Calculate conductance depending on connection orientation
-  !cdl     if(ihc == 0) then
-  !cdl       !
-  !cdl       ! -- Vertical connection
-  !cdl       vg(1) = DZERO
-  !cdl       vg(2) = DZERO
-  !cdl       vg(3) = DONE
-  !cdl       hyn = this%gwtmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-  !cdl       hym = this%gwtmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-  !cdl       cond = vcond(ibdn, ibdm, ictn, ictm, this%inewton, this%ivarcv,        &
-  !cdl                    this%idewatcv, this%condsat(iexg), hn, hm, hyn, hym,      &
-  !cdl                    satn, satm, topn, topm, botn, botm, this%hwva(iexg))
-  !cdl     else
-  !cdl       !
-  !cdl       ! -- Horizontal Connection
-  !cdl       hyn = this%gwtmodel1%npf%k11(n)
-  !cdl       hym = this%gwtmodel2%npf%k11(m)
-  !cdl       !
-  !cdl       ! -- Check for anisotropy in models, and recalculate hyn and hym
-  !cdl       if(this%ianglex > 0) then
-  !cdl         angle = this%auxvar(this%ianglex, iexg)
-  !cdl         vg(1) = abs(cos(angle))
-  !cdl         vg(2) = abs(sin(angle))
-  !cdl         vg(3) = DZERO
-  !cdl         !
-  !cdl         ! -- anisotropy in model 1
-  !cdl         if(this%gwtmodel1%npf%ik22 /= 0) then
-  !cdl           hyn = this%gwtmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-  !cdl         endif
-  !cdl         !
-  !cdl         ! -- anisotropy in model 2
-  !cdl         if(this%gwtmodel2%npf%ik22 /= 0) then
-  !cdl           hym = this%gwtmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-  !cdl         endif
-  !cdl       endif
-  !cdl       !
-  !cdl       fawidth = this%hwva(iexg)
-  !cdl       cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton,       &
-  !cdl                    this%ihc(iexg), this%icellavg, 0, 0, this%condsat(iexg),  &
-  !cdl                    hn, hm, satn, satm, hyn, hym, topn, topm, botn, botm,     &
-  !cdl                    this%cl1(iexg), this%cl2(iexg), fawidth, this%satomega)
-  !cdl     endif
-  !cdl     !
-  !cdl     this%cond(iexg) = cond
-  !cdl     !
-  !cdl   enddo
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine condcalc
-
   !> @ brief Allocate scalars
   !!
   !! Allocate scalar variables
@@ -1719,20 +885,9 @@ contains
     this%inobs = 0
     this%iAdvScheme = 0
     !
-    !cdl call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
-    !cdl call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
-    !cdl call mem_allocate(this%ivarcv, 'IVARCV', this%memoryPath)
-    !cdl call mem_allocate(this%idewatcv, 'IDEWATCV', this%memoryPath)
-    !cdl call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)    
-    !cdl call mem_allocate(this%ingnc, 'INGNC', this%memoryPath)
-    !cdl call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
-    !cdl this%icellavg = 0
-    !cdl this%ivarcv = 0
-    !cdl this%idewatcv = 0
-    !cdl this%inewton = 0    
-    !cdl this%ingnc = 0
+    !cdl Implement when MVT is ready
+    !cdl call mem_allocate(this%inmvr, 'INMVT', this%memoryPath)
     !cdl this%inmvr = 0
-    !cdl this%satomega = DZERO
     !
     ! -- return
     return
@@ -1751,22 +906,16 @@ contains
     ! -- local
     !
     ! -- objects
-    !cdl if(this%ingnc > 0) then
-    !cdl   call this%gnc%gnc_da()
-    !cdl   deallocate(this%gnc)
-    !cdl endif
-    !cdl if (this%inmvr > 0) then
-    !cdl   call this%mvr%mvr_da()
-    !cdl   deallocate(this%mvr)
+    !cdl Implement when MVT is ready
+    !cdl if (this%inmvt > 0) then
+    !cdl   call this%mvt%mvt_da()
+    !cdl   deallocate(this%mvt)
     !cdl endif
     call this%obs%obs_da()
     deallocate(this%obs)
     !
     ! -- arrays
     call mem_deallocate(this%cond)    
-    !cdl call mem_deallocate(this%condsat)
-    !cdl call mem_deallocate(this%idxglo)
-    !cdl call mem_deallocate(this%idxsymglo)
     call mem_deallocate(this%simvals)
     !
     ! -- output table objects
@@ -1788,13 +937,8 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%iAdvScheme)
     !
-    !cdl call mem_deallocate(this%icellavg)
-    !cdl call mem_deallocate(this%ivarcv)
-    !cdl call mem_deallocate(this%idewatcv)
-    !cdl call mem_deallocate(this%inewton)
-    !cdl call mem_deallocate(this%ingnc)
-    !cdl call mem_deallocate(this%inmvr)
-    !cdl call mem_deallocate(this%satomega)
+    !cdl Implement when MVT is ready
+    !cdl call mem_deallocate(this%inmvt)
     !
     ! -- deallocate base
     call this%DisConnExchangeType%disconnex_da()
@@ -1820,9 +964,6 @@ contains
     call this%DisConnExchangeType%allocate_arrays()
     !   
     call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
-    !cdl call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
-    !cdl call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)    !
-    !cdl call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
     call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
     !
     ! -- Initialize
@@ -1981,55 +1122,6 @@ contains
     return
   end subroutine gwt_gwt_fp
   
-  !> @ brief Calculate flow
-  !!
-  !! Calculate the flow for the specified exchange and node numbers
-  !!
-  !<
-  !cdl function qcalc(this, iexg, n1, n2)
-  !cdl   ! -- return
-  !cdl   real(DP) :: qcalc
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(in) :: iexg
-  !cdl   integer(I4B), intent(in) :: n1
-  !cdl   integer(I4B), intent(in) :: n2
-  !cdl   ! -- local
-  !cdl   !
-  !cdl   ! -- Calculate flow between nodes in the two models
-  !cdl   qcalc = this%cond(iexg) * (this%gwtmodel2%x(n2) - this%gwtmodel1%x(n1))
-  !cdl   !
-  !cdl   ! -- return
-  !cdl   return
-  !cdl end function qcalc
-
-  !> @ brief Set symmetric flag
-  !!
-  !! Return flag indicating whether or not this exchange will cause the
-  !! coefficient matrix to be asymmetric.
-  !!
-  !<
-  !cdl function gwt_gwt_get_iasym(this) result (iasym)
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   ! -- local
-  !cdl   integer(I4B) :: iasym
-  !cdl   !
-  !cdl   ! -- Start by setting iasym to zero
-  !cdl   iasym = 0
-  !cdl   !
-  !cdl   ! -- Groundwater flow
-  !cdl   if (this%inewton /= 0) iasym = 1
-  !cdl   !
-  !cdl   ! -- GNC
-  !cdl   if (this%ingnc > 0) then
-  !cdl     if (this%gnc%iasym /= 0) iasym = 1
-  !cdl   endif
-  !cdl   !
-  !cdl   ! -- return
-  !cdl   return
-  !cdl end function gwt_gwt_get_iasym
-
   !> @brief Return true when this exchange provides matrix 
   !! coefficients for solving @param model
   !<
