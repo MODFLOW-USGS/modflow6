@@ -158,11 +158,11 @@ subroutine gwtifmod_ar(this)
     call this%adv%adv_ar(this%dis, this%ibound)
   end if
   if (this%indsp > 0) then
-    call dspGridData%construct(this%neq)
-    call this%setDspGridData(dspGridData)
-    call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)
     this%dsp%idiffc = this%owner%dsp%idiffc
     this%dsp%idisp = this%owner%dsp%idisp
+    call dspGridData%construct(this%neq)
+    call this%setDspGridData(dspGridData)
+    call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)    
   end if
   
 end subroutine gwtifmod_ar
@@ -183,12 +183,17 @@ subroutine setDspGridData(this, gridData)
     gwtModel => CastAsGwtModel(modelPtr)
     idx = this%gridConnection%idxToGlobal(i)%index
 
-    gridData%diffc(i) = gwtModel%dsp%diffc(idx)
-    gridData%alh(i) = gwtModel%dsp%alh(idx)
-    gridData%alv(i) = gwtModel%dsp%alv(idx)
-    gridData%ath1(i) = gwtModel%dsp%ath1(idx)
-    gridData%ath2(i) = gwtModel%dsp%ath2(idx)
-    gridData%atv(i) = gwtModel%dsp%atv(idx)
+    if (this%dsp%idiffc > 0) then
+      gridData%diffc(i) = gwtModel%dsp%diffc(idx)
+    end if
+    if (this%dsp%idisp > 0) then
+      gridData%alh(i) = gwtModel%dsp%alh(idx)
+      gridData%alv(i) = gwtModel%dsp%alv(idx)
+      gridData%ath1(i) = gwtModel%dsp%ath1(idx)
+      gridData%ath2(i) = gwtModel%dsp%ath2(idx)
+      gridData%atv(i) = gwtModel%dsp%atv(idx)
+    end if
+
   end do
 
 end subroutine setDspGridData
