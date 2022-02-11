@@ -2129,6 +2129,9 @@ subroutine solution_create(filename, id)
       itot = itot + 1
     end do
     !
+    ! -- flush file
+    flush(iu)
+    !
     ! -- return
     return
   end subroutine csv_convergence_summary

@@ -59,6 +59,8 @@ contains
     ! -- append value to output line
     write(cval,fmtc)value
     write(nunit, '(a,a)', advance='NO') ',', trim(adjustl(cval))
+    !
+    ! -- return
     return
   end subroutine write_fmtd_cont
 
@@ -116,6 +118,8 @@ contains
       valdbl = value
       write(nunit)valdbl
     endif
+    !
+    ! -- return
     return
   end subroutine write_unfmtd_cont
 

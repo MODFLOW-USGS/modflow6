@@ -612,7 +612,7 @@ def cbc_compare(sim):
     list(enumerate(exdirs)),
 )
 def test_mf6model(idx, dir):
-    # determine if running on Travis or GitHub actions
+    # determine if running on CI infrastructure
     is_CI = running_on_CI()
     r_exe = None
     if not is_CI:

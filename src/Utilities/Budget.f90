@@ -288,6 +288,9 @@ module BudgetModule
     write(iout,299) val1, val2
     write(iout,300) pdiffv, pdiffr
     !
+    ! -- flush the file
+    flush(iout)
+    !
     ! -- set written_once to .true.
     this%written_once = .true.
     !
@@ -728,7 +731,12 @@ module BudgetModule
                                            (this%vbvl(3, i), i=1,this%msum-1), &
                                            (this%vbvl(4, i), i=1,this%msum-1), &
                                            totrin, totrout, pdiffr
+      !
+      ! -- flush the file
+      flush(this%ibudcsv)
     end if
+    !
+    ! -- return
     return
   end subroutine writecsv
   
@@ -769,6 +777,8 @@ module BudgetModule
       write(this%ibudcsv, '(a)', advance='NO') trim(adjustl(txt))
     end do
     write(this%ibudcsv, '(a)') 'TOTAL_IN,TOTAL_OUT,PERCENT_DIFFERENCE'
+    !
+    ! -- return
     return
   end subroutine write_csv_header
 

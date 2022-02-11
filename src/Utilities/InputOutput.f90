@@ -1242,7 +1242,11 @@ module InputOutputModule
 
       END SELECT
       END DO
-      
+      !
+      ! -- flush file
+      flush(IOUT)
+      !
+      ! -- return
       RETURN
       END SUBROUTINE ULAPRW
 
@@ -1266,6 +1270,9 @@ module InputOutputModule
 !C2------WRITE AN UNFORMATTED RECORD CONTAINING ARRAY VALUES
 !C2------THE ARRAY IS DIMENSIONED (NCOL,NROW)
       WRITE(ICHN) ((BUF(IC,IR),IC=1,NCOL),IR=1,NROW)
+      !
+      ! -- flush file
+      flush(ICHN)
 !C
 !C3------RETURN
       RETURN
@@ -1304,6 +1311,9 @@ module InputOutputModule
     write(ibdchn) kstp,kper,text,ncol,nrow,-nlay
     write(ibdchn) 1,delt,pertim,totim
     write(ibdchn) buff
+    !
+    ! -- flush file
+    flush(ibdchn)
     !
     ! -- return
     return
@@ -1629,8 +1639,12 @@ module InputOutputModule
     ! -- Loop through the rows, printing each one in its entirety.
     do i=1,nrow
       write(iout,userfmt) i,(buf(j,i),j=1,ncol)
-    enddo
+    end do
     !
+    ! -- flush file
+    flush(IOUT)
+    !
+    ! -- return
     return
   end subroutine ulaprufw
 

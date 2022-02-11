@@ -1195,8 +1195,12 @@ contains
       else
         call write_unfmtd_cont(obsrv, iprec, this%obsOutputList, simval)
       endif
-    enddo
+    end do
     !
+    ! -- flush file
+    flush(obsrv%UnitNumber)
+    !
+    ! --return
     return
   end subroutine write_continuous_simvals
 
