@@ -551,16 +551,16 @@ end subroutine gwtgwtcon_cq
 
 subroutine gwtgwtcon_bd(this, icnvg, isuppress_output, isolnid)
   use BudgetModule, only: rate_accumulator
-  use TdisModule, only: delt
+  !cdl use TdisModule, only: delt
   class(GwtGwtConnectionType) :: this           !< the connection
   integer(I4B), intent(inout) :: icnvg          !< convergence flag
   integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
   integer(I4B), intent(in) :: isolnid           !< solution id
   ! local
-  character(len=LENBUDTXT), dimension(1) :: budtxt
-  real(DP), dimension(2, 1) :: budterm
-  real(DP) :: ratin, ratout
-  integer(I4B) :: i, iposExg
+  !cdl character(len=LENBUDTXT), dimension(1) :: budtxt
+  !cdl real(DP), dimension(2, 1) :: budterm
+  !cdl real(DP) :: ratin, ratout
+  !cdl integer(I4B) :: i, iposExg
 
   !cdl! -- initialize
   !cdlbudtxt(1) = '    FLOW-JA-FACE'
