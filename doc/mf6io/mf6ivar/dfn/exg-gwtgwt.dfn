@@ -82,6 +82,38 @@ longname file keyword
 description keyword to specify that an input filename is expected next.
 
 block options
+name obs_filerecord
+type record obs6 filein obs6_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name obs6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname obs keyword
+description keyword to specify that record corresponds to an observations file.
+
+block options
+name obs6_filename
+type string
+preserve_case true
+in_record true
+tagged false
+reader urword
+optional false
+longname obs6 input filename
+description is the file name of the observations input file for this exchange. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:gwt-obstypetable} lists observation type(s) supported by the GWT-GWT package.
+
+block options
 name dev_interfacemodel_on
 type keyword
 reader urword

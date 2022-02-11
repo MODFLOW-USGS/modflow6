@@ -7,4 +7,5 @@ BEGIN OPTIONS
   [ADVSCHEME <advscheme>]
   [XT3D_OFF]
   [XT3D_RHS]
+  [OBS6 FILEIN <obs6_filename>]
 END OPTIONS

@@ -64,6 +64,8 @@
 | EXG | GWTGWT | OPTIONS | XT3D_OFF | KEYWORD | deactivate the xt3d method and use the faster and less accurate approximation for this exchange. |
 | EXG | GWTGWT | OPTIONS | XT3D_RHS | KEYWORD | add xt3d terms to right-hand side, when possible, for this exchange. |
 | EXG | GWTGWT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
+| EXG | GWTGWT | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
+| EXG | GWTGWT | OPTIONS | OBS6_FILENAME | STRING | is the file name of the observations input file for this exchange. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:gwt-obstypetable} lists observation type(s) supported by the GWT-GWT package. |
 | EXG | GWTGWT | OPTIONS | DEV_INTERFACEMODEL_ON | KEYWORD | activates the interface model mechanism for calculating the coefficients at (and possibly near) the exchange. This keyword should only be used for development purposes. |
 | EXG | GWTGWT | DIMENSIONS | NEXG | INTEGER | keyword and integer value specifying the number of GWT-GWT exchanges. |
 | EXG | GWTGWT | EXCHANGEDATA | CELLIDM1 | INTEGER | is the cellid of the cell in model 1 as specified in the simulation name file. For a structured grid that uses the DIS input file, CELLIDM1 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM1 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM1 is the node number for the cell. |
