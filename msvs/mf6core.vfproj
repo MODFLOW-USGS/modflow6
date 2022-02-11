@@ -51,6 +51,7 @@
 		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwtExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GwtGwtExchange.f90"/>
+		<File RelativePath="..\src\Exchange\GwtGwtExchangeV0.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
