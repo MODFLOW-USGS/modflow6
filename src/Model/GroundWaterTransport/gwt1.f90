@@ -70,6 +70,7 @@ module GwtModule
     procedure :: model_bd                => gwt_bd
     procedure :: model_ot                => gwt_ot
     procedure :: model_da                => gwt_da
+    procedure :: model_bdentry           => gwt_bdentry
     
     procedure :: allocate_scalars
     procedure, private :: package_create
@@ -1018,6 +1019,31 @@ module GwtModule
     ! -- return
     return
   end subroutine gwt_da
+
+  !> @brief GroundWater Transport Model Budget Entry
+  !!
+  !! This subroutine adds a budget entry to the flow budget.  It was added as
+  !! a method for the gwt model object so that the exchange object could add its
+  !! contributions.
+  !!
+  !! (1) adds the entry to the budget object
+  !<
+  subroutine gwt_bdentry(this, budterm, budtxt, rowlabel)
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    use TdisModule, only:delt
+    ! -- dummy
+    class(GwtModelType) :: this
+    real(DP), dimension(:, :), intent(in) :: budterm
+    character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt
+    character(len=*), intent(in) :: rowlabel
+! ------------------------------------------------------------------------------
+    !
+    call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
+    !
+    ! -- return
+    return
+  end subroutine gwt_bdentry
 
   function gwt_get_iasym(this) result (iasym)
 ! ******************************************************************************
