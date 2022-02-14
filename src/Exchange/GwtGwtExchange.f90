@@ -52,8 +52,8 @@ module GwtGwtExchangeModule
     integer(I4B), pointer                            :: iAdvScheme               !< the advection scheme at the interface:
                                                                                  !! 0 = upstream, 1 = central, 2 = TVD
 
-    !cdl integer(I4B), pointer                            :: inmvr       => null()    !< unit number for mover (0 if off)
-    !cdl type(GwtMvrType), pointer                        :: mvr         => null()    !< water mover object
+    !cdl integer(I4B), pointer                            :: inmvt       => null()    !< unit number for mover transport (0 if off)
+    !cdl type(GwtMvtType), pointer                        :: mvt         => null()    !< water mover object
     integer(I4B), pointer                            :: inobs       => null()    !< unit number for GWT-GWT observations
     type(ObsType), pointer                           :: obs         => null()    !< observation object
     !
@@ -83,7 +83,7 @@ module GwtGwtExchangeModule
     procedure          :: read_options
     procedure          :: parse_option
     !cdl Implement when MVT is ready
-    !cdl procedure          :: read_mvr
+    !cdl procedure          :: read_mvt
     procedure          :: gwt_gwt_bdsav
     procedure, private :: gwt_gwt_df_obs
     procedure, private :: gwt_gwt_rp_obs
@@ -618,12 +618,12 @@ contains
     enddo
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
-    !    saved, if the options were set in the MVR package
+    !    saved, if the options were set in the MVT package
     icbcfl = 1
     ibudfl = 1
     !
     !cdl Implement when MVT is ready
-    ! -- Call mvr bd routine
+    ! -- Call mvt bd routine
     !cdl if(this%inmvt > 0) call this%mvt%mvt_bdsav(icbcfl, ibudfl, isuppress_output)
     !
     ! -- Calculate and write simulated values for observations
@@ -787,10 +787,10 @@ contains
     !cdl     call store_error('NO MVT6 FILE SPECIFIED.')
     !cdl     call this%parser%StoreErrorUnit()
     !cdl   endif
-    !cdl   this%inmvr = getunit()
+    !cdl   this%inmvt = getunit()
     !cdl   call openfile(this%inmvt, iout, fname, 'MVT')
     !cdl   write(iout,'(4x,a)')                                               &
-    !cdl     'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
+    !cdl     'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(fname)
     case ('OBS6')
       call this%parser%GetStringCaps(subkey)
       if(subkey /= 'FILEIN') then
@@ -854,7 +854,7 @@ contains
   !cdl   !    So in this case, the dis object is just writing unconverted package
   !cdl   !    numbers to the binary budget file.
   !cdl   call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%dis,     &
-  !cdl               iexgmvr=1)
+  !cdl               iexgmvt=1)
   !cdl   !
   !cdl   ! -- Return
   !cdl   return
@@ -886,8 +886,8 @@ contains
     this%iAdvScheme = 0
     !
     !cdl Implement when MVT is ready
-    !cdl call mem_allocate(this%inmvr, 'INMVT', this%memoryPath)
-    !cdl this%inmvr = 0
+    !cdl call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
+    !cdl this%inmvt = 0
     !
     ! -- return
     return
