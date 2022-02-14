@@ -93,6 +93,9 @@ chd_spd = {0: chd_data}
 c_strt = 1.1
 porosity = 0.30
 
+# period length
+perlen = 100.
+
 
 def get_model(idx, dir):
     name = ex[idx]
@@ -102,7 +105,7 @@ def get_model(idx, dir):
     nper = 1
     tdis_rc = []
     for i in range(nper):
-        tdis_rc.append((1.0, 1, 1))
+        tdis_rc.append((perlen, 1, 1))
 
     # solver data
     nouter, ninner = 100, 300
@@ -119,11 +122,11 @@ def get_model(idx, dir):
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
-        outer_hclose=hclose,
+        outer_dvclose=hclose,
         outer_maximum=nouter,
         under_relaxation="DBD",
         inner_maximum=ninner,
-        inner_hclose=hclose,
+        inner_dvclose=hclose,
         rcloserecord=rclose,
         linear_acceleration="BICGSTAB",
         relaxation_factor=relax,
@@ -409,7 +412,7 @@ def add_gwtrefmodel(sim):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "ALL")],
+        saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
 
@@ -462,7 +465,7 @@ def add_gwtleftmodel(sim):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "ALL")],
+        saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
 
@@ -518,7 +521,7 @@ def add_gwtrightmodel(sim):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "ALL")],
+        saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
 
@@ -551,6 +554,7 @@ def add_gwtexchange(sim):
     gwtgwt = flopy.mf6.ModflowGwtgwt(
         sim,
         exgtype="GWT6-GWT6",
+        print_flows=True,
         nexg=len(gwtgwt_data),
         exgmnamea=mname_gwtleft,
         exgmnameb=mname_gwtright,
@@ -690,6 +694,28 @@ def compare_gwf_to_ref(sim):
                     cumul_balance_error, mname
                 )
 
+    # check flowja residual
+    for mname in [mname_ref, mname_left, mname_right]:
+        print(f"Checking flowja residual for model {mname}")
+
+        fpth = os.path.join(sim.simpath, f"{mname}.dis.grb")
+        grb = flopy.mf6.utils.MfGrdFile(fpth)
+        ia = grb._datadict["IA"] - 1
+
+        fpth = os.path.join(sim.simpath, "{}.cbc".format(mname))
+        assert os.path.isfile(fpth)
+        cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
+        flow_ja_face = cbb.get_data(idx=0)
+        assert len(flow_ja_face) > 0, "Could not check residuals as flow-ja-face could not be found"
+
+        for fjf in flow_ja_face:
+            fjf = fjf.flatten()
+            res = fjf[ia[:-1]]
+            errmsg = "min or max residual too large {} {}".format(
+                res.min(), res.max()
+            )
+            assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
     return
 
 
@@ -728,6 +754,30 @@ def compare_gwt_to_ref(sim):
                 ), "Cumulative balance error = {} for {}, should equal 0.0".format(
                     cumul_balance_error, mname
                 )
+
+    # check flowja residual for transport mass flows
+    for mname in [mname_ref, mname_left, mname_right]:
+        print(f"Checking flowja residual for model {mname}")
+
+        mflowname = mname.replace("gwt", "")
+        fpth = os.path.join(sim.simpath, f"{mflowname}.dis.grb")
+        grb = flopy.mf6.utils.MfGrdFile(fpth)
+        ia = grb._datadict["IA"] - 1
+
+        fpth = os.path.join(sim.simpath, "{}.cbc".format(mname))
+        assert os.path.isfile(fpth)
+        cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
+        flow_ja_face = cbb.get_data(idx=0)
+        assert len(flow_ja_face) > 0, "Could not check residuals as flow-ja-face could not be found"
+
+        for fjf in flow_ja_face:
+            fjf = fjf.flatten()
+            res = fjf[ia[:-1]]
+            errmsg = "min or max residual too large {} {}".format(
+                res.min(), res.max()
+            )
+            assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
+
     return
 
 

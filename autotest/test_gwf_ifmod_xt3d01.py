@@ -247,7 +247,6 @@ def get_model(idx, dir):
             bname = "top"
         l.append(bname)
         exgdata_withbname.append(l)
-    print(exgdata_withbname)
 
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -434,7 +433,8 @@ def eval_heads(sim):
     # or this means the residual term is not added correctly.
     fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
     cbb = flopy.utils.CellBudgetFile(fpth)
-    flow_ja_face = cbb.get_data(kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="NPF")
+    flow_ja_face = cbb.get_data(idx=0)
+    assert len(flow_ja_face) > 0, "Could not check residuals as flow-ja-face could not be found"
     ia = grb._datadict["IA"] - 1
     for fjf in flow_ja_face:
         fjf = fjf.flatten()

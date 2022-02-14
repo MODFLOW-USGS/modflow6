@@ -86,7 +86,7 @@ module GwtSpcModule
   subroutine initialize(this, dis, id, inunit, iout, name_model, packNameFlow)
     ! -- dummy variables
     class(GwtSpcType) :: this                       !<  GwtSpcType
-    class(DisBaseType), pointer, intent(in) :: dis  !< discretization package
+    class(DisBaseType), pointer, intent(in) :: dis  !<  discretization package
     integer(I4B), intent(in) :: id                  !<  id number for this spc package
     integer(I4B), intent(in) :: inunit              !<  unit number for input
     integer(I4B), intent(in) :: iout                !<  unit number for output

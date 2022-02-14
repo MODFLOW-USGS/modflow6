@@ -1,7 +1,7 @@
 """
-Test for the interface model approach, when running
-with a GWF-GWF exchange with horizontal _and_ vertical
-connections.
+Test for  GWFGWF exchange approach, with horizontal _and_ vertical
+connections.  Ensure flowja(idiag) is set right for horizontal
+and vertical connections.
 
 layer 1:
 
@@ -18,16 +18,16 @@ layer 2/3:
         1 1 1 1 1 1 1
         1 1 1 1 1 1 1
         1 1 1 1 1 1 1
-(H=1.0) 1 1 1 1 1 1 1 (H=0.0)
+        1 1 1 1 1 1 1
         1 1 1 1 1 1 1
         1 1 1 1 1 1 1
         1 1 1 1 1 1 1
 
 
-The exchange will have XT3D enabled so the head values in
-the child model should match the theory. In this case we
-just assert that they are equal for each column, something
-that is clearly not through when simulating without XT3D.
+There is no xt3d here or anything fancy. We just want to
+ensure that vertical flows and horizontal flows are added
+correctly to each model flowja diagonal terms.  This diagonal
+term contains the flow residual for the cell.
 
 """
 import os
@@ -46,7 +46,8 @@ from flopy.utils.lgrutil import Lgr
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["ifmod_vert"]
+ex = ["gwfgwf_lgr_classic", "gwfgwf_lgr_ifmod"]
+ifmod = [False, True]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -102,12 +103,12 @@ def get_model(idx, dir):
     # boundary stress period data
     left_chd = [
         [(ilay, irow, 0), h_left]
-        for ilay in range(nlay)
+        for ilay in range(1)  # apply chd only to top layer to drive vertical flow
         for irow in range(nrow)
     ]
     right_chd = [
         [(ilay, irow, ncol - 1), h_right]
-        for ilay in range(nlay)
+        for ilay in range(1)  # apply chd only to top layer to drive vertical flow
         for irow in range(nrow)
     ]
     chd_data = left_chd + right_chd
@@ -235,10 +236,9 @@ def get_model(idx, dir):
         exgmnamea=parent_name,
         exgmnameb=child_name,
         exchangedata=exgdata,
-        xt3d=True,
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
-        dev_interfacemodel_on=True,
+        dev_interfacemodel_on=ifmod[idx],
     )
 
     return sim
@@ -258,15 +258,6 @@ def eval_heads(sim):
 
     fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
-
-    # (note that without XT3D on the exchange, the 'error'
-    # is of order 1e-3!!)
-    deviations = np.array(
-        [np.std(heads_c[0, :, icol]) for icol in range(grb_c.ncol)]
-    )
-    assert np.any(
-        deviations < 1e-12
-    ), "head values deviate too much from theory"
 
     # check flowja residual
     for mname in [parent_name, child_name]:

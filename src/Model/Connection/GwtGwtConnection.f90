@@ -73,6 +73,7 @@ module GwtGwtConnectionModule
     procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: setGridExtent
+    procedure, pass(this), private :: setFlowToExchange
 
   end type GwtGwtConnectionType
 
@@ -277,6 +278,17 @@ subroutine gwtgwtcon_ar(this)
   ! ... and now the interface model
   call this%gwtInterfaceModel%model_ar()
 
+  ! AR the movers and obs through the exchange
+  if (this%exchangeIsOwned) then
+    !cdl implement this when MVT is ready
+    !cdl if (this%gwtExchange%inmvt > 0) then
+    !cdl   call this%gwtExchange%mvt%mvt_ar()
+    !cdl end if
+    if (this%gwtExchange%inobs > 0) then
+      call this%gwtExchange%obs%obs_ar()
+    end if
+  end if
+
 end subroutine gwtgwtcon_ar
 
 !> @brief validate this connection prior to constructing 
@@ -342,6 +354,11 @@ end subroutine gwtgwtcon_ac
 subroutine gwtgwtcon_rp(this)
   class(GwtGwtConnectionType) :: this !< the connection
 
+  ! Call exchange rp routines
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_rp()
+  end if
+  
 end subroutine gwtgwtcon_rp
 
 
@@ -355,6 +372,10 @@ subroutine gwtgwtcon_ad(this)
 
   ! recalculate dispersion ellipse 
   if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
+
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_ad()
+  end if
 
 end subroutine gwtgwtcon_ad
 
@@ -479,6 +500,12 @@ subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     end do
   end do
 
+  ! FC the movers through the exchange; we can call
+  ! exg_fc() directly because it only handles mover terms (unlike in GwfExchange%exg_fc)
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_fc(kiter, iasln, amatsln, rhssln, inwtflag)
+  end if
+
 end subroutine gwtgwtcon_fc
 
 subroutine gwtgwtcon_cq(this, icnvg, isuppress_output, isolnid)
@@ -488,47 +515,62 @@ subroutine gwtgwtcon_cq(this, icnvg, isuppress_output, isolnid)
   integer(I4B), intent(in) :: isolnid          !< solution id
 
   call this%gwtInterfaceModel%model_cq(icnvg, isuppress_output)
+  call this%setFlowToExchange()
 
 end subroutine gwtgwtcon_cq
 
+  !> @brief Set the flows (flowja from interface model) to the 
+  !< simvals in the exchange, leaving the budget calcution in there
+  subroutine setFlowToExchange(this)
+    class(GwtGwtConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: i
+    integer(I4B) :: nIface, mIface, ipos
+    class(GwtExchangeType), pointer :: gwtEx
+
+    gwtEx => this%gwtExchange
+    if (this%exchangeIsOwned) then    
+      do i = 1, gwtEx%nexg
+        gwtEx%simvals(i) = DZERO
+
+        if (gwtEx%gwtmodel1%ibound(gwtEx%nodem1(i)) /= 0 .and.                  &
+            gwtEx%gwtmodel2%ibound(gwtEx%nodem2(i)) /= 0) then
+
+          nIface = this%gridConnection%getInterfaceIndex(gwtEx%nodem1(i), gwtEx%model1)
+          mIface = this%gridConnection%getInterfaceIndex(gwtEx%nodem2(i), gwtEx%model2)
+          ipos = getCSRIndex(nIface, mIface, this%gwtInterfaceModel%ia, this%gwtInterfaceModel%ja)
+          gwtEx%simvals(i) = this%gwtInterfaceModel%flowja(ipos)
+
+        end if
+      end do
+    end if
+
+  end subroutine setFlowToExchange
+
 subroutine gwtgwtcon_bd(this, icnvg, isuppress_output, isolnid)
   use BudgetModule, only: rate_accumulator
-  use TdisModule, only: delt
   class(GwtGwtConnectionType) :: this           !< the connection
   integer(I4B), intent(inout) :: icnvg          !< convergence flag
   integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
   integer(I4B), intent(in) :: isolnid           !< solution id
-  ! local
-  character(len=LENBUDTXT), dimension(1) :: budtxt
-  real(DP), dimension(2, 1) :: budterm
-  real(DP) :: ratin, ratout
-  integer(I4B) :: i, iposExg
-
-  ! -- initialize
-  budtxt(1) = '    FLOW-JA-FACE'
-  !
-  ! -- Calculate ratin/ratout and pass to model budgets
-  do i = 1, this%gridConnection%nrOfBoundaryCells
-    iposExg = this%gridConnection%primConnections(i)
-    this%exgflowjaGwt(i) = this%gwtInterfaceModel%flowja(iposExg)
-  end do
-  call rate_accumulator(this%exgflowjaGwt, ratin, ratout)
-  !
-  ! -- Add the budget terms to the correct model
-  budterm(1, 1) = ratin
-  budterm(2, 1) = ratout
-  if (associated(this%gwtModel, this%gwtExchange%gwtmodel2)) then
-    budterm(1, 1) = ratout
-    budterm(2, 1) = ratin
+  
+  ! call exchange budget routine, also calls bd
+  ! for movers.
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_bd(icnvg, isuppress_output, isolnid)
   end if
-
-  call this%gwtmodel%budget%addentry(ratin, ratout, delt, budtxt(1),            &
-                                     isuppress_output, this%gwtExchange%name)
-
+    
 end subroutine gwtgwtcon_bd
 
 subroutine gwtgwtcon_ot(this)
   class(GwtGwtConnectionType) :: this !< the connection
+
+  ! Call exg_ot() here as it handles all output processing
+  ! based on gwtExchange%simvals(:), which was correctly
+  ! filled from gwtgwtcon
+  if (this%exchangeIsOwned) then
+    call this%gwtExchange%exg_ot()
+  end if
 
 end subroutine gwtgwtcon_ot
 
