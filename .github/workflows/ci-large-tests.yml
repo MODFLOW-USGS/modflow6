@@ -14,7 +14,7 @@
 #    - develop
 
 
-name: large tests
+name: Run and test modflow6-largetestmodels and modflow6-examples (z03)
 
 on:
   schedule:
