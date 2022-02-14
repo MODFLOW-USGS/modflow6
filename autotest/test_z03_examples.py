@@ -134,6 +134,7 @@ def set_make_comparison(test):
         "ex-gwf-sfr-p01": ("6.2.1",),
         "ex-gwf-lgr": ("6.2.2",),
         "ex-gwt-rotate": ("6.2.2",),
+        "ex-gwtgwt-mt3dms-p10": ("6.3.0",),
     }
     make_comparison = True
     if test in compare_tests.keys():
