@@ -554,6 +554,8 @@ def add_gwtexchange(sim):
     gwtgwt = flopy.mf6.ModflowGwtgwt(
         sim,
         exgtype="GWT6-GWT6",
+        gwfmodelname1=mname_left,
+        gwfmodelname2=mname_right,
         print_flows=True,
         nexg=len(gwtgwt_data),
         exgmnamea=mname_gwtleft,

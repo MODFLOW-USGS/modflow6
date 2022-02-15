@@ -15,15 +15,17 @@ module GwtGwtExchangeModule
   use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule,         only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
-                                     TABCENTER, TABLEFT, LENAUXNAME, DNODATA
+                                     TABCENTER, TABLEFT, LENAUXNAME, DNODATA, &
+                                     LENMODELNAME
   use ListModule,              only: ListType
   use ListsModule,             only: basemodellist
   use DisConnExchangeModule,   only: DisConnExchangeType
   use GwtModule,               only: GwtModelType
-  !cdl use GwtMvtModule,            only: GwtMvtType
+  use GwtMvtModule,            only: GwtMvtType
   use ObserveModule,           only: ObserveType
   use ObsModule,               only: ObsType
-  use SimModule,               only: count_errors, store_error, store_error_unit
+  use SimModule,               only: count_errors, store_error,                &
+                                     store_error_unit, ustop
   use SimVariablesModule,      only: errmsg
   use BlockParserModule,       only: BlockParserType
   use TableModule,             only: TableType, table_cr
@@ -43,6 +45,12 @@ module GwtGwtExchangeModule
   !!
   !<
   type, extends(DisConnExchangeType) :: GwtExchangeType
+    !
+    ! -- names of the GWF models that are connected by this exchange
+    character(len=LENMODELNAME)                      :: gwfmodelname1 = ''       !< name of gwfmodel that corresponds to gwtmodel1
+    character(len=LENMODELNAME)                      :: gwfmodelname2 = ''       !< name of gwfmodel that corresponds to gwtmodel2
+    !
+    ! -- pointers to gwt models
     type(GwtModelType), pointer                      :: gwtmodel1   => null()    !< pointer to GWT Model 1
     type(GwtModelType), pointer                      :: gwtmodel2   => null()    !< pointer to GWT Model 2
     ! 
@@ -51,9 +59,12 @@ module GwtGwtExchangeModule
     integer(I4B), pointer                            :: ipakcb      => null()    !< save flag for cell by cell flows
     integer(I4B), pointer                            :: iAdvScheme               !< the advection scheme at the interface:
                                                                                  !! 0 = upstream, 1 = central, 2 = TVD
-
-    !cdl integer(I4B), pointer                            :: inmvt       => null()    !< unit number for mover transport (0 if off)
-    !cdl type(GwtMvtType), pointer                        :: mvt         => null()    !< water mover object
+    !
+    ! -- Mover transport package
+    integer(I4B), pointer                            :: inmvt       => null()    !< unit number for mover transport (0 if off)
+    type(GwtMvtType), pointer                        :: mvt         => null()    !< water mover object
+    !
+    ! -- Observation package
     integer(I4B), pointer                            :: inobs       => null()    !< unit number for GWT-GWT observations
     type(ObsType), pointer                           :: obs         => null()    !< observation object
     !
@@ -82,8 +93,7 @@ module GwtGwtExchangeModule
     procedure          :: allocate_arrays
     procedure          :: read_options
     procedure          :: parse_option
-    !cdl Implement when MVT is ready
-    !cdl procedure          :: read_mvt
+    procedure          :: read_mvt
     procedure          :: gwt_gwt_bdsav
     procedure, private :: gwt_gwt_df_obs
     procedure, private :: gwt_gwt_rp_obs
@@ -200,11 +210,11 @@ contains
     ! -- read exchange data
     call this%read_data(iout)
     !
-    !cdl  Implment when MVT is ready
-    !cdl ! -- Read mover information
-    !cdl if(this%inmvt > 0) then
-    !cdl   call this%read_mvt(iout)
-    !cdl endif
+    ! -- Read mover information
+    if(this%inmvt > 0) then
+      call this%read_mvt(iout)
+      call this%mvt%mvt_df(this%gwtmodel1%dis)
+    endif
     !
     ! -- close the file
     close(inunit)
@@ -226,13 +236,27 @@ contains
     class(GwtExchangeType) :: this  !<  GwtExchangeType
     ! local
     
+    ! Ensure gwfmodel names were entered
+    if (this%gwfmodelname1 == '') then
+      write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
+                            ' requires that GWFMODELNAME1 be entered in the &
+                            &OPTIONS block.'
+      call store_error(errmsg)
+    end if
+    if (this%gwfmodelname2 == '') then
+      write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
+                            ' requires that GWFMODELNAME2 be entered in the &
+                            &OPTIONS block.'
+      call store_error(errmsg)
+    end if
+    
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
     if (associated(this%model1, this%model2)) then
       if (this%ixt3d > 0) then
         write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),             &
                              ' is a periodic boundary condition which cannot'// &
                              ' be configured with XT3D'
-        call store_error(errmsg, terminate=.TRUE.)
+        call store_error(errmsg)
       end if
     end if
 
@@ -245,7 +269,7 @@ contains
                              ' requires that ANGLDEGX be specified as an'//     &
                              ' auxiliary variable because dispersion was '//    &
                              'specified in one or both transport models.'
-        call store_error(errmsg, terminate=.TRUE.)
+        call store_error(errmsg)
       endif
     endif
 
@@ -253,7 +277,11 @@ contains
       write(errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name),               &
                            ' requires that ANGLDEGX be specified as an'//       &
                            ' auxiliary variable because XT3D is enabled'
-      call store_error(errmsg, terminate=.TRUE.)
+      call store_error(errmsg)
+    end if
+    
+    if (count_errors() > 0) then
+      call ustop()
     end if
 
   end subroutine validate_exchange
@@ -269,9 +297,8 @@ contains
     class(GwtExchangeType) :: this  !<  GwtExchangeType
     ! -- local
     !
-    !cdl Implement when MVT is ready
     ! -- If mover is active, then call ar routine
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_ar()
+    if(this%inmvt > 0) call this%mvt%mvt_ar()
     !
     ! -- Observation AR
     call this%obs%obs_ar()
@@ -295,9 +322,8 @@ contains
     ! -- Check with TDIS on whether or not it is time to RP
     if (.not. readnewdata) return
     !
-    !cdl Implement when MVT is ready
     ! -- Read and prepare for mover
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_rp()
+    if(this%inmvt > 0) call this%mvt%mvt_rp()
     !
     ! -- Read and prepare for observations
     call this%gwt_gwt_rp_obs()
@@ -317,9 +343,8 @@ contains
     class(GwtExchangeType) :: this  !<  GwtExchangeType
     ! -- local
     !
-    !cdl Implement when MVT is ready
     ! -- Advance mover
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_ad()
+    !if(this%inmvt > 0) call this%mvt%mvt_ad()
     !
     ! -- Push simulated values to preceding time step
     call this%obs%obs_ad()
@@ -344,9 +369,8 @@ contains
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     !
-    !cdl Implement when MVT is ready
     ! -- Call mvt fc routine
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_fc()
+    if(this%inmvt > 0) call this%mvt%mvt_fc(this%gwtmodel1%x, this%gwtmodel2%x)
     !
     ! -- Return
     return
@@ -388,9 +412,8 @@ contains
     budterm(2, 1) = ratin
     call this%gwtmodel2%model_bdentry(budterm, budtxt, this%name)
     !
-    !cdl Implement when MVT is ready
     ! -- Call mvt bd routine
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_bd()
+    if(this%inmvt > 0) call this%mvt%mvt_bd(this%gwtmodel1%x, this%gwtmodel2%x)
     !
     ! -- return
     return
@@ -622,9 +645,8 @@ contains
     icbcfl = 1
     ibudfl = 1
     !
-    !cdl Implement when MVT is ready
     ! -- Call mvt bd routine
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_bdsav(icbcfl, ibudfl, isuppress_output)
+    !cdl todo: if(this%inmvt > 0) call this%mvt%mvt_bdsav(icbcfl, ibudfl, isuppress_output)
     !
     ! -- Calculate and write simulated values for observations
     if(this%inobs /= 0) then
@@ -684,7 +706,7 @@ contains
     !cdl Implement when MVT is ready
     ! -- Mover budget output
     ibudfl = 1
-    !cdl if(this%inmvt > 0) call this%mvt%mvt_ot_bdsummary(ibudfl)
+    if(this%inmvt > 0) call this%mvt%mvt_ot_bdsummary(ibudfl)
     !
     ! -- OBS output
     call this%obs%obs_ot()
@@ -758,14 +780,47 @@ contains
     integer(I4B), intent(in) :: iout                 !< for logging    
     logical(LGP) :: parsed                           !< true when parsed
     ! local    
-    !cdl Implement when MVT is ready
-    !cdl character(len=LINELENGTH) :: fname
-    integer(I4B) :: inobs
+    character(len=LINELENGTH) :: fname
+    integer(I4B) :: inobs, ilen
     character(len=LINELENGTH) :: subkey
 
     parsed = .true.
 
     select case (keyword)
+    case ('GWFMODELNAME1')
+      call this%parser%GetStringCaps(subkey)
+      ilen = len_trim(subkey)
+      if (ilen > LENMODELNAME) then
+        write(errmsg, '(4x,a,a)')                                                &
+              'INVALID MODEL NAME: ', trim(subkey)
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+      if (this%gwfmodelname1 /= '') then
+        call store_error('GWFMODELNAME1 has already been set to ' &
+          // trim(this%gwfmodelname1) // '. Cannot set more than once.')
+        call this%parser%StoreErrorUnit()
+      end if
+      this%gwfmodelname1 = subkey(1:LENMODELNAME)
+      write(iout,'(4x,a,a)')                                                  &
+        'GWFMODELNAME1 IS SET TO: ', trim(this%gwfmodelname1)
+    case ('GWFMODELNAME2')
+      call this%parser%GetStringCaps(subkey)
+      ilen = len_trim(subkey)
+      if (ilen > LENMODELNAME) then
+        write(errmsg, '(4x,a,a)')                                                &
+              'INVALID MODEL NAME: ', trim(subkey)
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+      if (this%gwfmodelname2 /= '') then
+        call store_error('GWFMODELNAME2 has already been set to ' &
+          // trim(this%gwfmodelname2) // '. Cannot set more than once.')
+        call this%parser%StoreErrorUnit()
+      end if
+      this%gwfmodelname2 = subkey(1:LENMODELNAME)
+      write(iout,'(4x,a,a)')                                                   &
+        'GWFMODELNAME2 IS SET TO: ', trim(this%gwfmodelname2)
     case ('PRINT_FLOWS')
       this%iprflow = 1
       write(iout,'(4x,a)') &
@@ -774,23 +829,22 @@ contains
       this%ipakcb = -1
       write(iout,'(4x,a)') &
         'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
-    !cdl Implement when MVT is ready
-    !cdl case ('MVT6')
-    !cdl   call this%parser%GetStringCaps(subkey)
-    !cdl   if(subkey /= 'FILEIN') then
-    !cdl     call store_error('MVT6 KEYWORD MUST BE FOLLOWED BY ' //          &
-    !cdl       '"FILEIN" then by filename.')
-    !cdl     call this%parser%StoreErrorUnit()
-    !cdl   endif
-    !cdl   call this%parser%GetString(fname)
-    !cdl   if(fname == '') then
-    !cdl     call store_error('NO MVT6 FILE SPECIFIED.')
-    !cdl     call this%parser%StoreErrorUnit()
-    !cdl   endif
-    !cdl   this%inmvt = getunit()
-    !cdl   call openfile(this%inmvt, iout, fname, 'MVT')
-    !cdl   write(iout,'(4x,a)')                                               &
-    !cdl     'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(fname)
+    case ('MVT6')
+      call this%parser%GetStringCaps(subkey)
+      if(subkey /= 'FILEIN') then
+        call store_error('MVT6 KEYWORD MUST BE FOLLOWED BY ' //          &
+          '"FILEIN" then by filename.')
+        call this%parser%StoreErrorUnit()
+      endif
+      call this%parser%GetString(fname)
+      if(fname == '') then
+        call store_error('NO MVT6 FILE SPECIFIED.')
+        call this%parser%StoreErrorUnit()
+      endif
+      this%inmvt = getunit()
+      call openfile(this%inmvt, iout, fname, 'MVT')
+      write(iout,'(4x,a)')                                               &
+        'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(fname)
     case ('OBS6')
       call this%parser%GetStringCaps(subkey)
       if(subkey /= 'FILEIN') then
@@ -817,10 +871,8 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end select
-
       write(iout,'(4x,a,a)')                                                      &
         'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-
     case ('XT3D_OFF')
       this%ixt3d = 0
       write(iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
@@ -838,27 +890,25 @@ contains
   !! Read and process movers
   !!
   !<
-  !cdl Implement when MVT is ready
-  !cdl subroutine read_mvt(this, iout)
-  !cdl   ! -- modules
-  !cdl   use GwtMvtModule, only: mvt_cr
-  !cdl   ! -- dummy
-  !cdl   class(GwtExchangeType) :: this  !<  GwtExchangeType
-  !cdl   integer(I4B), intent(in) :: iout
-  !cdl   ! -- local
-  !cdl   !
-  !cdl   ! -- Create and initialize the mover object  Here, dis is set to the one
-  !cdl   !    for gwtmodel1 so that a call to save flows has an associated dis
-  !cdl   !    object.  Because the conversion flags for the mover are both false,
-  !cdl   !    the dis object does not convert from reduced to user node numbers. 
-  !cdl   !    So in this case, the dis object is just writing unconverted package
-  !cdl   !    numbers to the binary budget file.
-  !cdl   call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%dis,     &
-  !cdl               iexgmvt=1)
-  !cdl   !
-  !cdl   ! -- Return
-  !cdl   return
-  !cdl end subroutine read_mvt
+  subroutine read_mvt(this, iout)
+    ! -- modules
+    use GwtMvtModule, only: mvt_cr
+    ! -- dummy
+    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    integer(I4B), intent(in) :: iout
+    ! -- local
+    !
+    ! -- Create and initialize the mover object  Here, fmi is set to the one
+    !    for gwtmodel1 so that a call to save flows has an associated dis
+    !    object.  
+    call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%fmi, &
+                gwfmodelname1=this%gwfmodelname1, &
+                gwfmodelname2=this%gwfmodelname2, &
+                fmi2=this%gwtmodel2%fmi)
+    !
+    ! -- Return
+    return
+  end subroutine read_mvt
   
   !> @ brief Allocate scalars
   !!
@@ -885,9 +935,8 @@ contains
     this%inobs = 0
     this%iAdvScheme = 0
     !
-    !cdl Implement when MVT is ready
-    !cdl call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
-    !cdl this%inmvt = 0
+    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
+    this%inmvt = 0
     !
     ! -- return
     return
@@ -906,11 +955,10 @@ contains
     ! -- local
     !
     ! -- objects
-    !cdl Implement when MVT is ready
-    !cdl if (this%inmvt > 0) then
-    !cdl   call this%mvt%mvt_da()
-    !cdl   deallocate(this%mvt)
-    !cdl endif
+    if (this%inmvt > 0) then
+      call this%mvt%mvt_da()
+      deallocate(this%mvt)
+    endif
     call this%obs%obs_da()
     deallocate(this%obs)
     !
@@ -936,9 +984,7 @@ contains
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%iAdvScheme)
-    !
-    !cdl Implement when MVT is ready
-    !cdl call mem_deallocate(this%inmvt)
+    call mem_deallocate(this%inmvt)
     !
     ! -- deallocate base
     call this%DisConnExchangeType%disconnex_da()

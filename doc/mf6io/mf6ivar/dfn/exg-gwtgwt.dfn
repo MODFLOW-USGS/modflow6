@@ -2,6 +2,22 @@
 # flopy multi-package
 
 block options
+name gwfmodelname1
+type string
+reader urword
+optional false
+longname keyword to specify name of first corresponding GWF Model
+description keyword to specify name of first corresponding GWF Model.  In the simulation name file, the GWT6-GWT6 entry contains names for GWT Models (exgmnamea and exgmnameb).  The GWT Model with the name exgmnamea must correspond to the GWF Model with the name gwfmodelname1.
+
+block options
+name gwfmodelname2
+type string
+reader urword
+optional false
+longname keyword to specify name of second corresponding GWF Model
+description keyword to specify name of second corresponding GWF Model.  In the simulation name file, the GWT6-GWT6 entry contains names for GWT Models (exgmnamea and exgmnameb).  The GWT Model with the name exgmnameb must correspond to the GWF Model with the name gwfmodelname2.
+
+block options
 name auxiliary
 type string
 shape (naux)
