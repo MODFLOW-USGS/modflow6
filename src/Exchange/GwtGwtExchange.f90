@@ -858,6 +858,7 @@ contains
       call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
       this%obs%inUnitObs = inobs
     case ('ADVSCHEME')
+      !cdl todo: change to ADV_SCHEME?
       call this%parser%GetStringCaps(subkey)
       select case(subkey)
       case('UPSTREAM')
@@ -874,9 +875,11 @@ contains
       write(iout,'(4x,a,a)')                                                      &
         'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
     case ('XT3D_OFF')
+      !cdl todo: change to DSP_XT3D_OFF?
       this%ixt3d = 0
       write(iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
     case ('XT3D_RHS')
+      !cdl todo: change to DSP_XT3D_RHS?
       this%ixt3d = 2
       write(iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
     case default

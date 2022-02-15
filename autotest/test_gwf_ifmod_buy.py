@@ -519,6 +519,8 @@ def add_gwtexchange(sim):
         sim,
         exgtype="GWT6-GWT6",
         nexg=len(gwtgwt_data),
+        gwfmodelname1=mname_left,
+        gwfmodelname2=mname_right,
         exgmnamea=mname_gwtleft,
         exgmnameb=mname_gwtright,
         exchangedata=gwtgwt_data,
