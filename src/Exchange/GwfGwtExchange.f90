@@ -329,6 +329,10 @@ module GwfGwtExchangeModule
       if (gwfConnIdx == -1) then
         gwfloopexg: do iex = 1, baseexchangelist%Count()
           gwfEx => GetGwfExchangeFromList(baseexchangelist, iex)
+          
+          ! -- There is no guarantee that iex is a gwfExg, in which case
+          !    it will return as null.  cycle if so.
+          if (.not. associated(gwfEx)) cycle gwfloopexg
 
           if (associated(gwfEx%model1, gwfModel) .or.                           &
               associated(gwfEx%model2, gwfModel)) then
@@ -351,6 +355,7 @@ module GwfGwtExchangeModule
               exit gwfloopexg
             end if
           end if
+
 
         end do gwfloopexg
       end if
