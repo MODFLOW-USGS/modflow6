@@ -160,6 +160,22 @@ contains
       exchange%gwtmodel2 => mb
     end select
     !
+    ! -- Verify that gwt model1 is of the correct type
+    if (.not. associated(exchange%gwtmodel1)) then
+      write(errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
+        trim(exchange%name), &
+        '.  First specified GWT Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
+    ! -- Verify that gwf model2 is of the correct type
+    if (.not. associated(exchange%gwtmodel2)) then
+      write(errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
+        trim(exchange%name), &
+        '.  Second specified GWT Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
     ! -- Create the obs package
     call obs_cr(exchange%obs, exchange%inobs)
     !

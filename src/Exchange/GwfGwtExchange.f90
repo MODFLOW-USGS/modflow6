@@ -3,6 +3,7 @@ module GwfGwtExchangeModule
   use ConstantsModule,              only: LENPACKAGENAME
   use ListsModule,                  only: basemodellist, baseexchangelist,      &
                                           baseconnectionlist
+  use SimModule,                    only: store_error
   use SimVariablesModule,           only: errmsg
   use BaseExchangeModule,           only: BaseExchangeType, AddBaseExchangeToList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType,           &
@@ -100,6 +101,7 @@ module GwfGwtExchangeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
+    gwfmodel => null()
     mb => GetBaseModelFromList(basemodellist, this%m1id)
     select type (mb)
     type is (GwfModelType)
@@ -107,11 +109,26 @@ module GwfGwtExchangeModule
     end select
     !
     ! -- set gwtmodel
+    gwtmodel => null()
     mb => GetBaseModelFromList(basemodellist, this%m2id)
     select type (mb)
     type is (GwtModelType)
       gwtmodel => mb
     end select
+    !
+    ! -- Verify that gwf model is of the correct type
+    if (.not. associated(gwfmodel)) then
+      write(errmsg, '(3a)') 'Problem with GWF-GWT exchange ', trim(this%name), &
+        '.  Specified GWF Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
+    ! -- Verify that gwt model is of the correct type
+    if (.not. associated(gwtmodel)) then
+      write(errmsg, '(3a)') 'Problem with GWF-GWT exchange ', trim(this%name), &
+        '.  Specified GWF Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
     !
     ! -- Tell transport model fmi flows are not read from file
     gwtmodel%fmi%flows_from_file = .false.
@@ -186,7 +203,6 @@ module GwfGwtExchangeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
