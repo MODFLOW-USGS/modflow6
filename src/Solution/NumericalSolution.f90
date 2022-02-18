@@ -865,7 +865,7 @@ subroutine solution_create(filename, id)
     else if (this%linmeth == 2 ) then
       allocate(this%petsc_solver)
       write(iout,*) '***PETSC SOLVER WILL BE USED***'
-      call this%petsc_solver%petsc_solver_allocate_read(this%name, this%parser, IOUT,       &
+      call this%petsc_solver%allocate_read(this%name, this%parser, IOUT,       &
                                                         this%iprims,                        &
                                                         this%neq, this%nja, this%ia,        &
                                                         this%ja, this%amat, this%rhs,       &
@@ -1150,7 +1150,7 @@ subroutine solution_create(filename, id)
       deallocate(this%imslinear)
     else if (this%linmeth == 2 ) then
     ! -- PETSc
-      call this%petsc_solver%petsc_solver_deallocate()
+      call this%petsc_solver%deallocate()
       deallocate(this%petsc_solver)  
     end if  
     !
@@ -2559,7 +2559,8 @@ subroutine solution_create(filename, id)
                                           this%convdvmax, this%convdrmax)
     ! -- PETSc solver - linmeth option 2
     else if (this%linmeth == 2) then
-      call this%petsc_solver%petsc_solver_execute()
+      call this%petsc_solver%execute()
+      this%icnvg = 1
     end if
     !
     ! -- ptc finalize - set ratio of ptc value added to the diagonal and the

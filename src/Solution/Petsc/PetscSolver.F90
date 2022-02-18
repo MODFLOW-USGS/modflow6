@@ -32,9 +32,9 @@ module PetscSolverModule
 
     ! procedures (methods)
     contains
-      procedure :: petsc_solver_allocate_read
-      procedure :: petsc_solver_execute
-      procedure :: petsc_solver_deallocate
+      procedure :: allocate_read
+      procedure :: execute
+      procedure :: deallocate
       ! -- PRIVATE PROCEDURES
       procedure, private :: allocate_scalars
   end type PetscSolverDataType
@@ -45,7 +45,7 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine petsc_solver_allocate_read(this, name, parser, IOUT, IPRIMS,     &
+    subroutine allocate_read(this, name, parser, IOUT, IPRIMS,     &
                             NEQ, NJA, IA, JA, AMAT, RHS, X)
       ! -- modules
 #include <petsc/finclude/petscksp.h>
@@ -160,14 +160,14 @@ module PetscSolverModule
       
       ! -- RETURN
       RETURN
-    END SUBROUTINE petsc_solver_allocate_read
+    END SUBROUTINE allocate_read
 
     !> @brief Deallocate memory
     !!
     !!  Deallocate linear accelerator memory.
     !!
     !<
-    subroutine petsc_solver_deallocate(this)
+    subroutine deallocate(this)
       ! -- modules
 #include <petsc/finclude/petscksp.h>
       use petscksp
@@ -199,13 +199,13 @@ module PetscSolverModule
       
       ! -- return
       return
-    end subroutine petsc_solver_deallocate
+    end subroutine deallocate
     
 
     !> @brief Solve linear equation
     !!
     !< 
-    SUBROUTINE petsc_solver_execute(this)
+    SUBROUTINE execute(this)
 #include <petsc/finclude/petscksp.h>
       use petscksp
 !
@@ -369,7 +369,7 @@ module PetscSolverModule
       CHKERRQ(ierr)
 
 
-    END SUBROUTINE petsc_solver_execute
+    END SUBROUTINE execute
 
     !> @ brief Allocate and initialize scalars
     !!
