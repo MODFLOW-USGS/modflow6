@@ -215,6 +215,9 @@ module GwfMvrModule
       call mvrobj%parser%Initialize(mvrobj%inunit, mvrobj%iout)
     endif
     !
+    ! -- instantiate the budget object
+    call budgetobject_cr(mvrobj%budobj, 'WATER MOVER')
+    !
     ! -- Return
     return
   end subroutine mvr_cr
@@ -1216,7 +1219,6 @@ module GwfMvrModule
     ncv = 0
     !
     ! -- set up budobj
-    call budgetobject_cr(this%budobj, 'WATER MOVER')
     call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0)
     idx = 0
     !

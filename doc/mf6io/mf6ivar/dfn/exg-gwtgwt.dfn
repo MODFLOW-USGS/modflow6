@@ -98,6 +98,38 @@ longname file keyword
 description keyword to specify that an input filename is expected next.
 
 block options
+name mvt_filerecord
+type record mvt6 filein mvt6_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name mvt6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname obs keyword
+description keyword to specify that record corresponds to a transport mover file.
+
+block options
+name mvt6_filename
+type string
+preserve_case true
+in_record true
+tagged false
+reader urword
+optional false
+longname mvt6 input filename
+description is the file name of the transport mover input file to apply to this exchange.  Information for the transport mover are provided in the file provided with these keywords.
+
+block options
 name obs_filerecord
 type record obs6 filein obs6_filename
 shape

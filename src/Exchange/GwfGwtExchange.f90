@@ -365,6 +365,15 @@ module GwfGwtExchangeModule
                                 trim(gwtModel%name)
               gwfExIdx = iex
               gwtConn%exgflowja => gwfEx%simvals
+              
+              !cdl link up mvt to mvr
+              if (gwfEx%inmvr > 0) then
+                if (gwtConn%exchangeIsOwned) then
+                  !cdl todo: check and make sure gwtEx has mvt active
+                  gwtConn%gwtExchange%mvt%mvrbudobj => gwfEx%mvr%budobj
+                end if
+              end if
+              
               if (associated(gwfEx%model2, gwfModel)) gwtConn%exgflowSign = -1
               gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
 

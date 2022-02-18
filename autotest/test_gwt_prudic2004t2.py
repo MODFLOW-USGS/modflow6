@@ -529,20 +529,12 @@ def make_plot(sim):
     gwf = sim.get_model(gwfname)
     gwt = sim.get_model(gwtname)
 
-    fname = gwtname + ".lkt.bin"
-    fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(
-        fname, precision="double", text="concentration"
-    )
+    bobj = gwt.lkt.output.concentration()
     lkaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
 
-    fname = gwtname + ".sft.bin"
-    fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(
-        fname, precision="double", text="concentration"
-    )
+    bobj = gwt.sft.output.concentration()
     sfaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
@@ -561,6 +553,7 @@ def make_plot(sim):
     plt.ylabel("SIMULATED BORON CONCENTRATION,\nIN MICROGRAMS PER LITER")
     plt.draw()
     fname = os.path.join(ws, name + ".png")
+    print(f"Creating {fname}")
     plt.savefig(fname)
 
     return
@@ -570,6 +563,10 @@ def eval_results(sim):
     print("evaluating results...")
 
     makeplot = False
+    for idx, arg in enumerate(sys.argv):
+        if arg.lower() == "--makeplot":
+            makeplot = True
+
     if makeplot:
         make_plot(sim)
 

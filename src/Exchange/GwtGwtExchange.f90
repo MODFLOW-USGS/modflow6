@@ -55,6 +55,7 @@ module GwtGwtExchangeModule
     type(GwtModelType), pointer                      :: gwtmodel2   => null()    !< pointer to GWT Model 2
     ! 
     ! -- GWT specific option block:    
+    integer(I4B), pointer                            :: inewton     => null()    !< unneeded newton flag allows for mvt to be used here
     integer(I4B), pointer                            :: iprflow     => null()    !< print flag for cell by cell flows
     integer(I4B), pointer                            :: ipakcb      => null()    !< save flag for cell by cell flows
     integer(I4B), pointer                            :: iAdvScheme               !< the advection scheme at the interface:
@@ -944,10 +945,12 @@ contains
     !
     call this%DisConnExchangeType%allocate_scalars()
     !
+    call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)    
     call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
     call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
+    this%inewton = 0
     this%iprpak = 0
     this%iprflow = 0
     this%ipakcb = 0
@@ -999,6 +1002,7 @@ contains
     !
     ! -- scalars    
     deallocate(this%filename)
+    call mem_deallocate(this%inewton)
     call mem_deallocate(this%iprflow)
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%inobs)

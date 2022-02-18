@@ -32,7 +32,7 @@ module GwtMvtModule
     type(GwtFmiType), pointer                          :: fmi2 => null()        !< pointer to fmi object for model 2 (set to fmi1 for single model)
     type(BudgetType), pointer                          :: budget => null()      !< mover transport budget object (used to write balance table)
     type(BudgetObjectType), pointer                    :: budobj => null()      !< budget container (used to write binary file)
-    type(BudgetObjectType), pointer                    :: mvrbudobj => null()   !< pointer to the water mover budget budget object
+    type(BudgetObjectType), pointer                    :: mvrbudobj => null()   !< pointer to the water mover budget object
     character(len=LENPACKAGENAME),                                             &
       dimension(:), pointer, contiguous                :: paknames => null()    !< array of package names
     !
@@ -109,6 +109,9 @@ module GwtMvtModule
     if (present(gwfmodelname2)) then
       mvt%gwfmodelname2 =  gwfmodelname2
     end if
+    !
+    ! -- create the budget object
+    call budgetobject_cr(mvt%budobj, 'TRANSPORT MOVER')
     !
     ! -- Return
     return
@@ -252,14 +255,6 @@ module GwtMvtModule
     type(GwtFmiType), pointer :: fmi_rc  !< pointer to receiver model fmi package
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize the mass flow into advanced package from the mover
-    !cdl todo: this may need to be moved into the advanced transport packages
-    !          so that model mvt and exchange mvt can both work at the same time
-    call reset_qmfrommvr(this%fmi1)
-    if (.not. associated(this%fmi1, this%fmi2)) then
-      call reset_qmfrommvr(this%fmi2)
-    end if
-    !
     ! -- Add mover QC terms to the receiver packages
     nbudterm = this%mvrbudobj%nbudterm
     do i = 1, nbudterm
@@ -327,23 +322,6 @@ module GwtMvtModule
     return
   end subroutine mvt_fc
   
-  !> @ brief Reset qmfrommvr to zero
-  !!
-  !! Reset the qmfrommvr accumulator to zero
-  !!
-  !<
-  subroutine reset_qmfrommvr(fmi)
-    type(GwtFmiType), intent(in) :: fmi
-    integer(I4B) :: i, n
-    do i = 1, fmi%nflowpack
-      if (fmi%iatp(i) == 0) cycle
-      do n = 1, size(fmi%datp(i)%qmfrommvr)
-        fmi%datp(i)%qmfrommvr(n) = DZERO
-      end do
-    end do
-    return
-  end subroutine reset_qmfrommvr
-
   !> @ brief Set the fmi_pr and fmi_rc pointers
   !!
   !! The fmi_pr and fmi_rc arguments are pointers to the provider
@@ -795,7 +773,6 @@ module GwtMvtModule
     naux = 0
     !
     ! -- set up budobj
-    call budgetobject_cr(this%budobj, 'TRANSPORT MOVER')
     call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0, bddim_opt='M')
     !
     ! -- Go through the water mover budget terms and set up the transport
