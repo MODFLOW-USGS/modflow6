@@ -167,6 +167,19 @@ modflow_sources = files(
 
 mf6_external = static_library('mf6_external', external_libraries)
 
-mf6core = static_library('mf6core', modflow_sources, dependencies: dependencies, link_with: [mf6_external])
-
-executable('mf6', 'mf6.f90', link_with: [mf6core], dependencies: dependencies, install: true)
+if system == 'windows'
+  mf6core = static_library('mf6core', 
+                           modflow_sources, 
+                           dependencies: dependencies, 
+                           link_with: [mf6_external, petsc_modules],
+                           include_directories : petsc_incdir,)
+  executable('mf6', 
+             'mf6.f90', 
+             link_with: [mf6core, petsc_modules], 
+             dependencies: dependencies,
+             include_directories : petsc_incdir, 
+             install: true)
+else
+  mf6core = static_library('mf6core', modflow_sources, dependencies: dependencies, link_with: [mf6_external])
+  executable('mf6', 'mf6.f90', link_with: [mf6core], dependencies: dependencies, install: true)
+endif
