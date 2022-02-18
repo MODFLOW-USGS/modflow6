@@ -110,6 +110,11 @@ def build_model(idx, ws):
     # Transport solver
     imsgwt = None
     if transport_on:
+        hclose = 0.001
+        rclose = 0.1
+        nouter = 50
+        ninner = 20
+        relax = 0.97
         imsgwt = flopy.mf6.ModflowIms(
             sim,
             print_option="ALL",
@@ -159,30 +164,32 @@ def build_model(idx, ws):
     )
 
     # add a gwf-gwf exchange
+    global_row_end_north = 16 - 1
+    global_row_start_south = 17 - 1
     angldegx = 270.0
     cdist = delc
     gwfgwf_data = []
     for k in range(nlay):
         for j in range(ncol):
             connection = [
-                (k, 16 - 1, j),
-                (k, 17 - 1, j),
-                1,
-                delc / 2.0,
-                delc / 2,
-                delr,
-                angldegx,
-                cdist,
+                (k, global_row_end_north, j),     # cellidm1
+                (k, global_row_start_south, j),   # cellidm2
+                1,                                # ihc
+                delc / 2.0,                       # cl1
+                delc / 2.0,                       # cl2
+                delr,                             # hwva
+                angldegx,                         # angldegx
+                cdist,                            # cdist
             ]
             add_connection = True
-            if idomain[k, 16 - 1, j] == 0:
+            if idomain[k, global_row_end_north, j] == 0:
                 add_connection = False
-            if idomain[k, 17 - 1, j] == 0:
+            if idomain[k, global_row_start_south, j] == 0:
                 add_connection = False
             if lake_on:
-                if k == 0 and lakibd[16 - 1, j] > 0:
+                if k == 0 and lakibd[global_row_end_north, j] > 0:
                     add_connection = False
-                if k == 0 and lakibd[17 - 1, j] > 0:
+                if k == 0 and lakibd[global_row_start_south, j] > 0:
                     add_connection = False
             if add_connection:
                 gwfgwf_data.append(connection)
@@ -199,8 +206,8 @@ def build_model(idx, ws):
         exgmnameb=gwfnames[1],  # south
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        dev_interfacemodel_on=False,
         mvr_filerecord=mvr_filerecord,
+        dev_interfacemodel_on=False,
     )
 
     # simulation GWF-GWF Mover
@@ -697,7 +704,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsg
     return sim
 
 
-def make_concentration_vs_time(sim, ws):
+def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
     print("making concentration versus time plot...")
 
     times = None
@@ -731,10 +738,13 @@ def make_concentration_vs_time(sim, ws):
         times = np.array(times) / 365.0
         if lkaconc is not None:
             plt.plot(times, lkaconc[:, 0], "b-", label="Lake 1")
+            plt.plot(times, ans_lak1, ls="none", marker="o", mfc='none', mec='b')
         if sft3outflowconc is not None:
             plt.plot(times, sft3outflowconc, "r-", label="Stream segment 3")
+            plt.plot(times, ans_sfr3, ls="none", marker="o", mfc='none', mec='r')
         if sft4outflowconc is not None:
             plt.plot(times, sft4outflowconc, "g-", label="Stream segment 4")
+            plt.plot(times, ans_sfr4, ls="none", marker="o", mfc='none', mec='g')
         plt.legend()
         plt.ylim(0, 50)
         plt.xlim(0, 25)
@@ -841,7 +851,7 @@ def make_concentration_map(sim, ws):
                 lake_conc = lake_concs[ilak]
                 concentration_global[0, i, j] = lake_conc
 
-    # plot layer 1 and layer 2
+    # plot layers 1, 3, 5, and 8
     for iplot, ilay in enumerate([0, 2, 4, 7]):
         ax = axs.flatten()[iplot]
         pmv = flopy.plot.PlotMapView(model=gwt, ax=ax, layer=ilay)
@@ -863,18 +873,26 @@ def make_concentration_map(sim, ws):
 def eval_results(sim):
     print("evaluating results...")
 
+    # these answer files are results from autotest/prudic2004test2
+    fname = os.path.join(data_ws, "result_conc_lak1.txt")
+    ans_lak1 = np.loadtxt(fname)
+    fname = os.path.join(data_ws, "result_conc_sfr3.txt")
+    ans_sfr3 = np.loadtxt(fname)
+    fname = os.path.join(data_ws, "result_conc_sfr4.txt")
+    ans_sfr4 = np.loadtxt(fname)
+
     makeplot = False
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == "--makeplot":
             makeplot = True
 
     ws = exdirs[sim.idxsim]
-    simfp = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    simfp = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
 
     if makeplot:
         make_head_map(simfp, ws)
         if transport_on:
-            make_concentration_vs_time(simfp, ws)
+            make_concentration_vs_time(simfp, ws, ans_lak1, ans_sfr3, ans_sfr4)
             make_concentration_map(simfp, ws)
 
     # ensure concentrations were saved
@@ -884,131 +902,48 @@ def eval_results(sim):
 
     lkaconc = None
     if lkt_on and transport_on:
-        fname = gwtname + ".lkt.bin"
-        fname = os.path.join(ws, fname)
-        bobj = flopy.utils.HeadFile(
-            fname, precision="double", text="concentration"
-        )
+        gwt = simfp.get_model(gwtnames[0])
+        bobj = gwt.lkt.output.concentration()
         lkaconc = bobj.get_alldata()[:, 0, 0, :]
         times = bobj.times
         bobj.file.close()
 
-    sfaconc = None
+    sft3outflowconc = None
+    sft4outflowconc = None
     if sft_on and transport_on:
-        fname = gwtname + ".sft.bin"
-        fname = os.path.join(ws, fname)
-        bobj = flopy.utils.HeadFile(
-            fname, precision="double", text="concentration"
-        )
-        sfaconc = bobj.get_alldata()[:, 0, 0, :]
-        times = bobj.times
-        bobj.file.close()
+
+        # get southern model
+        gwt = simfp.get_model(gwtnames[1])
+        sftpack = gwt.get_package(f"sft-3")
+        times = sftpack.output.concentration().times
+        conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
+        sft3outflowconc = conc[:, -1] # last reach
+        sftpack = gwt.get_package(f"sft-4")
+        conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
+        sft4outflowconc = conc[:, -1] # last reach
 
     # set atol
-    atol = 0.02
+    atol = 0.5
 
     # check simulated concentration in lak 1 and 2 sfr reaches
     if lkaconc is not None:
         res_lak1 = lkaconc[:, 0]
-        ans_lak1 = [
-            -1.73249951e-19,
-            5.97398983e-02,
-            4.18358112e-01,
-            1.48857598e00,
-            3.63202585e00,
-            6.92925430e00,
-            1.11162776e01,
-            1.57328143e01,
-            2.03088745e01,
-            2.45013060e01,
-            2.81200704e01,
-            3.11132152e01,
-            3.34833369e01,
-            3.53028319e01,
-            3.66693021e01,
-            3.76781530e01,
-            3.84188513e01,
-            3.89615387e01,
-            3.93577458e01,
-            3.96464993e01,
-            3.98598113e01,
-            4.00184878e01,
-            4.01377654e01,
-            4.02288674e01,
-            4.02998291e01,
-            4.03563314e01,
-        ]
-        ans_lak1 = np.array(ans_lak1)
         d = res_lak1 - ans_lak1
+        print(f"lak1 max diff {d.max()}; min diff {d.min()}")
         msg = "{} {} {}".format(res_lak1, ans_lak1, d)
         assert np.allclose(res_lak1, ans_lak1, atol=atol), msg
 
-    if sfaconc is not None:
-        res_sfr3 = sfaconc[:, 30]
-        ans_sfr3 = [
-            -7.67944651e-23,
-            5.11358249e-03,
-            3.76169957e-02,
-            1.42055634e-01,
-            3.72438193e-01,
-            7.74112522e-01,
-            1.37336373e00,
-            2.18151231e00,
-            3.19993561e00,
-            4.42853144e00,
-            5.85660993e00,
-            7.46619448e00,
-            9.22646330e00,
-            1.11069607e01,
-            1.30764504e01,
-            1.50977917e01,
-            1.71329980e01,
-            1.91636634e01,
-            2.11530199e01,
-            2.30688490e01,
-            2.48821059e01,
-            2.65691424e01,
-            2.81080543e01,
-            2.94838325e01,
-            3.06909748e01,
-            3.17352915e01,
-        ]
-        ans_sfr3 = np.array(ans_sfr3)
+    if sft3outflowconc is not None:
+        res_sfr3 = sft3outflowconc
         d = res_sfr3 - ans_sfr3
+        print(f"sfr3 max diff {d.max()}; min diff {d.min()}")
         msg = "{} {} {}".format(res_sfr3, ans_sfr3, d)
         assert np.allclose(res_sfr3, ans_sfr3, atol=atol), msg
 
-        res_sfr4 = sfaconc[:, 37]
-        ans_sfr4 = [
-            -2.00171747e-20,
-            3.55076535e-02,
-            2.49465789e-01,
-            8.91299656e-01,
-            2.18622372e00,
-            4.19920114e00,
-            6.79501651e00,
-            9.72255743e00,
-            1.27208739e01,
-            1.55989390e01,
-            1.82462345e01,
-            2.06258607e01,
-            2.27255881e01,
-            2.45721928e01,
-            2.62061367e01,
-            2.76640442e01,
-            2.89788596e01,
-            3.01814571e01,
-            3.12842113e01,
-            3.22945541e01,
-            3.32174210e01,
-            3.40539043e01,
-            3.48027700e01,
-            3.54636082e01,
-            3.60384505e01,
-            3.65330352e01,
-        ]
-        ans_sfr4 = np.array(ans_sfr4)
+    if sft4outflowconc is not None:
+        res_sfr4 = sft4outflowconc
         d = res_sfr4 - ans_sfr4
+        print(f"sfr4 max diff {d.max()}; min diff {d.min()}")
         msg = "{} {} {}".format(res_sfr4, ans_sfr4, d)
         assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 

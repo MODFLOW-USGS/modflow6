@@ -370,7 +370,7 @@ module GwfGwtExchangeModule
               if (gwfEx%inmvr > 0) then
                 if (gwtConn%exchangeIsOwned) then
                   !cdl todo: check and make sure gwtEx has mvt active
-                  gwtConn%gwtExchange%mvt%mvrbudobj => gwfEx%mvr%budobj
+                  call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj(gwfEx%mvr%budobj)
                 end if
               end if
               
@@ -408,6 +408,15 @@ module GwfGwtExchangeModule
 
     !gwtConn%exgflowja => gwfConn%exgflowja
     gwtConn%exgflowja => gwfConn%gwfExchange%simvals
+    
+    !cdl link up mvt to mvr
+    if (gwfConn%gwfExchange%inmvr > 0) then
+      if (gwtConn%exchangeIsOwned) then
+        !cdl todo: check and make sure gwtEx has mvt active
+        call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj(gwfConn%gwfExchange%mvr%budobj)
+      end if
+    end if
+    
     if (associated(gwfConn%gwfExchange%model2, gwfConn%owner)) gwtConn%exgflowSign = -1
 
     ! fmi flows are not read from file
@@ -420,7 +429,6 @@ module GwfGwtExchangeModule
                         gwtConn%icbound)
 
   end subroutine link_connections
-
   
   subroutine exg_da(this)
 ! ******************************************************************************
