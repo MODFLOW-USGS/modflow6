@@ -3,6 +3,7 @@ module GwfGwtExchangeModule
   use ConstantsModule,              only: LENPACKAGENAME
   use ListsModule,                  only: basemodellist, baseexchangelist,      &
                                           baseconnectionlist
+  use SimModule,                    only: store_error
   use SimVariablesModule,           only: errmsg
   use BaseExchangeModule,           only: BaseExchangeType, AddBaseExchangeToList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType,           &
@@ -100,6 +101,7 @@ module GwfGwtExchangeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
+    gwfmodel => null()
     mb => GetBaseModelFromList(basemodellist, this%m1id)
     select type (mb)
     type is (GwfModelType)
@@ -107,11 +109,26 @@ module GwfGwtExchangeModule
     end select
     !
     ! -- set gwtmodel
+    gwtmodel => null()
     mb => GetBaseModelFromList(basemodellist, this%m2id)
     select type (mb)
     type is (GwtModelType)
       gwtmodel => mb
     end select
+    !
+    ! -- Verify that gwf model is of the correct type
+    if (.not. associated(gwfmodel)) then
+      write(errmsg, '(3a)') 'Problem with GWF-GWT exchange ', trim(this%name), &
+        '.  Specified GWF Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
+    ! -- Verify that gwt model is of the correct type
+    if (.not. associated(gwtmodel)) then
+      write(errmsg, '(3a)') 'Problem with GWF-GWT exchange ', trim(this%name), &
+        '.  Specified GWF Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
     !
     ! -- Tell transport model fmi flows are not read from file
     gwtmodel%fmi%flows_from_file = .false.
@@ -186,7 +203,6 @@ module GwfGwtExchangeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -329,6 +345,10 @@ module GwfGwtExchangeModule
       if (gwfConnIdx == -1) then
         gwfloopexg: do iex = 1, baseexchangelist%Count()
           gwfEx => GetGwfExchangeFromList(baseexchangelist, iex)
+          
+          ! -- There is no guarantee that iex is a gwfExg, in which case
+          !    it will return as null.  cycle if so.
+          if (.not. associated(gwfEx)) cycle gwfloopexg
 
           if (associated(gwfEx%model1, gwfModel) .or.                           &
               associated(gwfEx%model2, gwfModel)) then
@@ -345,12 +365,22 @@ module GwfGwtExchangeModule
                                 trim(gwtModel%name)
               gwfExIdx = iex
               gwtConn%exgflowja => gwfEx%simvals
+              
+              !cdl link up mvt to mvr
+              if (gwfEx%inmvr > 0) then
+                if (gwtConn%exchangeIsOwned) then
+                  !cdl todo: check and make sure gwtEx has mvt active
+                  call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj(gwfEx%mvr%budobj)
+                end if
+              end if
+              
               if (associated(gwfEx%model2, gwfModel)) gwtConn%exgflowSign = -1
               gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
 
               exit gwfloopexg
             end if
           end if
+
 
         end do gwfloopexg
       end if
@@ -378,6 +408,15 @@ module GwfGwtExchangeModule
 
     !gwtConn%exgflowja => gwfConn%exgflowja
     gwtConn%exgflowja => gwfConn%gwfExchange%simvals
+    
+    !cdl link up mvt to mvr
+    if (gwfConn%gwfExchange%inmvr > 0) then
+      if (gwtConn%exchangeIsOwned) then
+        !cdl todo: check and make sure gwtEx has mvt active
+        call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj(gwfConn%gwfExchange%mvr%budobj)
+      end if
+    end if
+    
     if (associated(gwfConn%gwfExchange%model2, gwfConn%owner)) gwtConn%exgflowSign = -1
 
     ! fmi flows are not read from file
@@ -390,7 +429,6 @@ module GwfGwtExchangeModule
                         gwtConn%icbound)
 
   end subroutine link_connections
-
   
   subroutine exg_da(this)
 ! ******************************************************************************

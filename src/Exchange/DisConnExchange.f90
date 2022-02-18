@@ -120,6 +120,8 @@ function parse_option(this, keyword, iout) result(parsed)
   case('DEV_INTERFACEMODEL_ON')
     call this%parser%DevOpt()
     this%dev_ifmod_on = .true.
+    write(iout, '(4x,2a)') 'Interface model coupling approach manually &
+      &activated for ', trim(this%name)
   case default
     ! not parsed here, assuming it is in derived type
     parsed = .false.

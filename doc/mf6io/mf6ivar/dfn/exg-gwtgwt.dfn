@@ -2,6 +2,22 @@
 # flopy multi-package
 
 block options
+name gwfmodelname1
+type string
+reader urword
+optional false
+longname keyword to specify name of first corresponding GWF Model
+description keyword to specify name of first corresponding GWF Model.  In the simulation name file, the GWT6-GWT6 entry contains names for GWT Models (exgmnamea and exgmnameb).  The GWT Model with the name exgmnamea must correspond to the GWF Model with the name gwfmodelname1.
+
+block options
+name gwfmodelname2
+type string
+reader urword
+optional false
+longname keyword to specify name of second corresponding GWF Model
+description keyword to specify name of second corresponding GWF Model.  In the simulation name file, the GWT6-GWT6 entry contains names for GWT Models (exgmnamea and exgmnameb).  The GWT Model with the name exgmnameb must correspond to the GWF Model with the name gwfmodelname2.
+
+block options
 name auxiliary
 type string
 shape (naux)
@@ -80,6 +96,38 @@ tagged true
 optional false
 longname file keyword
 description keyword to specify that an input filename is expected next.
+
+block options
+name mvt_filerecord
+type record mvt6 filein mvt6_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name mvt6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname obs keyword
+description keyword to specify that record corresponds to a transport mover file.
+
+block options
+name mvt6_filename
+type string
+preserve_case true
+in_record true
+tagged false
+reader urword
+optional false
+longname mvt6 input filename
+description is the file name of the transport mover input file to apply to this exchange.  Information for the transport mover are provided in the file provided with these keywords.
 
 block options
 name obs_filerecord

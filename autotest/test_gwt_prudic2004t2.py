@@ -25,11 +25,13 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
 
+data_ws = "./data/prudic2004test2/"
+fname = os.path.join(data_ws, "lakibd.dat")
+lakibd = np.loadtxt(fname, dtype=int)
 
 def build_model(idx, dir):
 
     ws = dir
-    data_ws = "./data/prudic2004test2/"
     name = ex[idx]
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -224,8 +226,6 @@ def build_model(idx, dir):
             perioddata=sfrperioddata,
         )
 
-    fname = os.path.join(data_ws, "lakibd.dat")
-    lakibd = np.loadtxt(fname, dtype=int)
     lakeconnectiondata = []
     nlakecon = [0, 0]
     lak_leakance = 1.0
@@ -519,8 +519,8 @@ def build_model(idx, dir):
     return sim, None
 
 
-def make_plot(sim):
-    print("making plots...")
+def make_concentration_vs_time(sim):
+    print("making plot of concentration versus time...")
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
@@ -529,20 +529,12 @@ def make_plot(sim):
     gwf = sim.get_model(gwfname)
     gwt = sim.get_model(gwtname)
 
-    fname = gwtname + ".lkt.bin"
-    fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(
-        fname, precision="double", text="concentration"
-    )
+    bobj = gwt.lkt.output.concentration()
     lkaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
 
-    fname = gwtname + ".sft.bin"
-    fname = os.path.join(ws, fname)
-    bobj = flopy.utils.HeadFile(
-        fname, precision="double", text="concentration"
-    )
+    bobj = gwt.sft.output.concentration()
     sfaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
@@ -560,7 +552,67 @@ def make_plot(sim):
     plt.xlabel("TIME, IN YEARS")
     plt.ylabel("SIMULATED BORON CONCENTRATION,\nIN MICROGRAMS PER LITER")
     plt.draw()
-    fname = os.path.join(ws, name + ".png")
+    fname = os.path.join(ws, "fig-concentration_vs_time.png")
+    print(f"Creating {fname}")
+    plt.savefig(fname)
+
+    return
+
+
+def make_concentration_map(sim):
+    print("making concentration map...")
+
+    import matplotlib.pyplot as plt
+    levels = [
+        1,
+        10,
+        25,
+        50,
+        100,
+        150,
+        200,
+        250,
+        300,
+        350,
+        400,
+        450,
+        500,
+    ]
+
+    name = ex[sim.idxsim]
+    ws = exdirs[sim.idxsim]
+    simfp = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
+    gwf = simfp.get_model(gwfname)
+    gwt = simfp.get_model(gwtname)
+    conc = gwt.output.concentration().get_data()
+    lakconc = gwt.lak.output.concentration().get_data().flatten()
+
+    il, jl = np.where(lakibd > 0)
+    for i, j in zip(il, jl):
+        ilak = lakibd[i, j] - 1
+        lake_conc = lakconc[ilak]
+        conc[0, i, j] = lake_conc
+
+    fig, axs = plt.subplots(
+        2, 2, figsize=(5, 7), dpi=300, tight_layout=True
+    )
+
+    # plot layers 1, 3, 5, and 8
+    for iplot, ilay in enumerate([0, 2, 4, 7]):
+        ax = axs.flatten()[iplot]
+        pmv = flopy.plot.PlotMapView(model=gwt, ax=ax, layer=ilay)
+        #pmv.plot_grid()
+        pmv.plot_array(lakibd, masked_values=[0], alpha=0.2)
+        pmv.plot_inactive(color_noflow="gray", alpha=0.25)
+        #pmv.plot_bc(name="CHD-1", color="blue")
+        cs = pmv.contour_array(conc, levels=levels, masked_values=[1.0e30])
+        ax.clabel(cs, cs.levels[::1], fmt="%1.0f", colors="b")
+        ax.set_title(f"Model layer {ilay + 1}")
+
+    fname = os.path.join(ws, "fig-concentration.png")
+    print(f"Creating {fname}")
     plt.savefig(fname)
 
     return
@@ -570,8 +622,13 @@ def eval_results(sim):
     print("evaluating results...")
 
     makeplot = False
+    for idx, arg in enumerate(sys.argv):
+        if arg.lower() == "--makeplot":
+            makeplot = True
+
     if makeplot:
-        make_plot(sim)
+        make_concentration_vs_time(sim)
+        make_concentration_map(sim)
 
     # ensure concentrations were saved
     ws = exdirs[sim.idxsim]
@@ -701,6 +758,14 @@ def eval_results(sim):
     d = res_sfr4 - ans_sfr4
     msg = "{} {} {}".format(res_sfr4, ans_sfr4, d)
     assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
+
+    # used to make results for the gwtgwt version of this problem
+    #fname = os.path.join(ws, f"result_conc_lak1.txt")
+    #np.savetxt(fname, res_lak1)
+    #fname = os.path.join(ws, f"result_conc_sfr3.txt")
+    #np.savetxt(fname, res_sfr3)
+    #fname = os.path.join(ws, f"result_conc_sfr4.txt")
+    #np.savetxt(fname, res_sfr4)
 
     # uncomment when testing
     # assert False

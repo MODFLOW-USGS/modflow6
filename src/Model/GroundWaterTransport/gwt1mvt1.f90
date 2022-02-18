@@ -7,6 +7,7 @@ module GwtMvtModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, LENPAKLOC, &
                              DNODATA, LENPACKAGENAME, TABCENTER, LENMODELNAME
+    
   use SimModule, only: store_error
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
@@ -22,12 +23,16 @@ module GwtMvtModule
   public :: mvt_cr
   
   type, extends(NumericalPackageType) :: GwtMvtType
+    character(len=LENMODELNAME)                        :: gwfmodelname1 = ''    !< name of model 1
+    character(len=LENMODELNAME)                        :: gwfmodelname2 = ''    !< name of model 2 (set to modelname 1 for single model MVT)
     integer(I4B), pointer                              :: maxpackages           !< max number of packages
     integer(I4B), pointer                              :: ibudgetout => null()  !< unit number for budget output file
     integer(I4B), pointer                              :: ibudcsv => null()     !< unit number for csv budget output file
-    type(GwtFmiType), pointer                          :: fmi => null()         !< pointer to fmi object
-    type(BudgetType), pointer                          :: budget => null()      !< mover budget object (used to write balance table)
+    type(GwtFmiType), pointer                          :: fmi1 => null()        !< pointer to fmi object for model 1
+    type(GwtFmiType), pointer                          :: fmi2 => null()        !< pointer to fmi object for model 2 (set to fmi1 for single model)
+    type(BudgetType), pointer                          :: budget => null()      !< mover transport budget object (used to write balance table)
     type(BudgetObjectType), pointer                    :: budobj => null()      !< budget container (used to write binary file)
+    type(BudgetObjectType), pointer                    :: mvrbudobj => null()   !< pointer to the water mover budget object
     character(len=LENPACKAGENAME),                                             &
       dimension(:), pointer, contiguous                :: paknames => null()    !< array of package names
     !
@@ -49,13 +54,16 @@ module GwtMvtModule
     procedure :: mvt_setup_budobj
     procedure :: mvt_fill_budobj
     procedure :: mvt_scan_mvrbudobj
+    procedure :: set_pointer_mvrbudobj
+    procedure :: set_fmi_pr_rc
     procedure, private :: mvt_setup_outputtab
     procedure, private :: mvt_print_outputtab
   end type GwtMvtType
 
   contains
 
-  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi)
+  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, gwfmodelname1, &
+                    gwfmodelname2, fmi2)
 ! ******************************************************************************
 ! mvt_cr -- Create a new initial conditions object
 ! ******************************************************************************
@@ -67,7 +75,10 @@ module GwtMvtModule
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(GwtFmiType), intent(in), target :: fmi1
+    character(len=*), intent(in), optional :: gwfmodelname1
+    character(len=*), intent(in), optional :: gwfmodelname2
+    type(GwtFmiType), intent(in), target, optional :: fmi2
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -82,8 +93,25 @@ module GwtMvtModule
     mvt%inunit = inunit
     mvt%iout = iout
     !
+    ! -- Assume that this MVT is owned by a GWT Model
+    mvt%fmi1 => fmi1
+    mvt%fmi2 => fmi1
+    !
     ! -- set pointers
-    mvt%fmi => fmi
+    if (present(fmi2)) then
+      mvt%fmi2 => fmi2
+    end if
+    !
+    ! -- set model names
+    if (present(gwfmodelname1)) then
+      mvt%gwfmodelname1 =  gwfmodelname1
+    end if
+    if (present(gwfmodelname2)) then
+      mvt%gwfmodelname2 =  gwfmodelname2
+    end if
+    !
+    ! -- create the budget object
+    call budgetobject_cr(mvt%budobj, 'TRANSPORT MOVER')
     !
     ! -- Return
     return
@@ -110,7 +138,7 @@ module GwtMvtModule
     ! -- set pointer to dis
     this%dis => dis
     !
-    ! --print a message identifying the MVT package.
+    ! -- print a message identifying the MVT package.
     write(this%iout, fmtmvt) this%inunit
     !
     ! -- Initialize block parser
@@ -125,6 +153,19 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_df
+  
+  !> @ brief Set pointer to mvrbudobj
+  !!
+  !! Store a pointer to mvrbudobj, which contains the simulated water
+  !! mover flows from either a gwf model MVR package or from a gwf-gwf
+  !! exchange MVR package.
+  !!
+  !<
+  subroutine set_pointer_mvrbudobj(this, mvrbudobj)
+    class(GwtMvtType) :: this
+    type(BudgetObjectType), intent(in), target :: mvrbudobj
+    this%mvrbudobj => mvrbudobj
+  end subroutine set_pointer_mvrbudobj
   
   subroutine mvt_ar(this)
 ! ******************************************************************************
@@ -164,6 +205,12 @@ module GwtMvtModule
     ! -- At this point, the mvrbudobj is available to set up the mvt budobj
     if (kper * kstp == 1) then
       !
+      ! -- if mvt is for a single model then point to fmi1
+      !cdl todo: this needs to be called from GwtGwtExg somehow for the 2 model case
+      if (associated(this%fmi1, this%fmi2)) then
+        call this%set_pointer_mvrbudobj(this%fmi1%mvrbudobj)
+      end if
+      !
       ! -- set up the mvt budobject
       call this%mvt_scan_mvrbudobj()
       call this%mvt_setup_budobj()
@@ -177,7 +224,7 @@ module GwtMvtModule
     return
   end subroutine mvt_rp
   
-  subroutine mvt_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, rhs)
+  subroutine mvt_fc(this, cnew1, cnew2)
 ! ******************************************************************************
 ! mvt_fc -- Calculate coefficients and fill amat and rhs
 !
@@ -193,14 +240,8 @@ module GwtMvtModule
     ! -- modules
     ! -- dummy
     class(GwtMvtType) :: this
-    integer, intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: cold
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), intent(in), dimension(nodes) :: cnew
-    real(DP), intent(inout), dimension(nodes) :: rhs
+    real(DP), intent(in), dimension(:), contiguous, target :: cnew1
+    real(DP), intent(in), dimension(:), contiguous, target :: cnew2
     ! -- local
     integer(I4B) :: i, n
     integer(I4B) :: id1, id2, nlist
@@ -209,36 +250,50 @@ module GwtMvtModule
     integer(I4B) :: nbudterm
     real(DP) :: q, cp
     real(DP), dimension(:), pointer :: concpak
+    real(DP), dimension(:), contiguous, pointer :: cnew
+    type(GwtFmiType), pointer :: fmi_pr  !< pointer to provider model fmi package
+    type(GwtFmiType), pointer :: fmi_rc  !< pointer to receiver model fmi package
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize the mass flow into advanced package from the mover
-    do i = 1, this%fmi%nflowpack
-      if (this%fmi%iatp(i) == 0) cycle
-      do n = 1, size(this%fmi%datp(i)%qmfrommvr)
-        this%fmi%datp(i)%qmfrommvr(n) = DZERO
-      end do
-    end do
-    !
     ! -- Add mover QC terms to the receiver packages
-    nbudterm = this%fmi%mvrbudobj%nbudterm
+    nbudterm = this%mvrbudobj%nbudterm
     do i = 1, nbudterm
-      nlist = this%fmi%mvrbudobj%budterm(i)%nlist
+      nlist = this%mvrbudobj%budterm(i)%nlist
       if (nlist > 0) then
-        call this%fmi%get_package_index(this%fmi%mvrbudobj%budterm(i)%text2id1, ipr)
-        call this%fmi%get_package_index(this%fmi%mvrbudobj%budterm(i)%text2id2, irc)
-        if (this%fmi%iatp(ipr) /= 0) concpak => this%fmi%datp(ipr)%concpack
+        !
+        ! -- Set pointers to the fmi packages for the provider and the receiver
+        call this%set_fmi_pr_rc(i, fmi_pr, fmi_rc)
+        !
+        ! -- Set a pointer to the GWT model concentration associated with the provider
+        cnew => cnew1
+        if (associated(fmi_pr, this%fmi2)) then
+          cnew => cnew2
+        end if
+        !
+        !-- Get the package index for the provider
+        call fmi_pr%get_package_index(this%mvrbudobj%budterm(i)%text2id1, ipr)
+        !
+        ! -- Get the package index for the receiver
+        call fmi_rc%get_package_index(this%mvrbudobj%budterm(i)%text2id2, irc)
+        !
+        ! -- If provider is an advanced package, then set a pointer to its simulated concentration
+        if (fmi_pr%iatp(ipr) /= 0) then
+          concpak => fmi_pr%datp(ipr)%concpack
+        end if
+        !
+        ! -- Process flows for each entry in the list and add mass to receivers
         do n = 1, nlist
           !
           ! -- lak/sfr/maw/uzf id1 (provider) and id2 (receiver)
-          id1 = this%fmi%mvrbudobj%budterm(i)%id1(n)
-          id2 = this%fmi%mvrbudobj%budterm(i)%id2(n)
+          id1 = this%mvrbudobj%budterm(i)%id1(n)
+          id2 = this%mvrbudobj%budterm(i)%id2(n)
           !
           ! -- Obtain mover flow rate from the mover flow budget object
-          q = this%fmi%mvrbudobj%budterm(i)%flow(n)
+          q = this%mvrbudobj%budterm(i)%flow(n)
           !
           ! -- Assign concentration of the provider
           cp = DZERO
-          if (this%fmi%iatp(ipr) /= 0) then
+          if (fmi_pr%iatp(ipr) /= 0) then
             !
             ! -- Provider package is being represented by an APT (SFT, LKT, MWT, UZT)
             !    so set the concentration to the simulated concentation of APT
@@ -248,15 +303,16 @@ module GwtMvtModule
             ! -- Provider is a regular stress package (WEL, DRN, RIV, etc.) or the
             !    provider is an advanced stress package but is not represented with
             !    SFT, LKT, MWT, or UZT, so use the GWT cell concentration 
-            igwtnode = this%fmi%gwfpackages(ipr)%nodelist(id1)
+            igwtnode = fmi_pr%gwfpackages(ipr)%nodelist(id1)
             cp = cnew(igwtnode)
+            
           end if
           !
           ! -- add the mover rate times the provider concentration into the receiver
           !    make sure these are accumulated since multiple providers can move
           !    water into the same receiver
-          if (this%fmi%iatp(irc) /= 0) then
-            this%fmi%datp(irc)%qmfrommvr(id2) = this%fmi%datp(irc)%qmfrommvr(id2) - q * cp
+          if (fmi_rc%iatp(irc) /= 0) then
+            fmi_rc%datp(irc)%qmfrommvr(id2) = fmi_rc%datp(irc)%qmfrommvr(id2) - q * cp
           end if
         end do
       end if
@@ -265,6 +321,74 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_fc
+  
+  !> @ brief Set the fmi_pr and fmi_rc pointers
+  !!
+  !! The fmi_pr and fmi_rc arguments are pointers to the provider
+  !! and receiver FMI Packages.  If this MVT Package is owned by
+  !! a single GWT model, then these pointers are both set to the
+  !! FMI Package of this GWT model's FMI Package.  If this MVT
+  !! Package is owned by a GWTGWT Exchange, then the fmi_pr and 
+  !! fmi_rc pointers may be assigned to FMI Packages in different models.
+  !!
+  !<
+  subroutine set_fmi_pr_rc(this, ibudterm, fmi_pr, fmi_rc)
+    ! -- dummy
+    class(GwtMvtType) :: this
+    integer(I4B), intent(in) :: ibudterm
+    type(GwtFmiType), pointer :: fmi_pr
+    type(GwtFmiType), pointer :: fmi_rc
+
+    fmi_pr => null()
+    fmi_rc => null()
+    if (this%gwfmodelname1 == '' .and. this%gwfmodelname2 == '') then
+      fmi_pr => this%fmi1
+      fmi_rc => this%fmi1
+    else
+      ! modelname for provider is this%mvrbudobj%budterm(i)%text1id1
+      if (this%mvrbudobj%budterm(ibudterm)%text1id1 == this%gwfmodelname1) then
+        ! -- model 1 is the provider
+        fmi_pr => this%fmi1
+      else if (this%mvrbudobj%budterm(ibudterm)%text1id1 == this%gwfmodelname2) then
+        ! -- model 2 is the provider
+        fmi_pr => this%fmi2
+      else
+        ! must be an error
+        !cdl todo: programming error
+        print *, this%mvrbudobj%budterm(ibudterm)%text1id1
+        print *, this%gwfmodelname1
+        print *, this%gwfmodelname2
+        stop "error in set_fmi_pr_rc"
+      end if
+        
+      ! modelname for receiver is this%mvrbudobj%budterm(i)%text1id2
+      if (this%mvrbudobj%budterm(ibudterm)%text1id2 == this%gwfmodelname1) then
+        ! -- model 1 is the receiver
+        fmi_rc => this%fmi1
+      else if (this%mvrbudobj%budterm(ibudterm)%text1id2 == this%gwfmodelname2) then
+        ! -- model 2 is the receiver
+        fmi_rc => this%fmi2
+      else
+        ! must be an error
+        !cdl todo: programming error
+        print *, this%mvrbudobj%budterm(ibudterm)%text1id2
+        print *, this%gwfmodelname1
+        print *, this%gwfmodelname2
+        stop "error in set_fmi_pr_rc"
+      end if
+    end if
+    
+    if (.not. associated(fmi_pr)) then
+      print *, 'Could not find FMI Package...'
+      stop "error in set_fmi_pr_rc"
+    end if
+    if (.not. associated(fmi_rc)) then
+      print *, 'Could not find FMI Package...'
+      stop "error in set_fmi_pr_rc"
+    end if
+
+    return
+  end subroutine set_fmi_pr_rc
 
   subroutine mvt_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
@@ -288,7 +412,7 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If there are active movers, then at least 2 outers required
-    if (associated(this%fmi%mvrbudobj)) then
+    if (associated(this%mvrbudobj)) then
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
         cpak = trim(this%packName)
@@ -300,7 +424,7 @@ module GwtMvtModule
     return
   end subroutine mvt_cc
   
-  subroutine mvt_bd(this, cnew)
+  subroutine mvt_bd(this, cnew1, cnew2)
 ! ******************************************************************************
 ! mvt_bd -- Write mover terms to listing file
 ! ******************************************************************************
@@ -310,12 +434,13 @@ module GwtMvtModule
     ! -- modules
     ! -- dummy
     class(GwtMvtType) :: this
-    real(DP), dimension(:), intent(in)  :: cnew
+    real(DP), dimension(:), contiguous, intent(in)  :: cnew1
+    real(DP), dimension(:), contiguous, intent(in)  :: cnew2
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- fill the budget object
-    call this%mvt_fill_budobj(cnew)
+    call this%mvt_fill_budobj(cnew1, cnew2)
     !
     ! -- return
     return
@@ -492,7 +617,9 @@ module GwtMvtModule
     endif
     !
     ! -- Scalars
-    this%fmi => null()
+    this%fmi1 => null()
+    this%fmi1 => null()
+    this%mvrbudobj => null()
     call mem_deallocate(this%maxpackages)
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%ibudcsv)
@@ -625,7 +752,7 @@ module GwtMvtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LENBUDTXT, LENMODELNAME, LENPACKAGENAME
+    use ConstantsModule, only: LENBUDTXT
     ! -- dummy
     class(GwtMvtType) :: this
     ! -- local
@@ -640,23 +767,22 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Assign terms to set up the mover budget object
-    nbudterm = this%fmi%mvrbudobj%nbudterm
+    nbudterm = this%mvrbudobj%nbudterm
     ncv = 0
     text = '        MVT-FLOW'
     naux = 0
     !
     ! -- set up budobj
-    call budgetobject_cr(this%budobj, 'TRANSPORT MOVER')
     call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0, bddim_opt='M')
     !
     ! -- Go through the water mover budget terms and set up the transport
     !    mover budget terms
     do i = 1, nbudterm
-      modelname1 = this%fmi%mvrbudobj%budterm(i)%text1id1
-      packagename1 = this%fmi%mvrbudobj%budterm(i)%text2id1
-      modelname2 = this%fmi%mvrbudobj%budterm(i)%text1id2
-      packagename2 = this%fmi%mvrbudobj%budterm(i)%text2id2
-      maxlist = this%fmi%mvrbudobj%budterm(i)%maxlist
+      modelname1 = this%mvrbudobj%budterm(i)%text1id1
+      packagename1 = this%mvrbudobj%budterm(i)%text2id1
+      modelname2 = this%mvrbudobj%budterm(i)%text1id2
+      packagename2 = this%mvrbudobj%budterm(i)%text2id2
+      maxlist = this%mvrbudobj%budterm(i)%maxlist
       call this%budobj%budterm(i)%initialize(text, &
                                              modelname1, &
                                              packagename1, &
@@ -671,7 +797,7 @@ module GwtMvtModule
     return
   end subroutine mvt_setup_budobj
 
-  subroutine mvt_fill_budobj(this, cnew)
+  subroutine mvt_fill_budobj(this, cnew1, cnew2)
 ! ******************************************************************************
 ! mvt_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -681,8 +807,12 @@ module GwtMvtModule
     ! -- modules
     ! -- dummy
     class(GwtMvtType) :: this
-    real(DP), intent(in), dimension(:) :: cnew
+    real(DP), intent(in), dimension(:), contiguous, target :: cnew1
+    real(DP), intent(in), dimension(:), contiguous, target :: cnew2
     ! -- local
+    type(GwtFmiType), pointer :: fmi_pr 
+    type(GwtFmiType), pointer :: fmi_rc
+    real(DP), dimension(:), contiguous, pointer :: cnew
     integer(I4B) :: nbudterm
     integer(I4B) :: nlist
     integer(I4B) :: ipr
@@ -699,28 +829,34 @@ module GwtMvtModule
     !
     ! -- Go through the water mover budget terms and set up the transport
     !    mover budget terms
-    nbudterm = this%fmi%mvrbudobj%nbudterm
+    nbudterm = this%mvrbudobj%nbudterm
     do i = 1, nbudterm
-      nlist = this%fmi%mvrbudobj%budterm(i)%nlist
-      call this%fmi%get_package_index(this%fmi%mvrbudobj%budterm(i)%text2id1, ipr)
-      call this%fmi%get_package_index(this%fmi%mvrbudobj%budterm(i)%text2id2, irc)
+      nlist = this%mvrbudobj%budterm(i)%nlist
+      call this%set_fmi_pr_rc(i, fmi_pr, fmi_rc)
+      cnew => cnew1
+      if (associated(fmi_pr, this%fmi2)) then
+        cnew => cnew2
+      end if
+      call fmi_pr%get_package_index(this%mvrbudobj%budterm(i)%text2id1, ipr)
+      call fmi_rc%get_package_index(this%mvrbudobj%budterm(i)%text2id2, irc)
       call this%budobj%budterm(i)%reset(nlist)
       do j = 1, nlist
-        n1 = this%fmi%mvrbudobj%budterm(i)%id1(j)
-        n2 = this%fmi%mvrbudobj%budterm(i)%id2(j)
-        q = this%fmi%mvrbudobj%budterm(i)%flow(j)
+        n1 = this%mvrbudobj%budterm(i)%id1(j)
+        n2 = this%mvrbudobj%budterm(i)%id2(j)
+        q = this%mvrbudobj%budterm(i)%flow(j)
         cp = DZERO
-        if (this%fmi%iatp(ipr) /= 0) then
-          cp = this%fmi%datp(ipr)%concpack(n1)
+        if (fmi_pr%iatp(ipr) /= 0) then
+          cp = fmi_pr%datp(ipr)%concpack(n1)
         else
           ! -- Must be a regular stress package
-          igwtnode = this%fmi%gwfpackages(ipr)%nodelist(n1)
+          igwtnode = fmi_pr%gwfpackages(ipr)%nodelist(n1)
+          !cdl todo: need to set cnew to model 1; right now it is coming in as argument
           cp = cnew(igwtnode)
         end if
         !
         ! -- Calculate solute mover rate
         rate = DZERO
-        if (this%fmi%iatp(irc) /= 0) then
+        if (fmi_rc%iatp(irc) /= 0) then
           rate = -q * cp
         end if
         !
@@ -753,7 +889,7 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate maxpackages, which is the the square of nbudterm
-    nbudterm = this%fmi%mvrbudobj%nbudterm
+    nbudterm = this%mvrbudobj%nbudterm
     do i = 1, nbudterm
       if (i * i == nbudterm) then
         maxpackages = i
@@ -773,13 +909,13 @@ module GwtMvtModule
     do i = 1, nbudterm
       found = .false.
       do j = 1, ipos
-        if (this%fmi%mvrbudobj%budterm(i)%text2id1 == this%paknames(j)) then
+        if (this%mvrbudobj%budterm(i)%text2id1 == this%paknames(j)) then
           found = .true.
           exit
         end if
       end do
       if (.not. found) then
-        this%paknames(ipos) = this%fmi%mvrbudobj%budterm(i)%text2id1
+        this%paknames(ipos) = this%mvrbudobj%budterm(i)%text2id1
         ipos = ipos + 1
       end if
     end do
@@ -890,7 +1026,7 @@ module GwtMvtModule
         call this%outputtab%add_term(inum)
         call this%outputtab%add_term(cloc1)
         call this%outputtab%add_term(this%budobj%budterm(i)%id1(n))
-        call this%outputtab%add_term(-this%fmi%mvrbudobj%budterm(i)%flow(n))
+        call this%outputtab%add_term(-this%mvrbudobj%budterm(i)%flow(n))
         call this%outputtab%add_term(this%budobj%budterm(i)%flow(n))
         call this%outputtab%add_term(cloc2)
         call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))

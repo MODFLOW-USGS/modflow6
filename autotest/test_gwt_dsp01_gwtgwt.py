@@ -234,6 +234,8 @@ def build_model(idx, dir):
     gwt1gwt2 = flopy.mf6.ModflowGwtgwt(
         sim,
         exgtype="GWT6-GWT6",
+        gwfmodelname1=gwf1.name,
+        gwfmodelname2=gwf2.name,
         nexg=len(gwfgwf_data),
         exgmnamea=gwt1.name,
         exgmnameb=gwt2.name,

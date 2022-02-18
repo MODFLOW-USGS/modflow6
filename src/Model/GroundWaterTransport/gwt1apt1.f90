@@ -35,7 +35,7 @@
 !
 module GwtAptModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE, DEP20, LENFTYPE, LINELENGTH,         &
                              LENBOUNDNAME, LENPACKAGENAME, NAMEDBOUNDFLAG,     &
                              DNODATA, TABLEFT, TABCENTER, TABRIGHT,            &
@@ -120,6 +120,7 @@ module GwtAptModule
     procedure :: bnd_ar => apt_ar
     procedure :: bnd_rp => apt_rp
     procedure :: bnd_ad => apt_ad
+    procedure :: bnd_cf => apt_cf
     procedure :: bnd_fc => apt_fc
     procedure, private :: apt_fc_expanded
     procedure :: pak_fc_expanded
@@ -738,6 +739,33 @@ module GwtAptModule
     ! -- return
     return
   end subroutine apt_ad
+  
+  !> @ brief Formulate the package hcof and rhs terms.
+  !!
+  !!  For the APT Package, the sole purpose here is to 
+  !!  reset the qmfrommvr term.
+  !!
+  !<
+  subroutine apt_cf(this, reset_mover)
+    ! -- modules
+    class(GwtAptType) :: this                          !< GwtAptType object
+    logical(LGP), intent(in), optional :: reset_mover  !< boolean for resetting mover 
+    ! -- local
+    integer(I4B) :: i
+    logical :: lrm
+    !
+    ! -- reset qmfrommvr
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if (lrm) then
+      do i = 1, size(this%qmfrommvr)
+        this%qmfrommvr(i) = DZERO
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine apt_cf
 
   subroutine apt_fc(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************

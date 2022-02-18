@@ -576,8 +576,7 @@ module GwtModule
     call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
                          amatsln, this%idxglo, this%rhs)
     if (this%inmvt > 0) then
-      call this%mvt%mvt_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
-                           amatsln, this%idxglo, this%x, this%rhs)
+      call this%mvt%mvt_fc(this%x, this%x)
     end if
     if(this%inmst > 0) then
       call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
@@ -724,7 +723,7 @@ module GwtModule
     if(this%inmst > 0) call this%mst%mst_bd(isuppress_output, this%budget)
     if(this%inssm > 0) call this%ssm%ssm_bd(isuppress_output, this%budget)
     if(this%infmi > 0) call this%fmi%fmi_bd(isuppress_output, this%budget)
-    if(this%inmvt > 0) call this%mvt%mvt_bd(this%x)
+    if(this%inmvt > 0) call this%mvt%mvt_bd(this%x, this%x)
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)

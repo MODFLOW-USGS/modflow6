@@ -1,4 +1,5 @@
 # --------------------- gwt lkt options ---------------------
+# flopy multi-package
 
 block options
 name flow_package_name

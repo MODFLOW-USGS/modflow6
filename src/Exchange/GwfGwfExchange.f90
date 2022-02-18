@@ -168,6 +168,22 @@ contains
       exchange%gwfmodel2 => mb
     end select
     !
+    ! -- Verify that gwf model1 is of the correct type
+    if (.not. associated(exchange%gwfmodel1)) then
+      write(errmsg, '(3a)') 'Problem with GWF-GWF exchange ', &
+        trim(exchange%name), &
+        '.  First specified GWF Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
+    ! -- Verify that gwf model2 is of the correct type
+    if (.not. associated(exchange%gwfmodel2)) then
+      write(errmsg, '(3a)') 'Problem with GWF-GWF exchange ', &
+        trim(exchange%name), &
+        '.  Second specified GWF Model does not appear to be of the correct type.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
     ! -- Create the obs package
     call obs_cr(exchange%obs, exchange%inobs)
     !
