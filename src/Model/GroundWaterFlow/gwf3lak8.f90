@@ -5870,7 +5870,7 @@ contains
                                                this%name_model, &
                                                this%packName, &
                                                maxlist, .false., .false., &
-                                               naux)
+                                               naux, ordered_id1=.false.)
       !
       ! -- store connectivity
       call this%budobj%budterm(idx)%reset(2 * nlen)
