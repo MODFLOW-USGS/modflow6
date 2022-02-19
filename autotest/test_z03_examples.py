@@ -42,7 +42,7 @@ def get_mf6_models():
     Get a list of test models
     """
 
-    # determine if largetest directory exists
+    # determine if examples directory exists
     dir_available = is_directory_available(example_basedir)
     if not dir_available:
         return []
@@ -143,6 +143,8 @@ def set_make_comparison(test):
         version = get_mf6_version(version="mf6-regression")
         print("MODFLOW regression version='{}'".format(version))
         if version in compare_tests[test]:
+            print(f"Test {test} does not run with versions {compare_tests[test]}")
+            print(f"Skipping regression test of sim {test} because the version is {version}")
             make_comparison = False
     return make_comparison
 
@@ -177,11 +179,15 @@ def main():
 
     # run the test model
     for on_dir in example_dirs:
+        mf6_regression = True
+        make_comparison = set_make_comparison(on_dir)
+        if not make_comparison:
+            mf6_regression = False
         sim = Simulation(
             on_dir,
-            mf6_regression=True,
+            mf6_regression=mf6_regression,
             cmp_verbose=False,
-            make_comparison=set_make_comparison(on_dir),
+            make_comparison=make_comparison,
         )
         run_mf6(sim)
 
