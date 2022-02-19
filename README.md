@@ -5,9 +5,9 @@ This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The 
 
 ### Version 6.3.0 release candidate
 
-[![Intel compiler](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-intel.yml)
-[![gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-latest.yml)
-[![gfortran - previous versions](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-gfortran-previous.yml)
+[![tests - ifort](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-ifort.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-ifort.yml)
+[![tests - gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-latest.yml)
+[![tests - gfortran - previous versions](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-previous.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-previous.yml)
 
 [![MODFLOW 6 intel nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml)
 [![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml)
