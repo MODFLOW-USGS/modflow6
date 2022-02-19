@@ -92,7 +92,7 @@ jobs:
         run: |
           .github/common/git-branch-export.sh
 
-      - name: Get the appropriate large regression test files
+      - name: Get the appropriate large or example regression test files
         run: |
           .github/common/get-${{ matrix.test_script }}-regression-files.sh
 
