@@ -214,22 +214,25 @@ Adding the cell number subscript ``$n$'' to cellwise quantities in equation~\ref
 	\frac{\partial Q_{SS_n}}{\partial h_n} = -\frac{SC1_n}{\Delta t} S_{F_n}^\st - \frac{SC1_n}{\Delta t} \frac{\partial S_{F_n}^\st}{\partial h_n} \left( h_n^t - BOT_n \right) + \frac{SC1_n}{\Delta t} \Delta z_n S_{F_n}^\st  \frac{\partial S_{F_n}^\st}{\partial h_n} ,
 \end{equation}
 
-\noindent where the superscript ``$t$'' has been omitted from $h_n^t$ in the derivatives for clarity. The fully implicit form of the Newton-Raphson formulation for the contribution of specific storage in the cell in the form of equation 2--30 in \cite{modflow6gwf} is
+\noindent where the superscript ``$t$'' has been omitted from $h_n^t$ in the derivatives for clarity. The fully implicit form of the Newton-Raphson formulation for the contribution of specific storage, in the form of equation 2--30 in \cite{modflow6gwf}, to $A_{n,n}$ and $b_n$ is
 
 \begin{equation}
 	\label{eqn:STOeq-nr}
-	\frac{\partial Q_{SS_n}}{\partial h_n} h_n^k = -Q_{SS_n} + \frac{\partial Q_{SS_n}}{\partial h_n} h_n^\kmo .
+	\begin{aligned}
+	A_{n,n} \leftarrow & A_{n,n} + \frac{\partial Q_{SS_n}}{\partial h_n} h_n^k \\
+	b_n \leftarrow & b_n - Q_{SS_n} + \frac{\partial Q_{SS_n}}{\partial h_n} h_n^\kmo .
+	\end{aligned}
 \end{equation}
 
 \noindent where the superscripts ``$k$'' and ``$k-1$'' indicate quantities evaluated on the current and previous outer iterations of the solution procedure, respectively. Replacement of $h_n^t$ and $S_{F_n}^\st$ by their previous iterates, $h_n^\kmo$ and $S_{F_n}^\skmo$, in equations~\ref{eqn:STOeq-rev-2} and~\ref{eqn:STOeq-rev-derv-simp} and substitution of those equations into equation~\ref{eqn:STOeq-nr}  results in
 
 \begin{equation}
 	\label{eqn:STOeq-rev-nr-simp}
-	\begin{split}
+	\begin{aligned}
 		A_{n,n} \leftarrow & A_{n,n} + \biggl[ -\frac{SC1_n}{\Delta t}  S_{F_n}^\skmo - \frac{SC1_n}{\Delta t} \frac{\partial S_{F_n}^\kmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1_n}{\Delta t} \Delta z_n S_{F_n}^\kmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr]  \\
 		b_n \leftarrow & b_n - \frac{SC1_n}{\Delta t} \biggl[ S_{F_n}^\stold \left( h_n^\told - BOT_n - \frac{\Delta z_n}{2} S_{F_n}^\stold \right) + S_{F_n}^\skmo \left( BOT_n + \frac{\Delta z_n}{2} S_{F_n}^\skmo \right) \biggr] \\
 		& \phantom{b_n} + \biggl[ - \frac{SC1_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1_n}{\Delta t} \Delta z_n S_{F_n}^\skmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr]  h_n^\kmo .
-	\end{split}
+	\end{aligned}
 \end{equation} 
 
 \noindent Comparison of equation~\ref{eqn:STOeq-rev-nr-simp} to equation~\ref{eqn:STOeq-rev-fd} shows that many of the terms in the Newton-Raphson formulation were added as part of the standard formulation. The Newton-Raphson formulation is completed by adding the second and third terms on the right-hand side of equation~\ref{eqn:STOeq-rev-derv-simp} and the product of these terms and the current head to the terms already added to the diagonal of the coefficient matrix and right-hand side by the standard formulation, respectively.

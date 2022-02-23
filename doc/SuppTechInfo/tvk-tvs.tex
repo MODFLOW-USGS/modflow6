@@ -120,7 +120,7 @@ Rearranging equation~\ref{eqn:tvs-qsy-new} for solution at the current iteration
 	\end{aligned}
 \end{equation}
 
-\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the beginning of the time step {\color{red} *** AMP: should this say "at the end of the time step"??? ***} is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
+\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the end of the time step is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
 
 \begin{equation}
 	\label{eqn:tvs-sy-b-fullsat}
@@ -137,25 +137,17 @@ As all $SC2_n^\told$ terms are eliminated by differentiation, the derivative of 
 	\frac{\partial Q_{Sy_n}}{\partial h_n} = - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} .
 \end{equation}
 
-\noindent The fully implicit Newton-Raphson formulation for specific yield storage contribution in cell $n$ is
+\noindent The fully implicit Newton-Raphson formulation for specific yield storage contribution to $A_{n,n}$ and $b_n$ is
 
 \begin{equation}
 	\label{eqn:tvs-sy-nr}
-	\frac{\partial Q_{Sy_n}}{\partial h_n} h_n^k = -Q_{Sy_n}^k + \frac{\partial Q_{Sy_n}}{\partial h_n} h_n^\kmo .
-\end{equation}
-
-\noindent Substitution of equations~\ref{eqn:tvs-qsy-new} and~\ref{eqn:tvs-qsy-nr-deriv} into equation~\ref{eqn:tvs-sy-nr} results in the following general expression of the Newton-Raphson formulation for the contribution of specific yield storage to cell $n$:
-
-\begin{equation}
-	\label{eqn:tvs-sy-nr-expanded}
 	\begin{aligned}
-		\biggl[ - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] h_n^k =
-		& - \biggl[ \frac{SC2_n^\told \, \Delta z_n}{\Delta t} \, S_{F_n}^\stold - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \, S_{F_n}^\skmo \biggr] \\
-		& + \biggl[ - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] h_n^\kmo ,
+		A_{n,n} \leftarrow & A_{n,n} + \frac{\partial Q_{Sy_n}}{\partial h_n} h_n^k \\
+		b_n \leftarrow & b_n - Q_{Sy_n}^k + \frac{\partial Q_{Sy_n}}{\partial h_n} h_n^\kmo .
 	\end{aligned}
 \end{equation}
 
-\noindent which yields the following contributions to $A_{n,n}$ and $b_n$:
+\noindent Substitution of equations~\ref{eqn:tvs-qsy-new} and~\ref{eqn:tvs-qsy-nr-deriv} into equation~\ref{eqn:tvs-sy-nr} results in the following general expression of the Newton-Raphson formulation for the contribution of specific yield storage to $A_{n,n}$ and $b_n$ is
 
 \begin{equation}
 	\label{eqn:tvs-sy-Ab-std}
@@ -165,6 +157,4 @@ As all $SC2_n^\told$ terms are eliminated by differentiation, the derivative of 
 	\end{aligned}
 \end{equation}
 
-\noindent For cells where the head at the beginning of the time step {\color{red} *** AMP: like earlier, should this say "at the end of the time step"??? ***} is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.
-
-{\color{red} *** AMP: I know I keep bringing this up, but Newton expressions of the form used in \ref{eqn:STOeq-nr}, \ref{eqn:tvs-sy-nr}, and \ref{eqn:tvs-sy-nr-expanded} (and in other MF publications) are not mathematically true statements -- the left side does not literally equal the right side. Ideally, it would be good to (at some point) come up with a way to express the underlying relationships that isn't potentially misleading. ***}
+\noindent For cells where the head at the end of the time step is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.
