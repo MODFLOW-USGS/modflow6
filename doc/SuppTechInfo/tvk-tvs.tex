@@ -48,26 +48,26 @@ Following the same process used to arrive at equation~\ref{eqn:STOeq-rev-fd} in 
 	\end{aligned}
 \end{equation}
 
-\noindent Note that in the absence of specific storage changes, i.e. for $SC1_n^\told = SC1_n^t = SC1_n$, equation~\ref{eqn:tvs-Ab-std} simplifies to equation~\ref{eqn:STOeq-rev-fd}.
+\noindent In the absence of specific storage changes, i.e. for $SC1_n^\told = SC1_n^t = SC1_n$, equation~\ref{eqn:tvs-Ab-std} simplifies to equation~\ref{eqn:STOeq-rev-fd}.
 
 
 \subsubsection{Newton-Raphson Formulation}
 
-Evaluating equation~\ref{eqn:tvs-qss} cellwise with subscript $n$ and applying quadratically smoothed cell saturations $S_F^*$ results in
+Evaluating equation~\ref{eqn:tvs-qss} cellwise with subscript ``$n$'' and applying quadratically smoothed cell saturations $S_F^*$ results in
 
 \begin{equation}
 	\label{eqn:tvs-qss-n}
 	Q_{SS_n} = \frac{SC1_n^\told}{\Delta t} \, S_{F_n}^\stold \left( h_n^\told - BOT_n - \frac{\Delta z_n}{2} S_{F_n}^\stold \right) - \frac{SC1_n^t}{\Delta t} \left[ S_{F_n}^\st \left( h_n^t - BOT_n \right) + \frac{\Delta z_n}{2} \left( S_{F_n}^\st \right)^2 \right] .
 \end{equation}
 
-\noindent The derivative of equation~\ref{eqn:tvs-qss-n} with respect to $h_n$ is identical to that of the base case with no transient specific storage changes, as all terms involving $SC1_n^\told$ disappear after differentiation. As such, the result is equivalent to equation~\ref{eqn:STOeq-rev-derv-simp} with $SC1 = SC1_n^t$:
+\noindent Upon differentiation of equation~\ref{eqn:tvs-qss-n} with respect to $h_n^t$, all terms involving $SC1_n^\told$ disappear. The result is equivalent to equation~\ref{eqn:STOeq-rev-derv-simp} with $SC1_n = SC1_n^t$:
 
 \begin{equation}
 	\label{eqn:tvs-qss-nr-deriv}
-	\frac{\partial Q_{SS_n}}{\partial h_n} = -\frac{SC1_n^t}{\Delta t} S_{F_n}^\skmo - \frac{SC1_n^t}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \left( h_n^\kmo - BOT_n \right) + \frac{SC1_n^t}{\Delta t} \Delta z_n S_{F_n}^\skmo  \frac{\partial S_{F_n}^\skmo}{\partial h_n} .
+	\frac{\partial Q_{SS_n}}{\partial h_n} = -\frac{SC1_n^t}{\Delta t} S_{F_n}^\st - \frac{SC1_n^t}{\Delta t} \frac{\partial S_{F_n}^\st}{\partial h_n} \left( h_n^t - BOT_n \right) + \frac{SC1_n^t}{\Delta t} \Delta z_n S_{F_n}^\st  \frac{\partial S_{F_n}^\st}{\partial h_n} .
 \end{equation}
 
-\noindent Substituting equations~\ref{eqn:tvs-qss-n} and~\ref{eqn:tvs-qss-nr-deriv} into equation~\ref{eqn:STOeq-nr} yields the following contributions to $A_{n,n}$ and $b_n$:
+\noindent where the superscript ``$t$'' has been omitted from $h_n^t$ in the derivatives for clarity. Replacement of $h_n^t$ and $S_{F_n}^\st$ by their previous iterates, $h_n^\kmo$ and $S_{F_n}^\skmo$, in equations~\ref{eqn:tvs-qss-n} and~\ref{eqn:tvs-qss-nr-deriv} and substitution of those equations into equation~\ref{eqn:STOeq-nr} yields the following contributions to $A_{n,n}$ and $b_n$:
 
 \begin{equation}
 	\label{eqn:tvs-Ab-nr}
@@ -78,13 +78,13 @@ Evaluating equation~\ref{eqn:tvs-qss} cellwise with subscript $n$ and applying q
 	\end{aligned}
 \end{equation}
 
-\noindent Once again, in the absence of storage changes ($SC1_n^\told = SC1_n^t = SC1_n$), this collapses to the base case formulation in equation~\ref{eqn:STOeq-rev-nr-simp}.
+\noindent In the absence of storage changes ($SC1_n^\told = SC1_n^t = SC1_n$), equation~\ref{eqn:tvs-Ab-nr} simplifies to equation~\ref{eqn:STOeq-rev-nr-simp}.
 
 
 
 \subsection{Storage Change Integration: Specific Yield} \label{sec:sci-sy}
 
-The standard \mf specific yield contribution to groundwater flow \citep[eq. 5--10]{modflow6gwf} is calculated as
+For constant specific yield, \mf calculates the specific yield contribution to groundwater flow \citep[eq. 5--10]{modflow6gwf} as
 
 \begin{equation}
 	\label{eqn:tvs-qsy-original}
@@ -93,7 +93,7 @@ The standard \mf specific yield contribution to groundwater flow \citep[eq. 5--1
 
 \noindent where $Q_{Sy_n}$ is the volumetric flow rate from specific yield ($L^3/T$) and $SC2_n = Sy_n \cdot A_n$ is the secondary storage capacity for cell $n$ with specific yield $Sy_n$ and horizontal cell area $A_n$.
 
-When specific yield changes transiently, the secondary storage capacity term is split into its new value $SC2_n^t$ and its old value $SC2_n^\told$, resulting in
+When specific yield changes transiently, the secondary storage capacity term is expressed in terms of its new value $SC2_n^t$ and its old value $SC2_n^\told$, resulting in
 
 \begin{equation}
 	\label{eqn:tvs-qsy-new}
@@ -120,7 +120,7 @@ Rearranging equation~\ref{eqn:tvs-qsy-new} for solution at the current iteration
 	\end{aligned}
 \end{equation}
 
-\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the beginning of the time step is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
+\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the beginning of the time step {\color{red} *** AMP: should this say "at the end of the time step"??? ***} is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
 
 \begin{equation}
 	\label{eqn:tvs-sy-b-fullsat}
@@ -147,7 +147,7 @@ As all $SC2_n^\told$ terms are eliminated by differentiation, the derivative of 
 \noindent Substitution of equations~\ref{eqn:tvs-qsy-new} and~\ref{eqn:tvs-qsy-nr-deriv} into equation~\ref{eqn:tvs-sy-nr} results in the following general expression of the Newton-Raphson formulation for the contribution of specific yield storage to cell $n$:
 
 \begin{equation}
-	\label{eqn:tvs-sy-nr}
+	\label{eqn:tvs-sy-nr-expanded}
 	\begin{aligned}
 		\biggl[ - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \frac{\partial S_{F_n}^\skmo}{\partial h_n} \biggr] h_n^k =
 		& - \biggl[ \frac{SC2_n^\told \, \Delta z_n}{\Delta t} \, S_{F_n}^\stold - \frac{SC2_n^t \, \Delta z_n}{\Delta t} \, S_{F_n}^\skmo \biggr] \\
@@ -165,4 +165,6 @@ As all $SC2_n^\told$ terms are eliminated by differentiation, the derivative of 
 	\end{aligned}
 \end{equation}
 
-\noindent For cells where the head at the beginning of the time step is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.
+\noindent For cells where the head at the beginning of the time step {\color{red} *** AMP: like earlier, should this say "at the end of the time step"??? ***} is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.
+
+{\color{red} *** AMP: I know I keep bringing this up, but Newton expressions of the form used in \ref{eqn:STOeq-nr}, \ref{eqn:tvs-sy-nr}, and \ref{eqn:tvs-sy-nr-expanded} (and in other MF publications) are not mathematically true statements -- the left side does not literally equal the right side. Ideally, it would be good to (at some point) come up with a way to express the underlying relationships that isn't potentially misleading. ***}
