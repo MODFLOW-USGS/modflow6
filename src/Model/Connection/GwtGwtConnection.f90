@@ -189,9 +189,9 @@ subroutine gwtgwtcon_df(this)
   ! we have to 'catch up' and create the interface model
   ! here, then the remainder of this routine will be define
   if (this%exchangeIsOwned) then
-    write(imName,'(a,i5.5)') 'GWTIM1_', this%gwtExchange%id
+    write(imName,'(a,i0)') 'GWTIM1_', this%gwtExchange%id
   else
-    write(imName,'(a,i5.5)') 'GWTIM2_', this%gwtExchange%id
+    write(imName,'(a,i0)') 'GWTIM2_', this%gwtExchange%id
   end if
   call this%gwtInterfaceModel%gwtifmod_cr(imName, this%iout, this%gridConnection)
   this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme

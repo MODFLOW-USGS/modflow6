@@ -143,9 +143,9 @@ contains
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
     if(this%exchangeIsOwned) then
-      write(imName,'(a,i5.5)') 'GWFIM1_', this%gwfExchange%id
+      write(imName,'(a,i0)') 'GWFIM1_', this%gwfExchange%id
     else
-      write(imName,'(a,i5.5)') 'GWFIM2_', this%gwfExchange%id
+      write(imName,'(a,i0)') 'GWFIM2_', this%gwfExchange%id
     end if
     call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
 

@@ -275,8 +275,8 @@ def api_func(exe, idx, model_ws=None):
 
 def check_interface_models(mf6):
     exchange_id = 1  # we only have 1 exchange  in this case
-    ifm_name_left = "GWFIM1_" + str(exchange_id).zfill(5)
-    gc_name_left = "GWFCON1_" + str(exchange_id).zfill(5)
+    ifm_name_left = f"GWFIM1_{exchange_id}"
+    gc_name_left = f"GWFCON1_{exchange_id}"
 
     # XT3D flag should be set to 1
     mem_addr = mf6.get_var_address("IXT3D", ifm_name_left, "NPF")

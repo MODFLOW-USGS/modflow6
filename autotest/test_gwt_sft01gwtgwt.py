@@ -8,8 +8,8 @@
 #       -------------                -------------   (sfr leakance is zero so no flow between sfr and gwf)
 #  gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
 #           |                            |
-#         gwfgwt                       gwfgwt
-#           |                           |
+#  gwfgwt (flow1-transport1)    gwfgwt (flow2-transport2)
+#           |                            |
 #       transport1                   transport2
 #  sft  1 2 3 4 5 6 7  gwtgwt-mvt => 1 2 3 4 5 6 7
 #       -------------                -------------
