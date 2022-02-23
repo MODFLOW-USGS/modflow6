@@ -36,7 +36,7 @@ module GwfGwfConnectionModule
     type(GwfInterfaceModelType), pointer  :: gwfInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iXt3dOnExchange => null()                   !< run XT3D on the interface,
                                                                          !! 0 = don't, 1 = matrix, 2 = rhs
-    integer(I4B) :: iout                                                 !< the list file for the interface model
+    integer(I4B) :: iout = 0                                             !< the list file for the interface model
 
     real(DP), dimension(:), pointer, contiguous :: exgflowja => null()   !< flowja through exchange faces
     
@@ -86,6 +86,7 @@ contains
     character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
     class(*), pointer :: objPtr
+    logical(LGP) :: write_ifmodel_listfile = .false.
 
     objPtr => model
     this%gwfModel => CastAsGwfModel(objPtr)
@@ -94,22 +95,20 @@ contains
 
     this%exchangeIsOwned = associated(gwfEx%model1, model)
     
-    if (gwfEx%id > 99999) then
-      write(*,*) 'Error: running 100000 submodels or more is not yet supported'
-      call ustop()
-    end if
     if (this%exchangeIsOwned) then
-      write(name,'(a,i5.5)') 'GWFCON1_', gwfEx%id
+      write(name,'(a,i0)') 'GWFCON1_', gwfEx%id
     else
-      write(name,'(a,i5.5)') 'GWFCON2_', gwfEx%id
+      write(name,'(a,i0)') 'GWFCON2_', gwfEx%id
     end if
 
     ! .lst file for interface model
-    fname = trim(name)//'.im.lst'
-    call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
-    write(this%iout, '(a,a)') 'Creating GWF-GWF connection for model ',         &
-                              trim(this%gwfModel%name), ' from exchange ',      &
-                              trim(gwfEx%name)
+    if (write_ifmodel_listfile) then
+      fname = trim(name)//'.im.lst'
+      call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
+      write(this%iout, '(4a)') 'Creating GWF-GWF connection for model ',         &
+                               trim(this%gwfModel%name), ' from exchange ',      &
+                               trim(gwfEx%name)
+    end if
     
     ! first call base constructor
     call this%SpatialModelConnectionType%spatialConnection_ctor(model, gwfEx, name)
@@ -144,9 +143,9 @@ contains
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
     if(this%exchangeIsOwned) then
-      write(imName,'(a,i5.5)') 'GWFIM1_', this%gwfExchange%id
+      write(imName,'(a,i0)') 'GWFIM1_', this%gwfExchange%id
     else
-      write(imName,'(a,i5.5)') 'GWFIM2_', this%gwfExchange%id
+      write(imName,'(a,i0)') 'GWFIM2_', this%gwfExchange%id
     end if
     call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
 

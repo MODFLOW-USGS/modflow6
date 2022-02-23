@@ -369,11 +369,11 @@ def api_func(exe, idx, model_ws=None):
 def check_interface_models(mf6):
     # interface model for model top-left from exchange=Exg1
     exg1_id = 1
-    ifm_topleft_1 = "GWFIM1_" + str(exg1_id).zfill(5)
-    gfc_topleft_1 = "GWFCON1_" + str(exg1_id).zfill(5)
+    ifm_topleft_1 = f"GWFIM1_{exg1_id}"
+    gfc_topleft_1 = f"GWFCON1_{exg1_id}"
     exg2_id = 2
-    ifm_topleft_2 = "GWFIM1_" + str(exg2_id).zfill(5)
-    gfc_topleft_2 = "GWFCON1_" + str(exg2_id).zfill(5)
+    ifm_topleft_2 = f"GWFIM1_{exg2_id}"
+    gfc_topleft_2 = f"GWFCON1_{exg2_id}"
 
     # interface model nr.1
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_1, "GC")

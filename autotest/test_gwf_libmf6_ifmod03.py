@@ -286,8 +286,8 @@ def api_func(exe, idx, model_ws=None):
 def check_interface_models(mf6):
     # interface model and connection for exchange
     exg_id = 1
-    ifm = "GWFIM1_" + str(exg_id).zfill(5)
-    gfc = "GWFCON1_" + str(exg_id).zfill(5)
+    ifm = f"GWFIM1_{exg_id}"
+    gfc = f"GWFCON1_{exg_id}"
 
     # check extent for interface model, it's always
     # DISU so we have cellxy:
