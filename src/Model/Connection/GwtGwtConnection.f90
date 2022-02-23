@@ -46,7 +46,7 @@ module GwtGwtConnectionModule
     real(DP), dimension(:), pointer, contiguous :: conc => null()         !< pointer to concentration array
     integer(I4B), dimension(:), pointer, contiguous :: icbound => null()  !< store pointer to gwt ibound array
   
-    integer(I4B) :: iout                                                  !< the list file for the interface model
+    integer(I4B) :: iout = 0                                              !< the list file for the interface model
 
   contains
 
@@ -91,6 +91,7 @@ subroutine gwtGwtConnection_ctor(this, model, gwtEx)
   character(len=LINELENGTH) :: fname
   character(len=LENCOMPONENTNAME) :: name
   class(*), pointer :: objPtr
+  logical(LGP) :: write_ifmodel_listfile = .false.
 
   objPtr => model
   this%gwtModel => CastAsGwtModel(objPtr)
@@ -99,22 +100,20 @@ subroutine gwtGwtConnection_ctor(this, model, gwtEx)
 
   this%exchangeIsOwned = associated(model, gwtEx%model1)
 
-  if (gwtEx%id > 99999) then
-    write(*,*) 'Error: running 100000 submodels or more is not yet supported'
-    call ustop()
-  end if
   if (this%exchangeIsOwned) then
-    write(name,'(a,i5.5)') 'GWTCON1_', gwtEx%id
+    write(name,'(a,i0)') 'GWTCON1_', gwtEx%id
   else
-    write(name,'(a,i5.5)') 'GWTCON2_', gwtEx%id
+    write(name,'(a,i0)') 'GWTCON2_', gwtEx%id
   end if
 
   ! .lst file for interface model
-  fname = trim(name)//'.im.lst'
-  call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
-  write(this%iout, '(a,a)') 'Creating GWT-GWT connection for model ',           &
-                            trim(this%gwtModel%name), 'from exchange ',         &
-                            trim(gwtEx%name) 
+  if (write_ifmodel_listfile) then
+    fname = trim(name)//'.im.lst'
+    call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
+    write(this%iout, '(4a)') 'Creating GWT-GWT connection for model ',           &
+                              trim(this%gwtModel%name), 'from exchange ',         &
+                              trim(gwtEx%name)
+  end if
 
   ! first call base constructor
   call this%SpatialModelConnectionType%spatialConnection_ctor(model, gwtEx, name)
