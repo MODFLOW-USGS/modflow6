@@ -798,11 +798,15 @@ def run_transport_model():
     failed_list = []
     for name1, i in zip(csvra.dtype.names, imap):
         name2 = lstra.dtype.names[i]
-        success = np.allclose(csvra[name1], lstra[name2], rtol=0.01)
+        if i == 18:
+            # percent difference needs to compare small numbers
+            success = np.allclose(csvra[name1], lstra[name2], atol=1.e-7)
+        else:
+            success = np.allclose(csvra[name1], lstra[name2], rtol=0.01)
         if not success:
             success_all = False
             failed_list.append(name1)
-            print(f"Records do not match for {name1}")
+            print(f"Records do not match for {name1} in position {i}")
             for rate1, rate2 in zip(csvra[name1], lstra[name2]):
                 print(rate1, rate2)
     assert success_all, f"Comparisons failed for {failed_list}"

@@ -300,7 +300,9 @@ module Xt3dModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Print a message identifying the xt3d module.
-    write(this%iout, fmtheader)
+    if (this%iout > 0) then
+      write(this%iout, fmtheader)
+    end if
     !
     ! -- Store pointers to arguments that were passed in
     this%ibound  => ibound
