@@ -120,7 +120,7 @@ Rearranging equation~\ref{eqn:tvs-qsy-new} for solution at the current iteration
 	\end{aligned}
 \end{equation}
 
-\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the beginning of the time step {\color{red} *** AMP: should this say "at the end of the time step"??? ***} is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
+\noindent As in the base formulation \citep[Chapter 5]{modflow6gwf}, for cells where the head at the end of the time step is at or above the top of the cell, $S_{F_n}^t = 1$ and the specific yield contribution is known. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution instead becomes
 
 \begin{equation}
 	\label{eqn:tvs-sy-b-fullsat}
@@ -165,6 +165,4 @@ As all $SC2_n^\told$ terms are eliminated by differentiation, the derivative of 
 	\end{aligned}
 \end{equation}
 
-\noindent For cells where the head at the beginning of the time step {\color{red} *** AMP: like earlier, should this say "at the end of the time step"??? ***} is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.
-
-{\color{red} *** AMP: I know I keep bringing this up, but Newton expressions of the form used in \ref{eqn:STOeq-nr}, \ref{eqn:tvs-sy-nr}, and \ref{eqn:tvs-sy-nr-expanded} (and in other MF publications) are not mathematically true statements -- the left side does not literally equal the right side. Ideally, it would be good to (at some point) come up with a way to express the underlying relationships that isn't potentially misleading. ***}
+\noindent For cells where the head at the end of the time step is at or above the top of the cell, the derivative is zero. In these cases, no terms are added to $A_{n,n}$ and the right-hand side contribution reverts to the standard formulation in equation~\ref{eqn:tvs-sy-b-fullsat}.
