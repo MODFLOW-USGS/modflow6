@@ -220,7 +220,9 @@ module GwtDspModule
     this%porosity => porosity
     !
     ! -- Print a message identifying the dispersion package.
-    write(this%iout, fmtdsp) this%inunit
+    if (this%iout > 0) then
+      write(this%iout, fmtdsp) this%inunit
+    end if
     !
     ! -- Allocate arrays
     call this%allocate_arrays(this%dis%nodes)
