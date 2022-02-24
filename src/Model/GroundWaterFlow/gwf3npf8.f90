@@ -3293,6 +3293,10 @@ module GwfNpfModule
                                           ihc, xc, yc, zc, dltot)
           cl1 = this%dis%con%cl1(isympos)
           cl2 = this%dis%con%cl2(isympos)
+          if (m < n) then
+            cl1 = this%dis%con%cl2(isympos)
+            cl2 = this%dis%con%cl1(isympos)
+          end if
           ooclsum = DONE / (cl1 + cl2)
           diz(iz) = dltot * cl1 * ooclsum
           qz = flowja(ipos)
@@ -3314,6 +3318,10 @@ module GwfNpfModule
                                           ihc, xc, yc, zc, dltot)
           cl1 = this%dis%con%cl1(isympos)
           cl2 = this%dis%con%cl2(isympos)
+          if (m < n) then
+            cl1 = this%dis%con%cl2(isympos)
+            cl2 = this%dis%con%cl1(isympos)
+          end if
           ooclsum = DONE / (cl1 + cl2)
           nix(ic) = -xn
           niy(ic) = -yn

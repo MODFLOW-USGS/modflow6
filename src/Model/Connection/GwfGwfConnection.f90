@@ -589,6 +589,7 @@ contains
     real(DP) :: cx, cy, cz
     real(DP) :: conLen
     real(DP) :: dist
+    real(DP) :: cl
     logical :: nozee
     type(ConnectionsType), pointer :: imCon                 !< interface model connections
     class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
@@ -645,7 +646,11 @@ contains
             area = area * satThick
           end if
 
-          dist = conLen * imCon%cl1(isym) / (imCon%cl1(isym) + imCon%cl2(isym))
+          cl = imCon%cl1(isym)
+          if (m < n) then
+            cl = imCon%cl2(isym)
+          end if
+          dist = conLen * cl / (imCon%cl1(isym) + imCon%cl2(isym))
           call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area,    &
                                                     nx, ny, dist)
         else
