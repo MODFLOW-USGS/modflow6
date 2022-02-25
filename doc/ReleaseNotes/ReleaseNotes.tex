@@ -154,7 +154,7 @@ MODFLOW~6 is tested with a large number of example problems, and new capabilitie
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.3.0--Month, Day, Year
+	\item Version mf6.3.0--March 4, 2022
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
@@ -184,6 +184,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	        \item Budget information for individual boundary package entries can be written to the model list file in a table form.  The table no longer includes boundaries that are in cells that are dry.
 	        \item When the simulated concentration in a cell is negative, which can occur erroneously due to numerical methods, then any sinks present in the cell should not add or remove any mass.  The program was modified so that sinks are deactivated if the simulated concentration in a cell is negative.
 	        \item Correct parsing of observation input so that observation names can have spaces if the observation name is enclosed in quotations.
+	        \item The GWF Node Property Flow (NPF) Package can optionally calculate the three components of specific discharge.  The program calculates these components using an interpolation method based on XT3D method, the simulated flows across each cell face, and distances from the center of the cell to each cell face.  This release contains a fix for a coding error in the calculation of the distance from the center of the cell to the cell face.  The fix will affect the calculated specific discharge for model grids that have variable cell sizes.  Because specific discharge is used in the calculation of the dispersion coefficients for GWT Models, simulated concentrations with this release may be different from simulated concentrations from previous releases; however, these concentration differences are expected to be minor.
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
