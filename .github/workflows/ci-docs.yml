@@ -34,7 +34,7 @@ jobs:
       - name: Install TeX Live
         run: |
           sudo apt-get update
-          sudo apt install texlive-latex-extra texlive-science
+          sudo apt install texlive-latex-extra texlive-science texlive-font-utils
 
       - name: Clone USGS LaTeX repo
         run: |
