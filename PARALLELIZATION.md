@@ -1,4 +1,4 @@
-# Installation Instructions PETSC
+q# Installation Instructions PETSC
 
 ## Ubuntu 
 
@@ -7,5 +7,10 @@
 - `cd petsc`
 - `./configure` (when building release build also `--with-debugging=no`)
 - `make all check`
-- `sudo cp arch-linux-c-debug/lib/pkgconfig/PETSc.pc /usr/lib/pkgconfig/`
-- add the following e.g. to `~/.bash_profile`: `export LD_LIBRARY_PATH="$(pwd)/arch-linux-c-debug/lib:$LD_LIBRARY_PATH"`
+- This will result in a folder `arch-linux-c-debug` for debug and `arch-linux-c-opt` for release builds
+- Add the following to `~/.bashrc`
+```
+export LD_LIBRARY_PATH="/path/to/compiled/petsc/lib:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/path/to/compiled/petsc/lib/pkgconfig:$PKG_CONFIG_PATH"
+```
+With `/path/to/compiled/petsc` being the absolute path to `arch-linux-c-debug` or `arch-linux-c-opt` depending on which build type you chose before.
