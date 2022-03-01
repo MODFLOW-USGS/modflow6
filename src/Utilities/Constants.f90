@@ -165,4 +165,12 @@ module ConstantsModule
     ENUMERATOR :: MRUN=2      !< 2
   END ENUM
 
+  ! -- enumerator that defines the compiler
+  ENUM, BIND(C)
+    ENUMERATOR :: CUNKNOWN=0  !< 0
+    ENUMERATOR :: CGFORTRAN=1 !< 1
+    ENUMERATOR :: CINTEL=3    !< 2
+    ENUMERATOR :: CCRAYFTN=3  !< 3
+  END ENUM
+
 end module ConstantsModule
