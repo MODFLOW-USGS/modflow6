@@ -45,16 +45,16 @@ module GwfGwfConnectionModule
     generic, public :: construct => gwfGwfConnection_ctor
     
     ! overriding NumericalExchangeType
-    procedure, pass(this) :: exg_df => gwfgwfcon_df    
-    procedure, pass(this) :: exg_ar => gwfgwfcon_ar
-    procedure, pass(this) :: exg_rp => gwfgwfcon_rp
-    procedure, pass(this) :: exg_ad => gwfgwfcon_ad
-    procedure, pass(this) :: exg_cf => gwfgwfcon_cf
-    procedure, pass(this) :: exg_fc => gwfgwfcon_fc
-    procedure, pass(this) :: exg_da => gwfgwfcon_da
-    procedure, pass(this) :: exg_cq => gwfgwfcon_cq
-    procedure, pass(this) :: exg_bd => gwfgwfcon_bd
-    procedure, pass(this) :: exg_ot => gwfgwfcon_ot
+    procedure :: exg_df => gwfgwfcon_df    
+    procedure :: exg_ar => gwfgwfcon_ar
+    procedure :: exg_rp => gwfgwfcon_rp
+    procedure :: exg_ad => gwfgwfcon_ad
+    procedure :: exg_cf => gwfgwfcon_cf
+    procedure :: exg_fc => gwfgwfcon_fc
+    procedure :: exg_da => gwfgwfcon_da
+    procedure :: exg_cq => gwfgwfcon_cq
+    procedure :: exg_bd => gwfgwfcon_bd
+    procedure :: exg_ot => gwfgwfcon_ot
 
     ! overriding 'protected'
     procedure, pass(this) :: validateConnection

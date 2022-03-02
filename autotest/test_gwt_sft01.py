@@ -37,7 +37,7 @@ def build_model(idx, dir):
     delc = 1.0
     delr = lx / ncol
     delz = lz / nlay
-    top = 0.
+    top = 0.0
     botm = [top - (k + 1) * delz for k in range(nlay)]
 
     perlen = [0.1]

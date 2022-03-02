@@ -800,7 +800,7 @@ def run_transport_model():
         name2 = lstra.dtype.names[i]
         if i == 18:
             # percent difference needs to compare small numbers
-            success = np.allclose(csvra[name1], lstra[name2], atol=1.e-7)
+            success = np.allclose(csvra[name1], lstra[name2], atol=1.0e-7)
         else:
             success = np.allclose(csvra[name1], lstra[name2], rtol=0.01)
         if not success:

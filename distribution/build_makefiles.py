@@ -121,6 +121,7 @@ def build_mf5to6_makefile():
             dryrun=True,
             makefile=True,
             networkx=True,
+            fflags="-fall-intrinsics",
         )
 
         msg = f"could not create makefile for '{os.path.basename(target)}'."

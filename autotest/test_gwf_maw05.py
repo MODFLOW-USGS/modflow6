@@ -207,7 +207,7 @@ def eval_results(sim):
     head = hobj.get_alldata()
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * np.pi * 0.1 ** 2
+    v0maw = mawstrt[sim.idxsim] * np.pi * 0.1**2
     v0gwf = 4 * 7 * 0.3
     v0 = v0maw + v0gwf
     top = [4.0, 3.0, 2.0, 1.0]
@@ -232,7 +232,7 @@ def eval_results(sim):
                 tp = min(head[kstp, k, 0, j], top[k])
                 dz = tp - botm[k]
                 vgwf += 0.3 * max(0.0, dz)
-        vmaw = stage[kstp] * np.pi * 0.1 ** 2
+        vmaw = stage[kstp] * np.pi * 0.1**2
         vnow = vmaw + vgwf
         errmsg = (
             "kstp {}: \n".format(kstp + 1)

@@ -406,18 +406,7 @@ module GenericUtilitiesModule
     end if
   
     ! -- return the correct return code
-    select case (ireturn_err)
-      case (0)
-        stop
-      case (1)
-        stop 1
-      case (2)
-        stop 2
-      case (138)
-        stop 138
-      case default
-        stop 999
-    end select
+    call exit(ireturn_err)
   
   end subroutine stop_with_error  
 

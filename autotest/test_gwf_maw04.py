@@ -62,13 +62,13 @@ size3d = nlay * nrow * ncol
 xlen = 1000.0
 common_ratio = 1.01
 nhalf = int(0.5 * ncol) + 1
-first_term = 0.5 * xlen / ((1 - common_ratio ** nhalf) / (1 - common_ratio))
+first_term = 0.5 * xlen / ((1 - common_ratio**nhalf) / (1 - common_ratio))
 delr = np.zeros((ncol), dtype=float)
 for n in range(nhalf):
     if n == 0:
         v = first_term
     else:
-        v = first_term * common_ratio ** n
+        v = first_term * common_ratio**n
     delr[nhalf + n - 1] = v
 delr[: nhalf - 1] = delr[-1 : nhalf - 1 : -1]
 

@@ -1,4 +1,4 @@
-# makedefaults created by pymake (version 1.2.2) for the 'mf6' executable.
+# makedefaults created by pymake (version 1.2.3) for the 'mf6' executable.
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -16,17 +16,18 @@ endif
 # Define the directories for the object and module files
 # and the executable and its path.
 BINDIR = ../bin
-OBJDIR = ./obj_temp
-MODDIR = ./mod_temp
+OBJDIR = obj_temp
+MODDIR = mod_temp
 INCSWITCH = -I $(OBJDIR)
 MODSWITCH = -J $(MODDIR)
-
-# define program name
-PROGRAM = $(BINDIR)/mf6
 
 # define os dependent program name
 ifeq ($(detected_OS), Windows)
 	PROGRAM = $(BINDIR)/mf6.exe
+else ifeq ($(detected_OS), Darwin)
+	PROGRAM = $(BINDIR)/mf6
+else
+	PROGRAM = $(BINDIR)/mf6
 endif
 
 # use GNU compilers if defined compilers do not exist
@@ -56,15 +57,18 @@ OPTLEVEL ?= -O2
 # set the fortran flags
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
+		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fall-intrinsics -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
+		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fall-intrinsics -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
 		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fpp
 		MODSWITCH = -module $(MODDIR)
+	endif
+	ifeq ($(FC), $(filter $(FC), ftn))
+		FFLAGS ?= -h noheap_allocate
 	endif
 endif
 
@@ -78,6 +82,9 @@ else
 		LDFLAGS ?= -lc
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
+		LDFLAGS ?= -lc
+	endif
+	ifeq ($(FC), $(filter $(FC), ftn))
 		LDFLAGS ?= -lc
 	endif
 endif

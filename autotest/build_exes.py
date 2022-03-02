@@ -35,6 +35,7 @@ mfexe_pth = "temp/mfexes"
 # some flags to check for errors in the code
 # add -Werror for compilation to terminate if errors are found
 strict_flags = (
+    "-fall-intrinsics "
     "-Wtabs -Wline-truncation -Wunused-label "
     "-Wunused-variable -pedantic -std=f2008 "
     "-Wcharacter-truncation"

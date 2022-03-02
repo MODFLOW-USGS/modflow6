@@ -4,6 +4,8 @@ import sys
 import shutil
 import subprocess
 
+import pytest
+
 try:
     import flopy
 except:
@@ -16,7 +18,9 @@ import targets
 
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 name = "gwf_ret_codes01"
-ws = os.path.join("temp", name)
+base_ws = os.path.join("temp", name)
+if not os.path.isdir(base_ws):
+    os.makedirs(base_ws)
 app = "mf6"
 if sys.platform.lower() == "win32":
     app += ".exe"
@@ -141,6 +145,8 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
 
 
 def normal_termination():
+    ws = os.path.join(base_ws, "normal_termination")
+
     # get the simulation
     sim = get_sim(ws, idomain=1)
 
@@ -149,7 +155,6 @@ def normal_termination():
 
     # run the simulation
     returncode, buff = run_mf6([mf6_exe], ws)
-    msg = "could not run {}".format(sim.name)
     if returncode != 0:
         msg = (
             "The run should have been successful but it terminated "
@@ -157,10 +162,15 @@ def normal_termination():
         )
         raise ValueError(msg)
 
+    # clean up working directory
+    clean(ws)
+
     return
 
 
 def converge_fail_continue():
+    ws = os.path.join(base_ws, "converge_fail_continue")
+
     # get the simulation
     sim = get_sim(ws, idomain=1, continue_flag=True, nouter=1)
 
@@ -179,6 +189,8 @@ def converge_fail_continue():
 
 
 def converge_fail_nocontinue():
+    ws = os.path.join(base_ws, "converge_fail_nocontinue")
+
     with pytest.raises(RuntimeError):
         # get the simulation
         sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
@@ -190,10 +202,13 @@ def converge_fail_nocontinue():
         returncode, buff = run_mf6([mf6_exe], ws)
         msg = "This run should fail with a returncode of 1"
         if returncode == 1:
+            clean(ws)
             raise RuntimeError(msg)
 
 
 def idomain_runtime_error():
+    ws = os.path.join(base_ws, "idomain_runtime_error")
+
     with pytest.raises(RuntimeError):
         # get the simulation
         sim = get_sim(ws, idomain=0)
@@ -208,6 +223,7 @@ def idomain_runtime_error():
             err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
             err = any(err_str in s for s in buff)
             if err:
+                clean(ws)
                 raise RuntimeError(msg)
             else:
                 msg += " but IDOMAIN ARRAY ERROR not returned"
@@ -215,6 +231,8 @@ def idomain_runtime_error():
 
 
 def unknown_keyword_error():
+    ws = base_ws
+
     with pytest.raises(RuntimeError):
         returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
         msg = "could not run {}".format("unknown_keyword")
@@ -229,6 +247,8 @@ def unknown_keyword_error():
 
 
 def run_argv(arg, return_str):
+    ws = base_ws
+
     returncode, buff = run_mf6([mf6_exe, arg], ws)
     if returncode == 0:
         found_str = any(return_str in s for s in buff)
@@ -266,12 +286,32 @@ def compiler_argv():
         run_argv(arg, return_str)
 
 
-def clean_sim():
-    print("Cleaning up")
-    shutil.rmtree(ws)
+def clean(dir_pth):
+    print(f"Cleaning up {dir_pth}")
+    shutil.rmtree(dir_pth)
 
 
-def test_main():
+@pytest.mark.parametrize(
+    "fn",
+    (
+        "idomain_runtime_error()",
+        "unknown_keyword_error()",
+        "normal_termination()",
+        "converge_fail_nocontinue()",
+        "help_argv()",
+        "version_argv()",
+        "develop_argv()",
+        "compiler_argv()",
+    ),
+)
+def test_main(fn):
+    eval(fn)
+
+
+if __name__ == "__main__":
+    # print message
+    print("standalone run of {}".format(os.path.basename(__file__)))
+
     idomain_runtime_error()
     unknown_keyword_error()
     normal_termination()
@@ -280,11 +320,4 @@ def test_main():
     version_argv()
     develop_argv()
     compiler_argv()
-    clean_sim()
-
-
-if __name__ == "__main__":
-    # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
-
-    test_main()
+    clean(base_ws)

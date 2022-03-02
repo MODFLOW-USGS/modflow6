@@ -53,17 +53,17 @@ module GwtGwtConnectionModule
     procedure, pass(this) :: gwtGwtConnection_ctor
     generic, public :: construct => gwtGwtConnection_ctor
 
-    procedure, pass(this) :: exg_ar => gwtgwtcon_ar
-    procedure, pass(this) :: exg_df => gwtgwtcon_df
-    procedure, pass(this) :: exg_ac => gwtgwtcon_ac
-    procedure, pass(this) :: exg_rp => gwtgwtcon_rp
-    procedure, pass(this) :: exg_ad => gwtgwtcon_ad
-    procedure, pass(this) :: exg_cf => gwtgwtcon_cf
-    procedure, pass(this) :: exg_fc => gwtgwtcon_fc
-    procedure, pass(this) :: exg_da => gwtgwtcon_da
-    procedure, pass(this) :: exg_cq => gwtgwtcon_cq
-    procedure, pass(this) :: exg_bd => gwtgwtcon_bd
-    procedure, pass(this) :: exg_ot => gwtgwtcon_ot
+    procedure :: exg_ar => gwtgwtcon_ar
+    procedure :: exg_df => gwtgwtcon_df
+    procedure :: exg_ac => gwtgwtcon_ac
+    procedure :: exg_rp => gwtgwtcon_rp
+    procedure :: exg_ad => gwtgwtcon_ad
+    procedure :: exg_cf => gwtgwtcon_cf
+    procedure :: exg_fc => gwtgwtcon_fc
+    procedure :: exg_da => gwtgwtcon_da
+    procedure :: exg_cq => gwtgwtcon_cq
+    procedure :: exg_bd => gwtgwtcon_bd
+    procedure :: exg_ot => gwtgwtcon_ot
 
     ! overriding 'protected'
     procedure, pass(this) :: validateConnection

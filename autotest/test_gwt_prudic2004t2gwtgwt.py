@@ -172,14 +172,14 @@ def build_model(idx, ws):
     for k in range(nlay):
         for j in range(ncol):
             connection = [
-                (k, global_row_end_north, j),     # cellidm1
-                (k, global_row_start_south, j),   # cellidm2
-                1,                                # ihc
-                delc / 2.0,                       # cl1
-                delc / 2.0,                       # cl2
-                delr,                             # hwva
-                angldegx,                         # angldegx
-                cdist,                            # cdist
+                (k, global_row_end_north, j),  # cellidm1
+                (k, global_row_start_south, j),  # cellidm2
+                1,  # ihc
+                delc / 2.0,  # cl1
+                delc / 2.0,  # cl2
+                delr,  # hwva
+                angldegx,  # angldegx
+                cdist,  # cdist
             ]
             add_connection = True
             if idomain[k, global_row_end_north, j] == 0:
@@ -241,22 +241,28 @@ def build_model(idx, ws):
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
         mvt_filerecord=mvt_filerecord,
-        #dev_interfacemodel_on=False,
+        # dev_interfacemodel_on=False,
     )
 
     # simulation GWT-GWT Mover
     if across_model_mvt_on:
-        mvt = flopy.mf6.modflow.ModflowGwtmvt(sim, filename=f"{name}.gwtgwt.mvt")
+        mvt = flopy.mf6.modflow.ModflowGwtmvt(
+            sim, filename=f"{name}.gwtgwt.mvt"
+        )
 
     regression = None
     return sim, regression
 
-def sfr_packagedata_to_list(fname, gwf, boundnames=False, convert_to_zero_base=True):
-    dt = flopy.mf6.ModflowGwfsfr.packagedata.dtype(gwf, cellid_expanded=True,
-                                               boundnames=boundnames, timeseries=False)
+
+def sfr_packagedata_to_list(
+    fname, gwf, boundnames=False, convert_to_zero_base=True
+):
+    dt = flopy.mf6.ModflowGwfsfr.packagedata.dtype(
+        gwf, cellid_expanded=True, boundnames=boundnames, timeseries=False
+    )
     dt[10] = ("man", float)
     if boundnames:
-        dt[14] = ("boundname", 'S40')
+        dt[14] = ("boundname", "S40")
     ra = np.genfromtxt(fname, dtype=dt)
     if convert_to_zero_base:
         ra["rno"] -= 1
@@ -272,15 +278,20 @@ def sfr_packagedata_to_list(fname, gwf, boundnames=False, convert_to_zero_base=T
 
     return sfrpdlist
 
+
 def sfr_connectiondata_to_list(fname, convert_to_zero_base=True):
     with open(fname) as f:
         cd_list = [[int(i) for i in s.strip().split()] for s in f.readlines()]
     if convert_to_zero_base:
-        cd_list = [[np.sign(irch) * (abs(irch) - 1) for irch in l] for l in cd_list]
+        cd_list = [
+            [np.sign(irch) * (abs(irch) - 1) for irch in l] for l in cd_list
+        ]
     return cd_list
 
 
-def build_gwfgwt_combo(sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsgwf, imsgwt):
+def build_gwfgwt_combo(
+    sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsgwf, imsgwt
+):
 
     # number of time steps for period 2 are reduced from 12 * 25 to 25 in
     # order to speed up this autotest
@@ -369,9 +380,17 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsg
         for isfrseg in isfrseglist:
             sfrperioddata = None
             if isfrseg == 1:
-                sfrperioddata = {0: [[0, "inflow", 86400], ]}
+                sfrperioddata = {
+                    0: [
+                        [0, "inflow", 86400],
+                    ]
+                }
             if isfrseg == 3:
-                sfrperioddata = {0: [[0, "inflow", 8640.0], ]}
+                sfrperioddata = {
+                    0: [
+                        [0, "inflow", 8640.0],
+                    ]
+                }
             fname = os.path.join(data_ws, f"sfr-packdata-{isfrseg}.dat")
             sfrpd = sfr_packagedata_to_list(fname, gwf)
             nreaches = len(sfrpd)
@@ -498,7 +517,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsg
     elif icombo == 2:
         lakpackagedata = [[0, 35.2, nlakecon[0], "lake2"]]
     else:
-        raise Exception('brokin')
+        raise Exception("brokin")
 
     if lake_on:
         i, j = np.where(lakibd > 0)
@@ -558,7 +577,6 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsg
         ninner = 20
         relax = 0.97
 
-
         dis = flopy.mf6.ModflowGwtdis(
             gwt,
             nlay=nlay,
@@ -597,10 +615,14 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsg
             )
 
         if icombo == 1:
-            lktpackagedata = [(0, 0.0, 99.0, 999.0, "mylake1"),]
+            lktpackagedata = [
+                (0, 0.0, 99.0, 999.0, "mylake1"),
+            ]
             lktperioddata = [(0, "STATUS", "ACTIVE")]
         elif icombo == 2:
-            lktpackagedata = [(0, 0.0, 99.0, 999.0, "mylake2"),]
+            lktpackagedata = [
+                (0, 0.0, 99.0, 999.0, "mylake2"),
+            ]
             lktperioddata = [(0, "STATUS", "ACTIVE")]
         else:
             raise Exception("something is not right")
@@ -726,10 +748,10 @@ def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
         sftpack = gwt.get_package(f"sft-3")
         times = sftpack.output.concentration().times
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
-        sft3outflowconc = conc[:, -1] # last reach
+        sft3outflowconc = conc[:, -1]  # last reach
         sftpack = gwt.get_package(f"sft-4")
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
-        sft4outflowconc = conc[:, -1] # last reach
+        sft4outflowconc = conc[:, -1]  # last reach
 
     if times is not None:
         import matplotlib.pyplot as plt
@@ -738,13 +760,19 @@ def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
         times = np.array(times) / 365.0
         if lkaconc is not None:
             plt.plot(times, lkaconc[:, 0], "b-", label="Lake 1")
-            plt.plot(times, ans_lak1, ls="none", marker="o", mfc='none', mec='b')
+            plt.plot(
+                times, ans_lak1, ls="none", marker="o", mfc="none", mec="b"
+            )
         if sft3outflowconc is not None:
             plt.plot(times, sft3outflowconc, "r-", label="Stream segment 3")
-            plt.plot(times, ans_sfr3, ls="none", marker="o", mfc='none', mec='r')
+            plt.plot(
+                times, ans_sfr3, ls="none", marker="o", mfc="none", mec="r"
+            )
         if sft4outflowconc is not None:
             plt.plot(times, sft4outflowconc, "g-", label="Stream segment 4")
-            plt.plot(times, ans_sfr4, ls="none", marker="o", mfc='none', mec='g')
+            plt.plot(
+                times, ans_sfr4, ls="none", marker="o", mfc="none", mec="g"
+            )
         plt.legend()
         plt.ylim(0, 50)
         plt.xlim(0, 25)
@@ -762,13 +790,12 @@ def make_head_map(sim, ws):
     print("making head map...")
 
     import matplotlib.pyplot as plt
+
     levels = np.arange(20, 60, 1)
-    fig, axs = plt.subplots(
-        1, 2, figsize=(8, 5), dpi=300, tight_layout=True
-    )
+    fig, axs = plt.subplots(1, 2, figsize=(8, 5), dpi=300, tight_layout=True)
 
     # push combo heads into global head
-    head_global = np.ones(idomain.shape, dtype=float) * 1.e30
+    head_global = np.ones(idomain.shape, dtype=float) * 1.0e30
     print("head global shape", head_global.shape)
     for icombo in [1, 2]:
         gwfname = gwfnames[icombo - 1]
@@ -777,7 +804,7 @@ def make_head_map(sim, ws):
         gwt = sim.get_model(gwtname)
         head = gwf.output.head().get_data()
         print("head shape", head.shape)
-        head_idx = np.where(head != 1.e30)
+        head_idx = np.where(head != 1.0e30)
         head_global[head_idx] = head[head_idx]
 
         if lake_on:
@@ -792,11 +819,13 @@ def make_head_map(sim, ws):
     for ilay in [0, 1]:
         ax = axs[ilay]
         pmv = flopy.plot.PlotMapView(model=gwf, ax=ax, layer=ilay)
-        #pmv.plot_grid()
+        # pmv.plot_grid()
         pmv.plot_array(lakibd, masked_values=[0], alpha=0.2)
         pmv.plot_ibound(idomain)
         pmv.plot_bc(name="CHD-1", color="blue")
-        cs = pmv.contour_array(head_global, levels=levels, masked_values=[1.0e30])
+        cs = pmv.contour_array(
+            head_global, levels=levels, masked_values=[1.0e30]
+        )
         ax.clabel(cs, cs.levels[::5], fmt="%1.0f", colors="b")
         ax.set_title(f"Model layer {ilay + 1}")
 
@@ -811,6 +840,7 @@ def make_concentration_map(sim, ws):
     print("making concentration map...")
 
     import matplotlib.pyplot as plt
+
     levels = [
         1,
         10,
@@ -826,12 +856,10 @@ def make_concentration_map(sim, ws):
         450,
         500,
     ]
-    fig, axs = plt.subplots(
-        2, 2, figsize=(5, 7), dpi=300, tight_layout=True
-    )
+    fig, axs = plt.subplots(2, 2, figsize=(5, 7), dpi=300, tight_layout=True)
 
     # push combo concentrations into global concentration
-    concentration_global = np.ones(idomain.shape, dtype=float) * 1.e30
+    concentration_global = np.ones(idomain.shape, dtype=float) * 1.0e30
     print("concentration global shape", concentration_global.shape)
     for icombo in [1, 2]:
         gwfname = gwfnames[icombo - 1]
@@ -840,7 +868,7 @@ def make_concentration_map(sim, ws):
         gwt = sim.get_model(gwtname)
         conc = gwt.output.concentration().get_data()
         print("conc shape", conc.shape)
-        conc_idx = np.where(conc != 1.e30)
+        conc_idx = np.where(conc != 1.0e30)
         concentration_global[conc_idx] = conc[conc_idx]
 
         if lake_on and lkt_on:
@@ -855,11 +883,13 @@ def make_concentration_map(sim, ws):
     for iplot, ilay in enumerate([0, 2, 4, 7]):
         ax = axs.flatten()[iplot]
         pmv = flopy.plot.PlotMapView(model=gwt, ax=ax, layer=ilay)
-        #pmv.plot_grid()
+        # pmv.plot_grid()
         pmv.plot_array(lakibd, masked_values=[0], alpha=0.2)
         pmv.plot_ibound(idomain)
-        #pmv.plot_bc(name="CHD-1", color="blue")
-        cs = pmv.contour_array(concentration_global, levels=levels, masked_values=[1.0e30])
+        # pmv.plot_bc(name="CHD-1", color="blue")
+        cs = pmv.contour_array(
+            concentration_global, levels=levels, masked_values=[1.0e30]
+        )
         ax.clabel(cs, cs.levels[::1], fmt="%1.0f", colors="b")
         ax.set_title(f"Model layer {ilay + 1}")
 
@@ -917,10 +947,10 @@ def eval_results(sim):
         sftpack = gwt.get_package(f"sft-3")
         times = sftpack.output.concentration().times
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
-        sft3outflowconc = conc[:, -1] # last reach
+        sft3outflowconc = conc[:, -1]  # last reach
         sftpack = gwt.get_package(f"sft-4")
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
-        sft4outflowconc = conc[:, -1] # last reach
+        sft4outflowconc = conc[:, -1]  # last reach
 
     # set atol
     atol = 0.5

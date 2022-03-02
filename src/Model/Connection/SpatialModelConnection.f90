@@ -60,11 +60,11 @@ module SpatialModelConnectionModule
     generic :: construct => spatialConnection_ctor
 
     ! partly overriding NumericalExchangeType:
-    procedure, pass(this) :: exg_df => spatialcon_df    
-    procedure, pass(this) :: exg_ar => spatialcon_ar
-    procedure, pass(this) :: exg_ac => spatialcon_ac
-    procedure, pass(this) :: exg_mc => spatialcon_mc
-    procedure, pass(this) :: exg_da => spatialcon_da
+    procedure :: exg_df => spatialcon_df    
+    procedure :: exg_ar => spatialcon_ar
+    procedure :: exg_ac => spatialcon_ac
+    procedure :: exg_mc => spatialcon_mc
+    procedure :: exg_da => spatialcon_da
     
     ! protected
     procedure, pass(this) :: spatialcon_df    

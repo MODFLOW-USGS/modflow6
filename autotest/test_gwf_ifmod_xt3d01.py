@@ -239,11 +239,11 @@ def get_model(idx, dir):
         angle = l[-2]
         if angle == 0:
             bname = "left"
-        elif angle == 90.:
+        elif angle == 90.0:
             bname = "bottom"
-        elif angle == 180.:
+        elif angle == 180.0:
             bname = "right"
-        elif angle == 270.:
+        elif angle == 270.0:
             bname = "top"
         l.append(bname)
         exgdata_withbname.append(l)
@@ -265,7 +265,7 @@ def get_model(idx, dir):
     obslist = []
     obstype = "FLOW-JA-FACE"
     for iexg, exg_connection in enumerate(exgdata):
-        obslist.append((f"f{iexg + 1}", obstype, (iexg,) ))
+        obslist.append((f"f{iexg + 1}", obstype, (iexg,)))
 
     gwfgwfobs = {}
     gwfgwfobs["gwf_obs.csv"] = obslist
@@ -434,7 +434,9 @@ def eval_heads(sim):
     fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
     cbb = flopy.utils.CellBudgetFile(fpth)
     flow_ja_face = cbb.get_data(idx=0)
-    assert len(flow_ja_face) > 0, "Could not check residuals as flow-ja-face could not be found"
+    assert (
+        len(flow_ja_face) > 0
+    ), "Could not check residuals as flow-ja-face could not be found"
     ia = grb._datadict["IA"] - 1
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
@@ -454,18 +456,26 @@ def eval_heads(sim):
     # Extract the gwf-gwf flows stored in parent budget file
     fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
     cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
-    parent_exchange_flows = cbb.get_data(kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1")[0]
+    parent_exchange_flows = cbb.get_data(
+        kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1"
+    )[0]
     parent_exchange_flows = parent_exchange_flows["q"]
 
     # Extract the gwf-gwf flows stored in child budget file
     fpth = os.path.join(sim.simpath, "{}.cbc".format(child_name))
     cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
-    child_exchange_flows = cbb.get_data(kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1")[0]
+    child_exchange_flows = cbb.get_data(
+        kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1"
+    )[0]
     child_exchange_flows = child_exchange_flows["q"]
 
     # Ensure observations are the same as parent exchange flows and negative child exchange flows
-    assert np.allclose(obsvalues, parent_exchange_flows), "exchange observations do not match parent exchange flows"
-    assert np.allclose(obsvalues, -child_exchange_flows), "exchange observations do not match chile exchange flows"
+    assert np.allclose(
+        obsvalues, parent_exchange_flows
+    ), "exchange observations do not match parent exchange flows"
+    assert np.allclose(
+        obsvalues, -child_exchange_flows
+    ), "exchange observations do not match chile exchange flows"
 
     # Read the lumped boundname observations values
     fpth = os.path.join(sim.simpath, "gwf_obs_boundnames.csv")
@@ -473,7 +483,9 @@ def eval_heads(sim):
         lines = f.readlines()
     obsnames = [name for name in lines[0].strip().split(",")[1:]]
     obsvalues = [float(v) for v in lines[1].strip().split(",")[1:]]
-    assert np.allclose(obsvalues, [-50., 50., 0, 0.]), "boundname observations do not match expected results"
+    assert np.allclose(
+        obsvalues, [-50.0, 50.0, 0, 0.0]
+    ), "boundname observations do not match expected results"
 
     return
 

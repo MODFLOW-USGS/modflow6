@@ -1,4 +1,4 @@
-# makedefaults created by pymake (version 1.2.2) for the 'mf5to6' executable.
+# makedefaults created by pymake (version 1.2.3) for the 'mf5to6' executable.
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -16,17 +16,18 @@ endif
 # Define the directories for the object and module files
 # and the executable and its path.
 BINDIR = ../../../bin
-OBJDIR = ./obj_temp
-MODDIR = ./mod_temp
+OBJDIR = obj_temp
+MODDIR = mod_temp
 INCSWITCH = -I $(OBJDIR)
 MODSWITCH = -J $(MODDIR)
-
-# define program name
-PROGRAM = $(BINDIR)/mf5to6
 
 # define os dependent program name
 ifeq ($(detected_OS), Windows)
 	PROGRAM = $(BINDIR)/mf5to6.exe
+else ifeq ($(detected_OS), Darwin)
+	PROGRAM = $(BINDIR)/mf5to6
+else
+	PROGRAM = $(BINDIR)/mf5to6
 endif
 
 # use GNU compilers if defined compilers do not exist
@@ -66,6 +67,9 @@ else
 		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fpp
 		MODSWITCH = -module $(MODDIR)
 	endif
+	ifeq ($(FC), $(filter $(FC), ftn))
+		FFLAGS ?= -h noheap_allocate
+	endif
 endif
 
 # set the ldflgs
@@ -78,6 +82,9 @@ else
 		LDFLAGS ?= -lc
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
+		LDFLAGS ?= -lc
+	endif
+	ifeq ($(FC), $(filter $(FC), ftn))
 		LDFLAGS ?= -lc
 	endif
 endif
