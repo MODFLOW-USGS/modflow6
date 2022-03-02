@@ -30,7 +30,9 @@ link_args = []
 # Command line options for gfortran
 if fc_id == 'gcc'
   # General options
-  compile_args += ['-pedantic',
+  compile_args += [
+                   '-fall-intrinsics',
+                   '-pedantic',
                    '-Wcharacter-truncation',
                    '-Wno-unused-dummy-argument', # This makes problems with OOP
                    '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
