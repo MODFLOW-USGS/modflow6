@@ -25,15 +25,20 @@ in develop mode or in release mode, and the approval status.
 
 This information is determined using the following logic:
 
-  If the branch name is master or release, then it assumes this version is approved, which will
-  result in use of the approved disclaimer.  Otherwise it is assumed to be provisional and a
-  release candidate.  The approval status can be overridden using the --isApproved command
-  line argument.  The release status can be overridden and set to release candidate using
-  the --releaseCandidate command line argument.
+  If the branch name is master or release or the --isApproved argument is specified,
+  then it assumes this version is approved, which will result in use of the approved disclaimer.
+  Otherwise it is assumed to be provisional.
+
+  If the version is approved (as determined by the previous logic) then the distribution is
+  not marked as a release candidate unless it is forced to be so using the --releaseCandidate
+  command line argument.
 
   The version number is read in from ../version.txt, which contains major, minor, and micro version
   numbers.  These numbers will be propagated through the source code, latex files, markdown files,
   etc.  The version numbers can be overridden using the command line argument --version major.minor.macro.
+
+  Develop mode is set to 0 if the distribution is approved or it can be explicitly set using
+  the --developMode command line argument.
 
 Once this script is run, these updated files will be used in compilation, latex documents, and
 other parts of the repo to mark the overall status.
@@ -133,20 +138,15 @@ preliminaryfmt = '''  character(len=*), parameter :: FMTDISCLAIMER =            
 
 
 def get_disclaimer():
-    # get current branch
-    branch = get_branch()
-
-    if "release" in branch.lower() or "master" in branch.lower():
+    is_approved = get_is_approved()
+    if is_approved:
         disclaimer = approved
-        is_approved = True
     else:
         disclaimer = preliminary
-        is_approved = False
-
     return is_approved, disclaimer
 
 
-def get_disclaimerfmt():
+def get_is_approved():
 
     is_approved = None
 
@@ -159,11 +159,21 @@ def get_disclaimerfmt():
         # get current branch
         branch = get_branch()
         if "release" in branch.lower() or "master" in branch.lower():
-            disclaimer = approvedfmt
             is_approved = True
         else:
-            disclaimer = preliminaryfmt
             is_approved = False
+
+    return is_approved
+
+
+def get_disclaimerfmt():
+
+    is_approved = get_is_approved()
+
+    if is_approved:
+        disclaimer = approvedfmt
+    else:
+        disclaimer = preliminaryfmt
 
     return is_approved, disclaimer
 
@@ -321,10 +331,10 @@ def get_version_type(branch):
             version_type = " release candidate "
 
     if version_type is None:
+        is_approved = get_is_approved()
         version_type = " "
-        if branch is not None:
-            if "release" not in branch.lower() and "master" not in branch.lower():
-                version_type = " release candidate "
+        if not is_approved:
+            version_type = " release candidate "
 
     return version_type
 
@@ -341,7 +351,8 @@ def get_develop_mode(branch):
 
     if idevelop is None:
         idevelop = 0
-        if "release" not in branch.lower() and "master" not in branch.lower():
+        is_approved = get_is_approved()
+        if not is_approved:
             idevelop = 1
 
     return idevelop
