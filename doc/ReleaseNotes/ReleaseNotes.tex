@@ -62,7 +62,6 @@
 %\renewcommand{\theauthorslastfirst}{}
 \renewcommand{\reportcitingtheauthors}{MODFLOW~6 Development Team}
 \renewcommand{\colophonmoreinfo}{}
-\renewcommand{\theoffice}{Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648-5001}
 \renewcommand{\reportbodypages}{}
 \urlstyle{rm}
 \renewcommand{\reportwebsiteroot}{https://doi.org/10.5066/}
@@ -93,8 +92,8 @@ Publishing support provided by the U.S. Geological Survey \\
 \newline \newline
 For information concerning this publication, please contact:
 \newline \newline
-Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648--5001 \\
-https://water.usgs.gov/ogw/
+Integrated Modeling and Prediction Division \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\
+https://www.usgs.gov/mission-areas/water-resources
 }
 
 \renewcommand{\reportrefname}{References Cited}
@@ -143,7 +142,7 @@ https://water.usgs.gov/ogw/
 
 % -------------------------------------------------
 \section{Introduction}
-This document describes MODFLOW~6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 and 10 operating systems, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
+This document describes MODFLOW~6 Version \modflowversion.  This distribution is packaged for personal computers using modern versions of the Microsoft Windows operating system, although the programs included in the distribution may run on older versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
 
 Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
 
@@ -158,8 +157,9 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
+		\item New publications describing MODFLOW~6 were released, including \cite{modflow6api}, \cite{modflow6gwt}, and \cite{modflow6csub}. 
 	        \item The GWF-GWF Exchange was updated to support XT3D flow calculations along the edges of connected GWF Models.  The XT3D flow calculation is an alternative to the ghost-node correction and has been shown to provide accurate flow calculations for cell connections that do not meet the control-volume finite-difference requirements.  This new capability allows the GWF-GWF Exchange to tightly couple a wide variety of parent and child grid configurations.  The new XT3D option for the GWF-GWF Exchange can be activated by specifying XT3D in the options block of the GWF-GWF Exchange input file.  The XT3D implementation for GWF-GWF is based on a new generalized coupling method that is described in the Supplemental Technical Information document distributed with this release.
-	        \item A new capability was added to support tight coupling of GWT Models through a new GWT-GWT Exchange.  The new GWT-GWT Exchange can be used to connect any two GWT Models in a manner similar to the GWF-GWF Exchange.  This allows transport to be represented from one GWT Model to another.  The GWT-GWT Exchange calculates advective and dispersive fluxes and also supports the Mover Transport (MVT) Package.  This first release of the GWT-GWT Exchange is limited to simulations in which the corresponding GWF Models and GWF-GWF Exchanges are run concurrently within the same simulation; the new capability does not yet support simulation of transport using groundwater flows saved from a previous simulation.  The new GWT-GWT functionality is activated by creating a GWT-GWT input file and specifying a GWT6-GWT6 exchange in the EXCHANGEDATA block of the simulation name file (mfsim.nam).  The GWT-GWT Exchange is based on a new generalized coupling method that is described in the Supplemental Technical Information document distributed with this release.
+	        \item A new capability was added to support tight coupling of GWT Models through a new GWT-GWT Exchange.  The new GWT-GWT Exchange can be used to connect any two GWT Models in a manner similar to the GWF-GWF Exchange.  This allows transport to be represented from one GWT Model to another.  The GWT-GWT Exchange calculates advective and dispersive fluxes and also supports the Mover Transport (MVT) Package.  This first release of the GWT-GWT Exchange is limited to simulations in which the corresponding GWF Models and GWF-GWF Exchanges are run concurrently within the same simulation; the new capability does not support simulation of transport using groundwater flows saved from a previous simulation; however, this may be supported in the future.  The new GWT-GWT functionality is activated by creating a GWT-GWT input file and specifying a GWT6-GWT6 exchange in the EXCHANGEDATA block of the simulation name file (mfsim.nam).  The GWT-GWT Exchange is based on a new generalized coupling method that is described in the Supplemental Technical Information document distributed with this release.
 	        \item This release introduces the Time-Varying hydraulic conductivity (TVK) and the Time-Varying Storage (TVS) options for the Node Property Flow (NPF) and Storage (STO) Packages, respectively, of the GWF Model.  The TVK option is activated by specifying the TVK6 keyword in the OPTIONS block of the NPF Package and by providing a TVK6 input file.  The TVS option is activated by specifying the TVS6 keyword in the OPTIONS block of the STO Package, and by providing a TVS6 input file.  The TVK6 and TVS6 input files are described in input and output guide (mf6io.pdf).  Technical information about the TVK and TVS options is provided in the Supplemental Technical Information report that is provided with the distribution.
 	        \item The option already existed to provide binary budget and head file information from a GWF simulation for only the first time step of a given stress period, in which case that information will be used for all time steps in that stress period in a GWT simulation that reads from those files. The behavior of this option has been extended such that if the binary budget and head file information provided for the final stress period of the GWF simulation is for only one time step, that information will be used for any subsequent time steps and stress periods in the GWT simulation. This extended behavior includes as a special case the use of binary budget and head file information from only one time step in only one stress period (for example, a single steady-state GWF stress period) for all time steps in all stress periods in a GWT simulation.
 	        \item Added new file-based input capability for the GWT Source and Sink Mixing (SSM) Package.  The SSM Package previously required that all source and sink concentrations be provided as auxiliary variables for corresponding GWF stress packages.  The SSM Package now supports an optional new FILEINPUT block, which can be provided with package names and file names.  Files referenced in the FILEINPUT block can be used to provide time-varying source and sink concentrations.  A description of this new Stress Package Concentration (SPC) Input file is described in the input and output guide under a new section titled ``File Input for Boundary Concentrations.''  If used, a single SSMI file can be provided for a corresponding GWF stress package.  Either an SPC file or the auxiliary variable approach can be used to supply concentrations for a single GWF stress package, but not both.
@@ -181,14 +181,14 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	        \item Added a check to the Flow Model Interface (FMI) Package of the GWT Model that will cause the program to terminate with an error if flow and budget files needed from a flow model cannot be located.
 	        \item The Output Control Package did not correctly determine if the end of a stress period was reached if the Adaptive Time Stepping (ATS) option was active.  Output Control works correctly now with ATS.
 	        \item Budget information for individual boundary package entries can be written to the model list file in a table form.  The table no longer includes boundaries that are in cells that are dry.
-	        \item When the simulated concentration in a cell is negative, which can occur erroneously due to numerical methods, then any sinks present in the cell should not add or remove any mass.  The program was modified so that sinks are deactivated if the simulated concentration in a cell is negative.
+	        \item When the simulated concentration in a cell is negative, which can occur erroneously due to numerical methods, then any sinks present in the cell should not add or remove mass.  The program was modified so that transport through sinks is deactivated if the simulated concentration in a cell is negative.
 	        \item Correct parsing of observation input so that observation names can have spaces if the observation name is enclosed in quotations.
 	        \item The GWF Node Property Flow (NPF) Package can optionally calculate the three components of specific discharge.  The program calculates these components using an interpolation method based on XT3D method, the simulated flows across each cell face, and distances from the center of the cell to each cell face.  This release contains a fix for a coding error in the calculation of the distance from the center of the cell to the cell face.  The fix will affect the calculated specific discharge for model grids that have variable cell sizes.  Because specific discharge is used in the calculation of the dispersion coefficients for GWT Models, simulated concentrations with this release may be different from simulated concentrations from previous releases; however, these concentration differences are expected to be minor.
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
-	        \item Fixed a bug in the Recharge (RCH) and Evapotranspiration (EVT) Packages that would occur with array-based input (READASARRAYS) combined with the Time-Array Series (TAS) functionality.  Because the TAS functionality only works for DIS and DISU models, this fix does not have any effect on models that use DISU discretization.  The bug would occur when one or more cells in the upper layer were removed using the IDOMAIN capability.  In this special case, the time-array series values did not carry over to the correct locations in the RCH and EVT arrays.  This error would be difficult to identify for complex models, because the model would run to completion without any errors.  The RCH and EVT Packages were modified to maintain direct correspondence between the \texttt{nodelist} and \texttt{bound} arrays with the arrays provided to the TAS utility.  A small and intended consequence of this fix is that the ID2 value written to the binary budget file for array-based RCH and EVT Packages will correspond to the consecutive cell number in the top layer.  
+	        \item Fixed a bug in the Recharge (RCH) and Evapotranspiration (EVT) Packages that would occur with array-based input (READASARRAYS) combined with the Time-Array Series (TAS) functionality.  Because the TAS functionality only works for DIS and DISV models, this fix does not have any effect on models that use DISU discretization.  The bug would occur when one or more cells in the upper layer were removed using the IDOMAIN capability.  In this special case, the time-array series values did not carry over to the correct locations in the RCH and EVT arrays.  This error would be difficult to identify for complex models, because the model would run to completion without any errors.  The RCH and EVT Packages were modified to maintain direct correspondence between the \texttt{nodelist} and \texttt{bound} arrays with the arrays provided to the TAS utility.  A small and intended consequence of this fix is that the ID2 value written to the binary budget file for array-based RCH and EVT Packages will correspond to the consecutive cell number in the top layer.  
 	        \item Recharge and evapotranspiration flows that are written to the GWF Model binary budget file are marked with the text headers ``RCH'' and ``EVT'', respectively.  In order to support the array-based input for SSM concentrations, these text headers are marked as ``RCHA'' and ``EVTA'', respectively, if the READASARRAYS option is specified for the package.  This change will have no effect on simulation results; however, post processing capabilities may need to be adjusted to account for this minor renaming convention.
 	        \item When the PRINT\_FLOWS option was used with the Source and Sink Mixing (SSM) Package, the cell ID numbers written to the listing file were incorrect.  The SSM Package was fixed to output the correct cell ID.
 	        \item Add new AUTO\_FLOW\_REDUCE\_CSV option for the Well Package.  If activated, then this option will result in information being written to a comma-separated value file for each well and for each time step in which the extraction rate is reduced.  Well extraction rates can be reduced for some groundwater conditions if the AUTO\_FLOW\_REDUCE option is activated.  Information is not written for wells in which the extraction rate is equal to the user-specified extraction rate.
@@ -223,7 +223,7 @@ The capability to use Unsaturated Zone Flow (UZF) routing beneath lakes and stre
 For the Groundwater Transport (GWT) Model, the decay and sorption processes do not apply to the LKT, SFT, MWT and UZT Packages.
 
 \item
-The GWT Model does not yet work with the CSUB Package of the GWF Model.  
+The GWT Model does not work with the CSUB Package of the GWF Model.  
 
 \item
 The GWT-GWT Exchange requires that both GWF Models are run concurrently in the same simulation.  There is not an option to read GWF-GWF flows from a previous simulation.
@@ -291,6 +291,12 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 \item \bibentry{langevin2020hydraulic}
 
 \item \bibentry{morway2021}
+
+\item \bibentry{modflow6api}
+
+\item \bibentry{modflow6gwt}
+
+\item \bibentry{modflow6csub}
 
 \end{itemize}
  
