@@ -34,9 +34,9 @@ module GwtInterfaceModelModule
 
   contains
     procedure, pass(this) :: gwtifmod_cr
-    procedure, pass(this) :: model_df => gwtifmod_df
-    procedure, pass(this) :: model_ar => gwtifmod_ar
-    procedure, pass(this) :: model_da => gwtifmod_da
+    procedure :: model_df => gwtifmod_df
+    procedure :: model_ar => gwtifmod_ar
+    procedure :: model_da => gwtifmod_da
     procedure :: allocate_scalars
     procedure :: setDspGridData
   end type GwtInterfaceModelType
