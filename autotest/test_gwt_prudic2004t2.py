@@ -29,6 +29,7 @@ data_ws = "./data/prudic2004test2/"
 fname = os.path.join(data_ws, "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
+
 def build_model(idx, dir):
 
     ws = dir
@@ -563,6 +564,7 @@ def make_concentration_map(sim):
     print("making concentration map...")
 
     import matplotlib.pyplot as plt
+
     levels = [
         1,
         10,
@@ -595,18 +597,16 @@ def make_concentration_map(sim):
         lake_conc = lakconc[ilak]
         conc[0, i, j] = lake_conc
 
-    fig, axs = plt.subplots(
-        2, 2, figsize=(5, 7), dpi=300, tight_layout=True
-    )
+    fig, axs = plt.subplots(2, 2, figsize=(5, 7), dpi=300, tight_layout=True)
 
     # plot layers 1, 3, 5, and 8
     for iplot, ilay in enumerate([0, 2, 4, 7]):
         ax = axs.flatten()[iplot]
         pmv = flopy.plot.PlotMapView(model=gwt, ax=ax, layer=ilay)
-        #pmv.plot_grid()
+        # pmv.plot_grid()
         pmv.plot_array(lakibd, masked_values=[0], alpha=0.2)
         pmv.plot_inactive(color_noflow="gray", alpha=0.25)
-        #pmv.plot_bc(name="CHD-1", color="blue")
+        # pmv.plot_bc(name="CHD-1", color="blue")
         cs = pmv.contour_array(conc, levels=levels, masked_values=[1.0e30])
         ax.clabel(cs, cs.levels[::1], fmt="%1.0f", colors="b")
         ax.set_title(f"Model layer {ilay + 1}")
@@ -760,12 +760,12 @@ def eval_results(sim):
     assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
     # used to make results for the gwtgwt version of this problem
-    #fname = os.path.join(ws, f"result_conc_lak1.txt")
-    #np.savetxt(fname, res_lak1)
-    #fname = os.path.join(ws, f"result_conc_sfr3.txt")
-    #np.savetxt(fname, res_sfr3)
-    #fname = os.path.join(ws, f"result_conc_sfr4.txt")
-    #np.savetxt(fname, res_sfr4)
+    # fname = os.path.join(ws, f"result_conc_lak1.txt")
+    # np.savetxt(fname, res_lak1)
+    # fname = os.path.join(ws, f"result_conc_sfr3.txt")
+    # np.savetxt(fname, res_sfr3)
+    # fname = os.path.join(ws, f"result_conc_sfr4.txt")
+    # np.savetxt(fname, res_sfr4)
 
     # uncomment when testing
     # assert False

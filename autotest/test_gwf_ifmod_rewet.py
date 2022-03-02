@@ -77,29 +77,49 @@ tops = [150.0, 50.0, 0.0, -50.0]
 hk = 10.0
 
 # boundary stress period data
-h_left = [100., 25.]
+h_left = [100.0, 25.0]
 
 # initial head
-h_start = -40.
+h_start = -40.0
 
 # head boundaries
-lchd1 = [[(ilay, irow, 0), h_left[0]] for ilay in range(nlay) for irow in range(nrow) if h_left[0] > tops[ilay + 1]]
-rchd = [[(ilay, irow, ncol - 1), h_start] for ilay in range(nlay) for irow in range(nrow) if h_start > tops[ilay + 1]]
-rchd_right = [[(ilay, irow, ncol_right - 1), h_start] for ilay in range(nlay) for irow in range(nrow) if
-              h_start > tops[ilay + 1]]
+lchd1 = [
+    [(ilay, irow, 0), h_left[0]]
+    for ilay in range(nlay)
+    for irow in range(nrow)
+    if h_left[0] > tops[ilay + 1]
+]
+rchd = [
+    [(ilay, irow, ncol - 1), h_start]
+    for ilay in range(nlay)
+    for irow in range(nrow)
+    if h_start > tops[ilay + 1]
+]
+rchd_right = [
+    [(ilay, irow, ncol_right - 1), h_start]
+    for ilay in range(nlay)
+    for irow in range(nrow)
+    if h_start > tops[ilay + 1]
+]
 chd1 = lchd1 + rchd
 
 chd_spd = {0: chd1}
 chd_spd_left = {0: lchd1}
 chd_spd_right = {0: rchd_right}
 
-lchd2 = [[(ilay, irow, 0), h_left[1]] for ilay in range(nlay) for irow in range(nrow) if h_left[1] > tops[ilay + 1]]
+lchd2 = [
+    [(ilay, irow, 0), h_left[1]]
+    for ilay in range(nlay)
+    for irow in range(nrow)
+    if h_left[1] > tops[ilay + 1]
+]
 chd_spd[1] = lchd2
 chd_spd_left[1] = lchd2
 
 # rewetting
 rewet_record = [("WETFCT", 1.0, "IWETIT", 1, "IHDWET", 1)]
 wetdry = -0.001
+
 
 def get_model(idx, dir):
     name = ex[idx]
@@ -360,7 +380,7 @@ def compare_to_ref(sim):
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))
         assert (
-                maxdiff < 10 * hclose_check
+            maxdiff < 10 * hclose_check
         ), "Max. head diff. {} should \
                          be within solver tolerance (x10): {}".format(
             maxdiff, 10 * hclose_check
@@ -373,7 +393,7 @@ def compare_to_ref(sim):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
                 assert (
-                        abs(cumul_balance_error) < 0.00001
+                    abs(cumul_balance_error) < 0.00001
                 ), "Cumulative balance error = {} for {}, should equal 0.0".format(
                     cumul_balance_error, mname
                 )

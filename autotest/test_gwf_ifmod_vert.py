@@ -280,7 +280,9 @@ def eval_heads(sim):
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
-        assert len(flow_ja_face) > 0, "Could not check residuals as flow-ja-face could not be found"
+        assert (
+            len(flow_ja_face) > 0
+        ), "Could not check residuals as flow-ja-face could not be found"
 
         for fjf in flow_ja_face:
             fjf = fjf.flatten()

@@ -143,8 +143,12 @@ def set_make_comparison(test):
         version = get_mf6_version(version="mf6-regression")
         print("MODFLOW regression version='{}'".format(version))
         if version in compare_tests[test]:
-            print(f"Test {test} does not run with versions {compare_tests[test]}")
-            print(f"Skipping regression test of sim {test} because the version is {version}")
+            print(
+                f"Test {test} does not run with versions {compare_tests[test]}"
+            )
+            print(
+                f"Skipping regression test of sim {test} because the version is {version}"
+            )
             make_comparison = False
     return make_comparison
 

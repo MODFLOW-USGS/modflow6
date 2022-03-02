@@ -69,7 +69,7 @@ drn_obs = {"drn_obs.csv": [("d1_1_100", "DRN", (0, 0, ncol - 1))]}
 
 def initial_conditions():
     x = np.arange(0, xlen - delr / 2, delr)
-    return np.sqrt(h0 ** 2 + x * (h1 ** 2 - h0 ** 2) / (xlen - delr))
+    return np.sqrt(h0**2 + x * (h1**2 - h0**2) / (xlen - delr))
 
 
 def get_model(idxsim, ws, name):
@@ -211,7 +211,7 @@ def drain_smoothing(xdiff, xrange, newton=False):
     else:
         cof1 = -1.0 / (xrange) ** 3
         cof2 = 2.0 / (xrange) ** 2
-        f = cof1 * xdiff ** 3 + cof2 * xdiff ** 2
+        f = cof1 * xdiff**3 + cof2 * xdiff**2
     f[sat < 0] = 0
     f[sat > 1] = 1
     return f
