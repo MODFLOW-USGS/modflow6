@@ -19,20 +19,20 @@ Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
   MODFLOW 6 framework: {U.S. Geological Survey Techniques and Methods, book 6,
   chap. A57, 36 p.}, \url{https://doi.org/10.3133/tm6A57}.
 
-\bibitem[{Hughes and others(2022{\natexlab{a}})Hughes, Leake, Galloway, and
-  White}]{modflow6csub}
-Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022{\natexlab{a}},
-  Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB)
-  Package of MODFLOW 6: {U.S. Geological Survey Techniques and Methods, book 6,
-  chap. A62, 57 p.}, \url{https://doi.org/10.3133/tm6A62}.
-
-\bibitem[{Hughes and others(2022{\natexlab{b}})Hughes, Russcher, Langevin,
+\bibitem[{Hughes and others(2022{\natexlab{a}})Hughes, Russcher, Langevin,
   Morway, and McDonald}]{modflow6api}
 Hughes, J.D., Russcher, M.J., Langevin, C.D., Morway, E.D., and McDonald, R.R.,
-  2022{\natexlab{b}}, The modflow application programming interface for
+  2022{\natexlab{a}}, The modflow application programming interface for
   simulation control and software interoperability: Environmental Modelling \&
   Software, v. 148, no. 105257,
   \url{https://doi.org/10.1016/j.envsoft.2021.105257}.
+
+\bibitem[{Hughes and others(2022{\natexlab{b}})Hughes, Leake, Galloway, and
+  White}]{modflow6csub}
+Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022{\natexlab{b}},
+  Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB)
+  Package of MODFLOW 6: {U.S. Geological Survey Techniques and Methods, book 6,
+  chap. A62, 57 p.}, \url{https://doi.org/10.3133/tm6A62}.
 
 \bibitem[{Langevin and others(2017)Langevin, Hughes, Provost, Banta, Niswonger,
   and Panday}]{modflow6gwf}

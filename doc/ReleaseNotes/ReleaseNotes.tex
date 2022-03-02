@@ -148,11 +148,45 @@ Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The ma
 
 MODFLOW~6 is tested with a large number of example problems, and new capabilities are thoroughly tested as they are integrated into the program.  Additional testing can sometimes reveal errors in the program.  These errors are fixed as soon as possible and made available in a subsequent release.  Every effort is made to maintain backward compatibility of the format for MODFLOW~6 input files; however, this goal is not always possible, especially for newer packages and models.  Changes to the program to add new functionality, correct errors, or alter the format for an input file are summarized in this release notes document.
 
+
 % -------------------------------------------------
-\section{History}
-This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
+\section{Release History}
+A list of all MODFLOW 6 releases is shown in table \ref{tab:releases}.  Changes introduced in previous releases are described in Appendix~\ref{app:A}.
+
+\begin{table}[h]
+\begin{center}
+\caption{List of MODFLOW 6 Releases}
+\small 
+\begin{tabular*}{12cm}{cl}
+\hline
+\hline
+\textbf{MODFLOW Version} & \textbf{Date}\\
+\hline
+6.0.0 & August 11, 2017 \\
+6.0.1 & September 28, 2017 \\
+6.0.2 & February 23, 2018 \\
+6.0.3 & August 9, 2018 \\
+6.0.4 & March 7, 2019 \\
+6.1.0 & December 12, 2019 \\
+6.1.1 & June 12, 2020 \\
+6.2.0 & October 20, 2020 \\
+6.2.1 & February 18, 2021 \\
+6.2.2 & July 30, 2021 \\
+6.3.0 & March 4, 2022 (this release) \\
+\hline
+\label{tab:releases}
+\end{tabular*}
+\end{center}
+\normalsize
+\end{table}
+
+
+% -------------------------------------------------
+\section{Changes Introduced in this Release}
+This section describes changes introduced into MODFLOW~6 for the current release.  These changes may substantially affect users.
 
 \begin{itemize}
+	
 	\item Version mf6.3.0--March 4, 2022
 	
 	\underline{NEW FUNCTIONALITY}
