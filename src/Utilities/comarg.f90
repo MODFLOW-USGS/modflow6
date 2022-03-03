@@ -289,9 +289,10 @@ module CommandArguments
       &'                            <str>=debug   Enhanced output to STDOUT.',/, &
       &' -m <str>  --mode <str>     MODFLOW 6 simulation mode based on <str>.',/,&
       &'                            <str>=validate Check model input for',/,     &
-      &'                                           errors but do assemble or',/, &
-      &'                                           solve matrix equations or',/, &
-      &'                                           write solution output.',/,    &
+      &'                                           errors but do not ',/,        &
+      &'                                           assemble or solve matrix ',/, &
+      &'                                           equations or write ',/,       &
+      &'                                           solution output.',/,          &
       &'                                                                    ',/, &
       &'Bug reporting and contributions are welcome from the community. ',/,     &
       &'Questions can be asked on the issues page[1]. Before creating a new',/,  &

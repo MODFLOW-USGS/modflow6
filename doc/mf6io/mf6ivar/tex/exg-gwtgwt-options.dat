@@ -9,5 +9,6 @@ BEGIN OPTIONS
   [ADVSCHEME <advscheme>]
   [XT3D_OFF]
   [XT3D_RHS]
+  [MVT6 FILEIN <mvt6_filename>]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS
