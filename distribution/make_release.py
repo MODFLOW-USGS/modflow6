@@ -477,6 +477,8 @@ def update_codejson(vmajor, vminor, vmicro):
     # create version
     version = get_tag(vmajor, vminor, vmicro)
 
+    is_approved = get_is_approved()
+
     # load and modify json file
     with open(json_fname, "r") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
@@ -484,7 +486,7 @@ def update_codejson(vmajor, vminor, vmicro):
     # modify the json file data
     sdate = now.strftime("%Y-%m-%d")
     data[0]["date"]["metadataLastUpdated"] = sdate
-    if "release" in branch.lower() or "master" in branch.lower():
+    if is_approved:
         data[0]["version"] = version
         data[0]["status"] = "Production"
     else:
