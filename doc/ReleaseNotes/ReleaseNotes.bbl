@@ -22,9 +22,9 @@ Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
 \bibitem[{Hughes and others(2022{\natexlab{a}})Hughes, Russcher, Langevin,
   Morway, and McDonald}]{modflow6api}
 Hughes, J.D., Russcher, M.J., Langevin, C.D., Morway, E.D., and McDonald, R.R.,
-  2022{\natexlab{a}}, The modflow application programming interface for
+  2022{\natexlab{a}}, The {MODFLOW Application Programming Interface} for
   simulation control and software interoperability: Environmental Modelling \&
-  Software, v. 148, no. 105257,
+  Software, v. 148, 105257,
   \url{https://doi.org/10.1016/j.envsoft.2021.105257}.
 
 \bibitem[{Hughes and others(2022{\natexlab{b}})Hughes, Leake, Galloway, and
