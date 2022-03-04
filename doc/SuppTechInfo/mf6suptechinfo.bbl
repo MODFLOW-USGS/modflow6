@@ -1,0 +1,56 @@
+\begin{thebibliography}{7}
+\providecommand{\natexlab}[1]{#1}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem[{Harbaugh(2005)}]{modflow2005}
+Harbaugh, A.W., 2005, MODFLOW-2005, the U.S. Geological Survey modular
+  ground-water model---the Ground-Water Flow Process: {U.S. Geological Survey
+  Techniques and Methods, book 6, chap. A16, variously paged}, accessed June
+  27, 2017, at \url{https://pubs.usgs.gov/tm/2005/tm6A16/}.
+
+\bibitem[{Hughes and others(2017)Hughes, Langevin, and
+  Banta}]{modflow6framework}
+Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
+  MODFLOW 6 framework: {U.S. Geological Survey Techniques and Methods, book 6,
+  chap. A57, 36 p.}, \url{https://doi.org/10.3133/tm6A57}.
+
+\bibitem[{Kavetski and Kuczera(2007)}]{doi:10.1029/2006WR005195}
+Kavetski, Dmitri, and Kuczera, George, 2007, Model smoothing strategies to
+  remove microscale discontinuities and spurious secondary optima in objective
+  functions in hydrological calibration: Water Resources Research, v.~43,
+  no.~3, \url{https://doi.org/10.1029/2006WR005195},
+  \url{https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2006WR005195}.
+
+\bibitem[{Langevin and others(2017)Langevin, Hughes, Provost, Banta, Niswonger,
+  and Panday}]{modflow6gwf}
+Langevin, C.D., Hughes, J.D., Provost, A.M., Banta, E.R., Niswonger, R.G., and
+  Panday, Sorab, 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
+  Model: {U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197
+  p.}, \url{https://doi.org/10.3133/tm6A55}.
+
+\bibitem[{Panday and others(2013)Panday, Langevin, Niswonger, Ibaraki, and
+  Hughes}]{modflowusg}
+Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
+  J.D., 2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW
+  for simulating groundwater flow and tightly coupled processes using a control
+  volume finite-difference formulation: {U.S. Geological Survey Techniques and
+  Methods, book 6, chap. A45, 66 p.}, accessed June 27, 2017, at
+  \url{https://pubs.usgs.gov/tm/06/a45/}.
+
+\bibitem[{Provost and others(2017)Provost, Langevin, and Hughes}]{modflow6xt3d}
+Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
+  ``XT3D'' Option in the Node Property Flow (NPF) Package of MODFLOW 6: {U.S.
+  Geological Survey Techniques and Methods, book 6, chap. A56, 46 p.},
+  \url{https://doi.org/10.3133/tm6A56}.
+
+\bibitem[{Zheng and Wang(1999)}]{zheng1999mt3dms}
+Zheng, Chunmiao, and Wang, P.P., 1999, MT3DMS---A modular three-dimensional
+  multi-species transport model for simulation of advection, dispersion and
+  chemical reactions of contaminants in groundwater systems; Documentation and
+  user's guide: {Contract report SERDP--99--1: Vicksburg, Miss., U.S. Army
+  Engineer Research and Development Center, 169 p.}
+
+\end{thebibliography}
