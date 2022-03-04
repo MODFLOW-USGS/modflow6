@@ -437,19 +437,20 @@ def update_readme_markdown(vmajor, vminor, vmicro):
             line = "### Version {}".format(version)
             if "develop" in branch:
                 line += sb
-        elif "https://doi.org/10.5066/F76Q1VQV" in line:
-            line = (
-                "[Langevin, C.D., Hughes, J.D., "
-                + "Banta, E.R., Provost, A.M., "
-                + "Niswonger, R.G., and Panday, Sorab, "
-                + "{}, ".format(now.year)
-                + "MODFLOW 6 Modular Hydrologic Model "
-                + "version {}{}: ".format(version, sb)
-                + "U.S. Geological Survey Software Release, "
-                + "{}, ".format(now.strftime("%d %B %Y"))
-                + "https://doi.org/10.5066/F76Q1VQV]"
-                + "(https://doi.org/10.5066/F76Q1VQV)"
-            )
+        # This has been commented out as we've generalized this reference.
+        #elif "https://doi.org/10.5066/F76Q1VQV" in line:
+        #    line = (
+        #        "[Langevin, C.D., Hughes, J.D., "
+        #        + "Banta, E.R., Provost, A.M., "
+        #        + "Niswonger, R.G., and Panday, Sorab, "
+        #        + "{}, ".format(now.year)
+        #        + "MODFLOW 6 Modular Hydrologic Model "
+        #        + "version {}{}: ".format(version, sb)
+        #        + "U.S. Geological Survey Software Release, "
+        #        + "{}, ".format(now.strftime("%d %B %Y"))
+        #        + "https://doi.org/10.5066/F76Q1VQV]"
+        #        + "(https://doi.org/10.5066/F76Q1VQV)"
+        #    )
         elif "Disclaimer" in line:
             line = disclaimer
             terminate = True
