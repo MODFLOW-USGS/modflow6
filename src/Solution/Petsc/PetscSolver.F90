@@ -16,19 +16,20 @@ module PetscSolverModule
   
   type, public :: PetscSolverDataType
     character(len=LENMEMPATH) :: memoryPath                              !< the path for storing variables in the memory manager
-    integer(I4B), POINTER :: iout => NULL()                              !< simulation listing file unit
-    integer(I4B), POINTER :: iprims => NULL()                            !< print flag
+    integer(I4B), pointer :: iout => NULL()                              !< simulation listing file unit
+    integer(I4B), pointer :: iprims => NULL()                            !< print flag
     ! -- pointers to solution variables
-    integer(I4B), POINTER :: neq => NULL()                               !< number of equations (rows in matrix)
-    integer(I4B), POINTER :: nja => NULL()                               !< number of non-zero values in amat
+    integer(I4B), pointer :: neq => NULL()                               !< number of equations (rows in matrix)
+    integer(I4B), pointer :: nja => NULL()                               !< number of non-zero values in amat
     integer(I4B), dimension(:), pointer, contiguous :: ia => NULL()      !< position of start of each row
     integer(I4B), dimension(:), pointer, contiguous :: ja => NULL()      !< column pointer
     real(DP), dimension(:), pointer, contiguous :: amat => NULL()        !< coefficient matrix
     real(DP), dimension(:), pointer, contiguous :: rhs => NULL()         !< right-hand side of equation
     real(DP), dimension(:), pointer, contiguous :: x => NULL()           !< dependent variable
-    Mat         Amat_petsc
-    Vec         x_petsc
-    Vec         rhs_petsc
+    Mat :: Amat_petsc
+    Vec :: x_petsc
+    Vec :: rhs_petsc
+    KSP :: ksp
 
     ! procedures (methods)
     contains
@@ -45,93 +46,67 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine allocate_read(this, name, parser, IOUT, IPRIMS,     &
-                            NEQ, NJA, IA, JA, AMAT, RHS, X)
+    subroutine allocate_read(this, name, parser, iout, iprims,     &
+                            neq, nja, ia, ja, amat, rhs, x)
       ! -- modules
-#include <petsc/finclude/petscksp.h>
-      use petscksp
       use MemoryManagerModule, only: mem_allocate
       use MemoryHelperModule,  only: create_mem_path
       use SimModule, only: store_error, count_errors,            &
                            deprecation_warning
       ! -- dummy variables
-      class(PetscSolverDataType), intent(INOUT) :: this          !< PetscSolverDataType instance
-      character (LEN=lensolutionname), intent(IN) :: name        !< solution name
+      class(PetscSolverDataType), intent(inout) :: this          !< PetscSolverDataType instance
+      character (LEN=lensolutionname), intent(in) :: name        !< solution name
       type(BlockParserType) :: parser                            !< block parser
-      integer(I4B), intent(IN) :: iout                           !< simulation listing file unit
-      integer(I4B), TARGET, intent(IN) :: iprims                 !< print option
-      integer(I4B), TARGET, INTENT(IN) :: NEQ                    !< number of equations
-      integer(I4B), TARGET, INTENT(IN) :: NJA                    !< number of non-zero entries in the coefficient matrix
-      integer(I4B), DIMENSION(NEQ+1), TARGET, INTENT(IN) :: IA   !< pointer to the start of a row in the coefficient matrix
-      integer(I4B), DIMENSION(NJA), TARGET, INTENT(IN) :: JA     !< column pointer
-      real(DP), DIMENSION(NJA), TARGET, INTENT(IN) :: AMAT       !< coefficient matrix
-      real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS     !< right-hand side
-      real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X       !< dependent variables
+      integer(I4B), intent(in) :: iout                           !< simulation listing file unit
+      integer(I4B), target, intent(in) :: iprims                 !< print option
+      integer(I4B), target, intent(in) :: neq                    !< number of equations
+      integer(I4B), target, intent(in) :: nja                    !< number of non-zero entries in the coefficient matrix
+      integer(I4B), dimension(neq+1), target, intent(in) :: ia   !< pointer to the start of a row in the coefficient matrix
+      integer(I4B), dimension(nja), target, intent(in) :: ja     !< column pointer
+      real(DP), dimension(nja), target, intent(in) :: amat       !< coefficient matrix
+      real(DP), dimension(neq), target, intent(inout) :: rhs     !< right-hand side
+      real(DP), dimension(neq), target, intent(inout) :: x       !< dependent variables
 
       ! -- local variables
-      LOGICAL :: lreaddata
+      logical :: lreaddata
       character(len=LINELENGTH) :: errmsg
       character(len=LINELENGTH) :: keyword
       integer(I4B) :: err
       logical :: isfound, endOfBlock
       PetscErrorCode ierr
 
-
-      !
-      ! -- DEFINE NAME      
       this%memoryPath = create_mem_path(name, 'PetscSolver')
-      !
-      ! -- SET POINTERS
-      this%IPRIMS => IPRIMS
-      this%NEQ => NEQ
-      this%NJA => NJA
-      this%IA => IA
-      this%JA => JA
-      this%AMAT => AMAT
-      this%RHS => RHS
-      this%X => X
 
-      ! -- ALLOCATE SCALAR VARIABLES
+      this%iprims => iprims
+      this%neq => neq
+      this%nja => nja
+      this%ia => ia
+      this%ja => ja
+      this%amat => amat
+      this%rhs => rhs
+      this%x => x
+
       call this%allocate_scalars()
-      !
-      ! -- initialize iout
       this%iout = iout
       
-      !  Create parallel matrix, specifying only its global dimensions.
-      !  When using MatCreate(), the matrix format can be specified at
-      !  runtime. Also, the parallel partitioning of the matrix is
-      !  determined by PETSc at runtime.
-
-      call MatCreate(PETSC_COMM_WORLD,this%Amat_petsc,ierr)
+      !  Create matrix 
+      call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 7,         &
+                           PETSC_NULL_INTEGER, this%Amat_petsc,ierr)
       CHKERRQ(ierr)
-      call MatSetSizes(this%Amat_petsc,PETSC_DECIDE,PETSC_DECIDE,this%neq,size(this%x),ierr)
+      call MatSetFromOptions(this%Amat_petsc, ierr)
       CHKERRQ(ierr)
-      call MatSetFromOptions(this%Amat_petsc,ierr)
-      CHKERRQ(ierr)
-      call MatSetUp(this%Amat_petsc,ierr)
+      call MatSetUp(this%Amat_petsc, ierr)
       CHKERRQ(ierr)
 
-      !  Create parallel vectors.
-      !   - Here, the parallel partitioning of the vector is determined by
-      !     PETSc at runtime.  We could also specify the local dimensions
-      !     if desired -- or use the more general routine VecCreate().
-      !   - When solving a linear system, the vectors and matrices MUST
-      !     be partitioned accordingly.  PETSc automatically generates
-      !     appropriately partitioned matrices and vectors when MatCreate()
-      !     and VecCreate() are used with the same communicator.
-      !   - Note: We form 1 vector from scratch and then duplicate as needed
-      call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,size(this%x),this%x_petsc,ierr)
+      !  Create petsc vectors.
+      call VecCreateSeq(PETSC_COMM_WORLD, size(this%x), this%x_petsc,ierr)
       CHKERRQ(ierr)
-      call VecSetFromOptions(this%x_petsc,ierr)
+      call VecSetFromOptions(this%x_petsc, ierr)
       CHKERRQ(ierr)
-      call VecDuplicate(this%x_petsc,this%rhs_petsc,ierr)
+      call VecDuplicate(this%x_petsc, this%rhs_petsc, ierr)
       CHKERRQ(ierr)
 
-      !
-      ! -- SET DEFAULT PARAMETERS (TODO)
-      
-      !
-      ! -- get PETSC block
+      ! get PETSC options block
       if (lreaddata) then
         call parser%GetBlock('PETSC', isfound, err, &
           supportOpenClose=.true., blockRequired=.FALSE.)
@@ -157,10 +132,36 @@ module PetscSolverModule
         end do
         write(iout,'(1x,a)') 'END OF PETSC DATA'
       end if
+
+      !  Create linear solver context
+      call KSPCreate(PETSC_COMM_WORLD,this%ksp,ierr)
+      CHKERRQ(ierr)
+      call KSPSetOperators(this%ksp,this%Amat_petsc,this%Amat_petsc,ierr)
+      CHKERRQ(ierr)
+      call KSPSetFromOptions(this%ksp,ierr)
+      CHKERRQ(ierr)
+
+      !call KSPSetConvergenceTest(this%ksp, check_convergence, 0, PETSC_NULL_FUNCTION, ierr)
+      !CHKERRQ(ierr)
+
+      return
+    end subroutine allocate_read
+
+    subroutine check_convergence(ksp, n, rnorm, flag, dummy, ierr)
+      KSP :: ksp
+      PetscInt :: n
+      PetscReal :: rnorm
+      KSPConvergedReason :: flag
+      PetscInt :: dummy
+      PetscErrorCode :: ierr
       
-      ! -- RETURN
-      RETURN
-    END SUBROUTINE allocate_read
+      if (rnorm .le. 0.1) then
+        flag = 1
+      else
+        flag = 0
+      end if
+      
+    end subroutine check_convergence
 
     !> @brief Deallocate memory
     !!
@@ -196,6 +197,9 @@ module PetscSolverModule
       CHKERRQ(ierr)
       call VecDestroy(this%rhs_petsc,ierr)
       CHKERRQ(ierr)
+
+      call KSPDestroy(this%ksp,ierr)
+      CHKERRQ(ierr)
       
       ! -- return
       return
@@ -203,81 +207,18 @@ module PetscSolverModule
     
 
     !> @brief Solve linear equation
-    !!
     !< 
-    SUBROUTINE execute(this)
-#include <petsc/finclude/petscksp.h>
-      use petscksp
-!
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!                   Variable declarations
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!
-!  Variables:
-!     ksp     - linear solver context
-!     ksp      - Krylov subspace method context
-!     pc       - preconditioner context
-!     x, rhs  - approx solution, right-hand-side, exact solution vectors
-!     A        - matrix that defines linear system
-!     its      - iterations for convergence
-!     norm     - norm of error in solution
-!     rctx     - random number generator context
-!
-!  Note that vectors are declared as PETSc "Vec" objects.  These vectors
-!  are mathematical objects that contain more than just an array of
-!  double precision numbers. I.e., vectors in PETSc are not just
-!        double precision x(*).
-!  However, local vector data can be easily accessed via VecGetArray().
-!  See the Fortran section of the PETSc users manual for details.
-!
-      
-      ! -- dummy variables
-      CLASS(PetscSolverDataType), INTENT(INOUT) :: this                       !< PetscSolverDataType instance
+    subroutine execute(this, kiter)
+      class(PetscSolverDataType), intent(inout) :: this !< PetscSolverDataType instance
+      integer(I4B) :: kiter
+      ! local
+      PetscErrorCode :: ierr
+      PetscInt :: ione = 1
+      PetscScalar, pointer :: x_pointer(:)
+      integer(I4B) :: row, ipos, n
+      !PetscViewer :: viewer
 
-      ! -- local variables
-      PetscInt  m,n
-      PetscInt  ione
-      PetscErrorCode ierr
-      PetscMPIInt rank, size_
-      PetscBool   flg
-      PetscScalar one,neg_one
-
-      KSP         ksp
-      PetscScalar,pointer :: x_pointer(:)
-      integer(I4B) :: row, ipos
-
-!  These variables are not currently used.
-!      PC          pc
-!      PCType      ptype
-!      PetscReal tol
-
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!                 Beginning of program
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-      m = 3
-      n = 3
-      one  = 1.0
-      neg_one = -1.0
-      ione    = 1
-      call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-m',m,flg,ierr)
-      CHKERRQ(ierr)
-      call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',n,flg,ierr)
-      CHKERRQ(ierr)
-      call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
-      CHKERRQ(ierr)
-      call MPI_Comm_size(PETSC_COMM_WORLD,size_,ierr)
-      CHKERRQ(ierr)
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!      Compute the matrix and right-hand-side vector that define
-!      the linear system, Ax = rhs.
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-
-
-!  Fill matrix
+      !  Fill matrix
       do row = 1, this%neq
         do ipos = this%ia(row), this%ia(row+1) - 1
           call MatSetValues(this%Amat_petsc, ione, row-1, ione, this%ja(ipos)-1, this%amat(ipos), INSERT_VALUES, ierr)
@@ -285,19 +226,17 @@ module PetscSolverModule
         end do
       end do
 
-!  Assemble matrix, using the 2-step process:
-!       MatAssemblyBegin(), MatAssemblyEnd()
-!  Computations can be done while messages are in transition,
-!  by placing code between these two statements.
-
-      call MatAssemblyBegin(this%Amat_petsc,MAT_FINAL_ASSEMBLY,ierr)
+      !  Assemble matrix, using the 2-step process:
+      !       MatAssemblyBegin(), MatAssemblyEnd()
+      !  Computations can be done while messages are in transition,
+      !  by placing code between these two statements.
+      call MatAssemblyBegin(this%Amat_petsc, MAT_FINAL_ASSEMBLY, ierr)
       CHKERRQ(ierr)
-      call MatAssemblyEnd(this%Amat_petsc,MAT_FINAL_ASSEMBLY,ierr)
+      call MatAssemblyEnd(this%Amat_petsc, MAT_FINAL_ASSEMBLY, ierr)
       CHKERRQ(ierr)
 
-
-      do ipos = 1, size(this%x)
-        call VecSetValues(this%x_petsc, ione, ipos-1, this%x(ipos),INSERT_VALUES, ierr)
+      do n = 1, size(this%x)
+        call VecSetValues(this%x_petsc, ione, n-1, this%x(n), INSERT_VALUES, ierr)
         CHKERRQ(ierr)
       end do
       call VecAssemblyBegin(this%x_petsc,ierr)
@@ -305,71 +244,46 @@ module PetscSolverModule
       call VecAssemblyEnd(this%x_petsc,ierr)
       CHKERRQ(ierr)
 
-      ! create rhs
-
-      do ipos = 1, size(this%rhs)
-        call VecSetValues(this%rhs_petsc, ione, ipos-1, this%rhs(ipos),INSERT_VALUES, ierr)
+      ! create RHS
+      do n = 1, size(this%rhs)
+        call VecSetValues(this%rhs_petsc, ione, n-1, this%rhs(n), INSERT_VALUES, ierr)
         CHKERRQ(ierr)
       end do
-      call VecAssemblyBegin(this%rhs_petsc,ierr)
+      call VecAssemblyBegin(this%rhs_petsc, ierr)
       CHKERRQ(ierr)
-      call VecAssemblyEnd(this%rhs_petsc,ierr)
-      CHKERRQ(ierr)
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!         Create the linear solver and set various options
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-!  Create linear solver context
-
-      call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
-      CHKERRQ(ierr)
-
-!  Set operators. Here the matrix that defines the linear system
-!  also serves as the preconditioning matrix.
-
-      call KSPSetOperators(ksp,this%Amat_petsc,this%Amat_petsc,ierr)
-      CHKERRQ(ierr)
-
-
-!  Set runtime options, e.g.,
-!      -ksp_type <type> -pc_type <type> -ksp_monitor -ksp_rtol <rtol>
-!  These options will override those specified above as long as
-!  KSPSetFromOptions() is called _after_ any other customization
-!  routines.
-
-      call KSPSetFromOptions(ksp,ierr)
-      CHKERRQ(ierr)
-
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!                      Solve the linear system
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-      call KSPSolve(ksp,this%rhs_petsc,this%x_petsc,ierr)
-      CHKERRQ(ierr)
-
-      ! copy `x` to `this%x`
-      call VecGetArrayReadF90(this%x_petsc, x_pointer, ierr)
-      CHKERRQ(ierr)
-
-      do ipos = 1, size(this%x)
-        this%x(ipos) = x_pointer(ipos)
-      end do
-
-      call VecRestoreArrayReadF90(this%x_petsc, x_pointer, ierr)
+      call VecAssemblyEnd(this%rhs_petsc, ierr)
       CHKERRQ(ierr)
       
-
-
-!  Free work space.  All PETSc objects should be destroyed when they
-!  are no longer needed.
-
-      call KSPDestroy(ksp,ierr)
+      ! ! print system
+      ! if (kiter == 1) then
+      !   call PetscViewerASCIIOpen(PETSC_COMM_WORLD, 'amat.txt', viewer, ierr)
+      !   CHKERRQ(ierr)
+      !   call MatView(this%Amat_petsc, viewer, ierr)        
+      !   CHKERRQ(ierr)
+      !   call PetscViewerDestroy(viewer,ierr)
+      !   CHKERRQ(ierr)
+      !   call PetscViewerASCIIOpen(PETSC_COMM_WORLD, 'rhs.txt', viewer, ierr)
+      !   CHKERRQ(ierr)
+      !   call VecView(this%rhs_petsc, viewer, ierr)        
+      !   CHKERRQ(ierr)
+      !   call PetscViewerDestroy(viewer,ierr)
+      !   CHKERRQ(ierr)
+      ! end if
+      
+      ! Solve the linear system
+      call KSPSolve(this%ksp, this%rhs_petsc, this%x_petsc, ierr)
       CHKERRQ(ierr)
 
+      ! copy solution
+      call VecGetArrayReadF90(this%x_petsc, x_pointer, ierr)
+      CHKERRQ(ierr)
+      do n = 1, size(this%x)
+        this%x(n) = x_pointer(n)
+      end do
+      call VecRestoreArrayReadF90(this%x_petsc, x_pointer, ierr)
+      CHKERRQ(ierr)
 
-    END SUBROUTINE execute
+    end subroutine execute
 
     !> @ brief Allocate and initialize scalars
     !!

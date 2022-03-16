@@ -2354,6 +2354,8 @@ subroutine solution_create(filename, id)
   !!
   !<
   subroutine sln_ls(this, kiter, kstp, kper, in_iter, iptc, ptcf)
+#include <petsc/finclude/petscksp.h>
+    use petscksp
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this  !< NumericalSolutionType instance
     integer(I4B), intent(in) :: kiter
@@ -2363,6 +2365,8 @@ subroutine solution_create(filename, id)
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local variables
+    PetscInt :: its
+    integer(I4B) :: ierr
     logical :: lsame
     integer(I4B) :: n
     integer(I4B) :: itestmat
@@ -2559,7 +2563,9 @@ subroutine solution_create(filename, id)
                                           this%convdvmax, this%convdrmax)
     ! -- PETSc solver - linmeth option 2
     else if (this%linmeth == 2) then
-      call this%petsc_solver%execute()
+      call this%petsc_solver%execute(kiter)
+      call KSPGetIterationNumber(this%petsc_solver%ksp, its, ierr)
+      in_iter = its
       this%icnvg = 1
     end if
     !
