@@ -3,7 +3,7 @@ module MawModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
                              LENBUDTXT,                                          &
-                             DZERO, DEM6, DEM4, DEM2, DQUARTER, DHALF, DP7,      &
+                             DZERO, DEM9, DEM6, DEM4, DEM2, DQUARTER, DHALF, DP7,&
                              DP9, DONE, DTWO, DPI, DTWOPI, DEIGHT, DHUNDRED,     &
                              DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
                              LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,      &
@@ -19,7 +19,8 @@ module MawModule
   use TableModule, only: TableType, table_cr
   use ObserveModule,        only: ObserveType
   use ObsModule, only: ObsType
-  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
+  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname,       &
+                               GetUnit, openfile
   use BaseDisModule, only: DisBaseType
   use SimModule,        only: count_errors, store_error, store_error_unit,       &
                               store_warning
@@ -66,6 +67,7 @@ module MawModule
     integer(I4B), pointer :: check_attr => NULL()
     integer(I4B), pointer :: ishutoffcnt => NULL()
     integer(I4B), pointer :: ieffradopt => NULL()
+    integer(I4B), pointer :: ioutredflowcsv => NULL() !< unit number for CSV output file containing MAWs with reduced extraction/injection rates
     real(DP), pointer :: satomega => null()
     !
     ! -- for underrelaxation of estimated well q if using shutoff
@@ -209,6 +211,9 @@ module MawModule
     ! -- density
     procedure :: maw_activate_density
     procedure, private :: maw_calculate_density_exchange
+    ! -- MAW reduced flow outputs
+    procedure, private :: maw_redflow_csv_init
+    procedure, private :: maw_redflow_csv_write
   end type MawType
 
 contains
@@ -288,6 +293,7 @@ contains
     call mem_allocate(this%check_attr, 'CHECK_ATTR', this%memoryPath)
     call mem_allocate(this%ishutoffcnt, 'ISHUTOFFCNT', this%memoryPath)
     call mem_allocate(this%ieffradopt, 'IEFFRADOPT', this%memoryPath)
+    call mem_allocate(this%ioutredflowcsv, 'IOUTREDFLOWCSV', this%memoryPath) !for writing reduced MAW flows to csv file
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%theta, 'THETA', this%memoryPath)
@@ -306,6 +312,7 @@ contains
     this%imawiss = 0
     this%imawissopt = 0
     this%ieffradopt = 0
+    this%ioutredflowcsv = 0
     this%satomega = DZERO
     this%bditems = 8
     this%theta = DP7
@@ -1846,6 +1853,15 @@ contains
           'MAW-GWF FLOW CORRECTIONS WILL BE APPLIED WHEN MAW HEADS ARE BELOW',    &
           'OR GWF HEADS IN CONNECTED CELLS ARE BELOW THE CELL BOTTOM.'
         found = .true.
+      case('MAW_FLOW_REDUCE_CSV')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          call this%maw_redflow_csv_init(fname)
+        else
+          call store_error('OPTIONAL MAW_FLOW_REDUCE_CSV KEYWORD MUST BE &
+            &FOLLOWED BY FILEOUT')
+        end if
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -3024,6 +3040,7 @@ contains
     call mem_deallocate(this%check_attr)
     call mem_deallocate(this%ishutoffcnt)
     call mem_deallocate(this%ieffradopt)
+    call mem_deallocate(this%ioutredflowcsv)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%theta)
@@ -3343,6 +3360,11 @@ contains
       end if
     end if
     !
+    ! -- Write the MAW reduced flows to csv file entries for this step
+    if (this%ioutredflowcsv > 0) then
+      call this%maw_redflow_csv_write()
+    end if
+    !
     ! -- return
     return
   end subroutine maw_bd_obs
@@ -3533,6 +3555,52 @@ contains
   !
   ! -- private MAW methods
   !
+  !> @brief Initialize the auto flow reduce csv output file
+  subroutine maw_redflow_csv_init(this, fname)
+    ! -- dummy variables
+    class(MawType), intent(inout) :: this !< MawType object
+    character(len=*), intent(in) :: fname
+    ! -- format
+    character(len=*),parameter :: fmtredflowcsv = &
+      "(4x, 'MAW REDUCED FLOW INFORMATION WILL BE SAVED TO FILE: ', a, /4x, &
+    &'OPENED ON UNIT: ', I0)"
+    
+    this%ioutredflowcsv = getunit()
+    call openfile(this%ioutredflowcsv, this%iout, fname, 'CSV', &
+      filstat_opt='REPLACE')
+    write(this%iout,fmtredflowcsv) trim(adjustl(fname)), &
+                                this%ioutredflowcsv
+    write(this%ioutredflowcsv, '(a)') &
+      'time,period,step,MAWnumber,rate-requested,rate-actual,maw-reduction'
+    return
+  end subroutine maw_redflow_csv_init
+  
+  !> @brief MAW reduced flows only when & where they occur
+  subroutine maw_redflow_csv_write(this)
+    ! -- modules
+    use TdisModule, only: totim, kstp, kper
+    ! -- dummy variables
+    class(MawType), intent(inout) :: this !< MawType object
+    ! -- local
+    integer(I4B) :: n
+    !integer(I4B) :: nodereduced
+    !integer(I4B) :: nodeuser
+    real(DP) :: v
+    ! -- format
+    do n = 1, this%nmawwells
+      !
+      ! -- test if node is constant or inactive
+      if(this%status(n) .ne. 'ACTIVE') then
+        cycle
+      end if
+      v = this%rate(n) - this%ratesim(n) !reductions in extraction will be negative and reductions in injection will be positive; follows convention of WEL AUTO_FLOW_REDUCE_CSV
+      if (abs(v) > DEM9) then   !need to check absolute value of difference for both extraction and injection; using 1e-9 as epsilon value but could be tweaked
+        write(this%ioutredflowcsv,'(*(G0,:,","))') &
+          totim, kper, kstp, n, this%rate(n), this%ratesim(n), v
+      end if
+    enddo
+  end subroutine maw_redflow_csv_write
+  
   subroutine maw_calculate_satcond(this, i, j, node)
     ! -- dummy
     class(MawType),intent(inout) :: this

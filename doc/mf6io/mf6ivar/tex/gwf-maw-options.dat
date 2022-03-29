@@ -13,6 +13,7 @@ BEGIN OPTIONS
   [FLOWING_WELLS]
   [SHUTDOWN_THETA <shutdown_theta>]
   [SHUTDOWN_KAPPA <shutdown_kappa>]
+  [MAW_FLOW_REDUCE_CSV FILEOUT <mfrcsvfile>]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]
   [MOVER]
