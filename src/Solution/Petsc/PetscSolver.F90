@@ -141,27 +141,8 @@ module PetscSolverModule
       call KSPSetFromOptions(this%ksp,ierr)
       CHKERRQ(ierr)
 
-      !call KSPSetConvergenceTest(this%ksp, check_convergence, 0, PETSC_NULL_FUNCTION, ierr)
-      !CHKERRQ(ierr)
-
       return
     end subroutine allocate_read
-
-    subroutine check_convergence(ksp, n, rnorm, flag, dummy, ierr)
-      KSP :: ksp
-      PetscInt :: n
-      PetscReal :: rnorm
-      KSPConvergedReason :: flag
-      PetscInt :: dummy
-      PetscErrorCode :: ierr
-      
-      if (rnorm .le. 0.1) then
-        flag = 1
-      else
-        flag = 0
-      end if
-      
-    end subroutine check_convergence
 
     !> @brief Deallocate memory
     !!
