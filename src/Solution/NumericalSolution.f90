@@ -306,7 +306,7 @@ subroutine solution_create(filename, id)
     this%iouttot_timestep = 0
     this%itertot_sim = 0
     this%mxiter = 0
-    this%linmeth = 2
+    this%linmeth = 2 ! TODO: change that back to 1 
     this%nonmeth = 0
     this%iprims = 0
     this%theta = DONE
