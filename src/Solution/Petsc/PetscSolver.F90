@@ -13,11 +13,19 @@ module PetscSolverModule
 
   implicit none
   private
+
+   ! -- enumerator that defines the linear acceleration method
+  enum, bind(C)
+    enumerator :: LIN_ACCEL_INVALID=0
+    enumerator :: LIN_ACCEL_CG=1
+    enumerator :: LIN_ACCEL_BCGSL=2
+  end enum
   
   type, public :: PetscSolverDataType
     character(len=LENMEMPATH) :: memoryPath                              !< the path for storing variables in the memory manager
     integer(I4B), pointer :: iout => NULL()                              !< simulation listing file unit
     integer(I4B), pointer :: iprims => NULL()                            !< print flag
+    integer(I4B), POINTER :: lin_accel => NULL()                         !< linear accelerator: LIN_ACCEL_CG, LIN_ACCEL_BCGSL
     ! -- pointers to solution variables
     integer(I4B), pointer :: neq => NULL()                               !< number of equations (rows in matrix)
     integer(I4B), pointer :: nja => NULL()                               !< number of non-zero values in amat
@@ -106,31 +114,46 @@ module PetscSolverModule
       call VecDuplicate(this%x_petsc, this%rhs_petsc, ierr)
       CHKERRQ(ierr)
 
-      ! get PETSC options block
+      ! get IMSLINEAR options block
+      ! We parse the linear block, but do we really want to share this setting?
+      ! TODO: Design something which lets PETSc as well as imslinear expand in the future
       if (lreaddata) then
-        call parser%GetBlock('PETSC', isfound, err, &
+        call parser%GetBlock('LINEAR', isfound, err, &
           supportOpenClose=.true., blockRequired=.FALSE.)
       else
         isfound = .FALSE.
       end if
       !
-      ! -- parse PETSC block if detected
+      ! -- parse LINEAR block if detected
       if (isfound) then
-        write(iout,'(/1x,a)')'PROCESSING PETSC DATA'
+        write(iout,'(/1x,a)')'PROCESSING LINEAR DATA'
         do
           call parser%GetNextLine(endOfBlock)
           if (endOfBlock) exit
           call parser%GetStringCaps(keyword)
           ! -- parse keyword
           select case (keyword)
+            case ('LINEAR_ACCELERATION')
+              call parser%GetStringCaps(keyword)
+              if (keyword.eq.'CG') then
+                this%lin_accel = LIN_ACCEL_CG
+              else if (keyword.eq.'BICGSTAB') then
+                this%lin_accel = LIN_ACCEL_BCGSL
+              else
+                this%lin_accel = LIN_ACCEL_INVALID
+                write(errmsg,'(3a)')                                             &
+                  'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (',              &
+                  trim(keyword), ').'
+                call store_error(errmsg)
+              end if
             ! -- default
             case default
                 write(errmsg,'(3a)')                                             &
-                  'UNKNOWN PETSC KEYWORD (', trim(keyword), ').'
+                  'UNKNOWN LINEAR KEYWORD (', trim(keyword), ').'
               call store_error(errmsg)
           end select
         end do
-        write(iout,'(1x,a)') 'END OF PETSC DATA'
+        write(iout,'(1x,a)') 'END OF LINEAR DATA'
       end if
 
       !  Create linear solver context
