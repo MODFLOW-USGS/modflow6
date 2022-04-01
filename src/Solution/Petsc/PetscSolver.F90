@@ -18,14 +18,14 @@ module PetscSolverModule
   enum, bind(C)
     enumerator :: LIN_ACCEL_INVALID=0
     enumerator :: LIN_ACCEL_CG=1
-    enumerator :: LIN_ACCEL_BCGSL=2
+    enumerator :: LIN_ACCEL_BCGS=2
   end enum
   
   type, public :: PetscSolverDataType
     character(len=LENMEMPATH) :: memoryPath                              !< the path for storing variables in the memory manager
     integer(I4B), pointer :: iout => NULL()                              !< simulation listing file unit
     integer(I4B), pointer :: iprims => NULL()                            !< print flag
-    integer(I4B), POINTER :: lin_accel => NULL()                         !< linear accelerator: LIN_ACCEL_CG, LIN_ACCEL_BCGSL
+    integer(I4B), POINTER :: lin_accel => NULL()                         !< linear accelerator: LIN_ACCEL_CG, LIN_ACCEL_BCGS
     ! -- pointers to solution variables
     integer(I4B), pointer :: neq => NULL()                               !< number of equations (rows in matrix)
     integer(I4B), pointer :: nja => NULL()                               !< number of non-zero values in amat
@@ -76,7 +76,6 @@ module PetscSolverModule
       real(DP), dimension(neq), target, intent(inout) :: x       !< dependent variables
 
       ! -- local variables
-      logical :: lreaddata
       character(len=LINELENGTH) :: errmsg
       character(len=LINELENGTH) :: keyword
       integer(I4B) :: err
@@ -117,12 +116,9 @@ module PetscSolverModule
       ! get IMSLINEAR options block
       ! We parse the linear block, but do we really want to share this setting?
       ! TODO: Design something which lets PETSc as well as imslinear expand in the future
-      if (lreaddata) then
-        call parser%GetBlock('LINEAR', isfound, err, &
-          supportOpenClose=.true., blockRequired=.FALSE.)
-      else
-        isfound = .FALSE.
-      end if
+      
+      call parser%GetBlock('LINEAR', isfound, err, &
+        supportOpenClose=.true., blockRequired=.FALSE.)
       !
       ! -- parse LINEAR block if detected
       if (isfound) then
@@ -138,7 +134,7 @@ module PetscSolverModule
               if (keyword.eq.'CG') then
                 this%lin_accel = LIN_ACCEL_CG
               else if (keyword.eq.'BICGSTAB') then
-                this%lin_accel = LIN_ACCEL_BCGSL
+                this%lin_accel = LIN_ACCEL_BCGS
               else
                 this%lin_accel = LIN_ACCEL_INVALID
                 write(errmsg,'(3a)')                                             &
@@ -146,25 +142,27 @@ module PetscSolverModule
                   trim(keyword), ').'
                 call store_error(errmsg)
               end if
-            ! -- default
-            case default
-                write(errmsg,'(3a)')                                             &
-                  'UNKNOWN LINEAR KEYWORD (', trim(keyword), ').'
-              call store_error(errmsg)
           end select
         end do
         write(iout,'(1x,a)') 'END OF LINEAR DATA'
       end if
 
       !  Create linear solver context
-      call KSPCreate(PETSC_COMM_WORLD,this%ksp,ierr)
+      call KSPCreate(PETSC_COMM_WORLD, this%ksp,ierr)
       CHKERRQ(ierr)
-      call KSPSetOperators(this%ksp,this%Amat_petsc,this%Amat_petsc,ierr)
+      if (this%lin_accel == LIN_ACCEL_CG) then
+        call KSPSetType(this%ksp, KSPCG, ierr)
+        CHKERRQ(ierr)
+      else if (this%lin_accel == LIN_ACCEL_BCGS) then
+        call KSPSetType(this%ksp, KSPBCGS, ierr)
+        CHKERRQ(ierr)
+      end if
+      call KSPSetOperators(this%ksp, this%Amat_petsc, this%Amat_petsc, ierr)
       CHKERRQ(ierr)
-      call KSPSetFromOptions(this%ksp,ierr)
+      call KSPSetFromOptions(this%ksp, ierr)
       CHKERRQ(ierr)
 
-      return
+
     end subroutine allocate_read
 
     !> @brief Deallocate memory
@@ -184,6 +182,7 @@ module PetscSolverModule
 
       ! -- scalars
       call mem_deallocate(this%iout)
+      call mem_deallocate(this%lin_accel)
       
       ! -- nullify pointers
       nullify(this%iprims)
@@ -302,9 +301,11 @@ module PetscSolverModule
       !
       ! -- allocate scalars
       call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+      call mem_allocate(this%lin_accel, 'LIN_ACCEL', this%memoryPath)
       !
       ! -- initialize scalars
       this%iout = 0
+      this%lin_accel = 0
       !
       ! -- return
       return
