@@ -54,7 +54,7 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine allocate_read(this, name, parser, iout, iprims,     &
+    subroutine allocate_read(this, name, parser, iout, iprims, lin_accel, &
                             neq, nja, ia, ja, amat, rhs, x)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
@@ -67,6 +67,7 @@ module PetscSolverModule
       type(BlockParserType) :: parser                            !< block parser
       integer(I4B), intent(in) :: iout                           !< simulation listing file unit
       integer(I4B), target, intent(in) :: iprims                 !< print option
+      integer(I4B), intent(in) :: lin_accel                      !< linear accelerator (1) CG (2) BICGSTAB 
       integer(I4B), target, intent(in) :: neq                    !< number of equations
       integer(I4B), target, intent(in) :: nja                    !< number of non-zero entries in the coefficient matrix
       integer(I4B), dimension(neq+1), target, intent(in) :: ia   !< pointer to the start of a row in the coefficient matrix
@@ -77,9 +78,6 @@ module PetscSolverModule
 
       ! -- local variables
       character(len=LINELENGTH) :: errmsg
-      character(len=LINELENGTH) :: keyword
-      integer(I4B) :: err
-      logical :: isfound, endOfBlock
       PetscErrorCode ierr
 
       this%memoryPath = create_mem_path(name, 'PetscSolver')
@@ -95,6 +93,7 @@ module PetscSolverModule
 
       call this%allocate_scalars()
       this%iout = iout
+      this%lin_accel = lin_accel
       
       !  Create matrix 
       call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 7,         &
@@ -113,40 +112,6 @@ module PetscSolverModule
       call VecDuplicate(this%x_petsc, this%rhs_petsc, ierr)
       CHKERRQ(ierr)
 
-      ! get IMSLINEAR options block
-      ! We parse the linear block, but do we really want to share this setting?
-      ! TODO: Design something which lets PETSc as well as imslinear expand in the future
-      
-      call parser%GetBlock('LINEAR', isfound, err, &
-        supportOpenClose=.true., blockRequired=.FALSE.)
-      !
-      ! -- parse LINEAR block if detected
-      if (isfound) then
-        write(iout,'(/1x,a)')'PROCESSING LINEAR DATA'
-        do
-          call parser%GetNextLine(endOfBlock)
-          if (endOfBlock) exit
-          call parser%GetStringCaps(keyword)
-          ! -- parse keyword
-          select case (keyword)
-            case ('LINEAR_ACCELERATION')
-              call parser%GetStringCaps(keyword)
-              if (keyword.eq.'CG') then
-                this%lin_accel = LIN_ACCEL_CG
-              else if (keyword.eq.'BICGSTAB') then
-                this%lin_accel = LIN_ACCEL_BCGS
-              else
-                this%lin_accel = LIN_ACCEL_INVALID
-                write(errmsg,'(3a)')                                             &
-                  'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (',              &
-                  trim(keyword), ').'
-                call store_error(errmsg)
-              end if
-          end select
-        end do
-        write(iout,'(1x,a)') 'END OF LINEAR DATA'
-      end if
-
       !  Create linear solver context
       call KSPCreate(PETSC_COMM_WORLD, this%ksp,ierr)
       CHKERRQ(ierr)
@@ -156,13 +121,17 @@ module PetscSolverModule
       else if (this%lin_accel == LIN_ACCEL_BCGS) then
         call KSPSetType(this%ksp, KSPBCGS, ierr)
         CHKERRQ(ierr)
+      else
+        write(errmsg,'(3a)')                                             &
+          'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (',              &
+          this%lin_accel, ').'
+        call store_error(errmsg)
       end if
+
       call KSPSetOperators(this%ksp, this%Amat_petsc, this%Amat_petsc, ierr)
       CHKERRQ(ierr)
       call KSPSetFromOptions(this%ksp, ierr)
       CHKERRQ(ierr)
-
-
     end subroutine allocate_read
 
     !> @brief Deallocate memory

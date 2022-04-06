@@ -856,35 +856,25 @@ subroutine solution_create(filename, id)
     !
     ! -- call secondary subroutine to initialize and read linear 
     !    solver parameters IMSLINEAR solver
-    if (this%linear_solver == LIN_SOLVER_INTERNAL)then
-      allocate(this%imslinear)
-      WRITE(IOUT,*) '***IMS LINEAR SOLVER WILL BE USED***'
-      call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT,       &
-                                             this%iprims, this%mxiter,           &
-                                             ifdparam, imslinear,                &
-                                             this%neq, this%nja, this%ia,        &
-                                             this%ja, this%amat, this%rhs,       &
-                                             this%x, this%nitermax)
-      WRITE(IOUT,*)
-      if ( imslinear.eq.1 ) then
-        this%isymmetric = 1
-      end if
-    else if (this%linear_solver == LIN_SOLVER_PETSC) then
-      allocate(this%petsc_solver)
-      write(iout,*) '***PETSC SOLVER WILL BE USED***'
-      call this%petsc_solver%allocate_read(this%name, this%parser, IOUT,       &
-                                                        this%iprims,                        &
-                                                        this%neq, this%nja, this%ia,        &
-                                                        this%ja, this%amat, this%rhs,       &
-                                                        this%x)
-      WRITE(IOUT,*)
-    !
-    ! -- incorrect linear solver flag
-    ELSE
-      WRITE(errmsg, '(a)')                                                       &
-        'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
-      call store_error(errmsg)
-    END IF
+    allocate(this%imslinear)
+    call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT,       &
+                                           this%iprims, this%mxiter,           &
+                                           ifdparam, imslinear,                &
+                                           this%neq, this%nja, this%ia,        &
+                                           this%ja, this%amat, this%rhs,       &
+                                           this%x, this%nitermax)
+    WRITE(IOUT,*)
+    if ( imslinear.eq.1 ) then
+      this%isymmetric = 1
+    end if
+
+    allocate(this%petsc_solver)
+    call this%petsc_solver%allocate_read(this%name, this%parser, IOUT,       &
+                                         this%iprims, imslinear,             &
+                                         this%neq, this%nja, this%ia,        &
+                                         this%ja, this%amat, this%rhs,       &
+                                         this%x)
+    WRITE(IOUT,*)
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -1151,15 +1141,13 @@ subroutine solution_create(filename, id)
     ! -- dummy variables
     class(NumericalSolutionType) :: this  !< NumericalSolutionType instance
 
-    if (this%linear_solver == LIN_SOLVER_INTERNAL) then
+    
     ! -- IMSLinearModule
-      call this%imslinear%imslinear_da()
-      deallocate(this%imslinear)
-    else if (this%linear_solver == LIN_SOLVER_PETSC) then
+    call this%imslinear%imslinear_da()
+    deallocate(this%imslinear)
     ! -- PETSc
-      call this%petsc_solver%deallocate()
-      deallocate(this%petsc_solver)  
-    end if  
+    call this%petsc_solver%deallocate()
+    deallocate(this%petsc_solver)  
     !
     ! -- lists
     call this%modellist%Clear()
