@@ -188,7 +188,6 @@ module PetscSolverModule
       PetscInt :: ione = 1
       PetscScalar, pointer :: x_pointer(:)
       integer(I4B) :: row, ipos, n
-      !PetscViewer :: viewer
 
       !  Fill matrix
       do row = 1, this%neq

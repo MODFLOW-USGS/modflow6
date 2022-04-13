@@ -874,6 +874,8 @@ subroutine solution_create(filename, id)
                                          this%neq, this%nja, this%ia,        &
                                          this%ja, this%amat, this%rhs,       &
                                          this%x)
+    
+    
     WRITE(IOUT,*)
     !
     ! -- write message about matrix symmetry
