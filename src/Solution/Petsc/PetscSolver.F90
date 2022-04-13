@@ -96,7 +96,7 @@ module PetscSolverModule
       this%lin_accel = lin_accel
       
       !  Create matrix 
-      call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 7,         &
+      call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 13,         &
                            PETSC_NULL_INTEGER, this%Amat_petsc,ierr)
       CHKERRQ(ierr)
       call MatSetFromOptions(this%Amat_petsc, ierr)
