@@ -95,7 +95,8 @@ module PetscSolverModule
       this%iout = iout
       this%lin_accel = lin_accel
       
-      !  Create matrix 
+      !  Create matrix
+      ! TODO: Calculate number of nonzeros per row properly instead of hardcoding to 13
       call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 13,         &
                            PETSC_NULL_INTEGER, this%Amat_petsc,ierr)
       CHKERRQ(ierr)
