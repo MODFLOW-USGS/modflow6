@@ -13,11 +13,19 @@ module PetscSolverModule
 
   implicit none
   private
+
+   ! -- enumerator that defines the linear acceleration method
+  enum, bind(C)
+    enumerator :: LIN_ACCEL_INVALID=0
+    enumerator :: LIN_ACCEL_CG=1
+    enumerator :: LIN_ACCEL_BCGS=2
+  end enum
   
   type, public :: PetscSolverDataType
     character(len=LENMEMPATH) :: memoryPath                              !< the path for storing variables in the memory manager
     integer(I4B), pointer :: iout => NULL()                              !< simulation listing file unit
     integer(I4B), pointer :: iprims => NULL()                            !< print flag
+    integer(I4B), POINTER :: lin_accel => NULL()                         !< linear accelerator: LIN_ACCEL_CG, LIN_ACCEL_BCGS
     ! -- pointers to solution variables
     integer(I4B), pointer :: neq => NULL()                               !< number of equations (rows in matrix)
     integer(I4B), pointer :: nja => NULL()                               !< number of non-zero values in amat
@@ -46,7 +54,7 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine allocate_read(this, name, parser, iout, iprims,     &
+    subroutine allocate_read(this, name, parser, iout, iprims, lin_accel, &
                             neq, nja, ia, ja, amat, rhs, x)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
@@ -59,6 +67,7 @@ module PetscSolverModule
       type(BlockParserType) :: parser                            !< block parser
       integer(I4B), intent(in) :: iout                           !< simulation listing file unit
       integer(I4B), target, intent(in) :: iprims                 !< print option
+      integer(I4B), intent(in) :: lin_accel                      !< linear accelerator (1) CG (2) BICGSTAB 
       integer(I4B), target, intent(in) :: neq                    !< number of equations
       integer(I4B), target, intent(in) :: nja                    !< number of non-zero entries in the coefficient matrix
       integer(I4B), dimension(neq+1), target, intent(in) :: ia   !< pointer to the start of a row in the coefficient matrix
@@ -68,11 +77,7 @@ module PetscSolverModule
       real(DP), dimension(neq), target, intent(inout) :: x       !< dependent variables
 
       ! -- local variables
-      logical :: lreaddata
       character(len=LINELENGTH) :: errmsg
-      character(len=LINELENGTH) :: keyword
-      integer(I4B) :: err
-      logical :: isfound, endOfBlock
       PetscErrorCode ierr
 
       this%memoryPath = create_mem_path(name, 'PetscSolver')
@@ -88,9 +93,10 @@ module PetscSolverModule
 
       call this%allocate_scalars()
       this%iout = iout
+      this%lin_accel = lin_accel
       
       !  Create matrix 
-      call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 7,         &
+      call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 13,         &
                            PETSC_NULL_INTEGER, this%Amat_petsc,ierr)
       CHKERRQ(ierr)
       call MatSetFromOptions(this%Amat_petsc, ierr)
@@ -106,62 +112,27 @@ module PetscSolverModule
       call VecDuplicate(this%x_petsc, this%rhs_petsc, ierr)
       CHKERRQ(ierr)
 
-      ! get PETSC options block
-      if (lreaddata) then
-        call parser%GetBlock('PETSC', isfound, err, &
-          supportOpenClose=.true., blockRequired=.FALSE.)
-      else
-        isfound = .FALSE.
-      end if
-      !
-      ! -- parse PETSC block if detected
-      if (isfound) then
-        write(iout,'(/1x,a)')'PROCESSING PETSC DATA'
-        do
-          call parser%GetNextLine(endOfBlock)
-          if (endOfBlock) exit
-          call parser%GetStringCaps(keyword)
-          ! -- parse keyword
-          select case (keyword)
-            ! -- default
-            case default
-                write(errmsg,'(3a)')                                             &
-                  'UNKNOWN PETSC KEYWORD (', trim(keyword), ').'
-              call store_error(errmsg)
-          end select
-        end do
-        write(iout,'(1x,a)') 'END OF PETSC DATA'
-      end if
-
       !  Create linear solver context
-      call KSPCreate(PETSC_COMM_WORLD,this%ksp,ierr)
+      call KSPCreate(PETSC_COMM_WORLD, this%ksp,ierr)
       CHKERRQ(ierr)
-      call KSPSetOperators(this%ksp,this%Amat_petsc,this%Amat_petsc,ierr)
-      CHKERRQ(ierr)
-      call KSPSetFromOptions(this%ksp,ierr)
-      CHKERRQ(ierr)
-
-      !call KSPSetConvergenceTest(this%ksp, check_convergence, 0, PETSC_NULL_FUNCTION, ierr)
-      !CHKERRQ(ierr)
-
-      return
-    end subroutine allocate_read
-
-    subroutine check_convergence(ksp, n, rnorm, flag, dummy, ierr)
-      KSP :: ksp
-      PetscInt :: n
-      PetscReal :: rnorm
-      KSPConvergedReason :: flag
-      PetscInt :: dummy
-      PetscErrorCode :: ierr
-      
-      if (rnorm .le. 0.1) then
-        flag = 1
+      if (this%lin_accel == LIN_ACCEL_CG) then
+        call KSPSetType(this%ksp, KSPCG, ierr)
+        CHKERRQ(ierr)
+      else if (this%lin_accel == LIN_ACCEL_BCGS) then
+        call KSPSetType(this%ksp, KSPBCGS, ierr)
+        CHKERRQ(ierr)
       else
-        flag = 0
+        write(errmsg,'(3a)')                                             &
+          'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (',              &
+          this%lin_accel, ').'
+        call store_error(errmsg)
       end if
-      
-    end subroutine check_convergence
+
+      call KSPSetOperators(this%ksp, this%Amat_petsc, this%Amat_petsc, ierr)
+      CHKERRQ(ierr)
+      call KSPSetFromOptions(this%ksp, ierr)
+      CHKERRQ(ierr)
+    end subroutine allocate_read
 
     !> @brief Deallocate memory
     !!
@@ -180,6 +151,7 @@ module PetscSolverModule
 
       ! -- scalars
       call mem_deallocate(this%iout)
+      call mem_deallocate(this%lin_accel)
       
       ! -- nullify pointers
       nullify(this%iprims)
@@ -216,7 +188,6 @@ module PetscSolverModule
       PetscInt :: ione = 1
       PetscScalar, pointer :: x_pointer(:)
       integer(I4B) :: row, ipos, n
-      !PetscViewer :: viewer
 
       !  Fill matrix
       do row = 1, this%neq
@@ -298,9 +269,11 @@ module PetscSolverModule
       !
       ! -- allocate scalars
       call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+      call mem_allocate(this%lin_accel, 'LIN_ACCEL', this%memoryPath)
       !
       ! -- initialize scalars
       this%iout = 0
+      this%lin_accel = 0
       !
       ! -- return
       return

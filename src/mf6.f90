@@ -12,9 +12,9 @@ program mf6
 
   PetscErrorCode ierr
 
-  call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+  call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
   if (ierr .ne. 0) then
-    print*,'Unable to initialize PETSc'
+    print *, 'Unable to initialize PETSc'
     stop
   endif
   !
