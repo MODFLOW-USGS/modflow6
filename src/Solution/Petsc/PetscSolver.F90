@@ -236,7 +236,7 @@ module PetscSolverModule
 
       call MatDestroy(this%Amat_petsc, ierr)
       CHKERRQ(ierr)
-      call VecDestroy(this%x, ierr)
+      call VecDestroy(this%x_petsc, ierr)
       CHKERRQ(ierr)
       call VecDestroy(this%rhs_petsc, ierr)
       CHKERRQ(ierr)
