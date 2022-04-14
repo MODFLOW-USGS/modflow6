@@ -34,6 +34,7 @@ module PetscSolverModule
     real(DP), dimension(:), pointer, contiguous :: amat => NULL()        !< coefficient matrix
     real(DP), dimension(:), pointer, contiguous :: rhs => NULL()         !< right-hand side of equation
     real(DP), dimension(:), pointer, contiguous :: x => NULL()           !< dependent variable
+    real(DP), dimension(:), pointer, contiguous :: x_old => NULL()       !< dependent variable of last iteration
     Mat :: Amat_petsc
     Vec :: x_petsc
     Vec :: rhs_petsc
@@ -76,9 +77,13 @@ module PetscSolverModule
       real(DP), dimension(neq), target, intent(inout) :: rhs     !< right-hand side
       real(DP), dimension(neq), target, intent(inout) :: x       !< dependent variables
 
+
+
       ! -- local variables
       character(len=LINELENGTH) :: errmsg
       PetscErrorCode ierr
+      real(DP), dimension(:), pointer, contiguous :: x_ => NULL()
+      real(DP), dimension(:), pointer, contiguous :: x_old => NULL()  
 
       this%memoryPath = create_mem_path(name, 'PetscSolver')
 
@@ -90,6 +95,10 @@ module PetscSolverModule
       this%amat => amat
       this%rhs => rhs
       this%x => x
+      x_ => x
+      
+      allocate(this%x_old, source=x)
+      x_old => this%x_old
 
       call this%allocate_scalars()
       this%iout = iout
@@ -133,7 +142,40 @@ module PetscSolverModule
       CHKERRQ(ierr)
       call KSPSetFromOptions(this%ksp, ierr)
       CHKERRQ(ierr)
+
+      call KSPSetConvergenceTest(this%ksp, check_convergence, 0, PETSC_NULL_FUNCTION, ierr)
+      CHKERRQ(ierr)
+
+      contains
+      subroutine check_convergence(ksp, n, rnorm, flag, dummy, ierr)
+        KSP :: ksp                       !< Iterative context
+        PetscInt :: n                    !< Iteration number
+        PetscReal :: rnorm               !< 2-norm (preconditioned) residual value
+        KSPConvergedReason :: flag       !< Converged reason
+        PetscInt :: dummy                !< optional user-defined monitor context
+        PetscErrorCode :: ierr
+        
+        if (n == 0) then
+          ! skip first iteration
+          flag = 0
+          return
+        end if
+
+        ! TODO: calculate diff between x_ and x_old
+        
+        print *, x_old
+
+        if (rnorm .le. 0.1) then
+          flag = 1 ! Converged
+        else
+          flag = 0 ! Not yet converged
+        end if
+        
+      end subroutine check_convergence
+
     end subroutine allocate_read
+
+
 
     !> @brief Deallocate memory
     !!
@@ -173,6 +215,8 @@ module PetscSolverModule
 
       call KSPDestroy(this%ksp,ierr)
       CHKERRQ(ierr)
+
+      deallocate(this%x_old)
       
       ! -- return
       return
