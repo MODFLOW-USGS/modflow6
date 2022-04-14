@@ -24,7 +24,7 @@ module PetscSolverModule
   type, private :: PetscContext
     Vec :: x
     Vec :: x_old
-    Vec :: norm
+    Vec :: delta_x
   end type
   
   type, public :: PetscSolverDataType
@@ -68,7 +68,7 @@ module PetscSolverModule
       use SimModule, only: store_error, count_errors,            &
                            deprecation_warning
       ! -- dummy variables
-      class(PetscSolverDataType), intent(inout) :: this          !< PetscSolverDataType instance
+      class(PetscSolverDataType), intent(inout), target :: this  !< PetscSolverDataType instance
       character (LEN=lensolutionname), intent(in) :: name        !< solution name
       type(BlockParserType) :: parser                            !< block parser
       integer(I4B), intent(in) :: iout                           !< simulation listing file unit
@@ -85,7 +85,10 @@ module PetscSolverModule
       ! -- local variables
       character(len=LINELENGTH) :: errmsg
       PetscErrorCode ierr
+      class(PetscSolverDataType), pointer :: this_pointer => null()
+
       this%memoryPath = create_mem_path(name, 'PetscSolver')
+
 
       this%iprims => iprims
       this%neq => neq
@@ -95,6 +98,8 @@ module PetscSolverModule
       this%amat => amat
       this%rhs => rhs
       this%x => x
+
+      this_pointer => this
 
       allocate(this%petsc_context)
 
@@ -121,6 +126,8 @@ module PetscSolverModule
       CHKERRQ(ierr)
       call VecDuplicate(this%petsc_context%x, this%petsc_context%x_old, ierr)
       CHKERRQ(ierr)
+      call VecDuplicate(this%petsc_context%x, this%petsc_context%delta_x, ierr)
+      CHKERRQ(ierr)
 
 
       !  Create linear solver context
@@ -144,42 +151,43 @@ module PetscSolverModule
       call KSPSetFromOptions(this%ksp, ierr)
       CHKERRQ(ierr)
 
-      call KSPSetConvergenceTest(this%ksp, check_convergence, this%petsc_context, PETSC_NULL_FUNCTION, ierr)
+      call KSPSetConvergenceTest(this%ksp, check_convergence, this_pointer, PETSC_NULL_FUNCTION, ierr)
       CHKERRQ(ierr)
 
 
     end subroutine allocate_read
 
-    subroutine check_convergence(ksp, n, rnorm, flag, dummy, ierr)
+    subroutine check_convergence(ksp, n, rnorm, flag, solver, ierr)
       KSP :: ksp                       !< Iterative context
       PetscInt :: n                    !< Iteration number
       PetscReal :: rnorm               !< 2-norm (preconditioned) residual value
       KSPConvergedReason :: flag       !< Converged reason
-      class(PetscContext) :: dummy                     !< optional user-defined monitor context
+      class(PetscSolverDataType), pointer :: solver   !< optional user-defined monitor context
       PetscErrorCode :: ierr           !< error
       ! local
-      PetscScalar, pointer, dimension(:) ::  xx
-    
-      call VecGetArrayF90(dummy%x,xx,ierr)
-      CHKERRQ(ierr)
-      print *, xx
+      PetscScalar :: alpha = -1.0
+      PetscReal :: norm
 
-
-      
       if (n == 0) then
         ! skip first iteration
-        flag = 0
+        flag = KSP_CONVERGED_ITERATING
         return
       end if
 
-      ! TODO: calculate diff between x_ and x_old
+      call VecWAXPY(solver%petsc_context%delta_x, alpha, solver%petsc_context%x, solver%petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
 
-      if (rnorm .le. 0.1) then
+      call VecNorm(solver%petsc_context%delta_x, NORM_INFINITY, norm, ierr)
+      CHKERRQ(ierr)
+
+      call VecCopy(solver%petsc_context%x, solver%petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
+
+      if (norm < 1.e-4) then
         flag = KSP_CONVERGED_RTOL ! Converged
       else
         flag = KSP_CONVERGED_ITERATING ! Not yet converged
       end if
-      
     end subroutine check_convergence
 
 
@@ -218,6 +226,8 @@ module PetscSolverModule
       call VecDestroy(this%petsc_context%x, ierr)
       CHKERRQ(ierr)
       call VecDestroy(this%petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
+      call VecDestroy(this%petsc_context%delta_x, ierr)
       CHKERRQ(ierr)
       call VecDestroy(this%rhs_petsc, ierr)
       CHKERRQ(ierr)
