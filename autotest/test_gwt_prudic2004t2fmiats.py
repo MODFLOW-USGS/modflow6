@@ -465,21 +465,6 @@ def run_transport_model():
         continue_=False,
     )
 
-    ats_filerecord = None
-    if True:
-        dt0 = 100
-        dtmin = 1.0e-5
-        dtmax = 10000.0
-        dtadj = 2.0
-        dtfailadj = 5.0
-        atsperiod = [
-            (1, dt0, dtmin, dtmax, dtadj, dtfailadj),
-        ]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
-        ats_filerecord = name + ".ats"
-
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 25, 1.0)]
     nper = len(tdis_rc)
     tdis = flopy.mf6.ModflowTdis(
@@ -487,8 +472,23 @@ def run_transport_model():
         time_units="DAYS",
         nper=nper,
         perioddata=tdis_rc,
-        ats_filerecord=ats_filerecord,
     )
+
+    if True:
+        dt0 = 100
+        dtmin = 1.0e-5
+        dtmax = 10000.0
+        dtadj = 2.0
+        dtfailadj = 5.0
+        ats_filerecord = name + ".ats"
+        atsperiod = [
+            (1, dt0, dtmin, dtmax, dtadj, dtfailadj),
+        ]
+        tdis.ats.initialize(
+            maxats=len(atsperiod),
+            perioddata=atsperiod,
+            filename=ats_filerecord,
+        )
 
     gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 

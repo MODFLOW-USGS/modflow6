@@ -838,7 +838,6 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         exgmnameb=gwfnamec,
         nexg=len(exchange_data),
         exchangedata=exchange_data,
-        mvr_filerecord="{}.mvr".format(name),
         pname="EXG-1",
         filename="{}.exg".format(name),
     )
@@ -977,8 +976,8 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
 
     mvrspd = {0: sim_mvr_perioddata}
     maxmvr = 3
-    mvr = flopy.mf6.ModflowMvr(
-        sim,
+    gwfgwf = sim.get_exchange_file("gwf.exg")
+    gwfgwf.mvr.initialize(
         modelnames=True,
         maxmvr=maxmvr,
         print_flows=True,

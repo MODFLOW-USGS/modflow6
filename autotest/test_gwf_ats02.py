@@ -70,23 +70,23 @@ def build_model(idx, dir):
     )
 
     # create tdis package
-    ats_filerecord = None
-    if True:
-        atsperiod = [
-            (i, dt0, dtmin, dtmax, dtadj, dtfailadj) for i in range(nper)
-        ]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
-        ats_filerecord = name + ".ats"
-
     tdis = flopy.mf6.ModflowTdis(
         sim,
-        ats_filerecord=ats_filerecord,
         time_units="DAYS",
         nper=nper,
         perioddata=tdis_rc,
     )
+
+    if True:
+        ats_filerecord = name + ".ats"
+        atsperiod = [
+            (i, dt0, dtmin, dtmax, dtadj, dtfailadj) for i in range(nper)
+        ]
+        tdis.ats.initialize(
+            maxats=len(atsperiod),
+            perioddata=atsperiod,
+            filename=ats_filerecord,
+        )
 
     # create gwf model
     gwfname = name

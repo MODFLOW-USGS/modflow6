@@ -120,7 +120,6 @@ def build_model(idx, dir):
         icelltype=laytyp,
         k=hk,
         k33=hk,
-        tvk_filerecord=[tvk_filename],
     )
 
     # tvk
@@ -134,7 +133,7 @@ def build_model(idx, dir):
                     spd.append([(k, i, j), "K", hydraulic_conductivity])
         tvkspd[kper] = spd
     tvk = flopy.mf6.ModflowUtltvk(
-        gwf, print_input=True, perioddata=tvkspd, filename=tvk_filename
+        npf, print_input=True, perioddata=tvkspd, filename=tvk_filename
     )
 
     # chd files
