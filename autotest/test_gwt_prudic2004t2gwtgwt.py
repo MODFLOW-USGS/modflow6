@@ -195,9 +195,6 @@ def build_model(idx, ws):
                 gwfgwf_data.append(connection)
 
     # GWF-GWF
-    mvr_filerecord = None
-    if across_model_mvr_on:
-        mvr_filerecord = f"{name}.gwfgwf.mvr"
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -206,7 +203,6 @@ def build_model(idx, ws):
         exgmnameb=gwfnames[1],  # south
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        mvr_filerecord=mvr_filerecord,
         dev_interfacemodel_on=False,
     )
 
@@ -215,21 +211,18 @@ def build_model(idx, ws):
         maxmvr, maxpackages = 1, 2
         mvrpack_sim = [["flow1", "lak-1"], ["flow2", "sfr-2"]]
         mvrspd = [["flow1", "lak-1", 0, "flow2", "sfr-2", 0, "FACTOR", 1.00]]
-        mvr = flopy.mf6.ModflowMvr(
-            sim,
+        mvr_filerecord = f"{name}.gwfgwf.mvr"
+        gwfgwf.mvr.initialize(
             modelnames=True,
             maxmvr=maxmvr,
             print_flows=True,
             maxpackages=maxpackages,
             packages=mvrpack_sim,
             perioddata=mvrspd,
-            filename=f"{name}.gwfgwf.mvr",
+            filename=mvr_filerecord,
         )
 
     # GWT-GWT
-    mvt_filerecord = None
-    if across_model_mvt_on:
-        mvt_filerecord = f"{name}.gwtgwt.mvt"
     gwtgwt = flopy.mf6.ModflowGwtgwt(
         sim,
         exgtype="GWT6-GWT6",
@@ -240,15 +233,13 @@ def build_model(idx, ws):
         gwfmodelname2=gwfnames[1],
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        mvt_filerecord=mvt_filerecord,
         # dev_interfacemodel_on=False,
     )
 
     # simulation GWT-GWT Mover
     if across_model_mvt_on:
-        mvt = flopy.mf6.modflow.ModflowGwtmvt(
-            sim, filename=f"{name}.gwtgwt.mvt"
-        )
+        mvt_filerecord = f"{name}.gwtgwt.mvt"
+        gwtgwt.mvt.initialize(filename=f"{name}.gwtgwt.mvt")
 
     regression = None
     return sim, regression

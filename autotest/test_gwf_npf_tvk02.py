@@ -114,9 +114,7 @@ def build_model(idx, dir):
 
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, icelltype=laytyp, k=hk, k33=hk, tvk_filerecord=[tvk_filename]
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=laytyp, k=hk, k33=hk)
 
     # TVK
     tvkspd = {}
@@ -157,7 +155,7 @@ def build_model(idx, dir):
     tvkspd[kper - 1] = spd
 
     tvk = flopy.mf6.ModflowUtltvk(
-        gwf, print_input=True, perioddata=tvkspd, filename=tvk_filename
+        npf, print_input=True, perioddata=tvkspd, filename=tvk_filename
     )
 
     # chd files

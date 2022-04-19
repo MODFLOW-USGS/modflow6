@@ -147,7 +147,6 @@ def build_model(idx, dir):
         excf = flopy.mf6.ModflowGwfgwf(
             sim,
             exgtype="GWF6-GWF6",
-            mvr_filerecord=fnmvr,
             nexg=len(exchd),
             exgmnamea=mnames[0],
             exgmnameb=mnames[1],
@@ -179,7 +178,7 @@ def build_model(idx, dir):
         )
         # create mvr package
         mmvr = flopy.mf6.ModflowMvr(
-            sim,
+            excf,
             print_input=True,
             modelnames=True,
             maxmvr=len(mvrpd),
