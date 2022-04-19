@@ -138,6 +138,9 @@ module PetscSolverModule
         call store_error(errmsg)
       end if
 
+      call KSPSetInitialGuessNonzero(this%ksp, .true., ierr)
+      CHKERRQ(ierr)
+
       ! Set preconditioner
       call KSPGetPC(this%ksp, pc, ierr)
       CHKERRQ(ierr)
