@@ -161,8 +161,6 @@ module PetscSolverModule
       ! Set convergence test and pass context
       call KSPSetConvergenceTest(this%ksp, check_convergence, petsc_context, destroy_context, ierr)
       CHKERRQ(ierr)
-
-
     end subroutine allocate_read
 
     subroutine check_convergence(ksp, n, rnorm, flag, petsc_context, ierr)
@@ -204,15 +202,15 @@ module PetscSolverModule
       end if
     end subroutine check_convergence
 
-    subroutine destroy_context(context, ierr)
-      class(PetscContext), pointer :: context   !< optional user-defined monitor context
-      PetscErrorCode :: ierr                    !< error
+    subroutine destroy_context(petsc_context, ierr)
+      class(PetscContext), pointer :: petsc_context   !< optional user-defined monitor context
+      PetscErrorCode :: ierr                          !< error
 
-      call VecDestroy(context%x_old, ierr)
+      call VecDestroy(petsc_context%x_old, ierr)
       CHKERRQ(ierr)
-      call VecDestroy(context%delta_x, ierr)
+      call VecDestroy(petsc_context%delta_x, ierr)
       CHKERRQ(ierr)
-      deallocate(context)
+      deallocate(petsc_context)
     end subroutine destroy_context
 
 
