@@ -10,6 +10,7 @@ module PetscSolverModule
                              VDEBUG
   use GenericUtilitiesModule, only: sim_message
   use BlockParserModule, only: BlockParserType
+  use IMSLinearModule, only: ImsLinearDataType
 
   implicit none
   private
@@ -24,6 +25,7 @@ module PetscSolverModule
   type, private :: PetscContext
     Vec :: x_old
     Vec :: delta_x
+    real(DP) :: dvclose
   end type
   
   type, public :: PetscSolverDataType
@@ -59,7 +61,7 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine allocate_read(this, name, parser, iout, iprims, lin_accel, &
+    subroutine allocate_read(this, name, parser, iout, iprims, imslinear, &
                             neq, nja, ia, ja, amat, rhs, x)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
@@ -72,7 +74,7 @@ module PetscSolverModule
       type(BlockParserType) :: parser                            !< block parser
       integer(I4B), intent(in) :: iout                           !< simulation listing file unit
       integer(I4B), target, intent(in) :: iprims                 !< print option
-      integer(I4B), intent(in) :: lin_accel                      !< linear accelerator (1) CG (2) BICGSTAB 
+      type(ImsLinearDataType), pointer, intent(in) :: imslinear  !< linear accelerator (1) CG (2) BICGSTAB 
       integer(I4B), target, intent(in) :: neq                    !< number of equations
       integer(I4B), target, intent(in) :: nja                    !< number of non-zero entries in the coefficient matrix
       integer(I4B), dimension(neq+1), target, intent(in) :: ia   !< pointer to the start of a row in the coefficient matrix
@@ -85,6 +87,7 @@ module PetscSolverModule
       character(len=LINELENGTH) :: errmsg
       PetscErrorCode ierr
       class(PetscContext), pointer :: petsc_context => null()
+      PC pc
 
       this%memoryPath = create_mem_path(name, 'PetscSolver')
 
@@ -99,7 +102,7 @@ module PetscSolverModule
 
       call this%allocate_scalars()
       this%iout = iout
-      this%lin_accel = lin_accel
+      this%lin_accel = imslinear%ILINMETH
       
       !  Create matrix
       ! TODO: Calculate number of nonzeros per row properly instead of hardcoding to 13
@@ -135,6 +138,12 @@ module PetscSolverModule
         call store_error(errmsg)
       end if
 
+      ! Set preconditioner
+      call KSPGetPC(this%ksp, pc, ierr)
+      CHKERRQ(ierr)
+      call PCSetType(pc, PCILU, ierr)
+      CHKERRQ(ierr)
+
       call KSPSetOperators(this%ksp, this%Amat_petsc, this%Amat_petsc, ierr)
       CHKERRQ(ierr)
       call KSPSetFromOptions(this%ksp, ierr)
@@ -146,6 +155,7 @@ module PetscSolverModule
       CHKERRQ(ierr)
       call VecDuplicate(this%x_petsc, petsc_context%delta_x, ierr)
       CHKERRQ(ierr)
+      petsc_context%dvclose = imslinear%dvclose
 
 
       ! Set convergence test and pass context
@@ -155,37 +165,39 @@ module PetscSolverModule
 
     end subroutine allocate_read
 
-    subroutine check_convergence(ksp, n, rnorm, flag, context, ierr)
-      KSP :: ksp                                !< Iterative context
-      PetscInt :: n                             !< Iteration number
-      PetscReal :: rnorm                        !< 2-norm (preconditioned) residual value
-      KSPConvergedReason :: flag                !< Converged reason
-      class(PetscContext), pointer :: context   !< optional user-defined monitor context
-      PetscErrorCode :: ierr                    !< error
+    subroutine check_convergence(ksp, n, rnorm, flag, petsc_context, ierr)
+      KSP :: ksp                                      !< Iterative context
+      PetscInt :: n                                   !< Iteration number
+      PetscReal :: rnorm                              !< 2-norm (preconditioned) residual value
+      KSPConvergedReason :: flag                      !< Converged reason
+      class(PetscContext), pointer :: petsc_context   !< optional user-defined monitor context
+      PetscErrorCode :: ierr                          !< error
       ! local
       PetscScalar :: alpha = -1.0
       PetscReal :: norm
       Vec :: x
 
+      call KSPGetSolution(ksp,x,ierr)
+      CHKERRQ(ierr)
+
       if (n == 0) then
         ! skip first iteration
+        call VecCopy(x, petsc_context%x_old, ierr)
+        CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
         return
       end if
 
-      call KSPGetSolution(ksp,x,ierr)
+      call VecWAXPY(petsc_context%delta_x, alpha, x, petsc_context%x_old, ierr)
       CHKERRQ(ierr)
 
-      call VecWAXPY(context%delta_x, alpha, x, context%x_old, ierr)
+      call VecNorm(petsc_context%delta_x, NORM_INFINITY, norm, ierr)
       CHKERRQ(ierr)
 
-      call VecNorm(context%delta_x, NORM_INFINITY, norm, ierr)
-      CHKERRQ(ierr)
-
-      call VecCopy(x, context%x_old, ierr)
+      call VecCopy(x, petsc_context%x_old, ierr)
       CHKERRQ(ierr)
       
-      if (norm < 1.e-4) then
+      if (norm < petsc_context%dvclose) then
         flag = KSP_CONVERGED_RTOL ! Converged
       else
         flag = KSP_CONVERGED_ITERATING ! Not yet converged

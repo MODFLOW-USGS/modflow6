@@ -870,7 +870,7 @@ subroutine solution_create(filename, id)
 
     allocate(this%petsc_solver)
     call this%petsc_solver%allocate_read(this%name, this%parser, IOUT,       &
-                                         this%iprims, imslinear,             &
+                                         this%iprims, this%imslinear,        &
                                          this%neq, this%nja, this%ia,        &
                                          this%ja, this%amat, this%rhs,       &
                                          this%x)
