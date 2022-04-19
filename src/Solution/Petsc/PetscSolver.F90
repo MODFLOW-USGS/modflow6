@@ -10,6 +10,7 @@ module PetscSolverModule
                              VDEBUG
   use GenericUtilitiesModule, only: sim_message
   use BlockParserModule, only: BlockParserType
+  use IMSLinearModule, only: ImsLinearDataType
 
   implicit none
   private
@@ -20,6 +21,12 @@ module PetscSolverModule
     enumerator :: LIN_ACCEL_CG=1
     enumerator :: LIN_ACCEL_BCGS=2
   end enum
+
+  type, private :: PetscContext
+    Vec :: x_old
+    Vec :: delta_x
+    real(DP) :: dvclose
+  end type
   
   type, public :: PetscSolverDataType
     character(len=LENMEMPATH) :: memoryPath                              !< the path for storing variables in the memory manager
@@ -38,7 +45,7 @@ module PetscSolverModule
     Vec :: x_petsc
     Vec :: rhs_petsc
     KSP :: ksp
-
+    
     ! procedures (methods)
     contains
       procedure :: allocate_read
@@ -54,7 +61,7 @@ module PetscSolverModule
     !> @brief Allocate storage and read data
     !!
     !<
-    subroutine allocate_read(this, name, parser, iout, iprims, lin_accel, &
+    subroutine allocate_read(this, name, parser, iout, iprims, imslinear, &
                             neq, nja, ia, ja, amat, rhs, x)
       ! -- modules
       use MemoryManagerModule, only: mem_allocate
@@ -67,7 +74,7 @@ module PetscSolverModule
       type(BlockParserType) :: parser                            !< block parser
       integer(I4B), intent(in) :: iout                           !< simulation listing file unit
       integer(I4B), target, intent(in) :: iprims                 !< print option
-      integer(I4B), intent(in) :: lin_accel                      !< linear accelerator (1) CG (2) BICGSTAB 
+      type(ImsLinearDataType), pointer, intent(in) :: imslinear  !< linear accelerator (1) CG (2) BICGSTAB 
       integer(I4B), target, intent(in) :: neq                    !< number of equations
       integer(I4B), target, intent(in) :: nja                    !< number of non-zero entries in the coefficient matrix
       integer(I4B), dimension(neq+1), target, intent(in) :: ia   !< pointer to the start of a row in the coefficient matrix
@@ -79,6 +86,8 @@ module PetscSolverModule
       ! -- local variables
       character(len=LINELENGTH) :: errmsg
       PetscErrorCode ierr
+      class(PetscContext), pointer :: petsc_context => null()
+      PC pc
 
       this%memoryPath = create_mem_path(name, 'PetscSolver')
 
@@ -93,9 +102,10 @@ module PetscSolverModule
 
       call this%allocate_scalars()
       this%iout = iout
-      this%lin_accel = lin_accel
+      this%lin_accel = imslinear%ILINMETH
       
-      !  Create matrix 
+      !  Create matrix
+      ! TODO: Calculate number of nonzeros per row properly instead of hardcoding to 13
       call MatCreateSeqAIJ(PETSC_COMM_WORLD, this%neq, size(this%x), 13,         &
                            PETSC_NULL_INTEGER, this%Amat_petsc,ierr)
       CHKERRQ(ierr)
@@ -105,7 +115,7 @@ module PetscSolverModule
       CHKERRQ(ierr)
 
       !  Create petsc vectors.
-      call VecCreateSeq(PETSC_COMM_WORLD, size(this%x), this%x_petsc,ierr)
+      call VecCreateSeq(PETSC_COMM_WORLD, size(this%x), this%x_petsc, ierr)
       CHKERRQ(ierr)
       call VecSetFromOptions(this%x_petsc, ierr)
       CHKERRQ(ierr)
@@ -128,11 +138,82 @@ module PetscSolverModule
         call store_error(errmsg)
       end if
 
+      ! Set preconditioner
+      call KSPGetPC(this%ksp, pc, ierr)
+      CHKERRQ(ierr)
+      call PCSetType(pc, PCILU, ierr)
+      CHKERRQ(ierr)
+
       call KSPSetOperators(this%ksp, this%Amat_petsc, this%Amat_petsc, ierr)
       CHKERRQ(ierr)
       call KSPSetFromOptions(this%ksp, ierr)
       CHKERRQ(ierr)
+
+      ! Init context
+      allocate(petsc_context)
+      call VecDuplicate(this%x_petsc, petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
+      call VecDuplicate(this%x_petsc, petsc_context%delta_x, ierr)
+      CHKERRQ(ierr)
+      petsc_context%dvclose = imslinear%dvclose
+
+
+      ! Set convergence test and pass context
+      call KSPSetConvergenceTest(this%ksp, check_convergence, petsc_context, destroy_context, ierr)
+      CHKERRQ(ierr)
     end subroutine allocate_read
+
+    subroutine check_convergence(ksp, n, rnorm, flag, petsc_context, ierr)
+      KSP :: ksp                                      !< Iterative context
+      PetscInt :: n                                   !< Iteration number
+      PetscReal :: rnorm                              !< 2-norm (preconditioned) residual value
+      KSPConvergedReason :: flag                      !< Converged reason
+      class(PetscContext), pointer :: petsc_context   !< optional user-defined monitor context
+      PetscErrorCode :: ierr                          !< error
+      ! local
+      PetscScalar :: alpha = -1.0
+      PetscReal :: norm
+      Vec :: x
+
+      call KSPGetSolution(ksp,x,ierr)
+      CHKERRQ(ierr)
+
+      if (n == 0) then
+        ! skip first iteration
+        call VecCopy(x, petsc_context%x_old, ierr)
+        CHKERRQ(ierr)
+        flag = KSP_CONVERGED_ITERATING
+        return
+      end if
+
+      call VecWAXPY(petsc_context%delta_x, alpha, x, petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
+
+      call VecNorm(petsc_context%delta_x, NORM_INFINITY, norm, ierr)
+      CHKERRQ(ierr)
+
+      call VecCopy(x, petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
+      
+      if (norm < petsc_context%dvclose) then
+        flag = KSP_CONVERGED_RTOL ! Converged
+      else
+        flag = KSP_CONVERGED_ITERATING ! Not yet converged
+      end if
+    end subroutine check_convergence
+
+    subroutine destroy_context(petsc_context, ierr)
+      class(PetscContext), pointer :: petsc_context   !< optional user-defined monitor context
+      PetscErrorCode :: ierr                          !< error
+
+      call VecDestroy(petsc_context%x_old, ierr)
+      CHKERRQ(ierr)
+      call VecDestroy(petsc_context%delta_x, ierr)
+      CHKERRQ(ierr)
+      deallocate(petsc_context)
+    end subroutine destroy_context
+
+
 
     !> @brief Deallocate memory
     !!
@@ -163,16 +244,14 @@ module PetscSolverModule
       nullify(this%rhs)
       nullify(this%x)
 
-      call MatDestroy(this%Amat_petsc,ierr)
+      call MatDestroy(this%Amat_petsc, ierr)
       CHKERRQ(ierr)
-      call VecDestroy(this%x_petsc,ierr)
+      call VecDestroy(this%x_petsc, ierr)
       CHKERRQ(ierr)
-      call VecDestroy(this%rhs_petsc,ierr)
+      call VecDestroy(this%rhs_petsc, ierr)
       CHKERRQ(ierr)
-
-      call KSPDestroy(this%ksp,ierr)
+      call KSPDestroy(this%ksp, ierr)
       CHKERRQ(ierr)
-      
       ! -- return
       return
     end subroutine deallocate
@@ -210,9 +289,9 @@ module PetscSolverModule
         call VecSetValues(this%x_petsc, ione, n-1, this%x(n), INSERT_VALUES, ierr)
         CHKERRQ(ierr)
       end do
-      call VecAssemblyBegin(this%x_petsc,ierr)
+      call VecAssemblyBegin(this%x_petsc, ierr)
       CHKERRQ(ierr)
-      call VecAssemblyEnd(this%x_petsc,ierr)
+      call VecAssemblyEnd(this%x_petsc, ierr)
       CHKERRQ(ierr)
 
       ! create RHS
