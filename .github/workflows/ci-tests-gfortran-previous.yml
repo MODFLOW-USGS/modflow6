@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
         GCC_V: [9]
     defaults:
       run:
@@ -48,7 +48,7 @@ jobs:
     
     - name: Install PETSc dependencies
       run: |
-        sudo apt install -y build-essential gfortran git openmpi-bin liblapack-dev pkg-config
+        sudo apt install -y openmpi-bin liblapack-dev
     
     - name: Check out PETSc
       run: |
@@ -59,6 +59,13 @@ jobs:
       run: |
         ./configure --with-debugging=no
         make all check
+
+    - name: Print env vars
+      run: |
+        echo $LD_LIBRARY_PATH
+        echo $PKG_CONFIG_PATH
+        ls $GITHUB_WORKSPACE/../petsc/lib
+        ls $GITHUB_WORKSPACE/../petsc/lib/pkgconfig
 
     - name: Install python packages
       run: |
