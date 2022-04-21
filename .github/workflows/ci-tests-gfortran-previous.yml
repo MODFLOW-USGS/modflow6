@@ -7,8 +7,9 @@ on:
   pull_request:
 
 env:
-  LD_LIBRARY_PATH: $GITHUB_WORKSPACE/../petsc/lib:$LD_LIBRARY_PATH
-  PKG_CONFIG_PATH: $GITHUB_WORKSPACE/../petsc/lib/pkgconfig:$PKG_CONFIG_PATH
+  PETSC_PATH: $GITHUB_WORKSPACE/../petsc
+  LD_LIBRARY_PATH: $PETSC_PATH/arch-linux-c-opt/lib:$LD_LIBRARY_PATH
+  PKG_CONFIG_PATH: $PETSC_PATH/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH
 
 jobs:
   test:
@@ -52,7 +53,7 @@ jobs:
     
     - name: Check out PETSc
       run: |
-        git clone -b release https://gitlab.com/petsc/petsc ../petsc
+        git clone -b release https://gitlab.com/petsc/petsc $PETSC_PATH
     
     - name: Compile PETSc
       working-directory: ../petsc
