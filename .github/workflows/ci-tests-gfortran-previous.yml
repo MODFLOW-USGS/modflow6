@@ -56,7 +56,7 @@ jobs:
         git clone -b release https://gitlab.com/petsc/petsc $PETSC_PATH
     
     - name: Compile PETSc
-      working-directory: ../petsc
+      working-directory: $PETSC_PATH
       run: |
         ./configure --with-debugging=no
         make all check
@@ -65,8 +65,9 @@ jobs:
       run: |
         echo $LD_LIBRARY_PATH
         echo $PKG_CONFIG_PATH
-        ls $GITHUB_WORKSPACE/../petsc/lib
-        ls $GITHUB_WORKSPACE/../petsc/lib/pkgconfig
+        ls $PETSC_PATH/arch-linux-c-opt/lib
+        ls $PETSC_PATH/arch-linux-c-opt/lib/pkgconfig
+        pwd
 
     - name: Install python packages
       run: |
