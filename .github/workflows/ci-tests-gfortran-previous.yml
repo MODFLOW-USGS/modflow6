@@ -8,8 +8,6 @@ on:
 
 env:
   PETSC_PATH: ${{ github.workspace }}/../petsc
-  LD_LIBRARY_PATH: ${{ env.PETSC_PATH }}/arch-linux-c-opt/lib
-  PKG_CONFIG_PATH: ${{ env.PETSC_PATH }}/arch-linux-c-opt/lib/pkgconfig
 
 jobs:
   test:
@@ -60,14 +58,16 @@ jobs:
       run: |
         ./configure --with-debugging=no
         make all check
+    
+    - name: Set env vars
+      run: |
+        echo "LD_LIBRARY_PATH=$PETSC_PATH/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$PETSC_PATH/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Print env vars
       run: |
         echo $LD_LIBRARY_PATH
         echo $PKG_CONFIG_PATH
-        ls $PETSC_PATH/arch-linux-c-opt/lib
-        ls $PETSC_PATH/arch-linux-c-opt/lib/pkgconfig
-        pwd
 
     - name: Install python packages
       run: |
