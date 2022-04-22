@@ -70,15 +70,10 @@ jobs:
         ./configure --with-debugging=no
         make all check
     
-    - name: Set env vars
+    - name: Set LD_LIBRARY_PATH and PKG_CONFIG_PATH
       run: |
-        echo "LD_LIBRARY_PATH=/petsc-$PETSC_VERSION/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=/petsc-$PETSC_VERSION/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-
-    - name: Print env vars
-      run: |
-        echo $LD_LIBRARY_PATH
-        echo $PKG_CONFIG_PATH
+        echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/temp/petsc-$PETSC_VERSION/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/temp/petsc-$PETSC_VERSION/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Install python packages
       run: |
