@@ -83,7 +83,7 @@ jobs:
 
     - name: Get regression test files
       run: |
-        .github/common/get-regression-files.sh
+        .github/common/get-largetests-regression-files.sh
 
     - name: Check out the correct regression test branch
       run: |
@@ -100,3 +100,8 @@ jobs:
     - name: Build and install modflow
       run: |
         meson install -C builddir
+
+    - name: Test applications
+      working-directory: autotest
+      run: |
+        pytest -v --durations=0 test_z03_largetests.py::test_mf6model[test1002_biscqtg_dev]
