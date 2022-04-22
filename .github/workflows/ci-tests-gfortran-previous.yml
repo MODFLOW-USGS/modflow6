@@ -50,13 +50,13 @@ jobs:
         sudo apt install -y openmpi-bin liblapack-dev
     
     - name: Check out PETSc
-      working-directory: /
+      working-directory: temp
       run: |
         wget https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-$PETSC_VERSION.tar.gz
         tar xf petsc-$PETSC_VERSION.tar.gz
     
     - name: Compile PETSc
-      working-directory: /petsc-${{ env.PETSC_VERSION }}
+      working-directory: temp/petsc-${{ env.PETSC_VERSION }}
       run: |
         ./configure --with-debugging=no
         make all check
