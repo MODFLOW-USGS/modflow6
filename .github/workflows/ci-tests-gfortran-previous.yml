@@ -50,8 +50,9 @@ jobs:
         sudo apt install -y openmpi-bin liblapack-dev
     
     - name: Check out PETSc
-      working-directory: temp
       run: |
+        mkdir temp
+        cd temp
         wget https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-$PETSC_VERSION.tar.gz
         tar xf petsc-$PETSC_VERSION.tar.gz
     
