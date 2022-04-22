@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  PETSC_PATH: ${{ github.workspace }}/../petsc
+  PETSC_VERSION: "3.17.0"
 
 jobs:
   test:
@@ -50,19 +50,21 @@ jobs:
         sudo apt install -y openmpi-bin liblapack-dev
     
     - name: Check out PETSc
+      working-directory: /
       run: |
-        git clone -b release https://gitlab.com/petsc/petsc $PETSC_PATH
+        wget https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-$PETSC_VERSION.tar.gz
+        tar xf petsc-$PETSC_VERSION.tar.gz
     
     - name: Compile PETSc
-      working-directory: ${{ env.PETSC_PATH }}
+      working-directory: /petsc-${{ env.PETSC_VERSION }}
       run: |
         ./configure --with-debugging=no
         make all check
     
     - name: Set env vars
       run: |
-        echo "LD_LIBRARY_PATH=$PETSC_PATH/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$PETSC_PATH/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/petsc-$PETSC_VERSION/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=/petsc-$PETSC_VERSION/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Print env vars
       run: |
