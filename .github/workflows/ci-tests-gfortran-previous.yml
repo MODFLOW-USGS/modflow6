@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  PETSC_VERSION: "3.16.6"
+  PETSC_VERSION: "v3.16.6" # Change that variable to update PETSc
 
 jobs:
   test:
@@ -28,7 +28,7 @@ jobs:
     - uses: actions/cache@v1
       id: cache
       with:
-        path: ../petsc-${{ env.PETSC_VERSION }}/arch-linux-c-opt
+        path: ../petsc/arch-linux-c-opt
         key: ${{ runner.os }}-${{ matrix.GCC_V }}-petsc-${{ env.PETSC_VERSION }}
 
     - name: Setup Python 3.8
@@ -57,22 +57,20 @@ jobs:
     
     - name: Check out PETSc
       if: steps.cache.outputs.cache-hit != 'true'
-      working-directory: ../
       run: |
-        wget https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-$PETSC_VERSION.tar.gz
-        tar xf petsc-$PETSC_VERSION.tar.gz
+        git clone -b $PETSC_VERSION https://gitlab.com/petsc/petsc.git ../petsc
     
     - name: Compile PETSc
       if: steps.cache.outputs.cache-hit != 'true'
-      working-directory: ../petsc-${{ env.PETSC_VERSION }}
+      working-directory: ../petsc
       run: |
         ./configure --with-debugging=no
         make all check
     
     - name: Set LD_LIBRARY_PATH and PKG_CONFIG_PATH
       run: |
-        echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/../petsc-$PETSC_VERSION/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/../petsc-$PETSC_VERSION/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/../petsc/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/../petsc/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Install python packages
       run: |
