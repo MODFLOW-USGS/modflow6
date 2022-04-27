@@ -155,7 +155,6 @@ module GwfGwtExchangeModule
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
-    class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
     !
