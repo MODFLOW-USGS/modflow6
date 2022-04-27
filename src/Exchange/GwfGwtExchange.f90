@@ -155,10 +155,6 @@ module GwfGwtExchangeModule
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
-    integer(I4B) :: ngwfpack
-    integer(I4B) :: ip
-    integer(I4B) :: imover
-    integer(I4B) :: iterm
     class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
@@ -185,29 +181,6 @@ module GwfGwtExchangeModule
     if (gwtmodel%indsp > 0) then
       gwfmodel%npf%icalcspdis = 1
     end if
-    !
-    ! -- Set the auxiliary names for gwf flow packages in gwt%fmi
-    ngwfpack = gwfmodel%bndlist%Count()
-    !
-    iterm = 1
-    do ip = 1, ngwfpack
-      packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(iterm)%set_auxname(packobj%naux,         &
-                                                    packobj%auxname)
-      iterm = iterm + 1
-      !
-      ! -- If a mover is active, then establish a separate
-      !    pointer link for the mover flows stored in SIMTOMVR.
-      !    Parallels the code in initialize_gwfterms_from_gwfbndlist() 
-      !    located in FMI
-      imover = packobj%imover
-      if (packobj%isadvpak /= 0) imover = 0
-      if (imover /= 0) then
-        call gwtmodel%fmi%gwfpackages(iterm)%set_auxname(packobj%naux,       &
-                                                         packobj%auxname)
-        iterm = iterm + 1
-      end if
-    end do
     !
     ! -- return
     return
