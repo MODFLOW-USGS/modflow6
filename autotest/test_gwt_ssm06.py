@@ -1,5 +1,5 @@
 # Derived from test_gwt_ssm01fmi.py, but drops RIV and adds SFR.
-# See test_gwt_ssm01fmi_b.py for additional detail on what this test is about.
+# See test_gwt_ssm06fmi.py for additional detail on what this test is about.
 
 import os
 import shutil
@@ -28,7 +28,7 @@ exe_name_mf6 = targets.target_dict["mf6"]
 exe_name_mf6 = os.path.abspath(exe_name_mf6)
 
 testdir = "./temp"
-testgroup = "ssm01c"
+testgroup = "ssm06"
 d = os.path.join(testdir, testgroup)
 if os.path.isdir(d):
     shutil.rmtree(d)
@@ -376,7 +376,7 @@ def run_flw_and_trnprt_models():
     return
 
 
-def test_ssm01fmi():
+def test_ssm06():
     run_flw_and_trnprt_models()
     d = os.path.join(testdir, testgroup)
     if os.path.isdir(d):
@@ -389,4 +389,4 @@ if __name__ == "__main__":
     print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run tests
-    test_ssm01fmi()
+    test_ssm06()

@@ -34,7 +34,7 @@ exe_name_mf6 = targets.target_dict["mf6"]
 exe_name_mf6 = os.path.abspath(exe_name_mf6)
 
 testdir = "./temp"
-testgroup = "ssm01b"
+testgroup = "ssm06fmi"
 d = os.path.join(testdir, testgroup)
 if os.path.isdir(d):
     shutil.rmtree(d)
@@ -53,8 +53,6 @@ botm = 0.0
 # appear in SSM and MVR is active. When MVR is inactive, all seem to work well.
 # However, things break as soon as MVR is activated.
 #
-
-mvr_status = False
 
 conns = [(0, -1), (1, 0, -2), (2, 1, -3), (3, 2, -4), (4, 3)]
 
@@ -412,7 +410,7 @@ def run_transport_model():
     return
 
 
-def test_ssm01fmi():
+def test_ssm06fmi():
     run_flow_model()
     run_transport_model()
     d = os.path.join(testdir, testgroup)
@@ -426,4 +424,4 @@ if __name__ == "__main__":
     print("standalone run of {}".format(os.path.basename(__file__)))
 
     # run tests
-    test_ssm01fmi()
+    test_ssm06fmi()
