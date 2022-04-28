@@ -155,8 +155,6 @@ module GwfGwtExchangeModule
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
-    integer(I4B) :: ngwfpack, ip
-    class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
     !
@@ -182,14 +180,6 @@ module GwfGwtExchangeModule
     if (gwtmodel%indsp > 0) then
       gwfmodel%npf%icalcspdis = 1
     end if
-    !
-    ! -- Set the auxiliary names for gwf flow packages in gwt%fmi
-    ngwfpack = gwfmodel%bndlist%Count()
-    do ip = 1, ngwfpack
-      packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(ip)%set_auxname(packobj%naux,              &
-                                                    packobj%auxname)
-    end do
     !
     ! -- return
     return

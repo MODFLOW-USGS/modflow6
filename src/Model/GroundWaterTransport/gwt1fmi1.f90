@@ -1441,6 +1441,8 @@ module GwtFmiModule
       budtxt = adjustl(packobj%text)
       call this%gwfpackages(iterm)%set_name(packobj%packName, budtxt)
       this%flowpacknamearray(iterm) = packobj%packName
+      call this%gwfpackages(iterm)%set_auxname(packobj%naux,         &
+                                               packobj%auxname)
       iterm = iterm + 1
       !
       ! -- if this package has a mover associated with it, then add another
@@ -1451,6 +1453,8 @@ module GwtFmiModule
         budtxt = trim(adjustl(packobj%text)) // '-TO-MVR'
         call this%gwfpackages(iterm)%set_name(packobj%packName, budtxt)
         this%flowpacknamearray(iterm) = packobj%packName
+        call this%gwfpackages(iterm)%set_auxname(packobj%naux,         &
+                                                 packobj%auxname)
         this%igwfmvrterm(iterm) = 1
         iterm = iterm + 1
       end if

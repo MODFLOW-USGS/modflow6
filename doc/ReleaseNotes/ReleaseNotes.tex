@@ -242,7 +242,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	%\underline{EXCHANGES}
 	%\begin{itemize}
-	%	\item xxx
+	%	\item Fixed a bug that occurred when flow and transport models were run simultaneously and auxiliary variable(s), for example CONCENTRATION, and mover were both active in the OPTIONS block of a boundary package (e.g., WEL). When running the flow and transport problems separately, no issues occurred.  The issue only seemed to be a problem when running flow and transport simultaneously because an indexing variable would get out of sync in SSM that reported an error message to the screen and prematurely exited MF6.  Two new autotests added: the first runs GWF & GWT independently while the second runs them simultaneously and would trigger the condition that this bug report aims to fix.
 	%	\item xxx
 	%	\item xxx
 	%\end{itemize}
