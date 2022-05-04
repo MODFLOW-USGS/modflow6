@@ -35,6 +35,9 @@ module mf6bmiUtil
   integer(c_int), bind(C, name="BMI_LENCOMPONENTNAME") :: BMI_LENCOMPONENTNAME = 256 !< component name length, i.e. 'MODFLOW 6'
   !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENCOMPONENTNAME
 
+  integer(c_int), bind(C, name="BMI_LENVERSION") :: BMI_LENVERSION = 256 !< length of version string, e.g. '6.3.1' or '6.4.1-dev'
+  !DIR$ ATTRIBUTES DLLEXPORT :: BMI_LENVERSION
+
 contains
 
   !> @brief Split the variable address string

@@ -301,6 +301,24 @@ contains
 
   end function xmi_finalize_solve
 
+
+  !> @brief Get the version string for this component
+  !<
+  function xmi_get_version(mf_version) result(bmi_status) bind(C, name="get_version")
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_get_version
+    ! -- modules
+    use VersionModule, only: VERSION
+    ! -- dummy variables
+    character(kind=c_char), intent(out) :: mf_version(BMI_LENVERSION)
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+
+    mf_version = string_to_char_array(VERSION, len_trim(VERSION))
+    bmi_status = BMI_SUCCESS
+
+  end function xmi_get_version
+
+
   !> @brief Get the full address string for a variable
   !!
   !! This routine constructs the full address string of a variable using the
