@@ -155,10 +155,12 @@ module GwtSsmModule
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
-      write(errmsg, '(a)') 'SSM PACKAGE DOES NOT HAVE &
-                            &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE &
-                            &OR TURN ON FMI AND PROVIDE A BUDGET FILE &
-                            &THAT CONTAINS BOUNDARY FLOWS.'
+      write(errmsg, '(a)') 'SSM PACKAGE DOES NOT DETECT ANY BOUNDARY FLOWS &
+                            &THAT REQUIRE SSM TERMS.  ACTIVATE GWF-GWT &
+                            &EXCHANGE OR ACTIVATE FMI PACKAGE AND PROVIDE A &
+                            &BUDGET FILE THAT CONTAINS BOUNDARY FLOWS.  IF NO &
+                            &BOUNDARY FLOWS ARE PRESENT IN CORRESPONDING GWF &
+                            &MODEL THEN THIS SSM PACKAGE SHOULD BE REMOVED.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     endif
