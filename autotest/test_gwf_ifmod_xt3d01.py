@@ -80,7 +80,7 @@ def get_model(idx, dir):
     row_s, row_e = 3, 5
     col_s, col_e = 3, 5
 
-    ref_fct = 3
+    ref_fct = 5
     nrowc = ref_fct * ((row_e - row_s) + 1)
     ncolc = ref_fct * ((col_e - col_s) + 1)
 

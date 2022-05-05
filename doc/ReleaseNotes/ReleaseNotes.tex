@@ -207,7 +207,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-		\item xxx
+		\item Corrected programming error in XT3D functionality that could occur when running coupled flow models or transport models.  The XT3D code would result in a memory access error when a child model with a much larger level of refinement was coupled to a coarser parent model.  The XT3D code was generalized to handle this situation. 
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
