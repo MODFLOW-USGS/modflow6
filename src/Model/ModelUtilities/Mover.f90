@@ -1,9 +1,16 @@
+!> @brief This module contains the MvrModule Module
+!!
+!! This module contains the code for the low-level MvrType
+!! object.
+!!
+!<
 module MvrModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, LENBUDTXT,   &
                              LENAUXNAME, LENBOUNDNAME, DZERO, DONE, &
                              LENMEMPATH
+  use SimVariablesModule, only: errmsg
   use PackageMoverModule, only: PackageMoverType
   
   implicit none
@@ -13,13 +20,19 @@ module MvrModule
   character(len=12), dimension(4) :: mvrtypes =                                &
     [character(len=12) :: 'FACTOR', 'EXCESS', 'THRESHOLD', 'UPTO']
   
+  !> @brief Derived type for MvrType 
+  !!
+  !! This derived type contains information and methods for
+  !! moving water between packages.
+  !!
+  !<
   type MvrType
     character(len=LENMEMPATH)                    :: pckNameSrc = ''              !< provider package name
     character(len=LENMEMPATH)                    :: pckNameTgt = ''              !< receiver package name
-    integer(I4B)                                 :: iRchNrSrc = 0                !< provider reach number
-    integer(I4B)                                 :: iRchNrTgt = 0                !< receiver reach number
-    integer(I4B)                                 :: imvrtype = 0                 !< mover type (1, 2, 3, 4) corresponds to mvrtypes
-    real(DP)                                     :: value = DZERO                !< factor or rate depending on mvrtype
+    integer(I4B), pointer                        :: iRchNrSrc => null()          !< provider reach number
+    integer(I4B), pointer                        :: iRchNrTgt => null()          !< receiver reach number
+    integer(I4B), pointer                        :: imvrtype => null()           !< mover type (1, 2, 3, 4) corresponds to mvrtypes
+    real(DP), pointer                            :: value => null()              !< factor or rate depending on mvrtype
     real(DP)                                     :: qpactual = DZERO             !< rate provided to the receiver
     real(DP)                                     :: qavailable = DZERO           !< rate available at time of providing
     real(DP), pointer                            :: qtformvr_ptr => null()       !< pointer to total available flow (qtformvr)
@@ -27,7 +40,8 @@ module MvrModule
     real(DP), pointer                            :: qtomvr_ptr => null()         !< pointer to provider flow rate (qtomvr)
     real(DP), pointer                            :: qfrommvr_ptr => null()       !< pointer to receiver flow rate (qfrommvr)
   contains
-    procedure :: set
+    procedure :: set_values
+    procedure :: prepare
     procedure :: echo
     procedure :: advance
     procedure :: fc
@@ -37,109 +51,60 @@ module MvrModule
   
   contains
   
-  subroutine set(this, line, inunit, iout, mname, pckMemPaths, pakmovers)
-! ******************************************************************************
-! set -- Setup mvr object
-!        If mname == '', then read mname out of line. pckMemPaths is an array
-!        of strings which are the memory paths for those packages. They are composed
-!        of model names and package names. The mover entries must be in pckMemPaths, 
-!        or this routine will terminate with an error.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use InputOutputModule, only: urword, extract_idnum_or_bndname
-    use SimModule, only: store_error, store_error_unit, count_errors    
+  !> @ brief Set values from input data
+  !!
+  !! Set values and pointers for mover object.
+  !!
+  !<
+  subroutine set_values(this, mname1, pname1, id1, mname2, pname2, &
+                        id2, imvrtype, value)
     use MemoryHelperModule, only: create_mem_path
-    ! -- dummy
     class(MvrType) :: this
-    character(len=*), intent(inout) :: line
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    character(len=LENMODELNAME), intent(in) :: mname
+    character(len=*), intent(in) :: mname1
+    character(len=*), intent(in) :: pname1
+    integer(I4B), intent(in), target :: id1
+    character(len=*), intent(in) :: mname2
+    character(len=*), intent(in) :: pname2
+    integer(I4B), intent(in), target :: id2
+    integer(I4B), intent(in), target :: imvrtype
+    real(DP), intent(in), target :: value
+    
+    this%pckNameSrc = create_mem_path(mname1, pname1)
+    this%iRchNrSrc => id1
+    this%pckNameTgt = create_mem_path(mname2, pname2)
+    this%iRchNrTgt => id2
+    this%imvrtype => imvrtype
+    this%value => value
+    
+    return
+  end subroutine set_values
+                        
+  !> @ brief Prepare object
+  !!
+  !! Set values and pointers for mover object.
+  !! pckMemPaths is an array of strings which are the memory paths for those 
+  !! packages. They are composed of model names and package names. The mover 
+  !! entries must be in pckMemPaths, or this routine will terminate with an error.
+  !<
+  subroutine prepare(this, inunit, pckMemPaths, pakmovers)
+    ! -- modules
+    use SimModule, only: store_error, store_error_unit, count_errors    
+    ! -- dummy
+    class(MvrType) :: this                                                  !< MvrType objec
+    integer(I4B), intent(in) :: inunit                                      !< input file unit number
     character(len=LENMEMPATH),                                                &
-      dimension(:), pointer, contiguous              :: pckMemPaths
-    type(PackageMoverType), dimension(:), pointer, contiguous    :: pakmovers
+      dimension(:), pointer, contiguous  :: pckMemPaths                     !< array of strings
+    type(PackageMoverType), dimension(:), pointer, contiguous :: pakmovers  !< Array of package mover objects
     ! -- local
-    integer(I4B) :: lloc, istart, istop, ival
-    real(DP) :: rval
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
-    character(len=LINELENGTH) :: errmsg
-    character(len=LENBOUNDNAME) :: bndname
-    character(len=LINELENGTH) :: modelName
-    character(len=LINELENGTH) :: packageName
-    logical :: mnamel, found
+    logical :: found
     integer(I4B) :: i
     integer(I4B) :: ipakloc1, ipakloc2
-! ------------------------------------------------------------------------------
-    !
-    ! -- Check for valid mname and set logical mnamel flag
-    if(mname == '') then
-      mnamel = .false.
-    else
-      mnamel = .true.
-    endif
-    !    
-    ! -- Set lloc for line
-    lloc = 1
-    !
-    ! -- Construct provider name, which is the memory path for the package
-    if(mnamel) then
-      modelName = mname
-    else
-      call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-      modelName = line(istart:istop)
-    endif
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    packageName = line(istart:istop)
-
-    this%pckNameSrc = create_mem_path(modelName, packageName)
-
-    !
-    ! -- Read id for the provider
-    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
-    this%iRchNrSrc = ival
-    !
-    ! -- Construct receiver name, which is the memory path for the package
-    if(mnamel) then
-      modelName = mname
-    else
-      call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-      modelName = line(istart:istop)
-    endif
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    packageName = line(istart:istop)
-    this%pckNameTgt = create_mem_path(modelName, packageName)
-    !
-    ! -- Read id for the receiver
-    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
-    this%iRchNrTgt = ival
-    !
-    ! -- Read mover type
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    select case(line(istart:istop))
-      case('FACTOR')
-        this%imvrtype = 1
-      case('EXCESS')
-        this%imvrtype = 2
-      case('THRESHOLD')
-        this%imvrtype = 3
-      case('UPTO')
-        this%imvrtype = 4
-      case default
-        call store_error('INVALID MOVER TYPE: '//trim(line(istart:istop)) )
-        call store_error_unit(inunit)
-    end select
-    !
-    ! -- Read mover value
-    call urword(line, lloc, istart, istop, 3, ival, rval, iout, inunit)
-    this%value = rval
     !
     ! -- Check to make sure provider and receiver are not the same
     if(this%pckNameSrc == this%pckNameTgt .and. this%iRchNrSrc == this%iRchNrTgt) then
       call store_error('PROVIDER AND RECEIVER ARE THE SAME: '//         &
-        trim(line))
+        trim(this%pckNameSrc) // ' : ' // trim(this%pckNameTgt))
       call store_error_unit(inunit)
     endif
     !
@@ -207,21 +172,19 @@ module MvrModule
     !
     ! -- return
     return
-  end subroutine set
+  end subroutine prepare
   
+  !> @ brief Echo data to list file
+  !!
+  !! Write mover values to output file.
+  !!
+  !<
   subroutine echo(this, iout)
-! ******************************************************************************
-! echo -- Write the mover info that was read from file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(MvrType) :: this
-    integer(I4B), intent(in) :: iout
+    class(MvrType) :: this             !< MvrType
+    integer(I4B), intent(in) :: iout   !< unit number for output file
     ! -- local
-! ------------------------------------------------------------------------------
     !
     write(iout, '(4x, a, a, a, i0)') 'FROM PACKAGE: ', trim(this%pckNameSrc),  &
       ' FROM ID: ', this%iRchNrSrc
@@ -234,37 +197,32 @@ module MvrModule
     return
   end subroutine echo
   
+  !> @ brief Advance
+  !!
+  !! Advance mover object.  Does nothing now.
+  !!
+  !<
   subroutine advance(this)
-! ******************************************************************************
-! advance -- Advance the mover
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(MvrType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
-    !
     !
     ! -- return
     return
   end subroutine advance
   
+  !> @ brief Formulate coefficients
+  !!
+  !! Make mover calculations.
+  !!
+  !<
   subroutine fc(this)
-! ******************************************************************************
-! fc -- formulate coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(MvrType) :: this
+    class(MvrType) :: this  !< MvrType
     ! -- local
     real(DP) :: qavailable, qtanew, qpactual
-! ------------------------------------------------------------------------------
     !
     ! -- Set qa and this%qavailable equal to available water in package (qtomvr)
     qavailable = this%qformvr_ptr
@@ -294,22 +252,20 @@ module MvrModule
     return
   end subroutine fc
 
+  !> @ brief Flow to receiver
+  !!
+  !! Calculate the rate of water provided to receiver.
+  !!
+  !<
   function qrcalc(this, qa, qta) result(qr)
-! ******************************************************************************
-! qrcalc -- Calculate the rate of water provided to the receiver
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
     real(DP) :: qr
     ! -- dummy
-    class(MvrType) :: this
-    real(DP), intent(in) :: qa
-    real(DP), intent(in) :: qta
+    class(MvrType) :: this      !< MvrType
+    real(DP), intent(in) :: qa  !< actual flow
+    real(DP), intent(in) :: qta !< total available flow
     ! -- local
-! ------------------------------------------------------------------------------
     ! -- Using the mover rules, calculate how much of the available water will
     !    go to the receiver.
     qr = DZERO
@@ -347,22 +303,20 @@ module MvrModule
     return
   end function qrcalc
 
+  !> @ brief Write flow
+  !!
+  !! Write a line of output for this mover object.
+  !!
+  !<
   subroutine writeflow(this, iout)
-! ******************************************************************************
-! writeflow -- Write mover flow information
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(MvrType) :: this
-    integer(I4B), intent(in) :: iout
+    class(MvrType) :: this            !< MvrType
+    integer(I4B), intent(in) :: iout  !< output file unit number
     ! -- local
     character(len=*), parameter :: fmt = &
       "(1x, a, ' ID ', i0, ' AVAILABLE ', 1(1pg15.6), " // &
       "' PROVIDED ', 1(1pg15.6), ' TO ', a, ' ID ', i0)"
-! ------------------------------------------------------------------------------
     !
     write(iout, fmt) trim(this%pckNameSrc), this%iRchNrSrc, this%qavailable,   &
       this%qpactual, trim(this%pckNameTgt), this%iRchNrTgt
