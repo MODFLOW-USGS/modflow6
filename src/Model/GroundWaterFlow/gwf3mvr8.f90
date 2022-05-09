@@ -112,6 +112,7 @@ module GwfMvrModule
   use BudgetObjectModule,     only: BudgetObjectType, budgetobject_cr
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
+  use GwfMvrPeriodDataModule, only: GwfMvrPeriodDataType
   use PackageMoverModule,     only: PackageMoverType
   use BaseDisModule,          only: DisBaseType
   use InputOutputModule,      only: urword
@@ -136,6 +137,7 @@ module GwfMvrModule
     character(len=LENPACKAGENAME),                                             &
       dimension(:), pointer, contiguous              :: paknames => null()       !< array of package names
     type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !< array of movers
+    type(GwfMvrPeriodDataType), pointer              :: gwfmvrperioddata => null() !< input data object
     type(BudgetType), pointer                        :: budget => null()         !< mover budget object (used to write table)
     type(BudgetObjectType), pointer                  :: budobj => null()         !< new budget container (used to write binary file)
     type(PackageMoverType),                                                    &
@@ -284,7 +286,7 @@ module GwfMvrModule
     ! -- local
     integer(I4B) :: i, ierr, nlist, ipos
     integer(I4B) :: ii, jj
-    logical :: isfound, endOfBlock
+    logical :: isfound
     character(len=LINELENGTH) :: line, errmsg
     character(len=LENMODELNAME) :: mname
     ! -- formats
@@ -344,32 +346,25 @@ module GwfMvrModule
       !    will happen only the first time
       call this%assign_packagemovers()
       !
-      ! -- Read each mover entry
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetCurrentLine(line)
-        !
-        ! -- Raise error if movers exceeds maxmvr
-        if (i > this%maxmvr) then
-          write(errmsg,'(4x,a,a)') 'MOVERS EXCEED MAXMVR ON LINE: ', &
-                                    trim(adjustl(line))
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        endif
-        !
-        ! -- Process the water mover line (mname = '' if this is an exchange)
-        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
-                             this%pckMemPaths, this%pakmovers)
-        !
-        ! -- Echo input
+      ! -- Call the period data input reader
+      call this%gwfmvrperioddata%read_from_parser(this%parser, nlist, mname)
+      !
+      ! -- Process the input data into the individual mover objects
+      do i = 1, nlist
+        call this%mvr(i)%set_values(this%gwfmvrperioddata%mname1(i), &
+                                    this%gwfmvrperioddata%pname1(i), &
+                                    this%gwfmvrperioddata%id1(i), &
+                                    this%gwfmvrperioddata%mname2(i), &
+                                    this%gwfmvrperioddata%pname2(i), &
+                                    this%gwfmvrperioddata%id2(i), &
+                                    this%gwfmvrperioddata%imvrtype(i), &
+                                    this%gwfmvrperioddata%value(i))
+        call this%mvr(i)%prepare(this%parser%iuactive, &
+                                 this%pckMemPaths, &
+                                 this%pakmovers)
         if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
-        !
-        ! -- increment counter
-        i = i + 1
       end do
       write(this%iout,'(/,1x,a,1x,i6,/)') 'END OF DATA FOR PERIOD', kper
-      nlist = i - 1
       !
       ! -- Set the number of movers for this period to nlist
       this%nmvr = nlist
@@ -709,6 +704,11 @@ module GwfMvrModule
       deallocate(this%pckMemPaths)
       deallocate(this%paknames)
       deallocate(this%pakmovers)
+      !
+      ! -- allocate the perioddata object
+      call this%gwfmvrperioddata%destroy()
+      deallocate(this%gwfmvrperioddata)
+      nullify(this%gwfmvrperioddata)
       !
       ! -- budget object
       call this%budget%budget_da()
@@ -1132,6 +1132,9 @@ module GwfMvrModule
     this%iexgmvr = 0
     this%imodelnames = 0
     !
+    ! -- allocate the period data input object
+    allocate(this%gwfmvrperioddata)
+    !
     ! -- Return
     return
   end subroutine allocate_scalars
@@ -1163,6 +1166,10 @@ module GwfMvrModule
     do i = 1, this%maxpackages
       call nulllify_packagemover_pointer(this%pakmovers(i))
     end do
+    !
+    ! -- allocate the perioddata object
+    call this%gwfmvrperioddata%construct(this%maxmvr, this%memoryPath)
+    !
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%memoryPath)

@@ -4,6 +4,7 @@ module MvrModule
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, LENBUDTXT,   &
                              LENAUXNAME, LENBOUNDNAME, DZERO, DONE, &
                              LENMEMPATH
+  use SimVariablesModule, only: errmsg
   use PackageMoverModule, only: PackageMoverType
   
   implicit none
@@ -16,10 +17,10 @@ module MvrModule
   type MvrType
     character(len=LENMEMPATH)                    :: pckNameSrc = ''              !< provider package name
     character(len=LENMEMPATH)                    :: pckNameTgt = ''              !< receiver package name
-    integer(I4B)                                 :: iRchNrSrc = 0                !< provider reach number
-    integer(I4B)                                 :: iRchNrTgt = 0                !< receiver reach number
-    integer(I4B)                                 :: imvrtype = 0                 !< mover type (1, 2, 3, 4) corresponds to mvrtypes
-    real(DP)                                     :: value = DZERO                !< factor or rate depending on mvrtype
+    integer(I4B), pointer                        :: iRchNrSrc => null()          !< provider reach number
+    integer(I4B), pointer                        :: iRchNrTgt => null()          !< receiver reach number
+    integer(I4B), pointer                        :: imvrtype => null()           !< mover type (1, 2, 3, 4) corresponds to mvrtypes
+    real(DP), pointer                            :: value => null()              !< factor or rate depending on mvrtype
     real(DP)                                     :: qpactual = DZERO             !< rate provided to the receiver
     real(DP)                                     :: qavailable = DZERO           !< rate available at time of providing
     real(DP), pointer                            :: qtformvr_ptr => null()       !< pointer to total available flow (qtformvr)
@@ -27,7 +28,8 @@ module MvrModule
     real(DP), pointer                            :: qtomvr_ptr => null()         !< pointer to provider flow rate (qtomvr)
     real(DP), pointer                            :: qfrommvr_ptr => null()       !< pointer to receiver flow rate (qfrommvr)
   contains
-    procedure :: set
+    procedure :: set_values
+    procedure :: prepare
     procedure :: echo
     procedure :: advance
     procedure :: fc
@@ -37,7 +39,30 @@ module MvrModule
   
   contains
   
-  subroutine set(this, line, inunit, iout, mname, pckMemPaths, pakmovers)
+  subroutine set_values(this, mname1, pname1, id1, mname2, pname2, &
+                        id2, imvrtype, value)
+    use MemoryHelperModule, only: create_mem_path
+    class(MvrType) :: this
+    character(len=*), intent(in) :: mname1
+    character(len=*), intent(in) :: pname1
+    integer(I4B), intent(in), target :: id1
+    character(len=*), intent(in) :: mname2
+    character(len=*), intent(in) :: pname2
+    integer(I4B), intent(in), target :: id2
+    integer(I4B), intent(in), target :: imvrtype
+    real(DP), intent(in), target :: value
+    
+    this%pckNameSrc = create_mem_path(mname1, pname1)
+    this%iRchNrSrc => id1
+    this%pckNameTgt = create_mem_path(mname2, pname2)
+    this%iRchNrTgt => id2
+    this%imvrtype => imvrtype
+    this%value => value
+    
+    return
+  end subroutine set_values
+                        
+  subroutine prepare(this, inunit, pckMemPaths, pakmovers)
 ! ******************************************************************************
 ! set -- Setup mvr object
 !        If mname == '', then read mname out of line. pckMemPaths is an array
@@ -49,97 +74,24 @@ module MvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword, extract_idnum_or_bndname
     use SimModule, only: store_error, store_error_unit, count_errors    
-    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(MvrType) :: this
-    character(len=*), intent(inout) :: line
     integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    character(len=LENMODELNAME), intent(in) :: mname
     character(len=LENMEMPATH),                                                &
       dimension(:), pointer, contiguous              :: pckMemPaths
     type(PackageMoverType), dimension(:), pointer, contiguous    :: pakmovers
     ! -- local
-    integer(I4B) :: lloc, istart, istop, ival
-    real(DP) :: rval
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
-    character(len=LINELENGTH) :: errmsg
-    character(len=LENBOUNDNAME) :: bndname
-    character(len=LINELENGTH) :: modelName
-    character(len=LINELENGTH) :: packageName
-    logical :: mnamel, found
+    logical :: found
     integer(I4B) :: i
     integer(I4B) :: ipakloc1, ipakloc2
 ! ------------------------------------------------------------------------------
     !
-    ! -- Check for valid mname and set logical mnamel flag
-    if(mname == '') then
-      mnamel = .false.
-    else
-      mnamel = .true.
-    endif
-    !    
-    ! -- Set lloc for line
-    lloc = 1
-    !
-    ! -- Construct provider name, which is the memory path for the package
-    if(mnamel) then
-      modelName = mname
-    else
-      call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-      modelName = line(istart:istop)
-    endif
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    packageName = line(istart:istop)
-
-    this%pckNameSrc = create_mem_path(modelName, packageName)
-
-    !
-    ! -- Read id for the provider
-    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
-    this%iRchNrSrc = ival
-    !
-    ! -- Construct receiver name, which is the memory path for the package
-    if(mnamel) then
-      modelName = mname
-    else
-      call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-      modelName = line(istart:istop)
-    endif
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    packageName = line(istart:istop)
-    this%pckNameTgt = create_mem_path(modelName, packageName)
-    !
-    ! -- Read id for the receiver
-    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
-    this%iRchNrTgt = ival
-    !
-    ! -- Read mover type
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    select case(line(istart:istop))
-      case('FACTOR')
-        this%imvrtype = 1
-      case('EXCESS')
-        this%imvrtype = 2
-      case('THRESHOLD')
-        this%imvrtype = 3
-      case('UPTO')
-        this%imvrtype = 4
-      case default
-        call store_error('INVALID MOVER TYPE: '//trim(line(istart:istop)) )
-        call store_error_unit(inunit)
-    end select
-    !
-    ! -- Read mover value
-    call urword(line, lloc, istart, istop, 3, ival, rval, iout, inunit)
-    this%value = rval
-    !
     ! -- Check to make sure provider and receiver are not the same
     if(this%pckNameSrc == this%pckNameTgt .and. this%iRchNrSrc == this%iRchNrTgt) then
       call store_error('PROVIDER AND RECEIVER ARE THE SAME: '//         &
-        trim(line))
+        trim(this%pckNameSrc) // ' : ' // trim(this%pckNameTgt))
       call store_error_unit(inunit)
     endif
     !
@@ -207,7 +159,7 @@ module MvrModule
     !
     ! -- return
     return
-  end subroutine set
+  end subroutine prepare
   
   subroutine echo(this, iout)
 ! ******************************************************************************
