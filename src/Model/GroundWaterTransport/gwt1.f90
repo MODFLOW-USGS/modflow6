@@ -1,7 +1,6 @@
 ! Groundwater Transport (GWT) Model
 ! The following are additional features/checks to add
 !   * Add check that discretization is the same between both models 
-!   * Program GWT-GWT exchange transport (awaiting implementation of interface model)
 !   * Consider implementation of steady-state transport (affects MST, IST)
 !   * Check and handle pore space discrepancy between flow and transport (porosity vs specific yield)
 !   * UZT may not have the required porosity term

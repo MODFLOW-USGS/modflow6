@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.3) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.5) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -145,6 +145,7 @@ $(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
+$(OBJDIR)/GwfMvrPeriodData.o \
 $(OBJDIR)/GwfBuyInputData.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \

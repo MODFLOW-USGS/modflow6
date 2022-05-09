@@ -1,4 +1,9 @@
-  
+!> @brief This module contains the GwfMvrPeriodDataModule Module
+!!
+!! This module contains the code for storing and reading
+!! stress period data for the GwfMvr Package.
+!!
+!<
 module GwfMvrPeriodDataModule
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: LENMEMPATH, LENMODELNAME, LENPACKAGENAME,  &
@@ -11,6 +16,12 @@ module GwfMvrPeriodDataModule
   private
   public GwfMvrPeriodDataType
   
+  !> @brief Derived type for GwfMvrPeriodDataType 
+  !!
+  !! This derived type contains information and methods for
+  !! the data read for the GwfMvr Package.
+  !!
+  !<
   type GwfMvrPeriodDataType
     character(len=LENMODELNAME), dimension(:), pointer, contiguous   :: mname1   => null() !< provider model name
     character(len=LENPACKAGENAME), dimension(:), pointer, contiguous :: pname1   => null() !< provider package name
@@ -24,16 +35,22 @@ module GwfMvrPeriodDataModule
     procedure :: construct
     procedure :: read_from_parser
     procedure :: destroy
-    
   end type GwfMvrPeriodDataType
 
   contains
   
+  !> @ brief Construct arrays
+  !!
+  !! Allocate maximum space for mover input.
+  !!
+  !<
   subroutine construct(this, maxsize, memoryPath)
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    class(GwfMvrPeriodDataType) :: this
-    integer(I4B), intent(in) :: maxsize
-    character(len=LENMEMPATH), intent(in) :: memoryPath
+    ! -- dummy
+    class(GwfMvrPeriodDataType) :: this                  !< GwfMvrPeriodDataType
+    integer(I4B), intent(in) :: maxsize                  !< size of arrays
+    character(len=LENMEMPATH), intent(in) :: memoryPath  !< memory manager path
     
     ! -- character arrays
     allocate(this%mname1(maxsize))
@@ -50,11 +67,17 @@ module GwfMvrPeriodDataModule
     return
   end subroutine construct
   
+  !> @ brief Fill the arrays from parser
+  !!
+  !! Use the provided block parser to fill the input arrays.
+  !!
+  !<
   subroutine read_from_parser(this, parser, nmvr, modelname)
-    class(GwfMvrPeriodDataType) :: this
-    type(BlockParserType), intent(inout) :: parser
-    integer(I4B), intent(out) :: nmvr
-    character(len=LENMODELNAME), intent(in) :: modelname
+    ! -- dummy
+    class(GwfMvrPeriodDataType) :: this                    !< GwfMvrPeriodDataType
+    type(BlockParserType), intent(inout) :: parser         !< block parser
+    integer(I4B), intent(out) :: nmvr                      !< number of mover entries read
+    character(len=LENMODELNAME), intent(in) :: modelname   !< name of model or empty string
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: maxmvr
@@ -120,9 +143,16 @@ module GwfMvrPeriodDataModule
     return
   end subroutine read_from_parser
 
+  !> @ brief Destroy memory
+  !!
+  !! Deallocate memory from the memory manager.
+  !!
+  !<
   subroutine destroy(this)
+    ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    class(GwfMvrPeriodDataType) :: this
+    ! -- dummy 
+    class(GwfMvrPeriodDataType) :: this  !< GwfMvrPeriodDataType
 
     ! -- character arrays
     deallocate(this%mname1)
