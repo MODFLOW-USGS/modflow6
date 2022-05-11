@@ -417,11 +417,6 @@ module SimModule
       ! -- determine if an error condition has occurred
       if (sim_errors%count_message() > 0) then
         ireturnerr = 2
-        if (iout > 0) then
-          call sim_message(stopmess, fmt=fmt, iunit=iout)
-        end if
-        call sim_message(stopmess, fmt=fmt)
-        
         if (present(ioutlocal)) then
           if (ioutlocal > 0 .and. ioutlocal /= iout) write(ioutlocal,fmt) msg
         endif
