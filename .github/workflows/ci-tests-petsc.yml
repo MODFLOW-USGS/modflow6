@@ -30,7 +30,7 @@ jobs:
       id: cache
       with:
         path: ../petsc
-        key: ${{ runner.os }}-${{ matrix.GCC_V }}-petsc-${{ env.PETSC_VERSION }}
+        key: ${{ runner.os }}-${{ matrix.GCC_V }}-PETSc-${{ env.PETSC_VERSION }}
 
     - name: Setup Python 3.8
       uses: actions/setup-python@v2.2.2
