@@ -868,13 +868,14 @@ subroutine solution_create(filename, id)
       this%isymmetric = 1
     end if
 
-    allocate(this%petsc_solver)
-    call this%petsc_solver%allocate_read(this%name, this%parser, IOUT,       &
-                                         this%iprims, this%imslinear,        &
-                                         this%neq, this%nja, this%ia,        &
-                                         this%ja, this%amat, this%rhs,       &
-                                         this%x)
-    
+    if (this%linear_solver == LIN_SOLVER_PETSC) then
+      allocate(this%petsc_solver)
+      call this%petsc_solver%allocate_read(this%name, this%parser, IOUT,       &
+                                          this%iprims, this%imslinear,        &
+                                          this%neq, this%nja, this%ia,        &
+                                          this%ja, this%amat, this%rhs,       &
+                                          this%x)
+    end if
     
     WRITE(IOUT,*)
     !
@@ -1148,8 +1149,10 @@ subroutine solution_create(filename, id)
     call this%imslinear%imslinear_da()
     deallocate(this%imslinear)
     ! -- PETSc
-    call this%petsc_solver%deallocate()
-    deallocate(this%petsc_solver)  
+    if (this%linear_solver == LIN_SOLVER_PETSC) then
+      call this%petsc_solver%deallocate()
+      deallocate(this%petsc_solver)
+    end if
     !
     ! -- lists
     call this%modellist%Clear()
