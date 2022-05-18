@@ -1,9 +1,10 @@
-name: tests - gfortran - previous versions
+name: tests - gfortran - petsc
 
 on:
   push:
     branches:
       - develop
+      - petsc
   pull_request:
 
 env:
