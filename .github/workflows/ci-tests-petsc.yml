@@ -29,7 +29,7 @@ jobs:
     - uses: actions/cache@v3
       id: cache
       with:
-        path: ${{ env.GITHUB_WORKSPACE }}/../petsc
+        path: ${{ env.HOME }}/petsc
         key: ${{ runner.os }}-${{ matrix.GCC_V }}-petsc-${{ env.PETSC_VERSION }}
 
     - name: Setup Python 3.8
@@ -59,19 +59,19 @@ jobs:
     - name: Check out PETSc
       if: steps.cache.outputs.cache-hit != 'true'
       run: |
-        git clone -b $PETSC_VERSION https://gitlab.com/petsc/petsc.git ../petsc
+        git clone -b $PETSC_VERSION https://gitlab.com/petsc/petsc.git $HOME/petsc
     
     - name: Compile PETSc
       if: steps.cache.outputs.cache-hit != 'true'
-      working-directory: ../petsc
+      working-directory: ${{ env.HOME }}/petsc
       run: |
         ./configure --with-debugging=no
         make all check
     
     - name: Set LD_LIBRARY_PATH and PKG_CONFIG_PATH
       run: |
-        echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/../petsc/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/../petsc/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$HOME/petsc/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$HOME/petsc/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Install python packages
       run: |
