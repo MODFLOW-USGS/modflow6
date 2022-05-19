@@ -138,6 +138,8 @@
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
+		<Filter Name="GroundWaterEnergy">
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe.f90"/></Filter>
 		<File RelativePath="..\src\Model\BaseModel.f90"/>
 		<File RelativePath="..\src\Model\NumericalModel.f90"/>
 		<File RelativePath="..\src\Model\NumericalPackage.f90"/>
