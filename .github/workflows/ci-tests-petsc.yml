@@ -76,14 +76,17 @@ jobs:
         echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Install python packages
+      working-directory: modflow6
       run: |
         .github/common/install-python-std.sh
 
     - name: Print python package versions
+      working-directory: modflow6
       run: |
         .github/common/python-version.sh
 
     - name: Set and print branch name
+      working-directory: modflow6
       run: |
         .github/common/git-branch-export.sh
 
