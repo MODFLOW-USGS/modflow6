@@ -25,11 +25,12 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2.3.4
+      path: modflow6
 
     - uses: actions/cache@v3
       id: cache
       with:
-        path: ${{ env.HOME }}/petsc
+        path: petsc
         key: ${{ runner.os }}-${{ matrix.GCC_V }}-petsc-${{ env.PETSC_VERSION }}
 
     - name: Setup Python 3.8
@@ -59,19 +60,19 @@ jobs:
     - name: Check out PETSc
       if: steps.cache.outputs.cache-hit != 'true'
       run: |
-        git clone -b $PETSC_VERSION https://gitlab.com/petsc/petsc.git $HOME/petsc
+        git clone -b $PETSC_VERSION https://gitlab.com/petsc/petsc.git
     
     - name: Compile PETSc
       if: steps.cache.outputs.cache-hit != 'true'
-      working-directory: ${{ env.HOME }}/petsc
+      working-directory: petsc
       run: |
         ./configure --with-debugging=no
         make all check
     
     - name: Set LD_LIBRARY_PATH and PKG_CONFIG_PATH
       run: |
-        echo "LD_LIBRARY_PATH=$HOME/petsc/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$HOME/petsc/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/petsc/arch-linux-c-opt/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-linux-c-opt/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Install python packages
       run: |
@@ -86,31 +87,36 @@ jobs:
         .github/common/git-branch-export.sh
 
     - name: Get regression test files
+      working-directory: modflow6
       run: |
         .github/common/get-largetests-regression-files.sh
 
     - name: Check out the correct regression test branch
+      working-directory: modflow6
       run: |
         .github/common/checkout-regression-branch.sh
 
     - name: Update flopy MODFLOW 6 classes
+      working-directory: modflow6
       run: |
         .github/common/update-flopy.sh
 
     - name: Setup modflow
+      working-directory: modflow6
       run: |
         meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
 
     - name: Build and install modflow
+      working-directory: modflow6
       run: |
         meson install -C builddir
 
     - name: Get executables
-      working-directory: autotest
+      working-directory: modflow6/autotest
       run: |
         pytest -v --durations=0 get_exes.py
     
     - name: Test applications
-      working-directory: autotest
+      working-directory: modflow6/autotest
       run: |
         pytest -v --durations=0 test_z03_largetests.py::test_mf6model[test1002_biscqtg_dev]
