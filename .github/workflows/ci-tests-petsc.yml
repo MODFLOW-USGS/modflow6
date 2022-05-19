@@ -24,8 +24,9 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v2.3.4
-      path: modflow6
+      uses: actions/checkout@v3
+      with:
+        path: modflow6
 
     - uses: actions/cache@v3
       id: cache
