@@ -96,6 +96,7 @@ modflow_sources = files(
     'Model' / 'BaseModel.f90',
     'Model' / 'NumericalModel.f90',
     'Model' / 'NumericalPackage.f90',
+    'Model' / 'TransportModel.f90',
     'Solution' / 'SparseMatrixSolver' / 'ims8base.f90',
     'Solution' / 'SparseMatrixSolver' / 'ims8linear.f90',
     'Solution' / 'SparseMatrixSolver' / 'ims8reordering.f90',
