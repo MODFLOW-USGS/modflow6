@@ -151,6 +151,7 @@ $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
+$(OBJDIR)/TransportModel.o \
 $(OBJDIR)/NameFile.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/gwt1uzt1.o \
