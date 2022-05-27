@@ -12,6 +12,7 @@ module GwtModule
   use ConstantsModule,             only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule,               only: write_listfile_header
   use NumericalModelModule,        only: NumericalModelType  
+  use TransportModelModule,        only: TransportModelType
   use BaseModelModule,             only: BaseModelType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
   use GwtIcModule,                 only: GwtIcType
@@ -32,7 +33,7 @@ module GwtModule
   public :: GwtModelType
   public :: CastAsGwtModel
 
-  type, extends(NumericalModelType) :: GwtModelType
+  type, extends(TransportModelType) :: GwtModelType
     
     type(GwtIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwtFmiType),               pointer :: fmi     => null()                ! flow model interface
