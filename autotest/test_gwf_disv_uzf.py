@@ -12,7 +12,6 @@ import os
 import pytest
 import sys
 import numpy as np
-import pandas as pd
 
 try:
     import flopy
@@ -337,10 +336,6 @@ def eval_model(sim):
     name = ex[idx]
     ws = os.path.join("temp", name)
 
-    # Get the ASCII MF6 heads
-    fpth = os.path.join(ws, name + ".obs.csv")
-    sel_hds = pd.read_csv(fpth, header=0)
-
     # Next, get the binary printed heads
     fpth = os.path.join(ws, name + ".hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
@@ -365,10 +360,6 @@ def eval_model(sim):
     gwetv = np.array([itm[2] for i, itm in enumerate(gwetl)])
     gwet = gwetv.reshape((50, 5, 10, 10))
 
-    # Get the ASCII version of the UZET and GWET output (i.e., user-specified)
-    et_pth = os.path.join(ws, name + ".uzfobs")
-    uzf_et = pd.read_csv(et_pth, header=0)
-
     # Also retrieve the binary UZET output
     uzpth = os.path.join(ws, name + ".uzf.bud")
     uzobj = flopy.utils.CellBudgetFile(uzpth, precision="double")
@@ -386,10 +377,15 @@ def eval_model(sim):
     uzet = uzetv.reshape((50, 5, 10, 10))
 
     # Confirm that the groundwater gradient dips to the right
-    for index, row in sel_hds.iterrows():
-        assert row[
-            1:
-        ].is_monotonic_decreasing, "GW heads not decreasing to the right"
+    for tm in np.arange(hds.shape[0]):
+        arr = hds[tm]
+        for ly in np.arange(hds.shape[1]):
+            hdlayer = arr[ly]
+            for rw in np.arange(arr.shape[0]):
+                fullrw = hdlayer[rw]
+                assert np.all(
+                    np.diff(fullrw) < 0
+                ), "GW heads not decreasing to the right"
 
     # After confirming heads drop off to the right,
     # complete checks that ET totals & character (UZET vs GWET)
