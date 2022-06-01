@@ -40,15 +40,15 @@ module Mf6CoreModule
         call Mf6Initialize()
         !
         ! -- time loop
-        tsloop: do while (totim < totalsimtime)
+        do while (totim < totalsimtime)
           
           ! perform a time step
           hasConverged = Mf6Update()
           
           ! if not converged, break
-          if(.not. hasConverged) exit tsloop   
+          if (.not. hasConverged) exit 
           
-        enddo tsloop
+        end do
         !
         ! -- finalize simulation
         call Mf6Finalize()
