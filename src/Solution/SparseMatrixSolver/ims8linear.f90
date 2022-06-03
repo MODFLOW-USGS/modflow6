@@ -159,7 +159,7 @@ MODULE IMSLinearModule
       END IF
       !
       ! -- DEFINE NAME      
-      this%memoryPath = create_mem_path(name, 'IMSLinear')
+      this%memoryPath = create_mem_path(name, 'IMSLINEAR')
       !
       ! -- SET POINTERS TO SOLUTION STORAGE
       this%IPRIMS => IPRIMS
