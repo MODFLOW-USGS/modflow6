@@ -41,6 +41,8 @@ module GwfCsubModule
   use ListModule, only: ListType
   use TableModule, only: TableType, table_cr
   !
+  use IMSLinearMisc, only: ims_misc_thomas
+  !
   implicit none
   !
   private
@@ -5751,9 +5753,9 @@ contains
         call this%csub_delay_assemble(ib, hcell)
         !
         ! -- solve for head change in delay interbed cells
-        call csub_delay_solve(this%ndelaycells, &
-                              this%dbal, this%dbad, this%dbau, &
-                              this%dbrhs, this%dbdh, this%dbaw)
+        call ims_misc_thomas(this%ndelaycells, &
+                             this%dbal, this%dbad, this%dbau, &
+                             this%dbrhs, this%dbdh, this%dbaw)
         !
         ! -- calculate maximum head change and update delay bed heads
         dhmax = DZERO
@@ -6386,48 +6388,6 @@ contains
     return
 
   end subroutine csub_delay_assemble_fn
-
-  !> @brief Delay interbed linear solution
-  !!
-  !! Method to solve the tridiagonal linear equations for a delay interbed
-  !! using the Thomas algorithm.
-  !!
-  !<
-  subroutine csub_delay_solve(n, tl, td, tu, b, x, w)
-    ! -- dummy variables
-    integer(I4B), intent(in) :: n                 !< number of matrix rows
-    real(DP), dimension(n), intent(in) :: tl      !< lower matrix terms
-    real(DP), dimension(n), intent(in) :: td      !< diagonal matrix terms
-    real(DP), dimension(n), intent(in) :: tu      !< upper matrix terms
-    real(DP), dimension(n), intent(in) :: b       !< right-hand side vector
-    real(DP), dimension(n), intent(inout) :: x    !< solution vectot
-    real(DP), dimension(n), intent(inout) :: w    !< work vector
-    ! -- local variables
-    integer(I4B) :: j
-    real(DP) :: bet
-    real(DP) :: beti
-    !
-    ! -- initialize variables
-    w(1) = DZERO
-    bet = td(1)
-    beti = DONE/bet
-    x(1) = b(1)*beti
-    !
-    ! -- decomposition and forward substitution
-    do j = 2, n
-      w(j) = tu(j - 1)*beti
-      bet = td(j) - tl(j)*w(j)
-      beti = DONE/bet
-      x(j) = (b(j) - tl(j)*x(j - 1))*beti
-    end do
-    !
-    ! -- backsubstitution
-    do j = n - 1, 1, -1
-      x(j) = x(j) - w(j + 1)*x(j + 1)
-    end do
-    ! -- return
-    return
-  end subroutine csub_delay_solve
 
   !> @brief Calculate delay interbed saturation
   !!
