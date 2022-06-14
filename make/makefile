@@ -7,7 +7,7 @@ include ./makedefaults
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
 SOURCEDIR3=../src/Solution
-SOURCEDIR4=../src/Solution/SparseMatrixSolver
+SOURCEDIR4=../src/Solution/LinearMethods
 SOURCEDIR5=../src/Timing
 SOURCEDIR6=../src/Utilities
 SOURCEDIR7=../src/Utilities/TimeSeries
@@ -146,6 +146,7 @@ $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
 $(OBJDIR)/GwfMvrPeriodData.o \
+$(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
