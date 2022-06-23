@@ -5,10 +5,10 @@ module RectangularGeometryModule
   implicit none
   private
   public :: RectangularGeometryType
-  
+
   type, extends(BaseGeometryType) :: RectangularGeometryType
     real(DP) :: height = DZERO
-    real(DP) :: width  = DZERO
+    real(DP) :: width = DZERO
   contains
     procedure :: area_sat
     procedure :: perimeter_sat
@@ -17,9 +17,9 @@ module RectangularGeometryModule
     procedure :: set_attribute
     procedure :: print_attributes
   end type RectangularGeometryType
-  
-  contains
-  
+
+contains
+
   function area_sat(this)
 ! ******************************************************************************
 ! area_sat -- return saturated area
@@ -41,7 +41,7 @@ module RectangularGeometryModule
     ! -- Return
     return
   end function area_sat
-  
+
   function perimeter_sat(this)
 ! ******************************************************************************
 ! perimeter_sat -- return saturated perimeter
@@ -63,7 +63,7 @@ module RectangularGeometryModule
     ! -- return
     return
   end function perimeter_sat
-  
+
   function area_wet(this, depth)
 ! ******************************************************************************
 ! area_wet -- return wetted area
@@ -81,18 +81,18 @@ module RectangularGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
-    if(depth <= DZERO) then
-      area_wet = DZERO      
-    elseif(depth <= this%height) then
+    if (depth <= DZERO) then
+      area_wet = DZERO
+    elseif (depth <= this%height) then
       area_wet = depth * this%width
     else
       area_wet = this%width * this%height
-    endif
+    end if
     !
     ! -- Return
     return
   end function area_wet
-  
+
   function perimeter_wet(this, depth)
 ! ******************************************************************************
 ! perimeter_wet -- return wetted perimeter
@@ -110,18 +110,18 @@ module RectangularGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
-    if(depth <= DZERO) then
-      perimeter_wet = DZERO      
-    elseif(depth <= this%height) then
+    if (depth <= DZERO) then
+      perimeter_wet = DZERO
+    elseif (depth <= this%height) then
       perimeter_wet = DTWO * (depth + this%width)
     else
       perimeter_wet = DTWO * (this%height + this%width)
-    endif
+    end if
     !
     ! -- return
     return
   end function perimeter_wet
-  
+
   subroutine set_attribute(this, line)
 ! ******************************************************************************
 ! set_attribute -- set a parameter for this rectangular object
@@ -141,26 +141,26 @@ module RectangularGeometryModule
     integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
 ! ------------------------------------------------------------------------------
-    !    
+    !
     ! -- should change this and set id if uninitialized or store it
-    lloc=1
+    lloc = 1
     call urword(line, lloc, istart, istop, 2, ival, rval, 0, 0)
     this%id = ival
-    
+
     ! -- Parse the attribute
     call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
-    select case(line(istart:istop))
-    case('NAME')
+    select case (line(istart:istop))
+    case ('NAME')
       call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
       this%name = line(istart:istop)
-    case('HEIGHT')
+    case ('HEIGHT')
       call urword(line, lloc, istart, istop, 3, ival, rval, 0, 0)
-      this%height = rval      
-    case('WIDTH')
+      this%height = rval
+    case ('WIDTH')
       call urword(line, lloc, istart, istop, 3, ival, rval, 0, 0)
-      this%width = rval      
+      this%width = rval
     case default
-      write(errmsg,'(4x,a,a)') &
+      write (errmsg, '(4x,a,a)') &
         'Unknown rectangular geometry attribute: ', line(istart:istop)
       call store_error(errmsg, terminate=.TRUE.)
     end select
@@ -189,13 +189,13 @@ module RectangularGeometryModule
     call this%BaseGeometryType%print_attributes(iout)
     !
     ! -- Print specifics of this geometry type
-    write(iout, fmttd) 'HEIGHT = ', this%height
-    write(iout, fmttd) 'WIDTH = ', this%width
-    write(iout, fmttd) 'SATURATED AREA = ', this%area_sat()
-    write(iout, fmttd) 'SATURATED WETTED PERIMETER = ', this%perimeter_sat()
+    write (iout, fmttd) 'HEIGHT = ', this%height
+    write (iout, fmttd) 'WIDTH = ', this%width
+    write (iout, fmttd) 'SATURATED AREA = ', this%area_sat()
+    write (iout, fmttd) 'SATURATED WETTED PERIMETER = ', this%perimeter_sat()
     !
     ! -- return
     return
   end subroutine print_attributes
-  
+
 end module RectangularGeometryModule
