@@ -21,13 +21,11 @@ Install the following VSCode extensions:
 
 - Modern Fortran:
   https://marketplace.visualstudio.com/items?itemName=krvajalm.linter-gfortran
-- FORTRAN IntelliSense: https://marketplace.visualstudio.com/items?itemName=hansec.fortran-ls
-- C/C++: https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools
-- Fortran Breakpoint Support:
-  https://marketplace.visualstudio.com/items?itemName=ekibun.fortranbreaker
 
-Now, configure the VSCode files for the modflow6 directory. Open the `modflow6`
-directory in VSCode. Copy `.vscode/settings_template.json` to (untracked) `.vscode/settings.json` and make sure that in the copy, the following setting points toward your Python executable.
+Now, configure the VSCode files for the modflow6 directory.
+Open the `modflow6` directory in VSCode.
+Make sure that this setting points toward your Python executable.
+directory in VSCode.
 
 ```json
 {
@@ -48,7 +46,7 @@ In order to compile run:
 1. Install the fortran language server via:
 
 ```bash
-pip install -U fortran-language-server
+pip install -U fortls
 ```
 
 2. Find out where the executable is
@@ -57,22 +55,14 @@ pip install -U fortran-language-server
 - cmd: `where fortls`
 - PowerShell: `Get-Command fortls`
 
-3. Add this to `.vscode/settings.json`. In case this file does not exist yet, create a new one. Also remember to adapt `fortran-ls.executablePath` to the path you get in the step before.
+3. Add this to `.vscode/settings.json`. In case this file does not exist yet, create a new one.
 
 
 ```json
-    "fortran-ls.executablePath": "/path/to/fortls",
-    "fortran-ls.hoverSignature": true,
-    "fortran-ls.lowercaseIntrinsics": true,
-    "fortran-ls.notifyInit": true,
-    "fortran-ls.variableHover": true,    
-    "fortran.linterEnabled": false,
-    "fortran.provideHover": false,
-    "fortran.provideCompletion": false,
-    "fortran.provideSymbols": false,
-    "[FortranFreeForm]": {
-        "editor.acceptSuggestionOnEnter": "off",
-    },
+{
+    "python.defaultInterpreterPath": "/path/to/python",
+    "fortran.fortls.path": "/path/to/fortls"
+}
 ```
 
 
