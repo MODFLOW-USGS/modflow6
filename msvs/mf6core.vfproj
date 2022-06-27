@@ -123,6 +123,7 @@
 		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfBuyInputData.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\GwfMvrPeriodData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfGridData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfStorageUtils.f90"/>
@@ -139,12 +140,14 @@
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
 		<File RelativePath="..\src\Model\BaseModel.f90"/>
 		<File RelativePath="..\src\Model\NumericalModel.f90"/>
-		<File RelativePath="..\src\Model\NumericalPackage.f90"/></Filter>
+		<File RelativePath="..\src\Model\NumericalPackage.f90"/>
+		<File RelativePath="..\src\Model\TransportModel.f90"/></Filter>
 		<Filter Name="Solution">
-		<Filter Name="IMS">
-		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8base.f90"/>
-		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8linear.f90"/>
-		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8reordering.f90"/></Filter>
+		<Filter Name="LinearMethods">
+		<File RelativePath="..\src\Solution\LinearMethods\ims8base.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8linear.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>

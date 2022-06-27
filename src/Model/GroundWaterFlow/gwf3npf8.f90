@@ -3360,7 +3360,7 @@ module GwfNpfModule
         endif
       enddo
       !
-      ! -- Assign numnber of vertical and horizontal connections
+      ! -- Assign number of vertical and horizontal connections
       ncz = iz
       nc = ic
       !

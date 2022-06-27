@@ -36,7 +36,8 @@ module KindModule
         ! -- write kind information
         write(iout, '(/a)') 'Real Variables'
         write(iout, '(2x,a,i0)') 'KIND: ', DP
-        write(iout, '(2x,a,1pg15.6)') 'TINY (smallest non-zero value): ', tiny(rdum)
+        write(iout, '(2x,a,1pg15.6)') 'TINY (smallest non-zero value): ', &
+          tiny(rdum)
         write(iout, '(2x,a,1pg15.6)') 'HUGE (largest value): ', huge(rdum)
         write(iout, '(2x,a,i0)') 'PRECISION: ', precision(rdum)
         write(iout, '(2x,a,i0)') 'BIT SIZE: ', bit_size(irdum)

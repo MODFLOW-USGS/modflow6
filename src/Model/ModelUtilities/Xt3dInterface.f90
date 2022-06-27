@@ -18,6 +18,8 @@ module Xt3dModule
     integer(I4B),dimension(:), pointer, contiguous  :: iax         => null()     !< ia array for extended neighbors used by xt3d
     integer(I4B),dimension(:), pointer, contiguous  :: jax         => null()     !< ja array for extended neighbors used by xt3d
     integer(I4B),dimension(:), pointer, contiguous  :: idxglox     => null()     !< mapping array for extended neighbors used by xt3d
+    integer(I4B),dimension(:), pointer, contiguous  :: ia_xt3d     => null()     !< ia array for local extended xt3d connections (no diagonal)
+    integer(I4B),dimension(:), pointer, contiguous  :: ja_xt3d     => null()     !< ja array for local extended xt3d connections (no diagonal)
     integer(I4B), pointer                           :: numextnbrs  => null()     !< dimension of jax array
     integer(I4B), pointer                           :: ixt3d       => null()     !< xt3d flag (0 is off, 1 is lhs, 2 is rhs)
     logical, pointer                                :: nozee       => null()     !< nozee flag
@@ -139,31 +141,65 @@ module Xt3dModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
+    type(sparsematrix) :: sparse_xt3d
     integer(I4B) :: i, j, k, jj, kk, iglo, kglo, iadded
+    integer(I4B) :: nnz
+    integer(I4B) :: ierror
 ! ------------------------------------------------------------------------------
     !
     ! -- If not rhs, add connections
     if (this%ixt3d == 1) then
-       ! -- loop over nodes
+
+       ! -- assume nnz is 19, which is an approximate value
+       !    based on a 3d structured grid
+       nnz = 19
+       call sparse_xt3d%init(this%dis%nodes, this%dis%nodes, nnz)
+      
+       ! -- loop over nodes and store extended xt3d neighbors
+       !    temporarily in sparse_xt3d; this will be converted to
+       !    ia_xt3d and ja_xt3d next
        do i = 1, this%dis%nodes
          iglo = i + moffset
          ! -- loop over neighbors
-         do jj = this%dis%con%ia(i), this%dis%con%ia(i+1) - 1
+         do jj = this%dis%con%ia(i) + 1, this%dis%con%ia(i+1) - 1
            j = this%dis%con%ja(jj)
            ! -- loop over neighbors of neighbors
-           do kk = this%dis%con%ia(j), this%dis%con%ia(j+1) - 1
+           do kk = this%dis%con%ia(j) + 1, this%dis%con%ia(j+1) - 1
              k = this%dis%con%ja(kk)
              kglo = k + moffset
-             call sparse%addconnection(iglo, kglo, 1, iadded)
-             this%numextnbrs = this%numextnbrs + iadded
+             call sparse_xt3d%addconnection(i, k, 1)
             enddo
          enddo
        enddo
+       
+       ! -- calculate ia_xt3d and ja_xt3d from sparse_xt3d and
+       !    then destroy sparse
+       call mem_allocate(this%ia_xt3d, this%dis%nodes+1, 'IA_XT3D', trim(this%memoryPath))
+       call mem_allocate(this%ja_xt3d, sparse_xt3d%nnz, 'JA_XT3D', trim(this%memoryPath))
+       call sparse_xt3d%filliaja(this%ia_xt3d, this%ja_xt3d, ierror)  
+       call sparse_xt3d%destroy()
+       !
+       ! -- add extended neighbors to sparse and count number of
+       !    extended neighbors
+       do i = 1, this%dis%nodes
+         iglo = i + moffset
+         do kk = this%ia_xt3d(i), this%ia_xt3d(i+1)-1
+           k = this%ja_xt3d(kk)
+           kglo = k + moffset
+           call sparse%addconnection(iglo, kglo, 1, iadded)
+           this%numextnbrs = this%numextnbrs + 1
+         end do
+       end do
+    else
+       ! -- Arrays not needed; set to size zero
+       call mem_allocate(this%ia_xt3d, 0, 'IA_XT3D', trim(this%memoryPath))
+       call mem_allocate(this%ja_xt3d, 0, 'JA_XT3D', trim(this%memoryPath))
     endif
     !
     ! -- Return
@@ -185,7 +221,8 @@ module Xt3dModule
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
-    integer(I4B) :: i, j, jj, iglo, jglo, jjg, niax, njax, ipos
+    integer(I4B) :: i, j, iglo, jglo, jjg, niax, njax, ipos
+    integer(I4B) :: jj_xt3d
     integer(I4B) :: igfirstnod, iglastnod
     logical :: isextnbr
 ! ------------------------------------------------------------------------------
@@ -226,19 +263,17 @@ module Xt3dModule
             cycle
           endif
           !
-          ! -- determine whether this neighbor is an extended neighbor
-          !    by searching the original neighbors
-          isextnbr = .true.
-          searchloop: do jj = this%dis%con%ia(i), this%dis%con%ia(i+1) - 1
-            j = this%dis%con%ja(jj)
-            jglo = j + moffset
-            !
-            ! -- if an original neighbor, note that and end the search
-            if(jglo == jasln(jjg)) then
-              isextnbr = .false.
-              exit searchloop
-            endif
-          enddo searchloop
+          ! -- Check to see if this local connection was added by
+          !    xt3d.  If not, then this connection was added by
+          !    something else, such as an interface model.
+          j = jglo - moffset
+          isextnbr = .false.
+          do jj_xt3d = this%ia_xt3d(i), this%ia_xt3d(i+1) - 1
+            if (j == this%ja_xt3d(jj_xt3d)) then
+              isextnbr = .true.
+              exit
+            end if
+          end do
           !
           ! -- if an extended neighbor, add it to jax and idxglox
           if (isextnbr) then
@@ -1004,6 +1039,8 @@ module Xt3dModule
       call mem_deallocate(this%iax)
       call mem_deallocate(this%jax)
       call mem_deallocate(this%idxglox)
+      call mem_deallocate(this%ia_xt3d)
+      call mem_deallocate(this%ja_xt3d)
       call mem_deallocate(this%rmatck)
       call mem_deallocate(this%qsat)
       call mem_deallocate(this%amatpc)

@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.3) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.5) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -7,7 +7,7 @@ include ./makedefaults
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
 SOURCEDIR3=../src/Solution
-SOURCEDIR4=../src/Solution/SparseMatrixSolver
+SOURCEDIR4=../src/Solution/LinearMethods
 SOURCEDIR5=../src/Timing
 SOURCEDIR6=../src/Utilities
 SOURCEDIR7=../src/Utilities/TimeSeries
@@ -145,11 +145,14 @@ $(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
+$(OBJDIR)/GwfMvrPeriodData.o \
+$(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
+$(OBJDIR)/TransportModel.o \
 $(OBJDIR)/NameFile.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/gwt1uzt1.o \

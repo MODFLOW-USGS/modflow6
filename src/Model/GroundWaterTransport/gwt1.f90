@@ -1,7 +1,6 @@
 ! Groundwater Transport (GWT) Model
 ! The following are additional features/checks to add
 !   * Add check that discretization is the same between both models 
-!   * Program GWT-GWT exchange transport (awaiting implementation of interface model)
 !   * Consider implementation of steady-state transport (affects MST, IST)
 !   * Check and handle pore space discrepancy between flow and transport (porosity vs specific yield)
 !   * UZT may not have the required porosity term
@@ -13,6 +12,7 @@ module GwtModule
   use ConstantsModule,             only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule,               only: write_listfile_header
   use NumericalModelModule,        only: NumericalModelType  
+  use TransportModelModule,        only: TransportModelType
   use BaseModelModule,             only: BaseModelType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
   use GwtIcModule,                 only: GwtIcType
@@ -33,7 +33,7 @@ module GwtModule
   public :: GwtModelType
   public :: CastAsGwtModel
 
-  type, extends(NumericalModelType) :: GwtModelType
+  type, extends(TransportModelType) :: GwtModelType
     
     type(GwtIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwtFmiType),               pointer :: fmi     => null()                ! flow model interface

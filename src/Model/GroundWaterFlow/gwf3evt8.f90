@@ -4,7 +4,8 @@ module EvtModule
   use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
-  use SimModule, only: store_error, store_error_unit
+  use SimModule, only: store_error, store_error_unit, count_errors
+  use SimVariablesModule, only: errmsg
   use ObsModule, only: DefaultObsIdProcessor
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -45,6 +46,7 @@ module EvtModule
     procedure, private :: evt_rp_array
     procedure, private :: evt_rp_list
     procedure, private :: default_nodelist
+    procedure, private :: check_pxdp
     ! -- for observations
     procedure, public :: bnd_obs_supported  => evt_obs_supported
     procedure, public :: bnd_df_obs => evt_df_obs
@@ -234,7 +236,7 @@ module EvtModule
     ! -- dummy
     class(EvtType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- format
@@ -363,7 +365,7 @@ module EvtModule
     integer(I4B) :: inievt, inrate, insurf, indepth
     integer(I4B) :: kpxdp, kpetm
     logical :: isfound, supportopenclose
-    character(len=LINELENGTH) :: line, msg, errmsg
+    character(len=LINELENGTH) :: line, msg
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -462,11 +464,83 @@ module EvtModule
           this%bound(2, n) = this%bound(2, n) * this%dis%get_area(node)
         end if
       enddo
+      !
+      ! -- ensure pxdp is monotonically increasing
+      if (this%nseg > 1) then
+        call this%check_pxdp()
+      end if
     endif
     !
     ! -- return
     return
   end subroutine evt_rp
+  
+  !> @brief Subroutine to check pxdp
+  !!
+  !! If the number of EVT segments (nseg) is greater than one, then
+  !! pxdp must be monotically increasing from zero to one.  Check
+  !! to make sure this is the case.
+  !!
+  !<
+  subroutine check_pxdp(this)
+    ! -- dummy
+    class(EvtType),intent(inout) :: this  !< EvtType
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    integer(I4B) :: i
+    integer(I4B) :: ierrmono
+    real(DP) :: pxdp1
+    real(DP) :: pxdp2
+    character(len=15) :: nodestr
+    ! -- formats
+    character(len=*), parameter :: fmtpxdp0 = &
+      "('PXDP must be between 0 and 1.  Found ', G0, ' for cell ', A)"
+    character(len=*), parameter :: fmtpxdp = &
+      "('PXDP is not monotonically increasing for cell ', A)"
+    !
+    ! -- check and make sure that pxdp is monotonically increasing and
+    !    that pxdp values are between 0 and 1
+    do n = 1, this%nbound
+      node = this%nodelist(n)
+      pxdp1 = DZERO
+      ierrmono = 0
+      segloop: do i = 1, this%nseg
+        !
+        ! -- set and check pxdp2
+        if (i < this%nseg) then
+          pxdp2 = this%bound(i + 3, n)
+          if (pxdp2 <= DZERO .or. pxdp2 >= DONE) then
+            call this%dis%noder_to_string(node, nodestr)
+            write(errmsg, fmtpxdp0) pxdp2, trim(nodestr)
+            call store_error(errmsg)
+          end if
+        else
+          pxdp2 = DONE
+        end if
+        !
+        ! -- check for monotonically increasing condition
+        if (pxdp2 - pxdp1 < DZERO) then
+          if (ierrmono == 0) then
+            ! -- only store mono error once for each node
+            call this%dis%noder_to_string(node, nodestr)
+            write(errmsg, fmtpxdp) trim(nodestr)
+            call store_error(errmsg)
+          end if
+          ierrmono = 1
+        end if
+        pxdp1 = pxdp2
+      end do segloop
+    end do
+    !
+    ! -- terminate if errors encountered
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine check_pxdp
 
   subroutine set_nodesontop(this)
 ! ******************************************************************************
