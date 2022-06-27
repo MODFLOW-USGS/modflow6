@@ -388,7 +388,7 @@ contains
     real(DP) :: v
     ! -- format
     character(len=*), parameter :: fmtcsub = &
-      "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 12/15/2019',            &
+      "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 12/15/2019', &
      &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! --print a message identifying the csub package.
@@ -3693,7 +3693,7 @@ contains
     real(DP) :: dinact
     ! -- formats
     character(len=*), parameter :: fmtnconv = &
-    "(/4x, 'DELAY INTERBED CELL HEADS IN ', i0, ' INTERBEDS IN',               &
+    "(/4x, 'DELAY INTERBED CELL HEADS IN ', i0, ' INTERBEDS IN', &
     &' NON-CONVERTIBLE GWF CELLS WERE LESS THAN THE TOP OF THE INTERBED CELL')"
     !
     ! -- Save compaction results

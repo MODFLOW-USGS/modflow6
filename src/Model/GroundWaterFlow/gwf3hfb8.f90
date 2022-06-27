@@ -2,10 +2,10 @@
 module GwfHfbModule
 
   use KindModule, only: DP, I4B
-  use Xt3dModule,             only: Xt3dType
+  use Xt3dModule, only: Xt3dType
   use NumericalPackageModule, only: NumericalPackageType
-  use BlockParserModule,      only: BlockParserType
-  use BaseDisModule,          only: DisBaseType
+  use BlockParserModule, only: BlockParserType
+  use BaseDisModule, only: DisBaseType
 
   implicit none
 
@@ -24,10 +24,10 @@ module GwfHfbModule
     real(DP), dimension(:), pointer, contiguous :: condsav => null()             !saved conductance of combined npf and hfb
     type(Xt3dType), pointer :: xt3d => null()                                    !pointer to xt3d object
     !
-    integer(I4B), dimension(:), pointer, contiguous :: ibound  => null()         !pointer to model ibound
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()         !pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to model icelltype
     integer(I4B), dimension(:), pointer, contiguous :: ihc => null()             !pointer to model ihc
-    integer(I4B), dimension(:), pointer, contiguous :: ia  => null()             !pointer to model ia
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null()             !pointer to model ia
     integer(I4B), dimension(:), pointer, contiguous :: ja => null()              !pointer to model ja
     integer(I4B), dimension(:), pointer, contiguous :: jas => null()             !pointer to model jas
     integer(I4B), dimension(:), pointer, contiguous :: isym => null()            !pointer to model isym
@@ -51,7 +51,7 @@ module GwfHfbModule
     procedure, private :: condsat_modify
   end type GwfHfbType
 
-  contains
+contains
 
   subroutine hfb_cr(hfbobj, name_model, inunit, iout)
 ! ******************************************************************************
@@ -68,7 +68,7 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(hfbobj)
+    allocate (hfbobj)
     !
     ! -- create name and memory path
     call hfbobj%set_names(1, name_model, 'HFB', 'HFB')
@@ -103,26 +103,28 @@ module GwfHfbModule
     type(Xt3dType), pointer :: xt3d
     class(DisBaseType), pointer, intent(inout) :: dis
     ! -- formats
-    character(len=*), parameter :: fmtheader =                                 &
-      &"(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ',       &
-        &'4/24/2015 INPUT READ FROM UNIT ', i4, //)"
+    character(len=*), parameter :: fmtheader = &
+      "(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ', &
+      &'4/24/2015 INPUT READ FROM UNIT ', i4, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Print a message identifying the node property flow package.
-    write(this%iout, fmtheader) this%inunit
+    write (this%iout, fmtheader) this%inunit
     !
     ! -- Set pointers
     this%dis => dis
     this%ibound => ibound
     this%xt3d => xt3d
 
-    call mem_setptr(this%icelltype, 'ICELLTYPE', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%icelltype, 'ICELLTYPE', &
+                    create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%ihc, 'IHC', create_mem_path(this%name_model, 'CON'))
     call mem_setptr(this%ia, 'IA', create_mem_path(this%name_model, 'CON'))
     call mem_setptr(this%ja, 'JA', create_mem_path(this%name_model, 'CON'))
     call mem_setptr(this%jas, 'JAS', create_mem_path(this%name_model, 'CON'))
     call mem_setptr(this%isym, 'ISYM', create_mem_path(this%name_model, 'CON'))
-    call mem_setptr(this%condsat, 'CONDSAT', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%condsat, 'CONDSAT', create_mem_path(this%name_model, &
+                                                             'NPF'))
     call mem_setptr(this%top, 'TOP', create_mem_path(this%name_model, 'DIS'))
     call mem_setptr(this%bot, 'BOT', create_mem_path(this%name_model, 'DIS'))
     call mem_setptr(this%hwva, 'HWVA', create_mem_path(this%name_model, 'CON'))
@@ -153,10 +155,10 @@ module GwfHfbModule
     integer(I4B) :: ierr
     logical :: isfound
     ! -- formats
-    character(len=*),parameter :: fmtblkerr = &
-      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
-      "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
+    character(len=*), parameter :: fmtblkerr = &
+      &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+    character(len=*), parameter :: fmtlsp = &
+      &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data
@@ -166,7 +168,7 @@ module GwfHfbModule
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
                                 supportOpenClose=.true.)
-      if(isfound) then
+      if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
         call this%read_check_ionper()
@@ -179,20 +181,20 @@ module GwfHfbModule
         else
           ! -- Found invalid block
           call this%parser%GetCurrentLine(line)
-          write(errmsg, fmtblkerr) adjustl(trim(line))
+          write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end if
-      endif
+      end if
     end if
     !
-    if(this%ionper == kper) then
+    if (this%ionper == kper) then
       call this%condsat_reset()
       call this%read_data()
       call this%condsat_modify()
     else
-      write(this%iout,fmtlsp) 'HFB'
-    endif
+      write (this%iout, fmtlsp) 'HFB'
+    end if
     !
     ! -- return
     return
@@ -214,11 +216,11 @@ module GwfHfbModule
     ! -- dummy
     class(GwfHfbType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: njasln
-    real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(:) :: idxglo
-    real(DP),intent(inout),dimension(:) :: rhs
-    real(DP),intent(inout),dimension(:) :: hnew
+    integer(I4B), intent(in) :: njasln
+    real(DP), dimension(njasln), intent(inout) :: amat
+    integer(I4B), intent(in), dimension(:) :: idxglo
+    real(DP), intent(inout), dimension(:) :: rhs
+    real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
     integer(I4B) ::  nodes, nja
     integer(I4B) :: ihfb, n, m
@@ -238,33 +240,33 @@ module GwfHfbModule
       ixt3d = 0
     end if
     !
-    if(ixt3d > 0) then
+    if (ixt3d > 0) then
       !
       do ihfb = 1, this%nhfb
         n = min(this%noden(ihfb), this%nodem(ihfb))
         m = max(this%noden(ihfb), this%nodem(ihfb))
         ! -- Skip if either cell is inactive.
-        if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
+        if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
   !!!      if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
         ! -- Compute scale factor for hfb correction
-        if(this%hydchr(ihfb) > DZERO) then
-          if(this%inewton == 0) then
+        if (this%hydchr(ihfb) > DZERO) then
+          if (this%inewton == 0) then
             ipos = this%idxloc(ihfb)
             topn = this%top(n)
             topm = this%top(m)
             botn = this%bot(n)
             botm = this%bot(m)
-            if(this%icelltype(n) == 1) then
-              if(hnew(n) < topn) topn = hnew(n)
-            endif
-            if(this%icelltype(m) == 1) then
-              if(hnew(m) < topm) topm = hnew(m)
-            endif
-            if(this%ihc(this%jas(ipos)) == 2) then
+            if (this%icelltype(n) == 1) then
+              if (hnew(n) < topn) topn = hnew(n)
+            end if
+            if (this%icelltype(m) == 1) then
+              if (hnew(m) < topm) topm = hnew(m)
+            end if
+            if (this%ihc(this%jas(ipos)) == 2) then
               faheight = min(topn, topm) - max(botn, botm)
             else
-              faheight = DHALF * ( (topn - botn) + (topm - botm) )
-            endif
+              faheight = DHALF * ((topn - botn) + (topm - botm))
+            end if
             fawidth = this%hwva(this%jas(ipos))
             condhfb = this%hydchr(ihfb) * fawidth * faheight
           else
@@ -272,47 +274,47 @@ module GwfHfbModule
           end if
         else
           condhfb = this%hydchr(ihfb)
-        endif
+        end if
         ! -- Make hfb corrections for xt3d
-        call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo,      &
-          rhs, hnew, n, m, condhfb)
+        call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo, &
+                                 rhs, hnew, n, m, condhfb)
       end do
       !
     else
       !
       ! -- For Newton, the effect of the barrier is included in condsat.
-      if(this%inewton == 0) then
+      if (this%inewton == 0) then
         do ihfb = 1, this%nhfb
           ipos = this%idxloc(ihfb)
           aterm = amat(idxglo(ipos))
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
-          if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-          if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+          if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
+          if (this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
             !
             ! -- Calculate hfb conductance
             topn = this%top(n)
             topm = this%top(m)
             botn = this%bot(n)
             botm = this%bot(m)
-            if(this%icelltype(n) == 1) then
-              if(hnew(n) < topn) topn = hnew(n)
-            endif
-            if(this%icelltype(m) == 1) then
-              if(hnew(m) < topm) topm = hnew(m)
-            endif
-            if(this%ihc(this%jas(ipos)) == 2) then
+            if (this%icelltype(n) == 1) then
+              if (hnew(n) < topn) topn = hnew(n)
+            end if
+            if (this%icelltype(m) == 1) then
+              if (hnew(m) < topm) topm = hnew(m)
+            end if
+            if (this%ihc(this%jas(ipos)) == 2) then
               faheight = min(topn, topm) - max(botn, botm)
             else
-              faheight = DHALF * ( (topn - botn) + (topm - botm) )
-            endif
-            if(this%hydchr(ihfb) > DZERO) then
+              faheight = DHALF * ((topn - botn) + (topm - botm))
+            end if
+            if (this%hydchr(ihfb) > DZERO) then
               fawidth = this%hwva(this%jas(ipos))
               condhfb = this%hydchr(ihfb) * fawidth * faheight
               cond = aterm * condhfb / (aterm + condhfb)
             else
-              cond = - aterm * this%hydchr(ihfb)
-            endif
+              cond = -aterm * this%hydchr(ihfb)
+            end if
             !
             ! -- Save cond for budget calculation
             this%condsav(ihfb) = cond
@@ -328,11 +330,11 @@ module GwfHfbModule
             amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
             amat(idxglo(isymcon)) = cond
             !
-          endif
-        enddo
-      endif
+          end if
+        end do
+      end if
       !
-    endif
+    end if
     !
     ! -- return
     return
@@ -351,8 +353,8 @@ module GwfHfbModule
     use ConstantsModule, only: DHALF, DZERO
     ! -- dummy
     class(GwfHfbType) :: this
-    real(DP),intent(inout),dimension(:) :: hnew
-    real(DP),intent(inout),dimension(:) :: flowja
+    real(DP), intent(inout), dimension(:) :: hnew
+    real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
     integer(I4B) :: ihfb, n, m
     integer(I4B) :: ipos
@@ -370,33 +372,33 @@ module GwfHfbModule
       ixt3d = 0
     end if
     !
-    if(ixt3d > 0) then
+    if (ixt3d > 0) then
       !
       do ihfb = 1, this%nhfb
         n = min(this%noden(ihfb), this%nodem(ihfb))
         m = max(this%noden(ihfb), this%nodem(ihfb))
         ! -- Skip if either cell is inactive.
-        if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
+        if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
   !!!      if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
         ! -- Compute scale factor for hfb correction
-        if(this%hydchr(ihfb) > DZERO) then
-          if(this%inewton == 0) then
+        if (this%hydchr(ihfb) > DZERO) then
+          if (this%inewton == 0) then
             ipos = this%idxloc(ihfb)
             topn = this%top(n)
             topm = this%top(m)
             botn = this%bot(n)
             botm = this%bot(m)
-            if(this%icelltype(n) == 1) then
-              if(hnew(n) < topn) topn = hnew(n)
-            endif
-            if(this%icelltype(m) == 1) then
-              if(hnew(m) < topm) topm = hnew(m)
-            endif
-            if(this%ihc(this%jas(ipos)) == 2) then
+            if (this%icelltype(n) == 1) then
+              if (hnew(n) < topn) topn = hnew(n)
+            end if
+            if (this%icelltype(m) == 1) then
+              if (hnew(m) < topm) topm = hnew(m)
+            end if
+            if (this%ihc(this%jas(ipos)) == 2) then
               faheight = min(topn, topm) - max(botn, botm)
             else
-              faheight = DHALF * ( (topn - botn) + (topm - botm) )
-            endif
+              faheight = DHALF * ((topn - botn) + (topm - botm))
+            end if
             fawidth = this%hwva(this%jas(ipos))
             condhfb = this%hydchr(ihfb) * fawidth * faheight
           else
@@ -404,7 +406,7 @@ module GwfHfbModule
           end if
         else
           condhfb = this%hydchr(ihfb)
-        endif
+        end if
         ! -- Make hfb corrections for xt3d
         call this%xt3d%xt3d_flowjahfb(n, m, hnew, flowja, condhfb)
       end do
@@ -412,12 +414,12 @@ module GwfHfbModule
     else
       !
       ! -- Recalculate flowja for non-newton unconfined.
-      if(this%inewton == 0) then
+      if (this%inewton == 0) then
         do ihfb = 1, this%nhfb
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
-          if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-          if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+          if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
+          if (this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
             ipos = this%dis%con%getjaindex(n, m)
             cond = this%condsav(ihfb)
             qnm = cond * (hnew(m) - hnew(n))
@@ -425,9 +427,9 @@ module GwfHfbModule
             ipos = this%dis%con%getjaindex(m, n)
             flowja(ipos) = -qnm
             !
-          endif
-        enddo
-      endif
+          end if
+        end do
+      end if
       !
     end if
     !
@@ -462,25 +464,25 @@ module GwfHfbModule
       call mem_deallocate(this%idxloc)
       call mem_deallocate(this%csatsav)
       call mem_deallocate(this%condsav)
-    endif
+    end if
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
     !
     ! -- nullify pointers
-    this%xt3d       => null()
-    this%inewton    => null()
-    this%ibound     => null()
-    this%icelltype  => null()
-    this%ihc        => null()
-    this%ia         => null()
-    this%ja         => null()
-    this%jas        => null()
-    this%isym       => null()
-    this%condsat    => null()
-    this%top        => null()
-    this%bot        => null()
-    this%hwva       => null()
+    this%xt3d => null()
+    this%inewton => null()
+    this%ibound => null()
+    this%icelltype => null()
+    this%ihc => null()
+    this%ia => null()
+    this%ja => null()
+    this%jas => null()
+    this%isym => null()
+    this%condsat => null()
+    this%top => null()
+    this%bot => null()
+    this%hwva => null()
     !
     ! -- return
     return
@@ -539,7 +541,7 @@ module GwfHfbModule
     ! -- initialize idxloc to 0
     do ihfb = 1, this%maxhfb
       this%idxloc(ihfb) = 0
-    enddo
+    end do
     !
     ! -- return
     return
@@ -565,28 +567,28 @@ module GwfHfbModule
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-      supportOpenClose=.true., blockRequired=.false.)
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING HFB OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING HFB OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(this%iout,'(4x,a)') &
-              'THE LIST OF HFBS WILL BE PRINTED.'
-          case default
-            write(errmsg,'(4x,a,a)') 'Unknown HFB option: ', &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('PRINT_INPUT')
+          this%iprpak = 1
+          write (this%iout, '(4x,a)') &
+            'THE LIST OF HFBS WILL BE PRINTED.'
+        case default
+          write (errmsg, '(4x,a,a)') 'Unknown HFB option: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF HFB OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF HFB OPTIONS'
     end if
     !
     ! -- return
@@ -603,7 +605,7 @@ module GwfHfbModule
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwfHfbType),intent(inout) :: this
+    class(GwfHfbType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
@@ -613,40 +615,40 @@ module GwfHfbModule
     !
     ! -- get dimensions block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
-      supportOpenClose=.true.)
+                              supportOpenClose=.true.)
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING HFB DIMENSIONS'
+      write (this%iout, '(/1x,a)') 'PROCESSING HFB DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('MAXHFB')
-            this%maxhfb = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i7)') 'MAXHFB = ', this%maxhfb
-          case default
-            write(errmsg,'(4x,a,a)') &
-              'Unknown HFB dimension: ', trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('MAXHFB')
+          this%maxhfb = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i7)') 'MAXHFB = ', this%maxhfb
+        case default
+          write (errmsg, '(4x,a,a)') &
+            'Unknown HFB dimension: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
       !
-      write(this%iout,'(1x,a)')'END OF HFB DIMENSIONS'
+      write (this%iout, '(1x,a)') 'END OF HFB DIMENSIONS'
     else
       call store_error('Required DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- verify dimensions were set
-    if(this%maxhfb <= 0) then
-      write(errmsg, '(1x,a)') &
+    if (this%maxhfb <= 0) then
+      write (errmsg, '(1x,a)') &
         'MAXHFB must be specified with value greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
@@ -676,11 +678,11 @@ module GwfHfbModule
     character(len=*), parameter :: fmthfb = "(i10, 2a10, 1(1pg15.6))"
 ! ------------------------------------------------------------------------------
     !
-    write(this%iout,'(//,1x,a)')'READING HFB DATA'
-    if(this%iprpak > 0) then
-      write(this%iout, '(3a10, 1a15)') 'HFB NUM', 'CELL1', 'CELL2',            &
-                                       'HYDCHR'
-    endif
+    write (this%iout, '(//,1x,a)') 'READING HFB DATA'
+    if (this%iprpak > 0) then
+      write (this%iout, '(3a10, 1a15)') 'HFB NUM', 'CELL1', 'CELL2', &
+        'HYDCHR'
+    end if
     !
     ihfb = 0
     this%nhfb = 0
@@ -692,40 +694,42 @@ module GwfHfbModule
       !
       ! -- Reset lloc and read noden, nodem, and hydchr
       ihfb = ihfb + 1
-      if(ihfb > this%maxhfb) then
+      if (ihfb > this%maxhfb) then
         call store_error('MAXHFB not large enough.')
         call this%parser%StoreErrorUnit()
-      endif
+      end if
       call this%parser%GetCellid(this%dis%ndim, cellidn)
       this%noden(ihfb) = this%dis%noder_from_cellid(cellidn, &
-                                       this%parser%iuactive, this%iout)
+                                                    this%parser%iuactive, &
+                                                    this%iout)
       call this%parser%GetCellid(this%dis%ndim, cellidm)
       this%nodem(ihfb) = this%dis%noder_from_cellid(cellidm, &
-                                       this%parser%iuactive, this%iout)
+                                                    this%parser%iuactive, &
+                                                    this%iout)
       this%hydchr(ihfb) = this%parser%GetDouble()
       !
       ! -- Print input if requested
-      if(this%iprpak /= 0) then
+      if (this%iprpak /= 0) then
         call this%dis%noder_to_string(this%noden(ihfb), nodenstr)
         call this%dis%noder_to_string(this%nodem(ihfb), nodemstr)
-        write(this%iout, fmthfb) ihfb, trim(adjustl(nodenstr)),                &
-                                 trim(adjustl(nodemstr)), this%hydchr(ihfb)
-      endif
+        write (this%iout, fmthfb) ihfb, trim(adjustl(nodenstr)), &
+          trim(adjustl(nodemstr)), this%hydchr(ihfb)
+      end if
       !
       this%nhfb = ihfb
-    enddo readloop
+    end do readloop
     !
     ! -- Stop if errors
     nerr = count_errors()
-    if(nerr > 0) then
+    if (nerr > 0) then
       call store_error('Errors encountered in HFB input file.')
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
-    write(this%iout, '(3x,i0,a,i0)') this%nhfb,                                &
-          ' HFBs READ FOR STRESS PERIOD ', kper
+    write (this%iout, '(3x,i0,a,i0)') this%nhfb, &
+      ' HFBs READ FOR STRESS PERIOD ', kper
     call this%check_data()
-    write(this%iout, '(1x,a)')'END READING HFB DATA'
+    write (this%iout, '(1x,a)') 'END READING HFB DATA'
     !
     ! -- return
     return
@@ -751,9 +755,9 @@ module GwfHfbModule
     character(len=LINELENGTH) :: errmsg
     logical :: found
     ! -- formats
-    character(len=*), parameter :: fmterr = "(1x, 'HFB no. ',i0,               &
+    character(len=*), parameter :: fmterr = "(1x, 'HFB no. ',i0, &
       &' is between two unconnected cells: ', a, ' and ', a)"
-    character(len=*), parameter :: fmtverr = "(1x, 'HFB no. ',i0,              &
+    character(len=*), parameter :: fmtverr = "(1x, 'HFB no. ',i0, &
       &' is between two cells not horizontally connected: ', a, ' and ', a)"
 ! ------------------------------------------------------------------------------
     !
@@ -761,20 +765,20 @@ module GwfHfbModule
       n = this%noden(ihfb)
       m = this%nodem(ihfb)
       found = .false.
-      do ipos = this%ia(n)+1, this%ia(n+1)-1
+      do ipos = this%ia(n) + 1, this%ia(n + 1) - 1
         if (m == this%ja(ipos)) then
           found = .true.
           this%idxloc(ihfb) = ipos
           exit
-        endif
-      enddo
+        end if
+      end do
       !
       ! -- check to make sure cells are connected
       if (.not. found) then
         call this%dis%noder_to_string(n, nodenstr)
         call this%dis%noder_to_string(m, nodemstr)
-        write(errmsg, fmterr) ihfb, trim(adjustl(nodenstr)),                   &
-                                  trim(adjustl(nodemstr))
+        write (errmsg, fmterr) ihfb, trim(adjustl(nodenstr)), &
+          trim(adjustl(nodemstr))
         call store_error(errmsg)
       else
         !
@@ -783,17 +787,17 @@ module GwfHfbModule
         if (this%ihc(this%jas(ipos)) == 0) then
           call this%dis%noder_to_string(n, nodenstr)
           call this%dis%noder_to_string(m, nodemstr)
-          write(errmsg, fmtverr) ihfb, trim(adjustl(nodenstr)),                &
-                                 trim(adjustl(nodemstr))
+          write (errmsg, fmtverr) ihfb, trim(adjustl(nodenstr)), &
+            trim(adjustl(nodemstr))
           call store_error(errmsg)
         end if
       end if
-    enddo
+    end do
     !
     ! -- Stop if errors detected
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call store_error_unit(this%inunit)
-    endif
+    end if
     !
     ! -- return
     return
@@ -817,7 +821,7 @@ module GwfHfbModule
     do ihfb = 1, this%nhfb
       ipos = this%idxloc(ihfb)
       this%condsat(this%jas(ipos)) = this%csatsav(ihfb)
-    enddo
+    end do
     !
     ! -- return
     return
@@ -850,29 +854,29 @@ module GwfHfbModule
       this%csatsav(ihfb) = cond
       n = this%noden(ihfb)
       m = this%nodem(ihfb)
-      if(this%inewton == 1 .or. &
-         (this%icelltype(n) == 0 .and. this%icelltype(m) == 0) ) then
+      if (this%inewton == 1 .or. &
+          (this%icelltype(n) == 0 .and. this%icelltype(m) == 0)) then
         !
         ! -- Calculate hfb conductance
         topn = this%top(n)
         topm = this%top(m)
         botn = this%bot(n)
         botm = this%bot(m)
-        if(this%ihc(this%jas(ipos)) == 2) then
+        if (this%ihc(this%jas(ipos)) == 2) then
           faheight = min(topn, topm) - max(botn, botm)
         else
-          faheight = DHALF * ( (topn - botn) + (topm - botm) )
-        endif
-        if(this%hydchr(ihfb) > DZERO) then
+          faheight = DHALF * ((topn - botn) + (topm - botm))
+        end if
+        if (this%hydchr(ihfb) > DZERO) then
           fawidth = this%hwva(this%jas(ipos))
           condhfb = this%hydchr(ihfb) * fawidth * faheight
           cond = cond * condhfb / (cond + condhfb)
         else
-          cond = - cond * this%hydchr(ihfb)
-        endif
+          cond = -cond * this%hydchr(ihfb)
+        end if
         this%condsat(this%jas(ipos)) = cond
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
