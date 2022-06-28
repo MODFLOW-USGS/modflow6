@@ -24,8 +24,7 @@ Install the following VSCode extensions:
 
 Now, configure the VSCode files for the modflow6 directory.
 Open the `modflow6` directory in VSCode.
-Make sure that this setting points toward your Python executable.
-directory in VSCode.
+Make sure that the setting "python.defaultInterpreterPath" points toward your Python executable.
 
 ```json
 {
@@ -55,12 +54,12 @@ pip install -U fortls
 - cmd: `where fortls`
 - PowerShell: `Get-Command fortls`
 
-3. Add this to `.vscode/settings.json`. In case this file does not exist yet, create a new one.
+3. Add the setting "fortran.fortls.path" to `.vscode/settings.json` and set its value to th result of step 2.
+In case this file does not exist yet, create a new one.
 
 
 ```json
 {
-    "python.defaultInterpreterPath": "/path/to/python",
     "fortran.fortls.path": "/path/to/fortls"
 }
 ```
