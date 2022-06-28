@@ -405,6 +405,7 @@ module MemoryManagerModule
     allocate(mt)
     !
     ! -- set memory type
+    mt%strsclr => sclr
     mt%isize = ilen
     mt%name = name
     mt%path = mem_path
@@ -419,9 +420,9 @@ module MemoryManagerModule
   
   !> @brief Allocate a 1-dimensional defined length string array 
   !<
-  subroutine allocate_str1d(astr, ilen, nrow, name, mem_path)
+  subroutine allocate_str1d(astr1d, ilen, nrow, name, mem_path)
     integer(I4B), intent(in) :: ilen                                                !< string length
-    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr   !< variable for allocation
+    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< variable for allocation
     integer(I4B), intent(in) :: nrow                                                !< number of strings in array
     character(len=*), intent(in) :: name                                            !< variable name
     character(len=*), intent(in) :: mem_path                                        !< path where the variable is stored
@@ -450,7 +451,7 @@ module MemoryManagerModule
     isize = ilen * nrow
     !
     ! -- allocate defined length string array
-    allocate(character(len=ilen) :: astr(nrow), stat=istat, errmsg=errmsg)
+    allocate(character(len=ilen) :: astr1d(nrow), stat=istat, errmsg=errmsg)
     !
     ! -- check for error condition
     if (istat /= 0) then
@@ -459,7 +460,7 @@ module MemoryManagerModule
     !
     ! -- fill deferred length string with empty string
     do n = 1, nrow
-      astr(n) = string
+      astr1d(n) = string
     end do
     !
     ! -- update counter
@@ -469,6 +470,7 @@ module MemoryManagerModule
     allocate(mt)
     !
     ! -- set memory type
+    mt%astr1d => astr1d
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -1678,18 +1680,34 @@ module MemoryManagerModule
   !<
   subroutine deallocate_str(sclr, name, mem_path)
     character(len=*), pointer, intent(inout) :: sclr  !< pointer to string
-    character(len=*), intent(in) :: name              !< variable name
-    character(len=*), intent(in) :: mem_path          !< path where variable is stored
+    character(len=*), intent(in), optional :: name              !< variable name
+    character(len=*), intent(in), optional :: mem_path          !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
+    integer(I4B) :: ipos
     ! -- code
-    if (associated(sclr)) then
-      call get_from_memorylist(name, mem_path, mt, found, check=.FALSE.)
-      if (.not. found) then
-        call store_error('Programming error in deallocate_str.', terminate=.TRUE.)
-      else
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
+      nullify(mt%strsclr)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if (associated(mt%strsclr, sclr)) then
+          nullify(mt%strsclr)
+          found = .true.
+          exit
+        end if
+      end do
+    end if
+    if (.not. found) then
+      call store_error('Programming error in deallocate_str.', terminate=.TRUE.)
+    else
+      if (mt%master) then
         deallocate(sclr)
+      else
+        nullify(sclr)
       end if
     end if
     !
@@ -1701,23 +1719,38 @@ module MemoryManagerModule
   !!
   !! @todo confirm this description versus the previous doc
   !<
-  subroutine deallocate_str1d(astr, name, mem_path)
-    character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr  !< array of strings
-    character(len=*), intent(in) :: name                                        !< variable name
-    character(len=*), intent(in) :: mem_path                                    !< path where variable is stored
+  subroutine deallocate_str1d(astr1d, name, mem_path)
+    character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< array of strings
+    character(len=*), optional, intent(in) :: name                               !< variable name
+    character(len=*), optional, intent(in) :: mem_path                           !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
+    integer(I4B) :: ipos
     ! -- code
-    if (associated(astr)) then
-      call get_from_memorylist(name, mem_path, mt, found, check=.FALSE.)
-      if (.not. found) then
-        errmsg = "Programming error in deallocate_str1d. Variable '" //          &
-          trim(name) // "' in '" // trim(mem_path) // "' is not "    //          &
-          "present in the memory manager but is associated."
-        call store_error(errmsg, terminate=.TRUE.)
+    !
+    ! -- process optional variables
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
+      nullify(mt%astr1d)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if (associated(mt%astr1d, astr1d)) then
+          nullify(mt%astr1d)
+          found = .true.
+          exit
+        end if
+      end do
+    end if
+    if (.not. found .and. size(astr1d) > 0 ) then
+      call store_error('programming error in deallocate_str1d', terminate=.TRUE.)
+    else
+      if (mt%master) then
+        deallocate(astr1d)
       else
-        deallocate(astr)
+        nullify(astr1d)
       end if
     end if
     !
