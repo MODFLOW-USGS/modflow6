@@ -52,7 +52,7 @@ gfortran can be used to compile MODFLOW 6 and associated utilities and generate 
 ### Python
 
 Install Python, for example via [miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/individual).
-Please make sure that your Python version is 3.7 or higher.
+Please make sure that your Python version is 3.8 or higher.
 Then install all packages necessary to run the tests either by executing [install-python-std.sh](.github/common/install-python-std.sh) via bash directly or by installing the listed packages manually.
 
 ### ifort (optional)
