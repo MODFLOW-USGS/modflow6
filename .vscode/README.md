@@ -54,7 +54,7 @@ pip install -U fortls
 - cmd: `where fortls`
 - PowerShell: `Get-Command fortls`
 
-3. Add the setting "fortran.fortls.path" to `.vscode/settings.json` and set its value to th result of step 2.
+3. Add the setting "fortran.fortls.path" to `.vscode/settings.json` and set its value to the result of step 2.
 In case this file does not exist yet, create a new one.
 
 
