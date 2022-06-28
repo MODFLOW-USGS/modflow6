@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -18,7 +19,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 cmppth = "mf6"
@@ -147,11 +148,11 @@ def build_mf6(idx, ws, newton=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -174,7 +175,7 @@ def build_mf6(idx, ws, newton=None):
     )
 
     # csub files
-    opth = "{}.csub.obs".format(name)
+    opth = f"{name}.csub.obs"
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         head_based=True,
@@ -195,8 +196,8 @@ def build_mf6(idx, ws, newton=None):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -222,14 +223,14 @@ def eval_sub(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 with newton-raphson
     fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
     try:
         tci = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     diffmax = -1e20
     tagmax = None
@@ -240,33 +241,31 @@ def eval_sub(sim):
             diffmax = diffmaxt
             tagmax = tag
 
-    msg = "maximum compaction difference " + "({}) in tag: {}".format(
-        diffmax, tagmax
-    )
+    msg = "maximum compaction difference " + f"({diffmax}) in tag: {tagmax}"
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.comp.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
-    line = "{:>15s}".format("TOTIM")
+    line = f"{'TOTIM':>15s}"
     for tag in tc.dtype.names[1:]:
-        line += " {:>15s}".format("{}_SK".format(tag))
-        line += " {:>15s}".format("{}_SKIB".format(tag))
-        line += " {:>15s}".format("{}_DIFF".format(tag))
+        line += f" {f'{tag}_SK':>15s}"
+        line += f" {f'{tag}_SKIB':>15s}"
+        line += f" {f'{tag}_DIFF':>15s}"
     f.write(line + "\n")
     for i in range(diff.shape[0]):
-        line = "{:15g}".format(tc["time"][i])
+        line = f"{tc['time'][i]:15g}"
         for tag in tc.dtype.names[1:]:
-            line += " {:15g}".format(tc[tag][i])
-            line += " {:15g}".format(tci[tag][i])
-            line += " {:15g}".format(tc[tag][i] - tci[tag][i])
+            line += f" {tc[tag][i]:15g}"
+            line += f" {tci[tag][i]:15g}"
+            line += f" {tc[tag][i] - tci[tag][i]:15g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -281,9 +280,7 @@ def eval_sub(sim):
 # compare cbc and lst budgets
 def cbc_compare(sim):
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -296,13 +293,11 @@ def cbc_compare(sim):
         t = t.strip()
         if paktest in t.lower():
             cbc_bud.append(t)
-            bud_lst.append("{}_IN".format(t))
-            bud_lst.append("{}_OUT".format(t))
+            bud_lst.append(f"{t}_IN")
+            bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -336,41 +331,41 @@ def cbc_compare(sim):
             d["totim"][idx] = t
             d["time_step"][idx] = k[0]
             d["stress_period"] = k[1]
-            key = "{}_IN".format(text)
+            key = f"{text}_IN"
             d[key][idx] = qin
-            key = "{}_OUT".format(text)
+            key = f"{text}_OUT"
             d[key][idx] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
-    msg = "maximum absolute total-budget difference ({}) ".format(diffmax)
+    msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.bud.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
         if i == 0:
-            line = "{:>10s}".format("TIME")
+            line = f"{'TIME':>10s}"
             for idx, key in enumerate(bud_lst):
-                line += "{:>25s}".format(key + "_LST")
-                line += "{:>25s}".format(key + "_CBC")
-                line += "{:>25s}".format(key + "_DIF")
+                line += f"{key + '_LST':>25s}"
+                line += f"{key + '_CBC':>25s}"
+                line += f"{key + '_DIF':>25s}"
             f.write(line + "\n")
-        line = "{:10g}".format(d["totim"][i])
+        line = f"{d['totim'][i]:10g}"
         for idx, key in enumerate(bud_lst):
-            line += "{:25g}".format(d0[key][i])
-            line += "{:25g}".format(d[key][i])
-            line += "{:25g}".format(diff[i, idx])
+            line += f"{d0[key][i]:25g}"
+            line += f"{d[key][i]:25g}"
+            line += f"{diff[i, idx]:25g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > budtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -420,7 +415,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

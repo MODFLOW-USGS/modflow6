@@ -4,8 +4,9 @@ to the specified well pumping rate when the AUTO_FLOW_REDUCE option is
 specified.
 """
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -167,7 +168,7 @@ def eval_obs(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     qtot = tc["Q"] + tc["QRED"]
 
@@ -175,11 +176,11 @@ def eval_obs(sim):
     diff = qtot + wellq
     diffmax = np.abs(diff).max()
     dtol = 1e-9
-    msg = "maximum absolute well rates ({}) ".format(diffmax)
+    msg = f"maximum absolute well rates ({diffmax}) "
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -192,7 +193,7 @@ def eval_obs(sim):
             fpth, names=True, delimiter=",", deletechars=""
         )
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     a1 = afroutput["rate-requested"]
     a2 = afroutput["rate-actual"] + afroutput["wel-reduction"]
@@ -232,7 +233,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

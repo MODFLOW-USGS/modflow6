@@ -7,8 +7,9 @@
 #  python -c "import build_exes; build_exes.test_build_modflow6()"
 
 import os
-import sys
 import shutil
+import sys
+
 import pymake
 
 from framework import running_on_CI
@@ -90,7 +91,7 @@ def build_mf6(srcdir=None, appdir=None):
     # build the application
     pm.build()
 
-    msg = "{} does not exist.".format(pm.target)
+    msg = f"{pm.target} does not exist."
     assert pm.returncode == 0, msg
 
 
@@ -115,7 +116,7 @@ def build_mf6_so():
     # build the application
     pm.build()
 
-    msg = "{} does not exist.".format(pm.target)
+    msg = f"{pm.target} does not exist."
     assert pm.returncode == 0, msg
 
 
@@ -182,7 +183,7 @@ def build_zbud6():
     # build the application
     pm.build()
 
-    msg = "{} does not exist.".format(pm.target)
+    msg = f"{pm.target} does not exist."
     assert pm.returncode == 0, msg
 
 

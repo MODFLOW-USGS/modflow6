@@ -5,8 +5,9 @@ removed.
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -98,7 +99,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -149,8 +150,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -174,7 +175,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -188,7 +189,7 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # initial conditions
@@ -201,7 +202,7 @@ def build_model(idx, dir):
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy[idx])
 
     # immobile storage and transfer
-    cim_filerecord = "{}.ist.ucn".format(gwtname)
+    cim_filerecord = f"{gwtname}.ist.ucn"
     ist = flopy.mf6.ModflowGwtist(
         gwt,
         save_flows=True,
@@ -218,8 +219,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -233,7 +234,7 @@ def build_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     return sim, None
@@ -247,39 +248,39 @@ def eval_transport(sim):
     gwfname = "gwf_" + name
 
     # head
-    fpth = os.path.join(sim.simpath, "{}.hds".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
     try:
         hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_alldata().flatten()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # mobile concentration
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
         )
         conc = cobj.get_alldata().flatten()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # immobile concentration
-    fpth = os.path.join(sim.simpath, "{}.ist.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.ist.ucn")
     try:
         cobj = flopy.utils.HeadFile(fpth, precision="double", text="CIM")
         cim = cobj.get_alldata().flatten()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # budget
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
         print(bobj.get_unique_record_names())
         immrate = bobj.get_data(text="IMMOBILE DOMAIN")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     times = cobj.get_times()
     for i, t in enumerate(times):
@@ -290,7 +291,7 @@ def eval_transport(sim):
             (cim[i] - conc[i]) * zetaim[sim.idxsim] * saturation * volume
         )
         print(t, conc[i], cim[i], rate_sim, rate_calc)
-        msg = "Rate: {} /= {} for time {}".format(rate_sim, rate_calc, t)
+        msg = f"Rate: {rate_sim} /= {rate_calc} for time {t}"
         assert np.allclose(rate_sim, rate_calc), msg
 
     return
@@ -328,7 +329,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

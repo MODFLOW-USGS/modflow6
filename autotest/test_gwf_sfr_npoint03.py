@@ -1,5 +1,6 @@
 import os
 import sys
+
 import numpy as np
 import pytest
 
@@ -16,7 +17,6 @@ from simulation import Simulation
 
 sys.path.append("scripts")
 from cross_section_functions import calculate_rectchan_mannings_discharge
-
 
 paktest = "sfr"
 
@@ -343,7 +343,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

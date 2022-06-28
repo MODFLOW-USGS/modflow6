@@ -10,9 +10,10 @@
 #  3.  Buoyancy package with lake and aquifer density = 1024.5
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -90,7 +91,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     idomain = np.full((nlay, nrow, ncol), 1)
@@ -168,7 +169,7 @@ def build_model(idx, dir):
     ]
 
     # note: for specifying lake number, use fortran indexing!
-    fname = "{}.lak.obs.csv".format(gwfname)
+    fname = f"{gwfname}.lak.obs.csv"
     lak_obs = {
         fname: [
             ("lakestage", "stage", 1),
@@ -194,8 +195,8 @@ def build_model(idx, dir):
         print_input=True,
         print_flows=True,
         print_stage=True,
-        stage_filerecord="{}.lak.bin".format(gwfname),
-        budget_filerecord="{}.lak.bud".format(gwfname),
+        stage_filerecord=f"{gwfname}.lak.bin",
+        budget_filerecord=f"{gwfname}.lak.bud",
         nlakes=len(pak_data),
         ntables=0,
         packagedata=pak_data,
@@ -209,8 +210,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -246,7 +247,7 @@ def eval_results(sim):
     v0 += 1.0 * 1  # middle column
     v0 = v0 * 0.3  # specific yield
     v0 = v0 + (2.25 - 2.0) * 2 + (2.25 - 1.0)
-    print("initial volume of water in model = {}".format(v0))
+    print(f"initial volume of water in model = {v0}")
 
     # calculate ending water volume in model
     h = head[0, 0, 0]
@@ -254,10 +255,10 @@ def eval_results(sim):
     v = h * 4 + 2.0 * 2 + 1.0 * 1
     v = v * 0.3  # specific yield
     v = v + (s - 2.0) * 2 + (s - 1.0)
-    print("final volume of water in model = {}".format(v))
+    print(f"final volume of water in model = {v}")
 
     # check to make sure starting water volume same as equalized final volume
-    errmsg = "initial and final water volume not equal: {} {}".format(v0, v)
+    errmsg = f"initial and final water volume not equal: {v0} {v}"
     assert np.allclose(v0, v)
 
     # todo: add a better check of the lake concentrations
@@ -293,7 +294,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

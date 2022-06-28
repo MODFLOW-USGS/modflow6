@@ -1,10 +1,11 @@
 import os
-import sys
-import flopy
-import pymake
 import shutil
 import subprocess
+import sys
 from multiprocessing import Pool
+
+import flopy
+import pymake
 
 # Set VERIFY
 VERIFY = False
@@ -29,7 +30,9 @@ def _get_version():
             version = sys.argv[idx + 1]
             break
     if version is None:
-        version = pymake.repo_latest_version(github_repo=github_repo, verify=VERIFY)
+        version = pymake.repo_latest_version(
+            github_repo=github_repo, verify=VERIFY
+        )
     return version
 
 
@@ -159,7 +162,9 @@ def revert_files(app, example):
                     with open(fpth, "w") as f:
                         for line in lines:
                             if replace[0] in line.lower():
-                                line = line.lower().replace(replace[0], replace[1])
+                                line = line.lower().replace(
+                                    replace[0], replace[1]
+                                )
                             f.write(line)
     return
 
@@ -205,7 +210,9 @@ def elapsed_real_to_string(elt):
 
 def get_examples():
     examples_repo = "MODFLOW-USGS/modflow6-examples"
-    version = pymake.repo_latest_version(github_repo=examples_repo, verify=VERIFY)
+    version = pymake.repo_latest_version(
+        github_repo=examples_repo, verify=VERIFY
+    )
     print(f"current examples version: {version}")
     url = (
         f"https://github.com/{examples_repo}"

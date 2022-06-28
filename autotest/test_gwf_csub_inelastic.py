@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -18,7 +19,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 paktest = "csub"
@@ -140,11 +141,11 @@ def build_mf6(idx, ws, update=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt6, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt6, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -165,7 +166,7 @@ def build_mf6(idx, ws, update=None):
         gwf, maxbound=len(c6), stress_period_data=cd6, save_flows=False
     )
     # initialize time series
-    chnam = "{}.ch.ts".format(name)
+    chnam = f"{name}.ch.ts"
     chd.ts.initialize(
         filename=chnam,
         timeseries=chd_ts,
@@ -174,7 +175,7 @@ def build_mf6(idx, ws, update=None):
     )
 
     # csub files
-    opth = "{}.csub.obs".format(name)
+    opth = f"{name}.csub.obs"
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         print_input=True,
@@ -203,8 +204,8 @@ def build_mf6(idx, ws, update=None):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST")],
         printrecord=[("BUDGET", "ALL")],
@@ -251,29 +252,29 @@ def eval_void(sim):
     diff = v - v2
     diffmax = np.abs(diff).max()
     dtol = 0.002
-    msg = "maximum absolute void ratio difference ({}) ".format(diffmax)
+    msg = f"maximum absolute void ratio difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.comp.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
-    line = "{:>15s}".format("TOTIM")
-    line += " {:>15s}".format("VOID")
-    line += " {:>15s}".format("MF")
-    line += " {:>15s}".format("DIFF")
+    line = f"{'TOTIM':>15s}"
+    line += f" {'VOID':>15s}"
+    line += f" {'MF':>15s}"
+    line += f" {'DIFF':>15s}"
     f.write(line + "\n")
     for i in range(diff.shape[0]):
-        line = "{:15g}".format(cd["time"][i])
-        line += " {:15g}".format(v[i])
-        line += " {:15g}".format(v[i])
-        line += " {:15g}".format(diff[i])
+        line = f"{cd['time'][i]:15g}"
+        line += f" {v[i]:15g}"
+        line += f" {v[i]:15g}"
+        line += f" {diff[i]:15g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -322,7 +323,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

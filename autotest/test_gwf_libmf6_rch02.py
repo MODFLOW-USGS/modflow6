@@ -6,8 +6,9 @@ simulated head in the non-bmi simulation.
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 from modflowapi import ModflowApi
 
 try:
@@ -149,7 +150,7 @@ def get_model(ws, name, rech=rch_spd):
     rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech, pname=rch_pname)
 
     # gwf observations
-    onam = "{}.head.obs".format(name)
+    onam = f"{name}.head.obs"
     cnam = onam + ".csv"
     obs_recarray = {cnam: [("h1_6_6", "HEAD", (0, 5, 5))]}
     gwfobs = flopy.mf6.ModflowUtlobs(
@@ -163,7 +164,7 @@ def get_model(ws, name, rech=rch_spd):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name),
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -210,7 +211,7 @@ def api_func(exe, idx, model_ws=None):
         os.chdir(model_ws)
 
     # get the observations from the standard run
-    fpth = os.path.join("..", "{}.head.obs.csv".format(ex[idx]))
+    fpth = os.path.join("..", f"{ex[idx]}.head.obs.csv")
     hobs = np.genfromtxt(fpth, delimiter=",", names=True)["H1_6_6"]
 
     try:
@@ -284,11 +285,11 @@ def api_func(exe, idx, model_ws=None):
             # evaluate if the estimation iterations need to continue
             if abs(r0) < 1e-5:
                 msg = (
-                    "Estimation for time {:5.1f}".format(current_time)
-                    + " converged in {:3d}".format(est_iter)
+                    f"Estimation for time {current_time:5.1f}"
+                    + f" converged in {est_iter:3d}"
                     + " iterations"
-                    + " -- final recharge={:10.5f}".format(rch)
-                    + " residual={:10.2g}".format(rch - rch_rates[idx])
+                    + f" -- final recharge={rch:10.5f}"
+                    + f" residual={rch - rch_rates[idx]:10.2g}"
                 )
                 print(msg)
                 break
@@ -358,7 +359,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

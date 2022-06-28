@@ -6,9 +6,10 @@ model grid of square cells.
 """
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -72,7 +73,7 @@ def build_model(idx, dir):
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -89,7 +90,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -103,13 +104,11 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -145,8 +144,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -158,7 +157,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
 
@@ -176,7 +175,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -190,17 +189,15 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=0.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme[idx], filename="{}.adv".format(gwtname)
+        gwt, scheme=scheme[idx], filename=f"{gwtname}.adv"
     )
 
     # mass storage and transfer
@@ -209,14 +206,14 @@ def build_model(idx, dir):
     # sources
     sourcerecarray = [("WEL-1", "AUX", "CONCENTRATION")]
     ssm = flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename="{}.ssm".format(gwtname)
+        gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
     )
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -239,7 +236,7 @@ def build_model(idx, dir):
     obs_package = flopy.mf6.ModflowUtlobs(
         gwt,
         pname="conc_obs",
-        filename="{}.obs".format(gwtname),
+        filename=f"{gwtname}.obs",
         digits=10,
         print_input=True,
         continuous=obs_data,
@@ -251,7 +248,7 @@ def build_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     return sim, None
@@ -263,14 +260,14 @@ def eval_transport(sim):
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
         )
         conc = cobj.get_data()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # This is the answer to this problem.  These concentrations are for
     # time step 200.
@@ -639,7 +636,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

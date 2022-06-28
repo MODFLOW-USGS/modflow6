@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pytest
 
@@ -155,7 +156,7 @@ def get_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format("gwf"),
+        filename="gwf.ims",
     )
 
     # the full gwf model as a reference
@@ -216,8 +217,8 @@ def add_refmodel(sim):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_ref),
-        budget_filerecord="{}.cbc".format(mname_ref),
+        head_filerecord=f"{mname_ref}.hds",
+        budget_filerecord=f"{mname_ref}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -262,8 +263,8 @@ def add_leftmodel(sim):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_left),
-        budget_filerecord="{}.cbc".format(mname_left),
+        head_filerecord=f"{mname_left}.hds",
+        budget_filerecord=f"{mname_left}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -311,8 +312,8 @@ def add_rightmodel(sim):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_right),
-        budget_filerecord="{}.cbc".format(mname_right),
+        head_filerecord=f"{mname_right}.hds",
+        budget_filerecord=f"{mname_right}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -363,15 +364,15 @@ def compare_to_ref(sim):
     print("comparing heads to single model reference...")
 
     for iper in range(nper):
-        fpth = os.path.join(sim.simpath, "{}.hds".format(mname_ref))
+        fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
         hds = flopy.utils.HeadFile(fpth)
         heads = hds.get_data(idx=iper)
 
-        fpth = os.path.join(sim.simpath, "{}.hds".format(mname_left))
+        fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
         hds = flopy.utils.HeadFile(fpth)
         heads_left = hds.get_data(idx=iper)
 
-        fpth = os.path.join(sim.simpath, "{}.hds".format(mname_right))
+        fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
         hds = flopy.utils.HeadFile(fpth)
         heads_right = hds.get_data(idx=iper)
 
@@ -388,7 +389,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -432,7 +433,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

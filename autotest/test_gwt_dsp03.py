@@ -8,9 +8,10 @@ the first and last.
 """
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -58,7 +59,7 @@ def grid_triangulator(itri, delr, delc):
                 vertdict[icell] = [vs[0], vs[1], vs[2], vs[0]]
                 icell += 1
             else:
-                raise Exception("Unknown itri value: {}".format(itri[i, j]))
+                raise Exception(f"Unknown itri value: {itri[i, j]}")
     verts, iverts = flopy.utils.cvfdutil.to_cvfd(vertdict)
     return verts, iverts
 
@@ -123,7 +124,7 @@ def build_model(idx, dir):
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -140,7 +141,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -192,7 +193,7 @@ def build_model(idx, dir):
         botm=botm,
         vertices=vertices,
         cell2d=cell2d,
-        filename="{}.disv".format(gwfname),
+        filename=f"{gwfname}.disv",
     )
 
     # dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
@@ -202,9 +203,7 @@ def build_model(idx, dir):
     #                              filename='{}.dis'.format(gwfname))
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -229,8 +228,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -242,7 +241,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
 
@@ -260,7 +259,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -273,17 +272,15 @@ def build_model(idx, dir):
         botm=botm,
         vertices=vertices,
         cell2d=cell2d,
-        filename="{}.disv".format(gwtname),
+        filename=f"{gwtname}.disv",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=0.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="upstream", filename="{}.adv".format(gwtname)
+        gwt, scheme="upstream", filename=f"{gwtname}.adv"
     )
 
     # dispersion
@@ -296,7 +293,7 @@ def build_model(idx, dir):
         alv=0.0,
         ath1=0.0,
         atv=0.0,
-        filename="{}.dsp".format(gwtname),
+        filename=f"{gwtname}.dsp",
     )
 
     # mass storage and transfer
@@ -308,15 +305,13 @@ def build_model(idx, dir):
     )
 
     # sources
-    ssm = flopy.mf6.ModflowGwtssm(
-        gwt, sources=[[]], filename="{}.ssm".format(gwtname)
-    )
+    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]], filename=f"{gwtname}.ssm")
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -330,7 +325,7 @@ def build_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     return sim, None
@@ -342,7 +337,7 @@ def eval_transport(sim):
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -351,7 +346,7 @@ def eval_transport(sim):
         tdistplot = times[int(len(times) / 5)]
         conc = cobj.get_data(totim=tdistplot)
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # This is the answer to this problem.  These concentrations are for
     # the time equal to 1/5 of perlen.
@@ -491,7 +486,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

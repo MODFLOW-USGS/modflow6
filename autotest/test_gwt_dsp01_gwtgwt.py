@@ -5,8 +5,9 @@ Test basic dispersion for two coupled gwt models.
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 from matplotlib import pyplot as plt
 
 try:
@@ -74,8 +75,8 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -130,7 +131,7 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
         alv=0.0,
         ath1=0.0,
         atv=0.0,
-        filename="{}.dsp".format(gwtname),
+        filename=f"{gwtname}.dsp",
     )
 
     # mass storage and transfer
@@ -139,8 +140,8 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -284,24 +285,24 @@ def build_model(idx, dir):
 def eval_transport(sim):
 
     gwtname = "transport1"
-    fpth = os.path.join(sim.simpath, "transport1", "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, "transport1", f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
         )
         conc1 = cobj.get_data()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     gwtname = "transport2"
-    fpth = os.path.join(sim.simpath, "transport2", "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, "transport2", f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
         )
         conc2 = cobj.get_data()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # diffusion across both sub-models:
     assert np.all(conc1 > 0.0)
@@ -345,7 +346,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

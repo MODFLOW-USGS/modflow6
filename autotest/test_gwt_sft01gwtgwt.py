@@ -17,9 +17,10 @@
 
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -274,7 +275,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
             save_flows=False,
             pname="CHD-1",
             auxiliary="CONCENTRATION",
-            filename="{}.chd".format(gwfname),
+            filename=f"{gwfname}.chd",
         )
 
     # wel files
@@ -291,7 +292,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
             save_flows=False,
             pname="WEL-1",
             auxiliary="CONCENTRATION",
-            filename="{}.wel".format(gwfname),
+            filename=f"{gwfname}.wel",
         )
 
     # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
@@ -369,8 +370,8 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -423,7 +424,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
 
     sftpackagedata = []
     for irno in range(ncol):
-        t = (irno, 0.0, 99.0, 999.0, "myreach{}".format(irno + 1))
+        t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
         sftpackagedata.append(t)
 
     sftperioddata = None
@@ -435,8 +436,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
 
     sft_obs = {
         (gwtname + ".sft.obs.csv",): [
-            ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1)
-            for i in range(7)
+            (f"sft-{i + 1}-conc", "CONCENTRATION", i + 1) for i in range(7)
         ]
         + [
             ("sft-1-extinflow", "EXT-INFLOW", 1),
@@ -474,8 +474,8 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -558,7 +558,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -1,7 +1,8 @@
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -103,8 +104,8 @@ def build_model(idx, ws):
     # output control
     flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -118,10 +119,10 @@ def eval_head(sim):
     fpth = os.path.join(sim.simpath, oname)
     v = np.genfromtxt(fpth, delimiter=",", names=True)
 
-    msg = "head in layer 1 != 8. ({})".format(v["H1"])
+    msg = f"head in layer 1 != 8. ({v['H1']})"
     assert np.allclose(v["H1"], 8.0), msg
 
-    msg = "head in layer 2 != 7. ({})".format(v["H2"])
+    msg = f"head in layer 2 != 7. ({v['H2']})"
     assert np.allclose(v["H2"], 7.0), msg
 
     return
@@ -157,7 +158,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

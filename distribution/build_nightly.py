@@ -1,13 +1,14 @@
 import os
-import sys
 import platform
 import shutil
+import sys
+
 import flopy
 import pymake
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from build_exes import build_mf6, build_mf6_so, build_mf5to6, build_zbud6
+from build_exes import build_mf5to6, build_mf6, build_mf6_so, build_zbud6
 
 # make sure exe extension is used on windows
 eext = ""
@@ -44,14 +45,14 @@ def relpath_fallback(pth):
 def create_dir(pth):
     # remove pth directory if it exists
     if os.path.exists(pth):
-        print("removing... {}".format(os.path.abspath(pth)))
+        print(f"removing... {os.path.abspath(pth)}")
         shutil.rmtree(pth)
 
     # create pth directory
-    print("creating... {}".format(os.path.abspath(pth)))
+    print(f"creating... {os.path.abspath(pth)}")
     os.makedirs(pth)
 
-    msg = "could not create... {}".format(os.path.abspath(pth))
+    msg = f"could not create... {os.path.abspath(pth)}"
     assert os.path.exists(pth), msg
 
     # return
@@ -138,7 +139,7 @@ def test_zip_assets():
         # zip up exe's using directories
         zip_pth = os.path.join(temppth, fpth)
         success = pymake.zip_all(zip_pth, dir_pths=binpth)
-        assert success, "could not create '{}'".format(zip_pth)
+        assert success, f"could not create '{zip_pth}'"
     return
 
 

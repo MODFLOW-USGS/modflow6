@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -18,7 +19,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 paktest = "csub"
@@ -152,7 +153,7 @@ def get_model(idx, dir, adjustmat=False):
         under_relaxation="NONE",
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord="{} strict".format(rclose),
+        rcloserecord=f"{rclose} strict",
         linear_acceleration="bicgstab",
         scaling_method="NONE",
         reordering_method="NONE",
@@ -169,11 +170,11 @@ def get_model(idx, dir, adjustmat=False):
         delc=delc,
         top=top,
         botm=botm,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -196,7 +197,7 @@ def get_model(idx, dir, adjustmat=False):
     )
 
     # csub files
-    opth = "{}.csub.obs".format(name)
+    opth = f"{name}.csub.obs"
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         head_based=True,
@@ -220,7 +221,7 @@ def get_model(idx, dir, adjustmat=False):
         ["delay-compaction", "delay-thickness", "delay-theta"]
     ):
         for n in range(ndcell[idx]):
-            tag = "{}{:02d}".format(tags[jdx], n + 1)
+            tag = f"{tags[jdx]}{n + 1:02d}"
             obs.append((tag, otype, (0, n)))
     orecarray = {}
     orecarray["csub_obs.csv"] = obs
@@ -232,8 +233,8 @@ def get_model(idx, dir, adjustmat=False):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -259,42 +260,42 @@ def eval_sub(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 base compaction results
     fpth = os.path.join(sim.simpath, compdir, "csub_obs.csv")
     try:
         tcb = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # calculate maximum absolute error
     diff = tc["TCOMP"] - tcb["TCOMP"]
     diffmax = np.abs(diff).max()
     dtol = 1e-6
-    msg = "maximum absolute total-compaction difference ({}) ".format(diffmax)
+    msg = f"maximum absolute total-compaction difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.comp.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
-    line = "{:>15s}".format("TOTIM")
-    line += " {:>15s}".format("CSUB")
-    line += " {:>15s}".format("MF")
-    line += " {:>15s}".format("DIFF")
+    line = f"{'TOTIM':>15s}"
+    line += f" {'CSUB':>15s}"
+    line += f" {'MF':>15s}"
+    line += f" {'DIFF':>15s}"
     f.write(line + "\n")
     for i in range(diff.shape[0]):
-        line = "{:15g}".format(tc["time"][i])
-        line += " {:15g}".format(tc["TCOMP"][i])
-        line += " {:15g}".format(tcb["TCOMP"][i])
-        line += " {:15g}".format(diff[i])
+        line = f"{tc['time'][i]:15g}"
+        line += f" {tc['TCOMP'][i]:15g}"
+        line += f" {tcb['TCOMP'][i]:15g}"
+        line += f" {diff[i]:15g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {:15.7g}".format(dtol)
+        msg += f"exceeds {dtol:15.7g}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -312,12 +313,13 @@ def eval_sub(sim):
     for key in calc.dtype.names:
         diff = calc[key] - ovalsi[key]
         diffmax = np.abs(diff).max()
-        msg = "maximum absolute interbed {} ".format(
-            key
-        ) + "difference ({:15.7g}) ".format(diffmax)
+        msg = (
+            "maximum absolute interbed {} ".format(key)
+            + f"difference ({diffmax:15.7g}) "
+        )
         if diffmax > dtol:
             sim.success = False
-            msg += "exceeds {:15.7g}".format(dtol)
+            msg += f"exceeds {dtol:15.7g}"
             assert diffmax < dtol, msg
         else:
             sim.success = True
@@ -327,9 +329,9 @@ def eval_sub(sim):
     calci = np.zeros((comp.shape[0]), dtype=dtype)
     thickini = 1.0 / ndcell[sim.idxsim]
     for n in range(ndcell[sim.idxsim]):
-        tagc = "DBCOMP{:02d}".format(n + 1)
-        tagb = "DBTHICK{:02d}".format(n + 1)
-        tagp = "DBPORO{:02d}".format(n + 1)
+        tagc = f"DBCOMP{n + 1:02d}"
+        tagb = f"DBTHICK{n + 1:02d}"
+        tagp = f"DBPORO{n + 1:02d}"
         comp = tc[tagc]
         ovals = np.zeros((comp.shape[0]), dtype=dtype)
         ovals["THICK"] = tc[tagb]
@@ -341,12 +343,13 @@ def eval_sub(sim):
         for key in calc.dtype.names:
             diff = calc[key] - ovals[key]
             diffmax = np.abs(diff).max()
-            msg = "maximum absolute {}({}) difference ".format(
-                key, n + 1
-            ) + "({:15.7g}) ".format(diffmax)
+            msg = (
+                "maximum absolute {}({}) difference ".format(key, n + 1)
+                + f"({diffmax:15.7g}) "
+            )
             if diffmax > dtol:
                 sim.success = False
-                msg += "exceeds {:15.7g}".format(dtol)
+                msg += f"exceeds {dtol:15.7g}"
                 assert diffmax < dtol, msg
             else:
                 sim.success = True
@@ -359,13 +362,14 @@ def eval_sub(sim):
     for key in calci.dtype.names:
         diff = calci[key] - ovalsi[key]
         diffmax = np.abs(diff).max()
-        msg = "maximum absolute interbed {} difference ".format(
-            key
-        ) + "({:15.7g}) ".format(diffmax)
+        msg = (
+            "maximum absolute interbed {} difference ".format(key)
+            + f"({diffmax:15.7g}) "
+        )
         msg += "calculated from individual interbed cell values "
         if diffmax > dtol:
             sim.success = False
-            msg += "exceeds {:15.7g}".format(dtol)
+            msg += f"exceeds {dtol:15.7g}"
             assert diffmax < dtol, msg
         else:
             sim.success = True
@@ -380,9 +384,7 @@ def eval_sub(sim):
 # compare cbc and lst budgets
 def cbc_compare(sim):
     # open cbc file
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -395,13 +397,11 @@ def cbc_compare(sim):
         t = t.strip()
         if paktest in t.lower():
             cbc_bud.append(t)
-            bud_lst.append("{}_IN".format(t))
-            bud_lst.append("{}_OUT".format(t))
+            bud_lst.append(f"{t}_IN")
+            bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -435,41 +435,41 @@ def cbc_compare(sim):
             d["totim"][idx] = t
             d["time_step"][idx] = k[0]
             d["stress_period"] = k[1]
-            key = "{}_IN".format(text)
+            key = f"{text}_IN"
             d[key][idx] = qin
-            key = "{}_OUT".format(text)
+            key = f"{text}_OUT"
             d[key][idx] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
-    msg = "maximum absolute total-budget difference ({}) ".format(diffmax)
+    msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.bud.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
         if i == 0:
-            line = "{:>10s}".format("TIME")
+            line = f"{'TIME':>10s}"
             for idx, key in enumerate(bud_lst):
-                line += "{:>25s}".format(key + "_LST")
-                line += "{:>25s}".format(key + "_CBC")
-                line += "{:>25s}".format(key + "_DIF")
+                line += f"{key + '_LST':>25s}"
+                line += f"{key + '_CBC':>25s}"
+                line += f"{key + '_DIF':>25s}"
             f.write(line + "\n")
-        line = "{:10g}".format(d["totim"][i])
+        line = f"{d['totim'][i]:10g}"
         for idx, key in enumerate(bud_lst):
-            line += "{:25g}".format(d0[key][i])
-            line += "{:25g}".format(d[key][i])
-            line += "{:25g}".format(diff[i, idx])
+            line += f"{d0[key][i]:25g}"
+            line += f"{d[key][i]:25g}"
+            line += f"{diff[i, idx]:25g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > budtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -522,7 +522,7 @@ def main():
 # use python testmf6_csub_sub01.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()
