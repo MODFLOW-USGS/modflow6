@@ -13,9 +13,10 @@ not present in any of the output. The setup is two coupled
 
 """
 import os
+
 import numpy as np
-from modflowapi import ModflowApi
 import pytest
+from modflowapi import ModflowApi
 
 try:
     import pymake
@@ -140,8 +141,8 @@ def get_model(dir, name):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name_left),
-        budget_filerecord="{}.cbc".format(name_left),
+        head_filerecord=f"{name_left}.hds",
+        budget_filerecord=f"{name_left}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -179,8 +180,8 @@ def get_model(dir, name):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name_right),
-        budget_filerecord="{}.cbc".format(name_right),
+        head_filerecord=f"{name_right}.hds",
+        budget_filerecord=f"{name_right}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -283,7 +284,7 @@ def check_interface_models(mf6):
     ixt3d = mf6.get_value_ptr(mem_addr)[0]
     assert (
         ixt3d == 1
-    ), "Interface model for {} should have XT3D enabled".format(name_left)
+    ), f"Interface model for {name_left} should have XT3D enabled"
 
     # check if n2 > n1, then cell 1 is below 2
     mem_addr = mf6.get_var_address("TOP", ifm_name_left, "DIS")
@@ -293,9 +294,7 @@ def check_interface_models(mf6):
     zc = (bot + top) / 2
     assert all(
         [zc[i] >= zc[i + 1] for i in range(len(zc) - 1)]
-    ), "Interface model for {} contains incorrectly numbered cells".format(
-        name_left
-    )
+    ), f"Interface model for {name_left} contains incorrectly numbered cells"
 
     # confirm some properties for the 'left' interface
     # model, looping over the models that contribute:
@@ -362,7 +361,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

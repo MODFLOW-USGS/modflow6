@@ -7,8 +7,9 @@ on test_gwf_uzf03.py.  Infiltration is assigned a concentration of 100.  The
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -108,7 +109,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -158,7 +159,7 @@ def build_model(idx, dir):
     uzf_obs = {
         gwfname
         + ".uzf.obs.csv": [
-            ("wc{}".format(k + 1), "water-content", k + 1, 0.5 * delv)
+            (f"wc{k + 1}", "water-content", k + 1, 0.5 * delv)
             for k in range(nlay)
         ]
     }
@@ -190,7 +191,7 @@ def build_model(idx, dir):
             thts,
             thti,
             brooks_corey_epsilon,
-            "uzf0{}".format(k + 1),
+            f"uzf0{k + 1}",
         ]
         for k in range(1, nlay)
     ]
@@ -222,17 +223,17 @@ def build_model(idx, dir):
         nuzfcells=len(uzf_pkdat),
         packagedata=uzf_pkdat,
         perioddata=uzf_spd,
-        budget_filerecord="{}.uzf.bud".format(gwfname),
+        budget_filerecord=f"{gwfname}.uzf.bud",
         observations=uzf_obs,
         pname="UZF-1",
-        filename="{}.uzf".format(gwfname),
+        filename=f"{gwfname}.uzf",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -241,7 +242,7 @@ def build_model(idx, dir):
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (1, 0, 0)])
-    obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
+    obs_dict = {f"{gwfname}.obs.csv": obs_lst}
     obs = flopy.mf6.ModflowUtlobs(
         gwf, pname="head_obs", digits=20, continuous=obs_dict
     )
@@ -252,7 +253,7 @@ def build_model(idx, dir):
         sim,
         save_flows=True,
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
 
     imsgwt = flopy.mf6.ModflowIms(
@@ -268,7 +269,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -285,19 +286,17 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=0.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="UPSTREAM", filename="{}.adv".format(gwtname)
+        gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
     )
 
     # storage
     porosity = sy
     sto = flopy.mf6.ModflowGwtmst(
-        gwt, porosity=porosity, filename="{}.sto".format(gwtname)
+        gwt, porosity=porosity, filename=f"{gwtname}.sto"
     )
     # sources
     sourcerecarray = [
@@ -305,12 +304,10 @@ def build_model(idx, dir):
         # ('WEL-1', 'AUX', 'CONCENTRATION'),
     ]
     ssm = flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename="{}.ssm".format(gwtname)
+        gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
     )
 
-    uztpackagedata = [
-        (iuz, 0.0, "uzt{}".format(iuz + 1)) for iuz in range(nlay)
-    ]
+    uztpackagedata = [(iuz, 0.0, f"uzt{iuz + 1}") for iuz in range(nlay)]
     uztperioddata = [
         (0, "INFILTRATION", 100.0),
         (0, "UZET", 100.0),
@@ -318,8 +315,7 @@ def build_model(idx, dir):
 
     uzt_obs = {
         (gwtname + ".uzt.obs.csv",): [
-            ("uztconc{}".format(k + 1), "CONCENTRATION", k + 1)
-            for k in range(nlay)
+            (f"uztconc{k + 1}", "CONCENTRATION", k + 1) for k in range(nlay)
         ],
     }
     # append additional obs attributes to obs dictionary
@@ -345,8 +341,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.bud".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.bud",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -366,7 +362,7 @@ def build_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     return sim, None
@@ -392,7 +388,7 @@ def make_plot(sim, obsvals):
     ax = fig.add_subplot(1, 1, 1)
     depth = np.arange(1, 31, 2.0)
     for row in obsvals:
-        label = "time {}".format(row[0])
+        label = f"time {row[0]}"
         ax.plot(row[1:], depth, label=label, marker="o")
     ax.set_ylim(0.0, 30.0)
     ax.set_xlim(0.0, 100.0)
@@ -427,7 +423,7 @@ def eval_flow(sim):
     conc = cobj.get_alldata()
     for conc_this_time in conc:
         c = conc_this_time.flatten()
-        errmsg = "conc[0] must be 100 and conc[-1] must be 0: {}".format(c)
+        errmsg = f"conc[0] must be 100 and conc[-1] must be 0: {c}"
         # assert np.allclose(c[0], 100.), errmsg
         assert np.allclose(c[-1], 0.0), errmsg
 
@@ -449,9 +445,7 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
+        errmsg = f"min or max residual too large {res.min()} {res.max()}"
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     bpth = os.path.join(ws, gwtname + ".uzt.bud")
@@ -461,9 +455,7 @@ def eval_flow(sim):
     for uz in uzet[
         100:
     ]:  # Need to look later in simulation when ET demand is met
-        msg = "unsat ET not correct.  Found {}.  Should be {}".format(
-            uz["q"], uz_answer
-        )
+        msg = f"unsat ET not correct.  Found {uz['q']}.  Should be {uz_answer}"
         assert np.allclose(uz["q"], uz_answer), msg
 
     uzinfil = bobj.get_data(text="INFILTRATION")
@@ -476,9 +468,7 @@ def eval_flow(sim):
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     c = cobj.get_data().flatten()
     canswer = 10 * [100.0] + 5 * [0.0]
-    msg = "Ending uzf concentrations {} do not match known concentrations {}".format(
-        c, canswer
-    )
+    msg = f"Ending uzf concentrations {c} do not match known concentrations {canswer}"
     assert np.allclose(c, canswer)
 
     # Make plot of obs
@@ -486,7 +476,7 @@ def eval_flow(sim):
     try:
         obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
     if False:
         make_plot(sim, obsvals)
     return
@@ -523,7 +513,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

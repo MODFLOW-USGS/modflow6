@@ -1,7 +1,8 @@
 import os
-import pytest
-import sys
 import subprocess
+import sys
+
+import pytest
 
 try:
     import pymake
@@ -19,19 +20,17 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from simulation import Simulation
-from targets import get_mf6_version
-
 from common_regression import (
-    get_home_dir,
     get_example_basedir,
-    is_directory_available,
     get_example_dirs,
+    get_home_dir,
     get_select_dirs,
     get_select_packages,
+    is_directory_available,
     set_mf6_regression,
 )
-
+from simulation import Simulation
+from targets import get_mf6_version
 
 # find path to examples directory
 home = get_home_dir()
@@ -80,7 +79,7 @@ def get_mf6_models():
         branch = os.path.basename(os.environ["GITHUB_REF"])
     else:
         branch = get_branch()
-    print("On branch {}".format(branch))
+    print(f"On branch {branch}")
 
     # tuple of example files to exclude
     # exclude = (None,)
@@ -95,7 +94,7 @@ def get_mf6_models():
     # write a summary of the files to exclude
     print("list of tests to exclude:")
     for idx, ex in enumerate(exclude):
-        print("    {}: {}".format(idx + 1, ex))
+        print(f"    {idx + 1}: {ex}")
 
     # build list of directories with valid example files
     if example_basedir is not None:
@@ -148,7 +147,7 @@ def get_mf6_models():
         if len(example_dirs) < 1:
             msg = "Selected packages not available ["
             for pak in select_packages:
-                msg += " {}".format(pak)
+                msg += f" {pak}"
             msg += "]"
             print(msg)
 
@@ -196,9 +195,9 @@ def set_make_comparison(test):
     make_comparison = True
     if test in compare_tests.keys():
         version = get_mf6_version()
-        print("MODFLOW version='{}'".format(version))
+        print(f"MODFLOW version='{version}'")
         version = get_mf6_version(version="mf6-regression")
-        print("MODFLOW regression version='{}'".format(version))
+        print(f"MODFLOW regression version='{version}'")
         if version in compare_tests[test]:
             make_comparison = False
     return make_comparison
@@ -226,7 +225,7 @@ def test_mf6model(exdir):
 def main():
     # write message
     tnam = os.path.splitext(os.path.basename(__file__))[0]
-    msg = "Running {} test".format(tnam)
+    msg = f"Running {tnam} test"
     print(msg)
 
     # determine if test directory exists
@@ -252,7 +251,7 @@ def main():
 
 if __name__ == "__main__":
 
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     delFiles = True
     for idx, arg in enumerate(sys.argv):

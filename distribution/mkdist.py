@@ -24,13 +24,14 @@ To make a distribution:
 
 
 import os
-import sys
 import shutil
 import subprocess
+import sys
 import zipfile
+from contextlib import contextmanager
+
 import pymake
 from pymake import download_and_unzip
-from contextlib import contextmanager
 
 
 @contextmanager
@@ -70,7 +71,7 @@ def get_distribution_info(versiontexname):
 
 
 def zipdir(dirname, zipname):
-    print("Zipping directory: {}".format(dirname))
+    print(f"Zipping directory: {dirname}")
     zipf = zipfile.ZipFile(zipname, "w", zipfile.ZIP_DEFLATED)
     for root, dirs, files in os.walk(dirname):
         for file in files:
@@ -90,13 +91,13 @@ def setup(name, destpath, version, subdirs):
 
     """
     print(2 * "\n")
-    print("Setting up {} distribution: {}".format(name, version))
+    print(f"Setting up {name} distribution: {version}")
     print("\n")
 
     dest = os.path.join(destpath, version)
     if os.path.exists(dest):
         # Raise Exception('Destination path exists.  Kill it first.')
-        print("Clobbering destination directory: {}".format(dest))
+        print(f"Clobbering destination directory: {dest}")
         print("\n")
         shutil.rmtree(dest)
     os.mkdir(dest)
@@ -105,7 +106,7 @@ def setup(name, destpath, version, subdirs):
     folderdict = {}
     for sd in subdirs:
         fullpath = os.path.join(dest, sd)
-        print("  creating ==> {}".format(fullpath))
+        print(f"  creating ==> {fullpath}")
         os.mkdir(fullpath)
         folderdict[sd] = fullpath
     print("\n")
@@ -122,10 +123,10 @@ def copytree(src, dst, symlinks=False, ignore=None):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
-            print("  copying {} ===> {}".format(s, d))
+            print(f"  copying {s} ===> {d}")
             shutil.copytree(s, d, symlinks, ignore)
         else:
-            print("  copying {} ===> {}".format(s, d))
+            print(f"  copying {s} ===> {d}")
             shutil.copy2(s, d)
     return
 
@@ -170,15 +171,17 @@ def change_version_module(fname, version):
         newline = line
         srchtxt = "character(len=40), parameter :: VERSION"
         if srchtxt in line:
-            newline = "{} = '{}'".format(srchtxt, version)
+            newline = f"{srchtxt} = '{version}'"
             found1 = True
         srchtxt = "integer(I4B), parameter :: IDEVELOPMODE"
         if srchtxt in line:
-            newline = "{} = {}".format(srchtxt, 0)
+            newline = f"{srchtxt} = {0}"
             found2 = True
         newlines.append(newline)
     if not found1 or not found2:
-        raise Exception("could not replace version or developmode in source code")
+        raise Exception(
+            "could not replace version or developmode in source code"
+        )
     with open(fname, "w") as f:
         for line in newlines:
             f.write(line.strip() + "\n")
@@ -251,7 +254,7 @@ def make_zonebudget(srcpath, destpath, win_target_os, exepath):
     flist = [os.path.join(srcpath, "msvs", "zonebudget.vfproj")]
     print("Copying zonebudget msvs files")
     for d in flist:
-        print("  {} ===> {}".format(d, fd["msvs"]))
+        print(f"  {d} ===> {fd['msvs']}")
         shutil.copy(d, fd["msvs"])
     print("\n")
 
@@ -278,7 +281,7 @@ def make_zonebudget(srcpath, destpath, win_target_os, exepath):
     if win_target_os:
         target += ".exe"
     if not os.path.isfile(target):
-        raise Exception("Did not build target: {}".format(target))
+        raise Exception(f"Did not build target: {target}")
 
     return
 
@@ -326,14 +329,14 @@ def make_mf5to6(srcpath, destpath, win_target_os, exepath):
     for fname in ["makefile", "makedefaults"]:
         fpath = os.path.join(srcpath, "pymake", fname)
         d = os.path.join(srcpath, "make", fname)
-        print("  {} ===> {}".format(fpath, d))
+        print(f"  {fpath} ===> {d}")
         shutil.copyfile(fpath, d)
 
     # Copy makefile to distribution/xxx/utils/mf5to6/make folder
     for fname in ["makefile", "makedefaults"]:
         fpath = os.path.join(srcpath, "pymake", fname)
         d = os.path.join(fd["make"], fname)
-        print("  {} ===> {}".format(fpath, d))
+        print(f"  {fpath} ===> {d}")
         shutil.copyfile(fpath, d)
 
     # Remove makefile and makedefaults from the pymake folder
@@ -345,7 +348,7 @@ def make_mf5to6(srcpath, destpath, win_target_os, exepath):
     flist = [os.path.join(srcpath, "msvs", "mf5to6.vfproj")]
     print("Copying mf5to6 msvs files")
     for d in flist:
-        print("  {} ===> {}".format(d, fd["msvs"]))
+        print(f"  {d} ===> {fd['msvs']}")
         shutil.copy(d, fd["msvs"])
     print("\n")
 
@@ -372,7 +375,7 @@ def make_mf5to6(srcpath, destpath, win_target_os, exepath):
     if win_target_os:
         target += ".exe"
     if not os.path.isfile(target):
-        raise Exception("Did not build target: {}".format(target))
+        raise Exception(f"Did not build target: {target}")
 
     return
 
@@ -381,10 +384,10 @@ def delete_files(files, pth, allow_failure=False):
     for file in files:
         fpth = os.path.join(pth, file)
         try:
-            print("removing...{}".format(file))
+            print(f"removing...{file}")
             os.remove(fpth)
         except:
-            print("could not remove...{}".format(file))
+            print(f"could not remove...{file}")
             if not allow_failure:
                 return False
     return True
@@ -416,32 +419,32 @@ def clean_latex_files():
     print("Cleaning latex files")
     exts = ["pdf", "aux", "bbl", "idx", "lof", "out", "toc"]
     pth = os.path.join("..", "doc", "mf6io")
-    files = ["mf6io.{}".format(e) for e in exts]
+    files = [f"mf6io.{e}" for e in exts]
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + ".pdf")
 
     pth = os.path.join("..", "doc", "ReleaseNotes")
-    files = ["ReleaseNotes.{}".format(e) for e in exts]
+    files = [f"ReleaseNotes.{e}" for e in exts]
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + ".pdf")
 
     pth = os.path.join("..", "doc", "zonebudget")
-    files = ["zonebudget.{}".format(e) for e in exts]
+    files = [f"zonebudget.{e}" for e in exts]
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + ".pdf")
 
     pth = os.path.join("..", "doc", "ConverterGuide")
-    files = ["converter_mf5to6.{}".format(e) for e in exts]
+    files = [f"converter_mf5to6.{e}" for e in exts]
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + ".pdf")
 
     pth = os.path.join("..", "..", "modflow6-docs.git", "mf6suptechinfo")
-    files = ["mf6suptechinfo.{}".format(e) for e in exts]
+    files = [f"mf6suptechinfo.{e}" for e in exts]
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + ".pdf")
 
     pth = os.path.join("..", "..", "modflow6-examples.git", "doc")
-    files = ["mf6examples.{}".format(e) for e in exts]
+    files = [f"mf6examples.{e}" for e in exts]
     delete_files(files, pth, allow_failure=True)
     assert not os.path.isfile(pth + ".pdf")
 
@@ -456,7 +459,11 @@ def rebuild_tex_from_dfn():
     with cwd(npth):
 
         # get list of TeX files
-        files = [f for f in os.listdir("tex") if os.path.isfile(os.path.join("tex", f))]
+        files = [
+            f
+            for f in os.listdir("tex")
+            if os.path.isfile(os.path.join("tex", f))
+        ]
         for f in files:
             fpth = os.path.join("tex", f)
             os.remove(fpth)
@@ -464,7 +471,7 @@ def rebuild_tex_from_dfn():
         # run python
         argv = ["python", "mf6ivar.py"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} with {}".format(ierr, argv[0], argv[1])
+        msg = f"\nERROR {ierr}: could not run {argv[0]} with {argv[1]}"
         assert ierr == 0, buff + msg
 
         # get list for dfn files
@@ -485,13 +492,14 @@ def rebuild_tex_from_dfn():
         for f in dfnfiles:
             if "common" in f:
                 continue
-            fpth = "{}-desc".format(f)
+            fpth = f"{f}-desc"
             if fpth not in texfiles:
                 icnt += 1
-                missing += "  {:3d} {}.tex\n".format(icnt, fpth)
-        msg = "\n{} TeX file(s) are missing. ".format(
-            icnt
-        ) + "Missing files:\n{}".format(missing)
+                missing += f"  {icnt:3d} {fpth}.tex\n"
+        msg = (
+            "\n{} TeX file(s) are missing. ".format(icnt)
+            + f"Missing files:\n{missing}"
+        )
         assert icnt == 0, msg
 
     return
@@ -509,8 +517,8 @@ def update_mf6io_tex_files(distfolder, mf6pth, expth=None):
         expth = os.path.join(distfolder, "examples", "ex-gwf-twri01")
     expth = os.path.abspath(expth)
 
-    assert os.path.isfile(mf6pth), "{} does not exist".format(mf6pth)
-    assert os.path.isdir(expth), "{} does not exist".format(expth)
+    assert os.path.isfile(mf6pth), f"{mf6pth} does not exist"
+    assert os.path.isdir(expth), f"{expth} does not exist"
 
     # run an example model
     if local:
@@ -525,12 +533,12 @@ def update_mf6io_tex_files(distfolder, mf6pth, expth=None):
     buff, ierr = run_command(cmd, simpth)
     lines = buff.split("\r\n")
     with open(fname1, "w") as f:
-        f.write("{}\n".format("{\\small"))
-        f.write("{}\n".format("\\begin{lstlisting}[style=modeloutput]"))
+        f.write("{\\small\n")
+        f.write("\\begin{lstlisting}[style=modeloutput]\n")
         for line in lines:
             f.write(line.rstrip() + "\n")
-        f.write("{}\n".format("\\end{lstlisting}"))
-        f.write("{}\n".format("}"))
+        f.write("\\end{lstlisting}\n")
+        f.write("}\n")
 
     # run model without a namefile present
     if os.path.isdir("./temp"):
@@ -540,24 +548,24 @@ def update_mf6io_tex_files(distfolder, mf6pth, expth=None):
     buff, ierr = run_command(cmd, "./temp")
     lines = buff.split("\r\n")
     with open(fname2, "w") as f:
-        f.write("{}\n".format("{\\small"))
-        f.write("{}\n".format("\\begin{lstlisting}[style=modeloutput]"))
+        f.write("{\\small\n")
+        f.write("\\begin{lstlisting}[style=modeloutput]\n")
         for line in lines:
             f.write(line.rstrip() + "\n")
-        f.write("{}\n".format("\\end{lstlisting}"))
-        f.write("{}\n".format("}"))
+        f.write("\\end{lstlisting}\n")
+        f.write("}\n")
 
     # run mf6 command with -h to show help
     cmd = [os.path.abspath(mf6pth), "-h"]
     buff, ierr = run_command(cmd, "./temp")
     lines = buff.split("\r\n")
     with open(fname3, "w") as f:
-        f.write("{}\n".format("{\\small"))
-        f.write("{}\n".format("\\begin{lstlisting}[style=modeloutput]"))
+        f.write("{\\small\n")
+        f.write("\\begin{lstlisting}[style=modeloutput]\n")
         for line in lines:
             f.write(line.rstrip() + "\n")
-        f.write("{}\n".format("\\end{lstlisting}"))
-        f.write("{}\n".format("}"))
+        f.write("\\end{lstlisting}\n")
+        f.write("}\n")
 
     # clean up
     if os.path.isdir("./temp"):
@@ -584,7 +592,7 @@ def build_latex_docs():
     shutil.copy(os.path.join(pth1, "version.tex"), pth2)
 
     for p, d, t in doclist:
-        print("Building latex document: {}".format(t))
+        print(f"Building latex document: {t}")
         dirname = os.path.join(p, d)
         with cwd(dirname):
 
@@ -598,25 +606,25 @@ def build_latex_docs():
             print("  Pass 1/4...")
             cmd = pdflatexcmd
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+            msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
             assert ierr == 0, buff + msg
 
             cmd = ["bibtex", os.path.splitext(t)[0] + ".aux"]
             print("  Pass 2/4...")
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+            msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
             assert ierr == 0, buff + msg
 
             print("  Pass 3/4...")
             cmd = pdflatexcmd
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+            msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
             assert ierr == 0, buff + msg
 
             print("  Pass 4/4...")
             cmd = pdflatexcmd
             buff, ierr = run_command(cmd, "./")
-            msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+            msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
             assert ierr == 0, buff + msg
 
             fname = os.path.splitext(t)[0] + ".pdf"
@@ -633,16 +641,18 @@ def update_latex_releaseinfo(examples_folder):
 
     cmd = ["python", "mk_folder_struct.py"]
     buff, ierr = run_command(cmd, pth)
-    msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+    msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
     assert ierr == 0, buff + msg
 
     cmd = ["python", "mk_runtimecomp.py"]
     buff, ierr = run_command(cmd, pth)
-    msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+    msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
     assert ierr == 0, buff + msg
 
     for f in files:
-        assert os.path.isfile(os.path.join(pth, f)), "File does not exist: " + f
+        assert os.path.isfile(os.path.join(pth, f)), (
+            "File does not exist: " + f
+        )
 
     return
 
@@ -674,7 +684,7 @@ def setup_examples(examples_repo, exdestpath, mf6path):
             "--destination",
             dest,
         ]  # no run no plot
-        print("running {} in {}".format(argv, scripts_folder))
+        print(f"running {argv} in {scripts_folder}")
         run_command(argv, scripts_folder)
 
     # create list of folders with mfsim.nam
@@ -689,7 +699,7 @@ def setup_examples(examples_repo, exdestpath, mf6path):
     # go through each simulation folder and add a run.bat file
     for dwpath in simulation_folders:
         fname = os.path.join(dwpath, "run.bat")
-        print("Adding {}".format(fname))
+        print(f"Adding {fname}")
         with open(fname, "w") as f:
             f.write("@echo off" + "\n")
             runbatloc = os.path.relpath(mf6path, start=dwpath)
@@ -703,12 +713,12 @@ def setup_examples(examples_repo, exdestpath, mf6path):
     with open(fname, "w") as f:
         for dwpath in simulation_folders:
             d = os.path.relpath(dwpath, start=exdestpath)
-            s = "cd {}".format(d)
+            s = f"cd {d}"
             f.write(s + "\n")
             runbatloc = os.path.relpath(mf6path, start=dwpath)
             f.write(runbatloc + "\n")
             d = os.path.relpath(exdestpath, start=dwpath)
-            s = "cd {}".format(d)
+            s = f"cd {d}"
             f.write(s + "\n")
             s = ""
             f.write(s + "\n")
@@ -752,7 +762,7 @@ if __name__ == "__main__":
     ]
     print("Copying msvs files")
     for d in flist:
-        print("  {} ===> {}".format(d, fd["msvs"]))
+        print(f"  {d} ===> {fd['msvs']}")
         shutil.copy(d, fd["msvs"])
     print("\n")
 
@@ -795,7 +805,7 @@ if __name__ == "__main__":
     # Copy makefile to the distribution
     for fname in ["makefile", "makedefaults"]:
         fpath = os.path.join(makedir, fname)
-        print("  {} ===> {}".format(fpath, fd["make"]))
+        print(f"  {fpath} ===> {fd['make']}")
         shutil.copy(fpath, fd["make"])
 
     # build MODFLOW 6 executable
@@ -811,7 +821,7 @@ if __name__ == "__main__":
     if win_target_os:
         target += ".exe"
     if not os.path.isfile(target):
-        raise Exception("Did not build target: {}".format(target))
+        raise Exception(f"Did not build target: {target}")
 
     # setup zone budget
     make_zonebudget(
@@ -839,7 +849,7 @@ if __name__ == "__main__":
     cmd = ["python", "evaluate_run_times.py"]
     pth = "."
     buff, ierr = run_command(cmd, pth)
-    msg = "\nERROR {}: could not run {} on {}".format(ierr, cmd[0], cmd[1])
+    msg = f"\nERROR {ierr}: could not run {cmd[0]} on {cmd[1]}"
     assert ierr == 0, buff + msg
 
     # Clean and then remake latex docs
@@ -876,7 +886,9 @@ if __name__ == "__main__":
             "mf6suptechinfo.pdf",
         ],
         [
-            os.path.join("..", "..", "modflow6-examples.git", "doc", "mf6examples.pdf"),
+            os.path.join(
+                "..", "..", "modflow6-examples.git", "doc", "mf6examples.pdf"
+            ),
             "mf6examples.pdf",
         ],
     ]
@@ -884,7 +896,7 @@ if __name__ == "__main__":
     print("Copying documentation")
     for din, dout in doclist:
         dst = os.path.join(fd["doc"], dout)
-        print("  copying {} ===> {}".format(din, dst))
+        print(f"  copying {din} ===> {dst}")
         shutil.copy(din, dst)
     print("\n")
 
@@ -894,7 +906,7 @@ if __name__ == "__main__":
         "https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf",
         "https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf",
     ]:
-        print("  downloading {}".format(url))
+        print(f"  downloading {url}")
         download_and_unzip(url, pth=fd["doc"], delete_zip=False, verify=False)
     print("\n")
 
@@ -908,9 +920,9 @@ if __name__ == "__main__":
         uflag = ""
     zipname = version + uflag + ".zip"
     if os.path.exists(zipname):
-        print("Removing existing file: {}".format(zipname))
+        print(f"Removing existing file: {zipname}")
         os.remove(zipname)
-    print("Creating zipped file: {}".format(zipname))
+    print(f"Creating zipped file: {zipname}")
     zipdir(distfolder, zipname)
     print("\n")
 

@@ -5,9 +5,10 @@
 # through the system.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -73,7 +74,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     nlay = 8
@@ -127,8 +128,8 @@ def build_model(idx, dir):
 
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -387,7 +388,7 @@ def build_model(idx, dir):
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
-            filename="{}.ims".format(gwtname),
+            filename=f"{gwtname}.ims",
         )
         sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -464,14 +465,14 @@ def build_model(idx, dir):
 
         sftpackagedata = []
         for irno in range(sfrpd.shape[0]):
-            t = (irno, 0.0, 99.0, 999.0, "myreach{}".format(irno + 1))
+            t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
             sftpackagedata.append(t)
 
         sftperioddata = [(0, "STATUS", "ACTIVE"), (0, "CONCENTRATION", 0.0)]
 
         sft_obs = {
             (gwtname + ".sft.obs.csv",): [
-                ("sft{}conc".format(i + 1), "CONCENTRATION", i + 1)
+                (f"sft{i + 1}conc", "CONCENTRATION", i + 1)
                 for i in range(sfrpd.shape[0])
             ]
         }
@@ -503,8 +504,8 @@ def build_model(idx, dir):
 
         oc = flopy.mf6.ModflowGwtoc(
             gwt,
-            budget_filerecord="{}.cbc".format(gwtname),
-            concentration_filerecord="{}.ucn".format(gwtname),
+            budget_filerecord=f"{gwtname}.cbc",
+            concentration_filerecord=f"{gwtname}.ucn",
             concentrationprintrecord=[
                 ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
@@ -688,7 +689,7 @@ def eval_results(sim):
     ]
     ans_lak1 = np.array(ans_lak1)
     d = res_lak1 - ans_lak1
-    msg = "{} {} {}".format(res_lak1, ans_lak1, d)
+    msg = f"{res_lak1} {ans_lak1} {d}"
     assert np.allclose(res_lak1, ans_lak1, atol=atol), msg
 
     res_sfr3 = sfaconc[:, 30]
@@ -722,7 +723,7 @@ def eval_results(sim):
     ]
     ans_sfr3 = np.array(ans_sfr3)
     d = res_sfr3 - ans_sfr3
-    msg = "{} {} {}".format(res_sfr3, ans_sfr3, d)
+    msg = f"{res_sfr3} {ans_sfr3} {d}"
     assert np.allclose(res_sfr3, ans_sfr3, atol=atol), msg
 
     res_sfr4 = sfaconc[:, 37]
@@ -756,7 +757,7 @@ def eval_results(sim):
     ]
     ans_sfr4 = np.array(ans_sfr4)
     d = res_sfr4 - ans_sfr4
-    msg = "{} {} {}".format(res_sfr4, ans_sfr4, d)
+    msg = f"{res_sfr4} {ans_sfr4} {d}"
     assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
     # used to make results for the gwtgwt version of this problem
@@ -802,7 +803,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

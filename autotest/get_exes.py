@@ -2,6 +2,7 @@
 
 import os
 import shutil
+
 import pymake
 
 from framework import running_on_CI
@@ -50,7 +51,7 @@ def create_dir(pth):
     print(f"creating... {os.path.abspath(pth)}")
     os.makedirs(pth, exist_ok=True)
 
-    msg = "could not create... {}".format(os.path.abspath(pth))
+    msg = f"could not create... {os.path.abspath(pth)}"
     assert os.path.exists(pth), msg
 
 
@@ -71,14 +72,14 @@ def rebuild_mf6_release():
     with open(fpth) as f:
         lines = f.read().splitlines()
 
-    assert len(lines) > 0, "could not update {}".format(srcpth)
+    assert len(lines) > 0, f"could not update {srcpth}"
 
     f = open(fpth, "w")
     for line in lines:
         tag = "IDEVELOPMODE = 0"
         if tag in line:
             line = line.replace(tag, "IDEVELOPMODE = 1")
-        f.write("{}\n".format(line))
+        f.write(f"{line}\n")
     f.close()
 
     # reset compiler based on environmental variable, if defined
@@ -91,7 +92,7 @@ def rebuild_mf6_release():
     # build the release version of MODFLOW 6
     pm.build()
 
-    msg = "{} does not exist.".format(pm.target)
+    msg = f"{pm.target} does not exist."
     assert pm.returncode == 0, msg
 
     # finalize the build
@@ -111,7 +112,7 @@ def test_getmfexes(verify=True):
         srcpth = os.path.join(mfexe_pth, target)
         if os.path.isfile(srcpth):
             dstpth = os.path.join(downloaded_bindir, target)
-            print("copying {} -> {}".format(srcpth, dstpth))
+            print(f"copying {srcpth} -> {dstpth}")
             shutil.copy(srcpth, dstpth)
 
 

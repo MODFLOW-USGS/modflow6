@@ -1,7 +1,8 @@
-import os
-import pytest
-import numpy as np
 import datetime
+import os
+
+import numpy as np
+import pytest
 
 try:
     import pymake
@@ -19,7 +20,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 ex = ["csub_sk03a"]
@@ -132,7 +133,7 @@ sig0[0, 0, jj] = 1.86
 tsnames = []
 sig0 = []
 for i in range(nrow):
-    tsname = "TLR{:02d}".format(i + 1)
+    tsname = f"TLR{i + 1:02d}"
     tsnames.append(tsname)
     sig0.append([(0, i, 0), tsname])
 tsname = "FR"
@@ -314,7 +315,7 @@ def get_model(idx, ws):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -361,7 +362,7 @@ def get_model(idx, ws):
     )
 
     # create chd time series
-    chnam = "{}.ch.ts".format(name)
+    chnam = f"{name}.ch.ts"
     chd_ts = [(0.0, strt), (1.0, strt), (perlen.sum(), finish)]
 
     # chd files
@@ -378,100 +379,100 @@ def get_model(idx, ws):
 
     # create load time series file with load
     csub_ts = []
-    csubnam = "{}.load.ts".format(name)
+    csubnam = f"{name}.load.ts"
 
     fopth = os.path.join(ws, "ts.csv")
     fo = open(fopth, "w")
 
     line2 = "TIME"
     for tsname in tsnames:
-        line2 += ",{}".format(tsname)
-    fo.write("{}\n".format(line2))
+        line2 += f",{tsname}"
+    fo.write(f"{line2}\n")
 
     d = [0.0]
-    line = " {:12.6e}".format(0.0)
+    line = f" {0.0:12.6e}"
     dateon = datestart + datetime.timedelta(seconds=0)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
-    line2 = "{}".format(datestr)
+    line2 = f"{datestr}"
     for tsname in tsnames:
         d.append(0.0)
         line2 += ",0.0000"
     csub_ts.append(tuple(d))
-    fo.write("{}\n".format(line2))
+    fo.write(f"{line2}\n")
 
     ton = 1.0
     d = [ton]
     dateon = datestart + datetime.timedelta(seconds=ton)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
-    line2 = "{}".format(datestr)
+    line2 = f"{datestr}"
     for tsname in tsnames:
         d.append(0.0)
         line2 += ",0.0000"
     csub_ts.append(tuple(d))
-    fo.write("{}\n".format(line2))
+    fo.write(f"{line2}\n")
 
     for i in range(tsv.shape[0]):
         ton = tstime[i]
         d = [ton]
         dateon = datestart + datetime.timedelta(seconds=ton)
         datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
-        line2 = "{}".format(datestr)
+        line2 = f"{datestr}"
         for j in range(tsv.shape[1]):
             d.append(tsv[i, j])
-            line2 += ",{:6.4f}".format(tsv[i, j])
+            line2 += f",{tsv[i, j]:6.4f}"
         csub_ts.append(tuple(d))
-        fo.write("{}\n".format(line2))
+        fo.write(f"{line2}\n")
 
     ton += 1
     d = [ton]
     dateon = datestart + datetime.timedelta(seconds=ton)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
-    line2 = "{}".format(datestr)
+    line2 = f"{datestr}"
     for tsname in tsnames:
         if tsname == "FR":
             d.append(fcar1)
-            line2 += ",{:6.4f}".format(fcar1)
+            line2 += f",{fcar1:6.4f}"
         else:
             d.append(0.0)
             line2 += ",0.0000"
     csub_ts.append(tuple(d))
-    fo.write("{}\n".format(line2))
+    fo.write(f"{line2}\n")
 
     ton += (i + 1.0) * 86400.0
     d = [ton]
     dateon = datestart + datetime.timedelta(minutes=29)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
-    line2 = "{}".format(datestr)
+    line2 = f"{datestr}"
     for tsname in tsnames:
         if tsname == "FR":
             d.append(fcar1)
-            line2 += ",{:6.4f}".format(fcar1)
+            line2 += f",{fcar1:6.4f}"
         else:
             d.append(0.0)
             line2 += ",0.0000"
     csub_ts.append(tuple(d))
-    fo.write("{}\n".format(line2))
+    fo.write(f"{line2}\n")
 
     ton = 100.0 * sec2day
     d = [ton]
     dateon = datestart + datetime.timedelta(minutes=30)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
-    line2 = "{}".format(datestr)
+    line2 = f"{datestr}"
     for tsname in tsnames:
         if tsname == "FR":
             d.append(fcar1)
-            line2 += ",{:6.4f}".format(fcar1)
+            line2 += f",{fcar1:6.4f}"
         else:
             d.append(fcar1)
             line2 += ",0.0000"
     csub_ts.append(tuple(d))
-    fo.write("{}\n".format(line2))
+    fo.write(f"{line2}\n")
 
     # close ts,csv
     fo.close()
 
     # csub files
-    opth = "{}.csub.obs".format(name)
+    opth = f"{name}.csub.obs"
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         print_input=True,
@@ -519,8 +520,8 @@ def get_model(idx, ws):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -552,12 +553,10 @@ def eval_comp(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -569,9 +568,7 @@ def eval_comp(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -591,41 +588,41 @@ def eval_comp(sim):
             d["totim"][idx] = t
             d["time_step"][idx] = k[0]
             d["stress_period"] = k[1]
-            key = "{}_IN".format(text)
+            key = f"{text}_IN"
             d[key][idx] = qin
-            key = "{}_OUT".format(text)
+            key = f"{text}_OUT"
             d[key][idx] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
-    msg = "maximum absolute total-budget difference ({}) ".format(diffmax)
+    msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.bud.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
         if i == 0:
-            line = "{:>10s}".format("TIME")
+            line = f"{'TIME':>10s}"
             for idx, key in enumerate(bud_lst):
-                line += "{:>25s}".format(key + "_LST")
-                line += "{:>25s}".format(key + "_CBC")
-                line += "{:>25s}".format(key + "_DIF")
+                line += f"{key + '_LST':>25s}"
+                line += f"{key + '_CBC':>25s}"
+                line += f"{key + '_DIF':>25s}"
             f.write(line + "\n")
-        line = "{:10g}".format(d["totim"][i])
+        line = f"{d['totim'][i]:10g}"
         for idx, key in enumerate(bud_lst):
-            line += "{:25g}".format(d0[key][i])
-            line += "{:25g}".format(d[key][i])
-            line += "{:25g}".format(diff[i, idx])
+            line += f"{d0[key][i]:25g}"
+            line += f"{d[key][i]:25g}"
+            line += f"{diff[i, idx]:25g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -694,7 +691,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

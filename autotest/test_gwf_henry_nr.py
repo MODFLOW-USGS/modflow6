@@ -6,8 +6,9 @@
 # the effects of tides on the aquifer.
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -228,14 +229,14 @@ def build_model(idx, dir):
         save_flows=False,
         pname="WEL-1",
         auxiliary="CONCENTRATION",
-        filename="{}.wel".format(name),
+        filename=f"{name}.wel",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -246,9 +247,9 @@ def build_model(idx, dir):
 
 def set_make_comparison():
     version = get_mf6_version()
-    print("MODFLOW version='{}'".format(version))
+    print(f"MODFLOW version='{version}'")
     version = get_mf6_version(version="mf6-regression")
-    print("MODFLOW regression version='{}'".format(version))
+    print(f"MODFLOW regression version='{version}'")
     if version in ("6.2.1",):
         make_comparison = False
     else:
@@ -301,7 +302,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

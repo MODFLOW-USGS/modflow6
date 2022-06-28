@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -68,7 +69,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
     )
     gwf.name_file.newtonoptions = newtonoptions[idx]
 
@@ -99,11 +100,11 @@ def build_model(idx, dir):
         top=100.0,
         botm=0.0,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -112,7 +113,7 @@ def build_model(idx, dir):
         icelltype=1,
         k=hk,
         k33=hk,
-        filename="{}.npf".format(name),
+        filename=f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -123,7 +124,7 @@ def build_model(idx, dir):
         sy=0.1,
         steady_state={0: True},
         # transient={1: False},
-        filename="{}.sto".format(name),
+        filename=f"{name}.sto",
     )
 
     # chd files
@@ -140,7 +141,7 @@ def build_model(idx, dir):
         gwf,
         stress_period_data=chdspdict,
         save_flows=False,
-        filename="{}.chd".format(name),
+        filename=f"{name}.chd",
     )
 
     # wel files
@@ -149,7 +150,7 @@ def build_model(idx, dir):
     #                              periodrecarray=wd6,
     #                              save_flows=False)
     # MAW
-    opth = "{}.maw.obs".format(name)
+    opth = f"{name}.maw.obs"
     wellbottom = 50.0
     wellrecarray = [[0, 0.1, wellbottom, 100.0, "THIEM", 1]]
     wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100.0, wellbottom, 1.0, 0.1]]
@@ -158,7 +159,7 @@ def build_model(idx, dir):
     mawo_dict["maw_obs.csv"] = [("mh1", "head", 1)]
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
-        filename="{}.maw".format(name),
+        filename=f"{name}.maw",
         print_input=True,
         print_head=True,
         print_flows=True,
@@ -172,12 +173,12 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     return sim, None
@@ -191,7 +192,7 @@ def eval_maw(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # create known results array
     tc0 = np.array([100.0, 25.0, 100.0])
@@ -200,11 +201,11 @@ def eval_maw(sim):
     diff = tc["MH1"] - tc0
     diffmax = np.abs(diff).max()
     dtol = 1e-9
-    msg = "maximum absolute maw head difference ({}) ".format(diffmax)
+    msg = f"maximum absolute maw head difference ({diffmax}) "
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -245,7 +246,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

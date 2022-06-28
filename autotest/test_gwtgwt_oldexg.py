@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pytest
 
@@ -130,7 +131,7 @@ def get_model(idx, dir):
         rcloserecord=rclose,
         linear_acceleration="BICGSTAB",
         relaxation_factor=relax,
-        filename="{}.ims".format("gwf"),
+        filename="gwf.ims",
     )
 
     # the full gwf model as a reference
@@ -151,12 +152,12 @@ def get_model(idx, dir):
         under_relaxation="NONE",
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord="{} strict".format(rclose),
+        rcloserecord=f"{rclose} strict",
         linear_acceleration="BICGSTAB",
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format("gwt"),
+        filename="gwt.ims",
     )
 
     gwt = add_gwtrefmodel(sim)
@@ -172,21 +173,21 @@ def get_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=mname_ref,
         exgmnameb=mname_gwtref,
-        filename="{}.gwfgwt".format("reference"),
+        filename="reference.gwfgwt",
     )
     gwfgwt_left = flopy.mf6.ModflowGwfgwt(
         sim,
         exgtype="GWF6-GWT6",
         exgmnamea=mname_left,
         exgmnameb=mname_gwtleft,
-        filename="{}.gwfgwt".format("left"),
+        filename="left.gwfgwt",
     )
     gwfgwt_right = flopy.mf6.ModflowGwfgwt(
         sim,
         exgtype="GWF6-GWT6",
         exgmnamea=mname_right,
         exgmnameb=mname_gwtright,
-        filename="{}.gwfgwt".format("right"),
+        filename="right.gwfgwt",
     )
 
     return sim
@@ -235,8 +236,8 @@ def add_refmodel(sim):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_ref),
-        budget_filerecord="{}.cbc".format(mname_ref),
+        head_filerecord=f"{mname_ref}.hds",
+        budget_filerecord=f"{mname_ref}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -279,8 +280,8 @@ def add_leftmodel(sim):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_left),
-        budget_filerecord="{}.cbc".format(mname_left),
+        head_filerecord=f"{mname_left}.hds",
+        budget_filerecord=f"{mname_left}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -326,8 +327,8 @@ def add_rightmodel(sim):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_right),
-        budget_filerecord="{}.cbc".format(mname_right),
+        head_filerecord=f"{mname_right}.hds",
+        budget_filerecord=f"{mname_right}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -407,8 +408,8 @@ def add_gwtrefmodel(sim):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(mname_gwtref),
-        concentration_filerecord="{}.ucn".format(mname_gwtref),
+        budget_filerecord=f"{mname_gwtref}.cbc",
+        concentration_filerecord=f"{mname_gwtref}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -460,8 +461,8 @@ def add_gwtleftmodel(sim):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(mname_gwtleft),
-        concentration_filerecord="{}.ucn".format(mname_gwtleft),
+        budget_filerecord=f"{mname_gwtleft}.cbc",
+        concentration_filerecord=f"{mname_gwtleft}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -516,8 +517,8 @@ def add_gwtrightmodel(sim):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(mname_gwtright),
-        concentration_filerecord="{}.ucn".format(mname_gwtright),
+        budget_filerecord=f"{mname_gwtright}.cbc",
+        concentration_filerecord=f"{mname_gwtright}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -598,24 +599,24 @@ def compare_to_ref(sim):
 def compare_gwf_to_ref(sim):
     print("comparing heads and spec. discharge to single model reference...")
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(mname_ref))
+    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_ref))
+    fpth = os.path.join(sim.simpath, f"{mname_ref}.cbc")
     nlay, nrow, ncol = heads.shape
     qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(mname_left))
+    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_left = hds.get_data()
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_left))
+    fpth = os.path.join(sim.simpath, f"{mname_left}.cbc")
     nlay, nrow, ncol = heads_left.shape
     qxb_left, qyb_left, qzb_left = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(mname_right))
+    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data()
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_right))
+    fpth = os.path.join(sim.simpath, f"{mname_right}.cbc")
     nlay, nrow, ncol = heads_right.shape
     qxb_right, qyb_right, qzb_right = qxqyqz(fpth, nlay, nrow, ncol)
 
@@ -686,7 +687,7 @@ def compare_gwf_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -704,7 +705,7 @@ def compare_gwf_to_ref(sim):
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.simpath, "{}.cbc".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -715,9 +716,7 @@ def compare_gwf_to_ref(sim):
         for fjf in flow_ja_face:
             fjf = fjf.flatten()
             res = fjf[ia[:-1]]
-            errmsg = "min or max residual too large {} {}".format(
-                res.min(), res.max()
-            )
+            errmsg = f"min or max residual too large {res.min()} {res.max()}"
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
@@ -726,13 +725,13 @@ def compare_gwf_to_ref(sim):
 def compare_gwt_to_ref(sim):
     print("comparing concentration  to single model reference...")
 
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(mname_gwtref))
+    fpth = os.path.join(sim.simpath, f"{mname_gwtref}.ucn")
     cnc = flopy.utils.HeadFile(fpth, text="CONCENTRATION")
     conc = cnc.get_data()
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(mname_gwtleft))
+    fpth = os.path.join(sim.simpath, f"{mname_gwtleft}.ucn")
     cnc = flopy.utils.HeadFile(fpth, text="CONCENTRATION")
     conc_left = cnc.get_data()
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(mname_gwtright))
+    fpth = os.path.join(sim.simpath, f"{mname_gwtright}.ucn")
     cnc = flopy.utils.HeadFile(fpth, text="CONCENTRATION")
     conc_right = cnc.get_data()
 
@@ -749,7 +748,7 @@ def compare_gwt_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_gwtref, mname_gwtleft, mname_gwtright]:
-        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -768,7 +767,7 @@ def compare_gwt_to_ref(sim):
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.simpath, "{}.cbc".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -779,9 +778,7 @@ def compare_gwt_to_ref(sim):
         for fjf in flow_ja_face:
             fjf = fjf.flatten()
             res = fjf[ia[:-1]]
-            errmsg = "min or max residual too large {} {}".format(
-                res.min(), res.max()
-            )
+            errmsg = f"min or max residual too large {res.min()} {res.max()}"
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
@@ -818,7 +815,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

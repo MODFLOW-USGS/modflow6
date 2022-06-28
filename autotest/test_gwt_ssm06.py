@@ -3,6 +3,7 @@
 
 import os
 import shutil
+
 import numpy as np
 
 try:
@@ -99,7 +100,7 @@ def run_flw_and_trnprt_models():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, gwfname)
 
@@ -137,8 +138,8 @@ def run_flw_and_trnprt_models():
 
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -163,13 +164,13 @@ def run_flw_and_trnprt_models():
     for ipak, i in enumerate(rows):
         blist = []
         blist.append(((0, i, ncol - 1), 50.0, 1000.0, 100.0))
-        fname = gwfname + "_{}.ghb".format(ipak + 1)
+        fname = gwfname + f"_{ipak + 1}.ghb"
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
             stress_period_data=blist,
             auxiliary=["concentration"],
             filename=fname,
-            pname="GHB-{}".format(ipak + 1),
+            pname=f"GHB-{ipak + 1}",
         )
 
     # drn
@@ -177,13 +178,13 @@ def run_flw_and_trnprt_models():
     for ipak, i in enumerate(rows):
         blist = []
         blist.append(((0, i, ncol - 1), 50.0, 1000.0, 100.0))
-        fname = gwfname + "_{}.drn".format(ipak + 1)
+        fname = gwfname + f"_{ipak + 1}.drn"
         drn = flopy.mf6.ModflowGwfdrn(
             gwf,
             stress_period_data=blist,
             auxiliary=["concentration"],
             filename=fname,
-            pname="DRN-{}".format(ipak + 1),
+            pname=f"DRN-{ipak + 1}",
         )
 
     # sfr - stream starts in the middle of domain and goes due east
@@ -223,7 +224,7 @@ def run_flw_and_trnprt_models():
         packagedata=sfr_pkdat,
         connectiondata=conns,
         perioddata=sfrspd,
-        filename="{}.sfr".format(gwfname),
+        filename=f"{gwfname}.sfr",
     )
 
     # mvr
@@ -273,7 +274,7 @@ def run_flw_and_trnprt_models():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, gwtname)
 
@@ -351,12 +352,12 @@ def run_flw_and_trnprt_models():
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(gwfname),
+        filename=f"{gwfname}.gwfgwt",
     )
 
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = "transport model did not terminate successfully\n{}".format(buff)
+    errmsg = f"transport model did not terminate successfully\n{buff}"
     assert success, errmsg
 
     # ensure budget table can be parsed
@@ -386,7 +387,7 @@ def test_ssm06():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run tests
     test_ssm06()

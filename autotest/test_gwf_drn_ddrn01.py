@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -18,7 +19,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 paktest = "drn"
@@ -74,7 +75,7 @@ def initial_conditions():
 
 def get_model(idxsim, ws, name):
     strt = initial_conditions()
-    hdsfile = "{}.hds".format(name)
+    hdsfile = f"{name}.hds"
     if newton[idxsim]:
         newtonoptions = "NEWTON"
     else:
@@ -118,7 +119,7 @@ def get_model(idxsim, ws, name):
         print_input=True,
     )
     drn.obs.initialize(
-        filename="{}.drn.obs".format(name),
+        filename=f"{name}.drn.obs",
         digits=20,
         print_input=True,
         continuous=drn_obs,
@@ -155,14 +156,14 @@ def eval_disch(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 head results
     fpth = os.path.join(sim.simpath, "head_obs.csv")
     try:
         th0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # calculate the drain flux analytically
     xdiff = th0["H1_1_100"] - delev
@@ -173,29 +174,29 @@ def eval_disch(sim):
     diff = tc["D1_1_100"] - tc0
     diffmax = np.abs(diff).max()
     dtol = 1e-6
-    msg = "maximum absolute discharge difference ({}) ".format(diffmax)
+    msg = f"maximum absolute discharge difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.disc.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.disc.cmp.out"
     )
     f = open(fpth, "w")
-    line = "{:>15s}".format("TOTIM")
-    line += " {:>15s}".format("DRN")
-    line += " {:>15s}".format("UZF")
-    line += " {:>15s}".format("DIFF")
+    line = f"{'TOTIM':>15s}"
+    line += f" {'DRN':>15s}"
+    line += f" {'UZF':>15s}"
+    line += f" {'DIFF':>15s}"
     f.write(line + "\n")
     for i in range(diff.shape[0]):
-        line = "{:15g}".format(tc["time"][i])
-        line += " {:15g}".format(tc["D1_1_100"][i])
-        line += " {:15g}".format(tc0[i])
-        line += " {:15g}".format(diff[i])
+        line = f"{tc['time'][i]:15g}"
+        line += f" {tc['D1_1_100'][i]:15g}"
+        line += f" {tc0[i]:15g}"
+        line += f" {diff[i]:15g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -264,7 +265,7 @@ def main():
 # use python testmf6_drn_ddrn01.py
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

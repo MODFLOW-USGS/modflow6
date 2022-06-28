@@ -126,7 +126,7 @@ def write_budget(
         # write auxiliary column names
         naux = ndat - 1
         if naux > 0:
-            auxtxt = ["{:16}".format(colname) for colname in colnames[3:]]
+            auxtxt = [f"{colname:16}" for colname in colnames[3:]]
             auxtxt = tuple(auxtxt)
             dt = np.dtype([(colname, "S16") for colname in colnames[3:]])
             h = np.array(auxtxt, dtype=dt)
@@ -143,7 +143,7 @@ def write_budget(
 
         pass
     else:
-        raise Exception("unknown method code {}".format(imeth))
+        raise Exception(f"unknown method code {imeth}")
     return
 
 

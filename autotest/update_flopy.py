@@ -1,13 +1,13 @@
+import importlib
 import os
 import shutil
 import subprocess
-import importlib
 from contextlib import contextmanager
 
 import flopy
 
 flopypth = flopy.__path__[0]
-print("flopy is installed in {}".format(flopypth))
+print(f"flopy is installed in {flopypth}")
 
 
 @contextmanager
@@ -53,7 +53,7 @@ def test_copy_dfn():
         if "dfn" in ext:
             fpth0 = os.path.join(pth0, fn)
             fpth1 = os.path.join(pth1, fn)
-            print('copying {} from "{}" to "{}"'.format(fn, pth0, pth1))
+            print(f'copying {fn} from "{pth0}" to "{pth1}"')
             shutil.copyfile(fpth0, fpth1)
 
 
@@ -67,16 +67,16 @@ def test_create_packages():
 
     # determine if createpackages.py exists
     fpth = os.path.join(pth, fn)
-    print('testing if "{}" exists'.format(fpth))
+    print(f'testing if "{fpth}" exists')
     exist = os.path.isfile(fpth)
-    assert exist, '"{}" does not exist'.format(fpth)
+    assert exist, f'"{fpth}" does not exist'
 
     # run createrpackages.py script
-    print("running...{}".format(fn))
+    print(f"running...{fn}")
     cmd = ["python", fn]
     buff, ierr = run_command(cmd, pth)
-    assert ierr == 0, "could not run {}".format(fn)
-    print("successfully ran...{}".format(fn))
+    assert ierr == 0, f"could not run {fn}"
+    print(f"successfully ran...{fn}")
 
     # reload flopy
     print("reloading flopy")
@@ -88,7 +88,7 @@ def test_create_packages():
 
 
 def list_files(pth, exts=["py"]):
-    print("\nLIST OF FILES IN {}".format(pth))
+    print(f"\nLIST OF FILES IN {pth}")
     files = [
         entry
         for entry in os.listdir(pth)
@@ -99,7 +99,7 @@ def list_files(pth, exts=["py"]):
         ext = os.path.splitext(fn)[1][1:].lower()
         if ext in exts:
             idx += 1
-            print("    {:5d} - {}".format(idx, fn))
+            print(f"    {idx:5d} - {fn}")
     return
 
 
@@ -115,10 +115,10 @@ def delete_files(files, pth, allow_failure=False, exclude=None):
             continue
         fpth = os.path.join(pth, fn)
         try:
-            print("removing...{}".format(fn))
+            print(f"removing...{fn}")
             os.remove(fpth)
         except:
-            print("could not remove...{}".format(fn))
+            print(f"could not remove...{fn}")
             if not allow_failure:
                 return False
     return True
@@ -148,7 +148,7 @@ def run_command(argv, pth, timeout=10):
 def main():
     # write message
     tnam = os.path.splitext(os.path.basename(__file__))[0]
-    msg = "Running {} test".format(tnam)
+    msg = f"Running {tnam} test"
     print(msg)
 
     print("deleting existing MODFLOW 6 FloPy files")
@@ -164,7 +164,7 @@ def main():
 
 
 if __name__ == "__main__":
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

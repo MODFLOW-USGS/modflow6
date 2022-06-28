@@ -1,9 +1,10 @@
 import os
-import pytest
-import sys
-import numpy as np
 import shutil
 import subprocess
+import sys
+
+import numpy as np
+import pytest
 
 try:
     import pymake
@@ -194,19 +195,19 @@ def build_model():
         nuzfcells=len(uzf_pkdat),
         packagedata=uzf_pkdat,
         perioddata=uzf_spd,
-        budget_filerecord="{}.uzf.bud".format(name),
-        filename="{}.uzf".format(name),
+        budget_filerecord=f"{name}.uzf.bud",
+        filename=f"{name}.uzf",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     return sim
@@ -248,7 +249,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()
