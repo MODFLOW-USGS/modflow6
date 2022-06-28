@@ -14,8 +14,10 @@ module VersionModule
   implicit none
   public
     ! -- modflow 6 version
-  integer(I4B), parameter :: IDEVELOPMODE = 1
-  character(len=40), parameter :: VERSION = '6.4.0 release candidate 03/04/2022'
+    integer(I4B), parameter :: IDEVELOPMODE = 1
+    character(len=*), parameter :: VERSIONNUMBER = '6.4.0'
+    character(len=*), parameter :: VERSIONTAG = ' release candidate 03/04/2022'
+    character(len=40), parameter :: VERSION = VERSIONNUMBER//VERSIONTAG
     character(len=10), parameter :: MFVNAM = ' 6'
     character(len=*), parameter  :: MFTITLE =                                     &
       'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL'
