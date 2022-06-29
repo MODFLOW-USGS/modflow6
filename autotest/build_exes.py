@@ -7,10 +7,9 @@
 #  python -c "import build_exes; build_exes.test_build_modflow6()"
 
 import os
-import shutil
+import pathlib as pl
 import sys
-
-import pymake
+from contextlib import contextmanager
 
 from framework import running_on_CI
 
@@ -18,8 +17,7 @@ if running_on_CI():
     print("running on CI environment")
     os.environ["PYMAKE_DOUBLE"] = "1"
 
-
-# make sure exe extension is used on windows
+# set OS dependent extensions
 eext = ""
 soext = ".so"
 if sys.platform.lower() == "win32":
@@ -43,6 +41,28 @@ strict_flags = (
 )
 
 
+@contextmanager
+def set_directory(path: str):
+    """Sets the cwd within the context
+
+    Args:
+        path (Path): The path to the cwd
+
+    Yields:
+        None
+    """
+
+    origin = os.path.abspath(os.getcwd())
+    path = os.path.abspath(path)
+    try:
+        os.chdir(path)
+        print(f"change from {origin} -> {path}")
+        yield
+    finally:
+        os.chdir(origin)
+        print(f"change from {path} -> {origin}")
+
+
 def relpath_fallback(pth):
     try:
         # throws ValueError on Windows if pth is on a different drive
@@ -60,131 +80,58 @@ def create_dir(pth):
     assert os.path.exists(pth), msg
 
 
-def get_compiler_envvar(fc):
-    env_var = os.environ.get("FC")
-    if env_var is not None:
-        if env_var != fc:
-            fc = env_var
-    return fc
-
-
-def build_mf6(srcdir=None, appdir=None):
-    pm = pymake.Pymake()
-    pm.target = f"mf6{eext}"
-    if srcdir is None:
-        srcdir = os.path.join("..", "src")
-    pm.srcdir = srcdir
-    if appdir is None:
-        appdir = os.path.join("..", "bin")
-    pm.appdir = appdir
-    pm.include_subdirs = True
-    pm.inplace = True
-    pm.makeclean = True
-
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the application
-    pm.build()
-
-    msg = f"{pm.target} does not exist."
-    assert pm.returncode == 0, msg
-
-
-def build_mf6_so():
-    pm = pymake.Pymake(verbose=True)
-    pm.target = f"libmf6{soext}"
-    pm.srcdir = os.path.join("..", "srcbmi")
-    pm.srcdir2 = os.path.join("..", "src")
-    pm.appdir = os.path.join("..", "bin")
-    pm.excludefiles = [os.path.join(pm.srcdir2, "mf6.f90")]
-    pm.include_subdirs = True
-    pm.inplace = True
-    pm.makeclean = True
-
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the application
-    pm.build()
-
-    msg = f"{pm.target} does not exist."
-    assert pm.returncode == 0, msg
-
-
-def build_mf5to6():
-    # define default compilers
-    fc = "gfortran"
-    cc = None
-    fflags = None
-
-    # reset compiler based on environmental variable, if defined
-    fc = get_compiler_envvar(fc)
-
-    # determine if fortran compiler specified on the command line
+def set_compiler_environment_variable():
+    fc = None
+    # parse command line arguments
     for idx, arg in enumerate(sys.argv):
-        if arg == "-fc":
+        if arg.lower() == "-fc":
             fc = sys.argv[idx + 1]
-        elif arg in ("-ff", "--fflags"):
-            fflags = sys.argv[idx + 1]
-
-    # set source and target paths
-    srcdir = os.path.join("..", "utils", "mf5to6", "src")
-    appdir = os.path.join("..", "bin")
-    target = f"mf5to6{eext}"
-    extrafiles = os.path.join(
-        "..", "utils", "mf5to6", "pymake", "extrafiles.txt"
-    )
-
-    # build modflow 5 to 6 converter
-    pymake.main(
-        srcdir,
-        target,
-        fc=fc,
-        cc=cc,
-        fflags=fflags,
-        include_subdirs=True,
-        extrafiles=extrafiles,
-        inplace=True,
-        appdir=appdir,
-        makeclean=True,
-    )
-    target_pth = os.path.join(appdir, target)
-    msg = f"{relpath_fallback(target_pth)} does not exist."
-    assert os.path.isfile(target_pth), msg
+        elif arg.lower().startswith("-fc="):
+            fc = arg.split("=")[1]
+    # determine the FC environmental variable needs to be set
+    set_env_var = False
+    env_var = os.environ.get("FC")
+    if env_var is None:
+        set_env_var = True
+        if fc is None:
+            fc = "gfortran"
+    else:
+        if fc is not None and env_var != fc:
+            set_env_var = True
+    if set_env_var:
+        os.environ["FC"] = fc
 
 
-def build_zbud6():
-    pm = pymake.Pymake()
-    pm.target = f"zbud6{eext}"
-    pm.srcdir = os.path.join("..", "utils", "zonebudget", "src")
-    pm.appdir = os.path.join("..", "bin")
-    pm.extrafiles = os.path.join(
-        "..", "utils", "zonebudget", "pymake", "extrafiles.txt"
-    )
-    pm.inplace = True
-    pm.makeclean = True
+def meson_build(
+    dir_path: str = "..",
+    libdir: str = "bin",
+    verbose: bool = False,
+):
+    set_compiler_environment_variable()
+    is_windows = sys.platform.lower() == "win32"
+    with set_directory(dir_path):
+        print("setup meson")
+        cmd = (
+            "meson setup builddir "
+            + f"--bindir={os.path.abspath(libdir)} "
+            + f"--libdir={os.path.abspath(libdir)} "
+            + "--prefix="
+        )
+        if is_windows:
+            cmd += "%CD%"
+        else:
+            cmd += "$(pwd)"
+        if pl.Path("builddir").exists():
+            cmd += " --wipe"
+        print(f"running...\n{cmd}")
+        if os.system(cmd) != 0:
+            raise RuntimeError("could not run meson setup")
 
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the application
-    pm.build()
-
-    msg = f"{pm.target} does not exist."
-    assert pm.returncode == 0, msg
+        print("build and install with meson")
+        cmd = "meson install -C builddir"
+        print(f"running...\n{cmd}")
+        if os.system(cmd) != 0:
+            raise RuntimeError("could not run meson install")
 
 
 def test_create_dirs():
@@ -196,25 +143,10 @@ def test_create_dirs():
     return
 
 
-def test_build_modflow6():
-    build_mf6()
-
-
-def test_build_modflow6_so():
-    build_mf6_so()
-
-
-def test_build_mf5to6():
-    build_mf5to6()
-
-
-def test_build_zbud6():
-    build_zbud6()
+def test_meson_build():
+    meson_build()
 
 
 if __name__ == "__main__":
     test_create_dirs()
-    test_build_modflow6()
-    test_build_modflow6_so()
-    test_build_mf5to6()
-    test_build_zbud6()
+    test_meson_build()

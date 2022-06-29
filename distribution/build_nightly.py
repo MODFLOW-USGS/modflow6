@@ -8,7 +8,7 @@ import pymake
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from build_exes import build_mf5to6, build_mf6, build_mf6_so, build_zbud6
+from build_exes import meson_build
 
 # make sure exe extension is used on windows
 eext = ""
@@ -29,8 +29,6 @@ def get_zipname():
     elif zipname == "win32":
         if platform.architecture()[0] == "64bit":
             zipname = "win64"
-
-    # return
     return zipname
 
 
@@ -78,27 +76,21 @@ def test_create_dirs():
     return
 
 
-def test_mf6():
-    build_mf6()
+def test_nightly_build():
+    meson_build()
 
-
-def test_libmf6():
-    build_mf6_so()
-
-
-def test_mf5to6():
-    build_mf5to6()
-
-
-def test_zbud6():
-    build_zbud6()
+    env = "GITHUB_ACTIONS"
+    os.environ[env] = "true"
+    if env in os.environ:
+        fpth = get_zipname() + ".zip"
+        zip_pth = os.path.join(temppth, fpth)
+        success = pymake.zip_all(zip_pth, dir_pths=binpth)
+        assert success, f"could not create '{zip_pth}'"
 
 
 def test_update_mf6io():
     from mkdist import update_mf6io_tex_files
 
-    if not os.path.isdir(temppth):
-        os.makedirs(temppth)
     # build simple model
     name = "mymodel"
     ws = os.path.join(temppth, name)
@@ -126,29 +118,8 @@ def test_update_mf6io():
     return
 
 
-def test_zip_assets():
-    # create temppth if it does not exist
-    if not os.path.isdir(temppth):
-        os.makedirs(temppth)
-
-    # zip assets
-    env = "GITHUB_ACTIONS"
-    os.environ[env] = "true"
-    if env in os.environ:
-        fpth = get_zipname() + ".zip"
-        # zip up exe's using directories
-        zip_pth = os.path.join(temppth, fpth)
-        success = pymake.zip_all(zip_pth, dir_pths=binpth)
-        assert success, f"could not create '{zip_pth}'"
-    return
-
-
 if __name__ == "__main__":
     test_update_version()
     test_create_dirs()
-    test_mf6()
-    test_libmf6()
-    test_mf5to6()
-    test_zbud6()
+    test_nightly_build()
     test_update_mf6io()
-    test_zip_assets()
