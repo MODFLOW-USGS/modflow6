@@ -2,10 +2,10 @@
 !!
 !! This module contains the overridden methods from the base model package
 !! class for the API package. The API package is designed to be used with the
-!! shared object and have period data specified using the MODFLOW API. Several 
-!! methods need to be overridden since no period data are specified in the 
+!! shared object and have period data specified using the MODFLOW API. Several
+!! methods need to be overridden since no period data are specified in the
 !! API input file. Overridden methods include:
-!!   - bnd_rp no period data is specified 
+!!   - bnd_rp no period data is specified
 !!   - bnd_fc BOUND array is not filled. hcof and rhs are specified dierctly
 !!
 !<
@@ -157,7 +157,7 @@ contains
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).
-      qusr = this%rhs(i) - this%hcof(i)*this%xnew(n)
+      qusr = this%rhs(i) - this%hcof(i) * this%xnew(n)
       if (this%imover == 1 .and. qusr > DZERO) then
         call this%pakmvrobj%accumulate_qformvr(i, qusr)
       end if

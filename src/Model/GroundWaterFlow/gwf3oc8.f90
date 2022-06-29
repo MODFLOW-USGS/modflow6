@@ -1,10 +1,10 @@
 module GwfOcModule
 
-  use BaseDisModule,             only: DisBaseType
-  use KindModule,                only: DP, I4B
-  use ConstantsModule,           only: LENMODELNAME
-  use OutputControlModule,       only: OutputControlType
-  use OutputControlDataModule,   only: OutputControlDataType, ocd_cr
+  use BaseDisModule, only: DisBaseType
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENMODELNAME
+  use OutputControlModule, only: OutputControlType
+  use OutputControlDataModule, only: OutputControlDataType, ocd_cr
 
   implicit none
   private
@@ -19,8 +19,8 @@ module GwfOcModule
   contains
     procedure :: oc_ar
   end type GwfOcType
-  
-  contains
+
+contains
 
   !> @ brief Create GwfOcType
   !!
@@ -36,7 +36,7 @@ module GwfOcModule
     integer(I4B), intent(in) :: iout              !< unit number for output
     !
     ! -- Create the object
-    allocate(ocobj)
+    allocate (ocobj)
     !
     ! -- Allocate scalars
     call ocobj%allocate_scalars(name_model)
@@ -71,30 +71,30 @@ module GwfOcModule
     ! -- Initialize variables
     inodata = 0
     nocdobj = 2
-    allocate(this%ocdobj(nocdobj))
+    allocate (this%ocdobj(nocdobj))
     do i = 1, nocdobj
       call ocd_cr(ocdobjptr)
       select case (i)
       case (1)
-        call ocdobjptr%init_dbl('BUDGET', nullvec, dis, 'PRINT LAST ',     &
-                                'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',       &
+        call ocdobjptr%init_dbl('BUDGET', nullvec, dis, 'PRINT LAST ', &
+                                'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       case (2)
-        call ocdobjptr%init_dbl('HEAD', head, dis, 'PRINT LAST ',          &
-                                'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',       &
+        call ocdobjptr%init_dbl('HEAD', head, dis, 'PRINT LAST ', &
+                                'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       end select
       this%ocdobj(i) = ocdobjptr
-      deallocate(ocdobjptr)
-    enddo
+      deallocate (ocdobjptr)
+    end do
     !
     ! -- Read options or set defaults if this package not on
-    if(this%inunit > 0) then
+    if (this%inunit > 0) then
       call this%read_options()
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine oc_ar
- 
+
 end module GwfOcModule
