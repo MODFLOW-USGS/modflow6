@@ -23,9 +23,11 @@ module MemoryTypeModule
     integer(I4B)                                           :: isize                  !< size of the array
     integer(I4B)                                           :: set_handler_idx = 0    !< index of side effect handler for external access
     logical(LGP)                                           :: master = .true.        !< master copy, others point to this one
+    character(len=:), pointer                              :: strsclr     => null()  !< pointer to the character string
     logical(LGP), pointer                                  :: logicalsclr => null()  !< pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !< pointer to the integer
     real(DP), pointer                                      :: dblsclr     => null()  !< pointer to the double
+    character(len=:), dimension(:), pointer, contiguous    :: astr1d      => null()  !< pointer to the 1d character string array
     integer(I4B), dimension(:), pointer, contiguous        :: aint1d      => null()  !< pointer to 1d integer array
     integer(I4B), dimension(:, :), pointer, contiguous     :: aint2d      => null()  !< pointer to 2d integer array
     integer(I4B), dimension(:, :, :), pointer, contiguous  :: aint3d      => null()  !< pointer to 3d integer array
@@ -79,9 +81,11 @@ module MemoryTypeModule
     class(MemoryType) :: this
     logical :: al
     al = .false.
+    if(associated(this%strsclr)) al = .true.
     if(associated(this%logicalsclr)) al = .true.
     if(associated(this%intsclr)) al = .true.
     if(associated(this%dblsclr)) al = .true.
+    if(associated(this%astr1d)) al = .true.
     if(associated(this%aint1d)) al = .true.
     if(associated(this%aint2d)) al = .true.
     if(associated(this%aint3d)) al = .true.

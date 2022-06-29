@@ -3,7 +3,7 @@ module DisConnExchangeModule
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LENAUXNAME, LENBOUNDNAME, LINELENGTH
   use ListModule, only: ListType
-  use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate
   use BlockParserModule, only: BlockParserType
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType
@@ -90,7 +90,7 @@ contains
       lloc = 1
       call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart, &
                   istop, caux, line, 'GWF_GWF_Exchange')
-      call mem_allocate(this%auxname, LENAUXNAME, this%naux, &
+      call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
                         'AUXNAME', trim(this%memoryPath))
       do n = 1, this%naux
         this%auxname(n) = caux(n)
@@ -316,6 +316,9 @@ contains
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
+    
+    call mem_allocate(this%auxname, LENAUXNAME, 0, &
+                      'AUXNAME', trim(this%memoryPath))
 
     this%nexg = 0
     this%naux = 0
@@ -332,7 +335,6 @@ contains
   !! connected nodes @param nexg
   !<
   subroutine allocate_arrays(this)
-    use MemoryManagerModule, only: mem_allocate
     class(DisConnExchangeType) :: this !< instance of exchange object
 
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
