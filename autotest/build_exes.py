@@ -105,7 +105,6 @@ def set_compiler_environment_variable():
 def meson_build(
     dir_path: str = "..",
     libdir: str = "bin",
-    verbose: bool = False,
 ):
     set_compiler_environment_variable()
     is_windows = sys.platform.lower() == "win32"
