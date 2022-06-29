@@ -80,14 +80,14 @@ def build_previous_version(pth):
     _del_version()
     appdir = os.path.abspath(os.path.join(base_build_dir, "rebuilt"))
     if not _is_dryrun():
-        meson_build(dirpth=pth, libdir=appdir)
+        meson_build(dir_path=pth, libdir=appdir)
 
     return os.path.abspath(os.path.join(appdir, f"mf6{app_ext}"))
 
 
 def build_current_version():
     if not _is_dryrun():
-        meson_build(libdir=base_build_dir)
+        meson_build()
     return os.path.abspath(os.path.join(base_build_dir, f"mf6{app_ext}"))
 
 
