@@ -1,14 +1,14 @@
 !> @brief This module contains the storage package methods
 !!
 !! This module contains the methods used to add the effects of storage
-!! on the groundwater flow equation. The contribution of specific 
+!! on the groundwater flow equation. The contribution of specific
 !! storage and specific yield can be represented.
 !!
 !<
 module GwfStoModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO,               &
+  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, &
                              LENBUDTXT, LINELENGTH
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors
@@ -26,7 +26,7 @@ module GwfStoModule
   public :: GwfStoType, sto_cr
 
   character(len=LENBUDTXT), dimension(2) :: budtxt = & !< text labels for budget terms
-                                            ['          STO-SS', '          STO-SY']
+    &['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
     integer(I4B), pointer                            :: istor_coef => null()     !< indicates if ss is the storage coefficient
@@ -114,7 +114,7 @@ contains
     ! -- local variables
     ! -- formats
     character(len=*), parameter :: fmtsto = &
-      "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014',                 &
+      "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014', &
       &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! --print a message identifying the storage package.
@@ -166,16 +166,16 @@ contains
     character(len=LINELENGTH) :: line, keyword
     ! -- formats
     character(len=*), parameter :: fmtlsp = &
-                                   "(1X,/1X,'REUSING ',A,' FROM LAST STRESS PERIOD')"
+      &"(1X,/1X,'REUSING ',A,' FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtblkerr = &
-                                   "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+      &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
 ! ------------------------------------------------------------------------------
     !
     ! -- Store ss and sy values from end of last stress period if needed
-    if(this%integratechanges /= 0) then
+    if (this%integratechanges /= 0) then
       call this%save_old_ss_sy()
     end if
     !
@@ -258,14 +258,14 @@ contains
     class(GwfStoType) :: this  !< GwfStoType object
     !
     ! -- Store ss and sy values from end of last time step if needed
-    if(this%integratechanges /= 0 .and. kstp > 1) then
+    if (this%integratechanges /= 0 .and. kstp > 1) then
       call this%save_old_ss_sy()
     end if
     !
     ! -- TVS
-    if(this%intvs /= 0) then
+    if (this%intvs /= 0) then
       call this%tvs%ad()
-    endif
+    end if
     !
     ! -- return
     return
@@ -307,7 +307,7 @@ contains
     real(DP) :: aterm
     real(DP) :: rhsterm
     ! -- formats
-    character(len=*), parameter :: fmtsperror =                                &
+    character(len=*), parameter :: fmtsperror = &
       &"('DETECTED TIME STEP LENGTH OF ZERO.  GWF STORAGE PACKAGE CANNOT BE ', &
       &'USED UNLESS DELT IS NON-ZERO.')"
     !
@@ -321,7 +321,7 @@ contains
     end if
     !
     ! -- set variables
-    tled = DONE/delt
+    tled = DONE / delt
     !
     ! -- loop through and calculate storage contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -345,7 +345,7 @@ contains
       sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       rho1 = sc1 * tled
       !
-      if(this%integratechanges /= 0) then
+      if (this%integratechanges /= 0) then
         ! -- Integration of storage changes (e.g. when using TVS):
         !    separate the old (start of time step) and new (end of time step)
         !    primary storage capacities
@@ -375,15 +375,15 @@ contains
         sc2 = SyCapacity(this%dis%area(n), this%sy(n))
         rho2 = sc2 * tled
         !
-        if(this%integratechanges /= 0) then
-        ! -- Integration of storage changes (e.g. when using TVS):
-        !    separate the old (start of time step) and new (end of time step)
-        !    secondary storage capacities
+        if (this%integratechanges /= 0) then
+          ! -- Integration of storage changes (e.g. when using TVS):
+          !    separate the old (start of time step) and new (end of time step)
+          !    secondary storage capacities
           sc2old = SyCapacity(this%dis%area(n), this%oldsy(n))
           rho2old = sc2old * tled
         else
-        ! -- No integration of storage changes: old and new values are
-        !    identical => normal MF6 storage formulation
+          ! -- No integration of storage changes: old and new values are
+          !    identical => normal MF6 storage formulation
           rho2old = rho2
         end if
         !
@@ -440,7 +440,7 @@ contains
     if (this%iss /= 0) return
     !
     ! -- set variables
-    tled = DONE/delt
+    tled = DONE / delt
     !
     ! -- loop through and calculate storage contribution to hcof and rhs
     do n = 1, this%dis%nodes
@@ -459,8 +459,8 @@ contains
       ! -- storage coefficients
       sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
       sc2 = SyCapacity(this%dis%area(n), this%sy(n))
-      rho1 = sc1*tled
-      rho2 = sc2*tled
+      rho1 = sc1 * tled
+      rho2 = sc2 * tled
       !
       ! -- calculate newton terms for specific storage
       !    and specific yield
@@ -477,7 +477,7 @@ contains
             drterm = -(rho1 * derv * h)
           end if
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
-          rhs(n) = rhs(n) + drterm*h
+          rhs(n) = rhs(n) + drterm * h
         end if
         !
         ! -- newton terms for specific yield
@@ -531,7 +531,7 @@ contains
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: aterm
-    real(DP) :: rhsterm 
+    real(DP) :: rhsterm
     !
     ! -- initialize strg arrays
     do n = 1, this%dis%nodes
@@ -543,7 +543,7 @@ contains
     if (this%iss == 0) then
       !
       ! -- set variables
-      tled = DONE/delt
+      tled = DONE / delt
       !
       ! -- Calculate storage change
       do n = 1, this%dis%nodes
@@ -563,9 +563,9 @@ contains
         !
         ! -- primary storage coefficient
         sc1 = SsCapacity(this%istor_coef, tp, bt, this%dis%area(n), this%ss(n))
-        rho1 = sc1*tled
+        rho1 = sc1 * tled
         !
-        if(this%integratechanges /= 0) then
+        if (this%integratechanges /= 0) then
           ! -- Integration of storage changes (e.g. when using TVS):
           !    separate the old (start of time step) and new (end of time step)
           !    primary storage capacities
@@ -580,8 +580,8 @@ contains
         !
         ! -- calculate specific storage terms and rate
         call SsTerms(this%iconvert(n), this%iorig_ss, this%iconf_ss, tp, bt, &
-                      rho1, rho1old, snnew, snold, hnew(n), hold(n), &
-                      aterm, rhsterm, rate)
+                     rho1, rho1old, snnew, snold, hnew(n), hold(n), &
+                     aterm, rhsterm, rate)
         !
         ! -- save rate
         this%strgss(n) = rate
@@ -598,7 +598,7 @@ contains
           sc2 = SyCapacity(this%dis%area(n), this%sy(n))
           rho2 = sc2 * tled
           !
-          if(this%integratechanges /= 0) then
+          if (this%integratechanges /= 0) then
             ! -- Integration of storage changes (e.g. when using TVS):
             !    separate the old (start of time step) and new (end of time
             !    step) secondary storage capacities
@@ -723,7 +723,7 @@ contains
     ! -- TVS
     if (this%intvs /= 0) then
       call this%tvs%da()
-      deallocate(this%tvs)
+      deallocate (this%tvs)
     end if
     !
     ! -- Deallocate arrays if package is active
@@ -735,10 +735,10 @@ contains
       call mem_deallocate(this%strgsy)
       !
       ! -- deallocate TVS arrays
-      if(associated(this%oldss)) then
+      if (associated(this%oldss)) then
         call mem_deallocate(this%oldss)
       end if
-      if(associated(this%oldsy)) then
+      if (associated(this%oldsy)) then
         call mem_deallocate(this%oldsy)
       end if
     end if
@@ -853,18 +853,18 @@ contains
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtisvflow = &
-                                   "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE "// &
-                                   "WHENEVER ICBCFL IS NOT ZERO.')"
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
+      &WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtflow = &
-                                   "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      &"(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*), parameter :: fmtorigss = &
-      "(4X,'ORIGINAL_SPECIFIC_STORAGE OPTION:',/,                              &
+      "(4X,'ORIGINAL_SPECIFIC_STORAGE OPTION:',/, &
       &1X,'The original specific storage formulation will be used')"
     character(len=*), parameter :: fmtstoc = &
-      "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
+      "(4X,'STORAGECOEFFICIENT OPTION:',/, &
       &1X,'Read storage coefficient rather than specific storage')"
     character(len=*), parameter :: fmtconfss = &
-      "(4X,'SS_CONFINED_ONLY OPTION:',/,                                       &
+      "(4X,'SS_CONFINED_ONLY OPTION:',/, &
       &1X,'Specific storage changes only occur under confined conditions')"
     !
     ! -- get options block
@@ -891,25 +891,25 @@ contains
           write (this%iout, fmtconfss)
         case ('TVS6')
           if (this%intvs /= 0) then
-            errmsg = 'Multiple TVS6 keywords detected in OPTIONS block.' // &
+            errmsg = 'Multiple TVS6 keywords detected in OPTIONS block.'// &
                      ' Only one TVS6 entry allowed.'
             call store_error(errmsg, terminate=.TRUE.)
           end if
           call this%parser%GetStringCaps(keyword)
-          if(trim(adjustl(keyword)) /= 'FILEIN') then
-            errmsg = 'TVS6 keyword must be followed by "FILEIN" ' // &
+          if (trim(adjustl(keyword)) /= 'FILEIN') then
+            errmsg = 'TVS6 keyword must be followed by "FILEIN" '// &
                      'then by filename.'
             call store_error(errmsg, terminate=.TRUE.)
-          endif
+          end if
           call this%parser%GetString(fname)
           this%intvs = GetUnit()
           call openfile(this%intvs, this%iout, fname, 'TVS')
           call tvs_cr(this%tvs, this%name_model, this%intvs, this%iout)
-        !
-        ! -- right now these are options that are only available in the
-        !    development version and are not included in the documentation.
-        !    These options are only available when IDEVELOPMODE in
-        !    constants module is set to 1
+          !
+          ! -- right now these are options that are only available in the
+          !    development version and are not included in the documentation.
+          !    These options are only available when IDEVELOPMODE in
+          !    constants module is set to 1
         case ('DEV_ORIGINAL_SPECIFIC_STORAGE')
           this%iorig_ss = 1
           write (this%iout, fmtorigss)
@@ -1084,10 +1084,10 @@ contains
     integer(I4B) :: n
     !
     ! -- Allocate TVS arrays if needed
-    if(.not. associated(this%oldss)) then
+    if (.not. associated(this%oldss)) then
       call mem_allocate(this%oldss, this%dis%nodes, 'OLDSS', this%memoryPath)
     end if
-    if(this%iusesy == 1 .and. .not. associated(this%oldsy)) then
+    if (this%iusesy == 1 .and. .not. associated(this%oldsy)) then
       call mem_allocate(this%oldsy, this%dis%nodes, 'OLDSY', this%memoryPath)
     end if
     !
@@ -1097,7 +1097,7 @@ contains
     end do
     !
     ! -- Save current specific yield, if used
-    if(this%iusesy == 1) then
+    if (this%iusesy == 1) then
       do n = 1, this%dis%nodes
         this%oldsy(n) = this%sy(n)
       end do
@@ -1106,5 +1106,5 @@ contains
     ! -- Return
     return
   end subroutine save_old_ss_sy
-    
+
 end module GwfStoModule
