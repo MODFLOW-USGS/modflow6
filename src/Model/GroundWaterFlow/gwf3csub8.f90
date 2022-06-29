@@ -597,7 +597,7 @@ contains
   subroutine read_options(this)
     ! -- modules
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_reallocate
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, urdaux, openfile
     ! -- dummy variables
@@ -664,8 +664,8 @@ contains
           lloc = 1
           call urdaux(this%naux, this%parser%iuactive, this%iout, lloc, &
                       istart, istop, caux, line, this%packName)
-          call mem_allocate(this%auxname, LENAUXNAME, this%naux, &
-                            'AUXNAME', this%memoryPath)
+          call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
+                              'AUXNAME', this%memoryPath)
           do n = 1, this%naux
             this%auxname(n) = caux(n)
           end do
@@ -1165,6 +1165,9 @@ contains
     ! -- allocate TS object
     allocate (this%TsManager)
     !
+    ! -- allocate text strings
+    call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
+    !
     ! -- initialize values
     this%istounit = 0
     this%inobspkg = 0
@@ -1350,6 +1353,10 @@ contains
     if (this%inamedbound /= 0) then
       call mem_allocate(this%boundname, LENBOUNDNAME, this%ninterbeds, &
                         'BOUNDNAME', trim(this%memoryPath))
+    else
+      call mem_allocate(this%boundname, LENBOUNDNAME, 1, &
+                  'BOUNDNAME', trim(this%memoryPath))
+
     end if
     !
     ! -- allocate the nodelist and bound arrays
