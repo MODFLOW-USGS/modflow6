@@ -94,7 +94,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          .github/common/python-version.sh
+          pip list
 
       - name: Test make for MODFLOW 6 programs
         if: runner.os == 'Linux' || runner.os == 'macOS'

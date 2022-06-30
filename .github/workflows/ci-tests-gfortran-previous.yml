@@ -53,7 +53,6 @@ jobs:
 
       - name: Print python package versions
         run: |
-          pip -V
           pip list
 
       - name: Set and print branch name

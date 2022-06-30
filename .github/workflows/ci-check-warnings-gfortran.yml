@@ -58,7 +58,6 @@ jobs:
 
       - name: Print python package versions
         run: |
-          pip -V
           pip list
 
       - name: Setup modflow

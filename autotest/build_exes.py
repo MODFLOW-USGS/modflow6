@@ -91,16 +91,10 @@ def set_compiler_environment_variable():
         elif arg.lower().startswith("-fc="):
             fc = arg.split("=")[1]
 
-    # determine if the FC environmental variable needs to be set
-    set_env_var = False
-    env_var = os.environ.get("FC")
-    if env_var is None:
-        set_env_var = True
-        if fc is None:
-            fc = "gfortran"
-    else:
-        if fc is not None and env_var != fc:
-            set_env_var = True
+    # determine if fc needs to be set to the FC environmental variable
+    env_var = os.getenv("FC", default="gfortran")
+    if fc is None and fc != env_var:
+        fc = env_var
 
     # validate Fortran compiler
     fc_options = (
@@ -114,8 +108,7 @@ def set_compiler_environment_variable():
         )
 
     # set FC environment variable
-    if set_env_var:
-        os.environ["FC"] = fc
+    os.environ["FC"] = fc
 
 
 def meson_build(
@@ -137,11 +130,11 @@ def meson_build(
             cmd += "$(pwd)"
         if pl.Path("builddir").is_dir():
             cmd += " --wipe"
-        print(f"setup meson\nrunning...\n{cmd}")
+        print(f"setup meson\nrunning...\n  {cmd}")
         sp.run(cmd, shell=True, check=True)
 
         cmd = "meson install -C builddir"
-        print(f"build and install with meson\nrunning...\n{cmd}")
+        print(f"build and install with meson\nrunning...\n  {cmd}")
         sp.run(cmd, shell=True, check=True)
 
 
