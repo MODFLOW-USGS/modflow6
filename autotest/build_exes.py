@@ -8,6 +8,7 @@
 
 import os
 import pathlib as pl
+import subprocess as sp
 import sys
 from contextlib import contextmanager
 
@@ -82,13 +83,15 @@ def create_dir(pth):
 
 def set_compiler_environment_variable():
     fc = None
+
     # parse command line arguments
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == "-fc":
             fc = sys.argv[idx + 1]
         elif arg.lower().startswith("-fc="):
             fc = arg.split("=")[1]
-    # determine the FC environmental variable needs to be set
+
+    # determine if the FC environmental variable needs to be set
     set_env_var = False
     env_var = os.environ.get("FC")
     if env_var is None:
@@ -98,6 +101,19 @@ def set_compiler_environment_variable():
     else:
         if fc is not None and env_var != fc:
             set_env_var = True
+
+    # validate Fortran compiler
+    fc_options = (
+        "gfortran",
+        "ifort",
+    )
+    if fc not in fc_options:
+        raise ValueError(
+            f"Fortran compiler {fc} not supported. Fortran compile must be "
+            + f"[{', '.join(str(value) for value in fc_options)}]."
+        )
+
+    # set FC environment variable
     if set_env_var:
         os.environ["FC"] = fc
 
@@ -109,7 +125,6 @@ def meson_build(
     set_compiler_environment_variable()
     is_windows = sys.platform.lower() == "win32"
     with set_directory(dir_path):
-        print("setup meson")
         cmd = (
             "meson setup builddir "
             + f"--bindir={os.path.abspath(libdir)} "
@@ -120,17 +135,14 @@ def meson_build(
             cmd += "%CD%"
         else:
             cmd += "$(pwd)"
-        if pl.Path("builddir").exists():
+        if pl.Path("builddir").is_dir():
             cmd += " --wipe"
-        print(f"running...\n{cmd}")
-        if os.system(cmd) != 0:
-            raise RuntimeError("could not run meson setup")
+        print(f"setup meson\nrunning...\n{cmd}")
+        sp.run(cmd, shell=True, check=True)
 
-        print("build and install with meson")
         cmd = "meson install -C builddir"
-        print(f"running...\n{cmd}")
-        if os.system(cmd) != 0:
-            raise RuntimeError("could not run meson install")
+        print(f"build and install with meson\nrunning...\n{cmd}")
+        sp.run(cmd, shell=True, check=True)
 
 
 def test_create_dirs():

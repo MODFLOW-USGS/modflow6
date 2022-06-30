@@ -45,10 +45,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
 
-      - name: Setup Python 3.8
-        uses: actions/setup-python@v2.2.2
+      - name: Setup Python
+        uses: actions/setup-python@v4.0.0
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: set FC=ifort environmental variable
         if: matrix.FC == 'ifort'
@@ -86,7 +86,8 @@ jobs:
 
       - name: Print python package versions
         run: |
-          .github/common/python-version.sh
+          pip -V
+          pip list
 
       - name: Set and print branch name
         run: |
