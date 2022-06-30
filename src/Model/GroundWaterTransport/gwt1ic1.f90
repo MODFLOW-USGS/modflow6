@@ -1,9 +1,9 @@
 module GwtIcModule
-  
-  use KindModule,             only: DP, I4B
-  use GwfIcModule,            only: GwfIcType
-  use BlockParserModule,      only: BlockParserType
-  use BaseDisModule,          only: DisBaseType
+
+  use KindModule, only: DP, I4B
+  use GwfIcModule, only: GwfIcType
+  use BlockParserModule, only: BlockParserType
+  use BaseDisModule, only: DisBaseType
 
   implicit none
   private
@@ -16,7 +16,7 @@ module GwtIcModule
     procedure :: read_data
   end type GwtIcType
 
-  contains
+contains
 
   subroutine ic_cr(ic, name_model, inunit, iout, dis)
 ! ******************************************************************************
@@ -34,7 +34,7 @@ module GwtIcModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(ic)
+    allocate (ic)
     !
     ! -- create name and memory path
     call ic%set_names(1, name_model, 'IC', 'IC')
@@ -63,8 +63,8 @@ module GwtIcModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: store_error
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error
     ! -- dummy
     class(GwtIcType) :: this
     ! -- local
@@ -81,8 +81,8 @@ module GwtIcModule
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
+    if (isfound) then
+      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -90,18 +90,18 @@ module GwtIcModule
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-          case ('STRT')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%strt, &
-                                         aname(1))
-          case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',             &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('STRT')
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%strt, &
+                                        aname(1))
+        case default
+          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
+      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
@@ -110,7 +110,5 @@ module GwtIcModule
     ! -- Return
     return
   end subroutine read_data
-  
-  
+
 end module GwtIcModule
-  
