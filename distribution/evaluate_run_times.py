@@ -12,7 +12,7 @@ VERIFY = False
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from build_exes import build_mf6
+from build_exes import meson_build
 
 github_repo = "MODFLOW-USGS/modflow6"
 working_dir = "./temp/"
@@ -78,17 +78,16 @@ def _get_previous_version():
 
 def build_previous_version(pth):
     _del_version()
-    srcdir = os.path.join(pth, "src")
-    appdir = os.path.join(base_build_dir, "rebuilt")
+    appdir = os.path.abspath(os.path.join(base_build_dir, "rebuilt"))
     if not _is_dryrun():
-        build_mf6(srcdir=srcdir, appdir=appdir)
+        meson_build(dir_path=pth, libdir=appdir)
 
     return os.path.abspath(os.path.join(appdir, f"mf6{app_ext}"))
 
 
 def build_current_version():
     if not _is_dryrun():
-        build_mf6(appdir=base_build_dir)
+        meson_build()
     return os.path.abspath(os.path.join(base_build_dir, f"mf6{app_ext}"))
 
 
