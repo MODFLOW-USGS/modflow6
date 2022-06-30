@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2019, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     defaults:
       run:
         shell: bash
@@ -30,6 +30,11 @@ jobs:
       uses: actions/setup-python@v2.2.2
       with:
         python-version: 3.8
+
+    - name: Workaround for windows-2022 v20220626.1 gfortran executable run failures
+      if: runner.os == 'Windows'
+      run: |
+        .github/common/link-gfortranlib5.sh
 
     - name: Setup symbolic links on Linux
       if: runner.os == 'Linux'
