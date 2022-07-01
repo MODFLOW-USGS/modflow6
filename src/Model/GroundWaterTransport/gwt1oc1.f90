@@ -30,10 +30,10 @@ contains
   !<
   subroutine oc_cr(ocobj, name_model, inunit, iout)
     ! -- dummy
-    type(GwtOcType), pointer :: ocobj            !< GwtOcType object
-    character(len=*), intent(in) :: name_model   !< name of the model
-    integer(I4B), intent(in) :: inunit           !< unit number for input
-    integer(I4B), intent(in) :: iout             !< unit number for output
+    type(GwtOcType), pointer :: ocobj !< GwtOcType object
+    character(len=*), intent(in) :: name_model !< name of the model
+    integer(I4B), intent(in) :: inunit !< unit number for input
+    integer(I4B), intent(in) :: iout !< unit number for output
     !
     ! -- Create the object
     allocate (ocobj)
@@ -59,13 +59,13 @@ contains
   !<
   subroutine oc_ar(this, conc, dis, dnodata)
     ! -- dummy
-    class(GwtOcType) :: this                                          !< GwtOcType object
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: conc   !< model concentration
-    class(DisBaseType), pointer, intent(in) :: dis                    !< model discretization package
-    real(DP), intent(in) :: dnodata                                   !< no data value
+    class(GwtOcType) :: this !< GwtOcType object
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: conc !< model concentration
+    class(DisBaseType), pointer, intent(in) :: dis !< model discretization package
+    real(DP), intent(in) :: dnodata !< no data value
     ! -- local
     integer(I4B) :: i, nocdobj, inodata
-    type(OutputControlDataType), pointer   :: ocdobjptr
+    type(OutputControlDataType), pointer :: ocdobjptr
     real(DP), dimension(:), pointer, contiguous :: nullvec => null()
     !
     ! -- Initialize variables

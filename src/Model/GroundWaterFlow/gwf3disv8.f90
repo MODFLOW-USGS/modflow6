@@ -17,18 +17,18 @@ module GwfDisvModule
   public disv_cr, disv_init_mem, GwfDisvType
 
   type, extends(DisBaseType) :: GwfDisvType
-    integer(I4B), pointer :: nlay => null()                                     ! number of layers
-    integer(I4B), pointer :: ncpl => null()                                      ! number of cells per layer
-    integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
-    real(DP), dimension(:, :), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:, :), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
-    integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
-    real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncpl, 1)
-    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncpl, 1, nlay)
-    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null()  ! idomain (ncpl, 1, nlay)
-    type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
-    type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
+    integer(I4B), pointer :: nlay => null() ! number of layers
+    integer(I4B), pointer :: ncpl => null() ! number of cells per layer
+    integer(I4B), pointer :: nvert => null() ! number of x,y vertices
+    real(DP), dimension(:, :), pointer, contiguous :: vertices => null() ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:, :), pointer, contiguous :: cellxy => null() ! cell center stored as 2d array of x and y
+    integer(I4B), dimension(:), pointer, contiguous :: iavert => null() ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javert => null() ! cell vertex pointer ja array
+    real(DP), dimension(:, :), pointer, contiguous :: top2d => null() ! top elevations for each cell at top of model (ncpl, 1)
+    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null() ! bottom elevations for each cell (ncpl, 1, nlay)
+    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null() ! idomain (ncpl, 1, nlay)
+    type(DisvGeomType) :: cell1 ! cell object used to calculate geometric properties
+    type(DisvGeomType) :: cell2 ! cell object used to calculate geometric properties
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
@@ -1069,26 +1069,26 @@ contains
     write (iunit) txt
     !
     ! -- write data
-    write (iunit) this%nodesuser                                                 ! ncells
-    write (iunit) this%nlay                                                      ! nlay
-    write (iunit) this%ncpl                                                      ! ncpl
-    write (iunit) this%nvert                                                     ! nvert
-    write (iunit) size(this%javert)                                              ! njavert
-    write (iunit) this%nja                                                       ! nja
-    write (iunit) this%xorigin                                                   ! xorigin
-    write (iunit) this%yorigin                                                   ! yorigin
-    write (iunit) this%angrot                                                    ! angrot
-    write (iunit) this%top2d                                                     ! top
-    write (iunit) this%bot3d                                                     ! botm
-    write (iunit) this%vertices                                                  ! vertices
-    write (iunit) (this%cellxy(1, i), i=1, this%ncpl)                          ! cellx
-    write (iunit) (this%cellxy(2, i), i=1, this%ncpl)                          ! celly
-    write (iunit) this%iavert                                                    ! iavert
-    write (iunit) this%javert                                                    ! javert
-    write (iunit) this%con%iausr                                                 ! iausr
-    write (iunit) this%con%jausr                                                 ! jausr
-    write (iunit) this%idomain                                                   ! idomain
-    write (iunit) icelltype                                                      ! icelltype
+    write (iunit) this%nodesuser ! ncells
+    write (iunit) this%nlay ! nlay
+    write (iunit) this%ncpl ! ncpl
+    write (iunit) this%nvert ! nvert
+    write (iunit) size(this%javert) ! njavert
+    write (iunit) this%nja ! nja
+    write (iunit) this%xorigin ! xorigin
+    write (iunit) this%yorigin ! yorigin
+    write (iunit) this%angrot ! angrot
+    write (iunit) this%top2d ! top
+    write (iunit) this%bot3d ! botm
+    write (iunit) this%vertices ! vertices
+    write (iunit) (this%cellxy(1, i), i=1, this%ncpl) ! cellx
+    write (iunit) (this%cellxy(2, i), i=1, this%ncpl) ! celly
+    write (iunit) this%iavert ! iavert
+    write (iunit) this%javert ! javert
+    write (iunit) this%con%iausr ! iausr
+    write (iunit) this%con%jausr ! jausr
+    write (iunit) this%idomain ! idomain
+    write (iunit) icelltype ! icelltype
     !
     ! -- Close the file
     close (iunit)
@@ -1396,9 +1396,9 @@ contains
   ! return x,y coordinate for a node
   subroutine get_cellxy_disv(this, node, xcell, ycell)
     use InputOutputModule, only: get_jk
-    class(GwfDisvType), intent(in)  :: this
-    integer(I4B), intent(in)        :: node         ! the reduced node number
-    real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
+    class(GwfDisvType), intent(in) :: this
+    integer(I4B), intent(in) :: node ! the reduced node number
+    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
     ! local
     integer(I4B) :: nodeuser, ncell2d, k
 
@@ -1412,8 +1412,8 @@ contains
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
-    class(GwfDisvType), intent(in)  :: this
-    character(len=*), intent(out)  :: dis_type
+    class(GwfDisvType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
 
     dis_type = "DISV"
 
@@ -1757,15 +1757,15 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisvType), intent(inout)                  :: this
-    character(len=*), intent(inout)                    :: line
-    integer(I4B), intent(inout)                        :: lloc
-    integer(I4B), intent(inout)                        :: istart
-    integer(I4B), intent(inout)                        :: istop
-    integer(I4B), intent(in)                           :: in
-    integer(I4B), intent(in)                           :: iout
+    class(GwfDisvType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
-    character(len=*), intent(in)                       :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: ival
     real(DP) :: rval
@@ -1827,15 +1827,15 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisvType), intent(inout)              :: this
-    character(len=*), intent(inout)                :: line
-    integer(I4B), intent(inout)                    :: lloc
-    integer(I4B), intent(inout)                    :: istart
-    integer(I4B), intent(inout)                    :: istop
-    integer(I4B), intent(in)                       :: in
-    integer(I4B), intent(in)                       :: iout
+    class(GwfDisvType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    character(len=*), intent(in)                   :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: ival
     real(DP) :: rval
@@ -1959,17 +1959,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfDisvType), intent(inout)              :: this
+    class(GwfDisvType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    integer(I4B), intent(in)                       :: iout
-    integer(I4B), intent(in)                       :: iprint
-    integer(I4B), intent(in)                       :: idataun
-    character(len=*), intent(in)                   :: aname
-    character(len=*), intent(in)                   :: cdatafmp
-    integer(I4B), intent(in)                       :: nvaluesp
-    integer(I4B), intent(in)                       :: nwidthp
-    character(len=*), intent(in)                   :: editdesc
-    real(DP), intent(in)                           :: dinact
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: iprint
+    integer(I4B), intent(in) :: idataun
+    character(len=*), intent(in) :: aname
+    character(len=*), intent(in) :: cdatafmp
+    integer(I4B), intent(in) :: nvaluesp
+    integer(I4B), intent(in) :: nwidthp
+    character(len=*), intent(in) :: editdesc
+    real(DP), intent(in) :: dinact
     ! -- local
     integer(I4B) :: k, ifirst
     integer(I4B) :: nlay

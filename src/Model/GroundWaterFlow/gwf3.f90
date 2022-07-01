@@ -31,30 +31,30 @@ module GwfModule
 
   type, extends(NumericalModelType) :: GwfModelType
 
-    type(GwfIcType), pointer :: ic => null()                ! initial conditions package
-    type(GwfNpfType), pointer :: npf => null()                ! node property flow package
-    type(Xt3dType), pointer :: xt3d => null()                ! xt3d option for npf
-    type(GwfBuyType), pointer :: buy => null()                ! buoyancy package
-    type(GwfStoType), pointer :: sto => null()                ! storage package
-    type(GwfCsubType), pointer :: csub => null()                ! subsidence package
-    type(GwfOcType), pointer :: oc => null()                ! output control package
-    type(GhostNodeType), pointer :: gnc => null()                ! ghost node correction package
-    type(GwfHfbType), pointer :: hfb => null()                ! horizontal flow barrier package
-    type(GwfMvrType), pointer :: mvr => null()                ! water mover package
-    type(GwfObsType), pointer :: obs => null()                ! observation package
-    type(BudgetType), pointer :: budget => null()                ! budget object
-    integer(I4B), pointer :: inic => null()                ! unit number IC
-    integer(I4B), pointer :: inoc => null()                ! unit number OC
-    integer(I4B), pointer :: innpf => null()                ! unit number NPF
-    integer(I4B), pointer :: inbuy => null()                ! unit number BUY
-    integer(I4B), pointer :: insto => null()                ! unit number STO
-    integer(I4B), pointer :: incsub => null()                ! unit number CSUB
-    integer(I4B), pointer :: inmvr => null()                ! unit number MVR
-    integer(I4B), pointer :: inhfb => null()                ! unit number HFB
-    integer(I4B), pointer :: ingnc => null()                ! unit number GNC
-    integer(I4B), pointer :: inobs => null()                ! unit number OBS
-    integer(I4B), pointer :: iss => null()                ! steady state flag
-    integer(I4B), pointer :: inewtonur => null()              ! newton under relaxation flag
+    type(GwfIcType), pointer :: ic => null() ! initial conditions package
+    type(GwfNpfType), pointer :: npf => null() ! node property flow package
+    type(Xt3dType), pointer :: xt3d => null() ! xt3d option for npf
+    type(GwfBuyType), pointer :: buy => null() ! buoyancy package
+    type(GwfStoType), pointer :: sto => null() ! storage package
+    type(GwfCsubType), pointer :: csub => null() ! subsidence package
+    type(GwfOcType), pointer :: oc => null() ! output control package
+    type(GhostNodeType), pointer :: gnc => null() ! ghost node correction package
+    type(GwfHfbType), pointer :: hfb => null() ! horizontal flow barrier package
+    type(GwfMvrType), pointer :: mvr => null() ! water mover package
+    type(GwfObsType), pointer :: obs => null() ! observation package
+    type(BudgetType), pointer :: budget => null() ! budget object
+    integer(I4B), pointer :: inic => null() ! unit number IC
+    integer(I4B), pointer :: inoc => null() ! unit number OC
+    integer(I4B), pointer :: innpf => null() ! unit number NPF
+    integer(I4B), pointer :: inbuy => null() ! unit number BUY
+    integer(I4B), pointer :: insto => null() ! unit number STO
+    integer(I4B), pointer :: incsub => null() ! unit number CSUB
+    integer(I4B), pointer :: inmvr => null() ! unit number MVR
+    integer(I4B), pointer :: inhfb => null() ! unit number HFB
+    integer(I4B), pointer :: ingnc => null() ! unit number GNC
+    integer(I4B), pointer :: inobs => null() ! unit number OBS
+    integer(I4B), pointer :: iss => null() ! steady state flag
+    integer(I4B), pointer :: inewtonur => null() ! newton under relaxation flag
 
   contains
 
@@ -92,12 +92,12 @@ module GwfModule
   integer(I4B), parameter :: NIUNIT = 100
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/'IC6  ', 'DIS6 ', 'DISU6', 'OC6  ', 'NPF6 ', & !  5
-    'STO6 ', 'HFB6 ', 'WEL6 ', 'DRN6 ', 'RIV6 ', & ! 10
-    'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
-    'API6 ', 'CHD6 ', '     ', '     ', '     ', & ! 20
-    '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
-    'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', '     ', & ! 30
-    70*'     '/
+            &'STO6 ', 'HFB6 ', 'WEL6 ', 'DRN6 ', 'RIV6 ', & ! 10
+            &'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
+            &'API6 ', 'CHD6 ', '     ', '     ', '     ', & ! 20
+            &'     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
+            &'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', '     ', & ! 30
+            &70*'     '/
 
 contains
 
@@ -131,9 +131,9 @@ contains
     use BudgetModule, only: budget_cr
     use NameFileModule, only: NameFileType
     ! -- dummy
-    character(len=*), intent(in)  :: filename
-    integer(I4B), intent(in)           :: id
-    character(len=*), intent(in)  :: modelname
+    character(len=*), intent(in) :: filename
+    integer(I4B), intent(in) :: id
+    character(len=*), intent(in) :: modelname
     logical, optional, intent(in) :: smr
     ! -- local
     integer(I4B) :: indis, indis6, indisu6, indisv6
@@ -141,8 +141,8 @@ contains
     character(len=LINELENGTH) :: errmsg
     character(len=LENPACKAGENAME) :: pakname
     type(NameFileType) :: namefile_obj
-    type(GwfModelType), pointer        :: this
-    class(BaseModelType), pointer       :: model
+    type(GwfModelType), pointer :: this
+    class(BaseModelType), pointer :: model
     integer(I4B) :: nwords
     character(len=LINELENGTH), allocatable, dimension(:) :: words
     ! -- format
@@ -1327,7 +1327,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfModelType) :: this
-    character(len=*), intent(in)  :: modelname
+    character(len=*), intent(in) :: modelname
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate members from parent class
@@ -1357,7 +1357,7 @@ contains
     this%inhfb = 0
     this%ingnc = 0
     this%inobs = 0
-    this%iss = 1       !default is steady-state (i.e., no STO package)
+    this%iss = 1 !default is steady-state (i.e., no STO package)
     this%inewtonur = 0 !default is to not use newton bottom head dampening
     !
     ! -- return

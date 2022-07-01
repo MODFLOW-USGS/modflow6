@@ -29,16 +29,16 @@ module GwfGwfConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
-    type(GwfModelType), pointer :: gwfModel => null()                    !< the model for which this connection exists
-    type(GwfExchangeType), pointer :: gwfExchange => null()              !< the primary exchange, cast to its concrete type
-    logical(LGP) :: exchangeIsOwned                                      !< there are two connections (in serial) for an exchange,
-                                                                         !! one of them needs to manage/own the exchange (e.g. clean up)
-    type(GwfInterfaceModelType), pointer  :: gwfInterfaceModel => null() !< the interface model
-    integer(I4B), pointer :: iXt3dOnExchange => null()                   !< run XT3D on the interface,
-                                                                         !! 0 = don't, 1 = matrix, 2 = rhs
-    integer(I4B) :: iout = 0                                             !< the list file for the interface model
+    type(GwfModelType), pointer :: gwfModel => null() !< the model for which this connection exists
+    type(GwfExchangeType), pointer :: gwfExchange => null() !< the primary exchange, cast to its concrete type
+    logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
+                                    !! one of them needs to manage/own the exchange (e.g. clean up)
+    type(GwfInterfaceModelType), pointer :: gwfInterfaceModel => null() !< the interface model
+    integer(I4B), pointer :: iXt3dOnExchange => null() !< run XT3D on the interface,
+                                                       !! 0 = don't, 1 = matrix, 2 = rhs
+    integer(I4B) :: iout = 0 !< the list file for the interface model
 
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null()   !< flowja through exchange faces
+    real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< flowja through exchange faces
 
   contains
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -78,10 +78,10 @@ contains
   subroutine gwfGwfConnection_ctor(this, model, gwfEx)
     use NumericalModelModule, only: NumericalModelType
     use InputOutputModule, only: openfile
-    class(GwfGwfConnectionType) :: this             !< the connection
-    class(NumericalModelType), pointer :: model     !< the model owning this connection,
-                                                    !! this must of course be a GwfModelType
-    class(DisConnExchangeType), pointer :: gwfEx    !< the exchange the interface model is created for
+    class(GwfGwfConnectionType) :: this !< the connection
+    class(NumericalModelType), pointer :: model !< the model owning this connection,
+                                                !! this must of course be a GwfModelType
+    class(DisConnExchangeType), pointer :: gwfEx !< the exchange the interface model is created for
     ! local
     character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
@@ -273,7 +273,7 @@ contains
   !< by the connection of a GWF model with its neigbors
   subroutine gwfgwfcon_cf(this, kiter)
     class(GwfGwfConnectionType) :: this !< this connection
-    integer(I4B), intent(in) :: kiter   !< the iteration counter
+    integer(I4B), intent(in) :: kiter !< the iteration counter
     ! local
     integer(I4B) :: i
 
@@ -319,12 +319,12 @@ contains
   !> @brief Write the calculated coefficients into the global
   !< system matrix and the rhs
   subroutine gwfgwfcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
-    class(GwfGwfConnectionType) :: this               !< this connection
-    integer(I4B), intent(in) :: kiter                 !< the iteration counter
-    integer(I4B), dimension(:), intent(in) :: iasln   !< global system's IA array
-    real(DP), dimension(:), intent(inout) :: amatsln  !< global system matrix coefficients
-    real(DP), dimension(:), intent(inout) ::rhssln    !< global right-hand-side
-    integer(I4B), optional, intent(in) :: inwtflag    !< newton-raphson flag
+    class(GwfGwfConnectionType) :: this !< this connection
+    integer(I4B), intent(in) :: kiter !< the iteration counter
+    integer(I4B), dimension(:), intent(in) :: iasln !< global system's IA array
+    real(DP), dimension(:), intent(inout) :: amatsln !< global system matrix coefficients
+    real(DP), dimension(:), intent(inout) :: rhssln !< global right-hand-side
+    integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
     integer(I4B) :: n, ipos, nglo
 
@@ -499,10 +499,10 @@ contains
   !! model, and then mapped back to real-world cell ids.
   !<
   subroutine gwfgwfcon_cq(this, icnvg, isuppress_output, isolnid)
-    class(GwfGwfConnectionType) :: this          !< this connection
-    integer(I4B), intent(inout) :: icnvg         !< convergence flag
+    class(GwfGwfConnectionType) :: this !< this connection
+    integer(I4B), intent(inout) :: icnvg !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
-    integer(I4B), intent(in) :: isolnid          !< solution id
+    integer(I4B), intent(in) :: isolnid !< solution id
 
     call this%gwfInterfaceModel%model_cq(icnvg, isuppress_output)
 
@@ -598,9 +598,9 @@ contains
     real(DP) :: dist
     real(DP) :: cl
     logical :: nozee
-    type(ConnectionsType), pointer :: imCon                 !< interface model connections
-    class(GwfNpfType), pointer :: imNpf                     !< interface model npf package
-    class(DisBaseType), pointer :: imDis                    !< interface model discretization
+    type(ConnectionsType), pointer :: imCon !< interface model connections
+    class(GwfNpfType), pointer :: imNpf !< interface model npf package
+    class(DisBaseType), pointer :: imDis !< interface model discretization
     type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
 
     ! for readability
@@ -676,10 +676,10 @@ contains
   !> @brief Calculate the budget terms for this connection, this is
   !! dispatched to the GWF-GWF exchange
   subroutine gwfgwfcon_bd(this, icnvg, isuppress_output, isolnid)
-    class(GwfGwfConnectionType) :: this           !< this connection
-    integer(I4B), intent(inout) :: icnvg          !< convergence flag
-    integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
-    integer(I4B), intent(in) :: isolnid           !< solution id
+    class(GwfGwfConnectionType) :: this !< this connection
+    integer(I4B), intent(inout) :: icnvg !< convergence flag
+    integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
+    integer(I4B), intent(in) :: isolnid !< solution id
     ! local
 
     ! call exchange budget routine, also calls bd
@@ -693,7 +693,7 @@ contains
   !> @brief Write output for exchange (and calls
   !< save on the budget)
   subroutine gwfgwfcon_ot(this)
-    class(GwfGwfConnectionType) :: this           !< this connection
+    class(GwfGwfConnectionType) :: this !< this connection
     ! local
 
     ! Call exg_ot() here as it handles all output processing
@@ -709,7 +709,7 @@ contains
   !<
   function CastAsGwfGwfConnection(obj) result(res)
     implicit none
-    class(*), pointer, intent(inout) :: obj     !< object to be cast
+    class(*), pointer, intent(inout) :: obj !< object to be cast
     class(GwfGwfConnectionType), pointer :: res !< the GwfGwfConnection
 
     res => null()

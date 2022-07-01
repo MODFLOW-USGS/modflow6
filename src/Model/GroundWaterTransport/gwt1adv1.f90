@@ -14,9 +14,9 @@ module GwtAdvModule
 
   type, extends(NumericalPackageType) :: GwtAdvType
 
-    integer(I4B), pointer                            :: iadvwt => null()        !< advection scheme (0 up, 1 central, 2 tvd)
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        !< pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
+    integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
 
   contains
 

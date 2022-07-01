@@ -34,7 +34,7 @@ module MawModule
   public :: MawType
 
   !
-  character(len=LENFTYPE)       :: ftype = 'MAW'
+  character(len=LENFTYPE) :: ftype = 'MAW'
   character(len=LENPACKAGENAME) :: text = '             MAW'
 
   private
@@ -145,18 +145,18 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous :: gwfsat => NULL()
     !
     ! -- arrays for handling the rows added to the solution matrix
-    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null()      !map position in global rhs and x array of pack entry
-    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null()         !map position in global array of package diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null()   !map position in global array of package off diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
-    real(DP), dimension(:), pointer, contiguous  :: xnewpak => null()            !package x vector
-    real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
+    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null() !map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null() !map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null() !map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !package ibound
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !package x vector
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !package xold vector
     !
     ! -- density variables
     integer(I4B), pointer :: idense
-    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
+    real(DP), dimension(:, :), pointer, contiguous :: denseterms => null()
     !
     ! -- type bound procedures
   contains
@@ -255,7 +255,7 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
-    packobj%iscloc = 0  ! not supported
+    packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
@@ -756,7 +756,7 @@ contains
       ! fill timeseries aware data
       !
       ! -- well_head and strt
-      jj = 1    ! For WELL_HEAD
+      jj = 1 ! For WELL_HEAD
       bndElem => this%well_head(n)
       call read_value_or_time_series_adv(strttext(n), n, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -1441,14 +1441,14 @@ contains
       end select
     case ('RATE')
       call this%parser%GetString(text)
-      jj = 1    ! For RATE
+      jj = 1 ! For RATE
       bndElem => this%rate(imaw)
       call read_value_or_time_series_adv(text, imaw, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
                                          this%iprpak, 'RATE')
     case ('WELL_HEAD')
       call this%parser%GetString(text)
-      jj = 1    ! For WELL_HEAD
+      jj = 1 ! For WELL_HEAD
       bndElem => this%well_head(imaw)
       call read_value_or_time_series_adv(text, imaw, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -2433,7 +2433,7 @@ contains
           !
           ! -- add pumping rate to mover if not injection
           if (rate < 0) then
-            call this%pakmvrobj%accumulate_qformvr(n, -rate)  !pumped water
+            call this%pakmvrobj%accumulate_qformvr(n, -rate) !pumped water
           end if
           !
           ! -- add flowing well flow to mover
@@ -2925,11 +2925,11 @@ contains
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(MawType) :: this              !< MawType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(MawType) :: this !< MawType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
@@ -3505,9 +3505,9 @@ contains
     !    the ID string of an observation definition for MAW package observations.
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop
@@ -3594,7 +3594,7 @@ contains
         cycle
       end if
       v = this%rate(n) - this%ratesim(n) !reductions in extraction will be negative and reductions in injection will be positive; follows convention of WEL AUTO_FLOW_REDUCE_CSV
-      if (abs(v) > DEM9) then   !need to check absolute value of difference for both extraction and injection; using 1e-9 as epsilon value but could be tweaked
+      if (abs(v) > DEM9) then !need to check absolute value of difference for both extraction and injection; using 1e-9 as epsilon value but could be tweaked
         write (this%ioutredflowcsv, '(*(G0,:,","))') &
           totim, kper, kstp, n, this%rate(n), this%ratesim(n), v
       end if

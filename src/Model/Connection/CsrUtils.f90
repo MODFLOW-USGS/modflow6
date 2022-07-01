@@ -11,11 +11,11 @@ contains
   !< returns -1 when not there
   function getCSRIndex(i, j, ia, ja) result(csrIndex)
     use KindModule, only: I4B
-    integer(I4B), intent(in) :: i                 !< the row index
-    integer(I4B), intent(in) :: j                 !< the column index
-    integer(I4B), dimension(:), intent(in) :: ia  !< CSR ia array
-    integer(I4B), dimension(:), intent(in) :: ja  !< CSR ja array
-    integer(I4B) :: csrIndex                      !< the CSR ndex of element i,j
+    integer(I4B), intent(in) :: i !< the row index
+    integer(I4B), intent(in) :: j !< the column index
+    integer(I4B), dimension(:), intent(in) :: ia !< CSR ia array
+    integer(I4B), dimension(:), intent(in) :: ja !< CSR ja array
+    integer(I4B) :: csrIndex !< the CSR ndex of element i,j
     ! local
     integer(I4B) :: idx
 

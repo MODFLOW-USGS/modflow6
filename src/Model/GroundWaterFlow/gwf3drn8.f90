@@ -16,7 +16,7 @@ module DrnModule
   public :: drn_create
   public :: DrnType
   !
-  character(len=LENFTYPE)       :: ftype = 'DRN'
+  character(len=LENFTYPE) :: ftype = 'DRN'
   character(len=LENPACKAGENAME) :: text = '             DRN'
   !
   type, extends(BndType) :: DrnType
@@ -84,8 +84,8 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 2  ! drnelev, conductance
-    packobj%iscloc = 2   !sfac applies to conductance
+    packobj%ncolbnd = 2 ! drnelev, conductance
+    packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return

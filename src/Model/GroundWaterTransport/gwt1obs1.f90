@@ -15,9 +15,9 @@ module GwtObsModule
 
   type, extends(ObsType) :: GwtObsType
     ! -- Private members
-    type(GwtIcType), pointer, private                    :: ic => null()         ! initial conditions
-    real(DP), dimension(:), pointer, contiguous, private :: x => null()          ! concentration
-    real(DP), dimension(:), pointer, contiguous, private :: flowja => null()     ! intercell flows
+    type(GwtIcType), pointer, private :: ic => null() ! initial conditions
+    real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration
+    real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
   contains
     ! -- Public procedures
     procedure, public :: gwt_obs_ar
@@ -42,7 +42,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtObsType), pointer, intent(out)   :: obs
+    type(GwtObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
 ! ------------------------------------------------------------------------------
     !
@@ -90,7 +90,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: pkgname
     character(len=*), intent(in) :: filtyp
-    class(DisBaseType), pointer  :: dis
+    class(DisBaseType), pointer :: dis
     ! -- local
     integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
@@ -216,9 +216,9 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
@@ -254,9 +254,9 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop, jaidx

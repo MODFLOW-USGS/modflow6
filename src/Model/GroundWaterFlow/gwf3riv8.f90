@@ -13,7 +13,7 @@ module rivmodule
   public :: riv_create
   public :: RivType
   !
-  character(len=LENFTYPE)       :: ftype = 'RIV'
+  character(len=LENFTYPE) :: ftype = 'RIV'
   character(len=LENPACKAGENAME) :: text = '             RIV'
   !
   type, extends(BndType) :: RivType
@@ -71,8 +71,8 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 3  ! stage, conductance, rbot
-    packobj%iscloc = 2   !sfac applies to conductance
+    packobj%ncolbnd = 3 ! stage, conductance, rbot
+    packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return

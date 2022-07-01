@@ -25,28 +25,28 @@ module GwtGwtConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwtGwtConnectionType
 
-    type(GwtModelType), pointer :: gwtModel => null()                     !< the model for which this connection exists
-    type(GwtExchangeType), pointer :: gwtExchange => null()               !< the primary exchange, cast to GWT-GWT
-    logical(LGP) :: exchangeIsOwned                                       !< there are two connections (in serial) for an exchange,
-                                                                          !! one of them needs to manage/own the exchange (e.g. clean up)
-    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null()   !< the interface model
-    integer(I4B), pointer :: iIfaceAdvScheme => null()                    !< the advection scheme at the interface:
-                                                                          !! 0 = upstream, 1 = central, 2 = TVD
-    integer(I4B), pointer :: iIfaceXt3d => null()                         !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null()    !< intercell flows at the interface, coming from GWF interface model
-    integer(I4B), pointer :: exgflowSign => null()                        !< indicates the flow direction of exgflowja
+    type(GwtModelType), pointer :: gwtModel => null() !< the model for which this connection exists
+    type(GwtExchangeType), pointer :: gwtExchange => null() !< the primary exchange, cast to GWT-GWT
+    logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
+                                    !! one of them needs to manage/own the exchange (e.g. clean up)
+    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
+    integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
+                                                       !! 0 = upstream, 1 = central, 2 = TVD
+    integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
+    real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< intercell flows at the interface, coming from GWF interface model
+    integer(I4B), pointer :: exgflowSign => null() !< indicates the flow direction of exgflowja
     real(DP), dimension(:), pointer, contiguous :: exgflowjaGwt => null() !< gwt-flowja at the interface (this is a subset of the GWT
                                                                           !! interface model flowja's)
 
-    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null()    !< gwfflowja for the interface model
-    real(DP), dimension(:), pointer, contiguous :: gwfsat => null()       !< gwfsat for the interface model
-    real(DP), dimension(:), pointer, contiguous :: gwfhead => null()      !< gwfhead for the interface model
-    real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null()  !< gwfspdis for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< gwfflowja for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< gwfsat for the interface model
+    real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< gwfhead for the interface model
+    real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< gwfspdis for the interface model
 
-    real(DP), dimension(:), pointer, contiguous :: conc => null()         !< pointer to concentration array
-    integer(I4B), dimension(:), pointer, contiguous :: icbound => null()  !< store pointer to gwt ibound array
+    real(DP), dimension(:), pointer, contiguous :: conc => null() !< pointer to concentration array
+    integer(I4B), dimension(:), pointer, contiguous :: icbound => null() !< store pointer to gwt ibound array
 
-    integer(I4B) :: iout = 0                                              !< the list file for the interface model
+    integer(I4B) :: iout = 0 !< the list file for the interface model
 
   contains
 
@@ -83,10 +83,10 @@ contains
 !<
   subroutine gwtGwtConnection_ctor(this, model, gwtEx)
     use InputOutputModule, only: openfile
-    class(GwtGwtConnectionType) :: this             !< the connection
-    class(NumericalModelType), pointer :: model     !< the model owning this connection,
-                                                  !! this must be a GwtModelType
-    class(DisConnExchangeType), pointer :: gwtEx    !< the GWT-GWT exchange the interface model is created for
+    class(GwtGwtConnectionType) :: this !< the connection
+    class(NumericalModelType), pointer :: model !< the model owning this connection,
+                                                !! this must be a GwtModelType
+    class(DisConnExchangeType), pointer :: gwtEx !< the GWT-GWT exchange the interface model is created for
     ! local
     character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
@@ -336,7 +336,7 @@ contains
 !> @brief add connections to the global system for
 !< this connection
   subroutine gwtgwtcon_ac(this, sparse)
-    class(GwtGwtConnectionType) :: this         !< this connection
+    class(GwtGwtConnectionType) :: this !< this connection
     type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
     ! local
     integer(I4B) :: ic, iglo, jglo
@@ -386,7 +386,7 @@ contains
 
   subroutine gwtgwtcon_cf(this, kiter)
     class(GwtGwtConnectionType) :: this !< the connection
-    integer(I4B), intent(in) :: kiter   !< the iteration counter
+    integer(I4B), intent(in) :: kiter !< the iteration counter
     ! local
     integer(I4B) :: i
 
@@ -413,7 +413,7 @@ contains
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
     integer(I4B) :: i, n, m, ipos, iposLoc, idx
-    type(ConnectionsType), pointer :: imCon                 !< interface model connections
+    type(ConnectionsType), pointer :: imCon !< interface model connections
     type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
     type(GlobalCellType), pointer :: boundaryCell, connectedCell
     class(GwtModelType), pointer :: gwtModel
@@ -476,12 +476,12 @@ contains
   end subroutine syncInterfaceModel
 
   subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
-    class(GwtGwtConnectionType) :: this               !< the connection
-    integer(I4B), intent(in) :: kiter                 !< the iteration counter
-    integer(I4B), dimension(:), intent(in) :: iasln   !< global system's IA array
-    real(DP), dimension(:), intent(inout) :: amatsln  !< global system matrix coefficients
-    real(DP), dimension(:), intent(inout) ::rhssln    !< global right-hand-side
-    integer(I4B), optional, intent(in) :: inwtflag    !< newton-raphson flag
+    class(GwtGwtConnectionType) :: this !< the connection
+    integer(I4B), intent(in) :: kiter !< the iteration counter
+    integer(I4B), dimension(:), intent(in) :: iasln !< global system's IA array
+    real(DP), dimension(:), intent(inout) :: amatsln !< global system matrix coefficients
+    real(DP), dimension(:), intent(inout) :: rhssln !< global right-hand-side
+    integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
     integer(I4B) :: n, nglo, ipos
 
@@ -515,10 +515,10 @@ contains
   end subroutine gwtgwtcon_fc
 
   subroutine gwtgwtcon_cq(this, icnvg, isuppress_output, isolnid)
-    class(GwtGwtConnectionType) :: this          !< the connection
-    integer(I4B), intent(inout) :: icnvg         !< convergence flag
+    class(GwtGwtConnectionType) :: this !< the connection
+    integer(I4B), intent(inout) :: icnvg !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
-    integer(I4B), intent(in) :: isolnid          !< solution id
+    integer(I4B), intent(in) :: isolnid !< solution id
 
     call this%gwtInterfaceModel%model_cq(icnvg, isuppress_output)
     call this%setFlowToExchange()
@@ -558,10 +558,10 @@ contains
 
   subroutine gwtgwtcon_bd(this, icnvg, isuppress_output, isolnid)
     use BudgetModule, only: rate_accumulator
-    class(GwtGwtConnectionType) :: this           !< the connection
-    integer(I4B), intent(inout) :: icnvg          !< convergence flag
-    integer(I4B), intent(in) :: isuppress_output  !< suppress output when =1
-    integer(I4B), intent(in) :: isolnid           !< solution id
+    class(GwtGwtConnectionType) :: this !< the connection
+    integer(I4B), intent(inout) :: icnvg !< convergence flag
+    integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
+    integer(I4B), intent(in) :: isolnid !< solution id
 
     ! call exchange budget routine, also calls bd
     ! for movers.
@@ -623,7 +623,7 @@ contains
 !<
   function CastAsGwtGwtConnection(obj) result(res)
     implicit none
-    class(*), pointer, intent(inout) :: obj     !< object to be cast
+    class(*), pointer, intent(inout) :: obj !< object to be cast
     class(GwtGwtConnectionType), pointer :: res !< the GwtGwtConnection
 
     res => null()

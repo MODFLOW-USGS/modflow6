@@ -47,27 +47,26 @@ module GridConnectionModule
     integer(I4B) :: internalStencilDepth !< stencil size for the interior
     integer(I4B) :: exchangeStencilDepth !< stencil size at the interface
 
-    class(NumericalModelType), pointer :: model => null()                       !< the model for which this grid connection exists
+    class(NumericalModelType), pointer :: model => null() !< the model for which this grid connection exists
 
-    integer(I4B), pointer :: nrOfBoundaryCells => null()                        !< nr of boundary cells with connection to another model
-    type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()    !< cells on our side of the primary connections
-    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()   !< cells on the neighbors side of the primary connection
-    type(ListType) :: exchanges                                                 !< all relevant exchanges for this connection, up to
-                                                                                !! the required depth
+    integer(I4B), pointer :: nrOfBoundaryCells => null() !< nr of boundary cells with connection to another model
+    type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null() !< cells on our side of the primary connections
+    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null() !< cells on the neighbors side of the primary connection
+    type(ListType) :: exchanges !< all relevant exchanges for this connection, up to the required depth
 
-    integer, dimension(:), pointer :: primConnections => null()                 !< table mapping the index in the boundaryCells/connectedCells
+    integer, dimension(:), pointer :: primConnections => null() !< table mapping the index in the boundaryCells/connectedCells
 
-    integer(I4B), pointer :: nrOfCells => null()                                !< the total number of cells in the interface
-    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()        !< a map from interface index to global coordinate
+    integer(I4B), pointer :: nrOfCells => null() !< the total number of cells in the interface
+    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null() !< a map from interface index to global coordinate
     integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
                                                                                 !! stored in mem. mgr. so can be used for debugging
 
-    integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null()  !< (sparse) mapping from regional index to interface ixd
-    type(ListType)                      :: regionalModels                       !< the models participating in the interface
-    integer(I4B), dimension(:), pointer :: regionalModelOffset => null()        !< the new offset to compactify the range of indices
-    integer(I4B), pointer               :: indexCount => null()                 !< counts the number of cells in the interface
-    type(ConnectionsType), pointer      :: connections => null()                !< sparse matrix with the connections
-    integer(I4B), dimension(:), pointer :: connectionMask => null()             !< to mask out connections from the amat coefficient calculation
+    integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null() !< (sparse) mapping from regional index to interface ixd
+    type(ListType) :: regionalModels !< the models participating in the interface
+    integer(I4B), dimension(:), pointer :: regionalModelOffset => null() !< the new offset to compactify the range of indices
+    integer(I4B), pointer :: indexCount => null() !< counts the number of cells in the interface
+    type(ConnectionsType), pointer :: connections => null() !< sparse matrix with the connections
+    integer(I4B), dimension(:), pointer :: connectionMask => null() !< to mask out connections from the amat coefficient calculation
 
   contains
     ! public
@@ -115,10 +114,10 @@ contains
   !! the data structures for the primary connections
   !<
   subroutine construct(this, model, nrOfPrimaries, connectionName)
-    class(GridConnectionType), intent(inout) :: this         !> this instance
-    class(NumericalModelType), pointer, intent(in) :: model  !> the model for which the interface is constructed
-    integer(I4B) :: nrOfPrimaries                            !> the number of primary connections between the two models
-    character(len=*) :: connectionName                       !> the name, for memory management mostly
+    class(GridConnectionType), intent(inout) :: this !> this instance
+    class(NumericalModelType), pointer, intent(in) :: model !> the model for which the interface is constructed
+    integer(I4B) :: nrOfPrimaries !> the number of primary connections between the two models
+    character(len=*) :: connectionName !> the name, for memory management mostly
     ! local
 
     this%model => model
@@ -145,11 +144,11 @@ contains
   !! arrays
   !<
   subroutine connectCell(this, idx1, model1, idx2, model2)
-    class(GridConnectionType), intent(in) :: this   !< this grid connection
-    integer(I4B)                          :: idx1   !< local index cell 1
-    class(NumericalModelType), pointer    :: model1 !< model of cell 1
-    integer(I4B)                          :: idx2   !< local index cell 2
-    class(NumericalModelType), pointer    :: model2 !< model of cell 2
+    class(GridConnectionType), intent(in) :: this !< this grid connection
+    integer(I4B) :: idx1 !< local index cell 1
+    class(NumericalModelType), pointer :: model1 !< model of cell 1
+    integer(I4B) :: idx2 !< local index cell 2
+    class(NumericalModelType), pointer :: model2 !< model of cell 2
 
     this%nrOfBoundaryCells = this%nrOfBoundaryCells + 1
     if (this%nrOfBoundaryCells > size(this%boundaryCells)) then
@@ -182,8 +181,8 @@ contains
   subroutine findModelNeighbors(this, globalExchanges, depth)
     class(GridConnectionType), intent(inout) :: this !< this grid connection
     type(ListType), intent(inout) :: globalExchanges !< list with global exchanges
-    integer(I4B) :: depth                            !< the maximal number of exchanges between
-                                                     !! any two models in the topology
+    integer(I4B) :: depth !< the maximal number of exchanges between
+                          !! any two models in the topology
 
     call this%addModelNeighbors(this%model, globalExchanges, depth)
 
@@ -194,11 +193,11 @@ contains
   recursive subroutine addModelNeighbors(this, model, &
                                          globalExchanges, &
                                          depth, mask)
-    class(GridConnectionType), intent(inout) :: this           !< this grid connection
+    class(GridConnectionType), intent(inout) :: this !< this grid connection
     class(NumericalModelType), pointer, intent(inout) :: model !< the model to add neighbors for
-    type(ListType), intent(inout) :: globalExchanges           !< list with all exchanges
-    integer(I4B) :: depth                                      !< the maximal number of exchanges between
-    class(NumericalModelType), pointer, optional :: mask       !< don't add this one a neighbor
+    type(ListType), intent(inout) :: globalExchanges !< list with all exchanges
+    integer(I4B) :: depth !< the maximal number of exchanges between
+    class(NumericalModelType), pointer, optional :: mask !< don't add this one a neighbor
     ! local
     integer(I4B) :: i, n
     class(DisConnExchangeType), pointer :: connEx
@@ -267,8 +266,8 @@ contains
   !> @brief Add a model to a list of all regional models
   !<
   subroutine addToRegionalModels(this, modelToAdd)
-    class(GridConnectionType), intent(inout) :: this    !< this grid connection
-    class(NumericalModelType), pointer    :: modelToAdd !< the model to add to the region
+    class(GridConnectionType), intent(inout) :: this !< this grid connection
+    class(NumericalModelType), pointer :: modelToAdd !< the model to add to the region
     ! local
     class(*), pointer :: mPtr
     procedure(isEqualIface), pointer :: areEqualMethod
@@ -424,15 +423,15 @@ contains
   !<
   recursive subroutine addNeighbors(this, cellNbrs, depth, mask, interior)
     use SimModule, only: ustop
-    class(GridConnectionType), intent(inout)  :: this     !< this grid connection
-    type(CellWithNbrsType), intent(inout)     :: cellNbrs !< cell to add to
-    integer(I4B), intent(inout)               :: depth    !< current depth (typically decreases in recursion)
-    type(GlobalCellType), optional            :: mask     !< mask to excluded back-and-forth connection between cells
-    logical(LGP)                              :: interior !< when true, we are adding from the exchange back into the model
+    class(GridConnectionType), intent(inout) :: this !< this grid connection
+    type(CellWithNbrsType), intent(inout) :: cellNbrs !< cell to add to
+    integer(I4B), intent(inout) :: depth !< current depth (typically decreases in recursion)
+    type(GlobalCellType), optional :: mask !< mask to excluded back-and-forth connection between cells
+    logical(LGP) :: interior !< when true, we are adding from the exchange back into the model
     ! local
-    integer(I4B)                              :: nbrIdx, ipos, inbr
-    type(ConnectionsType), pointer            :: conn
-    integer(I4B)                              :: newDepth
+    integer(I4B) :: nbrIdx, ipos, inbr
+    type(ConnectionsType), pointer :: conn
+    integer(I4B) :: newDepth
 
     ! if depth == 1, then we are not adding neighbors but use
     ! the boundary and connected cell only
@@ -475,9 +474,9 @@ contains
   !> @brief Add cell neighbors across models using the stored exchange
   !! data structures
   subroutine addRemoteNeighbors(this, cellNbrs, mask)
-    class(GridConnectionType), intent(inout)      :: this          !< this grid connection instance
-    type(CellWithNbrsType), intent(inout)         :: cellNbrs      !< cell to add to
-    type(GlobalCellType), optional                :: mask          !< a mask to exclude back-and-forth connections
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    type(CellWithNbrsType), intent(inout) :: cellNbrs !< cell to add to
+    type(GlobalCellType), optional :: mask !< a mask to exclude back-and-forth connections
     ! local
     integer(I4B) :: ix, iexg
     type(DisConnExchangeType), pointer :: connEx
@@ -514,11 +513,11 @@ contains
   !> @brief Add neighboring cell to tree structure
   !<
   subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel, mask)
-    class(GridConnectionType), intent(in) :: this      !< this grid connection instance
-    type(CellWithNbrsType), intent(inout) :: cellNbrs  !< the root cell which to add to
-    integer(I4B), intent(in)              :: newNbrIdx !< the neigboring cell's index
-    class(NumericalModelType), pointer    :: nbrModel  !< the model where the new neighbor lives
-    type(GlobalCellType), optional        :: mask      !< don't add connections to this cell (optional)
+    class(GridConnectionType), intent(in) :: this !< this grid connection instance
+    type(CellWithNbrsType), intent(inout) :: cellNbrs !< the root cell which to add to
+    integer(I4B), intent(in) :: newNbrIdx !< the neigboring cell's index
+    class(NumericalModelType), pointer :: nbrModel !< the model where the new neighbor lives
+    type(GlobalCellType), optional :: mask !< don't add connections to this cell (optional)
     ! local
 
     if (present(mask)) then
@@ -533,12 +532,12 @@ contains
   !> @brief Recursively set interface cell indexes and
   !< add to the region-to-interface loopup table
   recursive subroutine registerInterfaceCells(this, cellWithNbrs)
-    class(GridConnectionType), intent(inout) :: this          !< this grid connection instance
-    type(CellWithNbrsType)                   :: cellWithNbrs  !< the cell from where to start registering neighbors
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    type(CellWithNbrsType) :: cellWithNbrs !< the cell from where to start registering neighbors
     ! local
     integer(I4B) :: offset, inbr
-    integer(I4B) :: regionIdx  ! unique idx in the region (all connected models)
-    integer(I4B) :: ifaceIdx   ! unique idx in the interface grid
+    integer(I4B) :: regionIdx ! unique idx in the region (all connected models)
+    integer(I4B) :: ifaceIdx ! unique idx in the interface grid
 
     offset = this%getRegionalModelOffset(cellWithNbrs%cell%model)
     regionIdx = offset + cellWithNbrs%cell%index
@@ -561,8 +560,8 @@ contains
   !<
   subroutine addToGlobalMap(this, ifaceIdx, cell)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
-    integer(I4B), intent(in) :: ifaceIdx             !< unique idx in the interface grid
-    type(GlobalCellType), intent(in) :: cell         !< the global cell
+    integer(I4B), intent(in) :: ifaceIdx !< unique idx in the interface grid
+    type(GlobalCellType), intent(in) :: cell !< the global cell
     ! local
     integer(I4B) :: i, currentSize, newSize
     type(GlobalCellType), dimension(:), pointer :: tempMap
@@ -655,8 +654,8 @@ contains
   !> @brief Add primary connections to the sparse data structure
   !<
   subroutine makePrimaryConnections(this, sparse)
-    class(GridConnectionType), intent(inout)  :: this   !< this grid connection instance
-    type(SparseMatrix), pointer               :: sparse !< the sparse data structure to hold the connections
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    type(SparseMatrix), pointer :: sparse !< the sparse data structure to hold the connections
     ! local
     integer(I4B) :: icell
     integer(I4B) :: ifaceIdx, ifaceIdxNbr
@@ -680,11 +679,11 @@ contains
   !! cells neighoring the primarily connected cells) to the
   !< sparse data structure
   recursive subroutine connectNeighborCells(this, cell, sparse)
-    class(GridConnectionType), intent(inout)  :: this   !< this grid connection instance
-    type(CellWithNbrsType)                    :: cell   !< the cell whose connections is to be added
-    type(SparseMatrix), pointer               :: sparse !< the sparse data structure to hold the connections
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    type(CellWithNbrsType) :: cell !< the cell whose connections is to be added
+    type(SparseMatrix), pointer :: sparse !< the sparse data structure to hold the connections
     ! local
-    integer(I4B) :: ifaceIdx, ifaceIdxNbr    ! unique idx in the interface grid
+    integer(I4B) :: ifaceIdx, ifaceIdxNbr ! unique idx in the interface grid
     integer(I4B) :: inbr
 
     ifaceIdx = this%getInterfaceIndex(cell%cell)
@@ -705,7 +704,7 @@ contains
   !< connections between cells within the same model.
   subroutine fillConnectionDataInternal(this)
     use ConstantsModule, only: DPI, DTWOPI
-    class(GridConnectionType), intent(inout)  :: this !< this grid connection instance
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
     type(ConnectionsType), pointer :: conn, connOrig
     integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
@@ -757,7 +756,7 @@ contains
   subroutine fillConnectionDataFromExchanges(this)
     use ConstantsModule, only: DPI, DTWOPI, DPIO180
     use ArrayHandlersModule, only: ifind
-    class(GridConnectionType), intent(inout)  :: this !< this grid connection instance
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
     integer(I4B) :: inx, iexg, ivalAngldegx
     integer(I4B) :: ipos, isym
@@ -910,7 +909,7 @@ contains
   !<
   recursive subroutine maskInternalConnections(this, cell, nbrCell, level)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
-    type(CellWithNbrsType), intent(inout) :: cell    !< cell 1 in the connection to mask
+    type(CellWithNbrsType), intent(inout) :: cell !< cell 1 in the connection to mask
     type(CellWithNbrsType), intent(inout) :: nbrCell !< cell 2 in the connection to mask
     integer(I4B), intent(in) :: level
     ! local
@@ -939,10 +938,10 @@ contains
   !! (and not the transposed!) not overwriting the current level
   !< of a connection when it is smaller
   subroutine setMaskOnConnection(this, cell, nbrCell, level)
-    class(GridConnectionType), intent(inout) :: this       !< this grid connection instance
-    type(CellWithNbrsType), intent(inout) :: cell          !< cell 1 in the connection
-    type(CellWithNbrsType), intent(inout) :: nbrCell       !< cell 2 in the connection
-    integer(I4B), intent(in) :: level                      !< the level value to set the mask to
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    type(CellWithNbrsType), intent(inout) :: cell !< cell 1 in the connection
+    type(CellWithNbrsType), intent(inout) :: nbrCell !< cell 2 in the connection
+    integer(I4B), intent(in) :: level !< the level value to set the mask to
     ! local
     integer(I4B) :: ifaceIdx, ifaceIdxNbr
     integer(I4B) :: iposdiag, ipos
@@ -969,9 +968,9 @@ contains
   !> @brief Get interface index from global cell
   !<
   function getInterfaceIndexByCell(this, cell) result(ifaceIdx)
-    class(GridConnectionType), intent(inout)  :: this     !< this grid connection instance
-    type(GlobalCellType), intent(in)          :: cell     !< the global cell to get the interface index for
-    integer(I4B)                              :: ifaceIdx !< the index in the interface model
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    type(GlobalCellType), intent(in) :: cell !< the global cell to get the interface index for
+    integer(I4B) :: ifaceIdx !< the index in the interface model
     ! local
     integer(I4B) :: offset, regionIdx
 
@@ -983,10 +982,10 @@ contains
   !> @brief Get interface index from a model pointer and the local index
   !<
   function getInterfaceIndexByIndexModel(this, index, model) result(ifaceIdx)
-    class(GridConnectionType), intent(inout)  :: this     !< this grid connection instance
-    integer(I4B)                              :: index    !< the local cell index
-    class(NumericalModelType), pointer        :: model    !< the cell's model
-    integer(I4B)                              :: ifaceIdx !< the index in the interface model
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    integer(I4B) :: index !< the local cell index
+    class(NumericalModelType), pointer :: model !< the cell's model
+    integer(I4B) :: ifaceIdx !< the index in the interface model
     ! local
     integer(I4B) :: offset, regionIdx
 
@@ -998,9 +997,9 @@ contains
   !> @brief Get the offset for a regional model
   !<
   function getRegionalModelOffset(this, model) result(offset)
-    class(GridConnectionType), intent(inout) :: this   !< this grid connection instance
-    class(NumericalModelType), pointer       :: model  !< the model to get the offset for
-    integer(I4B)                             :: offset !< the index offset in the regional domain
+    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
+    class(NumericalModelType), pointer :: model !< the model to get the offset for
+    integer(I4B) :: offset !< the index offset in the regional domain
     ! local
     integer(I4B) :: im
     class(NumericalModelType), pointer :: modelInList
@@ -1033,7 +1032,7 @@ contains
   subroutine getDiscretization(this, disu)
     use ConnectionsModule
     use SparseModule, only: sparsematrix
-    class(GridConnectionType) :: this   !< the grid connection
+    class(GridConnectionType) :: this !< the grid connection
     class(GwfDisuType), pointer :: disu !< the target disu object
     ! local
     integer(I4B) :: icell, nrOfCells, idx
@@ -1112,9 +1111,9 @@ contains
   !< the same model is periodic
   function isPeriodic(this, n, m) result(periodic)
     class(GridConnectionType), intent(in) :: this !< this grid connection instance
-    integer(I4B), intent(in) :: n                 !< first node of the connection
-    integer(I4B), intent(in) :: m                 !< second node of the connection
-    logical :: periodic                           !< true when periodic
+    integer(I4B), intent(in) :: n !< first node of the connection
+    integer(I4B), intent(in) :: m !< second node of the connection
+    logical :: periodic !< true when periodic
     ! local
     integer(I4B) :: icell
 

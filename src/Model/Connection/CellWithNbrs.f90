@@ -10,7 +10,7 @@ module CellWithNbrsModule
   !! using a pointer to the model and its local cell
   !< index
   type, public :: GlobalCellType
-    integer(I4B) :: index                                 !< the index on the model grid
+    integer(I4B) :: index !< the index on the model grid
     class(NumericalModelType), pointer :: model => null() !< the model
   end type
 

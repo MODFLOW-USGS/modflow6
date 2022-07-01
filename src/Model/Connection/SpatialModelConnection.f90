@@ -27,30 +27,30 @@ module SpatialModelConnectionModule
   !< values for the exchange.
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
-    class(NumericalModelType), pointer  :: owner => null()                !< the model whose connection this is
-    class(NumericalModelType), pointer  :: interfaceModel => null()       !< the interface model
-    integer(I4B), pointer               :: nrOfConnections => null()      !< total nr. of connected cells (primary)
+    class(NumericalModelType), pointer :: owner => null() !< the model whose connection this is
+    class(NumericalModelType), pointer :: interfaceModel => null() !< the interface model
+    integer(I4B), pointer :: nrOfConnections => null() !< total nr. of connected cells (primary)
 
-    class(DisConnExchangeType), pointer :: primaryExchange => null()      !< the exchange for which the interface model is created
-    type(ListType)                      :: globalExchanges                !< all exchanges in the same solution
-    integer(I4B), pointer               :: internalStencilDepth => null() !< size of the computational stencil for the interior
-                                                                          !! default = 1, xt3d = 2, ...
-    integer(I4B), pointer               :: exchangeStencilDepth => null() !< size of the computational stencil at the interface
-                                                                          !! default = 1, xt3d = 2, ...
+    class(DisConnExchangeType), pointer :: primaryExchange => null() !< the exchange for which the interface model is created
+    type(ListType) :: globalExchanges !< all exchanges in the same solution
+    integer(I4B), pointer :: internalStencilDepth => null() !< size of the computational stencil for the interior
+                                                            !! default = 1, xt3d = 2, ...
+    integer(I4B), pointer :: exchangeStencilDepth => null() !< size of the computational stencil at the interface
+                                                            !! default = 1, xt3d = 2, ...
 
     ! The following variables are equivalent to those in Numerical Solution:
-    integer(I4B), pointer                               :: neq => null()      !< nr. of equations in matrix system
-    integer(I4B), pointer                               :: nja => null()      !< nr. of nonzero matrix elements
-    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()       !< sparse indexing IA
-    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()       !< sparse indexing JA
-    real(DP), dimension(:), pointer, contiguous         :: amat => null()     !< matrix coefficients
-    real(DP), dimension(:), pointer, contiguous         :: rhs => null()      !< rhs of interface system
-    real(DP), dimension(:), pointer, contiguous         :: x => null()        !< dependent variable of interface system
-    integer(I4B), dimension(:), pointer, contiguous     :: active => null()   !< cell status (c.f. ibound) of interface system
+    integer(I4B), pointer :: neq => null() !< nr. of equations in matrix system
+    integer(I4B), pointer :: nja => null() !< nr. of nonzero matrix elements
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< sparse indexing IA
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< sparse indexing JA
+    real(DP), dimension(:), pointer, contiguous :: amat => null() !< matrix coefficients
+    real(DP), dimension(:), pointer, contiguous :: rhs => null() !< rhs of interface system
+    real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent variable of interface system
+    integer(I4B), dimension(:), pointer, contiguous :: active => null() !< cell status (c.f. ibound) of interface system
 
     ! these are not in the memory manager
     class(GridConnectionType), pointer :: gridConnection => null() !< facility to build the interface grid connection structure
-    integer(I4B), dimension(:), pointer :: mapIdxToSln => null()   !< mapping between interface matrix and the solution matrix
+    integer(I4B), dimension(:), pointer :: mapIdxToSln => null() !< mapping between interface matrix and the solution matrix
 
   contains
 
@@ -92,11 +92,11 @@ contains ! module procedures
   !! This constructor is typically called from a derived class.
   !<
   subroutine spatialConnection_ctor(this, model, exchange, name)
-    class(SpatialModelConnectionType) :: this                   !< the connection
-    class(NumericalModelType), intent(in), pointer :: model     !< the model that owns the connection
+    class(SpatialModelConnectionType) :: this !< the connection
+    class(NumericalModelType), intent(in), pointer :: model !< the model that owns the connection
     class(DisConnExchangeType), intent(in), pointer :: exchange !< the primary exchange from which
                                                                 !! the connection is created
-    character(len=*), intent(in) :: name                        !< the connection name (for memory management mostly)
+    character(len=*), intent(in) :: name !< the connection name (for memory management mostly)
 
     this%name = name
     this%memoryPath = create_mem_path(this%name)
@@ -264,7 +264,7 @@ contains ! module procedures
   !> @brief Add connections, handled by the interface model,
   !< to the global system's sparse
   subroutine spatialcon_ac(this, sparse)
-    class(SpatialModelConnectionType) :: this   !< this connection
+    class(SpatialModelConnectionType) :: this !< this connection
     type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
     ! local
     integer(I4B) :: n, m, ipos
@@ -293,7 +293,7 @@ contains ! module procedures
   !< matrix to the global one
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
-    class(SpatialModelConnectionType) :: this       !< this connection
+    class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B), dimension(:), intent(in) :: iasln !< global IA array
     integer(I4B), dimension(:), intent(in) :: jasln !< global JA array
     ! local
@@ -441,7 +441,7 @@ contains ! module procedures
   !<
   subroutine createCoefficientMatrix(this, sparse)
     use SimModule, only: ustop
-    class(SpatialModelConnectionType) :: this   !< this connection
+    class(SpatialModelConnectionType) :: this !< this connection
     type(sparsematrix), intent(inout) :: sparse !< the sparse matrix with the cell connections
     ! local
     integer(I4B) :: ierror
@@ -493,7 +493,7 @@ contains ! module procedures
   !<
   function CastAsSpatialModelConnectionClass(obj) result(res)
     implicit none
-    class(*), pointer, intent(inout) :: obj           !< object to be cast
+    class(*), pointer, intent(inout) :: obj !< object to be cast
     class(SpatialModelConnectionType), pointer :: res !< the instance of SpatialModelConnectionType
     !
     res => null()
@@ -511,8 +511,8 @@ contains ! module procedures
   subroutine AddSpatialModelConnectionToList(list, conn)
     implicit none
     ! -- dummy
-    type(ListType), intent(inout) :: list                           !< the list
-    class(SpatialModelConnectionType), pointer, intent(in) :: conn  !< the connection
+    type(ListType), intent(inout) :: list !< the list
+    class(SpatialModelConnectionType), pointer, intent(in) :: conn !< the connection
     ! -- local
     class(*), pointer :: obj
     !
@@ -525,8 +525,8 @@ contains ! module procedures
   !> @brief Get the connection from a list
   !<
   function GetSpatialModelConnectionFromList(list, idx) result(res)
-    type(ListType), intent(inout) :: list             !< the list
-    integer(I4B), intent(in) :: idx                   !< the index of the connection
+    type(ListType), intent(inout) :: list !< the list
+    integer(I4B), intent(in) :: idx !< the index of the connection
     class(SpatialModelConnectionType), pointer :: res !< the returned connection
 
     ! local

@@ -21,25 +21,25 @@ module GwfDisuModule
   public :: CastAsDisuType
 
   type, extends(DisBaseType) :: GwfDisuType
-    integer(I4B), pointer :: njausr => null()                                    ! user-specified nja size
-    integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
-    real(DP), pointer :: voffsettol => null()                                    ! vertical offset tolerance
-    real(DP), dimension(:, :), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:, :), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
-    real(DP), dimension(:), pointer, contiguous :: top1d => null()               ! (size:nodesuser) cell top elevation
-    real(DP), dimension(:), pointer, contiguous :: bot1d => null()               ! (size:nodesuser) cell bottom elevation
-    real(DP), dimension(:), pointer, contiguous :: area1d => null()              ! (size:nodesuser) cell area, in plan view
-    integer(I4B), dimension(:), pointer, contiguous :: iainp => null()           ! (size:nodesuser+1) user iac converted ia
-    integer(I4B), dimension(:), pointer, contiguous :: jainp => null()           ! (size:njausr) user-input ja array
-    integer(I4B), dimension(:), pointer, contiguous :: ihcinp => null()          ! (size:njausr) user-input ihc array
-    real(DP), dimension(:), pointer, contiguous :: cl12inp => null()             ! (size:njausr) user-input cl12 array
-    real(DP), dimension(:), pointer, contiguous :: hwvainp => null()             ! (size:njausr) user-input hwva array
-    real(DP), dimension(:), pointer, contiguous :: angldegxinp => null()         ! (size:njausr) user-input angldegx array
-    integer(I4B), pointer :: iangledegx => null()                                ! =1 when angle information was present in input, 0 otherwise
-    integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
-    integer(I4B), dimension(:), pointer, contiguous :: idomain => null()        ! idomain (nodes)
-    logical(LGP) :: readFromFile                                                 ! True, when DIS is read from file (almost always)
+    integer(I4B), pointer :: njausr => null() ! user-specified nja size
+    integer(I4B), pointer :: nvert => null() ! number of x,y vertices
+    real(DP), pointer :: voffsettol => null() ! vertical offset tolerance
+    real(DP), dimension(:, :), pointer, contiguous :: vertices => null() ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:, :), pointer, contiguous :: cellxy => null() ! cell center stored as 2d array of x and y
+    real(DP), dimension(:), pointer, contiguous :: top1d => null() ! (size:nodesuser) cell top elevation
+    real(DP), dimension(:), pointer, contiguous :: bot1d => null() ! (size:nodesuser) cell bottom elevation
+    real(DP), dimension(:), pointer, contiguous :: area1d => null() ! (size:nodesuser) cell area, in plan view
+    integer(I4B), dimension(:), pointer, contiguous :: iainp => null() ! (size:nodesuser+1) user iac converted ia
+    integer(I4B), dimension(:), pointer, contiguous :: jainp => null() ! (size:njausr) user-input ja array
+    integer(I4B), dimension(:), pointer, contiguous :: ihcinp => null() ! (size:njausr) user-input ihc array
+    real(DP), dimension(:), pointer, contiguous :: cl12inp => null() ! (size:njausr) user-input cl12 array
+    real(DP), dimension(:), pointer, contiguous :: hwvainp => null() ! (size:njausr) user-input hwva array
+    real(DP), dimension(:), pointer, contiguous :: angldegxinp => null() ! (size:njausr) user-input angldegx array
+    integer(I4B), pointer :: iangledegx => null() ! =1 when angle information was present in input, 0 otherwise
+    integer(I4B), dimension(:), pointer, contiguous :: iavert => null() ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javert => null() ! cell vertex pointer ja array
+    integer(I4B), dimension(:), pointer, contiguous :: idomain => null() ! idomain (nodes)
+    logical(LGP) :: readFromFile ! True, when DIS is read from file (almost always)
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
@@ -1306,24 +1306,24 @@ contains
     end if
     !
     ! -- write data
-    write (iunit) this%nodesuser                                                 ! nodes
-    write (iunit) this%nja                                                       ! nja
-    write (iunit) this%xorigin                                                   ! xorigin
-    write (iunit) this%yorigin                                                   ! yorigin
-    write (iunit) this%angrot                                                    ! angrot
-    write (iunit) this%top1d                                                     ! top
-    write (iunit) this%bot1d                                                     ! bot
-    write (iunit) this%con%iausr                                                 ! ia
-    write (iunit) this%con%jausr                                                 ! ja
-    write (iunit) icelltype                                                      ! icelltype
+    write (iunit) this%nodesuser ! nodes
+    write (iunit) this%nja ! nja
+    write (iunit) this%xorigin ! xorigin
+    write (iunit) this%yorigin ! yorigin
+    write (iunit) this%angrot ! angrot
+    write (iunit) this%top1d ! top
+    write (iunit) this%bot1d ! bot
+    write (iunit) this%con%iausr ! ia
+    write (iunit) this%con%jausr ! ja
+    write (iunit) icelltype ! icelltype
     !
     ! -- if vertices have been read then write additional data
     if (this%nvert > 0) then
-      write (iunit) this%vertices                                                ! vertices
-      write (iunit) (this%cellxy(1, i), i=1, this%nodesuser)                   ! cellx
-      write (iunit) (this%cellxy(2, i), i=1, this%nodesuser)                   ! celly
-      write (iunit) this%iavert                                                  ! iavert
-      write (iunit) this%javert                                                  ! javert
+      write (iunit) this%vertices ! vertices
+      write (iunit) (this%cellxy(1, i), i=1, this%nodesuser) ! cellx
+      write (iunit) (this%cellxy(2, i), i=1, this%nodesuser) ! celly
+      write (iunit) this%iavert ! iavert
+      write (iunit) this%javert ! javert
     end if
     !
     ! -- Close the file
@@ -1506,9 +1506,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(GwfDisuType), intent(in)  :: this
-    integer(I4B), intent(in)        :: node         ! the reduced node number
-    real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
+    class(GwfDisuType), intent(in) :: this
+    integer(I4B), intent(in) :: node ! the reduced node number
+    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
     ! -- local
     integer(I4B) :: nu
 ! ------------------------------------------------------------------------------
@@ -1525,8 +1525,8 @@ contains
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
-    class(GwfDisuType), intent(in)  :: this
-    character(len=*), intent(out)  :: dis_type
+    class(GwfDisuType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
 
     dis_type = "DISU"
 
@@ -1795,15 +1795,15 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisuType), intent(inout)                  :: this
-    character(len=*), intent(inout)                    :: line
-    integer(I4B), intent(inout)                        :: lloc
-    integer(I4B), intent(inout)                        :: istart
-    integer(I4B), intent(inout)                        :: istop
-    integer(I4B), intent(in)                           :: in
-    integer(I4B), intent(in)                           :: iout
+    class(GwfDisuType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
-    character(len=*), intent(in)                       :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: nval
     integer(I4B), dimension(:), pointer, contiguous :: itemp
@@ -1847,15 +1847,15 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisuType), intent(inout)              :: this
-    character(len=*), intent(inout)                :: line
-    integer(I4B), intent(inout)                    :: lloc
-    integer(I4B), intent(inout)                    :: istart
-    integer(I4B), intent(inout)                    :: istop
-    integer(I4B), intent(in)                       :: in
-    integer(I4B), intent(in)                       :: iout
+    class(GwfDisuType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    character(len=*), intent(in)                   :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: nval
     real(DP), dimension(:), pointer, contiguous :: dtemp
@@ -1909,17 +1909,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfDisuType), intent(inout)              :: this
+    class(GwfDisuType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    integer(I4B), intent(in)                       :: iout
-    integer(I4B), intent(in)                       :: iprint
-    integer(I4B), intent(in)                       :: idataun
-    character(len=*), intent(in)                   :: aname
-    character(len=*), intent(in)                   :: cdatafmp
-    integer(I4B), intent(in)                       :: nvaluesp
-    integer(I4B), intent(in)                       :: nwidthp
-    character(len=*), intent(in)                   :: editdesc
-    real(DP), intent(in)                           :: dinact
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: iprint
+    integer(I4B), intent(in) :: idataun
+    character(len=*), intent(in) :: aname
+    character(len=*), intent(in) :: cdatafmp
+    integer(I4B), intent(in) :: nvaluesp
+    integer(I4B), intent(in) :: nwidthp
+    character(len=*), intent(in) :: editdesc
+    real(DP), intent(in) :: dinact
     ! -- local
     integer(I4B) :: k, ifirst
     integer(I4B) :: nlay
@@ -2036,7 +2036,7 @@ contains
   !> @brief Cast base to DISU
   !<
   function CastAsDisuType(dis) result(disu)
-    class(*), pointer :: dis            !< base pointer to DISU object
+    class(*), pointer :: dis !< base pointer to DISU object
     class(GwfDisuType), pointer :: disu !< the resulting DISU pointer
 
     disu => null()

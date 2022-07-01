@@ -14,12 +14,12 @@ module GwtCncModule
   private
   public :: cnc_create
   !
-  character(len=LENFTYPE)       :: ftype = 'CNC'
+  character(len=LENFTYPE) :: ftype = 'CNC'
   character(len=LENPACKAGENAME) :: text = '             CNC'
   !
   type, extends(BndType) :: GwtCncType
-    real(DP), dimension(:), pointer, contiguous :: ratecncin => null()        !simulated flows into constant conc (excluding other concs)
-    real(DP), dimension(:), pointer, contiguous :: ratecncout => null()       !simulated flows out of constant conc (excluding to other concs)
+    real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
+    real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
   contains
     procedure :: bnd_rp => cnc_rp
     procedure :: bnd_ad => cnc_ad

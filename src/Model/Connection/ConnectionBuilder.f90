@@ -36,8 +36,8 @@ contains
   !! created connections.
   !<
   subroutine processSolution(this, solution)
-    class(ConnectionBuilderType) :: this            !< the connection builder object
-    class(BaseSolutionType), pointer :: solution    !< the solution for which the exchanges are processed
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    class(BaseSolutionType), pointer :: solution !< the solution for which the exchanges are processed
     ! local
     class(NumericalSolutionType), pointer :: numSol
     type(ListType) :: newConnections
@@ -80,9 +80,9 @@ contains
   subroutine processExchanges(this, exchanges, newConnections)
     use ListsModule, only: baseconnectionlist, baseexchangelist
     use VersionModule, only: IDEVELOPMODE
-    class(ConnectionBuilderType) :: this              !< the connection builder object
-    type(ListType), pointer, intent(in) :: exchanges  !< the list of exchanges to process
-    type(ListType), intent(inout) :: newConnections   !< the newly created connections
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    type(ListType), pointer, intent(in) :: exchanges !< the list of exchanges to process
+    type(ListType), intent(inout) :: newConnections !< the newly created connections
     ! local
     class(DisConnExchangeType), pointer :: conEx
     class(BaseExchangeType), pointer :: baseEx
@@ -160,9 +160,9 @@ contains
     use GwtGwtConnectionModule, only: GwtGwtConnectionType
     use GwfModule, only: GwfModelType
 
-    class(NumericalModelType), pointer, intent(in) :: model     !< the model for which the connection will be created
+    class(NumericalModelType), pointer, intent(in) :: model !< the model for which the connection will be created
     class(DisConnExchangeType), pointer, intent(in) :: exchange !< the type of connection
-    class(SpatialModelConnectionType), pointer :: connection    !< the created connection
+    class(SpatialModelConnectionType), pointer :: connection !< the created connection
 
     ! different concrete connection types:
     class(GwfGwfConnectionType), pointer :: flowConnection => null()
@@ -196,8 +196,8 @@ contains
   !! those exchanges which are replaced by a connection
   !<
   subroutine setConnectionsToSolution(this, connections, solution)
-    class(ConnectionBuilderType) :: this                          !< the connection builder object
-    type(ListType), intent(inout) :: connections                  !< the connections created for the solution
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    type(ListType), intent(inout) :: connections !< the connections created for the solution
     class(NumericalSolutionType), pointer, intent(in) :: solution !< the solution to which the connections are set
     ! local
     type(ListType) :: keepList
@@ -253,9 +253,9 @@ contains
   !! connected, through yet another exchange object.
   !<
   subroutine assignExchangesToConnections(this, exchanges, connections)
-    class(ConnectionBuilderType) :: this              !< the connection builder object
-    type(ListType), pointer, intent(in) :: exchanges  !< all exchanges in a solution
-    type(ListType), intent(inout) :: connections         !< all connections that are created for this solution
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    type(ListType), pointer, intent(in) :: exchanges !< all exchanges in a solution
+    type(ListType), intent(inout) :: connections !< all connections that are created for this solution
     ! local
     integer(I4B) :: iex, iconn
     class(DisConnExchangeType), pointer :: conEx

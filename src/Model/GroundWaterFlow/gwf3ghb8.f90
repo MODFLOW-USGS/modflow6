@@ -13,7 +13,7 @@ module ghbmodule
   public :: ghb_create
   public :: GhbType
   !
-  character(len=LENFTYPE)       :: ftype = 'GHB'
+  character(len=LENFTYPE) :: ftype = 'GHB'
   character(len=LENPACKAGENAME) :: text = '             GHB'
   !
   type, extends(BndType) :: GhbType

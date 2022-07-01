@@ -29,23 +29,23 @@ module GwfStoModule
     &['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
-    integer(I4B), pointer                            :: istor_coef => null()     !< indicates if ss is the storage coefficient
-    integer(I4B), pointer                            :: iconf_ss => null()       !< indicates if ss is 0 below the top of a layer
-    integer(I4B), pointer                            :: iorig_ss => null()       !< indicates if the original storage specific storage formulation should be used
-    integer(I4B), pointer                            :: iss => null()            !< steady state flag: 1 = steady, 0 = transient
-    integer(I4B), pointer                            :: iusesy => null()         !< flag set if any cell is convertible (0, 1)
-    integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !< confined (0) or convertible (1)
-    real(DP), dimension(:), pointer, contiguous      :: ss => null()             !< specfic storage or storage coefficient
-    real(DP), dimension(:), pointer, contiguous      :: sy => null()             !< specific yield
-    real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !< vector of specific storage rates
-    real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !< vector of specific yield rates
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !< pointer to model ibound
-    real(DP), pointer                                :: satomega => null()       !< newton-raphson saturation omega
-    integer(I4B), pointer                         :: integratechanges => null()  !< indicates if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
-    integer(I4B), pointer                            :: intvs => null()          !< TVS (time-varying storage) unit number (0 if unused)
-    type(TvsType), pointer                           :: tvs => null()            !< TVS object
-    real(DP), dimension(:), pointer, contiguous, private :: oldss => null()      !< previous time step specific storage
-    real(DP), dimension(:), pointer, contiguous, private :: oldsy => null()      !< previous time step specific yield
+    integer(I4B), pointer :: istor_coef => null() !< indicates if ss is the storage coefficient
+    integer(I4B), pointer :: iconf_ss => null() !< indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer :: iorig_ss => null() !< indicates if the original storage specific storage formulation should be used
+    integer(I4B), pointer :: iss => null() !< steady state flag: 1 = steady, 0 = transient
+    integer(I4B), pointer :: iusesy => null() !< flag set if any cell is convertible (0, 1)
+    integer(I4B), dimension(:), pointer, contiguous :: iconvert => null() !< confined (0) or convertible (1)
+    real(DP), dimension(:), pointer, contiguous :: ss => null() !< specfic storage or storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: sy => null() !< specific yield
+    real(DP), dimension(:), pointer, contiguous :: strgss => null() !< vector of specific storage rates
+    real(DP), dimension(:), pointer, contiguous :: strgsy => null() !< vector of specific yield rates
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    real(DP), pointer :: satomega => null() !< newton-raphson saturation omega
+    integer(I4B), pointer :: integratechanges => null() !< indicates if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
+    integer(I4B), pointer :: intvs => null() !< TVS (time-varying storage) unit number (0 if unused)
+    type(TvsType), pointer :: tvs => null() !< TVS object
+    real(DP), dimension(:), pointer, contiguous, private :: oldss => null() !< previous time step specific storage
+    real(DP), dimension(:), pointer, contiguous, private :: oldsy => null() !< previous time step specific yield
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -56,7 +56,7 @@ module GwfStoModule
     procedure :: sto_bd
     procedure :: sto_save_model_flows
     procedure :: sto_da
-    procedure          :: allocate_scalars
+    procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     !procedure, private :: register_handlers
     procedure, private :: read_options
@@ -73,10 +73,10 @@ contains
   !<
   subroutine sto_cr(stoobj, name_model, inunit, iout)
     ! -- dummy variables
-    type(GwfStoType), pointer :: stoobj         !< GwfStoType object
-    character(len=*), intent(in) :: name_model  !< name of model
-    integer(I4B), intent(in) :: inunit          !< package input file unit
-    integer(I4B), intent(in) :: iout            !< model listing file unit
+    type(GwfStoType), pointer :: stoobj !< GwfStoType object
+    character(len=*), intent(in) :: name_model !< name of model
+    integer(I4B), intent(in) :: inunit !< package input file unit
+    integer(I4B), intent(in) :: iout !< model listing file unit
     !
     ! -- Create the object
     allocate (stoobj)
@@ -108,9 +108,9 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy variables
-    class(GwfStoType)                       :: this            !< GwfStoType object
-    class(DisBaseType), pointer, intent(in) :: dis             !< model discretization object
-    integer(I4B), dimension(:), pointer, contiguous :: ibound  !< model ibound array
+    class(GwfStoType) :: this !< GwfStoType object
+    class(DisBaseType), pointer, intent(in) :: dis !< model discretization object
+    integer(I4B), dimension(:), pointer, contiguous :: ibound !< model ibound array
     ! -- local variables
     ! -- formats
     character(len=*), parameter :: fmtsto = &
@@ -158,7 +158,7 @@ contains
     use TdisModule, only: kper, nper
     implicit none
     ! -- dummy variables
-    class(GwfStoType) :: this  !< GwfStoType object
+    class(GwfStoType) :: this !< GwfStoType object
     ! -- local variables
     integer(I4B) :: ierr
     logical :: isfound, readss, readsy, endOfBlock
@@ -255,7 +255,7 @@ contains
     ! -- modules
     use TdisModule, only: kstp
     ! -- dummy variables
-    class(GwfStoType) :: this  !< GwfStoType object
+    class(GwfStoType) :: this !< GwfStoType object
     !
     ! -- Store ss and sy values from end of last time step if needed
     if (this%integratechanges /= 0 .and. kstp > 1) then
@@ -280,14 +280,14 @@ contains
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this                           !< GwfStoType object
-    integer(I4B), intent(in) :: kiter                   !< outer iteration number
-    real(DP), intent(in), dimension(:) :: hold          !< previous heads
-    real(DP), intent(in), dimension(:) :: hnew          !< current heads
-    integer(I4B), intent(in) :: njasln                  !< size of the A matrix for the solution
-    real(DP), dimension(njasln), intent(inout) :: amat  !< A matrix
-    integer(I4B), intent(in), dimension(:) :: idxglo    !< global index model to solution
-    real(DP), intent(inout), dimension(:) :: rhs        !< right-hand side
+    class(GwfStoType) :: this !< GwfStoType object
+    integer(I4B), intent(in) :: kiter !< outer iteration number
+    real(DP), intent(in), dimension(:) :: hold !< previous heads
+    real(DP), intent(in), dimension(:) :: hnew !< current heads
+    integer(I4B), intent(in) :: njasln !< size of the A matrix for the solution
+    real(DP), dimension(njasln), intent(inout) :: amat !< A matrix
+    integer(I4B), intent(in), dimension(:) :: idxglo !< global index model to solution
+    real(DP), intent(inout), dimension(:) :: rhs !< right-hand side
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -411,14 +411,14 @@ contains
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this                            !< GwfStoType object
-    integer(I4B), intent(in) :: kiter                    !< outer iteration number
-    real(DP), intent(in), dimension(:) :: hold           !< previous heads
-    real(DP), intent(in), dimension(:) :: hnew           !< current heads
-    integer(I4B), intent(in) :: njasln                   !< size of the A matrix for the solution
-    real(DP), dimension(njasln), intent(inout) :: amat   !< A matrix
-    integer(I4B), intent(in), dimension(:) :: idxglo     !< global index model to solution
-    real(DP), intent(inout), dimension(:) :: rhs         !< right-hand side
+    class(GwfStoType) :: this !< GwfStoType object
+    integer(I4B), intent(in) :: kiter !< outer iteration number
+    real(DP), intent(in), dimension(:) :: hold !< previous heads
+    real(DP), intent(in), dimension(:) :: hnew !< current heads
+    integer(I4B), intent(in) :: njasln !< size of the A matrix for the solution
+    real(DP), dimension(njasln), intent(inout) :: amat !< A matrix
+    integer(I4B), intent(in), dimension(:) :: idxglo !< global index model to solution
+    real(DP), intent(inout), dimension(:) :: rhs !< right-hand side
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -509,10 +509,10 @@ contains
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
-    class(GwfStoType) :: this                                    !< GwfStoType object
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja  !< connection flows
-    real(DP), dimension(:), contiguous, intent(in) :: hnew       !< current head
-    real(DP), dimension(:), contiguous, intent(in) :: hold       !< previous head
+    class(GwfStoType) :: this !< GwfStoType object
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja !< connection flows
+    real(DP), dimension(:), contiguous, intent(in) :: hnew !< current head
+    real(DP), dimension(:), contiguous, intent(in) :: hold !< previous head
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: idiag
@@ -638,9 +638,9 @@ contains
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy variables
-    class(GwfStoType) :: this                          !< GwfStoType object
-    integer(I4B), intent(in) :: isuppress_output       !< flag to suppress model output
-    type(BudgetType), intent(inout) :: model_budget    !< model budget object
+    class(GwfStoType) :: this !< GwfStoType object
+    integer(I4B), intent(in) :: isuppress_output !< flag to suppress model output
+    type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local variables
     real(DP) :: rin
     real(DP) :: rout
@@ -668,9 +668,9 @@ contains
   !<
   subroutine sto_save_model_flows(this, icbcfl, icbcun)
     ! -- dummy variables
-    class(GwfStoType) :: this           !< GwfStoType object
-    integer(I4B), intent(in) :: icbcfl  !< flag to output budget data
-    integer(I4B), intent(in) :: icbcun  !< cell-by-cell file unit number
+    class(GwfStoType) :: this !< GwfStoType object
+    integer(I4B), intent(in) :: icbcfl !< flag to output budget data
+    integer(I4B), intent(in) :: icbcun !< cell-by-cell file unit number
     ! -- local variables
     integer(I4B) :: ibinun
     integer(I4B) :: iprint, nvaluesp, nwidthp
@@ -718,7 +718,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(GwfStoType) :: this  !< GwfStoType object
+    class(GwfStoType) :: this !< GwfStoType object
     !
     ! -- TVS
     if (this%intvs /= 0) then
@@ -769,7 +769,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy variables
-    class(GwfStoType) :: this  !< GwfStoType object
+    class(GwfStoType) :: this !< GwfStoType object
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -846,7 +846,7 @@ contains
   subroutine read_options(this)
     ! -- modules
     ! -- dummy variables
-    class(GwfStoType) :: this  !< GwfStoType object
+    class(GwfStoType) :: this !< GwfStoType object
     ! -- local variables
     character(len=LINELENGTH) :: keyword, fname
     integer(I4B) :: ierr
@@ -944,7 +944,7 @@ contains
   subroutine read_data(this)
     ! -- modules
     ! -- dummy variables
-    class(GwfStotype) :: this  !< GwfStoType object
+    class(GwfStotype) :: this !< GwfStoType object
     ! -- local variables
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
@@ -1079,7 +1079,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(GwfStoType) :: this  !< GwfStoType object
+    class(GwfStoType) :: this !< GwfStoType object
     ! -- local variables
     integer(I4B) :: n
     !

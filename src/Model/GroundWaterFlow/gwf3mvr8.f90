@@ -123,25 +123,25 @@ module GwfMvrModule
   public :: GwfMvrType, mvr_cr
 
   type, extends(NumericalPackageType) :: GwfMvrType
-    integer(I4B), pointer                            :: ibudgetout => null()     !< binary budget output file
-    integer(I4B), pointer                            :: ibudcsv => null()        !< unit number for csv budget output file
-    integer(I4B), pointer                            :: maxmvr => null()         !< max number of movers to be specified
-    integer(I4B), pointer                            :: maxpackages => null()    !< max number of packages to be specified
-    integer(I4B), pointer                            :: maxcomb => null()        !< max number of combination of packages
-    integer(I4B), pointer                            :: nmvr => null()           !< number of movers for current stress period
-    integer(I4B), pointer                            :: iexgmvr => null()        !< indicate mover is for an exchange (not for a single model)
-    integer(I4B), pointer                            :: imodelnames => null()    !< indicate package input file has model names in it
-    integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !< number of entries for each combination
+    integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: maxmvr => null() !< max number of movers to be specified
+    integer(I4B), pointer :: maxpackages => null() !< max number of packages to be specified
+    integer(I4B), pointer :: maxcomb => null() !< max number of combination of packages
+    integer(I4B), pointer :: nmvr => null() !< number of movers for current stress period
+    integer(I4B), pointer :: iexgmvr => null() !< indicate mover is for an exchange (not for a single model)
+    integer(I4B), pointer :: imodelnames => null() !< indicate package input file has model names in it
+    integer(I4B), dimension(:), pointer, contiguous :: ientries => null() !< number of entries for each combination
     character(len=LENMEMPATH), &
-      dimension(:), pointer, contiguous              :: pckMemPaths              !< memory paths of all packages used in this mover
+      dimension(:), pointer, contiguous :: pckMemPaths !< memory paths of all packages used in this mover
     character(len=LENPACKAGENAME), &
-      dimension(:), pointer, contiguous              :: paknames => null()       !< array of package names
-    type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !< array of movers
-    type(GwfMvrPeriodDataType), pointer              :: gwfmvrperioddata => null() !< input data object
-    type(BudgetType), pointer                        :: budget => null()         !< mover budget object (used to write table)
-    type(BudgetObjectType), pointer                  :: budobj => null()         !< new budget container (used to write binary file)
+      dimension(:), pointer, contiguous :: paknames => null() !< array of package names
+    type(MvrType), dimension(:), pointer, contiguous :: mvr => null() !< array of movers
+    type(GwfMvrPeriodDataType), pointer :: gwfmvrperioddata => null() !< input data object
+    type(BudgetType), pointer :: budget => null() !< mover budget object (used to write table)
+    type(BudgetObjectType), pointer :: budobj => null() !< new budget container (used to write binary file)
     type(PackageMoverType), &
-      dimension(:), pointer, contiguous    :: pakmovers => null()                !< pointer to package mover objects
+      dimension(:), pointer, contiguous :: pakmovers => null() !< pointer to package mover objects
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()

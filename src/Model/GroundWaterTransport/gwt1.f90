@@ -35,25 +35,25 @@ module GwtModule
 
   type, extends(TransportModelType) :: GwtModelType
 
-    type(GwtIcType), pointer :: ic => null()                ! initial conditions package
-    type(GwtFmiType), pointer :: fmi => null()                ! flow model interface
-    type(GwtMstType), pointer :: mst => null()                ! mass storage and transfer package
-    type(GwtAdvType), pointer :: adv => null()                ! advection package
-    type(GwtDspType), pointer :: dsp => null()                ! dispersion package
-    type(GwtSsmType), pointer :: ssm => null()                ! source sink mixing package
-    type(GwtMvtType), pointer :: mvt => null()                ! mover transport package
-    type(GwtOcType), pointer :: oc => null()                ! output control package
-    type(GwtObsType), pointer :: obs => null()                ! observation package
-    type(BudgetType), pointer :: budget => null()                ! budget object
-    integer(I4B), pointer :: inic => null()                ! unit number IC
-    integer(I4B), pointer :: infmi => null()                ! unit number FMI
-    integer(I4B), pointer :: inmvt => null()                ! unit number MVT
-    integer(I4B), pointer :: inmst => null()                ! unit number MST
-    integer(I4B), pointer :: inadv => null()                ! unit number ADV
-    integer(I4B), pointer :: indsp => null()                ! unit number DSP
-    integer(I4B), pointer :: inssm => null()                ! unit number SSM
-    integer(I4B), pointer :: inoc => null()                ! unit number OC
-    integer(I4B), pointer :: inobs => null()                ! unit number OBS
+    type(GwtIcType), pointer :: ic => null() ! initial conditions package
+    type(GwtFmiType), pointer :: fmi => null() ! flow model interface
+    type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
+    type(GwtAdvType), pointer :: adv => null() ! advection package
+    type(GwtDspType), pointer :: dsp => null() ! dispersion package
+    type(GwtSsmType), pointer :: ssm => null() ! source sink mixing package
+    type(GwtMvtType), pointer :: mvt => null() ! mover transport package
+    type(GwtOcType), pointer :: oc => null() ! output control package
+    type(GwtObsType), pointer :: obs => null() ! observation package
+    type(BudgetType), pointer :: budget => null() ! budget object
+    integer(I4B), pointer :: inic => null() ! unit number IC
+    integer(I4B), pointer :: infmi => null() ! unit number FMI
+    integer(I4B), pointer :: inmvt => null() ! unit number MVT
+    integer(I4B), pointer :: inmst => null() ! unit number MST
+    integer(I4B), pointer :: inadv => null() ! unit number ADV
+    integer(I4B), pointer :: indsp => null() ! unit number DSP
+    integer(I4B), pointer :: inssm => null() ! unit number SSM
+    integer(I4B), pointer :: inoc => null() ! unit number OC
+    integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
 
@@ -88,11 +88,11 @@ module GwtModule
   integer(I4B), parameter :: NIUNIT = 100
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
-    'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
-    'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
-    'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
-    'API6 ', '     ', '     ', '     ', '     ', & ! 25
-    75*'     '/
+            &'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
+            &'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
+            &'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
+            &'API6 ', '     ', '     ', '     ', '     ', & ! 25
+            &75*'     '/
 
 contains
 
@@ -126,17 +126,17 @@ contains
     use BudgetModule, only: budget_cr
     use NameFileModule, only: NameFileType
     ! -- dummy
-    character(len=*), intent(in)  :: filename
-    integer(I4B), intent(in)      :: id
-    character(len=*), intent(in)  :: modelname
+    character(len=*), intent(in) :: filename
+    integer(I4B), intent(in) :: id
+    character(len=*), intent(in) :: modelname
     ! -- local
     integer(I4B) :: indis, indis6, indisu6, indisv6
     integer(I4B) :: ipakid, i, j, iu, ipaknum
     character(len=LINELENGTH) :: errmsg
     character(len=LENPACKAGENAME) :: pakname
     type(NameFileType) :: namefile_obj
-    type(GwtModelType), pointer        :: this
-    class(BaseModelType), pointer       :: model
+    type(GwtModelType), pointer :: this
+    class(BaseModelType), pointer :: model
     integer(I4B) :: nwords
     character(len=LINELENGTH), allocatable, dimension(:) :: words
 ! ------------------------------------------------------------------------------
@@ -1084,7 +1084,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtModelType) :: this
-    character(len=*), intent(in)  :: modelname
+    character(len=*), intent(in) :: modelname
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate members from parent class
@@ -1263,7 +1263,7 @@ contains
 
   !> @brief Cast to GwtModelType
   function CastAsGwtModel(model) result(gwtmodel)
-    class(*), pointer :: model               !< The object to be cast
+    class(*), pointer :: model !< The object to be cast
     class(GwtModelType), pointer :: gwtmodel !< The GWT model
 
     gwtmodel => null()

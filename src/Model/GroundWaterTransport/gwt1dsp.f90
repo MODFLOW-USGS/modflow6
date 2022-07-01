@@ -16,31 +16,31 @@ module GwtDspModule
 
   type, extends(NumericalPackageType) :: GwtDspType
 
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()    ! pointer to GWT model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()    ! pointer to GWT fmi object
-    real(DP), dimension(:), pointer, contiguous      :: porosity => null()    ! pointer to GWT storage porosity
-    real(DP), dimension(:), pointer, contiguous      :: diffc => null()    ! molecular diffusion coefficient for each cell
-    real(DP), dimension(:), pointer, contiguous      :: alh => null()    ! longitudinal horizontal dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: alv => null()    ! longitudinal vertical dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: ath1 => null()    ! transverse horizontal dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: ath2 => null()    ! transverse horizontal dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: atv => null()    ! transverse vertical dispersivity
-    integer(I4B), pointer                            :: idiffc => null()    ! flag indicating diffusion is active
-    integer(I4B), pointer                            :: idisp => null()    ! flag indicating mechanical dispersion is active
-    integer(I4B), pointer                            :: ixt3d => null()    ! flag indicating xt3d is active
-    type(Xt3dType), pointer                          :: xt3d => null()    ! xt3d object
-    real(DP), dimension(:), pointer, contiguous      :: dispcoef => null()    ! disp coefficient (only if xt3d not active)
-    integer(I4B), pointer                            :: id22 => null()    ! flag indicating d22 is available
-    integer(I4B), pointer                            :: id33 => null()    ! flag indicating d33 is available
-    real(DP), dimension(:), pointer, contiguous      :: d11 => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer, contiguous      :: d22 => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer, contiguous      :: d33 => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer, contiguous      :: angle1 => null()    ! rotation angle 1
-    real(DP), dimension(:), pointer, contiguous      :: angle2 => null()    ! rotation angle 2
-    real(DP), dimension(:), pointer, contiguous      :: angle3 => null()    ! rotation angle 3
-    integer(I4B), pointer                            :: iangle1 => null()    ! flag indicating angle1 is available
-    integer(I4B), pointer                            :: iangle2 => null()    ! flag indicating angle2 is available
-    integer(I4B), pointer                            :: iangle3 => null()    ! flag indicating angle3 is available
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWT model ibound
+    type(GwtFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() ! pointer to GWT storage porosity
+    real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
+    real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous :: alv => null() ! longitudinal vertical dispersivity
+    real(DP), dimension(:), pointer, contiguous :: ath1 => null() ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous :: ath2 => null() ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous :: atv => null() ! transverse vertical dispersivity
+    integer(I4B), pointer :: idiffc => null() ! flag indicating diffusion is active
+    integer(I4B), pointer :: idisp => null() ! flag indicating mechanical dispersion is active
+    integer(I4B), pointer :: ixt3d => null() ! flag indicating xt3d is active
+    type(Xt3dType), pointer :: xt3d => null() ! xt3d object
+    real(DP), dimension(:), pointer, contiguous :: dispcoef => null() ! disp coefficient (only if xt3d not active)
+    integer(I4B), pointer :: id22 => null() ! flag indicating d22 is available
+    integer(I4B), pointer :: id33 => null() ! flag indicating d33 is available
+    real(DP), dimension(:), pointer, contiguous :: d11 => null() ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous :: d22 => null() ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous :: d33 => null() ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous :: angle1 => null() ! rotation angle 1
+    real(DP), dimension(:), pointer, contiguous :: angle2 => null() ! rotation angle 2
+    real(DP), dimension(:), pointer, contiguous :: angle3 => null() ! rotation angle 3
+    integer(I4B), pointer :: iangle1 => null() ! flag indicating angle1 is available
+    integer(I4B), pointer :: iangle2 => null() ! flag indicating angle2 is available
+    integer(I4B), pointer :: iangle3 => null() ! flag indicating angle3 is available
 
   contains
 
@@ -577,7 +577,7 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(6)           :: lname
+    logical, dimension(6) :: lname
     character(len=24), dimension(6) :: aname
     ! -- formats
     ! -- data
@@ -714,7 +714,7 @@ contains
   !<
   subroutine set_data(this, grid_data)
     use MemoryManagerModule, only: mem_reallocate
-    class(GwtDspType) :: this                         !< this DSP package
+    class(GwtDspType) :: this !< this DSP package
     type(GwtDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
     ! local
     integer(I4B) :: i

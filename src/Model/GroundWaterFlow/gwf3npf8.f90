@@ -29,109 +29,109 @@ module GwfNpfModule
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
-    type(GwfIcType), pointer                        :: ic => null()    !< initial conditions object
-    type(Xt3dType), pointer                         :: xt3d => null()    !< xt3d pointer
-    integer(I4B), pointer                           :: iname => null()    !< length of variable names
-    character(len=24), dimension(:), pointer        :: aname => null()    !< variable names
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()    !< pointer to model ibound
-    real(DP), dimension(:), pointer, contiguous     :: hnew => null()    !< pointer to model xnew
-    integer(I4B), pointer                           :: ixt3d => null()    !< xt3d flag (0 is off, 1 is lhs, 2 is rhs)
-    integer(I4B), pointer                           :: iperched => null()    !< vertical flow corrections if 1
-    integer(I4B), pointer                           :: ivarcv => null()    !< CV is function of water table
-    integer(I4B), pointer                           :: idewatcv => null()    !< CV may be a discontinuous function of water table
-    integer(I4B), pointer                           :: ithickstrt => null()    !< thickstrt option flag
-    integer(I4B), pointer                           :: igwfnewtonur => null()    !< newton head dampening using node bottom option flag
-    integer(I4B), pointer                           :: iusgnrhc => null()    !< MODFLOW-USG saturation calculation option flag
-    integer(I4B), pointer                           :: inwtupw => null()    !< MODFLOW-NWT upstream weighting option flag
-    integer(I4B), pointer                           :: icalcspdis => null()    !< Calculate specific discharge at cell centers
-    integer(I4B), pointer                           :: isavspdis => null()    !< Save specific discharge at cell centers
-    integer(I4B), pointer                           :: isavsat => null()    !< Save sat to budget file
-    real(DP), pointer                               :: hnoflo => null()    !< default is 1.e30
-    real(DP), pointer                               :: satomega => null()    !< newton-raphson saturation omega
-    integer(I4B), pointer                            :: irewet => null()    !< rewetting (0:off, 1:on)
-    integer(I4B), pointer                            :: iwetit => null()    !< wetting interval (default is 1)
-    integer(I4B), pointer                            :: ihdwet => null()    !< (0 or not 0)
-    integer(I4B), pointer                           :: icellavg => null()    !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
-    real(DP), pointer                               :: wetfct => null()    !< wetting factor
-    real(DP), pointer                               :: hdry => null()    !< default is -1.d30
-    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()    !< confined (0) or convertible (1)
-    integer(I4B), dimension(:), pointer, contiguous:: ithickstartflag => null()  !< array of flags for handling the thickstrt option
+    type(GwfIcType), pointer :: ic => null() !< initial conditions object
+    type(Xt3dType), pointer :: xt3d => null() !< xt3d pointer
+    integer(I4B), pointer :: iname => null() !< length of variable names
+    character(len=24), dimension(:), pointer :: aname => null() !< variable names
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous :: hnew => null() !< pointer to model xnew
+    integer(I4B), pointer :: ixt3d => null() !< xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer :: iperched => null() !< vertical flow corrections if 1
+    integer(I4B), pointer :: ivarcv => null() !< CV is function of water table
+    integer(I4B), pointer :: idewatcv => null() !< CV may be a discontinuous function of water table
+    integer(I4B), pointer :: ithickstrt => null() !< thickstrt option flag
+    integer(I4B), pointer :: igwfnewtonur => null() !< newton head dampening using node bottom option flag
+    integer(I4B), pointer :: iusgnrhc => null() !< MODFLOW-USG saturation calculation option flag
+    integer(I4B), pointer :: inwtupw => null() !< MODFLOW-NWT upstream weighting option flag
+    integer(I4B), pointer :: icalcspdis => null() !< Calculate specific discharge at cell centers
+    integer(I4B), pointer :: isavspdis => null() !< Save specific discharge at cell centers
+    integer(I4B), pointer :: isavsat => null() !< Save sat to budget file
+    real(DP), pointer :: hnoflo => null() !< default is 1.e30
+    real(DP), pointer :: satomega => null() !< newton-raphson saturation omega
+    integer(I4B), pointer :: irewet => null() !< rewetting (0:off, 1:on)
+    integer(I4B), pointer :: iwetit => null() !< wetting interval (default is 1)
+    integer(I4B), pointer :: ihdwet => null() !< (0 or not 0)
+    integer(I4B), pointer :: icellavg => null() !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
+    real(DP), pointer :: wetfct => null() !< wetting factor
+    real(DP), pointer :: hdry => null() !< default is -1.d30
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< confined (0) or convertible (1)
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag => null() !< array of flags for handling the thickstrt option
     !
     ! K properties
-    real(DP), dimension(:), pointer, contiguous     :: k11 => null()    !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer, contiguous     :: k22 => null()    !< hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer, contiguous     :: k33 => null()    !< hydraulic conductivity; if specified then this is Kz prior to rotation
-    integer(I4B), pointer                           :: iavgkeff => null()    !< effective conductivity averaging (0: harmonic, 1: arithmetic)
-    integer(I4B), pointer                           :: ik22 => null()    !< flag that k22 is specified
-    integer(I4B), pointer                           :: ik33 => null()    !< flag that k33 is specified
-    integer(I4B), pointer                           :: ik22overk => null()    !< flag that k22 is specified as anisotropy ratio
-    integer(I4B), pointer                           :: ik33overk => null()    !< flag that k33 is specified as anisotropy ratio
-    integer(I4B), pointer                           :: iangle1 => null()    !< flag to indicate angle1 was read
-    integer(I4B), pointer                           :: iangle2 => null()    !< flag to indicate angle2 was read
-    integer(I4B), pointer                           :: iangle3 => null()    !< flag to indicate angle3 was read
-    real(DP), dimension(:), pointer, contiguous     :: angle1 => null()    !< k ellipse rotation in xy plane around z axis (yaw)
-    real(DP), dimension(:), pointer, contiguous     :: angle2 => null()    !< k ellipse rotation up from xy plane around y axis (pitch)
-    real(DP), dimension(:), pointer, contiguous     :: angle3 => null()    !< k tensor rotation around x axis (roll)
+    real(DP), dimension(:), pointer, contiguous :: k11 => null() !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k22 => null() !< hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k33 => null() !< hydraulic conductivity; if specified then this is Kz prior to rotation
+    integer(I4B), pointer :: iavgkeff => null() !< effective conductivity averaging (0: harmonic, 1: arithmetic)
+    integer(I4B), pointer :: ik22 => null() !< flag that k22 is specified
+    integer(I4B), pointer :: ik33 => null() !< flag that k33 is specified
+    integer(I4B), pointer :: ik22overk => null() !< flag that k22 is specified as anisotropy ratio
+    integer(I4B), pointer :: ik33overk => null() !< flag that k33 is specified as anisotropy ratio
+    integer(I4B), pointer :: iangle1 => null() !< flag to indicate angle1 was read
+    integer(I4B), pointer :: iangle2 => null() !< flag to indicate angle2 was read
+    integer(I4B), pointer :: iangle3 => null() !< flag to indicate angle3 was read
+    real(DP), dimension(:), pointer, contiguous :: angle1 => null() !< k ellipse rotation in xy plane around z axis (yaw)
+    real(DP), dimension(:), pointer, contiguous :: angle2 => null() !< k ellipse rotation up from xy plane around y axis (pitch)
+    real(DP), dimension(:), pointer, contiguous :: angle3 => null() !< k tensor rotation around x axis (roll)
     !
-    integer(I4B), pointer                           :: iwetdry => null()    !< flag to indicate angle1 was read
-    real(DP), dimension(:), pointer, contiguous     :: wetdry => null()    !< wetdry array
-    real(DP), dimension(:), pointer, contiguous     :: sat => null()    !< saturation (0. to 1.) for each cell
-    real(DP), dimension(:), pointer, contiguous     :: condsat => null()    !< saturated conductance (symmetric array)
-    real(DP), pointer                               :: satmin => null()    !< minimum saturated thickness
-    integer(I4B), dimension(:), pointer, contiguous :: ibotnode => null()    !< bottom node used if igwfnewtonur /= 0
+    integer(I4B), pointer :: iwetdry => null() !< flag to indicate angle1 was read
+    real(DP), dimension(:), pointer, contiguous :: wetdry => null() !< wetdry array
+    real(DP), dimension(:), pointer, contiguous :: sat => null() !< saturation (0. to 1.) for each cell
+    real(DP), dimension(:), pointer, contiguous :: condsat => null() !< saturated conductance (symmetric array)
+    real(DP), pointer :: satmin => null() !< minimum saturated thickness
+    integer(I4B), dimension(:), pointer, contiguous :: ibotnode => null() !< bottom node used if igwfnewtonur /= 0
     !
-    real(DP), dimension(:, :), pointer, contiguous  :: spdis => null()    !< specific discharge : qx, qy, qz (nodes, 3)
-    integer(I4B), pointer                           :: nedges => null()    !< number of cell edges
-    integer(I4B), pointer                           :: lastedge => null()    !< last edge number
-    integer(I4B), dimension(:), pointer, contiguous :: nodedge => null()    !< array of node numbers that have edges
-    integer(I4B), dimension(:), pointer, contiguous :: ihcedge => null()    !< edge type (horizontal or vertical)
-    real(DP), dimension(:, :), pointer, contiguous  :: propsedge => null()    !< edge properties (Q, area, nx, ny, distance)
+    real(DP), dimension(:, :), pointer, contiguous :: spdis => null() !< specific discharge : qx, qy, qz (nodes, 3)
+    integer(I4B), pointer :: nedges => null() !< number of cell edges
+    integer(I4B), pointer :: lastedge => null() !< last edge number
+    integer(I4B), dimension(:), pointer, contiguous :: nodedge => null() !< array of node numbers that have edges
+    integer(I4B), dimension(:), pointer, contiguous :: ihcedge => null() !< edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
     !
-    integer(I4B), pointer                           :: intvk => null()    ! TVK (time-varying K) unit number (0 if unused)
-    type(TvkType), pointer                          :: tvk => null()    ! TVK object
-    integer(I4B), pointer                           :: kchangeper => null()    ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), pointer                           :: kchangestp => null()    ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null()    ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
+    integer(I4B), pointer :: intvk => null() ! TVK (time-varying K) unit number (0 if unused)
+    type(TvkType), pointer :: tvk => null() ! TVK object
+    integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
     !
   contains
-    procedure                               :: npf_df
-    procedure                               :: npf_ac
-    procedure                               :: npf_mc
-    procedure                               :: npf_ar
-    procedure                               :: npf_rp
-    procedure                               :: npf_ad
-    procedure                               :: npf_cf
-    procedure                               :: npf_fc
-    procedure                               :: npf_fn
-    procedure                               :: npf_cq
-    procedure                               :: npf_save_model_flows
-    procedure                               :: npf_nur
-    procedure                               :: npf_print_model_flows
-    procedure                               :: npf_da
-    procedure, private                      :: thksat => sgwf_npf_thksat
-    procedure, private                      :: qcalc => sgwf_npf_qcalc
-    procedure, private                      :: wd => sgwf_npf_wetdry
-    procedure, private                      :: wdmsg => sgwf_npf_wdmsg
-    procedure                               :: allocate_scalars
-    procedure, private                      :: allocate_arrays
-    procedure, private                      :: read_options
-    procedure, private                      :: set_options
-    procedure, private                      :: rewet_options
-    procedure, private                      :: check_options
-    procedure, private                      :: read_grid_data
-    procedure, private                      :: set_grid_data
-    procedure, private                      :: prepcheck
-    procedure, private                      :: preprocess_input
-    procedure, private                      :: calc_condsat
-    procedure, private                      :: calc_initial_sat
-    procedure, public                       :: rewet_check
-    procedure, public                       :: hy_eff
-    procedure, public                       :: calc_spdis
-    procedure, public                       :: sav_spdis
-    procedure, public                       :: sav_sat
-    procedure, public                       :: increase_edge_count
-    procedure, public                       :: set_edge_properties
-    procedure, public                       :: calcSatThickness
+    procedure :: npf_df
+    procedure :: npf_ac
+    procedure :: npf_mc
+    procedure :: npf_ar
+    procedure :: npf_rp
+    procedure :: npf_ad
+    procedure :: npf_cf
+    procedure :: npf_fc
+    procedure :: npf_fn
+    procedure :: npf_cq
+    procedure :: npf_save_model_flows
+    procedure :: npf_nur
+    procedure :: npf_print_model_flows
+    procedure :: npf_da
+    procedure, private :: thksat => sgwf_npf_thksat
+    procedure, private :: qcalc => sgwf_npf_qcalc
+    procedure, private :: wd => sgwf_npf_wetdry
+    procedure, private :: wdmsg => sgwf_npf_wdmsg
+    procedure :: allocate_scalars
+    procedure, private :: allocate_arrays
+    procedure, private :: read_options
+    procedure, private :: set_options
+    procedure, private :: rewet_options
+    procedure, private :: check_options
+    procedure, private :: read_grid_data
+    procedure, private :: set_grid_data
+    procedure, private :: prepcheck
+    procedure, private :: preprocess_input
+    procedure, private :: calc_condsat
+    procedure, private :: calc_initial_sat
+    procedure, public :: rewet_check
+    procedure, public :: hy_eff
+    procedure, public :: calc_spdis
+    procedure, public :: sav_spdis
+    procedure, public :: sav_sat
+    procedure, public :: increase_edge_count
+    procedure, public :: set_edge_properties
+    procedure, public :: calcSatThickness
   end type
 
 contains
@@ -187,11 +187,11 @@ contains
     use SimModule, only: store_error
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
-    class(GwfNpftype) :: this                                     !< instance of the NPF package
-    class(DisBaseType), pointer, intent(inout) :: dis             !< the pointer to the discretization
-    type(Xt3dType), pointer :: xt3d                               !< the pointer to the XT3D 'package'
-    integer(I4B), intent(in) :: ingnc                             !< ghostnodes enabled? (>0 means yes)
-    type(GwfNpfOptionsType), optional, intent(in) :: npf_options  !< the optional options, for when not constructing from file
+    class(GwfNpftype) :: this !< instance of the NPF package
+    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
+    type(Xt3dType), pointer :: xt3d !< the pointer to the XT3D 'package'
+    integer(I4B), intent(in) :: ingnc !< ghostnodes enabled? (>0 means yes)
+    type(GwfNpfOptionsType), optional, intent(in) :: npf_options !< the optional options, for when not constructing from file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader = &
@@ -293,11 +293,11 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfNpftype) :: this                                                 !< instance of the NPF package
-    type(GwfIcType), pointer, intent(in) :: ic                                !< initial conditions
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound  !< model ibound array
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew        !< pointer to model head array
-    type(GwfNpfGridDataType), optional, intent(in) :: grid_data               !< (optional) data structure with NPF grid data
+    class(GwfNpftype) :: this !< instance of the NPF package
+    type(GwfIcType), pointer, intent(in) :: ic !< initial conditions
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound !< model ibound array
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
+    type(GwfNpfGridDataType), optional, intent(in) :: grid_data !< (optional) data structure with NPF grid data
     ! -- local
     ! -- formats
     ! -- data
@@ -1694,7 +1694,7 @@ contains
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n, ierr
     logical :: isfound
-    logical, dimension(8)           :: lname
+    logical, dimension(8) :: lname
     character(len=24), dimension(:), pointer :: aname
     character(len=24), dimension(8) :: varinames
     ! -- formats
@@ -3616,10 +3616,10 @@ contains
   !<
   function calcSatThickness(this, n, m, ihc) result(satThickness)
     class(GwfNpfType) :: this !< this NPF instance
-    integer(I4B) :: n         !< node n
-    integer(I4B) :: m         !< node m
-    integer(I4B) :: ihc       !< 1 = horizonal connection, 0 for vertical
-    real(DP) :: satThickness  !< saturated thickness
+    integer(I4B) :: n !< node n
+    integer(I4B) :: m !< node m
+    integer(I4B) :: ihc !< 1 = horizonal connection, 0 for vertical
+    real(DP) :: satThickness !< saturated thickness
 
     satThickness = thksatnm(this%ibound(n), &
                             this%ibound(m), &

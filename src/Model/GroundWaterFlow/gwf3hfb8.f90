@@ -14,34 +14,34 @@ module GwfHfbModule
   public :: hfb_cr
 
   type, extends(NumericalPackageType) :: GwfHfbType
-    integer(I4B), pointer :: maxhfb => null()                                    !max number of hfb's
-    integer(I4B), pointer :: nhfb => null()                                      !number of hfb's
-    integer(I4B), dimension(:), pointer, contiguous :: noden => null()           !first cell
-    integer(I4B), dimension(:), pointer, contiguous :: nodem => null()           !second cell
-    integer(I4B), dimension(:), pointer, contiguous :: idxloc => null()          !position in model ja
-    real(DP), dimension(:), pointer, contiguous :: hydchr => null()              !hydraulic characteristic of the barrier
-    real(DP), dimension(:), pointer, contiguous :: csatsav => null()             !value of condsat prior to hfb modification
-    real(DP), dimension(:), pointer, contiguous :: condsav => null()             !saved conductance of combined npf and hfb
-    type(Xt3dType), pointer :: xt3d => null()                                    !pointer to xt3d object
+    integer(I4B), pointer :: maxhfb => null() !max number of hfb's
+    integer(I4B), pointer :: nhfb => null() !number of hfb's
+    integer(I4B), dimension(:), pointer, contiguous :: noden => null() !first cell
+    integer(I4B), dimension(:), pointer, contiguous :: nodem => null() !second cell
+    integer(I4B), dimension(:), pointer, contiguous :: idxloc => null() !position in model ja
+    real(DP), dimension(:), pointer, contiguous :: hydchr => null() !hydraulic characteristic of the barrier
+    real(DP), dimension(:), pointer, contiguous :: csatsav => null() !value of condsat prior to hfb modification
+    real(DP), dimension(:), pointer, contiguous :: condsav => null() !saved conductance of combined npf and hfb
+    type(Xt3dType), pointer :: xt3d => null() !pointer to xt3d object
     !
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()         !pointer to model ibound
-    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to model icelltype
-    integer(I4B), dimension(:), pointer, contiguous :: ihc => null()             !pointer to model ihc
-    integer(I4B), dimension(:), pointer, contiguous :: ia => null()             !pointer to model ia
-    integer(I4B), dimension(:), pointer, contiguous :: ja => null()              !pointer to model ja
-    integer(I4B), dimension(:), pointer, contiguous :: jas => null()             !pointer to model jas
-    integer(I4B), dimension(:), pointer, contiguous :: isym => null()            !pointer to model isym
-    real(DP), dimension(:), pointer, contiguous :: condsat => null()             !pointer to model condsat
-    real(DP), dimension(:), pointer, contiguous :: top => null()                 !pointer to model top
-    real(DP), dimension(:), pointer, contiguous :: bot => null()                 !pointer to model bot
-    real(DP), dimension(:), pointer, contiguous :: hwva => null()                !pointer to model hwva
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !pointer to model ibound
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !pointer to model icelltype
+    integer(I4B), dimension(:), pointer, contiguous :: ihc => null() !pointer to model ihc
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !pointer to model ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !pointer to model ja
+    integer(I4B), dimension(:), pointer, contiguous :: jas => null() !pointer to model jas
+    integer(I4B), dimension(:), pointer, contiguous :: isym => null() !pointer to model isym
+    real(DP), dimension(:), pointer, contiguous :: condsat => null() !pointer to model condsat
+    real(DP), dimension(:), pointer, contiguous :: top => null() !pointer to model top
+    real(DP), dimension(:), pointer, contiguous :: bot => null() !pointer to model bot
+    real(DP), dimension(:), pointer, contiguous :: hwva => null() !pointer to model hwva
   contains
     procedure :: hfb_ar
     procedure :: hfb_rp
     procedure :: hfb_fc
     procedure :: hfb_cq
     procedure :: hfb_da
-    procedure          :: allocate_scalars
+    procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_dimensions
@@ -222,7 +222,7 @@ contains
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
-    integer(I4B) ::  nodes, nja
+    integer(I4B) :: nodes, nja
     integer(I4B) :: ihfb, n, m
     integer(I4B) :: ipos
     integer(I4B) :: idiag, isymcon

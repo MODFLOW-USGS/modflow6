@@ -36,14 +36,14 @@ module LakModule
   public :: LakType
   public :: lak_create
   !
-  character(len=LENFTYPE)       :: ftype = 'LAK'
+  character(len=LENFTYPE) :: ftype = 'LAK'
   character(len=LENPACKAGENAME) :: text = '             LAK'
   !
   type LakTabType
-    real(DP), dimension(:), pointer, contiguous  :: tabstage => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabvolume => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabsarea => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabwarea => null()
+    real(DP), dimension(:), pointer, contiguous :: tabstage => null()
+    real(DP), dimension(:), pointer, contiguous :: tabvolume => null()
+    real(DP), dimension(:), pointer, contiguous :: tabsarea => null()
+    real(DP), dimension(:), pointer, contiguous :: tabwarea => null()
   end type LakTabType
   !
   type, extends(BndType) :: LakType
@@ -78,15 +78,15 @@ module LakModule
     integer(I4B), dimension(:), pointer, contiguous :: nlakeconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idxlakeconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: ntabrow => null()
-    real(DP), dimension(:), pointer, contiguous  :: strt => null()
-    real(DP), dimension(:), pointer, contiguous  :: laketop => null()
-    real(DP), dimension(:), pointer, contiguous  :: lakebot => null()
-    real(DP), dimension(:), pointer, contiguous  :: sareamax => null()
+    real(DP), dimension(:), pointer, contiguous :: strt => null()
+    real(DP), dimension(:), pointer, contiguous :: laketop => null()
+    real(DP), dimension(:), pointer, contiguous :: lakebot => null()
+    real(DP), dimension(:), pointer, contiguous :: sareamax => null()
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: lakename => null()
     character(len=8), dimension(:), pointer, contiguous :: status => null()
-    real(DP), dimension(:), pointer, contiguous  :: avail => null()
-    real(DP), dimension(:), pointer, contiguous  :: lkgwsink => null()
+    real(DP), dimension(:), pointer, contiguous :: avail => null()
+    real(DP), dimension(:), pointer, contiguous :: lkgwsink => null()
     real(DP), dimension(:), pointer, contiguous :: stage => null()
     real(DP), dimension(:), pointer, contiguous :: rainfall => null()
     real(DP), dimension(:), pointer, contiguous :: evaporation => null()
@@ -97,31 +97,31 @@ module LakModule
     !
     ! -- table data
     integer(I4B), dimension(:), pointer, contiguous :: ialaktab => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabstage => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabvolume => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabsarea => null()
-    real(DP), dimension(:), pointer, contiguous  :: tabwarea => null()
+    real(DP), dimension(:), pointer, contiguous :: tabstage => null()
+    real(DP), dimension(:), pointer, contiguous :: tabvolume => null()
+    real(DP), dimension(:), pointer, contiguous :: tabsarea => null()
+    real(DP), dimension(:), pointer, contiguous :: tabwarea => null()
     !
     ! -- lake solution data
     integer(I4B), dimension(:), pointer, contiguous :: ncncvr => null()
-    real(DP), dimension(:), pointer, contiguous  :: surfin => null()
-    real(DP), dimension(:), pointer, contiguous  :: surfout => null()
-    real(DP), dimension(:), pointer, contiguous  :: surfout1 => null()
-    real(DP), dimension(:), pointer, contiguous  :: precip => null()
-    real(DP), dimension(:), pointer, contiguous  :: precip1 => null()
-    real(DP), dimension(:), pointer, contiguous  :: evap => null()
-    real(DP), dimension(:), pointer, contiguous  :: evap1 => null()
-    real(DP), dimension(:), pointer, contiguous  :: evapo => null()
-    real(DP), dimension(:), pointer, contiguous  :: withr => null()
-    real(DP), dimension(:), pointer, contiguous  :: withr1 => null()
-    real(DP), dimension(:), pointer, contiguous  :: flwin => null()
-    real(DP), dimension(:), pointer, contiguous  :: flwiter => null()
-    real(DP), dimension(:), pointer, contiguous  :: flwiter1 => null()
-    real(DP), dimension(:), pointer, contiguous  :: seep => null()
-    real(DP), dimension(:), pointer, contiguous  :: seep1 => null()
-    real(DP), dimension(:), pointer, contiguous  :: seep0 => null()
-    real(DP), dimension(:), pointer, contiguous  :: stageiter => null()
-    real(DP), dimension(:), pointer, contiguous  :: chterm => null()
+    real(DP), dimension(:), pointer, contiguous :: surfin => null()
+    real(DP), dimension(:), pointer, contiguous :: surfout => null()
+    real(DP), dimension(:), pointer, contiguous :: surfout1 => null()
+    real(DP), dimension(:), pointer, contiguous :: precip => null()
+    real(DP), dimension(:), pointer, contiguous :: precip1 => null()
+    real(DP), dimension(:), pointer, contiguous :: evap => null()
+    real(DP), dimension(:), pointer, contiguous :: evap1 => null()
+    real(DP), dimension(:), pointer, contiguous :: evapo => null()
+    real(DP), dimension(:), pointer, contiguous :: withr => null()
+    real(DP), dimension(:), pointer, contiguous :: withr1 => null()
+    real(DP), dimension(:), pointer, contiguous :: flwin => null()
+    real(DP), dimension(:), pointer, contiguous :: flwiter => null()
+    real(DP), dimension(:), pointer, contiguous :: flwiter1 => null()
+    real(DP), dimension(:), pointer, contiguous :: seep => null()
+    real(DP), dimension(:), pointer, contiguous :: seep1 => null()
+    real(DP), dimension(:), pointer, contiguous :: seep0 => null()
+    real(DP), dimension(:), pointer, contiguous :: stageiter => null()
+    real(DP), dimension(:), pointer, contiguous :: chterm => null()
     !
     ! -- lake convergence
     integer(I4B), dimension(:), pointer, contiguous :: iseepc => null()
@@ -139,16 +139,16 @@ module LakModule
     integer(I4B), dimension(:), pointer, contiguous :: cellid => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodesontop => null()
     integer(I4B), dimension(:), pointer, contiguous :: ictype => null()
-    real(DP), dimension(:), pointer, contiguous  :: bedleak => null()
-    real(DP), dimension(:), pointer, contiguous  :: belev => null()
-    real(DP), dimension(:), pointer, contiguous  :: telev => null()
-    real(DP), dimension(:), pointer, contiguous  :: connlength => null()
-    real(DP), dimension(:), pointer, contiguous  :: connwidth => null()
-    real(DP), dimension(:), pointer, contiguous  :: sarea => null()
-    real(DP), dimension(:), pointer, contiguous  :: warea => null()
-    real(DP), dimension(:), pointer, contiguous  :: satcond => null()
-    real(DP), dimension(:), pointer, contiguous  :: simcond => null()
-    real(DP), dimension(:), pointer, contiguous  :: simlakgw => null()
+    real(DP), dimension(:), pointer, contiguous :: bedleak => null()
+    real(DP), dimension(:), pointer, contiguous :: belev => null()
+    real(DP), dimension(:), pointer, contiguous :: telev => null()
+    real(DP), dimension(:), pointer, contiguous :: connlength => null()
+    real(DP), dimension(:), pointer, contiguous :: connwidth => null()
+    real(DP), dimension(:), pointer, contiguous :: sarea => null()
+    real(DP), dimension(:), pointer, contiguous :: warea => null()
+    real(DP), dimension(:), pointer, contiguous :: satcond => null()
+    real(DP), dimension(:), pointer, contiguous :: simcond => null()
+    real(DP), dimension(:), pointer, contiguous :: simlakgw => null()
     !
     ! -- lake outlet data
     integer(I4B), dimension(:), pointer, contiguous :: lakein => null()
@@ -159,7 +159,7 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous :: outwidth => null()
     real(DP), dimension(:), pointer, contiguous :: outrough => null()
     real(DP), dimension(:), pointer, contiguous :: outslope => null()
-    real(DP), dimension(:), pointer, contiguous  :: simoutrate => null()
+    real(DP), dimension(:), pointer, contiguous :: simoutrate => null()
     !
     ! -- lake output data
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
@@ -175,9 +175,9 @@ module LakModule
     integer(I4B), pointer :: gwfik33 => NULL()
     !
     ! -- package x, xold, and ibound
-    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
-    real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
-    real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !package ibound
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !package x vector
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !package xold vector
     !
     ! -- lake budget object
     type(BudgetObjectType), pointer :: budobj => null()
@@ -188,7 +188,7 @@ module LakModule
     !
     ! -- density variables
     integer(I4B), pointer :: idense
-    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
+    real(DP), dimension(:, :), pointer, contiguous :: denseterms => null()
     !
     ! -- type bound procedures
   contains
@@ -231,7 +231,7 @@ module LakModule
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
     procedure, private :: lak_calculate_conn_warea
-    procedure, public  :: lak_calculate_vol
+    procedure, public :: lak_calculate_vol
     procedure, private :: lak_calculate_conductance
     procedure, private :: lak_calculate_cond_head
     procedure, private :: lak_calculate_conn_conductance
@@ -265,7 +265,7 @@ module LakModule
     ! -- table
     procedure, private :: lak_setup_tableobj
     ! -- density
-    procedure          :: lak_activate_density
+    procedure :: lak_activate_density
     procedure, private :: lak_calculate_density_exchange
   end type LakType
 
@@ -309,7 +309,7 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3
-    packobj%iscloc = 0  ! not supported
+    packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
@@ -1765,7 +1765,7 @@ contains
     do n = 1, this%nlakes
       this%xnewpak(n) = this%strt(n)
       write (text, '(g15.7)') this%strt(n)
-      jj = 1    ! For STAGE
+      jj = 1 ! For STAGE
       bndElem => this%stage(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, &
                                          'BND', this%tsManager, this%iprpak, &
@@ -2389,7 +2389,7 @@ contains
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: igwfnode
-    real(DP)  :: flow
+    real(DP) :: flow
     real(DP) :: hgwf
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -3162,7 +3162,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For STAGE
+      jj = 1 ! For STAGE
       bndElem => this%stage(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3173,7 +3173,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For RAINFALL
+      jj = 1 ! For RAINFALL
       bndElem => this%rainfall(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3190,7 +3190,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For EVAPORATION
+      jj = 1 ! For EVAPORATION
       bndElem => this%evaporation(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3207,7 +3207,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For RUNOFF
+      jj = 1 ! For RUNOFF
       bndElem => this%runoff(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3224,7 +3224,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For specified INFLOW
+      jj = 1 ! For specified INFLOW
       bndElem => this%inflow(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3241,7 +3241,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For specified WITHDRAWAL
+      jj = 1 ! For specified WITHDRAWAL
       bndElem => this%withdrawal(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3258,7 +3258,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For specified OUTLET RATE
+      jj = 1 ! For specified OUTLET RATE
       bndElem => this%outrate(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3269,7 +3269,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For OUTLET INVERT
+      jj = 1 ! For OUTLET INVERT
       bndElem => this%outinvert(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3280,7 +3280,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For OUTLET WIDTH
+      jj = 1 ! For OUTLET WIDTH
       bndElem => this%outwidth(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3291,7 +3291,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For OUTLET ROUGHNESS
+      jj = 1 ! For OUTLET ROUGHNESS
       bndElem => this%outrough(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3302,7 +3302,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For OUTLET SLOPE
+      jj = 1 ! For OUTLET SLOPE
       bndElem => this%outslope(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -3787,7 +3787,7 @@ contains
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
-    real(DP) ::  hlak, blak
+    real(DP) :: hlak, blak
     logical :: lrm
     ! ------------------------------------------------------------------------------
     !!
@@ -4420,11 +4420,11 @@ contains
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(LakType) :: this              !< LakType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(LakType) :: this !< LakType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
@@ -5116,9 +5116,9 @@ contains
     !    the ID string of an observation definition for LAK package observations.
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop
@@ -5674,10 +5674,10 @@ contains
     integer(I4B), intent(in) :: n
     real(DP), intent(in) :: hlak
     real(DP), intent(inout) :: avail
-    real(DP), intent(inout)  :: ra
-    real(DP), intent(inout)  :: ro
-    real(DP), intent(inout)  :: qinf
-    real(DP), intent(inout)  :: ex
+    real(DP), intent(inout) :: ra
+    real(DP), intent(inout) :: ro
+    real(DP), intent(inout) :: qinf
+    real(DP), intent(inout) :: ex
     real(DP), intent(in), optional :: headp
     ! -- local
     integer(I4B) :: j
@@ -6416,22 +6416,22 @@ contains
     if (stage >= botl) then
       ss = stage
       stage_below_bot = .false.
-      rdenselak = this%denseterms(1, iconn)  ! lak rel density
+      rdenselak = this%denseterms(1, iconn) ! lak rel density
     else
       ss = botl
       stage_below_bot = .true.
-      rdenselak = this%denseterms(2, iconn)  ! gwf rel density
+      rdenselak = this%denseterms(2, iconn) ! gwf rel density
     end if
     !
     ! -- set hh to head or botl
     if (head >= botl) then
       hh = head
       head_below_bot = .false.
-      rdensegwf = this%denseterms(2, iconn)  ! gwf rel density
+      rdensegwf = this%denseterms(2, iconn) ! gwf rel density
     else
       hh = botl
       head_below_bot = .true.
-      rdensegwf = this%denseterms(1, iconn)  ! lak rel density
+      rdensegwf = this%denseterms(1, iconn) ! lak rel density
     end if
     !
     ! -- todo: hack because denseterms not updated in a cf calculation

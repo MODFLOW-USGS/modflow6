@@ -17,13 +17,13 @@ module RchModule
   private
   public :: rch_create
   !
-  character(len=LENFTYPE)       :: ftype = 'RCH'
+  character(len=LENFTYPE) :: ftype = 'RCH'
   character(len=LENPACKAGENAME) :: text = '             RCH'
   character(len=LENPACKAGENAME) :: texta = '            RCHA'
   !
   type, extends(BndType) :: RchType
     integer(I4B), pointer :: inirch => NULL()
-    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => NULL()      ! User provided cell numbers; nodelist is cells where recharge is applied)
+    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => NULL() ! User provided cell numbers; nodelist is cells where recharge is applied)
     logical, private :: fixed_cell = .false.
     logical, private :: read_as_arrays = .false.
   contains
@@ -88,7 +88,7 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
-    packobj%iscloc = 1   ! sfac applies to recharge rate
+    packobj%iscloc = 1 ! sfac applies to recharge rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
@@ -445,7 +445,7 @@ contains
         if (keyword == 'TIMEARRAYSERIES') then
           ! -- Get time-array series name
           call this%parser%GetStringCaps(tasName)
-          jcol = 1  ! for recharge rate
+          jcol = 1 ! for recharge rate
           bndArrayPtr => this%bound(jcol, :)
           ! Make a time-array-series link and add it to the list of links
           ! contained in the TimeArraySeriesManagerType object.

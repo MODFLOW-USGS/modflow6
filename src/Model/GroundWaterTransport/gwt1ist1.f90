@@ -28,7 +28,7 @@ module GwtIstModule
   private
   public :: ist_create
   !
-  character(len=LENFTYPE)       :: ftype = 'IST'
+  character(len=LENFTYPE) :: ftype = 'IST'
   character(len=LENPACKAGENAME) :: text = ' IMMOBILE DOMAIN'
   integer(I4B), parameter :: NBDITEMS = 5
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
@@ -48,31 +48,31 @@ module GwtIstModule
   !<
   type, extends(BndType) :: GwtIstType
 
-    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
-    type(GwtMstType), pointer                        :: mst => null()           !< pointer to mst object
+    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(GwtMstType), pointer :: mst => null() !< pointer to mst object
 
-    integer(I4B), pointer                            :: icimout => null()       !< unit number for binary cim output
-    integer(I4B), pointer                            :: ibudgetout => null()    !< binary budget output file
-    integer(I4B), pointer                            :: ibudcsv => null()       !< unit number for csv budget output file
-    integer(I4B), pointer                            :: idcy => null()          !< order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer                            :: isrb => null()          !< sorption active flag (0:off, 1:on)
-    integer(I4B), pointer                            :: kiter => null()         !< picard iteration counter
-    real(DP), dimension(:), pointer, contiguous      :: cim => null()           !< concentration for immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: cimnew => null()        !< immobile concentration at end of current time step
-    real(DP), dimension(:), pointer, contiguous      :: cimold => null()        !< immobile concentration at end of last time step
-    real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        !< mass transfer rate to immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       !< porosity of the immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  !< bulk density
-    real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      !< distribution coefficient
-    real(DP), dimension(:), pointer, contiguous      :: decay => null()         !< first or zero order rate constant for liquid
-    real(DP), dimension(:), pointer, contiguous      :: decaylast => null()     !< decay rate used for last iteration (needed for zero order decay)
-    real(DP), dimension(:), pointer, contiguous      :: decayslast => null()    !< sorbed decay rate used for last iteration (needed for zero order decay)
-    real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  !< first or zero order rate constant for sorbed mass
-    real(DP), dimension(:), pointer, contiguous      :: strg => null()          !< mass transfer rate
-    real(DP), dimension(2, NBDITEMS)                 :: budterm                 !< immmobile domain mass summaries
+    integer(I4B), pointer :: icimout => null() !< unit number for binary cim output
+    integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on)
+    integer(I4B), pointer :: kiter => null() !< picard iteration counter
+    real(DP), dimension(:), pointer, contiguous :: cim => null() !< concentration for immobile domain
+    real(DP), dimension(:), pointer, contiguous :: cimnew => null() !< immobile concentration at end of current time step
+    real(DP), dimension(:), pointer, contiguous :: cimold => null() !< immobile concentration at end of last time step
+    real(DP), dimension(:), pointer, contiguous :: zetaim => null() !< mass transfer rate to immobile domain
+    real(DP), dimension(:), pointer, contiguous :: thetaim => null() !< porosity of the immobile domain
+    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density
+    real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< distribution coefficient
+    real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order rate constant for liquid
+    real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous :: decayslast => null() !< sorbed decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous :: decay_sorbed => null() !< first or zero order rate constant for sorbed mass
+    real(DP), dimension(:), pointer, contiguous :: strg => null() !< mass transfer rate
+    real(DP), dimension(2, NBDITEMS) :: budterm !< immmobile domain mass summaries
 
-    type(BudgetType), pointer                        :: budget => null()        !< budget object
-    type(OutputControlDataType), pointer             :: ocd => null()           !< output control object for cim
+    type(BudgetType), pointer :: budget => null() !< budget object
+    type(OutputControlDataType), pointer :: ocd => null() !< output control object for cim
 
   contains
 
@@ -104,13 +104,13 @@ contains
   subroutine ist_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, mst)
     ! -- dummy
-    class(BndType), pointer :: packobj            !< BndType pointer that will point to new IST Package
-    integer(I4B), intent(in) :: id                 !< name of the model
-    integer(I4B), intent(in) :: ibcnum             !< consecutive package number
-    integer(I4B), intent(in) :: inunit             !< unit number of package input file
-    integer(I4B), intent(in) :: iout               !< unit number of model listing file
-    character(len=*), intent(in) :: namemodel     !< name of the model
-    character(len=*), intent(in) :: pakname       !< name of the package
+    class(BndType), pointer :: packobj !< BndType pointer that will point to new IST Package
+    integer(I4B), intent(in) :: id !< name of the model
+    integer(I4B), intent(in) :: ibcnum !< consecutive package number
+    integer(I4B), intent(in) :: inunit !< unit number of package input file
+    integer(I4B), intent(in) :: iout !< unit number of model listing file
+    character(len=*), intent(in) :: namemodel !< name of the model
+    character(len=*), intent(in) :: pakname !< name of the package
     ! -- local
     type(GwtIstType), pointer :: istobj
     type(GwtFmiType), pointer :: fmi
@@ -156,7 +156,7 @@ contains
     use SimModule, only: store_error, count_errors
     use BudgetModule, only: budget_cr
     ! -- dummy
-    class(GwtIstType), intent(inout) :: this     !< GwtIstType object
+    class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     integer(I4B) :: n
     ! -- formats
@@ -220,7 +220,7 @@ contains
   !<
   subroutine ist_rp(this)
     ! -- dummy
-    class(GwtIstType), intent(inout) :: this   !< GwtIstType object
+    class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     ! -- format
     !
@@ -238,7 +238,7 @@ contains
     ! -- modules
     use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy variables
-    class(GwtIstType) :: this  !< GwtIstType object
+    class(GwtIstType) :: this !< GwtIstType object
     ! -- local variables
     integer(I4B) :: n
     !
@@ -272,11 +272,11 @@ contains
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtIstType) :: this                              !< GwtIstType object
-    real(DP), dimension(:), intent(inout) :: rhs           !< right-hand side vector for model
-    integer(I4B), dimension(:), intent(in) :: ia           !< solution CRS row pointers
-    integer(I4B), dimension(:), intent(in) :: idxglo       !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln       !< solution coefficient matrix
+    class(GwtIstType) :: this !< GwtIstType object
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
+    integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
+    integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
+    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
@@ -383,10 +383,10 @@ contains
     use TdisModule, only: delt
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtIstType), intent(inout) :: this                        !< GwtIstType object
-    real(DP), dimension(:), intent(in) :: x                         !< current dependent-variable value
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja     !< flow between two connected control volumes
-    integer(I4B), optional, intent(in) :: iadv                      !< flag that indicates if this is an advance package
+    class(GwtIstType), intent(inout) :: this !< GwtIstType object
+    real(DP), dimension(:), intent(in) :: x !< current dependent-variable value
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow between two connected control volumes
+    integer(I4B), optional, intent(in) :: iadv !< flag that indicates if this is an advance package
     ! -- local
     integer(I4B) :: idiag
     integer(I4B) :: n
@@ -506,8 +506,8 @@ contains
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GwtIstType) :: this                            !< GwtIstType object
-    type(BudgetType), intent(inout) :: model_budget      !< model budget object
+    class(GwtIstType) :: this !< GwtIstType object
+    type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local
     real(DP) :: ratin
     real(DP) :: ratout
@@ -529,11 +529,11 @@ contains
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtIstType) :: this                                    !< GwtIstType object
-    integer(I4B), intent(in) :: icbcfl                           !< flag for cell-by-cell output
-    integer(I4B), intent(in) :: ibudfl                           !< flag indication if cell-by-cell data should be saved
-    integer(I4B), intent(in) :: icbcun                           !< unit number for cell-by-cell output
-    integer(I4B), dimension(:), optional, intent(in) :: imap     !< mapping vector
+    class(GwtIstType) :: this !< GwtIstType object
+    integer(I4B), intent(in) :: icbcfl !< flag for cell-by-cell output
+    integer(I4B), intent(in) :: ibudfl !< flag indication if cell-by-cell data should be saved
+    integer(I4B), intent(in) :: icbcun !< unit number for cell-by-cell output
+    integer(I4B), dimension(:), optional, intent(in) :: imap !< mapping vector
     ! -- loca
     integer(I4B) :: n
     integer(I4B) :: ibinun
@@ -595,9 +595,9 @@ contains
     ! -- modules
     use TdisModule, only: kstp, endofperiod
     ! -- dummy variables
-    class(GwtIstType) :: this              !< BndType object
-    integer(I4B), intent(in) :: idvsave    !< flag and unit number for dependent-variable output
-    integer(I4B), intent(in) :: idvprint   !< flag indicating if dependent-variable should be written to the model listing file
+    class(GwtIstType) :: this !< BndType object
+    integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
+    integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
     ! -- local
     integer(I4B) :: ipflg
     integer(I4B) :: ibinun
@@ -631,11 +631,11 @@ contains
     ! -- modules
     use TdisModule, only: delt, totim
     ! -- dummy variables
-    class(GwtIstType) :: this           !< GwtIstType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(GwtIstType) :: this !< GwtIstType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     ! -- local
     integer(I4B) :: isuppress_output = 0
     !
@@ -662,7 +662,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtIstType) :: this  !< GwtIstType object
+    class(GwtIstType) :: this !< GwtIstType object
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
@@ -713,7 +713,7 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     use OutputControlDataModule, only: ocd_cr
     ! -- dummy
-    class(GwtIstType) :: this  !< GwtIstType object
+    class(GwtIstType) :: this !< GwtIstType object
     ! -- local
     !
     ! -- call standard BndType allocate scalars
@@ -752,7 +752,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtIstType), intent(inout) :: this  !< GwtIstType object
+    class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     integer(I4B) :: n
     !
@@ -828,7 +828,7 @@ contains
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, openfile
     ! -- dummy
-    class(GwtIstType), intent(inout) :: this  !< GwtIstType object
+    class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=LINELENGTH) :: fname
@@ -925,7 +925,7 @@ contains
   !<
   subroutine ist_read_dimensions(this)
     ! -- dummy
-    class(GwtIstType), intent(inout) :: this  !< GwtIstType object
+    class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     ! -- format
     !
@@ -944,7 +944,7 @@ contains
     use SimModule, only: store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
-    class(GwtIstType) :: this  !< GwtIstType object
+    class(GwtIstType) :: this !< GwtIstType object
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=:), allocatable :: line
@@ -1136,20 +1136,20 @@ contains
                         thetaimfrac, rhob, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
     ! -- dummy
-    real(DP), intent(in) :: thetaim                      !< immobile domain porosity
-    real(DP), intent(in) :: vcell                        !< volume of cell
-    real(DP), intent(in) :: delt                         !< length of time step
-    real(DP), intent(in) :: swtpdt                       !< cell saturation at end of time step
-    real(DP), intent(in) :: thetaimfrac                  !< fraction of total porosity this is immobile
-    real(DP), intent(in) :: rhob                         !< bulk density
-    real(DP), intent(in) :: kd                           !< distribution coefficient for linear isotherm
-    real(DP), intent(in) :: lambda1im                    !< first-order decay rate in aqueous phase
-    real(DP), intent(in) :: lambda2im                    !< first-order decay rate in sorbed phase
-    real(DP), intent(in) :: gamma1im                     !< zero-order decay rate in aqueous phase
-    real(DP), intent(in) :: gamma2im                     !< zero-order decay rate in sorbed phase
-    real(DP), intent(in) :: zetaim                       !< transfer coefficient between mobile and immobile domains
-    real(DP), dimension(:), intent(inout) :: ddterm      !< nine terms comprising the balance equation of the immobile domain
-    real(DP), intent(inout) :: f                         !< the f term used to calculate the immobile domain concentration
+    real(DP), intent(in) :: thetaim !< immobile domain porosity
+    real(DP), intent(in) :: vcell !< volume of cell
+    real(DP), intent(in) :: delt !< length of time step
+    real(DP), intent(in) :: swtpdt !< cell saturation at end of time step
+    real(DP), intent(in) :: thetaimfrac !< fraction of total porosity this is immobile
+    real(DP), intent(in) :: rhob !< bulk density
+    real(DP), intent(in) :: kd !< distribution coefficient for linear isotherm
+    real(DP), intent(in) :: lambda1im !< first-order decay rate in aqueous phase
+    real(DP), intent(in) :: lambda2im !< first-order decay rate in sorbed phase
+    real(DP), intent(in) :: gamma1im !< zero-order decay rate in aqueous phase
+    real(DP), intent(in) :: gamma2im !< zero-order decay rate in sorbed phase
+    real(DP), intent(in) :: zetaim !< transfer coefficient between mobile and immobile domains
+    real(DP), dimension(:), intent(inout) :: ddterm !< nine terms comprising the balance equation of the immobile domain
+    real(DP), intent(inout) :: f !< the f term used to calculate the immobile domain concentration
     ! -- local
     real(DP) :: tled
     !
@@ -1183,11 +1183,11 @@ contains
   !<
   subroutine get_hcofrhs(ddterm, f, cimold, hcof, rhs)
     ! -- dummy
-    real(DP), dimension(:), intent(in) :: ddterm  !< terms comprising the balance equation of the immobile domain
-    real(DP), intent(in) :: f                     !< the f term used to calculate the immobile domain concentration
-    real(DP), intent(in) :: cimold                !< immobile domain concentration at end of last time step
-    real(DP), intent(inout) :: hcof               !< calculated contribution for the a-matrix diagonal position
-    real(DP), intent(inout) :: rhs                !< calculated contribution for the solution right-hand side
+    real(DP), dimension(:), intent(in) :: ddterm !< terms comprising the balance equation of the immobile domain
+    real(DP), intent(in) :: f !< the f term used to calculate the immobile domain concentration
+    real(DP), intent(in) :: cimold !< immobile domain concentration at end of last time step
+    real(DP), intent(inout) :: hcof !< calculated contribution for the a-matrix diagonal position
+    real(DP), intent(inout) :: rhs !< calculated contribution for the solution right-hand side
     !
     ! -- calculate hcof
     hcof = ddterm(9)**2 / f - ddterm(9)
@@ -1209,12 +1209,12 @@ contains
   !<
   function get_ddconc(ddterm, f, cimold, cnew) result(cimnew)
     ! -- dummy
-    real(DP), dimension(:), intent(in) :: ddterm  !< terms comprising the balance equation of the immobile domain
-    real(DP), intent(in) :: f                     !< the f term used to calculate the immobile domain concentration
-    real(DP), intent(in) :: cimold                !< immobile domain concentration at end of last time step
-    real(DP), intent(in) :: cnew                  !< concentration of the mobile domain at the end of the time step
+    real(DP), dimension(:), intent(in) :: ddterm !< terms comprising the balance equation of the immobile domain
+    real(DP), intent(in) :: f !< the f term used to calculate the immobile domain concentration
+    real(DP), intent(in) :: cimold !< immobile domain concentration at end of last time step
+    real(DP), intent(in) :: cnew !< concentration of the mobile domain at the end of the time step
     ! -- result
-    real(DP) :: cimnew                            !< calculated concentration of the immobile domain
+    real(DP) :: cimnew !< calculated concentration of the immobile domain
     ! -- local
     !
     ! -- calculate ddconc
@@ -1235,12 +1235,12 @@ contains
   subroutine accumulate_budterm(budterm, ddterm, cimnew, cimold, cnew, idcy)
     ! -- modules
     ! -- dummy
-    real(DP), dimension(:, :), intent(inout) :: budterm  !<
-    real(DP), dimension(:), intent(in) :: ddterm         !< terms comprising the balance equation of the immobile domain
-    real(DP), intent(in) :: cimnew                       !< immobile domain concenration at the end of this time step
-    real(DP), intent(in) :: cimold                       !< immobile domain concentration at end of last time step
-    real(DP), intent(in) :: cnew                         !< mobile domain concentration at the end of this time step
-    integer(I4B), intent(in) :: idcy                     !< order of decay rate (0:none, 1:first, 2:zero)
+    real(DP), dimension(:, :), intent(inout) :: budterm !<
+    real(DP), dimension(:), intent(in) :: ddterm !< terms comprising the balance equation of the immobile domain
+    real(DP), intent(in) :: cimnew !< immobile domain concenration at the end of this time step
+    real(DP), intent(in) :: cimold !< immobile domain concentration at end of last time step
+    real(DP), intent(in) :: cnew !< mobile domain concentration at the end of this time step
+    integer(I4B), intent(in) :: idcy !< order of decay rate (0:none, 1:first, 2:zero)
     ! -- local
     real(DP) :: rate
     integer(I4B) :: i

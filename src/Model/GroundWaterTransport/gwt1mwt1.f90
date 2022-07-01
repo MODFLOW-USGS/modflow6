@@ -48,15 +48,15 @@ module GwtMwtModule
 
   character(len=*), parameter :: ftype = 'MWT'
   character(len=*), parameter :: flowtype = 'MAW'
-  character(len=16)           :: text = '             MWT'
+  character(len=16) :: text = '             MWT'
 
   type, extends(GwtAptType) :: GwtMwtType
 
-    integer(I4B), pointer                               :: idxbudrate => null()  ! index of well rate terms in flowbudptr
-    integer(I4B), pointer                               :: idxbudfwrt => null()  ! index of flowing well rate terms in flowbudptr
-    integer(I4B), pointer                               :: idxbudrtmv => null()  ! index of rate to mover terms in flowbudptr
-    integer(I4B), pointer                               :: idxbudfrtm => null()  ! index of flowing well rate to mover terms in flowbudptr
-    real(DP), dimension(:), pointer, contiguous         :: concrate => null()    ! well rate concentration
+    integer(I4B), pointer :: idxbudrate => null() ! index of well rate terms in flowbudptr
+    integer(I4B), pointer :: idxbudfwrt => null() ! index of flowing well rate terms in flowbudptr
+    integer(I4B), pointer :: idxbudrtmv => null() ! index of rate to mover terms in flowbudptr
+    integer(I4B), pointer :: idxbudfrtm => null() ! index of flowing well rate to mover terms in flowbudptr
+    real(DP), dimension(:), pointer, contiguous :: concrate => null() ! well rate concentration
 
   contains
 

@@ -17,7 +17,7 @@ module EvtModule
   private
   public :: evt_create
   !
-  character(len=LENFTYPE)       :: ftype = 'EVT'
+  character(len=LENFTYPE) :: ftype = 'EVT'
   character(len=LENPACKAGENAME) :: text = '             EVT'
   character(len=LENPACKAGENAME) :: texta = '           EVTA'
   !
@@ -26,7 +26,7 @@ module EvtModule
     logical, private :: segsdefined = .true.
     logical, private :: fixed_cell = .false.
     logical, private :: read_as_arrays = .false.
-    logical, private:: surfratespecified = .false.
+    logical, private :: surfratespecified = .false.
     ! -- integers
     integer(I4B), pointer :: inievt => null()
     integer(I4B), pointer, private :: nseg => null()
@@ -108,7 +108,7 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3 ! Assumes NSEG = 1
-    packobj%iscloc = 2  ! sfac applies to max. ET rate
+    packobj%iscloc = 2 ! sfac applies to max. ET rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
@@ -485,7 +485,7 @@ contains
   !<
   subroutine check_pxdp(this)
     ! -- dummy
-    class(EvtType), intent(inout) :: this  !< EvtType
+    class(EvtType), intent(inout) :: this !< EvtType
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: node
@@ -888,7 +888,7 @@ contains
           call this%parser%GetStringCaps(tasName)
           ! -- Ensure that time-array series has been defined and that name
           !    of time-array series is valid.
-          jcol = 2  ! for max ET rate
+          jcol = 2 ! for max ET rate
           bndArrayPtr => this%bound(jcol, :)
           ! Make a time-array-series link and add it to the list of links
           ! contained in the TimeArraySeriesManagerType object.

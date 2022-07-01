@@ -24,7 +24,7 @@ module apimodule
   public :: api_create
   public :: ApiType
   !
-  character(len=LENFTYPE)       :: ftype = 'API'
+  character(len=LENFTYPE) :: ftype = 'API'
   character(len=LENPACKAGENAME) :: text = '             API'
   !
   type, extends(BndType) :: ApiType
@@ -46,13 +46,13 @@ contains
   !<
   subroutine api_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
     ! -- dummy variables
-    class(BndType), pointer :: packobj          !< pointer to default package type
-    integer(I4B), intent(in) :: id              !< package id
-    integer(I4B), intent(in) :: ibcnum          !< boundary condition number
-    integer(I4B), intent(in) :: inunit          !< unit number of USR package input file
-    integer(I4B), intent(in) :: iout            !< unit number of model listing file
-    character(len=*), intent(in) :: namemodel   !< model name
-    character(len=*), intent(in) :: pakname     !< package name
+    class(BndType), pointer :: packobj !< pointer to default package type
+    integer(I4B), intent(in) :: id !< package id
+    integer(I4B), intent(in) :: ibcnum !< boundary condition number
+    integer(I4B), intent(in) :: inunit !< unit number of USR package input file
+    integer(I4B), intent(in) :: iout !< unit number of model listing file
+    character(len=*), intent(in) :: namemodel !< model name
+    character(len=*), intent(in) :: pakname !< package name
     ! -- local variables
     type(ApiType), pointer :: apiobj
     !
@@ -133,10 +133,10 @@ contains
   subroutine api_fc(this, rhs, ia, idxglo, amatsln)
     ! -- dummy variables
     class(ApiType) :: this
-    real(DP), dimension(:), intent(inout) :: rhs      !< right-hand side vector
-    integer(I4B), dimension(:), intent(in) :: ia      !< pointer to the rows in A matrix
-    integer(I4B), dimension(:), intent(in) :: idxglo  !< position of entries in A matrix
-    real(DP), dimension(:), intent(inout) :: amatsln  !< A matrix for solution
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector
+    integer(I4B), dimension(:), intent(in) :: ia !< pointer to the rows in A matrix
+    integer(I4B), dimension(:), intent(in) :: idxglo !< position of entries in A matrix
+    real(DP), dimension(:), intent(inout) :: amatsln !< A matrix for solution
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
