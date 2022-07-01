@@ -47,9 +47,9 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          sudo ln -fs /usr/local/bin/gfortran-10 /usr/local/bin/gfortran
-          sudo ln -fs /usr/local/bin/gcc-10 /usr/local/bin/gcc
-          sudo ln -fs /usr/local/bin/g++-10 /usr/local/bin/g++
+          sudo ln -fs /usr/local/bin/gfortran-11 /usr/local/bin/gfortran
+          sudo ln -fs /usr/local/bin/gcc-11 /usr/local/bin/gcc
+          sudo ln -fs /usr/local/bin/g++-11 /usr/local/bin/g++
 
       - name: Print GNU compiler versions
         run: |

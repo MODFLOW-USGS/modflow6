@@ -17,13 +17,14 @@ on:
       - develop
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18417/w_HPCKit_p_2022.1.0.93_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18438/l_HPCKit_p_2022.1.1.97_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18341/m_HPCKit_p_2022.1.0.86_offline.dmg
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18679/l_HPCKit_p_2022.2.0.191_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18681/m_HPCKit_p_2022.2.0.158_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
   LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
   FC: ifort
+  VS_VER: vs2022
 
 jobs:
   test:
@@ -34,7 +35,7 @@ jobs:
         include:
           - os: ubuntu-latest
           - os: macos-latest
-          - os: windows-2019
+          - os: windows-latest
     defaults:
       run:
         shell: bash
@@ -132,7 +133,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          call ".github/intel-scripts/ifortvars_windows.bat"
+          call ".github/intel-scripts/build_windows.bat"
           meson setup builddir -Ddebug=false --prefix=%CD% --libdir=bin
           meson install -C builddir
           cd autotest

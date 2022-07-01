@@ -13,11 +13,9 @@ env:
 
 jobs:
   check_warnings:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        os: [ ubuntu-latest ]
     defaults:
       run:
         shell: bash
@@ -32,19 +30,10 @@ jobs:
           python-version: 3.9
 
       - name: Setup symbolic links on Linux
-        if: runner.os == 'Linux'
         run: |
           sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
           sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
           sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
-
-      - name: Setup symbolic link to gfortran on macOS
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          sudo ln -fs /usr/local/bin/gfortran-10 /usr/local/bin/gfortran
-          sudo ln -fs /usr/local/bin/gcc-10 /usr/local/bin/gcc
-          sudo ln -fs /usr/local/bin/g++-10 /usr/local/bin/g++
 
       - name: Print GNU compiler versions
         run: |
@@ -69,11 +58,9 @@ jobs:
           meson compile -C builddir
 
   test_night_build_script:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        os: [ ubuntu-latest ]
     defaults:
       run:
         shell: bash
@@ -88,19 +75,10 @@ jobs:
           python-version: 3.9
 
       - name: Setup symbolic links on Linux
-        if: runner.os == 'Linux'
         run: |
           sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
           sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
           sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
-
-      - name: Setup symbolic link to gfortran on macOS
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          sudo ln -fs /usr/local/bin/gfortran-10 /usr/local/bin/gfortran
-          sudo ln -fs /usr/local/bin/gcc-10 /usr/local/bin/gcc
-          sudo ln -fs /usr/local/bin/g++-10 /usr/local/bin/g++
 
       - name: Print GNU compiler versions
         run: |
@@ -125,3 +103,9 @@ jobs:
         working-directory: distribution
         run: |
           pytest -v -s build_nightly.py
+
+      - name: Move the build zip file
+        run: |
+          ls -l ./distribution/*
+          mv ./distribution/temp_zip/linux.zip ./linux.zip
+          ls -l ./
