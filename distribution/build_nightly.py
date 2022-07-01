@@ -18,7 +18,9 @@ if sys.platform.lower() == "win32":
     eext = ".exe"
     soext = ".dll"
 
-binpth, temppth = os.path.join("..", "bin"), os.path.join("temp")
+bin_path = os.path.abspath(os.path.join("..", "bin"))
+example_path = os.path.abspath(os.path.join("temp"))
+zip_path = os.path.abspath(os.path.join("temp_zip"))
 
 
 def get_zipname():
@@ -54,27 +56,19 @@ def create_dir(pth):
     msg = f"could not create... {os.path.abspath(pth)}"
     assert os.path.exists(pth), msg
 
-    # return
-    return
-
 
 def test_update_version():
     from make_release import update_version
 
     update_version()
 
-    # return
-    return
-
 
 def test_create_dirs():
-    pths = [binpth, temppth]
-
-    for pth in pths:
+    for pth in (
+        bin_path,
+        zip_path,
+    ):
         create_dir(pth)
-
-    # return
-    return
 
 
 def test_nightly_build():
@@ -82,24 +76,23 @@ def test_nightly_build():
 
     # test if there are any executable files to zip
     binpth_files = [
-        os.path.join(binpth, f)
-        for f in os.listdir(binpth)
-        if os.path.isfile(os.path.join(binpth, f))
-        and shutil.which(os.path.join(binpth, f), mode=os.X_OK)
-        and pathlib.Path(os.path.join(binpth, f)).suffix
+        os.path.join(bin_path, f)
+        for f in os.listdir(bin_path)
+        if os.path.isfile(os.path.join(bin_path, f))
+        and shutil.which(os.path.join(bin_path, f), mode=os.X_OK)
+        and pathlib.Path(os.path.join(bin_path, f)).suffix
         not in (".a", ".lib", ".pdb")
     ]
     if len(binpth_files) < 1:
         raise FileNotFoundError(
-            f"No executable files present in {os.path.abspath(binpth)}.\n"
-            + f"Available files:\n [{', '.join(os.listdir(binpth))}]"
+            f"No executable files present in {os.path.abspath(bin_path)}.\n"
+            + f"Available files:\n [{', '.join(os.listdir(bin_path))}]"
         )
     else:
         print(f"Files to zip:\n [{', '.join(binpth_files)}]")
 
-    fpth = get_zipname() + ".zip"
-    print(f"Zipping files to '{fpth}'")
-    zip_pth = os.path.join(temppth, fpth)
+    zip_pth = os.path.abspath(os.path.join(zip_path, get_zipname() + ".zip"))
+    print(f"Zipping files to '{zip_pth}'")
     success = pymake.zip_all(zip_pth, file_pths=binpth_files)
     assert success, f"Could not create '{zip_pth}'"
 
@@ -109,11 +102,11 @@ def test_update_mf6io():
 
     # build simple model
     name = "mymodel"
-    ws = os.path.join(temppth, name)
+    ws = os.path.join(example_path, name)
     exe_name = "mf6"
     if sys.platform.lower() == "win32":
         exe_name += ".exe"
-    exe_name = os.path.join(binpth, exe_name)
+    exe_name = os.path.join(bin_path, exe_name)
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=exe_name)
     tdis = flopy.mf6.ModflowTdis(sim)
     ims = flopy.mf6.ModflowIms(sim)
@@ -129,9 +122,6 @@ def test_update_mf6io():
 
     # update the mf6io simulation output for LaTeX
     update_mf6io_tex_files(None, exe_name, expth=ws)
-
-    # return
-    return
 
 
 if __name__ == "__main__":
