@@ -23,10 +23,10 @@ module TvsModule
   public :: tvs_cr
 
   type, extends(TvBaseType) :: TvsType
-    integer(I4B), pointer :: integratechanges => null()           !< STO flag indicating if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
-    integer(I4B), pointer :: iusesy => null()                     !< STO flag set if any cell is convertible (0, 1)
-    real(DP), dimension(:), pointer, contiguous :: ss => null()   !< STO specfic storage or storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: sy => null()   !< STO specific yield
+    integer(I4B), pointer :: integratechanges => null() !< STO flag indicating if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
+    integer(I4B), pointer :: iusesy => null() !< STO flag set if any cell is convertible (0, 1)
+    real(DP), dimension(:), pointer, contiguous :: ss => null() !< STO specfic storage or storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: sy => null() !< STO specific yield
   contains
     procedure :: da => tvs_da
     procedure :: ar_set_pointers => tvs_ar_set_pointers

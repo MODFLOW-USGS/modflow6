@@ -40,8 +40,8 @@ module SfrModule
   !
   implicit none
   !
-  character(len=LENFTYPE)       :: ftype = 'SFR'                                  !< package ftype string
-  character(len=LENPACKAGENAME) :: text = '             SFR'                     !< package budget string
+  character(len=LENFTYPE) :: ftype = 'SFR' !< package ftype string
+  character(len=LENPACKAGENAME) :: text = '             SFR' !< package budget string
   !
   private
   public :: sfr_create
@@ -51,100 +51,100 @@ module SfrModule
     ! -- scalars
     ! -- for budgets
     ! -- characters
-    character(len=16), dimension(:), pointer, contiguous :: csfrbudget => NULL()  !< advanced package budget names
-    character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()     !< aux names
+    character(len=16), dimension(:), pointer, contiguous :: csfrbudget => NULL() !< advanced package budget names
+    character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL() !< aux names
     character(len=LENBOUNDNAME), dimension(:), pointer, &
-      contiguous :: sfrname => null()                  !< internal SFR reach name
+      contiguous :: sfrname => null() !< internal SFR reach name
     ! -- integers
-    integer(I4B), pointer :: iprhed => null()                                     !< flag for printing stages to listing file
-    integer(I4B), pointer :: istageout => null()                                  !< flag and unit number for binary stage output
-    integer(I4B), pointer :: ibudgetout => null()                                 !< flag and unit number for binary sfr budget output
-    integer(I4B), pointer :: ibudcsv => null()                                    !< unit number for csv budget output file
-    integer(I4B), pointer :: ipakcsv => null()                                    !< flag and unit number for package convergence information
-    integer(I4B), pointer :: idiversions => null()                                !< flag indicating if there are any diversions
-    integer(I4B), pointer :: nconn => NULL()                                      !< number of reach connections
-    integer(I4B), pointer :: maxsfrpicard => NULL()                               !< maximum number of Picard iteration calls to SFR solve
-    integer(I4B), pointer :: maxsfrit => NULL()                                   !< maximum number of iterations in SFR solve
-    integer(I4B), pointer :: bditems => NULL()                                    !< number of SFR budget items
-    integer(I4B), pointer :: cbcauxitems => NULL()                                !< number of aux items in cell-by-cell budget file
-    integer(I4B), pointer :: icheck => NULL()                                     !< flag indicating if input should be checked (default is yes)
-    integer(I4B), pointer :: iconvchk => NULL()                                   !< flag indicating of final convergence run is executed
-    integer(I4B), pointer :: gwfiss => NULL()                                     !< groundwater model steady-state flag
-    integer(I4B), pointer :: ianynone => null()                                   !< number of reaches with 'none' connection
+    integer(I4B), pointer :: iprhed => null() !< flag for printing stages to listing file
+    integer(I4B), pointer :: istageout => null() !< flag and unit number for binary stage output
+    integer(I4B), pointer :: ibudgetout => null() !< flag and unit number for binary sfr budget output
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: ipakcsv => null() !< flag and unit number for package convergence information
+    integer(I4B), pointer :: idiversions => null() !< flag indicating if there are any diversions
+    integer(I4B), pointer :: nconn => NULL() !< number of reach connections
+    integer(I4B), pointer :: maxsfrpicard => NULL() !< maximum number of Picard iteration calls to SFR solve
+    integer(I4B), pointer :: maxsfrit => NULL() !< maximum number of iterations in SFR solve
+    integer(I4B), pointer :: bditems => NULL() !< number of SFR budget items
+    integer(I4B), pointer :: cbcauxitems => NULL() !< number of aux items in cell-by-cell budget file
+    integer(I4B), pointer :: icheck => NULL() !< flag indicating if input should be checked (default is yes)
+    integer(I4B), pointer :: iconvchk => NULL() !< flag indicating of final convergence run is executed
+    integer(I4B), pointer :: gwfiss => NULL() !< groundwater model steady-state flag
+    integer(I4B), pointer :: ianynone => null() !< number of reaches with 'none' connection
     ! -- double precision
-    real(DP), pointer :: unitconv => NULL()                                       !< unit conversion factor (SI to model units)
-    real(DP), pointer :: dmaxchg => NULL()                                        !< maximum depth change allowed
-    real(DP), pointer :: deps => NULL()                                           !< perturbation value
+    real(DP), pointer :: unitconv => NULL() !< unit conversion factor (SI to model units)
+    real(DP), pointer :: dmaxchg => NULL() !< maximum depth change allowed
+    real(DP), pointer :: deps => NULL() !< perturbation value
     ! -- integer vectors
-    integer(I4B), dimension(:), pointer, contiguous :: isfrorder => null()        !< sfr reach order determined from DAG of upstream reaches
-    integer(I4B), dimension(:), pointer, contiguous :: ia => null()               !< CRS row pointer for SFR reaches
-    integer(I4B), dimension(:), pointer, contiguous :: ja => null()               !< CRS column pointers for SFR reach connections
+    integer(I4B), dimension(:), pointer, contiguous :: isfrorder => null() !< sfr reach order determined from DAG of upstream reaches
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< CRS row pointer for SFR reaches
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< CRS column pointers for SFR reach connections
     ! -- double precision output vectors
-    real(DP), dimension(:), pointer, contiguous :: qoutflow => null()             !< reach downstream flow
-    real(DP), dimension(:), pointer, contiguous :: qextoutflow => null()          !< reach discharge to external boundary
-    real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()              !< aux value
-    real(DP), dimension(:), pointer, contiguous :: dbuff => null()                !< temporary vector
+    real(DP), dimension(:), pointer, contiguous :: qoutflow => null() !< reach downstream flow
+    real(DP), dimension(:), pointer, contiguous :: qextoutflow => null() !< reach discharge to external boundary
+    real(DP), dimension(:), pointer, contiguous :: qauxcbc => null() !< aux value
+    real(DP), dimension(:), pointer, contiguous :: dbuff => null() !< temporary vector
     !
     ! -- sfr budget object
-    type(BudgetObjectType), pointer :: budobj => null()                           !< SFR budget object
+    type(BudgetObjectType), pointer :: budobj => null() !< SFR budget object
     !
     ! -- sfr table objects
-    type(TableType), pointer :: stagetab => null()                                !< reach stage table written to the listing file
-    type(TableType), pointer :: pakcsvtab => null()                               !< SFR package convergence table
+    type(TableType), pointer :: stagetab => null() !< reach stage table written to the listing file
+    type(TableType), pointer :: pakcsvtab => null() !< SFR package convergence table
     !
     ! -- sfr reach data
-    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()        !< ibound array for SFR reaches that defines active, inactive, and constant reaches
-    integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()         !< groundwater node connected to SFR reaches
-    integer(I4B), dimension(:), pointer, contiguous :: igwftopnode => null()      !< highest active groundwater node under SFR reaches
-    real(DP), dimension(:), pointer, contiguous :: length => null()               !< reach length
-    real(DP), dimension(:), pointer, contiguous :: width => null()                !< reach width
-    real(DP), dimension(:), pointer, contiguous :: strtop => null()               !< reach bed top elevation
-    real(DP), dimension(:), pointer, contiguous :: bthick => null()               !< reach bed thickness
-    real(DP), dimension(:), pointer, contiguous :: hk => null()                   !< vertical hydraulic conductivity of reach bed sediments
-    real(DP), dimension(:), pointer, contiguous :: slope => null()                !< reach slope
-    integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null()       !< number of connections for each reach
-    real(DP), dimension(:), pointer, contiguous :: ustrf => null()                !< upstream flow fraction for upstream connections
-    real(DP), dimension(:), pointer, contiguous :: ftotnd => null()               !< total fraction of connected reaches that are not diversions
-    integer(I4B), dimension(:), pointer, contiguous :: ndiv => null()             !< number of diversions for each reach
-    real(DP), dimension(:), pointer, contiguous :: usflow => null()               !< upstream reach flow
-    real(DP), dimension(:), pointer, contiguous :: dsflow => null()               !< downstream reach flow
-    real(DP), dimension(:), pointer, contiguous :: depth => null()                !< reach depth
-    real(DP), dimension(:), pointer, contiguous :: stage => null()                !< reach stage
-    real(DP), dimension(:), pointer, contiguous :: gwflow => null()               !< flow from groundwater to reach
-    real(DP), dimension(:), pointer, contiguous :: simevap => null()              !< simulated reach evaporation
-    real(DP), dimension(:), pointer, contiguous :: simrunoff => null()            !< simulated reach runoff
-    real(DP), dimension(:), pointer, contiguous :: stage0 => null()               !< previous reach stage iterate
-    real(DP), dimension(:), pointer, contiguous :: usflow0 => null()              !< previous upstream reach flow iterate
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !< ibound array for SFR reaches that defines active, inactive, and constant reaches
+    integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null() !< groundwater node connected to SFR reaches
+    integer(I4B), dimension(:), pointer, contiguous :: igwftopnode => null() !< highest active groundwater node under SFR reaches
+    real(DP), dimension(:), pointer, contiguous :: length => null() !< reach length
+    real(DP), dimension(:), pointer, contiguous :: width => null() !< reach width
+    real(DP), dimension(:), pointer, contiguous :: strtop => null() !< reach bed top elevation
+    real(DP), dimension(:), pointer, contiguous :: bthick => null() !< reach bed thickness
+    real(DP), dimension(:), pointer, contiguous :: hk => null() !< vertical hydraulic conductivity of reach bed sediments
+    real(DP), dimension(:), pointer, contiguous :: slope => null() !< reach slope
+    integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null() !< number of connections for each reach
+    real(DP), dimension(:), pointer, contiguous :: ustrf => null() !< upstream flow fraction for upstream connections
+    real(DP), dimension(:), pointer, contiguous :: ftotnd => null() !< total fraction of connected reaches that are not diversions
+    integer(I4B), dimension(:), pointer, contiguous :: ndiv => null() !< number of diversions for each reach
+    real(DP), dimension(:), pointer, contiguous :: usflow => null() !< upstream reach flow
+    real(DP), dimension(:), pointer, contiguous :: dsflow => null() !< downstream reach flow
+    real(DP), dimension(:), pointer, contiguous :: depth => null() !< reach depth
+    real(DP), dimension(:), pointer, contiguous :: stage => null() !< reach stage
+    real(DP), dimension(:), pointer, contiguous :: gwflow => null() !< flow from groundwater to reach
+    real(DP), dimension(:), pointer, contiguous :: simevap => null() !< simulated reach evaporation
+    real(DP), dimension(:), pointer, contiguous :: simrunoff => null() !< simulated reach runoff
+    real(DP), dimension(:), pointer, contiguous :: stage0 => null() !< previous reach stage iterate
+    real(DP), dimension(:), pointer, contiguous :: usflow0 => null() !< previous upstream reach flow iterate
     ! -- cross-section data
-    integer(I4B), pointer :: ncrossptstot => null()                               !< total number of cross-section points
-    integer(I4B), dimension(:), pointer, contiguous :: ncrosspts => null()        !< number of cross-section points for each reach
-    integer(I4B), dimension(:), pointer, contiguous :: iacross => null()          !< pointers to cross-section data for each reach
-    real(DP), dimension(:), pointer, contiguous :: station => null()              !< cross-section station (x-position) data
-    real(DP), dimension(:), pointer, contiguous :: xsheight => null()             !< cross-section height data
-    real(DP), dimension(:), pointer, contiguous :: xsrough => null()              !< cross-section roughness data
+    integer(I4B), pointer :: ncrossptstot => null() !< total number of cross-section points
+    integer(I4B), dimension(:), pointer, contiguous :: ncrosspts => null() !< number of cross-section points for each reach
+    integer(I4B), dimension(:), pointer, contiguous :: iacross => null() !< pointers to cross-section data for each reach
+    real(DP), dimension(:), pointer, contiguous :: station => null() !< cross-section station (x-position) data
+    real(DP), dimension(:), pointer, contiguous :: xsheight => null() !< cross-section height data
+    real(DP), dimension(:), pointer, contiguous :: xsrough => null() !< cross-section roughness data
     ! -- connection data
-    integer(I4B), dimension(:), pointer, contiguous :: idir => null()             !< reach connection direction
-    integer(I4B), dimension(:), pointer, contiguous :: idiv => null()             !< reach connection diversion number
-    real(DP), dimension(:), pointer, contiguous :: qconn => null()                !< reach connection flow
+    integer(I4B), dimension(:), pointer, contiguous :: idir => null() !< reach connection direction
+    integer(I4B), dimension(:), pointer, contiguous :: idiv => null() !< reach connection diversion number
+    real(DP), dimension(:), pointer, contiguous :: qconn => null() !< reach connection flow
     ! -- boundary data
-    real(DP), dimension(:), pointer, contiguous :: rough => null()                !< reach Manning's roughness coefficient (SI units)
-    real(DP), dimension(:), pointer, contiguous :: rain => null()                 !< reach rainfall
-    real(DP), dimension(:), pointer, contiguous :: evap => null()                 !< reach potential evaporation
-    real(DP), dimension(:), pointer, contiguous :: inflow => null()               !< reach upstream inflow
-    real(DP), dimension(:), pointer, contiguous :: runoff => null()               !< reach maximum runoff
-    real(DP), dimension(:), pointer, contiguous :: sstage => null()               !< reach specified stage
+    real(DP), dimension(:), pointer, contiguous :: rough => null() !< reach Manning's roughness coefficient (SI units)
+    real(DP), dimension(:), pointer, contiguous :: rain => null() !< reach rainfall
+    real(DP), dimension(:), pointer, contiguous :: evap => null() !< reach potential evaporation
+    real(DP), dimension(:), pointer, contiguous :: inflow => null() !< reach upstream inflow
+    real(DP), dimension(:), pointer, contiguous :: runoff => null() !< reach maximum runoff
+    real(DP), dimension(:), pointer, contiguous :: sstage => null() !< reach specified stage
     ! -- reach aux variables
-    real(DP), dimension(:, :), pointer, contiguous :: rauxvar => null()            !< reach aux variable
+    real(DP), dimension(:, :), pointer, contiguous :: rauxvar => null() !< reach aux variable
     ! -- diversion data
-    integer(I4B), dimension(:), pointer, contiguous :: iadiv => null()            !< row pointer for reach diversions
-    integer(I4B), dimension(:), pointer, contiguous :: divreach => null()         !< diversion reach
-    character(len=10), dimension(:), pointer, contiguous :: divcprior => null()  !< diversion rule
-    real(DP), dimension(:), pointer, contiguous :: divflow => null()              !< specified diversion flow value
-    real(DP), dimension(:), pointer, contiguous :: divq => null()                 !< simulated diversion flow
+    integer(I4B), dimension(:), pointer, contiguous :: iadiv => null() !< row pointer for reach diversions
+    integer(I4B), dimension(:), pointer, contiguous :: divreach => null() !< diversion reach
+    character(len=10), dimension(:), pointer, contiguous :: divcprior => null() !< diversion rule
+    real(DP), dimension(:), pointer, contiguous :: divflow => null() !< specified diversion flow value
+    real(DP), dimension(:), pointer, contiguous :: divq => null() !< simulated diversion flow
     !
     ! -- density variables
-    integer(I4B), pointer :: idense                                               !< flag indicating if density corrections are active
-    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()       !< density terms
+    integer(I4B), pointer :: idense !< flag indicating if density corrections are active
+    real(DP), dimension(:, :), pointer, contiguous :: denseterms => null() !< density terms
     !
     ! -- type bound procedures
   contains
@@ -221,13 +221,13 @@ contains
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy variables
-    class(BndType), pointer :: packobj           !< pointer to default package type
-    integer(I4B), intent(in) :: id                !< package id
-    integer(I4B), intent(in) :: ibcnum            !< boundary condition number
-    integer(I4B), intent(in) :: inunit            !< unit number of SFR package input file
-    integer(I4B), intent(in) :: iout              !< unit number of model listing file
-    character(len=*), intent(in) :: namemodel    !< model name
-    character(len=*), intent(in) :: pakname      !< package name
+    class(BndType), pointer :: packobj !< pointer to default package type
+    integer(I4B), intent(in) :: id !< package id
+    integer(I4B), intent(in) :: ibcnum !< boundary condition number
+    integer(I4B), intent(in) :: inunit !< unit number of SFR package input file
+    integer(I4B), intent(in) :: iout !< unit number of model listing file
+    character(len=*), intent(in) :: namemodel !< model name
+    character(len=*), intent(in) :: pakname !< package name
     ! -- local variables
     type(SfrType), pointer :: sfrobj
     !
@@ -250,7 +250,7 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
-    packobj%iscloc = 0  ! not supported
+    packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
@@ -269,7 +269,7 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
@@ -332,7 +332,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -516,7 +516,7 @@ contains
   !<
   subroutine sfr_read_dimensions(this)
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -608,9 +608,9 @@ contains
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, openfile
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this    !< SfrType object
-    character(len=*), intent(inout) :: option  !< option keyword string
-    logical(LGP), intent(inout) :: found   !< boolean indicating if option found
+    class(SfrType), intent(inout) :: this !< SfrType object
+    character(len=*), intent(inout) :: option !< option keyword string
+    logical(LGP), intent(inout) :: found !< boolean indicating if option found
     ! -- local variables
     real(DP) :: r
     character(len=MAXCHARLEN) :: fname
@@ -751,7 +751,7 @@ contains
   !<
   subroutine sfr_ar(this)
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: ierr
@@ -810,7 +810,7 @@ contains
     ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: cellid
@@ -956,7 +956,7 @@ contains
         !
         ! -- set upstream fraction
         text = ustrfname
-        jj = 1  ! For 'USTRF'
+        jj = 1 ! For 'USTRF'
         bndElem => this%ustrf(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                            this%packName, 'BND', &
@@ -1045,7 +1045,7 @@ contains
     use MemoryManagerModule, only: mem_reallocate
     use sfrCrossSectionManager, only: cross_section_cr, SfrCrossSection
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: line
@@ -1187,7 +1187,7 @@ contains
     use MemoryManagerModule, only: mem_reallocate
     use SparseModule, only: sparsematrix
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: line
     logical(LGP) :: isfound
@@ -1467,7 +1467,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     character(len=10) :: cnum
     character(len=10) :: cval
@@ -1672,7 +1672,7 @@ contains
     use MemoryManagerModule, only: mem_reallocate
     use sfrCrossSectionManager, only: cross_section_cr, SfrCrossSection
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
@@ -1855,7 +1855,7 @@ contains
     ! -- modules
     use TimeSeriesManagerModule, only: var_timeseries
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: iaux
@@ -1916,8 +1916,8 @@ contains
   !<
   subroutine sfr_cf(this, reset_mover)
     ! -- dummy variables
-    class(SfrType) :: this                             !< SfrType object
-    logical(LGP), intent(in), optional :: reset_mover  !< boolean for resetting mover
+    class(SfrType) :: this !< SfrType object
+    logical(LGP), intent(in), optional :: reset_mover !< boolean for resetting mover
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: igwfnode
@@ -1957,11 +1957,11 @@ contains
   !<
   subroutine sfr_fc(this, rhs, ia, idxglo, amatsln)
     ! -- dummy variables
-    class(SfrType) :: this                             !< SfrType object
-    real(DP), dimension(:), intent(inout) :: rhs       !< right-hand side vector for model
-    integer(I4B), dimension(:), intent(in) :: ia       !< solution CRS row pointers
-    integer(I4B), dimension(:), intent(in) :: idxglo   !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln   !< solution coefficient matrix
+    class(SfrType) :: this !< SfrType object
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
+    integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
+    integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
+    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2061,11 +2061,11 @@ contains
   !<
   subroutine sfr_fn(this, rhs, ia, idxglo, amatsln)
     ! -- dummy variables
-    class(SfrType) :: this                             !< SfrType object
-    real(DP), dimension(:), intent(inout) :: rhs       !< right-hand side vector for model
-    integer(I4B), dimension(:), intent(in) :: ia       !< solution CRS row pointers
-    integer(I4B), dimension(:), intent(in) :: idxglo   !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln   !< solution coefficient matrix
+    class(SfrType) :: this !< SfrType object
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
+    integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
+    integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
+    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2117,14 +2117,14 @@ contains
     ! -- modules
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this               !< SfrType object
-    integer(I4B), intent(in) :: innertot                !< total number of inner iterations
-    integer(I4B), intent(in) :: kiter                   !< Picard iteration number
-    integer(I4B), intent(in) :: iend                    !< flag indicating if this is the last Picard iteration
-    integer(I4B), intent(in) :: icnvgmod                !< flag inficating if the model has met specific convergence criteria
-    character(len=LENPAKLOC), intent(inout) :: cpak     !< string for user node
-    integer(I4B), intent(inout) :: ipak                 !< location of the maximum dependent variable change
-    real(DP), intent(inout) :: dpak                     !< maximum dependent variable change
+    class(SfrType), intent(inout) :: this !< SfrType object
+    integer(I4B), intent(in) :: innertot !< total number of inner iterations
+    integer(I4B), intent(in) :: kiter !< Picard iteration number
+    integer(I4B), intent(in) :: iend !< flag indicating if this is the last Picard iteration
+    integer(I4B), intent(in) :: icnvgmod !< flag inficating if the model has met specific convergence criteria
+    character(len=LENPAKLOC), intent(inout) :: cpak !< string for user node
+    integer(I4B), intent(inout) :: ipak !< location of the maximum dependent variable change
+    real(DP), intent(inout) :: dpak !< maximum dependent variable change
     ! -- local variables
     character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: tag
@@ -2275,10 +2275,10 @@ contains
     use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this                         !< SfrType object
-    real(DP), dimension(:), intent(in) :: x                       !< current dependent-variable value
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja   !< flow between two connected control volumes
-    integer(I4B), optional, intent(in) :: iadv                    !< flag that indicates if this is an advance package
+    class(SfrType), intent(inout) :: this !< SfrType object
+    real(DP), dimension(:), intent(in) :: x !< current dependent-variable value
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow between two connected control volumes
+    integer(I4B), optional, intent(in) :: iadv !< flag that indicates if this is an advance package
     ! -- local variables
     integer(I4B) :: i
     real(DP) :: qext
@@ -2353,9 +2353,9 @@ contains
     ! -- modules
     use TdisModule, only: kstp, kper, delt, pertim, totim
     ! -- dummy variables
-    class(SfrType) :: this               !< SfrType object
-    integer(I4B), intent(in) :: icbcfl   !< flag and unit number for cell-by-cell output
-    integer(I4B), intent(in) :: ibudfl   !< flag indication if cell-by-cell data should be saved
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: icbcfl !< flag and unit number for cell-by-cell output
+    integer(I4B), intent(in) :: ibudfl !< flag indication if cell-by-cell data should be saved
     ! -- local variables
     integer(I4B) :: ibinun
     character(len=20), dimension(:), allocatable :: cellidstr
@@ -2411,9 +2411,9 @@ contains
     use TdisModule, only: kstp, kper, pertim, totim
     use InputOutputModule, only: ulasav
     ! -- dummy variables
-    class(SfrType) :: this                 !< SfrType object
-    integer(I4B), intent(in) :: idvsave    !< flag and unit number for dependent-variable output
-    integer(I4B), intent(in) :: idvprint   !< flag indicating if dependent-variable should be written to the model listing file
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
+    integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
     ! -- local variables
     character(len=20) :: cellid
     integer(I4B) :: ibinun
@@ -2511,11 +2511,11 @@ contains
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(SfrType) :: this              !< SfrType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
@@ -2532,7 +2532,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(SfrType) :: this   !< SfrType object
+    class(SfrType) :: this !< SfrType object
     !
     ! -- deallocate arrays
     call mem_deallocate(this%qoutflow)
@@ -2657,7 +2657,7 @@ contains
   !<
   subroutine define_listlabel(this)
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -2693,7 +2693,7 @@ contains
   !<
   logical function sfr_obs_supported(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     !
     ! -- set boolean
     sfr_obs_supported = .true.
@@ -2709,7 +2709,7 @@ contains
   !<
   subroutine sfr_df_obs(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: indx
     !
@@ -2809,7 +2809,7 @@ contains
   !<
   subroutine sfr_bd_obs(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2903,7 +2903,7 @@ contains
     ! -- modules
     use TdisModule, only: kper
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -3015,10 +3015,10 @@ contains
   !<
   subroutine sfr_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- dummy variables
-    type(ObserveType), intent(inout) :: obsrv        !< Observation object
-    class(DisBaseType), intent(in)    :: dis              !< Discretization object
-    integer(I4B), intent(in)    :: inunitobs   !< file unit number for the package observation file
-    integer(I4B), intent(in)    :: iout        !< model listing file unit number
+    type(ObserveType), intent(inout) :: obsrv !< Observation object
+    class(DisBaseType), intent(in) :: dis !< Discretization object
+    integer(I4B), intent(in) :: inunitobs !< file unit number for the package observation file
+    integer(I4B), intent(in) :: iout !< model listing file unit number
     ! -- local variables
     integer(I4B) :: nn1
     integer(I4B) :: icol
@@ -3061,10 +3061,10 @@ contains
     ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this                   !< SfrType object
-    integer(I4B), intent(in) :: n                          !< reach number
-    integer(I4B), intent(inout) :: ichkustrm               !< flag indicating if upstream fraction data specified
-    character(len=LINELENGTH), intent(inout) :: crossfile  !< cross-section file name
+    class(SfrType), intent(inout) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    integer(I4B), intent(inout) :: ichkustrm !< flag indicating if upstream fraction data specified
+    character(len=LINELENGTH), intent(inout) :: crossfile !< cross-section file name
     ! -- local variables
     character(len=10) :: cnum
     character(len=LINELENGTH) :: text
@@ -3101,7 +3101,7 @@ contains
       end if
     case ('MANNING')
       call this%parser%GetString(text)
-      jj = 1  ! For 'MANNING'
+      jj = 1 ! For 'MANNING'
       bndElem => this%rough(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
@@ -3109,21 +3109,21 @@ contains
                                          'MANNING')
     case ('STAGE')
       call this%parser%GetString(text)
-      jj = 1  ! For 'STAGE'
+      jj = 1 ! For 'STAGE'
       bndElem => this%sstage(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
                                          this%tsManager, this%iprpak, 'STAGE')
     case ('RAINFALL')
       call this%parser%GetString(text)
-      jj = 1  ! For 'RAIN'
+      jj = 1 ! For 'RAIN'
       bndElem => this%rain(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
                                          this%tsManager, this%iprpak, 'RAIN')
     case ('EVAPORATION')
       call this%parser%GetString(text)
-      jj = 1  ! For 'EVAP'
+      jj = 1 ! For 'EVAP'
       bndElem => this%evap(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
@@ -3131,7 +3131,7 @@ contains
                                          'MANNING')
     case ('RUNOFF')
       call this%parser%GetString(text)
-      jj = 1  ! For 'RUNOFF'
+      jj = 1 ! For 'RUNOFF'
       bndElem => this%runoff(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
@@ -3139,7 +3139,7 @@ contains
                                          'RUNOFF')
     case ('INFLOW')
       call this%parser%GetString(text)
-      jj = 1  ! For 'INFLOW'
+      jj = 1 ! For 'INFLOW'
       bndElem => this%inflow(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
@@ -3169,7 +3169,7 @@ contains
       ! -- read value
       call this%parser%GetString(text)
       ii = this%iadiv(n) + idiv - 1
-      jj = 1  ! For 'DIVERSION'
+      jj = 1 ! For 'DIVERSION'
       bndElem => this%divflow(ii)
       call read_value_or_time_series_adv(text, ii, jj, bndElem, &
                                          this%packName, 'BND', &
@@ -3188,7 +3188,7 @@ contains
     case ('UPSTREAM_FRACTION')
       ichkustrm = 1
       call this%parser%GetString(text)
-      jj = 1  ! For 'USTRF'
+      jj = 1 ! For 'USTRF'
       bndElem => this%ustrf(n)
       call read_value_or_time_series_adv(text, n, jj, bndElem, &
                                          this%packName, 'BND', &
@@ -3250,12 +3250,12 @@ contains
   !<
   subroutine sfr_solve(this, n, h, hcof, rhs, update)
     ! -- dummy variables
-    class(SfrType) :: this                        !< SfrType object
-    integer(I4B), intent(in) :: n                 !< reach number
-    real(DP), intent(in) :: h                     !< groundwater head in cell connected to reach
-    real(DP), intent(inout) :: hcof               !< coefficient term added to the diagonal
-    real(DP), intent(inout) :: rhs                !< right-hand side term
-    logical(LGP), intent(in), optional :: update  !< boolean indicating if the reach depth and stage variables should be updated to current iterate
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: h !< groundwater head in cell connected to reach
+    real(DP), intent(inout) :: hcof !< coefficient term added to the diagonal
+    real(DP), intent(inout) :: rhs !< right-hand side term
+    logical(LGP), intent(in), optional :: update !< boolean indicating if the reach depth and stage variables should be updated to current iterate
     ! -- local variables
     logical(LGP) :: lupdate
     integer(I4B) :: i
@@ -3696,10 +3696,10 @@ contains
   !<
   subroutine sfr_update_flows(this, n, qd, qgwf)
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this   !< SfrType object
-    integer(I4B), intent(in) :: n           !< reach number
-    real(DP), intent(inout) :: qd           !< downstream reach flow
-    real(DP), intent(in) :: qgwf            !< groundwater leakage for reach
+    class(SfrType), intent(inout) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(inout) :: qd !< downstream reach flow
+    real(DP), intent(in) :: qgwf !< groundwater leakage for reach
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n2
@@ -3764,12 +3764,12 @@ contains
   !<
   subroutine sfr_calc_qd(this, n, depth, hgwf, qgwf, qd)
     ! -- dummy variables
-    class(SfrType) :: this             !< SfrType object
-    integer(I4B), intent(in) :: n      !< reach number
-    real(DP), intent(in) :: depth      !< reach depth
-    real(DP), intent(in) :: hgwf       !< groundwater head in connected GWF cell
-    real(DP), intent(inout) :: qgwf    !< groundwater leakage for reach
-    real(DP), intent(inout) :: qd      !< residual
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
+    real(DP), intent(in) :: hgwf !< groundwater head in connected GWF cell
+    real(DP), intent(inout) :: qgwf !< groundwater leakage for reach
+    real(DP), intent(inout) :: qd !< residual
     ! -- local variables
     real(DP) :: qsrc
     !
@@ -3801,10 +3801,10 @@ contains
   !<
   subroutine sfr_calc_qsource(this, n, depth, qsrc)
     ! -- dummy variables
-    class(SfrType) :: this            !< SfrType object
-    integer(I4B), intent(in) :: n     !< reach number
-    real(DP), intent(in) :: depth     !< reach depth
-    real(DP), intent(inout) :: qsrc   !< sum of sources for reach
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
+    real(DP), intent(inout) :: qsrc !< sum of sources for reach
     ! -- local variables
     real(DP) :: qu
     real(DP) :: qi
@@ -3869,10 +3869,10 @@ contains
   !<
   subroutine sfr_calc_qman(this, n, depth, qman)
     ! -- dummy variables
-    class(SfrType) :: this           !< SfrType object
-    integer(I4B), intent(in) :: n    !< reach number
-    real(DP), intent(in) :: depth    !< reach depth
-    real(DP), intent(inout) :: qman  !< streamflow
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
+    real(DP), intent(inout) :: qman !< streamflow
     ! -- local variables
     integer(I4B) :: npts
     integer(I4B) :: i0
@@ -3943,13 +3943,13 @@ contains
   !<
   subroutine sfr_calc_qgwf(this, n, depth, hgwf, qgwf, gwfhcof, gwfrhs)
     ! -- dummy variables
-    class(SfrType) :: this                         !< SfrType object
-    integer(I4B), intent(in) :: n                  !< reach number
-    real(DP), intent(in) :: depth                  !< reach depth
-    real(DP), intent(in) :: hgwf                   !< head in GWF cell connected to reach
-    real(DP), intent(inout) :: qgwf                !< reach-aquifer exchange
-    real(DP), intent(inout), optional :: gwfhcof   !< diagonal coefficient term for reach
-    real(DP), intent(inout), optional :: gwfrhs    !< right-hand side term for reach
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
+    real(DP), intent(in) :: hgwf !< head in GWF cell connected to reach
+    real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+    real(DP), intent(inout), optional :: gwfhcof !< diagonal coefficient term for reach
+    real(DP), intent(inout), optional :: gwfrhs !< right-hand side term for reach
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: tp
@@ -4011,10 +4011,10 @@ contains
   !<
   subroutine sfr_calc_cond(this, n, depth, cond)
     ! -- dummy variables
-    class(SfrType) :: this           !< SfrType object
-    integer(I4B), intent(in) :: n    !< reach number
-    real(DP), intent(in) :: depth    !< reach depth
-    real(DP), intent(inout) :: cond  !< reach-aquifer conductance
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
+    real(DP), intent(inout) :: cond !< reach-aquifer conductance
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: wp
@@ -4045,11 +4045,11 @@ contains
   !<
   subroutine sfr_calc_div(this, n, i, qd, qdiv)
     ! -- dummy variables
-    class(SfrType) :: this              !< SfrType object
-    integer(I4B), intent(in) :: n       !< reach number
-    integer(I4B), intent(in) :: i       !< diversion number in reach
-    real(DP), intent(inout) :: qd       !< remaining downstream flow for reach
-    real(DP), intent(inout) :: qdiv     !< diversion flow for diversion i
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    integer(I4B), intent(in) :: i !< diversion number in reach
+    real(DP), intent(inout) :: qd !< remaining downstream flow for reach
+    real(DP), intent(inout) :: qdiv !< diversion flow for diversion i
     ! -- local variables
     character(len=10) :: cp
     integer(I4B) :: jpos
@@ -4103,10 +4103,10 @@ contains
   !<
   subroutine sfr_calc_reach_depth(this, n, q1, d1)
     ! -- dummy variables
-    class(SfrType) :: this          !< SfrType object
-    integer(I4B), intent(in) :: n   !< reach number
-    real(DP), intent(in) :: q1      !< streamflow
-    real(DP), intent(inout) :: d1   !< stream depth at midpoint of reach
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: q1 !< streamflow
+    real(DP), intent(inout) :: d1 !< stream depth at midpoint of reach
     ! -- local variables
     real(DP) :: w
     real(DP) :: s
@@ -4142,10 +4142,10 @@ contains
   !<
   subroutine sfr_calc_xs_depth(this, n, qrch, d)
     ! -- dummy variables
-    class(SfrType) :: this          !< SfrType object
-    integer(I4B), intent(in) :: n   !< reach number
-    real(DP), intent(in) :: qrch    !< streamflow
-    real(DP), intent(inout) :: d    !< stream depth at midpoint of reach
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: qrch !< streamflow
+    real(DP), intent(inout) :: d !< stream depth at midpoint of reach
     ! -- local variables
     integer(I4B) :: iter
     real(DP) :: perturbation
@@ -4195,7 +4195,7 @@ contains
   !<
   subroutine sfr_check_reaches(this)
     ! -- dummy variables
-    class(SfrType) :: this   !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     character(len=5) :: crch
     character(len=10) :: cval
@@ -4317,7 +4317,7 @@ contains
   !<
   subroutine sfr_check_connections(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     logical(LGP) :: lreorder
     character(len=5) :: crch
@@ -4598,7 +4598,7 @@ contains
   !<
   subroutine sfr_check_diversions(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -4708,7 +4708,7 @@ contains
   !<
   subroutine sfr_check_ustrf(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -4915,7 +4915,7 @@ contains
   !<
   subroutine sfr_setup_budobj(this)
     ! -- dummy variables
-    class(SfrType) :: this   !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: nbudterm
     integer(I4B) :: i
@@ -5134,7 +5134,7 @@ contains
   !<
   subroutine sfr_fill_budobj(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: naux
     integer(I4B) :: i
@@ -5312,7 +5312,7 @@ contains
   !<
   subroutine sfr_setup_tableobj(this)
     ! -- dummy variables
-    class(SfrType) :: this  !< SfrType object
+    class(SfrType) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
@@ -5392,11 +5392,11 @@ contains
   !<
   function calc_area_wet(this, n, depth)
     ! -- return variable
-    real(DP) :: calc_area_wet       !< wetted area
+    real(DP) :: calc_area_wet !< wetted area
     ! -- dummy variables
-    class(SfrType) :: this          !< SfrType object
-    integer(I4B), intent(in) :: n   !< reach number
-    real(DP), intent(in) :: depth   !< reach depth
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
     ! -- local variables
     integer(I4B) :: npts
     integer(I4B) :: i0
@@ -5424,11 +5424,11 @@ contains
   !<
   function calc_perimeter_wet(this, n, depth)
     ! -- return variable
-    real(DP) :: calc_perimeter_wet   !< wetted perimeter
+    real(DP) :: calc_perimeter_wet !< wetted perimeter
     ! -- dummy variables
-    class(SfrType) :: this           !< SfrType object
-    integer(I4B), intent(in) :: n    !< reach number
-    real(DP), intent(in) :: depth    !< reach depth
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
     ! -- local variables
     integer(I4B) :: npts
     integer(I4B) :: i0
@@ -5456,10 +5456,10 @@ contains
   !<
   function calc_surface_area(this, n)
     ! -- return variable
-    real(DP) :: calc_surface_area  !< surface area
+    real(DP) :: calc_surface_area !< surface area
     ! -- dummy variables
-    class(SfrType) :: this         !< SfrType object
-    integer(I4B), intent(in) :: n  !< reach number
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
     ! -- local variables
     integer(I4B) :: npts
     integer(I4B) :: i0
@@ -5490,9 +5490,9 @@ contains
     ! -- return variable
     real(DP) :: calc_surface_area_wet !< wetted surface area
     ! -- dummy variables
-    class(SfrType) :: this            !< SfrType object
-    integer(I4B), intent(in) :: n     !< reach number
-    real(DP), intent(in) :: depth     !< reach depth
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
     ! -- local variables
     real(DP) :: top_width
     !
@@ -5511,11 +5511,11 @@ contains
   !<
   function calc_top_width_wet(this, n, depth)
     ! -- return variable
-    real(DP) :: calc_top_width_wet  !< wetted top width
+    real(DP) :: calc_top_width_wet !< wetted top width
     ! -- dummy variables
-    class(SfrType) :: this          !< SfrType object
-    integer(I4B), intent(in) :: n   !< reach number
-    real(DP), intent(in) :: depth   !< reach depth
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< reach depth
     ! -- local variables
     integer(I4B) :: npts
     integer(I4B) :: i0
@@ -5549,7 +5549,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
+    class(SfrType), intent(inout) :: this !< SfrType object
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -5585,15 +5585,15 @@ contains
   subroutine sfr_calculate_density_exchange(this, n, stage, head, cond, &
                                             bots, flow, gwfhcof, gwfrhs)
     ! -- dummy variables
-    class(SfrType), intent(inout) :: this  !< SfrType object
-    integer(I4B), intent(in) :: n         !< reach number
-    real(DP), intent(in) :: stage         !< reach stage
-    real(DP), intent(in) :: head          !< head in connected GWF cell
-    real(DP), intent(in) :: cond          !< reach conductance
-    real(DP), intent(in) :: bots          !< bottom elevation of reach
-    real(DP), intent(inout) :: flow       !< calculated flow, updated here with density terms
-    real(DP), intent(inout) :: gwfhcof    !< GWF diagonal coefficient, updated here with density terms
-    real(DP), intent(inout) :: gwfrhs     !< GWF right-hand-side value, updated here with density terms
+    class(SfrType), intent(inout) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: stage !< reach stage
+    real(DP), intent(in) :: head !< head in connected GWF cell
+    real(DP), intent(in) :: cond !< reach conductance
+    real(DP), intent(in) :: bots !< bottom elevation of reach
+    real(DP), intent(inout) :: flow !< calculated flow, updated here with density terms
+    real(DP), intent(inout) :: gwfhcof !< GWF diagonal coefficient, updated here with density terms
+    real(DP), intent(inout) :: gwfrhs !< GWF right-hand-side value, updated here with density terms
     ! -- local variables
     real(DP) :: ss
     real(DP) :: hh
@@ -5613,22 +5613,22 @@ contains
     if (stage >= bots) then
       ss = stage
       stage_below_bot = .false.
-      rdensesfr = this%denseterms(1, n)  ! sfr rel density
+      rdensesfr = this%denseterms(1, n) ! sfr rel density
     else
       ss = bots
       stage_below_bot = .true.
-      rdensesfr = this%denseterms(2, n)  ! gwf rel density
+      rdensesfr = this%denseterms(2, n) ! gwf rel density
     end if
     !
     ! -- set hh to head or bots
     if (head >= bots) then
       hh = head
       head_below_bot = .false.
-      rdensegwf = this%denseterms(2, n)  ! gwf rel density
+      rdensegwf = this%denseterms(2, n) ! gwf rel density
     else
       hh = bots
       head_below_bot = .true.
-      rdensegwf = this%denseterms(1, n)  ! sfr rel density
+      rdensegwf = this%denseterms(1, n) ! sfr rel density
     end if
     !
     ! -- todo: hack because denseterms not updated in a cf calculation

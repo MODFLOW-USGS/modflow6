@@ -1,8 +1,8 @@
 module PackageMoverModule
-  
-  use KindModule,          only: DP, I4B
-  use ConstantsModule,     only: LENMEMPATH, DZERO
-  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
+
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENMEMPATH, DZERO
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
 
   implicit none
@@ -10,17 +10,17 @@ module PackageMoverModule
   public :: PackageMoverType
   public :: set_packagemover_pointer
   public :: nulllify_packagemover_pointer
-  
+
   type PackageMoverType
-    
-    character(len=LENMEMPATH)                    :: memoryPath                !< the location in the memory manager where the variables are stored
-    integer(I4B), pointer                        :: nproviders
-    integer(I4B), pointer                        :: nreceivers
-    integer(I4B), dimension(:), pointer, contiguous :: iprmap => null()       !< map between id1 and feature (needed for lake to map from outlet to lake number)
-    real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
-    real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
-    real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
-    real(DP), dimension(:), pointer, contiguous  :: qfrommvr      => null()
+
+    character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
+    integer(I4B), pointer :: nproviders
+    integer(I4B), pointer :: nreceivers
+    integer(I4B), dimension(:), pointer, contiguous :: iprmap => null() !< map between id1 and feature (needed for lake to map from outlet to lake number)
+    real(DP), dimension(:), pointer, contiguous :: qtformvr => null()
+    real(DP), dimension(:), pointer, contiguous :: qformvr => null()
+    real(DP), dimension(:), pointer, contiguous :: qtomvr => null()
+    real(DP), dimension(:), pointer, contiguous :: qfrommvr => null()
 
   contains
     procedure :: ar
@@ -33,17 +33,19 @@ module PackageMoverModule
     procedure :: get_qfrommvr
     procedure :: get_qtomvr
     procedure :: accumulate_qformvr
-    
+
   end type PackageMoverType
-  
-  contains
-  
+
+contains
+
   subroutine set_packagemover_pointer(packagemover, memPath)
     type(PackageMoverType), intent(inout) :: packagemover
     character(len=*), intent(in) :: memPath
     packagemover%memoryPath = memPath
-    call mem_setptr(packagemover%nproviders, 'NPROVIDERS', packagemover%memoryPath)
-    call mem_setptr(packagemover%nreceivers, 'NRECEIVERS', packagemover%memoryPath)
+    call mem_setptr(packagemover%nproviders, 'NPROVIDERS', &
+                    packagemover%memoryPath)
+    call mem_setptr(packagemover%nreceivers, 'NRECEIVERS', &
+                    packagemover%memoryPath)
     call mem_setptr(packagemover%iprmap, 'IPRMAP', packagemover%memoryPath)
     call mem_setptr(packagemover%qtformvr, 'QTFORMVR', packagemover%memoryPath)
     call mem_setptr(packagemover%qformvr, 'QFORMVR', packagemover%memoryPath)
@@ -78,8 +80,8 @@ module PackageMoverModule
     !
     ! -- return
     return
-  end subroutine ar  
-  
+  end subroutine ar
+
   subroutine ad(this)
     class(PackageMoverType) :: this
     integer :: i
@@ -88,12 +90,12 @@ module PackageMoverModule
     do i = 1, this%nproviders
       this%qtomvr(i) = DZERO
       this%qformvr(i) = DZERO
-    enddo
+    end do
     !
     ! -- return
     return
   end subroutine ad
-  
+
   subroutine cf(this)
     class(PackageMoverType) :: this
     integer :: i
@@ -101,16 +103,16 @@ module PackageMoverModule
     ! -- set frommvr and qtomvr to zero
     do i = 1, this%nreceivers
       this%qfrommvr(i) = DZERO
-    enddo
+    end do
     do i = 1, this%nproviders
       this%qtomvr(i) = DZERO
       this%qtformvr(i) = this%qformvr(i)
-    enddo
+    end do
     !
     ! -- return
     return
   end subroutine cf
-  
+
   subroutine fc(this)
     class(PackageMoverType) :: this
     integer :: i
@@ -118,12 +120,12 @@ module PackageMoverModule
     ! -- set formvr to zero
     do i = 1, this%nproviders
       this%qformvr(i) = DZERO
-    enddo
+    end do
     !
     ! -- return
     return
   end subroutine fc
-  
+
   subroutine da(this)
     class(PackageMoverType) :: this
     !
@@ -139,12 +141,12 @@ module PackageMoverModule
     call mem_deallocate(this%nreceivers)
     !
     ! -- pointers
-    nullify(this%iprmap)
+    nullify (this%iprmap)
     !
     ! -- return
     return
   end subroutine da
-  
+
   subroutine allocate_scalars(this)
     class(PackageMoverType) :: this
     !
@@ -156,8 +158,8 @@ module PackageMoverModule
     !
     ! -- return
     return
-  end subroutine allocate_scalars  
-  
+  end subroutine allocate_scalars
+
   subroutine allocate_arrays(this)
     class(PackageMoverType) :: this
     integer(I4B) :: i
@@ -174,22 +176,22 @@ module PackageMoverModule
       this%qtformvr(i) = DZERO
       this%qformvr(i) = DZERO
       this%qtomvr(i) = DZERO
-    enddo
+    end do
     do i = 1, this%nreceivers
       this%qfrommvr(i) = DZERO
-    enddo
+    end do
     !
     ! -- return
     return
   end subroutine allocate_arrays
-  
+
   function get_qfrommvr(this, ireceiver) result(qfrommvr)
     class(PackageMoverType) :: this
     real(DP) :: qfrommvr
     integer, intent(in) :: ireceiver
     qfrommvr = this%qfrommvr(ireceiver)
   end function get_qfrommvr
-  
+
   function get_qtomvr(this, iprovider) result(qtomvr)
     class(PackageMoverType) :: this
     real(DP) :: qtomvr

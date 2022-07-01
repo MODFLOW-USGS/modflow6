@@ -16,17 +16,17 @@ module GwfDisModule
   public dis_cr, dis_init_mem, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
-    integer(I4B), pointer :: nlay => null()                                      ! number of layers
-    integer(I4B), pointer :: nrow => null()                                      ! number of rows
-    integer(I4B), pointer :: ncol => null()                                      ! number of columns
-    real(DP), dimension(:), pointer, contiguous :: delr => null()                ! spacing along a row
-    real(DP), dimension(:), pointer, contiguous :: delc => null()                ! spacing along a column
-    real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncol, nrow)
-    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncol, nrow, nlay)
-    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null()   ! idomain (ncol, nrow, nlay)
-    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncol, nrow, nlay)
-    real(DP), dimension(:), pointer, contiguous :: cellx => null()               ! cell center x coordinate for column j
-    real(DP), dimension(:), pointer, contiguous :: celly => null()               ! cell center y coordinate for row i
+    integer(I4B), pointer :: nlay => null() ! number of layers
+    integer(I4B), pointer :: nrow => null() ! number of rows
+    integer(I4B), pointer :: ncol => null() ! number of columns
+    real(DP), dimension(:), pointer, contiguous :: delr => null() ! spacing along a row
+    real(DP), dimension(:), pointer, contiguous :: delc => null() ! spacing along a column
+    real(DP), dimension(:, :), pointer, contiguous :: top2d => null() ! top elevations for each cell at top of model (ncol, nrow)
+    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null() ! bottom elevations for each cell (ncol, nrow, nlay)
+    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null() ! idomain (ncol, nrow, nlay)
+    real(DP), dimension(:, :, :), pointer :: botm => null() ! top and bottom elevations for each cell (ncol, nrow, nlay)
+    real(DP), dimension(:), pointer, contiguous :: cellx => null() ! cell center x coordinate for column j
+    real(DP), dimension(:), pointer, contiguous :: celly => null() ! cell center y coordinate for row i
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
@@ -803,22 +803,22 @@ contains
     write (iunit) txt
     !
     ! -- write data
-    write (iunit) this%nodesuser                                                 ! ncells
-    write (iunit) this%nlay                                                      ! nlay
-    write (iunit) this%nrow                                                      ! nrow
-    write (iunit) this%ncol                                                      ! ncol
-    write (iunit) this%nja                                                       ! nja
-    write (iunit) this%xorigin                                                   ! xorigin
-    write (iunit) this%yorigin                                                   ! yorigin
-    write (iunit) this%angrot                                                    ! angrot
-    write (iunit) this%delr                                                      ! delr
-    write (iunit) this%delc                                                      ! delc
-    write (iunit) this%top2d                                                     ! top2d
-    write (iunit) this%bot3d                                                     ! bot3d
-    write (iunit) this%con%iausr                                                 ! iausr
-    write (iunit) this%con%jausr                                                 ! jausr
-    write (iunit) this%idomain                                                   ! idomain
-    write (iunit) icelltype                                                      ! icelltype
+    write (iunit) this%nodesuser ! ncells
+    write (iunit) this%nlay ! nlay
+    write (iunit) this%nrow ! nrow
+    write (iunit) this%ncol ! ncol
+    write (iunit) this%nja ! nja
+    write (iunit) this%xorigin ! xorigin
+    write (iunit) this%yorigin ! yorigin
+    write (iunit) this%angrot ! angrot
+    write (iunit) this%delr ! delr
+    write (iunit) this%delc ! delc
+    write (iunit) this%top2d ! top2d
+    write (iunit) this%bot3d ! bot3d
+    write (iunit) this%con%iausr ! iausr
+    write (iunit) this%con%jausr ! jausr
+    write (iunit) this%idomain ! idomain
+    write (iunit) icelltype ! icelltype
     !
     ! -- Close the file
     close (iunit)
@@ -1079,8 +1079,8 @@ contains
     integer(I4B), intent(inout) :: lloc
     integer(I4B), intent(inout) :: istart
     integer(I4B), intent(inout) :: istop
-    integer(I4B), intent(in)    :: in
-    integer(I4B), intent(in)    :: iout
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(inout) :: line
     logical, optional, intent(in) :: flag_string
     logical, optional, intent(in) :: allow_zero
@@ -1171,12 +1171,12 @@ contains
     ! -- return
     integer(I4B) :: nodeu
     ! -- dummy
-    class(GwfDisType)                :: this
+    class(GwfDisType) :: this
     character(len=*), intent(inout) :: cellid
-    integer(I4B), intent(in)    :: inunit
-    integer(I4B), intent(in)    :: iout
-    logical, optional, intent(in)    :: flag_string
-    logical, optional, intent(in)    :: allow_zero
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
     ! -- local
     integer(I4B) :: lloclocal, istart, istop, ndum, n
     integer(I4B) :: k, i, j, nlay, nrow, ncol
@@ -1429,8 +1429,8 @@ contains
   subroutine get_cellxy_dis3d(this, node, xcell, ycell)
     use InputOutputModule, only: get_ijk
     class(GwfDisType), intent(in) :: this
-    integer(I4B), intent(in)      :: node         ! the reduced node number
-    real(DP), intent(out)         :: xcell, ycell ! the x,y for the cell
+    integer(I4B), intent(in) :: node ! the reduced node number
+    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
     ! local
     integer(I4B) :: nodeuser, i, j, k
 
@@ -1444,8 +1444,8 @@ contains
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
-    class(GwfDisType), intent(in)  :: this
-    character(len=*), intent(out)  :: dis_type
+    class(GwfDisType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
 
     dis_type = "DIS"
 
@@ -1464,15 +1464,15 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisType), intent(inout)                   :: this
-    character(len=*), intent(inout)                    :: line
-    integer(I4B), intent(inout)                        :: lloc
-    integer(I4B), intent(inout)                        :: istart
-    integer(I4B), intent(inout)                        :: istop
-    integer(I4B), intent(in)                           :: in
-    integer(I4B), intent(in)                           :: iout
+    class(GwfDisType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
-    character(len=*), intent(in)                       :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: ival
     real(DP) :: rval
@@ -1534,18 +1534,18 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisType), intent(inout)               :: this
-    character(len=*), intent(inout)                :: line
-    integer(I4B), intent(inout)                    :: lloc
-    integer(I4B), intent(inout)                    :: istart
-    integer(I4B), intent(inout)                    :: istop
-    integer(I4B), intent(in)                       :: in
-    integer(I4B), intent(in)                       :: iout
+    class(GwfDisType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    character(len=*), intent(in)                   :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: ival
-    real(DP)     :: rval
+    real(DP) :: rval
     integer(I4B) :: nlay
     integer(I4B) :: nrow
     integer(I4B) :: ncol
@@ -1668,17 +1668,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfDisType), intent(inout)               :: this
+    class(GwfDisType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    integer(I4B), intent(in)                       :: iout
-    integer(I4B), intent(in)                       :: iprint
-    integer(I4B), intent(in)                       :: idataun
-    character(len=*), intent(in)                   :: aname
-    character(len=*), intent(in)                   :: cdatafmp
-    integer(I4B), intent(in)                       :: nvaluesp
-    integer(I4B), intent(in)                       :: nwidthp
-    character(len=*), intent(in)                   :: editdesc
-    real(DP), intent(in)                           :: dinact
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: iprint
+    integer(I4B), intent(in) :: idataun
+    character(len=*), intent(in) :: aname
+    character(len=*), intent(in) :: cdatafmp
+    integer(I4B), intent(in) :: nvaluesp
+    integer(I4B), intent(in) :: nwidthp
+    character(len=*), intent(in) :: editdesc
+    real(DP), intent(in) :: dinact
     ! -- local
     integer(I4B) :: k, ifirst
     integer(I4B) :: nlay

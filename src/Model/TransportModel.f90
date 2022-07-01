@@ -5,24 +5,21 @@
 !<
 
 module TransportModelModule
-  use KindModule,                  only: DP, I4B
-  use ConstantsModule,             only: LENFTYPE
-  use SimVariablesModule,          only: errmsg
-  use NumericalModelModule,        only: NumericalModelType
-  
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENFTYPE
+  use SimVariablesModule, only: errmsg
+  use NumericalModelModule, only: NumericalModelType
+
   implicit none
-  
+
   private
-  
+
   public :: TransportModelType
-  
+
   type, extends(NumericalModelType) :: TransportModelType
 
   contains
-  
-  end type TransportModelType
-  
 
-  
-end module TransportModelModule  
-  
+  end type TransportModelType
+
+end module TransportModelModule

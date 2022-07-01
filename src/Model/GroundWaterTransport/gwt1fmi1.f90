@@ -33,35 +33,35 @@ module GwtFmiModule
 
   type, extends(NumericalPackageType) :: GwtFmiType
 
-    logical, pointer                                :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-GWT exg
-    integer(I4B), dimension(:), pointer, contiguous :: iatp => null()            !< advanced transport package applied to gwfpackages
-    type(ListType), pointer                         :: gwfbndlist => null()      !< list of gwf stress packages
-    integer(I4B), pointer                           :: iflowsupdated => null()   !< flows were updated for this time step
-    integer(I4B), pointer                           :: iflowerr => null()        !< add the flow error correction
-    real(DP), dimension(:), pointer, contiguous     :: flowcorrect => null()     !< mass flow correction
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !< pointer to GWT ibound
-    real(DP), dimension(:), pointer, contiguous     :: gwfflowja => null()       !< pointer to the GWF flowja array
-    real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis => null()       !< pointer to npf specific discharge array
-    real(DP), dimension(:), pointer, contiguous     :: gwfhead => null()       !< pointer to the GWF head array
-    real(DP), dimension(:), pointer, contiguous     :: gwfsat => null()       !< pointer to the GWF saturation array
-    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null()      !< mark cells with saturation = 0 to exclude from dispersion
-    real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()       !< pointer to flow model QSTOSS
-    real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()       !< pointer to flow model QSTOSY
-    integer(I4B), pointer                           :: igwfstrgss => null()      !< indicates if gwfstrgss is available
-    integer(I4B), pointer                           :: igwfstrgsy => null()      !< indicates if gwfstrgsy is available
-    integer(I4B), pointer                           :: iubud => null()           !< unit number GWF budget file
-    integer(I4B), pointer                           :: iuhds => null()           !< unit number GWF head file
-    integer(I4B), pointer                           :: iumvr => null()           !< unit number GWF mover budget file
-    integer(I4B), pointer                           :: nflowpack => null()       !< number of GWF flow packages
-    integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null()     !< flag to indicate that gwf package is a mover term
-    type(BudgetFileReaderType)                      :: bfr                       !< budget file reader
-    type(HeadFileReaderType)                        :: hfr                       !< head file reader
-    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages            !< used to get flows between a package and gwf
-    type(BudgetObjectType), pointer                 :: mvrbudobj => null()    !< pointer to the mover budget budget object
+    logical, pointer :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-GWT exg
+    integer(I4B), dimension(:), pointer, contiguous :: iatp => null() !< advanced transport package applied to gwfpackages
+    type(ListType), pointer :: gwfbndlist => null() !< list of gwf stress packages
+    integer(I4B), pointer :: iflowsupdated => null() !< flows were updated for this time step
+    integer(I4B), pointer :: iflowerr => null() !< add the flow error correction
+    real(DP), dimension(:), pointer, contiguous :: flowcorrect => null() !< mass flow correction
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to GWT ibound
+    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< pointer to the GWF flowja array
+    real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
+    real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
+    real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< pointer to the GWF saturation array
+    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null() !< mark cells with saturation = 0 to exclude from dispersion
+    real(DP), dimension(:), pointer, contiguous :: gwfstrgss => null() !< pointer to flow model QSTOSS
+    real(DP), dimension(:), pointer, contiguous :: gwfstrgsy => null() !< pointer to flow model QSTOSY
+    integer(I4B), pointer :: igwfstrgss => null() !< indicates if gwfstrgss is available
+    integer(I4B), pointer :: igwfstrgsy => null() !< indicates if gwfstrgsy is available
+    integer(I4B), pointer :: iubud => null() !< unit number GWF budget file
+    integer(I4B), pointer :: iuhds => null() !< unit number GWF head file
+    integer(I4B), pointer :: iumvr => null() !< unit number GWF mover budget file
+    integer(I4B), pointer :: nflowpack => null() !< number of GWF flow packages
+    integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null() !< flag to indicate that gwf package is a mover term
+    type(BudgetFileReaderType) :: bfr !< budget file reader
+    type(HeadFileReaderType) :: hfr !< head file reader
+    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
+    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
     type(DataAdvancedPackageType), &
-      dimension(:), pointer, contiguous             :: datp => null()
-    character(len=16), dimension(:), allocatable    :: flowpacknamearray         !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
-    type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj                 !< flow budget objects for the advanced packages
+      dimension(:), pointer, contiguous :: datp => null()
+    character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
+    type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj !< flow budget objects for the advanced packages
   contains
 
     procedure :: fmi_df

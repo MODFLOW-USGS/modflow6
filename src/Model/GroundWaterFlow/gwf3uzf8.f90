@@ -29,7 +29,7 @@ module UzfModule
 
   implicit none
 
-  character(len=LENFTYPE)       :: ftype = 'UZF'
+  character(len=LENFTYPE) :: ftype = 'UZF'
   character(len=LENPACKAGENAME) :: text = '       UZF CELLS'
 
   private
@@ -41,62 +41,62 @@ module UzfModule
     integer(I4B), pointer :: iprwcont => null()
     integer(I4B), pointer :: iwcontout => null()
     integer(I4B), pointer :: ibudgetout => null()
-    integer(I4B), pointer :: ibudcsv => null()  !< unit number for csv budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: ipakcsv => null()
     !
-    type(BudgetObjectType), pointer                    :: budobj => null()
-    integer(I4B), pointer                              :: bditems => null()  !< number of budget items
-    integer(I4B), pointer                              :: nbdtxt => null()  !< number of budget text items
+    type(BudgetObjectType), pointer :: budobj => null()
+    integer(I4B), pointer :: bditems => null() !< number of budget items
+    integer(I4B), pointer :: nbdtxt => null() !< number of budget text items
     character(len=LENBUDTXT), dimension(:), pointer, &
-      contiguous               :: bdtxt => null()  !< budget items written to cbc file
+      contiguous :: bdtxt => null() !< budget items written to cbc file
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: uzfname => null()
     !
     ! -- uzf table objects
-    type(TableType), pointer                           :: pakcsvtab => null()
+    type(TableType), pointer :: pakcsvtab => null()
     !
     ! -- uzf kinematic object
-    type(UzfCellGroupType), pointer                    :: uzfobj => null()
-    type(UzfCellGroupType)                             :: uzfobjwork
+    type(UzfCellGroupType), pointer :: uzfobj => null()
+    type(UzfCellGroupType) :: uzfobjwork
     !
     ! -- pointer to gwf variables
-    integer(I4B), pointer                              :: gwfiss => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwftop => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwfbot => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwfarea => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwfhcond => null()
+    integer(I4B), pointer :: gwfiss => null()
+    real(DP), dimension(:), pointer, contiguous :: gwftop => null()
+    real(DP), dimension(:), pointer, contiguous :: gwfbot => null()
+    real(DP), dimension(:), pointer, contiguous :: gwfarea => null()
+    real(DP), dimension(:), pointer, contiguous :: gwfhcond => null()
     !
     ! -- uzf data
-    integer(I4B), pointer                               :: ntrail => null()
-    integer(I4B), pointer                               :: nsets => null()
-    integer(I4B), pointer                               :: nwav => null()
-    integer(I4B), pointer                               :: nodes => null()
-    integer(I4B), pointer                               :: readflag => null()
-    integer(I4B), pointer                               :: ietflag => null()  !< et flag, 0 is off, 1 or 2 are different types
-    integer(I4B), pointer                               :: igwetflag => null()
-    integer(I4B), pointer                               :: iseepflag => null()
-    integer(I4B), pointer                               :: imaxcellcnt => null()
-    integer(I4B), pointer                               :: iuzf2uzf => null()
+    integer(I4B), pointer :: ntrail => null()
+    integer(I4B), pointer :: nsets => null()
+    integer(I4B), pointer :: nwav => null()
+    integer(I4B), pointer :: nodes => null()
+    integer(I4B), pointer :: readflag => null()
+    integer(I4B), pointer :: ietflag => null() !< et flag, 0 is off, 1 or 2 are different types
+    integer(I4B), pointer :: igwetflag => null()
+    integer(I4B), pointer :: iseepflag => null()
+    integer(I4B), pointer :: imaxcellcnt => null()
+    integer(I4B), pointer :: iuzf2uzf => null()
     ! -- integer vectors
-    integer(I4B), dimension(:), pointer, contiguous     :: igwfnode => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()
+    integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null()
     ! -- double precision output vectors
-    real(DP), dimension(:), pointer, contiguous         :: appliedinf => null()
-    real(DP), dimension(:), pointer, contiguous         :: rejinf => null()
-    real(DP), dimension(:), pointer, contiguous         :: rejinf0 => null()
-    real(DP), dimension(:), pointer, contiguous         :: rejinftomvr => null()
-    real(DP), dimension(:), pointer, contiguous         :: infiltration => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwet => null()
-    real(DP), dimension(:), pointer, contiguous         :: uzet => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwd => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwd0 => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwdtomvr => null()
-    real(DP), dimension(:), pointer, contiguous         :: rch => null()
-    real(DP), dimension(:), pointer, contiguous         :: rch0 => null()
-    real(DP), dimension(:), pointer, contiguous         :: qsto => null()  !< change in stored mobile water per time for this time step
-    real(DP), dimension(:), pointer, contiguous         :: wcnew => null()  !< water content for this time step
-    real(DP), dimension(:), pointer, contiguous         :: wcold => null()  !< water content for previous time step
+    real(DP), dimension(:), pointer, contiguous :: appliedinf => null()
+    real(DP), dimension(:), pointer, contiguous :: rejinf => null()
+    real(DP), dimension(:), pointer, contiguous :: rejinf0 => null()
+    real(DP), dimension(:), pointer, contiguous :: rejinftomvr => null()
+    real(DP), dimension(:), pointer, contiguous :: infiltration => null()
+    real(DP), dimension(:), pointer, contiguous :: gwet => null()
+    real(DP), dimension(:), pointer, contiguous :: uzet => null()
+    real(DP), dimension(:), pointer, contiguous :: gwd => null()
+    real(DP), dimension(:), pointer, contiguous :: gwd0 => null()
+    real(DP), dimension(:), pointer, contiguous :: gwdtomvr => null()
+    real(DP), dimension(:), pointer, contiguous :: rch => null()
+    real(DP), dimension(:), pointer, contiguous :: rch0 => null()
+    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< change in stored mobile water per time for this time step
+    real(DP), dimension(:), pointer, contiguous :: wcnew => null() !< water content for this time step
+    real(DP), dimension(:), pointer, contiguous :: wcold => null() !< water content for previous time step
     !
     ! -- timeseries aware variables
     real(DP), dimension(:), pointer, contiguous :: sinf => null()
@@ -115,10 +115,10 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: deriv => null()
     !
     ! budget variables
-    real(DP), pointer                          :: totfluxtot => null()
-    integer(I4B), pointer                      :: issflag => null()
-    integer(I4B), pointer                      :: issflagold => null()
-    integer(I4B), pointer                      :: istocb => null()
+    real(DP), pointer :: totfluxtot => null()
+    integer(I4B), pointer :: issflag => null()
+    integer(I4B), pointer :: issflagold => null()
+    integer(I4B), pointer :: istocb => null()
     !
     ! -- uzf cbc budget items
     integer(I4B), pointer :: cbcauxitems => NULL()
@@ -210,7 +210,7 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
-    packobj%iscloc = 0  ! not supported
+    packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
@@ -493,7 +493,7 @@ contains
                          'FOLLOWED BY FILEOUT')
       end if
     case ('SIMULATE_ET')
-      this%ietflag = 1    !default
+      this%ietflag = 1 !default
       this%igwetflag = 0
       found = .true.
       write (this%iout, fmtet)
@@ -832,7 +832,7 @@ contains
         !
         ! -- FINF
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For SINF
+        jj = 1 ! For SINF
         bndElem => this%sinf(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -840,7 +840,7 @@ contains
         !
         ! -- PET
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For PET
+        jj = 1 ! For PET
         bndElem => this%pet(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -848,7 +848,7 @@ contains
         !
         ! -- EXTD
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For EXTDP
+        jj = 1 ! For EXTDP
         bndElem => this%extdp(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -856,7 +856,7 @@ contains
         !
         ! -- EXTWC
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For EXTWC
+        jj = 1 ! For EXTWC
         bndElem => this%extwc(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -864,7 +864,7 @@ contains
         !
         ! -- HA
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For HA
+        jj = 1 ! For HA
         bndElem => this%ha(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -872,7 +872,7 @@ contains
         !
         ! -- HROOT
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For HROOT
+        jj = 1 ! For HROOT
         bndElem => this%hroot(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -880,7 +880,7 @@ contains
         !
         ! -- ROOTACT
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For ROOTACT
+        jj = 1 ! For ROOTACT
         bndElem => this%rootact(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
@@ -1689,11 +1689,11 @@ contains
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(UzfType) :: this              !< UzfType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(UzfType) :: this !< UzfType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
@@ -1710,7 +1710,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
-    logical, intent(in) :: reset_state         !< flag indicating that waves should be reset after solution
+    logical, intent(in) :: reset_state !< flag indicating that waves should be reset after solution
     ! -- dummy
     class(UzfType) :: this
     ! -- locals
@@ -1873,7 +1873,7 @@ contains
         if (n < m) then
           ! -- m is beneath n
         else
-          nml = m  ! -- m is above n
+          nml = m ! -- m is above n
           exit
         end if
       end if
@@ -1985,7 +1985,7 @@ contains
         !
         ! -- surfdep
         surfdep = this%parser%GetDouble()
-        if (surfdep <= DZERO .and. landflag > 0) then   !need to check for cell thickness
+        if (surfdep <= DZERO .and. landflag > 0) then !need to check for cell thickness
           write (errmsg, '(a,1x,i0,1x,a,1x,g0,a)') &
             'SURFDEP for uzf cell', i, &
             'must be greater than 0 (specified value is', surfdep, ').'
@@ -2611,9 +2611,9 @@ contains
     !    the ID string of an observation definition for UZF-package observations.
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: n, nn
     real(DP) :: obsdepth

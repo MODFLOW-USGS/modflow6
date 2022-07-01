@@ -5,3 +5,5 @@ whitespace-plusminus: 1
 whitespace-multdiv: 1
 line-length: 82
 indent: 2
+enable-decl: true
+strip-comments: true

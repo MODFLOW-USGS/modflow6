@@ -23,12 +23,12 @@ module GwtInterfaceModelModule
   !! of the solution, it is not being solved.
   type, public, extends(GwtModelType) :: GwtInterfaceModelType
 
-    integer(i4B), pointer :: iAdvScheme => null()                     !< the advection scheme: 0 = up, 1 = central, 2 = tvd
-    integer(i4B), pointer :: ixt3d => null()                          !< xt3d setting: 0 = off, 1 = lhs, 2 = rhs
+    integer(i4B), pointer :: iAdvScheme => null() !< the advection scheme: 0 = up, 1 = central, 2 = tvd
+    integer(i4B), pointer :: ixt3d => null() !< xt3d setting: 0 = off, 1 = lhs, 2 = rhs
 
-    class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the interface grid
-    class(GwtModelType), private, pointer :: owner => null()          !< the real GWT model for which the exchange coefficients
-                                                                      !! are calculated with this interface model
+    class(GridConnectionType), pointer :: gridConnection => null() !< The grid connection class will provide the interface grid
+    class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
+                                                             !! are calculated with this interface model
 
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with MST porosity
 
@@ -46,9 +46,9 @@ contains
 !> @brief Create the interface model, analogously to what
 !< happens in gwt_cr
   subroutine gwtifmod_cr(this, name, iout, gridConn)
-    class(GwtInterfaceModelType) :: this                       !< the GWT interface model
-    character(len=*), intent(in)  :: name                      !< the interface model's name
-    integer(I4B), intent(in) :: iout                           !< the output unit
+    class(GwtInterfaceModelType) :: this !< the GWT interface model
+    character(len=*), intent(in) :: name !< the interface model's name
+    integer(I4B), intent(in) :: iout !< the output unit
     class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection data for creating a DISU
     ! local
     class(*), pointer :: modelPtr

@@ -11,13 +11,13 @@ module GwfIcModule
   public :: ic_cr
 
   type, extends(NumericalPackageType) :: GwfIcType
-    real(DP), dimension(:), pointer, contiguous :: strt => null()                ! starting head
+    real(DP), dimension(:), pointer, contiguous :: strt => null() ! starting head
   contains
-    procedure          :: ic_ar
-    procedure          :: ic_da
+    procedure :: ic_ar
+    procedure :: ic_da
     procedure, private :: allocate_arrays
     procedure, private :: read_options
-    procedure          :: read_data
+    procedure :: read_data
   end type GwfIcType
 
 contains

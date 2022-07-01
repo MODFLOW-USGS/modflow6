@@ -23,18 +23,18 @@ module GwtMvtModule
   public :: mvt_cr
 
   type, extends(NumericalPackageType) :: GwtMvtType
-    character(len=LENMODELNAME)                        :: gwfmodelname1 = ''    !< name of model 1
-    character(len=LENMODELNAME)                        :: gwfmodelname2 = ''    !< name of model 2 (set to modelname 1 for single model MVT)
-    integer(I4B), pointer                              :: maxpackages           !< max number of packages
-    integer(I4B), pointer                              :: ibudgetout => null()  !< unit number for budget output file
-    integer(I4B), pointer                              :: ibudcsv => null()     !< unit number for csv budget output file
-    type(GwtFmiType), pointer                          :: fmi1 => null()        !< pointer to fmi object for model 1
-    type(GwtFmiType), pointer                          :: fmi2 => null()        !< pointer to fmi object for model 2 (set to fmi1 for single model)
-    type(BudgetType), pointer                          :: budget => null()      !< mover transport budget object (used to write balance table)
-    type(BudgetObjectType), pointer                    :: budobj => null()      !< budget container (used to write binary file)
-    type(BudgetObjectType), pointer                    :: mvrbudobj => null()   !< pointer to the water mover budget object
+    character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of model 1
+    character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of model 2 (set to modelname 1 for single model MVT)
+    integer(I4B), pointer :: maxpackages !< max number of packages
+    integer(I4B), pointer :: ibudgetout => null() !< unit number for budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    type(GwtFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
+    type(GwtFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
+    type(BudgetType), pointer :: budget => null() !< mover transport budget object (used to write balance table)
+    type(BudgetObjectType), pointer :: budobj => null() !< budget container (used to write binary file)
+    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the water mover budget object
     character(len=LENPACKAGENAME), &
-      dimension(:), pointer, contiguous                :: paknames => null()    !< array of package names
+      dimension(:), pointer, contiguous :: paknames => null() !< array of package names
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
@@ -251,8 +251,8 @@ contains
     real(DP) :: q, cp
     real(DP), dimension(:), pointer :: concpak
     real(DP), dimension(:), contiguous, pointer :: cnew
-    type(GwtFmiType), pointer :: fmi_pr  !< pointer to provider model fmi package
-    type(GwtFmiType), pointer :: fmi_rc  !< pointer to receiver model fmi package
+    type(GwtFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
+    type(GwtFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
 ! ------------------------------------------------------------------------------
     !
     ! -- Add mover QC terms to the receiver packages
@@ -437,8 +437,8 @@ contains
     ! -- modules
     ! -- dummy
     class(GwtMvtType) :: this
-    real(DP), dimension(:), contiguous, intent(in)  :: cnew1
-    real(DP), dimension(:), contiguous, intent(in)  :: cnew2
+    real(DP), dimension(:), contiguous, intent(in) :: cnew1
+    real(DP), dimension(:), contiguous, intent(in) :: cnew2
     ! -- local
 ! ------------------------------------------------------------------------------
     !

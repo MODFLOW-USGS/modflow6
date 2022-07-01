@@ -33,13 +33,13 @@ module WelModule
   private
   public :: wel_create
   !
-  character(len=LENFTYPE) :: ftype = 'WEL'                   !< package ftype
-  character(len=16)       :: text = '             WEL'      !< package flow text string
+  character(len=LENFTYPE) :: ftype = 'WEL' !< package ftype
+  character(len=16) :: text = '             WEL' !< package flow text string
   !
   type, extends(BndType) :: WelType
-    integer(I4B), pointer :: iflowred => null()    !< flag indicating if the AUTO_FLOW_REDUCE option is active
-    real(DP), pointer :: flowred => null()         !< AUTO_FLOW_REDUCE variable
-    integer(I4B), pointer :: ioutafrcsv => null()  !< unit number for CSV output file containing wells with reduced puping rates
+    integer(I4B), pointer :: iflowred => null() !< flag indicating if the AUTO_FLOW_REDUCE option is active
+    real(DP), pointer :: flowred => null() !< AUTO_FLOW_REDUCE variable
+    integer(I4B), pointer :: ioutafrcsv => null() !< unit number for CSV output file containing wells with reduced puping rates
   contains
     procedure :: allocate_scalars => wel_allocate_scalars
     procedure :: bnd_options => wel_options
@@ -68,13 +68,13 @@ contains
   !<
   subroutine wel_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
     ! -- dummy variables
-    class(BndType), pointer :: packobj         !< pointer to default package type
-    integer(I4B), intent(in) :: id              !< package id
-    integer(I4B), intent(in) :: ibcnum          !< boundary condition number
-    integer(I4B), intent(in) :: inunit          !< unit number of WEL package input file
-    integer(I4B), intent(in) :: iout            !< unit number of model listing file
-    character(len=*), intent(in) :: namemodel  !< model name
-    character(len=*), intent(in) :: pakname    !< package name
+    class(BndType), pointer :: packobj !< pointer to default package type
+    integer(I4B), intent(in) :: id !< package id
+    integer(I4B), intent(in) :: ibcnum !< boundary condition number
+    integer(I4B), intent(in) :: inunit !< unit number of WEL package input file
+    integer(I4B), intent(in) :: iout !< unit number of model listing file
+    character(len=*), intent(in) :: namemodel !< model name
+    character(len=*), intent(in) :: pakname !< package name
     ! -- local variables
     type(WelType), pointer :: welobj
     !
@@ -113,7 +113,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(WelType) :: this  !< WelType object
+    class(WelType) :: this !< WelType object
     !
     ! -- Deallocate parent package
     call this%BndType%bnd_da()
@@ -137,7 +137,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(WelType) :: this  !< WelType object
+    class(WelType) :: this !< WelType object
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
@@ -165,9 +165,9 @@ contains
     ! -- modules
     use InputOutputModule, only: urword
     ! -- dummy variables
-    class(WelType), intent(inout) :: this     !< WelType object
-    character(len=*), intent(inout) :: option   !< option keyword string
-    logical, intent(inout) :: found    !< boolean indicating if option found
+    class(WelType), intent(inout) :: this !< WelType object
+    character(len=*), intent(inout) :: option !< option keyword string
+    logical, intent(inout) :: found !< boolean indicating if option found
     ! -- local variables
     real(DP) :: r
     character(len=MAXCHARLEN) :: fname
@@ -226,8 +226,8 @@ contains
   !<
   subroutine wel_cf(this, reset_mover)
     ! -- dummy variables
-    class(WelType) :: this                         !< WelType object
-    logical, intent(in), optional :: reset_mover   !< boolean for resetting mover
+    class(WelType) :: this !< WelType object
+    logical, intent(in), optional :: reset_mover !< boolean for resetting mover
     ! -- local variables
     integer(I4B) :: i, node, ict
     real(DP) :: qmult
@@ -281,11 +281,11 @@ contains
   !<
   subroutine wel_fc(this, rhs, ia, idxglo, amatsln)
     ! -- dummy variables
-    class(WelType) :: this                            !< WelType object
-    real(DP), dimension(:), intent(inout) :: rhs      !< right-hand side vector for model
-    integer(I4B), dimension(:), intent(in) :: ia      !< solution CRS row pointers
-    integer(I4B), dimension(:), intent(in) :: idxglo  !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln  !< solution coefficient matrix
+    class(WelType) :: this !< WelType object
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
+    integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
+    integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
+    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -322,11 +322,11 @@ contains
   !<
   subroutine wel_fn(this, rhs, ia, idxglo, amatsln)
     ! -- dummy variables
-    class(WelType) :: this                            !< WelType object
-    real(DP), dimension(:), intent(inout) :: rhs      !< right-hand side vector for model
-    integer(I4B), dimension(:), intent(in) :: ia      !< solution CRS row pointers
-    integer(I4B), dimension(:), intent(in) :: idxglo  !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln  !< solution coefficient matrix
+    class(WelType) :: this !< WelType object
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
+    integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
+    integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
+    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: node
@@ -428,7 +428,7 @@ contains
   !<
   subroutine define_listlabel(this)
     ! -- dummy variables
-    class(WelType), intent(inout) :: this  !< WelType object
+    class(WelType), intent(inout) :: this !< WelType object
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -463,7 +463,7 @@ contains
   !<
   logical function wel_obs_supported(this)
     ! -- dummy variables
-    class(WelType) :: this  !< WelType object
+    class(WelType) :: this !< WelType object
     !
     ! -- set boolean
     wel_obs_supported = .true.
@@ -479,7 +479,7 @@ contains
   !<
   subroutine wel_df_obs(this)
     ! -- dummy variables
-    class(WelType) :: this  !< WelType object
+    class(WelType) :: this !< WelType object
     ! -- local variables
     integer(I4B) :: indx
     !
@@ -508,7 +508,7 @@ contains
   !<
   subroutine wel_bd_obs(this)
     ! -- dummy variables
-    class(WelType) :: this  !< WelType object
+    class(WelType) :: this !< WelType object
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n

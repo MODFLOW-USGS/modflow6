@@ -56,59 +56,59 @@ module GwtAptModule
   public GwtAptType, apt_process_obsID
 
   character(len=LENFTYPE) :: ftype = 'APT'
-  character(len=16)       :: text = '             APT'
+  character(len=16) :: text = '             APT'
 
   type, extends(BndType) :: GwtAptType
 
-    character(len=LENPACKAGENAME)                     :: flowpackagename = ''    !< name of corresponding flow package
+    character(len=LENPACKAGENAME) :: flowpackagename = '' !< name of corresponding flow package
     character(len=8), &
-      dimension(:), pointer, contiguous               :: status => null()        !< active, inactive, constant
-    character(len=LENAUXNAME)                         :: cauxfpconc = ''         !< name of aux column in flow package auxvar array for concentration
-    integer(I4B), pointer                             :: iauxfpconc => null()    !< column in flow package bound array to insert concs
-    integer(I4B), pointer                             :: imatrows => null()      !< if active, add new rows to matrix
-    integer(I4B), pointer                             :: iprconc => null()       !< print conc to listing file
-    integer(I4B), pointer                             :: iconcout => null()      !< unit number for conc output file
-    integer(I4B), pointer                             :: ibudgetout => null()    !< unit number for budget output file
-    integer(I4B), pointer                             :: ibudcsv => null()       !< unit number for csv budget output file
-    integer(I4B), pointer                             :: ncv => null()           !< number of control volumes
-    integer(I4B), pointer                             :: igwfaptpak => null()    !< package number of corresponding this package
-    real(DP), dimension(:), pointer, contiguous       :: strt => null()          !< starting feature concentration
-    integer(I4B), dimension(:), pointer, contiguous   :: idxlocnode => null()    !< map position in global rhs and x array of pack entry
-    integer(I4B), dimension(:), pointer, contiguous   :: idxpakdiag => null()    !< map diag position of feature in global amat
-    integer(I4B), dimension(:), pointer, contiguous   :: idxdglo => null()       !< map position in global array of package diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous   :: idxoffdglo => null()    !< map position in global array of package off diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous   :: idxsymdglo => null()    !< map position in global array of package diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous   :: idxsymoffdglo => null() !< map position in global array of package off diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous   :: idxfjfdglo => null()    !< map diagonal feature to feature in global amat
-    integer(I4B), dimension(:), pointer, contiguous   :: idxfjfoffdglo => null() !< map off diagonal feature to feature in global amat
-    integer(I4B), dimension(:), pointer, contiguous   :: iboundpak => null()     !< package ibound
-    real(DP), dimension(:), pointer, contiguous       :: xnewpak => null()       !< feature concentration for current time step
-    real(DP), dimension(:), pointer, contiguous       :: xoldpak => null()       !< feature concentration from previous time step
-    real(DP), dimension(:), pointer, contiguous       :: dbuff => null()         !< temporary storage array
+      dimension(:), pointer, contiguous :: status => null() !< active, inactive, constant
+    character(len=LENAUXNAME) :: cauxfpconc = '' !< name of aux column in flow package auxvar array for concentration
+    integer(I4B), pointer :: iauxfpconc => null() !< column in flow package bound array to insert concs
+    integer(I4B), pointer :: imatrows => null() !< if active, add new rows to matrix
+    integer(I4B), pointer :: iprconc => null() !< print conc to listing file
+    integer(I4B), pointer :: iconcout => null() !< unit number for conc output file
+    integer(I4B), pointer :: ibudgetout => null() !< unit number for budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: ncv => null() !< number of control volumes
+    integer(I4B), pointer :: igwfaptpak => null() !< package number of corresponding this package
+    real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration
+    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !< map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null() !< map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null() !< map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null() !< map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: idxfjfdglo => null() !< map diagonal feature to feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous :: idxfjfoffdglo => null() !< map off diagonal feature to feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !< package ibound
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !< feature concentration for current time step
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !< feature concentration from previous time step
+    real(DP), dimension(:), pointer, contiguous :: dbuff => null() !< temporary storage array
     character(len=LENBOUNDNAME), &
-      dimension(:), pointer, contiguous               :: featname => null()
-    real(DP), dimension(:), pointer, contiguous       :: concfeat => null()      !< concentration of the feature
-    real(DP), dimension(:, :), pointer, contiguous     :: lauxvar => null()       !< auxiliary variable
-    type(GwtFmiType), pointer                         :: fmi => null()           !< pointer to fmi object
-    real(DP), dimension(:), pointer, contiguous       :: qsto => null()          !< mass flux due to storage change
-    real(DP), dimension(:), pointer, contiguous       :: ccterm => null()        !< mass flux required to maintain constant concentration
-    integer(I4B), pointer                             :: idxbudfjf => null()     !< index of flow ja face in flowbudptr
-    integer(I4B), pointer                             :: idxbudgwf => null()     !< index of gwf terms in flowbudptr
-    integer(I4B), pointer                             :: idxbudsto => null()     !< index of storage terms in flowbudptr
-    integer(I4B), pointer                             :: idxbudtmvr => null()    !< index of to mover terms in flowbudptr
-    integer(I4B), pointer                             :: idxbudfmvr => null()    !< index of from mover terms in flowbudptr
-    integer(I4B), pointer                             :: idxbudaux => null()     !< index of auxiliary terms in flowbudptr
-    integer(I4B), dimension(:), pointer, contiguous   :: idxbudssm => null()     !< flag that flowbudptr%buditem is a general solute source/sink
-    integer(I4B), pointer                             :: nconcbudssm => null()   !< number of concbudssm terms (columns)
-    real(DP), dimension(:, :), pointer, contiguous   :: concbudssm => null()    !< user specified concentrations for flow terms
-    real(DP), dimension(:), pointer, contiguous       :: qmfrommvr => null()     !< a mass flow coming from the mover that needs to be added
+      dimension(:), pointer, contiguous :: featname => null()
+    real(DP), dimension(:), pointer, contiguous :: concfeat => null() !< concentration of the feature
+    real(DP), dimension(:, :), pointer, contiguous :: lauxvar => null() !< auxiliary variable
+    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass flux due to storage change
+    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass flux required to maintain constant concentration
+    integer(I4B), pointer :: idxbudfjf => null() !< index of flow ja face in flowbudptr
+    integer(I4B), pointer :: idxbudgwf => null() !< index of gwf terms in flowbudptr
+    integer(I4B), pointer :: idxbudsto => null() !< index of storage terms in flowbudptr
+    integer(I4B), pointer :: idxbudtmvr => null() !< index of to mover terms in flowbudptr
+    integer(I4B), pointer :: idxbudfmvr => null() !< index of from mover terms in flowbudptr
+    integer(I4B), pointer :: idxbudaux => null() !< index of auxiliary terms in flowbudptr
+    integer(I4B), dimension(:), pointer, contiguous :: idxbudssm => null() !< flag that flowbudptr%buditem is a general solute source/sink
+    integer(I4B), pointer :: nconcbudssm => null() !< number of concbudssm terms (columns)
+    real(DP), dimension(:, :), pointer, contiguous :: concbudssm => null() !< user specified concentrations for flow terms
+    real(DP), dimension(:), pointer, contiguous :: qmfrommvr => null() !< a mass flow coming from the mover that needs to be added
     !
     ! -- pointer to flow package boundary
-    type(BndType), pointer                            :: flowpackagebnd => null()
+    type(BndType), pointer :: flowpackagebnd => null()
     !
     ! -- budget objects
-    type(BudgetObjectType), pointer                   :: budobj => null()        !< apt solute budget object
-    type(BudgetObjectType), pointer                   :: flowbudptr => null()    !< GWF flow budget object
+    type(BudgetObjectType), pointer :: budobj => null() !< apt solute budget object
+    type(BudgetObjectType), pointer :: flowbudptr => null() !< GWF flow budget object
     !
     ! -- table objects
     type(TableType), pointer :: dvtab => null()
@@ -585,7 +585,7 @@ contains
         goto 999
       end if
       call this%parser%GetString(text)
-      jj = 1    ! For feature concentration
+      jj = 1 ! For feature concentration
       bndElem => this%concfeat(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
@@ -750,8 +750,8 @@ contains
   !<
   subroutine apt_cf(this, reset_mover)
     ! -- modules
-    class(GwtAptType) :: this                          !< GwtAptType object
-    logical(LGP), intent(in), optional :: reset_mover  !< boolean for resetting mover
+    class(GwtAptType) :: this !< GwtAptType object
+    logical(LGP), intent(in), optional :: reset_mover !< boolean for resetting mover
     ! -- local
     integer(I4B) :: i
     logical :: lrm
@@ -1133,11 +1133,11 @@ contains
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(GwtAptType) :: this           !< GwtAptType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(GwtAptType) :: this !< GwtAptType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
@@ -1758,7 +1758,7 @@ contains
       !call read_single_value_or_time_series(text, &
       !                                      this%stage(n)%value, &
       !                                      this%stage(n)%name, &
-      !                                      endtim,  &
+      !                                      endtim, &
       !                                      this%name, 'BND', this%TsManager, &
       !                                      this%iprpak, n, jj, 'STAGE', &
       !                                      this%featname(n), this%inunit)
@@ -2332,7 +2332,7 @@ contains
       if (this%iboundpak(n1) /= 0) then
         igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
         q = this%hcof(j) * x(igwfnode) - this%rhs(j)
-        q = -q  ! flip sign so relative to lake
+        q = -q ! flip sign so relative to lake
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
@@ -2949,9 +2949,9 @@ contains
     ! -- modules
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop

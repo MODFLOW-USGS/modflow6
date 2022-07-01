@@ -26,9 +26,9 @@ module GwfInterfaceModelModule
   !! general way, e.g. DIS+DIS with refinement, requires the resulting
   !< discretization to be of type DISU.
   type, public, extends(GwfModelType) :: GwfInterfaceModelType
-    class(GridConnectionType), pointer    :: gridConnection => null() !< The grid connection class will provide the interface grid
-    class(GwfModelType), private, pointer :: owner => null()          !< the real GWF model for which the exchange coefficients
-                                                                      !! are calculated with this interface model
+    class(GridConnectionType), pointer :: gridConnection => null() !< The grid connection class will provide the interface grid
+    class(GwfModelType), private, pointer :: owner => null() !< the real GWF model for which the exchange coefficients
+                                                             !! are calculated with this interface model
   contains
     procedure, pass(this) :: gwfifm_cr
     procedure :: model_df => gwfifm_df
@@ -46,9 +46,9 @@ contains
   !> @brief set up the interface model, analogously to what
   !< happens in gwf_cr
   subroutine gwfifm_cr(this, name, iout, gridConn)
-    class(GwfInterfaceModelType) :: this        !< the GWF interface model
-    character(len=*), intent(in)  :: name                      !< the interface model's name
-    integer(I4B), intent(in) :: iout                           !< the output unit
+    class(GwfInterfaceModelType) :: this !< the GWF interface model
+    character(len=*), intent(in) :: name !< the interface model's name
+    integer(I4B), intent(in) :: iout !< the output unit
     class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection for creating a DISU
     ! local
     class(*), pointer :: modPtr
@@ -172,7 +172,7 @@ contains
   !! the interface to the data structure
   !<
   subroutine setNpfOptions(this, npfOptions)
-    class(GwfInterfaceModelType) :: this  !< the GWF interface model
+    class(GwfInterfaceModelType) :: this !< the GWF interface model
     type(GwfNpfOptionsType) :: npfOptions !< the options data to be filled
 
     ! for now, assuming full homogeneity, so just take
@@ -194,7 +194,7 @@ contains
   !! in this interface
   !<
   subroutine setNpfGridData(this, npfGridData)
-    class(GwfInterfaceModelType) :: this    !< the interface model
+    class(GwfInterfaceModelType) :: this !< the interface model
     type(GwfNpfGridDataType) :: npfGridData !< grid data to be set
     ! local
     integer(I4B) :: icell, idx

@@ -15,12 +15,12 @@ module ChdModule
   private
   public :: chd_create, ChdType
   !
-  character(len=LENFTYPE)       :: ftype = 'CHD'
+  character(len=LENFTYPE) :: ftype = 'CHD'
   character(len=LENPACKAGENAME) :: text = '             CHD'
   !
   type, extends(BndType) :: ChdType
-    real(DP), dimension(:), pointer, contiguous :: ratechdin => null()        !simulated flows into constant head (excluding other chds)
-    real(DP), dimension(:), pointer, contiguous :: ratechdout => null()       !simulated flows out of constant head (excluding to other chds)
+    real(DP), dimension(:), pointer, contiguous :: ratechdin => null() !simulated flows into constant head (excluding other chds)
+    real(DP), dimension(:), pointer, contiguous :: ratechdout => null() !simulated flows out of constant head (excluding to other chds)
   contains
     procedure :: bnd_rp => chd_rp
     procedure :: bnd_ad => chd_ad
