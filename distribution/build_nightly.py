@@ -95,13 +95,13 @@ def test_nightly_build():
             + f"Available files:\n [{', '.join(os.listdir(binpth))}]"
         )
     else:
-        print(f"Files to zip [{', '.join(binpth_files)}]")
+        print(f"Files to zip:\n [{', '.join(binpth_files)}]")
 
     fpth = get_zipname() + ".zip"
     print(f"Zipping files to '{fpth}'")
     zip_pth = os.path.join(temppth, fpth)
     success = pymake.zip_all(zip_pth, file_pths=binpth_files)
-    assert success, f"could not create '{zip_pth}'"
+    assert success, f"Could not create '{zip_pth}'"
 
 
 def test_update_mf6io():
