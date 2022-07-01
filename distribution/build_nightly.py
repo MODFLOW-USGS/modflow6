@@ -1,4 +1,5 @@
 import os
+import pathlib
 import platform
 import shutil
 import sys
@@ -79,13 +80,28 @@ def test_create_dirs():
 def test_nightly_build():
     meson_build()
 
-    env = "GITHUB_ACTIONS"
-    os.environ[env] = "true"
-    if env in os.environ:
-        fpth = get_zipname() + ".zip"
-        zip_pth = os.path.join(temppth, fpth)
-        success = pymake.zip_all(zip_pth, dir_pths=binpth)
-        assert success, f"could not create '{zip_pth}'"
+    # test if there are any executable files to zip
+    binpth_files = [
+        os.path.join(binpth, f)
+        for f in os.listdir(binpth)
+        if os.path.isfile(os.path.join(binpth, f))
+        and shutil.which(os.path.join(binpth, f), mode=os.X_OK)
+        and pathlib.Path(os.path.join(binpth, f)).suffix
+        not in (".a", ".lib", ".pdb")
+    ]
+    if len(binpth_files) < 1:
+        raise FileNotFoundError(
+            f"No executable files present in {os.path.abspath(binpth)}.\n"
+            + f"Available files:\n [{', '.join(os.listdir(binpth))}]"
+        )
+    else:
+        print(f"Files to zip:\n [{', '.join(binpth_files)}]")
+
+    fpth = get_zipname() + ".zip"
+    print(f"Zipping files to '{fpth}'")
+    zip_pth = os.path.join(temppth, fpth)
+    success = pymake.zip_all(zip_pth, file_pths=binpth_files)
+    assert success, f"Could not create '{zip_pth}'"
 
 
 def test_update_mf6io():
