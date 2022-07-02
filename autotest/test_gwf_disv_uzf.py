@@ -35,7 +35,7 @@ for s in ex:
 nlay = 5
 nper = 5
 perlen = [10] * 5
-nstp = [10] * 5
+nstp = [5] * 5
 tsmult = len(perlen) * [1.0]
 botm = [20.0, 15.0, 10.0, 5.0, 0.0]
 strt = 20
@@ -340,7 +340,7 @@ def eval_model(sim):
     fpth = os.path.join(ws, name + ".hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     hds = hobj.get_alldata()
-    hds = hds.reshape((50, 5, 10, 10))
+    hds = hds.reshape((np.sum(nstp), 5, 10, 10))
 
     # Get the MF6 cell-by-cell fluxes
     bpth = os.path.join(ws, name + ".cbc")
@@ -358,7 +358,7 @@ def eval_model(sim):
     gwet = np.array(gwet)
     gwetl = gwet.ravel().tolist()
     gwetv = np.array([itm[2] for i, itm in enumerate(gwetl)])
-    gwet = gwetv.reshape((50, 5, 10, 10))
+    gwet = gwetv.reshape((np.sum(nstp), 5, 10, 10))
 
     # Also retrieve the binary UZET output
     uzpth = os.path.join(ws, name + ".uzf.bud")
@@ -374,7 +374,7 @@ def eval_model(sim):
     uzet = np.array(uzet)
     uzetl = uzet.ravel().tolist()
     uzetv = np.array([itm[2] for i, itm in enumerate(uzetl)])
-    uzet = uzetv.reshape((50, 5, 10, 10))
+    uzet = uzetv.reshape((np.sum(nstp), 5, 10, 10))
 
     # Confirm that the groundwater gradient dips to the right
     for tm in np.arange(hds.shape[0]):
