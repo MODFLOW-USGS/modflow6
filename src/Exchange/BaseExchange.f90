@@ -12,9 +12,9 @@ module BaseExchangeModule
   private :: CastAsBaseExchangeClass
 
   type, abstract :: BaseExchangeType
-    character(len=LENEXCHANGENAME)   :: name                !< the name of this exchange
-    character(len=LENMEMPATH)        :: memoryPath          !< the location in the memory manager where the variables are stored
-    integer(I4B)                     :: id
+    character(len=LENEXCHANGENAME) :: name !< the name of this exchange
+    character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
+    integer(I4B) :: id
   contains
     procedure(exg_df), deferred :: exg_df
     procedure(exg_ar), deferred :: exg_ar
@@ -134,9 +134,9 @@ contains
   !! added to the solution where the model resides
   !<
   function connects_model(this, model) result(is_connected)
-    class(BaseExchangeType) :: this                     !< the instance of the exchange
-    class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
-    logical(LGP) :: is_connected                        !< true, when connected
+    class(BaseExchangeType) :: this !< the instance of the exchange
+    class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    logical(LGP) :: is_connected !< true, when connected
 
     is_connected = .false.
 
@@ -194,8 +194,8 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B), intent(in)    :: idx
-    class(BaseExchangeType), pointer    :: res
+    integer(I4B), intent(in) :: idx
+    class(BaseExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
 ! ------------------------------------------------------------------------------

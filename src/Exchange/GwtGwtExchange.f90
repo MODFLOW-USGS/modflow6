@@ -47,31 +47,31 @@ module GwtGwtExchangeModule
   type, extends(DisConnExchangeType) :: GwtExchangeType
     !
     ! -- names of the GWF models that are connected by this exchange
-    character(len=LENMODELNAME)                      :: gwfmodelname1 = ''       !< name of gwfmodel that corresponds to gwtmodel1
-    character(len=LENMODELNAME)                      :: gwfmodelname2 = ''       !< name of gwfmodel that corresponds to gwtmodel2
+    character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of gwfmodel that corresponds to gwtmodel1
+    character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of gwfmodel that corresponds to gwtmodel2
     !
     ! -- pointers to gwt models
-    type(GwtModelType), pointer                      :: gwtmodel1 => null()    !< pointer to GWT Model 1
-    type(GwtModelType), pointer                      :: gwtmodel2 => null()    !< pointer to GWT Model 2
+    type(GwtModelType), pointer :: gwtmodel1 => null() !< pointer to GWT Model 1
+    type(GwtModelType), pointer :: gwtmodel2 => null() !< pointer to GWT Model 2
     !
     ! -- GWT specific option block:
-    integer(I4B), pointer                            :: inewton => null()    !< unneeded newton flag allows for mvt to be used here
-    integer(I4B), pointer                            :: iprflow => null()    !< print flag for cell by cell flows
-    integer(I4B), pointer                            :: ipakcb => null()    !< save flag for cell by cell flows
-    integer(I4B), pointer                            :: iAdvScheme               !< the advection scheme at the interface:
+    integer(I4B), pointer :: inewton => null() !< unneeded newton flag allows for mvt to be used here
+    integer(I4B), pointer :: iprflow => null() !< print flag for cell by cell flows
+    integer(I4B), pointer :: ipakcb => null() !< save flag for cell by cell flows
+    integer(I4B), pointer :: iAdvScheme !< the advection scheme at the interface:
                                                                                  !! 0 = upstream, 1 = central, 2 = TVD
     !
     ! -- Mover transport package
-    integer(I4B), pointer                            :: inmvt => null()    !< unit number for mover transport (0 if off)
-    type(GwtMvtType), pointer                        :: mvt => null()    !< water mover object
+    integer(I4B), pointer :: inmvt => null() !< unit number for mover transport (0 if off)
+    type(GwtMvtType), pointer :: mvt => null() !< water mover object
     !
     ! -- Observation package
-    integer(I4B), pointer                            :: inobs => null()    !< unit number for GWT-GWT observations
-    type(ObsType), pointer                           :: obs => null()    !< observation object
+    integer(I4B), pointer :: inobs => null() !< unit number for GWT-GWT observations
+    type(ObsType), pointer :: obs => null() !< observation object
     !
     ! -- internal data
-    real(DP), dimension(:), pointer, contiguous      :: cond => null()    !< conductance
-    real(DP), dimension(:), pointer, contiguous      :: simvals => null()    !< simulated flow rate for each exchange
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !< conductance
+    real(DP), dimension(:), pointer, contiguous :: simvals => null() !< simulated flow rate for each exchange
     !
     ! -- table objects
     type(TableType), pointer :: outputtab1 => null()
@@ -79,26 +79,26 @@ module GwtGwtExchangeModule
 
   contains
 
-    procedure          :: exg_df => gwt_gwt_df
-    procedure          :: exg_ar => gwt_gwt_ar
-    procedure          :: exg_rp => gwt_gwt_rp
-    procedure          :: exg_ad => gwt_gwt_ad
-    procedure          :: exg_fc => gwt_gwt_fc
-    procedure          :: exg_bd => gwt_gwt_bd
-    procedure          :: exg_ot => gwt_gwt_ot
-    procedure          :: exg_da => gwt_gwt_da
-    procedure          :: exg_fp => gwt_gwt_fp
-    procedure          :: connects_model => gwt_gwt_connects_model
-    procedure          :: use_interface_model
-    procedure          :: allocate_scalars
-    procedure          :: allocate_arrays
-    procedure          :: read_options
-    procedure          :: parse_option
-    procedure          :: read_mvt
-    procedure          :: gwt_gwt_bdsav
+    procedure :: exg_df => gwt_gwt_df
+    procedure :: exg_ar => gwt_gwt_ar
+    procedure :: exg_rp => gwt_gwt_rp
+    procedure :: exg_ad => gwt_gwt_ad
+    procedure :: exg_fc => gwt_gwt_fc
+    procedure :: exg_bd => gwt_gwt_bd
+    procedure :: exg_ot => gwt_gwt_ot
+    procedure :: exg_da => gwt_gwt_da
+    procedure :: exg_fp => gwt_gwt_fp
+    procedure :: connects_model => gwt_gwt_connects_model
+    procedure :: use_interface_model
+    procedure :: allocate_scalars
+    procedure :: allocate_arrays
+    procedure :: read_options
+    procedure :: parse_option
+    procedure :: read_mvt
+    procedure :: gwt_gwt_bdsav
     procedure, private :: gwt_gwt_df_obs
     procedure, private :: gwt_gwt_rp_obs
-    procedure, public  :: gwt_gwt_save_simvals
+    procedure, public :: gwt_gwt_save_simvals
     procedure, private :: validate_exchange
   end type GwtExchangeType
 
@@ -117,10 +117,10 @@ contains
     use ObsModule, only: obs_cr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    character(len=*), intent(in) :: filename   !< filename for reading
-    integer(I4B), intent(in) :: id            !< id for the exchange
-    integer(I4B), intent(in) :: m1id          !< id for model 1
-    integer(I4B), intent(in) :: m2id          !< id for model 2
+    character(len=*), intent(in) :: filename !< filename for reading
+    integer(I4B), intent(in) :: id !< id for the exchange
+    integer(I4B), intent(in) :: m1id !< id for model 1
+    integer(I4B), intent(in) :: m2id !< id for model 2
     ! -- local
     type(GwtExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
@@ -195,7 +195,7 @@ contains
     use InputOutputModule, only: getunit, openfile
     use GhostNodeModule, only: gnc_cr
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     integer(I4B) :: inunit
     !
@@ -250,7 +250,7 @@ contains
   !> @brief validate exchange data after reading
   !<
   subroutine validate_exchange(this)
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! local
 
     ! Ensure gwfmodel names were entered
@@ -311,7 +311,7 @@ contains
   subroutine gwt_gwt_ar(this)
     ! -- modules
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     !
     ! -- If mover is active, then call ar routine
@@ -333,7 +333,7 @@ contains
     ! -- modules
     use TdisModule, only: readnewdata
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     !
     ! -- Check with TDIS on whether or not it is time to RP
     if (.not. readnewdata) return
@@ -356,7 +356,7 @@ contains
   subroutine gwt_gwt_ad(this)
     ! -- modules
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     !
     ! -- Advance mover
@@ -377,11 +377,11 @@ contains
   subroutine gwt_gwt_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     ! -- modules
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) ::rhssln
+    real(DP), dimension(:), intent(inout) :: rhssln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     !
@@ -402,7 +402,7 @@ contains
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use BudgetModule, only: rate_accumulator
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
@@ -445,7 +445,7 @@ contains
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     character(len=LENBOUNDNAME) :: bname
     character(len=LENPACKAGENAME + 4) :: packname1
@@ -689,7 +689,7 @@ contains
     use SimVariablesModule, only: iout
     use ConstantsModule, only: DZERO, LINELENGTH
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     integer(I4B) :: iexg, n1, n2
     integer(I4B) :: ibudfl
@@ -697,10 +697,10 @@ contains
     character(len=LINELENGTH) :: node1str, node2str
     ! -- format
     character(len=*), parameter :: fmtheader = &
-     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /,  &
+     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /, &
        &2a16, 5a16, /, 112('-'))"
     character(len=*), parameter :: fmtheader2 = &
-     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /,  &
+     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /, &
        &2a16, 4a16, /, 96('-'))"
     character(len=*), parameter :: fmtdata = &
                                    "(2a16, 5(1pg16.6))"
@@ -748,7 +748,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
     character(len=LINELENGTH) :: keyword
@@ -797,10 +797,10 @@ contains
   !<
   function parse_option(this, keyword, iout) result(parsed)
     use InputOutputModule, only: getunit, openfile
-    class(GwtExchangeType) :: this                   !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     character(len=LINELENGTH), intent(in) :: keyword !< the option name
-    integer(I4B), intent(in) :: iout                 !< for logging
-    logical(LGP) :: parsed                           !< true when parsed
+    integer(I4B), intent(in) :: iout !< for logging
+    logical(LGP) :: parsed !< true when parsed
     ! local
     character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs, ilen
@@ -921,7 +921,7 @@ contains
     ! -- modules
     use GwtMvtModule, only: mvt_cr
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
     !
@@ -947,7 +947,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     !
     call this%DisConnExchangeType%allocate_scalars()
@@ -980,7 +980,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     !
     ! -- objects
@@ -1032,7 +1032,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     character(len=LINELENGTH) :: text
     integer(I4B) :: ntabcol, i
@@ -1098,7 +1098,7 @@ contains
   !<
   subroutine gwt_gwt_df_obs(this)
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     integer(I4B) :: indx
     !
@@ -1120,7 +1120,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -1193,7 +1193,7 @@ contains
   !<
   subroutine gwt_gwt_fp(this)
     ! -- dummy
-    class(GwtExchangeType) :: this  !<  GwtExchangeType
+    class(GwtExchangeType) :: this !<  GwtExchangeType
     !
     return
   end subroutine gwt_gwt_fp
@@ -1202,9 +1202,9 @@ contains
   !! coefficients for solving @param model
   !<
   function gwt_gwt_connects_model(this, model) result(is_connected)
-    class(GwtExchangeType) :: this                      !<  GwtExchangeType
-    class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
-    logical(LGP) :: is_connected                        !< true, when connected
+    class(GwtExchangeType) :: this !<  GwtExchangeType
+    class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    logical(LGP) :: is_connected !< true, when connected
 
     is_connected = .false.
     ! only connected when model is GwtModelType of course
@@ -1223,7 +1223,7 @@ contains
   !<
   function use_interface_model(this) result(useIM)
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    logical(LGP) :: useIM          !< true when interface model should be used
+    logical(LGP) :: useIM !< true when interface model should be used
 
     useIM = (this%ixt3d > 0)
 
@@ -1290,9 +1290,9 @@ contains
     use BaseDisModule, only: DisBaseType
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: n, iexg, istat
     integer(I4B) :: icol, istart, istop
@@ -1348,8 +1348,8 @@ contains
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B), intent(in)    :: idx
-    class(GwtExchangeType), pointer    :: res
+    integer(I4B), intent(in) :: idx
+    class(GwtExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

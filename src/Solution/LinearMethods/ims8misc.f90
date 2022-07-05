@@ -4,7 +4,7 @@ MODULE IMSLinearMisc
   use ConstantsModule, only: DZERO, DONE
 
   private
-  public ::  ims_misc_thomas
+  public :: ims_misc_thomas
 
 CONTAINS
 
@@ -17,13 +17,13 @@ CONTAINS
   subroutine ims_misc_thomas(n, tl, td, tu, b, x, w)
     implicit none
     ! -- dummy variables
-    integer(I4B), intent(in) :: n                 !< number of matrix rows
-    real(DP), dimension(n), intent(in) :: tl      !< lower matrix terms
-    real(DP), dimension(n), intent(in) :: td      !< diagonal matrix terms
-    real(DP), dimension(n), intent(in) :: tu      !< upper matrix terms
-    real(DP), dimension(n), intent(in) :: b       !< right-hand side vector
-    real(DP), dimension(n), intent(inout) :: x    !< solution vector
-    real(DP), dimension(n), intent(inout) :: w    !< work vector
+    integer(I4B), intent(in) :: n !< number of matrix rows
+    real(DP), dimension(n), intent(in) :: tl !< lower matrix terms
+    real(DP), dimension(n), intent(in) :: td !< diagonal matrix terms
+    real(DP), dimension(n), intent(in) :: tu !< upper matrix terms
+    real(DP), dimension(n), intent(in) :: b !< right-hand side vector
+    real(DP), dimension(n), intent(inout) :: x !< solution vector
+    real(DP), dimension(n), intent(inout) :: w !< work vector
     ! -- local variables
     integer(I4B) :: j
     real(DP) :: bet
