@@ -135,7 +135,7 @@ jobs:
       - name: Build MODFLOW 6 (Windows)
         if: runner.os == 'Windows'
         run: |
-          .gihub/intel-scripts/build_windows.bat $VS_VER
+          .github/intel-scripts/build_windows.bat $VS_VER
 
       - name: Test applications
         working-directory: autotest
