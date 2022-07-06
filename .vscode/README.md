@@ -29,17 +29,6 @@ installation in a WSL environment.
 
 Required and optional dependencies for MODFLOW 6 are discussed in [DEVELOPER.md](../DEVELOPER.md)
 
-The Modern Fortran extension requires a Fortran compiler and language server.  To install
-the [fortls](https://github.com/gnikit/fortls) fortran language server run:
-
-```bash
-pip install -U fortls
-```
-
-The Modern Fortran formatting capability requires `fprettify`, which can be installed in a similar way
-using `pip` or `conda`.
-
-
 ### Settings
 
 Add [settings.json](https://code.visualstudio.com/docs/getstarted/settings#_settingsjson) to the
@@ -52,17 +41,19 @@ In general, to determine the path of an installed tool in your environment run:
 - cmd: `where <toolname>`, e.g. `where python`
 - PowerShell: `Get-Command <toolname>` e.g. `Get-Command fprettify`
 
-The setting "python.defaultInterpreterPath" describes the path of your Python executable:
-```json
-{
-    "python.defaultInterpreterPath": "/path/to/python",
-}
+1. Activate the conda environment:
+
+```bash
+conda activate modflow6
 ```
 
-The setting "fortran.fortls.path" describes the path of your fortls executable:
+2. Determine the path of `fortls` and `fprettify`
+
+3. Set the setting "fortran.fortls.path" and "fortran.formatting.path":
 ```json
 {
-    "fortran.fortls.path": "/path/to/fortls"
+    "fortran.fortls.path": "/path/to/fortls",
+    "fortran.formatting.path": "/path/to/fprettify",
 }
 ```
 
@@ -70,10 +61,11 @@ The fortran formatter can be integrated with VSCode using the following settings
 
 ```json
 {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "fortran-lang.linter-gfortran",
+    "[fortran]": {
+        "editor.formatOnSave": true,
+    },
     "fortran.formatting.formatter": "fprettify",
-    "fortran.formatting.fprettifyArgs": ["-c", "C:\\<full path to modflow6>\\distribution\\.fprettify.yaml"],
+    "fortran.formatting.fprettifyArgs": ["-c", "/path/to/modflow6/.fprettify.yaml"],
 }
 ```
 
