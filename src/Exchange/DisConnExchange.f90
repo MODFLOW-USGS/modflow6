@@ -19,33 +19,33 @@ module DisConnExchangeModule
   !! in the connections object: DisBaseType%con
   !<
   type, extends(NumericalExchangeType) :: DisConnExchangeType
-    character(len=LINELENGTH), pointer               :: filename => null()    !< name of the input file
+    character(len=LINELENGTH), pointer :: filename => null() !< name of the input file
 
-    class(NumericalModelType), pointer               :: model1 => null()    !< model 1
-    class(NumericalModelType), pointer               :: model2 => null()    !< model 2
-    integer(I4B), pointer                            :: nexg => null()    !< number of exchanges
-    integer(I4B), dimension(:), pointer, contiguous  :: nodem1 => null()    !< node numbers in model 1
-    integer(I4B), dimension(:), pointer, contiguous  :: nodem2 => null()    !< node numbers in model 2
-    integer(I4B), dimension(:), pointer, contiguous  :: ihc => null()    !< horizontal connection indicator array, size: nexg
-    real(DP), dimension(:), pointer, contiguous      :: cl1 => null()    !< connection length 1, size: nexg
-    real(DP), dimension(:), pointer, contiguous      :: cl2 => null()    !< connection length 2, size: nexg
-    real(DP), dimension(:), pointer, contiguous      :: hwva => null()    !< horizontal widths, vertical flow areas, size: nexg
-    integer(I4B), pointer                            :: naux => null()    !< number of auxiliary variables
+    class(NumericalModelType), pointer :: model1 => null() !< model 1
+    class(NumericalModelType), pointer :: model2 => null() !< model 2
+    integer(I4B), pointer :: nexg => null() !< number of exchanges
+    integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() !< node numbers in model 1
+    integer(I4B), dimension(:), pointer, contiguous :: nodem2 => null() !< node numbers in model 2
+    integer(I4B), dimension(:), pointer, contiguous :: ihc => null() !< horizontal connection indicator array, size: nexg
+    real(DP), dimension(:), pointer, contiguous :: cl1 => null() !< connection length 1, size: nexg
+    real(DP), dimension(:), pointer, contiguous :: cl2 => null() !< connection length 2, size: nexg
+    real(DP), dimension(:), pointer, contiguous :: hwva => null() !< horizontal widths, vertical flow areas, size: nexg
+    integer(I4B), pointer :: naux => null() !< number of auxiliary variables
     character(len=LENBOUNDNAME), dimension(:), &
-      pointer, contiguous :: boundname => null()    !< boundnames
+      pointer, contiguous :: boundname => null() !< boundnames
 
     character(len=LENAUXNAME), dimension(:), &
-      pointer, contiguous  :: auxname => null()    !< vector of auxname
-    real(DP), dimension(:, :), pointer, contiguous   :: auxvar => null()    !< array of auxiliary variable values
-    integer(I4B), pointer                            :: ianglex => null()    !< flag indicating anglex was read, if read, ianglex is index in auxvar
-    integer(I4B), pointer                            :: icdist => null()    !< flag indicating cdist was read, if read, icdist is index in auxvar
-    integer(I4B), pointer                            :: iprpak => null()    !< print input flag
-    integer(I4B), pointer                            :: inamedbound => null()    !< flag to read boundnames
+      pointer, contiguous :: auxname => null() !< vector of auxname
+    real(DP), dimension(:, :), pointer, contiguous :: auxvar => null() !< array of auxiliary variable values
+    integer(I4B), pointer :: ianglex => null() !< flag indicating anglex was read, if read, ianglex is index in auxvar
+    integer(I4B), pointer :: icdist => null() !< flag indicating cdist was read, if read, icdist is index in auxvar
+    integer(I4B), pointer :: iprpak => null() !< print input flag
+    integer(I4B), pointer :: inamedbound => null() !< flag to read boundnames
 
-    integer(I4B), pointer                            :: ixt3d => null()    !< flag indicating if XT3D should be applied on the interface: 0 = off, 1 = lhs, 2 = rhs
-    logical(LGP)                                     :: dev_ifmod_on             !< development option, forces interface model for this exchange
+    integer(I4B), pointer :: ixt3d => null() !< flag indicating if XT3D should be applied on the interface: 0 = off, 1 = lhs, 2 = rhs
+    logical(LGP) :: dev_ifmod_on !< development option, forces interface model for this exchange
 
-    type(BlockParserType)                            :: parser                   !< block parser for input file (controlled from derived type)
+    type(BlockParserType) :: parser !< block parser for input file (controlled from derived type)
 
   contains
 
@@ -68,10 +68,10 @@ contains
   function parse_option(this, keyword, iout) result(parsed)
     use ArrayHandlersModule, only: ifind
     use InputOutputModule, only: urdaux
-    class(DisConnExchangeType) :: this               !< instance of exchange object
+    class(DisConnExchangeType) :: this !< instance of exchange object
     character(len=LINELENGTH), intent(in) :: keyword !< the option name
-    integer(I4B), intent(in) :: iout                 !< for logging
-    logical(LGP) :: parsed                           !< true when parsed
+    integer(I4B), intent(in) :: iout !< for logging
+    logical(LGP) :: parsed !< true when parsed
     ! local
     integer(I4B) :: istart
     integer(I4B) :: istop
@@ -91,7 +91,7 @@ contains
       call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart, &
                   istop, caux, line, 'GWF_GWF_Exchange')
       call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
-                        'AUXNAME', trim(this%memoryPath))
+                          'AUXNAME', trim(this%memoryPath))
       do n = 1, this%naux
         this%auxname(n) = caux(n)
       end do
@@ -135,7 +135,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     class(DisConnExchangeType) :: this !< instance of exchange object
-    integer(I4B), intent(in) :: iout   !< output file unit
+    integer(I4B), intent(in) :: iout !< output file unit
     ! local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -177,7 +177,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit, count_errors
     class(DisConnExchangeType) :: this !< instance of exchange object
-    integer(I4B), intent(in) :: iout   !< the output file unit
+    integer(I4B), intent(in) :: iout !< the output file unit
     ! local
     character(len=LINELENGTH) :: nodestr, node1str, node2str, cellid
     character(len=2) :: cnfloat
@@ -316,7 +316,7 @@ contains
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
-    
+
     call mem_allocate(this%auxname, LENAUXNAME, 0, &
                       'AUXNAME', trim(this%memoryPath))
 
@@ -362,7 +362,7 @@ contains
   !<
   function use_interface_model(this) result(useIM)
     class(DisConnExchangeType) :: this !< instance of exchange object
-    logical(LGP) :: useIM              !< flag whether interface model should be used
+    logical(LGP) :: useIM !< flag whether interface model should be used
                                      !! for this exchange instead
 
     useIM = .false.
@@ -431,8 +431,8 @@ contains
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B), intent(in)    :: idx
-    class(DisConnExchangeType), pointer    :: res
+    integer(I4B), intent(in) :: idx
+    class(DisConnExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

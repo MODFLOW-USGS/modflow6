@@ -44,30 +44,30 @@ module GwfGwfExchangeModule
   !!
   !<
   type, extends(DisConnExchangeType) :: GwfExchangeType
-    type(GwfModelType), pointer                      :: gwfmodel1 => null()    !< pointer to GWF Model 1
-    type(GwfModelType), pointer                      :: gwfmodel2 => null()    !< pointer to GWF Model 2
+    type(GwfModelType), pointer :: gwfmodel1 => null() !< pointer to GWF Model 1
+    type(GwfModelType), pointer :: gwfmodel2 => null() !< pointer to GWF Model 2
     !
     ! -- GWF specific option block:
-    integer(I4B), pointer                            :: iprflow => null()    !< print flag for cell by cell flows
-    integer(I4B), pointer                            :: ipakcb => null()    !< save flag for cell by cell flows
-    integer(I4B), pointer                            :: inewton => null()    !< newton flag (1 newton is on)
-    integer(I4B), pointer                            :: icellavg => null()    !< cell averaging
-    integer(I4B), pointer                            :: ivarcv => null()    !< variable cv
-    integer(I4B), pointer                            :: idewatcv => null()    !< dewatered cv
-    integer(I4B), pointer                            :: ingnc => null()    !< unit number for gnc (0 if off)
-    type(GhostNodeType), pointer                     :: gnc => null()    !< gnc object
-    integer(I4B), pointer                            :: inmvr => null()    !< unit number for mover (0 if off)
-    type(GwfMvrType), pointer                        :: mvr => null()    !< water mover object
-    integer(I4B), pointer                            :: inobs => null()    !< unit number for GWF-GWF observations
-    type(ObsType), pointer                           :: obs => null()    !< observation object
+    integer(I4B), pointer :: iprflow => null() !< print flag for cell by cell flows
+    integer(I4B), pointer :: ipakcb => null() !< save flag for cell by cell flows
+    integer(I4B), pointer :: inewton => null() !< newton flag (1 newton is on)
+    integer(I4B), pointer :: icellavg => null() !< cell averaging
+    integer(I4B), pointer :: ivarcv => null() !< variable cv
+    integer(I4B), pointer :: idewatcv => null() !< dewatered cv
+    integer(I4B), pointer :: ingnc => null() !< unit number for gnc (0 if off)
+    type(GhostNodeType), pointer :: gnc => null() !< gnc object
+    integer(I4B), pointer :: inmvr => null() !< unit number for mover (0 if off)
+    type(GwfMvrType), pointer :: mvr => null() !< water mover object
+    integer(I4B), pointer :: inobs => null() !< unit number for GWF-GWF observations
+    type(ObsType), pointer :: obs => null() !< observation object
     !
     ! -- internal data
-    real(DP), dimension(:), pointer, contiguous      :: cond => null()    !< conductance
-    real(DP), dimension(:), pointer, contiguous      :: condsat => null()    !< saturated conductance
-    integer(I4B), dimension(:), pointer, contiguous  :: idxglo => null()    !< mapping to global (solution) amat
-    integer(I4B), dimension(:), pointer, contiguous  :: idxsymglo => null()    !< mapping to global (solution) symmetric amat
-    real(DP), pointer                                :: satomega => null()    !< saturation smoothing
-    real(DP), dimension(:), pointer, contiguous      :: simvals => null()    !< simulated flow rate for each exchange
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !< conductance
+    real(DP), dimension(:), pointer, contiguous :: condsat => null() !< saturated conductance
+    integer(I4B), dimension(:), pointer, contiguous :: idxglo => null() !< mapping to global (solution) amat
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymglo => null() !< mapping to global (solution) symmetric amat
+    real(DP), pointer :: satomega => null() !< saturation smoothing
+    real(DP), dimension(:), pointer, contiguous :: simvals => null() !< simulated flow rate for each exchange
     !
     ! -- table objects
     type(TableType), pointer :: outputtab1 => null()
@@ -75,40 +75,40 @@ module GwfGwfExchangeModule
 
   contains
 
-    procedure          :: exg_df => gwf_gwf_df
-    procedure          :: exg_ac => gwf_gwf_ac
-    procedure          :: exg_mc => gwf_gwf_mc
-    procedure          :: exg_ar => gwf_gwf_ar
-    procedure          :: exg_rp => gwf_gwf_rp
-    procedure          :: exg_ad => gwf_gwf_ad
-    procedure          :: exg_cf => gwf_gwf_cf
-    procedure          :: exg_fc => gwf_gwf_fc
-    procedure          :: exg_fn => gwf_gwf_fn
-    procedure          :: exg_cq => gwf_gwf_cq
-    procedure          :: exg_bd => gwf_gwf_bd
-    procedure          :: exg_ot => gwf_gwf_ot
-    procedure          :: exg_da => gwf_gwf_da
-    procedure          :: exg_fp => gwf_gwf_fp
-    procedure          :: get_iasym => gwf_gwf_get_iasym
-    procedure          :: connects_model => gwf_gwf_connects_model
-    procedure          :: use_interface_model
-    procedure          :: allocate_scalars
-    procedure          :: allocate_arrays
-    procedure          :: read_options
-    procedure          :: parse_option
-    procedure          :: read_gnc
-    procedure          :: read_mvr
+    procedure :: exg_df => gwf_gwf_df
+    procedure :: exg_ac => gwf_gwf_ac
+    procedure :: exg_mc => gwf_gwf_mc
+    procedure :: exg_ar => gwf_gwf_ar
+    procedure :: exg_rp => gwf_gwf_rp
+    procedure :: exg_ad => gwf_gwf_ad
+    procedure :: exg_cf => gwf_gwf_cf
+    procedure :: exg_fc => gwf_gwf_fc
+    procedure :: exg_fn => gwf_gwf_fn
+    procedure :: exg_cq => gwf_gwf_cq
+    procedure :: exg_bd => gwf_gwf_bd
+    procedure :: exg_ot => gwf_gwf_ot
+    procedure :: exg_da => gwf_gwf_da
+    procedure :: exg_fp => gwf_gwf_fp
+    procedure :: get_iasym => gwf_gwf_get_iasym
+    procedure :: connects_model => gwf_gwf_connects_model
+    procedure :: use_interface_model
+    procedure :: allocate_scalars
+    procedure :: allocate_arrays
+    procedure :: read_options
+    procedure :: parse_option
+    procedure :: read_gnc
+    procedure :: read_mvr
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
-    procedure          :: gwf_gwf_bdsav
+    procedure :: gwf_gwf_bdsav
     procedure, private :: gwf_gwf_df_obs
     procedure, private :: gwf_gwf_rp_obs
-    procedure, public  :: gwf_gwf_save_simvals
+    procedure, public :: gwf_gwf_save_simvals
     procedure, private :: gwf_gwf_calc_simvals
-    procedure, public  :: gwf_gwf_set_spdis
+    procedure, public :: gwf_gwf_set_spdis
     procedure, private :: validate_exchange
-    procedure          :: gwf_gwf_add_to_flowja
+    procedure :: gwf_gwf_add_to_flowja
   end type GwfExchangeType
 
 contains
@@ -126,10 +126,10 @@ contains
     use ObsModule, only: obs_cr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    character(len=*), intent(in) :: filename   !< filename for reading
-    integer(I4B), intent(in) :: id            !< id for the exchange
-    integer(I4B), intent(in) :: m1id          !< id for model 1
-    integer(I4B), intent(in) :: m2id          !< id for model 2
+    character(len=*), intent(in) :: filename !< filename for reading
+    integer(I4B), intent(in) :: id !< id for the exchange
+    integer(I4B), intent(in) :: m1id !< id for model 1
+    integer(I4B), intent(in) :: m2id !< id for model 2
     ! -- local
     type(GwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
@@ -202,7 +202,7 @@ contains
     use InputOutputModule, only: getunit, openfile
     use GhostNodeModule, only: gnc_cr
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: inunit
     !
@@ -266,7 +266,7 @@ contains
   !> @brief validate exchange data after reading
   !<
   subroutine validate_exchange(this)
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! local
 
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
@@ -333,7 +333,7 @@ contains
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
     integer(I4B) :: n, iglo, jglo
@@ -364,7 +364,7 @@ contains
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
@@ -409,7 +409,7 @@ contains
     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
     use GwfNpfModule, only: condmean, vcond, hcond
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: iexg
     integer(I4B) :: n, m, ihc
@@ -510,7 +510,7 @@ contains
     ! -- modules
     use TdisModule, only: readnewdata
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     !
     ! -- Check with TDIS on whether or not it is time to RP
     if (.not. readnewdata) return
@@ -533,7 +533,7 @@ contains
   subroutine gwf_gwf_ad(this)
     ! -- modules
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     !
     ! -- Advance mover
@@ -553,7 +553,7 @@ contains
   !<
   subroutine gwf_gwf_cf(this, kiter)
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
     ! -- local
     !
@@ -575,11 +575,11 @@ contains
     use ConstantsModule, only: DHALF
     use GwfNpfModule, only: hcond, vcond
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) ::rhssln
+    real(DP), dimension(:), intent(inout) :: rhssln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
@@ -650,7 +650,7 @@ contains
     ! -- modules
     use SmoothingModule, only: sQuadraticSaturationDerivative
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
@@ -764,7 +764,7 @@ contains
   subroutine gwf_gwf_cq(this, icnvg, isuppress_output, isolnid)
     ! -- modules
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
@@ -787,7 +787,7 @@ contains
   !< store them in a member array
   subroutine gwf_gwf_calc_simvals(this)
     use ConstantsModule, only: DZERO
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! local
     integer(I4B) :: i
     integer(I4B) :: n1, n2
@@ -815,7 +815,7 @@ contains
   !> @brief Add exchange flow to each model flowja diagonal
   !< position so that residual is calculated correctly.
   subroutine gwf_gwf_add_to_flowja(this)
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! local
     integer(I4B) :: i
     integer(I4B) :: n
@@ -844,7 +844,7 @@ contains
   subroutine gwf_gwf_set_spdis(this)
     use ConstantsModule, only: DZERO, DPIO180
     use GwfNpfModule, only: thksatnm
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! local
     integer(I4B) :: iusg
     integer(I4B) :: i
@@ -962,7 +962,7 @@ contains
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use BudgetModule, only: rate_accumulator
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
@@ -1005,7 +1005,7 @@ contains
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     character(len=LENBOUNDNAME) :: bname
     character(len=LENPACKAGENAME + 4) :: packname1
@@ -1249,7 +1249,7 @@ contains
     use SimVariablesModule, only: iout
     use ConstantsModule, only: DZERO, LINELENGTH
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: iexg, n1, n2
     integer(I4B) :: ibudfl
@@ -1257,10 +1257,10 @@ contains
     character(len=LINELENGTH) :: node1str, node2str
     ! -- format
     character(len=*), parameter :: fmtheader = &
-     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /,  &
+     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /, &
        &2a16, 5a16, /, 112('-'))"
     character(len=*), parameter :: fmtheader2 = &
-     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /,  &
+     "(/1x, 'SUMMARY OF EXCHANGE RATES FOR EXCHANGE ', a, ' WITH ID ', i0, /, &
        &2a16, 4a16, /, 96('-'))"
     character(len=*), parameter :: fmtdata = &
                                    "(2a16, 5(1pg16.6))"
@@ -1324,7 +1324,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
     character(len=LINELENGTH) :: keyword
@@ -1378,10 +1378,10 @@ contains
   !<
   function parse_option(this, keyword, iout) result(parsed)
     use InputOutputModule, only: getunit, openfile
-    class(GwfExchangeType) :: this                   !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     character(len=LINELENGTH), intent(in) :: keyword !< the option name
-    integer(I4B), intent(in) :: iout                 !< for logging
-    logical(LGP) :: parsed                           !< true when parsed
+    integer(I4B), intent(in) :: iout !< for logging
+    logical(LGP) :: parsed !< true when parsed
     ! local
     character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs
@@ -1487,7 +1487,7 @@ contains
     use SimModule, only: store_error, store_error_unit, count_errors
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: i, nm1, nm2, nmgnc1, nmgnc2
     character(len=*), parameter :: fmterr = &
@@ -1545,7 +1545,7 @@ contains
     ! -- modules
     use GwfMvrModule, only: mvr_cr
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
     !
@@ -1571,7 +1571,7 @@ contains
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
     ! -- local
     integer(I4B) :: iexg
@@ -1582,7 +1582,7 @@ contains
     integer(I4B) :: irewet
     character(len=30) :: nodestrn, nodestrm
     character(len=*), parameter :: fmtrwt = &
-      "(1x, 'CELL ',A,' REWET FROM GWF MODEL ',A,' CELL ',A,                   &
+      "(1x, 'CELL ',A,' REWET FROM GWF MODEL ',A,' CELL ',A, &
        &' FOR ITER. ',I0, ' STEP ',I0, ' PERIOD ', I0)"
     !
     ! -- Use model 1 to rewet model 2 and vice versa
@@ -1627,7 +1627,7 @@ contains
     use ConstantsModule, only: DHALF, DZERO, DONE
     use GwfNpfModule, only: hcond, vcond
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: iexg
     integer(I4B) :: n, m, ihc
@@ -1722,7 +1722,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     !
     call this%DisConnExchangeType%allocate_scalars()
@@ -1763,7 +1763,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     !
     ! -- objects
@@ -1827,7 +1827,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     character(len=LINELENGTH) :: text
     integer(I4B) :: ntabcol, i
@@ -1836,7 +1836,7 @@ contains
     !
     call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
     call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
-    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)    !
+    call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath) !
     call mem_allocate(this%condsat, this%nexg, 'CONDSAT', this%memoryPath)
     call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
     !
@@ -1896,7 +1896,7 @@ contains
   !<
   subroutine gwf_gwf_df_obs(this)
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: indx
     !
@@ -1918,7 +1918,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -1991,7 +1991,7 @@ contains
   !<
   subroutine gwf_gwf_fp(this)
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     !
     return
   end subroutine gwf_gwf_fp
@@ -2005,7 +2005,7 @@ contains
     ! -- return
     real(DP) :: qcalc
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iexg
     integer(I4B), intent(in) :: n1
     integer(I4B), intent(in) :: n2
@@ -2026,7 +2026,7 @@ contains
   !<
   function gwf_gwf_get_iasym(this) result(iasym)
     ! -- dummy
-    class(GwfExchangeType) :: this  !<  GwfExchangeType
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: iasym
     !
@@ -2049,9 +2049,9 @@ contains
   !! coefficients for solving @param model
   !<
   function gwf_gwf_connects_model(this, model) result(is_connected)
-    class(GwfExchangeType) :: this                      !<  GwfExchangeType
-    class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
-    logical(LGP) :: is_connected                        !< true, when connected
+    class(GwfExchangeType) :: this !<  GwfExchangeType
+    class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    logical(LGP) :: is_connected !< true, when connected
 
     is_connected = .false.
     ! only connected when model is GwfModelType of course
@@ -2070,7 +2070,7 @@ contains
   !<
   function use_interface_model(this) result(useIM)
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    logical(LGP) :: useIM          !< true when interface model should be used
+    logical(LGP) :: useIM !< true when interface model should be used
 
     useIM = (this%ixt3d > 0)
 
@@ -2137,9 +2137,9 @@ contains
     use BaseDisModule, only: DisBaseType
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B), intent(in)    :: inunitobs
-    integer(I4B), intent(in)    :: iout
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: n, iexg, istat
     integer(I4B) :: icol, istart, istop
@@ -2195,8 +2195,8 @@ contains
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B), intent(in)    :: idx
-    class(GwfExchangeType), pointer    :: res
+    integer(I4B), intent(in) :: idx
+    class(GwfExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

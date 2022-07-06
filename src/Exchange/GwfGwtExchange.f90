@@ -276,7 +276,7 @@ contains
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
     use SimModule, only: store_error
     use SimVariablesModule, only: iout
-    class(GwfGwtExchangeType) :: this       !< this exchange
+    class(GwfGwtExchangeType) :: this !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GwtModelType), pointer :: gwtModel !< the transport model
     ! local
@@ -390,7 +390,7 @@ contains
   !> @brief Links a GWT connection to its GWF counterpart
   !<
   subroutine link_connections(this, gwtConn, gwfConn)
-    class(GwfGwtExchangeType) :: this      !< this exchange
+    class(GwfGwtExchangeType) :: this !< this exchange
     class(GwtGwtConnectionType), pointer :: gwtConn !< GWT connection
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 

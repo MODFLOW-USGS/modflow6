@@ -313,8 +313,8 @@ contains
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B), intent(in)    :: idx
-    class(NumericalExchangeType), pointer    :: res
+    integer(I4B), intent(in) :: idx
+    class(NumericalExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !
