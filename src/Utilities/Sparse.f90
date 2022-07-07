@@ -64,22 +64,25 @@ module SparseModule
 
     ! overload
     subroutine initializefixed(this,nrow,ncol,maxnnz)
-        implicit none
-        class(sparsematrix), intent(inout) :: this
-        integer(I4B),intent(in) :: nrow,ncol
-        integer(I4B),intent(in) :: maxnnz
-        ! local
-        integer(I4B), dimension(nrow) :: rowmaxnnz
-        integer(I4B) :: i
-        
-        do i=1,nrow
-            rowmaxnnz(i) = maxnnz
-        enddo
-        
-        call this%initialize(nrow, ncol, rowmaxnnz)            
-        
+      implicit none
+      class(sparsematrix), intent(inout) :: this
+      integer(I4B),intent(in) :: nrow,ncol
+      integer(I4B),intent(in) :: maxnnz
+      ! local
+      integer(I4B), dimension(:), allocatable :: rowmaxnnz
+      integer(I4B) :: i
+
+      allocate(rowmaxnnz(nrow))
+
+      do i=1,nrow
+        rowmaxnnz(i) = maxnnz
+      enddo
+
+      call this%initialize(nrow, ncol, rowmaxnnz)
+      deallocate(rowmaxnnz)
+
     end subroutine initializefixed
-          
+
     subroutine filliaja(this, ia, ja, ierror, sort)
       !allocate and fill the ia and ja arrays using information
       !from the sparsematrix.
