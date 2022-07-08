@@ -1,8 +1,8 @@
 module TimeSeriesFileListModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,  only: LINELENGTH
-  use ListModule,       only: ListType
+  use ConstantsModule, only: LINELENGTH
+  use ListModule, only: ListType
   use TimeSeriesModule, only: TimeSeriesFileType, &
                               ConstructTimeSeriesFile, &
                               GetTimeSeriesFileFromList, &
@@ -19,13 +19,13 @@ module TimeSeriesFileListModule
     type(ListType), public :: tsfileList
   contains
     ! -- Public procedures
-    procedure, public  :: Add
-    procedure, public  :: Counttsfiles
-    procedure, public  :: CountTimeSeries
-    procedure, public  :: Gettsfile
-    procedure, public  :: Clear
-    procedure, public  :: da => tsfl_da
-    procedure, public  :: add_time_series_tsfile
+    procedure, public :: Add
+    procedure, public :: Counttsfiles
+    procedure, public :: CountTimeSeries
+    procedure, public :: Gettsfile
+    procedure, public :: Clear
+    procedure, public :: da => tsfl_da
+    procedure, public :: add_time_series_tsfile
   end type TimeSeriesFileListType
 
 contains
@@ -87,17 +87,17 @@ contains
     !
     numtsfiles = this%Counttsfiles()
     CountTimeSeries = 0
-    do i=1,numtsfiles
+    do i = 1, numtsfiles
       tsfile => this%Gettsfile(i)
       if (associated(tsfile)) then
         CountTimeSeries = CountTimeSeries + tsfile%Count()
-      endif
-    enddo
+      end if
+    end do
     !
     return
   end function CountTimeSeries
 
-  function Gettsfile(this, indx) result (res)
+  function Gettsfile(this, indx) result(res)
     implicit none
     ! -- dummy
     class(TimeSeriesFileListType) :: this
@@ -115,7 +115,7 @@ contains
   subroutine add_time_series_tsfile(this, tsfile)
     implicit none
     ! -- dummy
-    class(TimeSeriesFileListType),      intent(inout) :: this
+    class(TimeSeriesFileListType), intent(inout) :: this
     class(TimeSeriesFileType), pointer, intent(inout) :: tsfile
     ! -- local
     !
@@ -132,10 +132,10 @@ contains
     type(TimeSeriesFileType), pointer :: tsf => null()
     !
     n = this%Counttsfiles()
-    do i=1,n
+    do i = 1, n
       tsf => this%Gettsfile(i)
       call tsf%da()
-    enddo
+    end do
     !
     call this%tsfileList%Clear(.true.)
     !

@@ -1,10 +1,10 @@
 module TimeArrayModule
 
-  use BaseDisModule,      only: DisBaseType
-  use KindModule,         only: DP, I4B
-  use ListModule,         only: ListType
+  use BaseDisModule, only: DisBaseType
+  use KindModule, only: DP, I4B
+  use ListModule, only: ListType
   use SimVariablesModule, only: errmsg
-  use SimModule,          only: store_error
+  use SimModule, only: store_error
 
   implicit none
   private
@@ -37,7 +37,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeArrayType), pointer, intent(out) :: newTa
-    class(DisBaseType),   pointer, intent(in)  :: dis
+    class(DisBaseType), pointer, intent(in) :: dis
     ! -- local
     integer(I4B) :: isize
 ! ------------------------------------------------------------------------------
@@ -48,9 +48,9 @@ contains
     else
       errmsg = 'Time array series is not supported for discretization type'
       call store_error(errmsg, terminate=.TRUE.)
-    endif
-    allocate(newTa)
-    allocate(newTa%taArray(isize))
+    end if
+    allocate (newTa)
+    allocate (newTa%taArray(isize))
     return
   end subroutine ConstructTimeArray
 
@@ -84,7 +84,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ListType),               intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(TimeArrayType), pointer, intent(inout) :: timearray
     ! -- local
     class(*), pointer :: obj
@@ -96,7 +96,7 @@ contains
     return
   end subroutine AddTimeArrayToList
 
-  function GetTimeArrayFromList(list, indx) result (res)
+  function GetTimeArrayFromList(list, indx) result(res)
 ! ******************************************************************************
 ! GetTimeArrayFromList -- get ta from list
 ! ******************************************************************************
@@ -105,8 +105,8 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B),   intent(in)    :: indx
-    type(TimeArrayType),  pointer :: res
+    integer(I4B), intent(in) :: indx
+    type(TimeArrayType), pointer :: res
     ! -- local
     class(*), pointer :: obj
 ! ------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ contains
     class(TimeArrayType) :: this
 ! ------------------------------------------------------------------------------
     !
-    deallocate(this%taArray)
+    deallocate (this%taArray)
     this%taArray => null()
     !
     return

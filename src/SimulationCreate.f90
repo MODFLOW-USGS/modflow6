@@ -1,24 +1,24 @@
 module SimulationCreateModule
 
-  use KindModule,             only: DP, I4B, write_kindinfo
-  use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule,     only: simfile, simlstfile, iout
+  use KindModule, only: DP, I4B, write_kindinfo
+  use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
+  use SimVariablesModule, only: simfile, simlstfile, iout
   use GenericUtilitiesModule, only: sim_message, write_centered
-  use SimModule,              only: store_error, count_errors,            &
-                                    store_error_unit, MaxErrors
-  use VersionModule,          only: write_listfile_header
-  use InputOutputModule,      only: getunit, urword, openfile
-  use ArrayHandlersModule,    only: expandarray, ifind
-  use BaseModelModule,        only: BaseModelType
-  use BaseSolutionModule,     only: BaseSolutionType, AddBaseSolutionToList,     &
-                                    GetBaseSolutionFromList
-  use SolutionGroupModule,    only: SolutionGroupType, AddSolutionGroupToList
-  use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
-  use ListsModule,            only: basesolutionlist, basemodellist,             &
-                                    solutiongrouplist, baseexchangelist
-  use BaseModelModule,        only: GetBaseModelFromList
-  use BlockParserModule,      only: BlockParserType
-  use ListModule,             only: ListType
+  use SimModule, only: store_error, count_errors, &
+                       store_error_unit, MaxErrors
+  use VersionModule, only: write_listfile_header
+  use InputOutputModule, only: getunit, urword, openfile
+  use ArrayHandlersModule, only: expandarray, ifind
+  use BaseModelModule, only: BaseModelType
+  use BaseSolutionModule, only: BaseSolutionType, AddBaseSolutionToList, &
+                                GetBaseSolutionFromList
+  use SolutionGroupModule, only: SolutionGroupType, AddSolutionGroupToList
+  use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
+  use ListsModule, only: basesolutionlist, basemodellist, &
+                         solutiongrouplist, baseexchangelist
+  use BaseModelModule, only: GetBaseModelFromList
+  use BlockParserModule, only: BlockParserType
+  use ListModule, only: ListType
 
   implicit none
   private
@@ -29,7 +29,7 @@ module SimulationCreateModule
   character(len=LENMODELNAME), allocatable, dimension(:) :: modelname
   type(BlockParserType) :: parser
 
-  contains
+contains
 
   !> @brief Read the simulation name file and initialize the models, exchanges
   !<
@@ -39,7 +39,7 @@ module SimulationCreateModule
     character(len=LINELENGTH) :: line
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize iout 
+    ! -- initialize iout
     iout = 0
     !
     ! -- Open simulation list file
@@ -47,8 +47,8 @@ module SimulationCreateModule
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
     !
     ! -- write simlstfile to stdout
-    write(line,'(2(1x,A))') 'Writing simulation list file:',                     &
-                            trim(adjustl(simlstfile))
+    write (line, '(2(1x,A))') 'Writing simulation list file:', &
+      trim(adjustl(simlstfile))
     call sim_message(line)
     call write_listfile_header(iout)
     !
@@ -58,7 +58,7 @@ module SimulationCreateModule
     ! -- Return
     return
   end subroutine simulation_cr
-   
+
   !> @brief Deallocate simulation variables
   !<
   subroutine simulation_da()
@@ -67,7 +67,7 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     !
     ! -- variables
-    deallocate(modelname)
+    deallocate (modelname)
     !
     ! -- Return
     return
@@ -82,7 +82,7 @@ module SimulationCreateModule
   !<
   subroutine read_simulation_namefile(namfile)
     ! -- dummy
-    character(len=*),intent(in) :: namfile  !< simulation name file
+    character(len=*), intent(in) :: namfile !< simulation name file
     ! -- local
     character(len=LINELENGTH) :: line
 ! ------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ module SimulationCreateModule
     call openfile(inunit, iout, namfile, 'NAM')
     !
     ! -- write name of namfile to stdout
-    write(line,'(2(1x,a))') 'Using Simulation name file:', namfile
+    write (line, '(2(1x,a))') 'Using Simulation name file:', namfile
     call sim_message(line, skipafter=1)
     !
     ! -- Initialize block parser
@@ -121,7 +121,7 @@ module SimulationCreateModule
     call parser%Clear()
     !
     ! -- Go through each solution and assign exchanges accordingly
-    call assign_exchanges()    
+    call assign_exchanges()
     !
     ! -- Return
     return
@@ -143,44 +143,44 @@ module SimulationCreateModule
     !
     ! -- Process OPTIONS block
     call parser%GetBlock('OPTIONS', isfound, ierr, &
-      supportOpenClose=.true., blockRequired=.false.)
+                         supportOpenClose=.true., blockRequired=.false.)
     if (isfound) then
-      write(iout,'(/1x,a)')'READING SIMULATION OPTIONS'
+      write (iout, '(/1x,a)') 'READING SIMULATION OPTIONS'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('CONTINUE')
-            isimcontinue = 1
-            write(iout, '(4x, a)')                                             &
-                  'SIMULATION WILL CONTINUE EVEN IF THERE IS NONCONVERGENCE.'
-          case ('NOCHECK')
-            isimcheck = 0
-            write(iout, '(4x, a)')                                             &
-                  'MODEL DATA WILL NOT BE CHECKED FOR ERRORS.'
-          case ('MEMORY_PRINT_OPTION')
-            errmsg = ''
-            call parser%GetStringCaps(keyword)
-            call mem_set_print_option(iout, keyword, errmsg)
-            if (errmsg /= ' ') then
-              call store_error(errmsg)
-              call parser%StoreErrorUnit()
-            endif
-          case ('MAXERRORS')
-            imax = parser%GetInteger()
-            call MaxErrors(imax)
-            write(iout, '(4x, a, i0)')                                         &
-                  'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', imax
-          case default
-            write(errmsg, '(4x,a,a)') &
-                  '****ERROR. UNKNOWN SIMULATION OPTION: ',                    &
-                  trim(keyword)
+        case ('CONTINUE')
+          isimcontinue = 1
+          write (iout, '(4x, a)') &
+            'SIMULATION WILL CONTINUE EVEN IF THERE IS NONCONVERGENCE.'
+        case ('NOCHECK')
+          isimcheck = 0
+          write (iout, '(4x, a)') &
+            'MODEL DATA WILL NOT BE CHECKED FOR ERRORS.'
+        case ('MEMORY_PRINT_OPTION')
+          errmsg = ''
+          call parser%GetStringCaps(keyword)
+          call mem_set_print_option(iout, keyword, errmsg)
+          if (errmsg /= ' ') then
             call store_error(errmsg)
             call parser%StoreErrorUnit()
+          end if
+        case ('MAXERRORS')
+          imax = parser%GetInteger()
+          call MaxErrors(imax)
+          write (iout, '(4x, a, i0)') &
+            'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', imax
+        case default
+          write (errmsg, '(4x,a,a)') &
+            '****ERROR. UNKNOWN SIMULATION OPTION: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)')'END OF SIMULATION OPTIONS'
+      write (iout, '(1x,a)') 'END OF SIMULATION OPTIONS'
     end if
     !
     ! -- return
@@ -206,27 +206,27 @@ module SimulationCreateModule
     !
     ! -- Process TIMING block
     call parser%GetBlock('TIMING', isfound, ierr, &
-      supportOpenClose=.true.)
+                         supportOpenClose=.true.)
     if (isfound) then
-      write(iout,'(/1x,a)')'READING SIMULATION TIMING'
+      write (iout, '(/1x,a)') 'READING SIMULATION TIMING'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('TDIS6')
-            found_tdis = .true.
-            call parser%GetString(line)
-            call tdis_cr(line)
-          case default
-            write(errmsg, '(4x,a,a)') &
-                  '****ERROR. UNKNOWN SIMULATION TIMING: ', &
-                  trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
+        case ('TDIS6')
+          found_tdis = .true.
+          call parser%GetString(line)
+          call tdis_cr(line)
+        case default
+          write (errmsg, '(4x,a,a)') &
+            '****ERROR. UNKNOWN SIMULATION TIMING: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)')'END OF SIMULATION TIMING'
+      write (iout, '(1x,a)') 'END OF SIMULATION TIMING'
     else
       call store_error('****ERROR.  Did not find TIMING block in simulation'// &
                        ' control file.')
@@ -234,10 +234,10 @@ module SimulationCreateModule
     end if
     !
     ! -- Ensure that TDIS was found
-    if(.not. found_tdis) then
+    if (.not. found_tdis) then
       call store_error('****ERROR. TDIS not found in TIMING block.')
       call parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
@@ -247,9 +247,9 @@ module SimulationCreateModule
   !<
   subroutine models_create()
     ! -- modules
-    use GwfModule,              only: gwf_cr
-    use GwtModule,              only: gwt_cr
-    use ConstantsModule,        only: LENMODELNAME
+    use GwfModule, only: gwf_cr
+    use GwtModule, only: gwt_cr
+    use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -262,32 +262,32 @@ module SimulationCreateModule
     !
     ! -- Process MODELS block
     call parser%GetBlock('MODELS', isfound, ierr, &
-      supportOpenClose=.true.)
+                         supportOpenClose=.true.)
     if (isfound) then
-      write(iout,'(/1x,a)')'READING SIMULATION MODELS'
+      write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
       im = 0
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('GWF6')
-            call parser%GetString(fname)
-            call add_model(im, 'GWF6', mname)
-            call gwf_cr(fname, im, modelname(im))
-          case ('GWT6')
-            call parser%GetString(fname)
-            call add_model(im, 'GWT6', mname)
-            call gwt_cr(fname, im, modelname(im))
-          case default
-            write(errmsg, '(4x,a,a)') &
-                  '****ERROR. UNKNOWN SIMULATION MODEL: ',                     &
-                  trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
+        case ('GWF6')
+          call parser%GetString(fname)
+          call add_model(im, 'GWF6', mname)
+          call gwf_cr(fname, im, modelname(im))
+        case ('GWT6')
+          call parser%GetString(fname)
+          call add_model(im, 'GWT6', mname)
+          call gwt_cr(fname, im, modelname(im))
+        case default
+          write (errmsg, '(4x,a,a)') &
+            '****ERROR. UNKNOWN SIMULATION MODEL: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)')'END OF SIMULATION MODELS'
+      write (iout, '(1x,a)') 'END OF SIMULATION MODELS'
     else
       call store_error('****ERROR.  Did not find MODELS block in simulation'// &
                        ' control file.')
@@ -302,9 +302,9 @@ module SimulationCreateModule
   !<
   subroutine exchanges_create()
     ! -- modules
-    use GwfGwfExchangeModule,    only: gwfexchange_create
-    use GwfGwtExchangeModule,    only: gwfgwt_cr
-    use GwtGwtExchangeModule,    only: gwtexchange_create
+    use GwfGwfExchangeModule, only: gwfexchange_create
+    use GwfGwtExchangeModule, only: gwfgwt_cr
+    use GwtGwtExchangeModule, only: gwtexchange_create
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -320,9 +320,9 @@ module SimulationCreateModule
       &'file.  Could not find model: ', a)"
 ! ------------------------------------------------------------------------------
     call parser%GetBlock('EXCHANGES', isfound, ierr, &
-      supportOpenClose=.true.)
+                         supportOpenClose=.true.)
     if (isfound) then
-      write(iout,'(/1x,a)')'READING SIMULATION EXCHANGES'
+      write (iout, '(/1x,a)') 'READING SIMULATION EXCHANGES'
       id = 0
       do
         call parser%GetNextLine(endOfBlock)
@@ -337,39 +337,39 @@ module SimulationCreateModule
 
         ! find model index in list
         m1 = ifind(modelname, name1)
-        if(m1 < 0) then
-          write(errmsg, fmtmerr) trim(name1)
+        if (m1 < 0) then
+          write (errmsg, fmtmerr) trim(name1)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
-        endif
+        end if
         m2 = ifind(modelname, name2)
-        if(m2 < 0) then
-          write(errmsg, fmtmerr) trim(name2)
+        if (m2 < 0) then
+          write (errmsg, fmtmerr) trim(name2)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
-        endif
+        end if
 
-        write(iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ',    &
-              id, ' will be created to connect model ', m1, ' with model ', m2
+        write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ', &
+          id, ' will be created to connect model ', m1, ' with model ', m2
 
         select case (keyword)
-          case ('GWF6-GWF6')
-            call gwfexchange_create(fname, id, m1, m2)
-          case ('GWF6-GWT6')
-            call gwfgwt_cr(fname, id, m1, m2)
-          case ('GWT6-GWT6')
-            call gwtexchange_create(fname, id, m1, m2)
-          case default
-            write(errmsg, '(4x,a,a)') &
-                  '****ERROR. UNKNOWN SIMULATION EXCHANGES: ',                 &
-                  trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
+        case ('GWF6-GWF6')
+          call gwfexchange_create(fname, id, m1, m2)
+        case ('GWF6-GWT6')
+          call gwfgwt_cr(fname, id, m1, m2)
+        case ('GWT6-GWT6')
+          call gwtexchange_create(fname, id, m1, m2)
+        case default
+          write (errmsg, '(4x,a,a)') &
+            '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)')'END OF SIMULATION EXCHANGES'
+      write (iout, '(1x,a)') 'END OF SIMULATION EXCHANGES'
     else
-      call store_error('****ERROR.  Did not find EXCHANGES block in '//        &
+      call store_error('****ERROR.  Did not find EXCHANGES block in '// &
                        'simulation control file.')
       call parser%StoreErrorUnit()
     end if
@@ -382,17 +382,17 @@ module SimulationCreateModule
   !<
   subroutine solution_groups_create()
     ! -- modules
-    use SolutionGroupModule,        only: SolutionGroupType,                   &
-                                          solutiongroup_create
-    use BaseSolutionModule,         only: BaseSolutionType
-    use BaseModelModule,            only: BaseModelType
-    use BaseExchangeModule,         only: BaseExchangeType
-    use NumericalSolutionModule,    only: solution_create
+    use SolutionGroupModule, only: SolutionGroupType, &
+                                   solutiongroup_create
+    use BaseSolutionModule, only: BaseSolutionType
+    use BaseModelModule, only: BaseModelType
+    use BaseExchangeModule, only: BaseExchangeType
+    use NumericalSolutionModule, only: solution_create
     ! -- dummy
     ! -- local
-    type(SolutionGroupType), pointer  :: sgp
-    class(BaseSolutionType), pointer  :: sp
-    class(BaseModelType), pointer     :: mp
+    type(SolutionGroupType), pointer :: sgp
+    class(BaseSolutionType), pointer :: sp
+    class(BaseModelType), pointer :: mp
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: isoln
@@ -405,9 +405,9 @@ module SimulationCreateModule
     character(len=LINELENGTH) :: fname, mname
     ! -- formats
     character(len=*), parameter :: fmterrmxiter = &
-      "('ERROR. MXITER IS SET TO ', i0, ' BUT THERE IS ONLY ONE SOLUTION',     &
-        &' IN SOLUTION GROUP ', i0, '. SET MXITER TO 1 IN SIMULATION CONTROL', &
-        &' FILE.')"
+      "('ERROR. MXITER IS SET TO ', i0, ' BUT THERE IS ONLY ONE SOLUTION', &
+      &' IN SOLUTION GROUP ', i0, '. SET MXITER TO 1 IN SIMULATION CONTROL', &
+      &' FILE.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- isoln is the cumulative solution number, isgp is the cumulative
@@ -419,27 +419,27 @@ module SimulationCreateModule
     sgploop: do
       !
       call parser%GetBlock('SOLUTIONGROUP', isfound, ierr, &
-        supportOpenClose=.true.)
-      if(ierr /= 0) exit sgploop
+                           supportOpenClose=.true.)
+      if (ierr /= 0) exit sgploop
       if (.not. isfound) exit sgploop
       isgp = isgp + 1
       !
       ! -- Get the solutiongroup id and check that it is listed consecutively.
       sgid = parser%GetInteger()
-      if(isgp /= sgid) then
-        write(errmsg, '(a)') 'Solution groups are not listed consecutively.'
+      if (isgp /= sgid) then
+        write (errmsg, '(a)') 'Solution groups are not listed consecutively.'
         call store_error(errmsg)
-        write(errmsg, '(a,i0,a,i0)' ) 'Found ', sgid, ' when looking for ',isgp
+        write (errmsg, '(a,i0,a,i0)') 'Found ', sgid, ' when looking for ', isgp
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-      endif
+      end if
       !
       ! -- Create the solutiongroup and add it to the solutiongrouplist
       call solutiongroup_create(sgp, sgid)
       call AddSolutionGroupToList(solutiongrouplist, sgp)
       !
       ! -- Begin processing the solution group
-      write(iout,'(/1x,a)')'READING SOLUTIONGROUP'
+      write (iout, '(/1x,a)') 'READING SOLUTIONGROUP'
       !
       ! -- Initialize isgpsoln to 0.  isgpsoln is the solution counter for this
       !    particular solution group.  It goes from 1 to the number of solutions
@@ -451,126 +451,126 @@ module SimulationCreateModule
         call parser%GetStringCaps(keyword)
         select case (keyword)
           !
-          case ('MXITER')
-            sgp%mxiter = parser%GetInteger()
+        case ('MXITER')
+          sgp%mxiter = parser%GetInteger()
           !
-          case ('IMS6')
-            !
-            ! -- Initialize and increment counters
-            isoln = isoln + 1
-            isgpsoln = isgpsoln + 1
-            !
-            ! -- Create the solution, retrieve from the list, and add to sgp
-            call parser%GetString(fname)
-            call solution_create(fname, isoln)
-            sp => GetBaseSolutionFromList(basesolutionlist, isoln)
-            call sgp%add_solution(isoln, sp)
-            !
-            ! -- Add all of the models that are listed on this line to
-            !    the current solution (sp)
-            do
-              !
-              ! -- Set istart and istop to encompass model name. Exit this
-              !    loop if there are no more models.
-              call parser%GetStringCaps(mname)
-              if (mname == '') exit
-              !
-              ! -- Find the model id, and then get model
-              mid = ifind(modelname, mname)
-              if(mid <= 0) then
-                write(errmsg, '(a,a)') 'Error.  Invalid modelname: ', &
-                  trim(mname)
-                call store_error(errmsg)
-                call parser%StoreErrorUnit()
-              endif
-              mp => GetBaseModelFromList(basemodellist, mid)
-              !
-              ! -- Add the model to the solution
-              call sp%add_model(mp)
-              mp%idsoln = isoln
-              !
-            enddo
+        case ('IMS6')
           !
-          case default
-            write(errmsg, '(4x,a,a)') &
-                  '****ERROR. UNKNOWN SOLUTIONGROUP ENTRY: ', &
-                  trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
+          ! -- Initialize and increment counters
+          isoln = isoln + 1
+          isgpsoln = isgpsoln + 1
+          !
+          ! -- Create the solution, retrieve from the list, and add to sgp
+          call parser%GetString(fname)
+          call solution_create(fname, isoln)
+          sp => GetBaseSolutionFromList(basesolutionlist, isoln)
+          call sgp%add_solution(isoln, sp)
+          !
+          ! -- Add all of the models that are listed on this line to
+          !    the current solution (sp)
+          do
+            !
+            ! -- Set istart and istop to encompass model name. Exit this
+            !    loop if there are no more models.
+            call parser%GetStringCaps(mname)
+            if (mname == '') exit
+            !
+            ! -- Find the model id, and then get model
+            mid = ifind(modelname, mname)
+            if (mid <= 0) then
+              write (errmsg, '(a,a)') 'Error.  Invalid modelname: ', &
+                trim(mname)
+              call store_error(errmsg)
+              call parser%StoreErrorUnit()
+            end if
+            mp => GetBaseModelFromList(basemodellist, mid)
+            !
+            ! -- Add the model to the solution
+            call sp%add_model(mp)
+            mp%idsoln = isoln
+            !
+          end do
+          !
+        case default
+          write (errmsg, '(4x,a,a)') &
+            '****ERROR. UNKNOWN SOLUTIONGROUP ENTRY: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
       !
       ! -- Make sure there is a solution in this solution group
-      if(isgpsoln == 0) then
-        write(errmsg, '(4x,a,i0)') &
+      if (isgpsoln == 0) then
+        write (errmsg, '(4x,a,i0)') &
           'ERROR. THERE ARE NO SOLUTIONS FOR SOLUTION GROUP ', isgp
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-      endif
+      end if
       !
       ! -- If there is only one solution then mxiter should be 1.
-      if(isgpsoln == 1 .and. sgp%mxiter > 1) then
-        write(errmsg, fmterrmxiter) sgp%mxiter, isgpsoln
+      if (isgpsoln == 1 .and. sgp%mxiter > 1) then
+        write (errmsg, fmterrmxiter) sgp%mxiter, isgpsoln
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-      endif
+      end if
       !
       ! -- todo: more error checking?
       !
-      write(iout,'(1x,a)')'END OF SIMULATION SOLUTIONGROUP'
+      write (iout, '(1x,a)') 'END OF SIMULATION SOLUTIONGROUP'
       !
-    enddo sgploop
+    end do sgploop
     !
     ! -- Check and make sure at least one solution group was found
-    if(solutiongrouplist%Count() == 0) then
+    if (solutiongrouplist%Count() == 0) then
       call store_error('ERROR.  THERE ARE NO SOLUTION GROUPS.')
       call parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine solution_groups_create
 
-  !> @brief Check for dangling models, and break with 
+  !> @brief Check for dangling models, and break with
   !! error when found
   !<
-  subroutine check_model_assignment()    
+  subroutine check_model_assignment()
     character(len=LINELENGTH) :: errmsg
     class(BaseModelType), pointer :: mp
     integer(I4B) :: im
-  
+
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
       if (mp%idsoln == 0) then
-        write(errmsg, '(a,a)') &
+        write (errmsg, '(a,a)') &
           '****ERROR.  Model was not assigned to a solution: ', mp%name
         call store_error(errmsg)
-      endif
-    enddo
+      end if
+    end do
     if (count_errors() > 0) then
       call store_error_unit(inunit)
-    endif
+    end if
 
   end subroutine check_model_assignment
 
   !> @brief Assign exchanges to solutions
-  !! 
-  !! This assigns NumericalExchanges to NumericalSolutions, 
+  !!
+  !! This assigns NumericalExchanges to NumericalSolutions,
   !! based on the link between the models in the solution and
-  !! those exchanges. The BaseExchange%connects_model() function 
+  !! those exchanges. The BaseExchange%connects_model() function
   !! should be overridden to indicate if such a link exists.
   !<
   subroutine assign_exchanges()
     ! -- local
-    class(BaseSolutionType), pointer :: sp    
+    class(BaseSolutionType), pointer :: sp
     class(BaseExchangeType), pointer :: ep
-    class(BaseModelType), pointer :: mp    
+    class(BaseModelType), pointer :: mp
     type(ListType), pointer :: models_in_solution
     integer(I4B) :: is, ie, im
 
     do is = 1, basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
-      ! 
+      !
       ! -- now loop over exchanges
       do ie = 1, baseexchangelist%Count()
         ep => GetBaseExchangeFromList(baseexchangelist, ie)
@@ -580,14 +580,14 @@ module SimulationCreateModule
         do im = 1, models_in_solution%Count()
           mp => GetBaseModelFromList(models_in_solution, im)
           if (ep%connects_model(mp)) then
-            ! 
+            !
             ! -- add to solution (and only once)
             call sp%add_exchange(ep)
             exit
           end if
         end do
       end do
-    enddo
+    end do
   end subroutine assign_exchanges
 
   !> @brief Add the model to the list of modelnames, check that the model name is valid
@@ -601,35 +601,35 @@ module SimulationCreateModule
     integer :: ilen
     integer :: i
     character(len=LINELENGTH) :: errmsg
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     im = im + 1
     call expandarray(modelname)
     call parser%GetStringCaps(mname)
     ilen = len_trim(mname)
     if (ilen > LENMODELNAME) then
-      write(errmsg, '(4x,a,a)')                                                &
-            'ERROR. INVALID MODEL NAME: ', trim(mname)
+      write (errmsg, '(4x,a,a)') &
+        'ERROR. INVALID MODEL NAME: ', trim(mname)
       call store_error(errmsg)
-      write(errmsg, '(4x,a,i0,a,i0)')                                          &
-            'NAME LENGTH OF ', ilen, ' EXCEEDS MAXIMUM LENGTH OF ',            &
-            LENMODELNAME
+      write (errmsg, '(4x,a,i0,a,i0)') &
+        'NAME LENGTH OF ', ilen, ' EXCEEDS MAXIMUM LENGTH OF ', &
+        LENMODELNAME
       call store_error(errmsg)
       call parser%StoreErrorUnit()
-    endif
+    end if
     do i = 1, ilen
       if (mname(i:i) == ' ') then
-        write(errmsg, '(4x,a,a)')                                              &
-              'ERROR. INVALID MODEL NAME: ', trim(mname)
+        write (errmsg, '(4x,a,a)') &
+          'ERROR. INVALID MODEL NAME: ', trim(mname)
         call store_error(errmsg)
-        write(errmsg, '(4x,a)')                                                &
-              'MODEL NAME CANNOT HAVE SPACES WITHIN IT.'
+        write (errmsg, '(4x,a)') &
+          'MODEL NAME CANNOT HAVE SPACES WITHIN IT.'
         call store_error(errmsg)
         call parser%StoreErrorUnit()
-      endif
-    enddo
+      end if
+    end do
     modelname(im) = mname
-    write(iout, '(4x,a,i0)') mtype // ' model ' // trim(mname) //              &
-      ' will be created as model ', im  
+    write (iout, '(4x,a,i0)') mtype//' model '//trim(mname)// &
+      ' will be created as model ', im
     !
     ! -- return
     return

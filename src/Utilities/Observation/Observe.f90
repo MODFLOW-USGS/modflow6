@@ -11,18 +11,18 @@
 !-----------------------------------------------------------------------
 module ObserveModule
 
-  use KindModule,          only: DP, I4B
-  use BaseDisModule,       only: DisBaseType
-  use ConstantsModule,     only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
-                                 MAXOBSTYPES, DNODATA, DZERO
-  use TableModule,         only: TableType
-  use InputOutputModule,   only: urword
-  use ListModule,          only: ListType
-  use SimModule,           only: store_warning, store_error, &
-                                store_error_unit
-  use TdisModule,          only: totim, totalsimtime
+  use KindModule, only: DP, I4B
+  use BaseDisModule, only: DisBaseType
+  use ConstantsModule, only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
+                             MAXOBSTYPES, DNODATA, DZERO
+  use TableModule, only: TableType
+  use InputOutputModule, only: urword
+  use ListModule, only: ListType
+  use SimModule, only: store_warning, store_error, &
+                       store_error_unit
+  use TdisModule, only: totim, totalsimtime
   use ArrayHandlersModule, only: ExpandArrayWrapper
-  
+
   implicit none
 
   private
@@ -68,11 +68,11 @@ module ObserveModule
     type(ObsDataType), pointer, private :: obsDatum => null()
   contains
     ! -- Public procedures
-    procedure, public  :: ResetCurrent
-    procedure, public  :: WriteTo
-    procedure, public  :: AddObsIndex
-    procedure, public  :: ResetObsIndex
-    procedure, public  :: da
+    procedure, public :: ResetCurrent
+    procedure, public :: WriteTo
+    procedure, public :: AddObsIndex
+    procedure, public :: ResetObsIndex
+    procedure, public :: da
   end type ObserveType
 
   type :: ObsDataType
@@ -96,10 +96,10 @@ module ObserveModule
       import :: ObserveType
       import :: DisBaseType
       ! -- dummy
-      type(ObserveType),  intent(inout) :: obsrv
-      class(DisBaseType), intent(in)    :: dis
-      integer(I4B),       intent(in)    :: inunitobs
-      integer(I4B),       intent(in)    :: iout
+      type(ObserveType), intent(inout) :: obsrv
+      class(DisBaseType), intent(in) :: dis
+      integer(I4B), intent(in) :: inunitobs
+      integer(I4B), intent(in) :: iout
     end subroutine ProcessIdSub
   end interface
 
@@ -143,21 +143,21 @@ contains
     if (len_trim(btagfound) > 12) then
       tag = btagfound(1:12)
     else
-      write(tag, '(a12)') btagfound
+      write (tag, '(a12)') btagfound
     end if
     !
     ! -- write fnamein to fnameout
     if (len_trim(fnamein) > 80) then
       fnameout = fnamein(1:80)
     else
-      write(fnameout, '(a80)') fnamein
+      write (fnameout, '(a80)') fnamein
     end if
     !
     ! -- write data to observation table
     call obstab%add_term(this%Name)
-    call obstab%add_term(tag // trim(this%ObsTypeId))
+    call obstab%add_term(tag//trim(this%ObsTypeId))
     call obstab%add_term('ALL TIMES')
-    call obstab%add_term('"' // trim(this%IDstring) // '"')
+    call obstab%add_term('"'//trim(this%IDstring)//'"')
     call obstab%add_term(fnameout)
     !
     ! -- return
@@ -179,11 +179,11 @@ contains
     !
     ! -- Deallocate observation index array, if necessary
     if (allocated(this%indxbnds)) then
-      deallocate(this%indxbnds)
+      deallocate (this%indxbnds)
     end if
     !
     ! -- Allocate observation index array to size 0
-    allocate(this%indxbnds(0))
+    allocate (this%indxbnds(0))
     !
     ! -- return
     return
@@ -192,7 +192,7 @@ contains
   subroutine AddObsIndex(this, indx)
 ! **************************************************************************
 ! AddObsIndex -- Add the observation index to the observation index array
-!                (indbnds). The observation index count (indxbnds_count)  
+!                (indbnds). The observation index count (indxbnds_count)
 !                is also incremented by one and the observation index array
 !                is expanded, if necessary.
 ! **************************************************************************
@@ -226,7 +226,7 @@ contains
     ! -- dummy
     class(ObserveType), intent(inout) :: this
     if (allocated(this%indxbnds)) then
-      deallocate(this%indxbnds)
+      deallocate (this%indxbnds)
     end if
     !
     ! -- return
@@ -245,13 +245,13 @@ contains
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
     ! -- dummy variables
-    type(ObserveType),    pointer :: newObservation
-    character(len=*),  intent(in) :: defLine
-    integer(I4B),      intent(in) :: numunit   ! Output unit number
-    logical,           intent(in) :: formatted ! Formatted output?
-    integer(I4B),      intent(in) :: indx      ! Index in ObsOutput array
+    type(ObserveType), pointer :: newObservation
+    character(len=*), intent(in) :: defLine
+    integer(I4B), intent(in) :: numunit ! Output unit number
+    logical, intent(in) :: formatted ! Formatted output?
+    integer(I4B), intent(in) :: indx ! Index in ObsOutput array
     type(ObsDataType), dimension(:), pointer, intent(in) :: obsData
-    integer(I4B),      intent(in) :: inunit
+    integer(I4B), intent(in) :: inunit
     ! -- local
     real(DP) :: r
     integer(I4B) :: i, icol, iout, istart, istop, n
@@ -262,8 +262,8 @@ contains
     icol = 1
     !
     ! -- Allocate an ObserveType object.
-    allocate(newObservation)
-    allocate(newObservation%indxbnds(0))
+    allocate (newObservation)
+    allocate (newObservation%indxbnds(0))
     !
     ! -- Set indxbnds_count to 0
     newObservation%indxbnds_count = 0
@@ -272,22 +272,22 @@ contains
     !    contents of defLine.
     !
     ! -- Get observation name and store it
-    call urword(defLine,icol,istart,istop,1,n,r,iout,inunit)
+    call urword(defLine, icol, istart, istop, 1, n, r, iout, inunit)
     newObservation%Name = defLine(istart:istop)
     !
     ! -- Get observation type, convert it to uppercase, and store it.
-    call urword(defLine,icol,istart,istop,1,n,r,iout,inunit)
+    call urword(defLine, icol, istart, istop, 1, n, r, iout, inunit)
     newObservation%ObsTypeId = defLine(istart:istop)
     !
     ! -- Look up package ID for this observation type and store it
-    do i=1,MAXOBSTYPES
+    do i = 1, MAXOBSTYPES
       if (obsData(i)%ObsTypeID == newObservation%ObsTypeId) then
         newObservation%obsDatum => obsData(i)
         exit
       elseif (obsData(i)%ObsTypeID == '') then
         exit
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- Remaining text is ID [and ID2]; store the remainder of the string
     istart = istop + 1
@@ -321,7 +321,7 @@ contains
 
   subroutine AddObsToList(list, obs)
     ! -- dummy
-    type(ListType),             intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(ObserveType), pointer, intent(inout) :: obs
     ! -- local
     class(*), pointer :: obj
@@ -332,11 +332,11 @@ contains
     return
   end subroutine AddObsToList
 
-  function GetObsFromList(list, idx) result (res)
+  function GetObsFromList(list, idx) result(res)
     ! -- dummy
     type(ListType), intent(inout) :: list
-    integer(I4B),        intent(in)    :: idx
-    type(ObserveType), pointer    :: res
+    integer(I4B), intent(in) :: idx
+    type(ObserveType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

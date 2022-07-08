@@ -1,5 +1,5 @@
 module TimeSeriesRecordModule
-  
+
   use KindModule, only: DP, I4B
   use ListModule, only: ListType
 
@@ -21,7 +21,7 @@ contains
     type(TimeSeriesRecordType), pointer, intent(out) :: newTsRecord
     real(DP), intent(in) :: time, value
     !
-    allocate(newTsRecord)
+    allocate (newTsRecord)
     newTsRecord%tsrTime = time
     newTsRecord%tsrValue = value
     return
@@ -46,7 +46,7 @@ contains
   subroutine AddTimeSeriesRecordToList(list, tsrecord)
     implicit none
     ! -- dummy
-    type(ListType),             intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(TimeSeriesRecordType), pointer, intent(inout) :: tsrecord
     ! -- local
     class(*), pointer :: obj => null()
