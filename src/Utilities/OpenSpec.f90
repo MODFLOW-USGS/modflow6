@@ -4,7 +4,7 @@ module OpenSpecModule
 !  specifiers is not included in ANSI FORTRAN 77. The included
 !  specifiers are ACCESS, FORM and ACTION.
 !
-      CHARACTER(len=20) :: ACCESS,FORM,ACTION(2)
+  CHARACTER(len=20) :: ACCESS, FORM, ACTION(2)
 !
 !
 !  Specifiers for OPEN statements for unformatted files, which are
@@ -15,14 +15,14 @@ module OpenSpecModule
 !
 !    Standard Fortran -- Use unless there is a reason to do otherwise.
 !      DATA ACCESS/'SEQUENTIAL'/
-       DATA ACCESS/'STREAM'/
+  DATA ACCESS/'STREAM'/
 !
 !
 !  FORM specifier --
 !
 !    Standard Fortran, which results in vendor dependent (non-portable)
 !    files.  Use unless there is a reason to do otherwise.
-      DATA FORM/'UNFORMATTED'/
+  DATA FORM/'UNFORMATTED'/
 !
 !    Non-standard Fortran that causes code compiled by Compaq (Digital)
 !    Fortran on personal computers to use unstructured non-formatted
@@ -41,7 +41,7 @@ module OpenSpecModule
 !
 !    Standard Fortran 90 and 95 -- Use unless there is a reason to do
 !    otherwise.
-      DATA (ACTION(IACT),IACT=1,2)/'READ','READWRITE'/
+  DATA(ACTION(IACT), IACT=1, 2)/'READ', 'READWRITE'/
 !
 !    Non-standard Fortran that causes code compiled by the Lahey LF90
 !    compiler to create files that can be shared.  For use when parallel

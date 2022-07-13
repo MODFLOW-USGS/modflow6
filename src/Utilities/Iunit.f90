@@ -2,7 +2,7 @@
 ! -- assigned to a single package type, as shown below.
 ! --    row(i)   cunit(i) iunit(i)%nval   iunit(i)%iunit  iunit(i)%ipos
 ! --         1      BCF6              1           (1000)            (1)
-! --         2       WEL              3 (1001,1003,1005)        (2,5,7) 
+! --         2       WEL              3 (1001,1003,1005)        (2,5,7)
 ! --         3       GHB              1           (1002)            (4)
 ! --         4       EVT              2      (1004,1006)         (6,10)
 ! --         5       RIV              0               ()             ()
@@ -19,8 +19,8 @@ module IunitModule
 
   type :: IunitRowType
     integer(I4B) :: nval = 0
-    integer(I4B), allocatable, dimension(:) :: iunit                             ! unit numbers for this row
-    integer(I4B), allocatable, dimension(:) :: ipos                              ! position in the input files character array
+    integer(I4B), allocatable, dimension(:) :: iunit ! unit numbers for this row
+    integer(I4B), allocatable, dimension(:) :: ipos ! position in the input files character array
   end type IunitRowType
 
   type :: IunitType
@@ -33,7 +33,7 @@ module IunitModule
     procedure :: getunitnumber
   end type IunitType
 
-  contains
+contains
 
   subroutine init(this, niunit, cunit)
 ! ******************************************************************************
@@ -51,12 +51,12 @@ module IunitModule
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
-    allocate(this%cunit(niunit))
-    allocate(this%iunit(niunit))
+    allocate (this%cunit(niunit))
+    allocate (this%iunit(niunit))
     this%niunit = niunit
-    do i=1,niunit
-      this%cunit(i)=cunit(i)
-    enddo
+    do i = 1, niunit
+      this%cunit(i) = cunit(i)
+    end do
     !
     ! -- Return
     return
@@ -86,41 +86,41 @@ module IunitModule
     ! -- Find the row containing ftyp
     irow = 0
     do i = 1, this%niunit
-      if(this%cunit(i) == ftyp) then
+      if (this%cunit(i) == ftyp) then
         irow = i
         exit
-      endif
-    enddo
-    if(irow == 0) then
-      write(errmsg, '(a,a)') 'Package type not supported: ', ftyp
+      end if
+    end do
+    if (irow == 0) then
+      write (errmsg, '(a,a)') 'Package type not supported: ', ftyp
       call store_error(errmsg)
       call store_error_filename(namefilename, terminate=.TRUE.)
-    endif
+    end if
     !
     ! -- Store the iunit number for this ftyp
-    if(this%iunit(irow)%nval == 0) then
-      allocate(this%iunit(irow)%iunit(1))
-      allocate(this%iunit(irow)%ipos(1))
-      this%iunit(irow)%nval=1
+    if (this%iunit(irow)%nval == 0) then
+      allocate (this%iunit(irow)%iunit(1))
+      allocate (this%iunit(irow)%ipos(1))
+      this%iunit(irow)%nval = 1
     else
       !
       ! -- increase size of iunit
-      allocate(itemp(this%iunit(irow)%nval))
+      allocate (itemp(this%iunit(irow)%nval))
       itemp(:) = this%iunit(irow)%iunit(:)
-      deallocate(this%iunit(irow)%iunit)
+      deallocate (this%iunit(irow)%iunit)
       this%iunit(irow)%nval = this%iunit(irow)%nval + 1
-      allocate(this%iunit(irow)%iunit(this%iunit(irow)%nval))
+      allocate (this%iunit(irow)%iunit(this%iunit(irow)%nval))
       this%iunit(irow)%iunit(1:this%iunit(irow)%nval - 1) = itemp(:)
       !
       ! -- increase size of ipos
       itemp(:) = this%iunit(irow)%ipos(:)
-      deallocate(this%iunit(irow)%ipos)
-      allocate(this%iunit(irow)%ipos(this%iunit(irow)%nval))
+      deallocate (this%iunit(irow)%ipos)
+      allocate (this%iunit(irow)%ipos(this%iunit(irow)%nval))
       this%iunit(irow)%ipos(1:this%iunit(irow)%nval - 1) = itemp(:)
       !
       ! -- cleanup temp
-      deallocate(itemp)
-    endif
+      deallocate (itemp)
+    end if
     this%iunit(irow)%iunit(this%iunit(irow)%nval) = iunit
     this%iunit(irow)%ipos(this%iunit(irow)%nval) = ipos
     !
@@ -146,26 +146,26 @@ module IunitModule
     ! -- Find the row
     irow = 0
     do i = 1, this%niunit
-      if(this%cunit(i) == ftyp) then
+      if (this%cunit(i) == ftyp) then
         irow = i
         exit
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- Find the unit number.
     iunit = 0
-    if(irow > 0) then
+    if (irow > 0) then
       nval = this%iunit(irow)%nval
-      if(nval > 0) then
+      if (nval > 0) then
         iunit = this%iunit(irow)%iunit(nval)
-        if(iremove > 0) then
+        if (iremove > 0) then
           this%iunit(irow)%iunit(nval) = 0
           this%iunit(irow)%nval = nval - 1
-        endif
+        end if
       else
         iunit = 0
-      endif
-    endif
+      end if
+    end if
   end subroutine getunitnumber
 
 end module IunitModule

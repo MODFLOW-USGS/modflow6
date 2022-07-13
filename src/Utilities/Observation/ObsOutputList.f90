@@ -10,7 +10,7 @@ module ObsOutputListModule
   use KindModule, only: DP, I4B
   use InputOutputModule, only: same_word
   use ListModule, only: ListType
-  use ObsOutputModule, only: ObsOutputType, ConstructObsOutput,  &
+  use ObsOutputModule, only: ObsOutputType, ConstructObsOutput, &
                              AddObsOutputToList, GetObsOutputFromList
 
   implicit none
@@ -51,10 +51,10 @@ contains
     type(ObsOutputType), pointer :: obsOutput => null()
     !
     num = this%Count()
-    do i=1,num
+    do i = 1, num
       obsOutput => this%Get(i)
       call obsOutput%ClearLineout()
-    enddo
+    end do
     !
     return
   end subroutine ClearOutputLines
@@ -76,7 +76,7 @@ contains
     return
   end function Count
 
-  logical function ContainsFile(this,fname)
+  logical function ContainsFile(this, fname)
 ! **************************************************************************
 ! ContainsFile -- return true if filename fname is included in list of
 ! ObsOutputType objects
@@ -87,24 +87,24 @@ contains
     implicit none
     ! -- dummy
     class(ObsOutputListType), intent(inout) :: this
-    character(len=*),     intent(in)    :: fname
+    character(len=*), intent(in) :: fname
     ! -- local
     type(ObsOutputType), pointer :: obsOutput => null()
     integer(I4B) :: i, n
     !
     ContainsFile = .false.
     n = this%Count()
-    loop1: do i=1,n
+    loop1: do i = 1, n
       obsOutput => this%Get(i)
-      if (same_word(obsOutput%filename,fname)) then
+      if (same_word(obsOutput%filename, fname)) then
         ContainsFile = .true.
         exit loop1
-      endif
-    enddo loop1
+      end if
+    end do loop1
     return
   end function ContainsFile
 
-  subroutine Add(this,fname,nunit)
+  subroutine Add(this, fname, nunit)
 ! **************************************************************************
 ! Add -- construct a new ObsOutputType object with arguments assigned to
 ! its members, and add the new object to the list
@@ -115,8 +115,8 @@ contains
     implicit none
     ! -- dummy
     class(ObsOutputListType), intent(inout) :: this
-    character(len=*),     intent(in)    :: fname
-    integer(I4B),              intent(in)    :: nunit
+    character(len=*), intent(in) :: fname
+    integer(I4B), intent(in) :: nunit
     ! -- local
     type(ObsOutputType), pointer :: obsOutput => null()
     !
@@ -143,12 +143,12 @@ contains
     integer(I4B) :: i, num
     !
     num = this%Count()
-    do i=1,num
+    do i = 1, num
       obsOutput => this%Get(i)
       if (obsOutput%FormattedOutput) then
         call obsOutput%WriteLineout()
-      endif
-    enddo
+      end if
+    end do
     !
     return
   end subroutine WriteOutputLines
@@ -196,10 +196,10 @@ contains
     type(ObsOutputType), pointer :: obsoutput => null()
     !
     n = this%Count()
-    do i=1,n
+    do i = 1, n
       obsoutput => GetObsOutputFromList(this%ObsOutputs, i)
       !call obsoutput%DeallocObsOutput()
-    enddo
+    end do
     !
     call this%ObsOutputs%Clear(.true.)
     !
