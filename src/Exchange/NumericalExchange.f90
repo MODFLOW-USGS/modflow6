@@ -1,18 +1,18 @@
 module NumericalExchangeModule
 
-  use KindModule,            only: DP, I4B
-  use BaseModelModule,       only: BaseModelType  
-  use BaseExchangeModule,    only: BaseExchangeType, AddBaseExchangeToList  
-  use NumericalModelModule,  only: NumericalModelType
-  use ListModule,            only: ListType
+  use KindModule, only: DP, I4B
+  use BaseModelModule, only: BaseModelType
+  use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
+  use NumericalModelModule, only: NumericalModelType
+  use ListModule, only: ListType
 
   implicit none
 
   private
-  public :: NumericalExchangeType,                                             &
+  public :: NumericalExchangeType, &
             AddNumericalExchangeToList, GetNumericalExchangeFromList
 
-  type, extends(BaseExchangeType) :: NumericalExchangeType    
+  type, extends(BaseExchangeType) :: NumericalExchangeType
     character(len=7) :: typename !< name of the type (e.g., 'GWF-GWF')
   contains
     procedure :: exg_df
@@ -29,7 +29,7 @@ module NumericalExchangeModule
     procedure :: exg_bd
     procedure :: exg_ot
     procedure :: exg_da
-    procedure :: get_iasym   
+    procedure :: get_iasym
   end type NumericalExchangeType
 
 contains
@@ -61,7 +61,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SparseModule, only:sparsematrix
+    use SparseModule, only: sparsematrix
     ! -- dummy
     class(NumericalExchangeType) :: this
     type(sparsematrix), intent(inout) :: sparse
@@ -80,7 +80,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- module
-    use SparseModule, only:sparsematrix
+    use SparseModule, only: sparsematrix
     ! -- dummy
     class(NumericalExchangeType) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
@@ -120,7 +120,7 @@ contains
     ! -- return
     return
   end subroutine exg_ad
-  
+
   subroutine exg_cf(this, kiter)
 ! ******************************************************************************
 ! exg_cf -- Calculate conductance, and for explicit exchanges, set the
@@ -132,7 +132,7 @@ contains
     ! -- modules
     ! -- dummy
     class(NumericalExchangeType) :: this
-    integer(I4B),intent(in) :: kiter
+    integer(I4B), intent(in) :: kiter
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -272,7 +272,7 @@ contains
     return
   end subroutine exg_da
 
-  function get_iasym(this) result (iasym)
+  function get_iasym(this) result(iasym)
     class(NumericalExchangeType) :: this
     integer(I4B) :: iasym
 
@@ -280,7 +280,7 @@ contains
 
   end function get_iasym
 
-  function CastAsNumericalExchangeClass(obj) result (res)
+  function CastAsNumericalExchangeClass(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(NumericalExchangeType), pointer :: res
@@ -298,7 +298,7 @@ contains
   subroutine AddNumericalExchangeToList(list, exchange)
     implicit none
     ! -- dummy
-    type(ListType),       intent(inout) :: list
+    type(ListType), intent(inout) :: list
     class(NumericalExchangeType), pointer, intent(in) :: exchange
     ! -- local
     class(*), pointer :: obj
@@ -309,12 +309,12 @@ contains
     return
   end subroutine AddNumericalExchangeToList
 
-  function GetNumericalExchangeFromList(list, idx) result (res)
+  function GetNumericalExchangeFromList(list, idx) result(res)
     implicit none
     ! -- dummy
-    type(ListType),            intent(inout) :: list
-    integer(I4B),                   intent(in)    :: idx
-    class(NumericalExchangeType), pointer    :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(NumericalExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !
