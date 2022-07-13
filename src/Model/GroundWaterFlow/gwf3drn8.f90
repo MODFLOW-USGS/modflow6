@@ -1,10 +1,10 @@
 module DrnModule
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, DTWO,                                  &
+  use ConstantsModule, only: DZERO, DONE, DTWO, &
                              LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
   use MemoryHelperModule, only: create_mem_path
-  use SmoothingModule,  only: sQSaturation, sQSaturationDerivative,              &
-                              sQuadraticSaturation
+  use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
+                             sQuadraticSaturation
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -16,30 +16,30 @@ module DrnModule
   public :: drn_create
   public :: DrnType
   !
-  character(len=LENFTYPE)       :: ftype = 'DRN'
-  character(len=LENPACKAGENAME) :: text  = '             DRN'
+  character(len=LENFTYPE) :: ftype = 'DRN'
+  character(len=LENPACKAGENAME) :: text = '             DRN'
   !
   type, extends(BndType) :: DrnType
-    
+
     integer(I4B), pointer :: iauxddrncol => null()
     integer(I4B), pointer :: icubic_scaling => null()
-    
-    contains
-      procedure :: allocate_scalars => drn_allocate_scalars
-      procedure :: bnd_options => drn_options
-      procedure :: bnd_ck => drn_ck
-      procedure :: bnd_cf => drn_cf
-      procedure :: bnd_fc => drn_fc
-      procedure :: bnd_fn => drn_fn
-      procedure :: bnd_da => drn_da
-      procedure :: define_listlabel
-      procedure :: get_drain_elevations
-      procedure :: get_drain_factor
-      ! -- methods for observations
-      procedure, public :: bnd_obs_supported => drn_obs_supported
-      procedure, public :: bnd_df_obs => drn_df_obs
-      ! -- method for time series
-      procedure, public :: bnd_rp_ts => drn_rp_ts
+
+  contains
+    procedure :: allocate_scalars => drn_allocate_scalars
+    procedure :: bnd_options => drn_options
+    procedure :: bnd_ck => drn_ck
+    procedure :: bnd_cf => drn_cf
+    procedure :: bnd_fc => drn_fc
+    procedure :: bnd_fn => drn_fn
+    procedure :: bnd_da => drn_da
+    procedure :: define_listlabel
+    procedure :: get_drain_elevations
+    procedure :: get_drain_factor
+    ! -- methods for observations
+    procedure, public :: bnd_obs_supported => drn_obs_supported
+    procedure, public :: bnd_df_obs => drn_df_obs
+    ! -- method for time series
+    procedure, public :: bnd_rp_ts => drn_rp_ts
   end type DrnType
 
 contains
@@ -55,10 +55,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -66,7 +66,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(drnobj)
+    allocate (drnobj)
     packobj => drnobj
     !
     ! -- create name and memory path
@@ -80,12 +80,12 @@ contains
     call packobj%pack_initialize()
     !
     ! -- initialize
-    packobj%inunit=inunit
-    packobj%iout=iout
-    packobj%id=id
+    packobj%inunit = inunit
+    packobj%iout = iout
+    packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd=2  ! drnelev, conductance
-    packobj%iscloc=2   !sfac applies to conductance
+    packobj%ncolbnd = 2 ! drnelev, conductance
+    packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
@@ -159,9 +159,9 @@ contains
     use InputOutputModule, only: urword
     use SimModule, only: store_error
     ! -- dummy
-    class(DrnType),   intent(inout) :: this
+    class(DrnType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
+    logical, intent(inout) :: found
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LENAUXNAME) :: ddrnauxname
@@ -169,41 +169,41 @@ contains
 ! ------------------------------------------------------------------------------
     !
     select case (option)
-      case('MOVER')
-        this%imover = 1
-        write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-        found = .true.
-      case('AUXDEPTHNAME')
-        call this%parser%GetStringCaps(ddrnauxname)
-        this%iauxddrncol = -1
-        write(this%iout, '(4x,a,a)')                                             &
-          'AUXILIARY DRAIN DEPTH NAME: ', trim(ddrnauxname)
-        found = .true.
+    case ('MOVER')
+      this%imover = 1
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+      found = .true.
+    case ('AUXDEPTHNAME')
+      call this%parser%GetStringCaps(ddrnauxname)
+      this%iauxddrncol = -1
+      write (this%iout, '(4x,a,a)') &
+        'AUXILIARY DRAIN DEPTH NAME: ', trim(ddrnauxname)
+      found = .true.
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
       !    These options are only available when IDEVELOPMODE in
       !    constants module is set to 1
-      case ('DEV_CUBIC_SCALING')
-        call this%parser%DevOpt()
-        this%icubic_scaling = 1
-        write(this%iout, '(4x,a,1x,a)')                                      &
-          'CUBIC SCALING will be used for drains with non-zero DDRN values', &
-          'even if the NEWTON-RAPHSON method is not being used.'
-        found = .true.
-      case default
-        !
-        ! -- No options found
-        found = .false.
+    case ('DEV_CUBIC_SCALING')
+      call this%parser%DevOpt()
+      this%icubic_scaling = 1
+      write (this%iout, '(4x,a,1x,a)') &
+        'CUBIC SCALING will be used for drains with non-zero DDRN values', &
+        'even if the NEWTON-RAPHSON method is not being used.'
+      found = .true.
+    case default
+      !
+      ! -- No options found
+      found = .false.
     end select
     !
     ! -- DDRN was specified, so find column of auxvar that will be used
     if (this%iauxddrncol < 0) then
       !
       ! -- Error if no aux variable specified
-      if(this%naux == 0) then
-        write(errmsg,'(a,2(1x,a))')                                              &
-          'AUXDDRNNAME WAS SPECIFIED AS',  trim(adjustl(ddrnauxname)),           &
+      if (this%naux == 0) then
+        write (errmsg, '(a,2(1x,a))') &
+          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
           'BUT NO AUX VARIABLES SPECIFIED.'
         call store_error(errmsg)
       end if
@@ -211,16 +211,16 @@ contains
       ! -- Assign ddrn column
       this%iauxddrncol = 0
       do n = 1, this%naux
-        if(ddrnauxname == this%auxname(n)) then
+        if (ddrnauxname == this%auxname(n)) then
           this%iauxddrncol = n
           exit
         end if
       end do
       !
       ! -- Error if aux variable cannot be found
-      if(this%iauxddrncol == 0) then
-        write(errmsg,'(a,2(1x,a))')                                              &
-          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)),            &
+      if (this%iauxddrncol == 0) then
+        write (errmsg, '(a,2(1x,a))') &
+          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
           'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
         call store_error(errmsg)
       end if
@@ -241,7 +241,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(DrnType),intent(inout) :: this
+    class(DrnType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
@@ -251,32 +251,32 @@ contains
     real(DP) :: drntop
     real(DP) :: drnbot
     ! -- formats
-    character(len=*), parameter :: fmtddrnerr =                             &
-      "('SCALED-CONDUCTANCE DRN BOUNDARY (',i0,') BOTTOM ELEVATION " //     &
-      "(',f10.3,') IS LESS THAN CELL BOTTOM (',f10.3,')')"
-    character(len=*), parameter :: fmtdrnerr =                              &
-      "('DRN BOUNDARY (',i0,') ELEVATION (',f10.3,') IS LESS THAN CELL " // &
-      "BOTTOM (',f10.3,')')"
+    character(len=*), parameter :: fmtddrnerr = &
+      "('SCALED-CONDUCTANCE DRN BOUNDARY (',i0,') BOTTOM ELEVATION &
+      &(',f10.3,') IS LESS THAN CELL BOTTOM (',f10.3,')')"
+    character(len=*), parameter :: fmtdrnerr = &
+      "('DRN BOUNDARY (',i0,') ELEVATION (',f10.3,') IS LESS THAN CELL &
+      &BOTTOM (',f10.3,')')"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
-        node = this%nodelist(i)
-        bt = this%dis%bot(node)
-        !
-        ! -- calculate the drainage depth and the top and bottom of
-        !    the conductance scaling elevations
-        call this%get_drain_elevations(i, drndepth, drntop, drnbot)
-        !
-        ! -- accumulate errors
-        if (drnbot < bt .and. this%icelltype(node) /= 0) then
-          if (drndepth /= DZERO) then
-            write(errmsg, fmt=fmtddrnerr) i, drnbot, bt
-          else
-            write(errmsg, fmt=fmtdrnerr) i, drnbot, bt
-          end if
-          call store_error(errmsg)
+      node = this%nodelist(i)
+      bt = this%dis%bot(node)
+      !
+      ! -- calculate the drainage depth and the top and bottom of
+      !    the conductance scaling elevations
+      call this%get_drain_elevations(i, drndepth, drntop, drnbot)
+      !
+      ! -- accumulate errors
+      if (drnbot < bt .and. this%icelltype(node) /= 0) then
+        if (drndepth /= DZERO) then
+          write (errmsg, fmt=fmtddrnerr) i, drnbot, bt
+        else
+          write (errmsg, fmt=fmtdrnerr) i, drnbot, bt
         end if
+        call store_error(errmsg)
+      end if
     end do
     !
     ! -- write summary of drain package error messages
@@ -310,7 +310,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no drains
-    if(this%nbound == 0) return
+    if (this%nbound == 0) return
     !
     ! -- pakmvrobj cf
     lrm = .true.
@@ -322,14 +322,14 @@ contains
     ! -- Calculate hcof and rhs for each drn entry
     do i = 1, this%nbound
       node = this%nodelist(i)
-      if(this%ibound(node) <= 0) then
+      if (this%ibound(node) <= 0) then
         this%hcof(i) = DZERO
         this%rhs(i) = DZERO
         cycle
       end if
       !
       ! -- set local variables for this drain
-      cdrn = this%bound(2,i)
+      cdrn = this%bound(2, i)
       !
       ! -- calculate the drainage scaling factor
       call this%get_drain_factor(i, fact, drnbot)
@@ -367,9 +367,9 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- packmvrobj fc
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%fc()
-    endif
+    end if
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
@@ -383,17 +383,17 @@ contains
       !
       ! -- If mover is active and this drain is discharging,
       !    store available water (as positive value).
-      if(this%imover == 1 .and. fact > DZERO) then
-        drncond = this%bound(2,i)
+      if (this%imover == 1 .and. fact > DZERO) then
+        drncond = this%bound(2, i)
         qdrn = fact * drncond * (this%xnew(n) - drnbot)
         call this%pakmvrobj%accumulate_qformvr(i, qdrn)
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
   end subroutine drn_fc
-  
+
   subroutine drn_fn(this, rhs, ia, idxglo, amatsln)
 ! **************************************************************************
 ! drn_fn -- Fill newton terms
@@ -427,12 +427,12 @@ contains
         node = this%nodelist(i)
         !
         ! -- test if node is constant or inactive
-        if(this%ibound(node) <= 0) then
+        if (this%ibound(node) <= 0) then
           cycle
         end if
         !
         ! -- set local variables for this drain
-        cdrn = this%bound(2,i)
+        cdrn = this%bound(2, i)
         xnew = this%xnew(node)
         !
         ! -- calculate the drainage depth and the top and bottom of
@@ -441,7 +441,7 @@ contains
         !
         ! -- calculate scaling factor
         if (drndepth /= DZERO) then
-          drterm = sQSaturationDerivative(drntop, drnbot, xnew,                  &
+          drterm = sQSaturationDerivative(drntop, drnbot, xnew, &
                                           c1=-DONE, c2=DTWO)
           drterm = drterm * cdrn * (drnbot - xnew)
           !
@@ -456,7 +456,7 @@ contains
     ! -- return
     return
   end subroutine drn_fn
-  
+
   subroutine define_listlabel(this)
 ! ******************************************************************************
 ! define_listlabel -- Define the list heading that is written to iout when
@@ -469,28 +469,27 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'DRAIN EL.'
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'CONDUCTANCE'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'DRAIN EL.'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'CONDUCTANCE'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
   end subroutine define_listlabel
 
-    
   subroutine get_drain_elevations(this, i, drndepth, drntop, drnbot)
 ! ******************************************************************************
 ! get_drain_elevations -- Define drain depth and the top and bottom elevations
@@ -512,7 +511,7 @@ contains
     !
     ! -- initialize dummy and local variables
     drndepth = DZERO
-    drnelev = this%bound(1,i)
+    drnelev = this%bound(1, i)
     !
     ! -- set the drain depth
     if (this%iauxddrncol > 0) then
@@ -533,7 +532,6 @@ contains
     return
   end subroutine get_drain_elevations
 
-    
   subroutine get_drain_factor(this, i, factor, opt_drnbot)
 ! ******************************************************************************
 ! get_drain_factor -- Get the drain conductance scale factor.
@@ -553,39 +551,39 @@ contains
     real(DP) :: drntop
     real(DP) :: drnbot
 ! ------------------------------------------------------------------------------
-      !
-      ! -- set local variables for this drain
-      node = this%nodelist(i)
-      xnew = this%xnew(node)
-      !
-      ! -- calculate the drainage depth and the top and bottom of
-      !    the conductance scaling elevations
-      call this%get_drain_elevations(i, drndepth, drntop, drnbot)
-      !
-      ! -- set opt_drnbot to drnbot if passed as dummy variable
-      if (present(opt_drnbot)) then
-        opt_drnbot = drnbot
-      end if
-      !
-      ! -- calculate scaling factor
-      if (drndepth /= DZERO) then
-        if (this%icubic_scaling /= 0) then
-          factor = sQSaturation(drntop, drnbot, xnew, c1=-DONE, c2=DTWO)
-        else
-          factor = sQuadraticSaturation(drntop, drnbot, xnew, eps=DZERO)
-        end if
+    !
+    ! -- set local variables for this drain
+    node = this%nodelist(i)
+    xnew = this%xnew(node)
+    !
+    ! -- calculate the drainage depth and the top and bottom of
+    !    the conductance scaling elevations
+    call this%get_drain_elevations(i, drndepth, drntop, drnbot)
+    !
+    ! -- set opt_drnbot to drnbot if passed as dummy variable
+    if (present(opt_drnbot)) then
+      opt_drnbot = drnbot
+    end if
+    !
+    ! -- calculate scaling factor
+    if (drndepth /= DZERO) then
+      if (this%icubic_scaling /= 0) then
+        factor = sQSaturation(drntop, drnbot, xnew, c1=-DONE, c2=DTWO)
       else
-        if (xnew <= drnbot) then
-          factor = DZERO
-        else
-          factor = DONE
-        end if
+        factor = sQuadraticSaturation(drntop, drnbot, xnew, eps=DZERO)
       end if
+    else
+      if (xnew <= drnbot) then
+        factor = DZERO
+      else
+        factor = DONE
+      end if
+    end if
     !
     ! -- return
     return
   end subroutine get_drain_factor
-  
+
   ! -- Procedures related to observations
 
   logical function drn_obs_supported(this)
@@ -647,7 +645,7 @@ contains
     type(TimeSeriesLinkType), pointer :: tslink => null()
     !
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
         select case (tslink%JCol)
@@ -656,8 +654,8 @@ contains
         case (2)
           tslink%Text = 'COND'
         end select
-      endif
-    enddo
+      end if
+    end do
     !
     return
   end subroutine drn_rp_ts

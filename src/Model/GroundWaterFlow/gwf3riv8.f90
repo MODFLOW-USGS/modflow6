@@ -13,8 +13,8 @@ module rivmodule
   public :: riv_create
   public :: RivType
   !
-  character(len=LENFTYPE)       :: ftype = 'RIV'
-  character(len=LENPACKAGENAME) :: text  = '             RIV'
+  character(len=LENFTYPE) :: ftype = 'RIV'
+  character(len=LENPACKAGENAME) :: text = '             RIV'
   !
   type, extends(BndType) :: RivType
   contains
@@ -43,10 +43,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -54,7 +54,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(rivobj)
+    allocate (rivobj)
     packobj => rivobj
     !
     ! -- create name and memory path
@@ -67,17 +67,17 @@ contains
     ! -- initialize package
     call packobj%pack_initialize()
 
-    packobj%inunit=inunit
-    packobj%iout=iout
-    packobj%id=id
+    packobj%inunit = inunit
+    packobj%iout = iout
+    packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd=3  ! stage, conductance, rbot
-    packobj%iscloc=2   !sfac applies to conductance
-    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
+    packobj%ncolbnd = 3 ! stage, conductance, rbot
+    packobj%iscloc = 2 !sfac applies to conductance
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
-end subroutine riv_create
+  end subroutine riv_create
 
   subroutine riv_options(this, option, found)
 ! ******************************************************************************
@@ -90,21 +90,21 @@ end subroutine riv_create
 ! ------------------------------------------------------------------------------
     use InputOutputModule, only: urword
     ! -- dummy
-    class(RivType),   intent(inout) :: this
+    class(RivType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
+    logical, intent(inout) :: found
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     select case (option)
-      case('MOVER')
-        this%imover = 1
-        write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-        found = .true.
-      case default
-        !
-        ! -- No options found
-        found = .false.
+    case ('MOVER')
+      this%imover = 1
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+      found = .true.
+    case default
+      !
+      ! -- No options found
+      found = .false.
     end select
     !
     ! -- return
@@ -122,7 +122,7 @@ end subroutine riv_create
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(RivType),intent(inout) :: this
+    class(RivType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
@@ -132,35 +132,35 @@ end subroutine riv_create
     real(DP) :: rbot
     ! -- formats
     character(len=*), parameter :: fmtriverr = &
-      "('RIV BOUNDARY (',i0,') RIVER BOTTOM (',f10.4,') IS LESS " // &
-      "THAN CELL BOTTOM (',f10.4,')')"
+      "('RIV BOUNDARY (',i0,') RIVER BOTTOM (',f10.4,') IS LESS &
+      &THAN CELL BOTTOM (',f10.4,')')"
     character(len=*), parameter :: fmtriverr2 = &
-      "('RIV BOUNDARY (',i0,') RIVER STAGE (',f10.4,') IS LESS " // &
-      "THAN RIVER BOTTOM (',f10.4,')')"
+      "('RIV BOUNDARY (',i0,') RIVER STAGE (',f10.4,') IS LESS &
+      &THAN RIVER BOTTOM (',f10.4,')')"
     character(len=*), parameter :: fmtriverr3 = &
-      "('RIV BOUNDARY (',i0,') RIVER STAGE (',f10.4,') IS LESS " // &
-      "THAN CELL BOTTOM (',f10.4,')')"
+      "('RIV BOUNDARY (',i0,') RIVER STAGE (',f10.4,') IS LESS &
+      &THAN CELL BOTTOM (',f10.4,')')"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
-        node = this%nodelist(i)
-        bt = this%dis%bot(node)
-        stage = this%bound(1,i)
-        rbot = this%bound(3,i)
-        ! -- accumulate errors
-        if (rbot < bt .and. this%icelltype(node) /= 0) then
-          write(errmsg, fmt=fmtriverr) i, rbot, bt
-          call store_error(errmsg)
-        end if
-        if (stage < rbot) then
-          write(errmsg, fmt=fmtriverr2) i, stage, rbot
-          call store_error(errmsg)
-        end if
-        if (stage < bt .and. this%icelltype(node) /= 0) then
-          write(errmsg, fmt=fmtriverr3) i, stage, bt
-          call store_error(errmsg)
-        end if
+      node = this%nodelist(i)
+      bt = this%dis%bot(node)
+      stage = this%bound(1, i)
+      rbot = this%bound(3, i)
+      ! -- accumulate errors
+      if (rbot < bt .and. this%icelltype(node) /= 0) then
+        write (errmsg, fmt=fmtriverr) i, rbot, bt
+        call store_error(errmsg)
+      end if
+      if (stage < rbot) then
+        write (errmsg, fmt=fmtriverr2) i, stage, rbot
+        call store_error(errmsg)
+      end if
+      if (stage < bt .and. this%icelltype(node) /= 0) then
+        write (errmsg, fmt=fmtriverr3) i, stage, bt
+        call store_error(errmsg)
+      end if
     end do
     !
     ! -- write summary of river package error messages
@@ -172,7 +172,7 @@ end subroutine riv_create
     return
   end subroutine riv_ck
 
-subroutine riv_cf(this, reset_mover)
+  subroutine riv_cf(this, reset_mover)
 ! ******************************************************************************
 ! riv_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip in no rivs
@@ -191,38 +191,38 @@ subroutine riv_cf(this, reset_mover)
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no rivs
-    if(this%nbound.eq.0) return
+    if (this%nbound .eq. 0) return
     !
     ! -- pakmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. lrm) then
+    if (this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
-    endif
+    end if
     !
     ! -- Calculate hcof and rhs for each riv entry
-    do i=1,this%nbound
-      node=this%nodelist(i)
-      if(this%ibound(node)<=0) then
-        this%hcof(i)=DZERO
-        this%rhs(i)=DZERO
+    do i = 1, this%nbound
+      node = this%nodelist(i)
+      if (this%ibound(node) <= 0) then
+        this%hcof(i) = DZERO
+        this%rhs(i) = DZERO
         cycle
-      endif
-      hriv=this%bound(1,i)
-      criv=this%bound(2,i)
-      rbot=this%bound(3,i)
-      if(this%xnew(node)<=rbot) then
-        this%rhs(i)=-criv*(hriv-rbot)
+      end if
+      hriv = this%bound(1, i)
+      criv = this%bound(2, i)
+      rbot = this%bound(3, i)
+      if (this%xnew(node) <= rbot) then
+        this%rhs(i) = -criv * (hriv - rbot)
         this%hcof(i) = DZERO
       else
-        this%rhs(i) = -criv*hriv
+        this%rhs(i) = -criv * hriv
         this%hcof(i) = -criv
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
-end subroutine riv_cf
+  end subroutine riv_cf
 
   subroutine riv_fc(this, rhs, ia, idxglo, amatsln)
 ! **************************************************************************
@@ -243,9 +243,9 @@ end subroutine riv_cf
 ! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%fc()
-    endif
+    end if
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
@@ -256,13 +256,13 @@ end subroutine riv_cf
       !
       ! -- If mover is active and this river cell is discharging,
       !    store available water (as positive value).
-      stage = this%bound(1,i)
-      if(this%imover == 1 .and. this%xnew(n) > stage) then
-        cond = this%bound(2,i)
+      stage = this%bound(1, i)
+      if (this%imover == 1 .and. this%xnew(n) > stage) then
+        cond = this%bound(2, i)
         qriv = cond * (this%xnew(n) - stage)
         call this%pakmvrobj%accumulate_qformvr(i, qriv)
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
@@ -280,23 +280,23 @@ end subroutine riv_cf
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STAGE'
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'CONDUCTANCE'
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOTTOM EL.'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STAGE'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'CONDUCTANCE'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOTTOM EL.'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
@@ -304,7 +304,7 @@ end subroutine riv_cf
 
   ! -- Procedures related to observations
 
-logical function riv_obs_supported(this)
+  logical function riv_obs_supported(this)
 ! ******************************************************************************
 ! riv_obs_supported
 !   -- Return true because RIV package supports observations.
@@ -313,28 +313,28 @@ logical function riv_obs_supported(this)
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-  implicit none
-  class(RivType) :: this
+    implicit none
+    class(RivType) :: this
 ! ------------------------------------------------------------------------------
-  riv_obs_supported = .true.
-  return
-end function riv_obs_supported
+    riv_obs_supported = .true.
+    return
+  end function riv_obs_supported
 
   subroutine riv_df_obs(this)
-  ! ******************************************************************************
-  ! riv_df_obs (implements bnd_df_obs)
-  !   -- Store observation type supported by RIV package.
-  !   -- Overrides BndType%bnd_df_obs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! riv_df_obs (implements bnd_df_obs)
+    !   -- Store observation type supported by RIV package.
+    !   -- Overrides BndType%bnd_df_obs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(RivType) :: this
     ! -- local
     integer(I4B) :: indx
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     call this%obs%StoreObsType('riv', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -361,7 +361,7 @@ end function riv_obs_supported
     type(TimeSeriesLinkType), pointer :: tslink => null()
     !
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
         select case (tslink%JCol)
@@ -372,8 +372,8 @@ end function riv_obs_supported
         case (3)
           tslink%Text = 'RBOT'
         end select
-      endif
-    enddo
+      end if
+    end do
     !
     return
   end subroutine riv_rp_ts

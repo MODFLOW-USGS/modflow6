@@ -1,42 +1,41 @@
 module MawModule
   !
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
-                             LENBUDTXT,                                          &
-                             DZERO, DEM9, DEM6, DEM4, DEM2, DQUARTER, DHALF, DP7,&
-                             DP9, DONE, DTWO, DPI, DTWOPI, DEIGHT, DHUNDRED,     &
-                             DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
-                             LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,      &
-                             TABLEFT, TABCENTER, TABRIGHT,                       &
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             LENBUDTXT, DZERO, DEM9, DEM6, DEM4, DEM2, DQUARTER, &
+                             DHALF, DP7, DP9, DONE, DTWO, DPI, DTWOPI, DEIGHT, &
+                             DHUNDRED, DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, &
+                             LENAUXNAME, LENFTYPE, DHNOFLO, DHDRY, DNODATA, &
+                             MAXCHARLEN, TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
-                              sQuadraticSaturationDerivative,                    &
-                              sQSaturationDerivative,                            &
-                              sQuadratic0sp,                                     &
-                              sQuadratic0spDerivative
+  use SmoothingModule, only: sQuadraticSaturation, sQSaturation, &
+                             sQuadraticSaturationDerivative, &
+                             sQSaturationDerivative, &
+                             sQuadratic0sp, &
+                             sQuadratic0spDerivative
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: TableType, table_cr
-  use ObserveModule,        only: ObserveType
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
-  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname,       &
+  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname, &
                                GetUnit, openfile
   use BaseDisModule, only: DisBaseType
-  use SimModule,        only: count_errors, store_error, store_error_unit,       &
-                              store_warning
-  use BlockParserModule,   only: BlockParserType
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       store_warning
+  use BlockParserModule, only: BlockParserType
   use SimVariablesModule, only: errmsg, warnmsg
-  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   !
   implicit none
-  
+
   public :: MawType
-  
+
   !
-  character(len=LENFTYPE)       :: ftype = 'MAW'
-  character(len=LENPACKAGENAME) :: text  = '             MAW'
+  character(len=LENFTYPE) :: ftype = 'MAW'
+  character(len=LENPACKAGENAME) :: text = '             MAW'
 
   private
   public :: maw_create
@@ -46,10 +45,10 @@ module MawModule
     ! -- scalars
     ! -- characters
     !
-    character(len=LENBUDTXT), dimension(:), pointer,                            &
-                               contiguous :: cmawbudget => NULL()
-    character(len=LENAUXNAME), dimension(:), pointer,                           &
-                               contiguous :: cauxcbc => NULL()
+    character(len=LENBUDTXT), dimension(:), pointer, &
+      contiguous :: cmawbudget => NULL()
+    character(len=LENAUXNAME), dimension(:), pointer, &
+      contiguous :: cauxcbc => NULL()
     !
     ! -- logical
     logical(LGP), pointer :: correct_flow => null()
@@ -75,7 +74,7 @@ module MawModule
     real(DP), pointer :: kappa => NULL()
     !
     ! -- vector data for each well
-    character (len=8), dimension(:), pointer, contiguous :: status => null()
+    character(len=8), dimension(:), pointer, contiguous :: status => null()
     integer(I4B), dimension(:), pointer, contiguous :: ngwfnodes => null()
     integer(I4B), dimension(:), pointer, contiguous :: ieqn => null()
     integer(I4B), dimension(:), pointer, contiguous :: ishutoff => null()
@@ -99,13 +98,13 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous :: shutoffweight => null()
     real(DP), dimension(:), pointer, contiguous :: shutoffdq => null()
     real(DP), dimension(:), pointer, contiguous :: shutoffqold => null()
-    character (len=LENBOUNDNAME), dimension(:), pointer,                        &
-                                  contiguous :: cmawname => null()
+    character(len=LENBOUNDNAME), dimension(:), pointer, &
+      contiguous :: cmawname => null()
     !
     ! -- time-series aware data
     real(DP), dimension(:), pointer, contiguous :: rate => null()
     real(DP), dimension(:), pointer, contiguous :: well_head => null()
-    real(DP), dimension(:,:), pointer, contiguous :: mauxvar => null()
+    real(DP), dimension(:, :), pointer, contiguous :: mauxvar => null()
     !
     ! -- ia vector for connections
     integer(I4B), dimension(:), pointer, contiguous :: iaconn => null()
@@ -146,21 +145,21 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous :: gwfsat => NULL()
     !
     ! -- arrays for handling the rows added to the solution matrix
-    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null()      !map position in global rhs and x array of pack entry
-    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null()         !map position in global array of package diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null()   !map position in global array of package off diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
-    real(DP), dimension(:), pointer, contiguous  :: xnewpak => null()            !package x vector
-    real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
+    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null() !map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null() !map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null() !map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !package ibound
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !package x vector
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !package xold vector
     !
     ! -- density variables
     integer(I4B), pointer :: idense
-    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
+    real(DP), dimension(:, :), pointer, contiguous :: denseterms => null()
     !
     ! -- type bound procedures
-    contains
+  contains
     procedure :: maw_allocate_scalars
     procedure :: maw_allocate_well_conn_arrays
     procedure :: maw_allocate_arrays
@@ -228,17 +227,17 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(MawType), pointer :: mawobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(mawobj)
+    allocate (mawobj)
     packobj => mawobj
     !
     ! -- create name and memory path
@@ -256,9 +255,9 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
-    packobj%iscloc = 0  ! not supported
+    packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
-    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
@@ -274,7 +273,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(MawType),   intent(inout) :: this
+    class(MawType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
@@ -334,7 +333,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(MawType),   intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: n
@@ -342,7 +341,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate character array for budget text
-    call mem_allocate(this%cmawbudget, LENBUDTXT, this%bditems, 'CMAWBUDGET',    &
+    call mem_allocate(this%cmawbudget, LENBUDTXT, this%bditems, 'CMAWBUDGET', &
                       this%memoryPath)
     !
     !-- fill cmawbudget
@@ -356,15 +355,16 @@ contains
     this%cmawbudget(8) = '  FW-RATE-TO-MVR'
     !
     ! -- allocate character arrays
-    call mem_allocate(this%cmawname, LENBOUNDNAME, this%nmawwells, 'CMAWNAME',   &
+    call mem_allocate(this%cmawname, LENBOUNDNAME, this%nmawwells, 'CMAWNAME', &
                       this%memoryPath)
     call mem_allocate(this%status, 8, this%nmawwells, 'STATUS', this%memoryPath)
     !
     ! -- allocate well data pointers in memory manager
-    call mem_allocate(this%ngwfnodes, this%nmawwells, 'NGWFNODES', this%memoryPath)
+    call mem_allocate(this%ngwfnodes, this%nmawwells, 'NGWFNODES', &
+                      this%memoryPath)
     call mem_allocate(this%ieqn, this%nmawwells, 'IEQN', this%memoryPath)
     call mem_allocate(this%ishutoff, this%nmawwells, 'ISHUTOFF', this%memoryPath)
-    call mem_allocate(this%ifwdischarge, this%nmawwells, 'IFWDISCHARGE',         &
+    call mem_allocate(this%ifwdischarge, this%nmawwells, 'IFWDISCHARGE', &
                       this%memoryPath)
     call mem_allocate(this%strt, this%nmawwells, 'STRT', this%memoryPath)
     call mem_allocate(this%radius, this%nmawwells, 'RADIUS', this%memoryPath)
@@ -377,28 +377,33 @@ contains
     call mem_allocate(this%fwelev, this%nmawwells, 'FWELEV', this%memoryPath)
     call mem_allocate(this%fwcond, this%nmawwells, 'FWCONDS', this%memoryPath)
     call mem_allocate(this%fwrlen, this%nmawwells, 'FWRLEN', this%memoryPath)
-    call mem_allocate(this%fwcondsim, this%nmawwells, 'FWCONDSIM', this%memoryPath)
+    call mem_allocate(this%fwcondsim, this%nmawwells, 'FWCONDSIM', &
+                      this%memoryPath)
     call mem_allocate(this%xsto, this%nmawwells, 'XSTO', this%memoryPath)
     call mem_allocate(this%xoldsto, this%nmawwells, 'XOLDSTO', this%memoryPath)
-    call mem_allocate(this%shutoffmin, this%nmawwells, 'SHUTOFFMIN', this%memoryPath)
-    call mem_allocate(this%shutoffmax, this%nmawwells, 'SHUTOFFMAX', this%memoryPath)
-    call mem_allocate(this%shutofflevel, this%nmawwells, 'SHUTOFFLEVEL',         &
+    call mem_allocate(this%shutoffmin, this%nmawwells, 'SHUTOFFMIN', &
                       this%memoryPath)
-    call mem_allocate(this%shutoffweight, this%nmawwells, 'SHUTOFFWEIGHT',       &
+    call mem_allocate(this%shutoffmax, this%nmawwells, 'SHUTOFFMAX', &
                       this%memoryPath)
-    call mem_allocate(this%shutoffdq, this%nmawwells, 'SHUTOFFDQ', this%memoryPath)
-    call mem_allocate(this%shutoffqold, this%nmawwells, 'SHUTOFFQOLD',           &
+    call mem_allocate(this%shutofflevel, this%nmawwells, 'SHUTOFFLEVEL', &
+                      this%memoryPath)
+    call mem_allocate(this%shutoffweight, this%nmawwells, 'SHUTOFFWEIGHT', &
+                      this%memoryPath)
+    call mem_allocate(this%shutoffdq, this%nmawwells, 'SHUTOFFDQ', &
+                      this%memoryPath)
+    call mem_allocate(this%shutoffqold, this%nmawwells, 'SHUTOFFQOLD', &
                       this%memoryPath)
     !
     ! -- timeseries aware variables
     call mem_allocate(this%rate, this%nmawwells, 'RATE', this%memoryPath)
-    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', this%memoryPath)
+    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', &
+                      this%memoryPath)
     if (this%naux > 0) then
       jj = this%naux
     else
       jj = 1
     end if
-    call mem_allocate(this%mauxvar, jj, this%nmawwells, 'MAUXVAR',               &
+    call mem_allocate(this%mauxvar, jj, this%nmawwells, 'MAUXVAR', &
                       this%memoryPath)
     !
     ! -- allocate and initialize dbuff
@@ -409,7 +414,7 @@ contains
     end if
     !
     ! -- allocate iaconn
-    call mem_allocate(this%iaconn, this%nmawwells+1, 'IACONN', this%memoryPath)
+    call mem_allocate(this%iaconn, this%nmawwells + 1, 'IACONN', this%memoryPath)
     !
     ! -- allocate imap
     call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%memoryPath)
@@ -472,7 +477,7 @@ contains
     end do
     !
     ! -- allocate character array for budget text
-    call mem_allocate(this%cauxcbc, LENAUXNAME, this%cbcauxitems, 'CAUXCBC',     &
+    call mem_allocate(this%cauxcbc, LENAUXNAME, this%cbcauxitems, 'CAUXCBC', &
                       this%memoryPath)
     !
     ! -- allocate and initialize qauxcbc
@@ -530,7 +535,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(MawType),   intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     !integer(I4B) :: i
 ! ------------------------------------------------------------------------------
@@ -552,7 +557,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: keyword
@@ -576,31 +581,31 @@ contains
     ! -- local allocatable arrays
     character(len=LINELENGTH), dimension(:), allocatable :: strttext
     character(len=LENBOUNDNAME), dimension(:), allocatable :: nametxt
-    character(len=50), dimension(:,:), allocatable :: caux
+    character(len=50), dimension(:, :), allocatable :: caux
     integer(I4B), dimension(:), allocatable :: nboundchk
     integer(I4B), dimension(:), allocatable :: wellieqn
     integer(I4B), dimension(:), allocatable :: ngwfnodes
     real(DP), dimension(:), allocatable :: radius
     real(DP), dimension(:), allocatable :: bottom
     ! -- format
-    character(len=*), parameter :: fmthdbot =                                    &
-      "('well head (', G0, ') must be greater than or equal to the               &
-     &BOTTOM_ELEVATION (', G0, ').')"
+    character(len=*), parameter :: fmthdbot = &
+      "('well head (', G0, ') must be greater than or equal to the &
+      &BOTTOM_ELEVATION (', G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- code
     !
     ! -- allocate and initialize temporary variables
-    allocate(strttext(this%nmawwells))
-    allocate(nametxt(this%nmawwells))
+    allocate (strttext(this%nmawwells))
+    allocate (nametxt(this%nmawwells))
     if (this%naux > 0) then
-      allocate(caux(this%naux, this%nmawwells))
+      allocate (caux(this%naux, this%nmawwells))
     end if
-    allocate(nboundchk(this%nmawwells))
-    allocate(wellieqn(this%nmawwells))
-    allocate(ngwfnodes(this%nmawwells))
-    allocate(radius(this%nmawwells))
-    allocate(bottom(this%nmawwells))
+    allocate (nboundchk(this%nmawwells))
+    allocate (wellieqn(this%nmawwells))
+    allocate (ngwfnodes(this%nmawwells))
+    allocate (radius(this%nmawwells))
+    allocate (bottom(this%nmawwells))
     !
     ! -- initialize temporary variables
     do n = 1, this%nmawwells
@@ -615,13 +620,13 @@ contains
     !
     ! -- read maw well data
     ! -- get wells block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                     &
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
                               supportopenclose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')                                                 &
-        'PROCESSING ' // trim(adjustl(this%text)) // ' PACKAGEDATA'
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -629,8 +634,8 @@ contains
         n = ival
 
         if (n < 1 .or. n > this%nmawwells) then
-          write(errmsg,'(a,1x,i0,a)')                                            &
-            'IMAW must be greater than 0 and less than or equal to',             &
+          write (errmsg, '(a,1x,i0,a)') &
+            'IMAW must be greater than 0 and less than or equal to', &
             this%nmawwells, '.'
           call store_error(errmsg)
           cycle
@@ -642,7 +647,7 @@ contains
         ! -- radius
         rval = this%parser%GetDouble()
         if (rval <= DZERO) then
-          write(errmsg,'(a,1x,i0,1x,a)')                                         &
+          write (errmsg, '(a,1x,i0,1x,a)') &
             'Radius for well', n, 'must be greater than zero.'
           call store_error(errmsg)
         end if
@@ -656,19 +661,19 @@ contains
         !
         ! -- ieqn
         call this%parser%GetStringCaps(keyword)
-        if (keyword=='SPECIFIED') then
+        if (keyword == 'SPECIFIED') then
           ieqn = 0
-        else if (keyword=='THEIM' .or. keyword=='THIEM') then
+        else if (keyword == 'THEIM' .or. keyword == 'THIEM') then
           ieqn = 1
-        else if (keyword=='SKIN') then
+        else if (keyword == 'SKIN') then
           ieqn = 2
-        else if (keyword=='CUMULATIVE') then
+        else if (keyword == 'CUMULATIVE') then
           ieqn = 3
-        else if (keyword=='MEAN') then
+        else if (keyword == 'MEAN') then
           ieqn = 4
         else
-          write(errmsg,'(a,1x,i0,1x,a)')                                         &
-            'CONDEQN for well', n,                                               &
+          write (errmsg, '(a,1x,i0,1x,a)') &
+            'CONDEQN for well', n, &
             "must be 'CONDUCTANCE', 'THIEM', 'MEAN', or 'SKIN'."
         end if
         wellieqn(n) = ieqn
@@ -677,11 +682,11 @@ contains
         ival = this%parser%GetInteger()
         if (ival < 1) then
           ival = 0
-          write(errmsg,'(a,1x,i0,1x,a)')                                         &
+          write (errmsg, '(a,1x,i0,1x,a)') &
             'NGWFNODES for well', n, 'must be greater than zero.'
           call store_error(errmsg)
         end if
-        
+
         if (ival > 0) then
           ngwfnodes(n) = ival
         end if
@@ -695,8 +700,8 @@ contains
         end do
         !
         ! -- set default bndName
-        write (cno,'(i9.9)') n
-        bndName = 'MAWWELL' // cno
+        write (cno, '(i9.9)') n
+        bndName = 'MAWWELL'//cno
         !
         ! -- read well name
         if (this%inamedbound /= 0) then
@@ -708,16 +713,16 @@ contains
         nametxt(n) = bndName
       end do
 
-      write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' PACKAGEDATA'
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
       !
       ! -- check for duplicate or missing wells
-      do n = 1,  this%nmawwells
+      do n = 1, this%nmawwells
         if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0,a)')  'No data specified for maw well', n, '.'
+          write (errmsg, '(a,1x,i0,a)') 'No data specified for maw well', n, '.'
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                              &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
             'Data for maw well', n, 'specified', nboundchk(n), 'times.'
           call store_error(errmsg)
         end if
@@ -733,13 +738,13 @@ contains
     !
     ! -- set MAXBOUND
     this%maxbound = itmp
-    write(this%iout,'(//4x,a,i7)') 'MAXBOUND = ', this%maxbound
+    write (this%iout, '(//4x,a,i7)') 'MAXBOUND = ', this%maxbound
     !
     ! -- allocate well and connection data
     call this%maw_allocate_well_conn_arrays()
     !
     ! -- fill well data with data stored in temporary local arrays
-    do n = 1,  this%nmawwells
+    do n = 1, this%nmawwells
       rval = radius(n)
       this%radius(n) = rval
       this%area(n) = DPI * rval**DTWO
@@ -751,18 +756,18 @@ contains
       ! fill timeseries aware data
       !
       ! -- well_head and strt
-      jj = 1    ! For WELL_HEAD
+      jj = 1 ! For WELL_HEAD
       bndElem => this%well_head(n)
-      call read_value_or_time_series_adv(strttext(n), n, jj, bndElem, this%packName, &
-                                         'BND', this%tsManager, this%iprpak,     &
-                                         'WELL_HEAD')
+      call read_value_or_time_series_adv(strttext(n), n, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'WELL_HEAD')
       !
       ! -- set starting head value
       this%strt(n) = this%well_head(n)
       !
       ! -- check for error condition
       if (this%strt(n) < this%bot(n)) then
-        write(cstr, fmthdbot) this%strt(n), this%bot(n)
+        write (cstr, fmthdbot) this%strt(n), this%bot(n)
         call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
       end if
       !
@@ -771,11 +776,11 @@ contains
         text = caux(jj, n)
         ii = n
         bndElem => this%mauxvar(jj, ii)
-        call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,     &
-                                           'AUX', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName, &
+                                           'AUX', this%tsManager, this%iprpak, &
                                            this%auxname(jj))
       end do
-    end do 
+    end do
     !
     ! -- set iaconn and imap for each connection
     idx = 0
@@ -785,20 +790,20 @@ contains
         idx = idx + 1
         this%imap(idx) = n
       end do
-      this%iaconn(n+1) = idx + 1
+      this%iaconn(n + 1) = idx + 1
     end do
     !
     ! -- deallocate local storage
-    deallocate(strttext)
-    deallocate(nametxt)
+    deallocate (strttext)
+    deallocate (nametxt)
     if (this%naux > 0) then
-      deallocate(caux)
+      deallocate (caux)
     end if
-    deallocate(nboundchk)
-    deallocate(wellieqn)
-    deallocate(ngwfnodes)
-    deallocate(radius)
-    deallocate(bottom)
+    deallocate (nboundchk)
+    deallocate (wellieqn)
+    deallocate (ngwfnodes)
+    deallocate (radius)
+    deallocate (bottom)
     !
     ! -- return
     return
@@ -813,7 +818,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: cellid
     character(len=30) :: nodestr
@@ -837,7 +842,7 @@ contains
     real(DP) :: botw
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     integer(I4B), dimension(:), pointer, contiguous :: iachk
-    
+
 ! ------------------------------------------------------------------------------
     ! -- format
     !
@@ -849,12 +854,12 @@ contains
     ireset_wellbot = 0
     !
     ! -- allocate and initialize local storage
-    allocate(iachk(this%nmawwells+1))
+    allocate (iachk(this%nmawwells + 1))
     iachk(1) = 1
     do n = 1, this%nmawwells
-      iachk(n+1) = iachk(n) +  this%ngwfnodes(n)
+      iachk(n + 1) = iachk(n) + this%ngwfnodes(n)
     end do
-    allocate(nboundchk(this%maxbound))
+    allocate (nboundchk(this%maxbound))
     do n = 1, this%maxbound
       nboundchk(n) = 0
     end do
@@ -865,7 +870,7 @@ contains
     !
     ! -- parse well_connections block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &
         ' CONNECTIONDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -877,8 +882,8 @@ contains
         !
         ! -- check for error condition
         if (n < 1 .or. n > this%nmawwells) then
-          write(errmsg,'(a,1x,i0,a)')                                            &
-            'IMAW must be greater than 0 and less than or equal to ',            &
+          write (errmsg, '(a,1x,i0,a)') &
+            'IMAW must be greater than 0 and less than or equal to ', &
             this%nmawwells, '.'
           call store_error(errmsg)
           cycle
@@ -887,23 +892,23 @@ contains
         ! -- read connection number
         ival = this%parser%GetInteger()
         if (ival < 1 .or. ival > this%ngwfnodes(n)) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                 &
-            'JCONN for well ', n,                                                &
-            'must be greater than 1 and less than or equal to ',                 &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,a)') &
+            'JCONN for well ', n, &
+            'must be greater than 1 and less than or equal to ', &
             this%ngwfnodes(n), '.'
           call store_error(errmsg)
           cycle
         end if
-        
+
         ipos = iachk(n) + ival - 1
         nboundchk(ipos) = nboundchk(ipos) + 1
-        
+
         j = ival
         jpos = this%get_jpos(n, ival)
         !
         ! -- read gwfnodes from the line
         call this%parser%GetCellid(this%dis%ndim, cellid)
-        nn  = this%dis%noder_from_cellid(cellid, this%inunit, this%iout)
+        nn = this%dis%noder_from_cellid(cellid, this%inunit, this%iout)
         topnn = this%dis%top(nn)
         botnn = this%dis%bot(nn)
         botw = this%bot(n)
@@ -943,9 +948,9 @@ contains
             botw = rval
             this%bot(n) = rval
           else
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)')                  &
-              'Screen bottom for maw well', n, 'connection', j, '(',             &
-              this%botscrn(jpos), ') is less than the well bottom (',            &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)') &
+              'Screen bottom for maw well', n, 'connection', j, '(', &
+              this%botscrn(jpos), ') is less than the well bottom (', &
               this%bot(n), ').'
             call store_error(errmsg)
           end if
@@ -955,28 +960,29 @@ contains
         rval = this%parser%GetDouble()
         if (this%ieqn(n) == 0) then
           this%satcond(jpos) = rval
-        else if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                   &
+        else if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR. &
                  this%ieqn(n) == 4) then
           this%hk(jpos) = rval
         end if
         !
         ! -- skin radius
         rval = this%parser%GetDouble()
-        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
+        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR. &
             this%ieqn(n) == 4) then
           this%sradius(jpos) = rval
           if (this%sradius(jpos) <= this%radius(n)) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)')                  &
-              'Screen radius for maw well', n, 'connection', j, '(',             &
-              this%sradius(jpos),') is less than or equal to the well radius (', &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,g0,a,g0,a)') &
+              'Screen radius for maw well', n, 'connection', j, '(', &
+              this%sradius(jpos), &
+              ') is less than or equal to the well radius (', &
               this%radius(n), ').'
             call store_error(errmsg)
           end if
         end if
       end do
-      write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
-      
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
+
       ipos = 0
       do n = 1, this%nmawwells
         do j = 1, this%ngwfnodes(n)
@@ -984,19 +990,19 @@ contains
           !
           ! -- check for missing or duplicate maw well connections
           if (nboundchk(ipos) == 0) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                               &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0,a)') &
               'No data specified for maw well', n, 'connection', j, '.'
             call store_error(errmsg)
           else if (nboundchk(ipos) > 1) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')                 &
-              'Data for maw well', n, 'connection', j,                           &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              'Data for maw well', n, 'connection', j, &
               'specified', nboundchk(n), 'times.'
             call store_error(errmsg)
           end if
         end do
       end do
       !
-      ! -- make sure that more than one connection per cell is only specified 
+      ! -- make sure that more than one connection per cell is only specified
       !    wells using the mean conducance type
       do n = 1, this%nmawwells
         if (this%ieqn(n) /= 4) then
@@ -1011,9 +1017,9 @@ contains
               nn2 = this%get_gwfnode(n, jj)
               if (nn2 == nn) then
                 call this%dis%noder_to_string(nn, nodestr)
-                write(errmsg,'(a,1x,i0,1x,a,1x,i0,3(1x,a))')                     &
-                  'Only one connection can be specified for maw well',           &
-                  n, 'connection', j, 'to gwf cell', trim(adjustl(nodestr)),     &
+                write (errmsg, '(a,1x,i0,1x,a,1x,i0,3(1x,a))') &
+                  'Only one connection can be specified for maw well', &
+                  n, 'connection', j, 'to gwf cell', trim(adjustl(nodestr)), &
                   'unless the mean condeqn is specified.'
                 call store_error(errmsg)
               end if
@@ -1026,27 +1032,27 @@ contains
     end if
     !
     ! -- deallocate local variable
-    deallocate(iachk)
-    deallocate(nboundchk)
+    deallocate (iachk)
+    deallocate (nboundchk)
     !
     ! -- add warning messages
     if (ireset_scrntop > 0) then
-      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
-        'The screen tops in multi-aquifer well package', trim(this%packName),    &
+      write (warnmsg, '(a,1x,a,1x,a,1x,i0,1x,a)') &
+        'The screen tops in multi-aquifer well package', trim(this%packName), &
         'were reset to the top of the connected cell', ireset_scrntop, 'times.'
       call store_warning(warnmsg)
     end if
     if (ireset_scrnbot > 0) then
-      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
+      write (warnmsg, '(a,1x,a,1x,a,1x,i0,1x,a)') &
         'The screen bottoms in multi-aquifer well package', trim(this%packName), &
-        'were reset to the bottom of the connected cell', ireset_scrnbot,        &
+        'were reset to the bottom of the connected cell', ireset_scrnbot, &
         'times.'
       call store_warning(warnmsg)
     end if
     if (ireset_wellbot > 0) then
-      write(warnmsg,'(a,1x,a,1x,a,1x,i0,1x,a)')                                  &
-        'The well bottoms in multi-aquifer well package', trim(this%packName),   &
-        'were reset to the bottom of the connected cell', ireset_wellbot,        &
+      write (warnmsg, '(a,1x,a,1x,a,1x,i0,1x,a)') &
+        'The well bottoms in multi-aquifer well package', trim(this%packName), &
+        'were reset to the bottom of the connected cell', ireset_wellbot, &
         'times.'
       call store_warning(warnmsg)
     end if
@@ -1060,7 +1066,6 @@ contains
     return
   end subroutine maw_read_well_connections
 
-
   subroutine maw_read_dimensions(this)
 ! ******************************************************************************
 ! pak1read_dimensions -- Read the dimensions for this package
@@ -1070,7 +1075,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     character(len=LENBOUNDNAME) :: keyword
     integer(I4B) :: ierr
@@ -1079,7 +1084,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
-    this%nmawwells= -1
+    this%nmawwells = -1
     this%maxbound = -1
     !
     ! -- get dimensions block
@@ -1088,31 +1093,31 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')                                                 &
-        'PROCESSING ' // trim(adjustl(this%text)) // ' DIMENSIONS'
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('NMAWWELLS')
-            this%nmawwells = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)') 'NMAWWELLS = ', this%nmawwells
-          case default
-            write(errmsg,'(3a)')                                                 &
-              'Unknown ' // trim(this%text) // ' dimension: ', trim(keyword), '.'
-            call store_error(errmsg)
+        case ('NMAWWELLS')
+          this%nmawwells = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'NMAWWELLS = ', this%nmawwells
+        case default
+          write (errmsg, '(3a)') &
+            'Unknown '//trim(this%text)//' dimension: ', trim(keyword), '.'
+          call store_error(errmsg)
         end select
       end do
-      write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
     else
       call store_error('Required dimensions block not found.', terminate=.TRUE.)
     end if
     !
     ! -- verify dimensions were set correctly
     if (this%nmawwells < 0) then
-      write(errmsg, '(a)')                                                       &
+      write (errmsg, '(a)') &
         'NMAWWELLS was not specified or was specified incorrectly.'
       call store_error(errmsg)
     end if
@@ -1142,7 +1147,6 @@ contains
     return
   end subroutine maw_read_dimensions
 
-
   subroutine maw_read_initial_attr(this)
 ! ******************************************************************************
 ! maw_read_initial_attr -- Read the initial parameters for this package
@@ -1154,7 +1158,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -1167,29 +1171,29 @@ contains
     integer(I4B) :: idx
     real(DP) :: k11
     real(DP) :: k22
-    character (len=10), dimension(0:4) :: ccond
-    character (len=30) :: nodestr
+    character(len=10), dimension(0:4) :: ccond
+    character(len=30) :: nodestr
     ! -- data
-    data ccond(0) /'SPECIFIED '/
-    data ccond(1) /'THIEM     '/
-    data ccond(2) /'SKIN      '/
-    data ccond(3) /'CUMULATIVE'/
-    data ccond(4) /'MEAN      '/
+    data ccond(0)/'SPECIFIED '/
+    data ccond(1)/'THIEM     '/
+    data ccond(2)/'SKIN      '/
+    data ccond(3)/'CUMULATIVE'/
+    data ccond(4)/'MEAN      '/
     ! -- format
     character(len=*), parameter :: fmtwelln = &
-      "(1X,//43X,'MULTI-AQUIFER WELL DATA'" // &
-      "/1X,109('-')," // &
-      "/1X,7(A10,1X),A16)"
+      "(1X,//43X,'MULTI-AQUIFER WELL DATA'&
+      &/1X,109('-'),&
+      &/1X,7(A10,1X),A16)"
     character(len=*), parameter :: fmtwelld = &
-      "(1X,I10,1X,4(G10.3,1X),I10,1X,A10,1X,A16)"
+      &"(1X,I10,1X,4(G10.3,1X),I10,1X,A10,1X,A16)"
     character(len=*), parameter :: fmtline = &
-      "(1X,119('-'),//)"
+      &"(1X,119('-'),//)"
     character(len=*), parameter :: fmtwellcn = &
-      "(1X,//37X,'MULTI-AQUIFER WELL CONNECTION DATA'" // &
-      "/1X,119('-')," // &
-      "/1X,2(A10,1X),A20,7(A10,1X))"
+      "(1X,//37X,'MULTI-AQUIFER WELL CONNECTION DATA'&
+      &/1X,119('-'),&
+      &/1X,2(A10,1X),A20,7(A10,1X))"
     character(len=*), parameter :: fmtwellcd = &
-      "(1X,2(I10,1X),A20,1X,2(G10.3,1X),2(A10,1X),3(G10.3,1X))"
+      &"(1X,2(I10,1X),A20,1X,2(G10.3,1X),2(A10,1X),3(G10.3,1X))"
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize xnewpak
@@ -1201,12 +1205,12 @@ contains
     ! -- initialize status (iboundpak) of maw wells to active
     do n = 1, this%nmawwells
       select case (this%status(n))
-        case('CONSTANT')
-          this%iboundpak(n) = -1
-        case('INACTIVE')
-          this%iboundpak(n) = 0
-        case('ACTIVE')
-          this%iboundpak(n) = 1
+      case ('CONSTANT')
+        this%iboundpak(n) = -1
+      case ('INACTIVE')
+        this%iboundpak(n) = 0
+      case ('ACTIVE')
+        this%iboundpak(n) = 1
       end select
     end do
     !
@@ -1267,8 +1271,8 @@ contains
       if (this%inamedbound /= 0) then
         ntabcols = ntabcols + 1
       end if
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STATIC WELL DATA'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STATIC WELL DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%nmawwells, ntabcols, this%iout)
       text = 'NUMBER'
@@ -1288,7 +1292,7 @@ contains
       if (this%inamedbound /= 0) then
         text = 'NAME'
         call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
-      end if    
+      end if
       do n = 1, this%nmawwells
         call this%inputtab%add_term(n)
         call this%inputtab%add_term(this%radius(n))
@@ -1297,7 +1301,7 @@ contains
         call this%inputtab%add_term(this%strt(n))
         call this%inputtab%add_term(this%ngwfnodes(n))
         call this%inputtab%add_term(ccond(this%ieqn(n)))
-        if (this%inamedbound /= 0) then 
+        if (this%inamedbound /= 0) then
           call this%inputtab%add_term(this%cmawname(n))
         end if
       end do
@@ -1306,8 +1310,8 @@ contains
     ! -- write well connection data
     if (this%iprpak /= 0) then
       ntabcols = 10
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') STATIC WELL CONNECTION DATA'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') STATIC WELL CONNECTION DATA'
       call table_cr(this%inputtab, this%packName, title)
       call this%inputtab%table_df(this%maxbound, ntabcols, this%iout)
       text = 'NUMBER'
@@ -1342,17 +1346,17 @@ contains
           call this%inputtab%add_term(nodestr)
           call this%inputtab%add_term(this%topscrn(jpos))
           call this%inputtab%add_term(this%botscrn(jpos))
-          if (this%ieqn(n) == 2 .or.                                             &
-              this%ieqn(n) == 3 .or.                                             &
+          if (this%ieqn(n) == 2 .or. &
+              this%ieqn(n) == 3 .or. &
               this%ieqn(n) == 4) then
             call this%inputtab%add_term(this%sradius(jpos))
             call this%inputtab%add_term(this%hk(jpos))
           else
-            call this%inputtab%add_term(' ')      
-            call this%inputtab%add_term(' ')      
-          end if      
-          if (this%ieqn(n) == 1 .or.                                             &
-              this%ieqn(n) == 2 .or.                                             &
+            call this%inputtab%add_term(' ')
+            call this%inputtab%add_term(' ')
+          end if
+          if (this%ieqn(n) == 1 .or. &
+              this%ieqn(n) == 2 .or. &
               this%ieqn(n) == 3) then
             k11 = this%gwfk11(nn)
             if (this%gwfik22 == 0) then
@@ -1386,7 +1390,6 @@ contains
     return
   end subroutine maw_read_initial_attr
 
-
   subroutine maw_set_stressperiod(this, imaw, iheadlimit_warning)
 ! ******************************************************************************
 ! maw_set_stressperiod -- Set a stress period attribute for mawweslls(imaw)
@@ -1398,7 +1401,7 @@ contains
     ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: imaw
     integer(I4B), intent(inout) :: iheadlimit_warning
     ! -- local
@@ -1413,120 +1416,120 @@ contains
     real(DP), pointer :: bndElem => null()
     integer(I4B) :: istat
     ! -- formats
-    character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
+    character(len=*), parameter :: fmthdbot = &
+      &"('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- read remainder of variables on the line
     call this%parser%GetStringCaps(keyword)
     select case (keyword)
-      case ('STATUS')
-        call this%parser%GetStringCaps(text)
-        this%status(imaw) = text(1:8)
-        select case(text)
-          case('CONSTANT')
-            this%iboundpak(imaw) = -1
-          case('INACTIVE')
-            this%iboundpak(imaw) = 0
-          case('ACTIVE')
-            this%iboundpak(imaw) = 1
-          case default
-            write(errmsg,'(2a)')                                                 &
-              'Unknown ' // trim(this%text) // " maw status keyword: '",         &
-              trim(text) // "'."
-            call store_error(errmsg)
-        end select
-      case ('RATE')
-        call this%parser%GetString(text)
-        jj = 1    ! For RATE
-        bndElem => this%rate(imaw)
-        call read_value_or_time_series_adv(text, imaw, jj, bndElem, this%packName,   &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'RATE')
-     case ('WELL_HEAD')
-        call this%parser%GetString(text)
-        jj = 1    ! For WELL_HEAD
-        bndElem => this%well_head(imaw)
-        call read_value_or_time_series_adv(text, imaw, jj, bndElem, this%packName,   &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'WELL_HEAD')
-        !
-        ! -- set xnewpak to well_head
-        this%xnewpak(imaw) = this%well_head(imaw)
-        !
-        ! -- check for error condition
-        if (this%well_head(imaw) < this%bot(imaw)) then
-          write(cstr, fmthdbot)                                                  &
-            this%well_head(imaw), this%bot(imaw)
-          call this%maw_set_attribute_error(imaw, 'WELL HEAD', trim(cstr))
-        end if
-      case ('FLOWING_WELL')
-        this%fwelev(imaw) = this%parser%GetDouble()
-        this%fwcond(imaw) = this%parser%GetDouble()
-        this%fwrlen(imaw) = this%parser%GetDouble()
-        !
-        ! -- test for condition where flowing well data is specified but
-        !    flowing_wells is not specified in the options block
-        if (this%iflowingwells == 0) then
-          this%iflowingwells = -1
-          text = 'Flowing well data is specified in the ' // trim(this%packName) //  &
-                 ' package but FLOWING_WELL was not specified in the ' //        &
-                 'OPTIONS block.'
-          call store_warning(text)
-        end if
-      case ('RATE_SCALING')
-        rval = this%parser%GetDouble()
-        this%pumpelev(imaw) = rval
-        rval = this%parser%GetDouble()
-        this%reduction_length(imaw) = rval
-        if (rval < DZERO) then
-          call this%maw_set_attribute_error(imaw, trim(keyword),                 &
-            'must be greater than or equal to 0.')
-        end if
-      case ('HEAD_LIMIT')
-        call this%parser%GetString(text)
-        if (trim(text) == 'OFF') then
-          this%shutofflevel(imaw) = DEP20
-        else
-          read (text, *, iostat=istat, iomsg=errmsgr)              &
-            this%shutofflevel(imaw)
-          if (istat /= 0) then
-            errmsg = 'Could not read HEAD_LIMIT value. ' // trim(errmsgr)
-            call store_error(errmsg)
-          end if
-          if (this%shutofflevel(imaw) <= this%bot(imaw)) then
-            iheadlimit_warning = iheadlimit_warning + 1
-          end if
-        end if
-      case ('SHUT_OFF')
-        rval = this%parser%GetDouble()
-        this%shutoffmin(imaw) = rval
-        rval = this%parser%GetDouble()
-        this%shutoffmax(imaw) = rval
-      case ('AUXILIARY')
-        call this%parser%GetStringCaps(caux)
-        do jj = 1, this%naux
-          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
-          call this%parser%GetString(text)
-          ii = imaw
-          bndElem => this%mauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,   &
-                                             'AUX', this%tsManager, this%iprpak, &
-                                             this%auxname(jj))
-          exit
-        end do
+    case ('STATUS')
+      call this%parser%GetStringCaps(text)
+      this%status(imaw) = text(1:8)
+      select case (text)
+      case ('CONSTANT')
+        this%iboundpak(imaw) = -1
+      case ('INACTIVE')
+        this%iboundpak(imaw) = 0
+      case ('ACTIVE')
+        this%iboundpak(imaw) = 1
       case default
-        write(errmsg,'(2a)')                                                     &
-          'Unknown ' // trim(this%text) // " maw data keyword: '",               &
-          trim(keyword) // "'."
+        write (errmsg, '(2a)') &
+          'Unknown '//trim(this%text)//" maw status keyword: '", &
+          trim(text)//"'."
         call store_error(errmsg)
       end select
+    case ('RATE')
+      call this%parser%GetString(text)
+      jj = 1 ! For RATE
+      bndElem => this%rate(imaw)
+      call read_value_or_time_series_adv(text, imaw, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'RATE')
+    case ('WELL_HEAD')
+      call this%parser%GetString(text)
+      jj = 1 ! For WELL_HEAD
+      bndElem => this%well_head(imaw)
+      call read_value_or_time_series_adv(text, imaw, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'WELL_HEAD')
+      !
+      ! -- set xnewpak to well_head
+      this%xnewpak(imaw) = this%well_head(imaw)
+      !
+      ! -- check for error condition
+      if (this%well_head(imaw) < this%bot(imaw)) then
+        write (cstr, fmthdbot) &
+          this%well_head(imaw), this%bot(imaw)
+        call this%maw_set_attribute_error(imaw, 'WELL HEAD', trim(cstr))
+      end if
+    case ('FLOWING_WELL')
+      this%fwelev(imaw) = this%parser%GetDouble()
+      this%fwcond(imaw) = this%parser%GetDouble()
+      this%fwrlen(imaw) = this%parser%GetDouble()
+      !
+      ! -- test for condition where flowing well data is specified but
+      !    flowing_wells is not specified in the options block
+      if (this%iflowingwells == 0) then
+        this%iflowingwells = -1
+        text = 'Flowing well data is specified in the '//trim(this%packName)// &
+               ' package but FLOWING_WELL was not specified in the '// &
+               'OPTIONS block.'
+        call store_warning(text)
+      end if
+    case ('RATE_SCALING')
+      rval = this%parser%GetDouble()
+      this%pumpelev(imaw) = rval
+      rval = this%parser%GetDouble()
+      this%reduction_length(imaw) = rval
+      if (rval < DZERO) then
+        call this%maw_set_attribute_error(imaw, trim(keyword), &
+                                          'must be greater than or equal to 0.')
+      end if
+    case ('HEAD_LIMIT')
+      call this%parser%GetString(text)
+      if (trim(text) == 'OFF') then
+        this%shutofflevel(imaw) = DEP20
+      else
+        read (text, *, iostat=istat, iomsg=errmsgr) &
+          this%shutofflevel(imaw)
+        if (istat /= 0) then
+          errmsg = 'Could not read HEAD_LIMIT value. '//trim(errmsgr)
+          call store_error(errmsg)
+        end if
+        if (this%shutofflevel(imaw) <= this%bot(imaw)) then
+          iheadlimit_warning = iheadlimit_warning + 1
+        end if
+      end if
+    case ('SHUT_OFF')
+      rval = this%parser%GetDouble()
+      this%shutoffmin(imaw) = rval
+      rval = this%parser%GetDouble()
+      this%shutoffmax(imaw) = rval
+    case ('AUXILIARY')
+      call this%parser%GetStringCaps(caux)
+      do jj = 1, this%naux
+        if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
+        call this%parser%GetString(text)
+        ii = imaw
+        bndElem => this%mauxvar(jj, ii)
+        call read_value_or_time_series_adv(text, ii, jj, bndElem, &
+                                           this%packName, 'AUX', &
+                                           this%tsManager, this%iprpak, &
+                                           this%auxname(jj))
+        exit
+      end do
+    case default
+      write (errmsg, '(2a)') &
+        'Unknown '//trim(this%text)//" maw data keyword: '", &
+        trim(keyword)//"'."
+      call store_error(errmsg)
+    end select
 
     !
     ! -- return
     return
   end subroutine maw_set_stressperiod
-
 
   subroutine maw_set_attribute_error(this, imaw, keyword, msg)
 ! ******************************************************************************
@@ -1539,18 +1542,18 @@ contains
 ! ------------------------------------------------------------------------------
     use SimModule, only: store_error
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: imaw
-    character (len=*), intent(in) :: keyword
-    character (len=*), intent(in) :: msg
+    character(len=*), intent(in) :: keyword
+    character(len=*), intent(in) :: msg
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
-      write(errmsg,'(a,1x,a,1x,i0,1x,a)')                                        &
+      write (errmsg, '(a,1x,a,1x,i0,1x,a)') &
         keyword, ' for MAW well', imaw, 'has already been set.'
     else
-      write(errmsg,'(a,1x,a,1x,i0,1x,a)')                                        &
+      write (errmsg, '(a,1x,a,1x,i0,1x,a)') &
         keyword, ' for MAW well', imaw, msg
     end if
     call store_error(errmsg)
@@ -1558,7 +1561,6 @@ contains
     ! -- return
     return
   end subroutine maw_set_attribute_error
-
 
   subroutine maw_check_attributes(this)
 ! ******************************************************************************
@@ -1571,7 +1573,7 @@ contains
 ! ------------------------------------------------------------------------------
     use SimModule, only: store_error
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: cgwfnode
     integer(I4B) :: idx
@@ -1583,7 +1585,7 @@ contains
     idx = 1
     do n = 1, this%nmawwells
       if (this%ngwfnodes(n) < 1) then
-        call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater ' //  &
+        call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater '// &
                                           'than 0.')
       end if
       if (this%radius(n) == DEP20) then
@@ -1591,7 +1593,7 @@ contains
       end if
       if (this%shutoffmin(n) > DZERO) then
         if (this%shutoffmin(n) >= this%shutoffmax(n)) then
-          call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must ' // &
+          call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must '// &
                                             'be greater than shutoffmin.')
         end if
       end if
@@ -1601,34 +1603,34 @@ contains
         jpos = this%get_jpos(n, j)
         !
         ! -- write gwfnode number
-        write(cgwfnode,'(a,i0,a)') 'gwfnode(', j,')'
+        write (cgwfnode, '(a,i0,a)') 'gwfnode(', j, ')'
         !
         ! -- connection screen data
         if (this%botscrn(jpos) >= this%topscrn(jpos)) then
-          call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom ' // &
-                                            'must be less tha screen top. ' //   &
+          call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom '// &
+                                            'must be less tha screen top. '// &
                                             trim(cgwfnode))
         end if
         !
         ! -- connection skin hydraulic conductivity
-        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
+        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR. &
             this%ieqn(n) == 4) then
           if (this%hk(jpos) <= DZERO) then
-            call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
-                                              'conductivity must be greater ' // &
-                                              'than zero. ' // trim(cgwfnode))
+            call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic '// &
+                                              'conductivity must be greater '// &
+                                              'than zero. '//trim(cgwfnode))
           end if
         else if (this%ieqn(n) == 0) then
           !
           ! -- saturated conductance
           if (this%satcond(jpos) < DZERO) then
-            call this%maw_set_attribute_error(n, 'HK_SKIN',                      &
-                                              'skin hyraulic conductivity ' //   &
-                                              'must be greater than or ' //      &
-                                              'equal to zero when using ' //     &
-                                              'SPECIFIED condeqn. ' //           &
+            call this%maw_set_attribute_error(n, 'HK_SKIN', &
+                                              'skin hyraulic conductivity '// &
+                                              'must be greater than or '// &
+                                              'equal to zero when using '// &
+                                              'SPECIFIED condeqn. '// &
                                               trim(cgwfnode))
-          end if    
+          end if
         end if
         idx = idx + 1
       end do
@@ -1648,7 +1650,7 @@ contains
 ! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
@@ -1688,7 +1690,7 @@ contains
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
@@ -1704,11 +1706,14 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate connection mapping vectors
-    call mem_allocate(this%idxlocnode, this%nmawwells, 'IDXLOCNODE', this%memoryPath)
+    call mem_allocate(this%idxlocnode, this%nmawwells, 'IDXLOCNODE', &
+                      this%memoryPath)
     call mem_allocate(this%idxdglo, this%maxbound, 'IDXDGLO', this%memoryPath)
-    call mem_allocate(this%idxoffdglo, this%maxbound, 'IDXOFFDGLO', this%memoryPath)
-    call mem_allocate(this%idxsymdglo, this%maxbound, 'IDXSYMDGLO', this%memoryPath)
-    call mem_allocate(this%idxsymoffdglo, this%maxbound, 'IDXSYMOFFDGLO',        &
+    call mem_allocate(this%idxoffdglo, this%maxbound, 'IDXOFFDGLO', &
+                      this%memoryPath)
+    call mem_allocate(this%idxsymdglo, this%maxbound, 'IDXSYMDGLO', &
+                      this%memoryPath)
+    call mem_allocate(this%idxsymoffdglo, this%maxbound, 'IDXSYMOFFDGLO', &
                       this%memoryPath)
     !
     ! -- Find the position of each connection in the global ia, ja structure
@@ -1723,7 +1728,7 @@ contains
         j = this%get_gwfnode(n, ii)
         jglo = j + moffset
         searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if(jglo == jasln(jj)) then
+          if (jglo == jasln(jj)) then
             this%idxdglo(ipos) = iasln(iglo)
             this%idxoffdglo(ipos) = jj
             exit searchloop
@@ -1739,7 +1744,7 @@ contains
         iglo = this%get_gwfnode(n, ii) + moffset
         jglo = moffset + this%dis%nodes + this%ioffset + n
         symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if(jglo == jasln(jj)) then
+          if (jglo == jasln(jj)) then
             this%idxsymdglo(ipos) = iasln(iglo)
             this%idxsymoffdglo(ipos) = jj
             exit symsearchloop
@@ -1755,7 +1760,7 @@ contains
 
   subroutine maw_read_options(this, option, found)
 ! ******************************************************************************
-! maw_read_options -- set options specific to MawType. 
+! maw_read_options -- set options specific to MawType.
 !                     Overrides BndType%bnd_options
 ! ******************************************************************************
 !
@@ -1765,119 +1770,119 @@ contains
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
-    class(MawType),   intent(inout) :: this
+    class(MawType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
+    logical, intent(inout) :: found
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
-    character(len=*),parameter :: fmtflowingwells = &
-      "(4x, 'FLOWING WELLS WILL BE SIMULATED.')"
-    character(len=*),parameter :: fmtshutdown = &
-      "(4x, 'SHUTDOWN ', a, ' VALUE (',g15.7,') SPECIFIED.')"
-    character(len=*),parameter :: fmtnostoragewells = &
-      "(4x, 'WELL STORAGE WILL NOT BE SIMULATED.')"
-    character(len=*),parameter :: fmtmawbin = &
-      "(4x, 'MAW ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x,               &
+    character(len=*), parameter :: fmtflowingwells = &
+      &"(4x, 'FLOWING WELLS WILL BE SIMULATED.')"
+    character(len=*), parameter :: fmtshutdown = &
+      &"(4x, 'SHUTDOWN ', a, ' VALUE (',g15.7,') SPECIFIED.')"
+    character(len=*), parameter :: fmtnostoragewells = &
+      &"(4x, 'WELL STORAGE WILL NOT BE SIMULATED.')"
+    character(len=*), parameter :: fmtmawbin = &
+      "(4x, 'MAW ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, &
      &'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for 'FLOWING_WELLS' and set this%iflowingwells
     select case (option)
-      case ('PRINT_HEAD')
-        this%iprhed = 1
-        write(this%iout,'(4x,a)')                                                &
-          trim(adjustl(this%text)) // ' heads will be printed to listing file.'
+    case ('PRINT_HEAD')
+      this%iprhed = 1
+      write (this%iout, '(4x,a)') &
+        trim(adjustl(this%text))//' heads will be printed to listing file.'
+      found = .true.
+    case ('HEAD')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%iheadout = getunit()
+        call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, 'REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmtmawbin) 'HEAD', fname, this%iheadout
         found = .true.
-      case('HEAD')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%iheadout = getunit()
-          call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)',         &
-                       form, access, 'REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtmawbin) 'HEAD', fname, this%iheadout
-          found = .true.
-        else
-          call store_error('Optional maw stage keyword must be ' //              &
-                           'followed by fileout.')
-        end if
-      case('BUDGET')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
-                        form, access, 'REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtmawbin) 'BUDGET', fname, this%ibudgetout
-          found = .true.
-        else
-          call store_error('Optional maw budget keyword must be ' //             &
-                           'followed by fileout.')
-        end if
-      case('BUDGETCSV')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ibudcsv = getunit()
-          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
-            filstat_opt='REPLACE')
-          write(this%iout,fmtmawbin) 'BUDGET CSV', fname, this%ibudcsv
-        else
-          call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
-            &FILEOUT')
-        end if
-      case('FLOWING_WELLS')
-        this%iflowingwells = 1
-        write(this%iout, fmtflowingwells)
+      else
+        call store_error('Optional maw stage keyword must be '// &
+                         'followed by fileout.')
+      end if
+    case ('BUDGET')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ibudgetout = getunit()
+        call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, 'REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmtmawbin) 'BUDGET', fname, this%ibudgetout
         found = .true.
-      case('SHUTDOWN_THETA')
-        this%theta = this%parser%GetDouble()
-        write(this%iout, fmtshutdown) 'THETA', this%theta
-        found = .true.
-      case('SHUTDOWN_KAPPA')
-        this%kappa = this%parser%GetDouble()
-        write(this%iout, fmtshutdown) 'KAPPA', this%kappa
-        found = .true.
-      case('MOVER')
-        this%imover = 1
-        write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-        found = .true.
-      case('NO_WELL_STORAGE')
-        this%imawissopt = 1
-        write(this%iout, fmtnostoragewells)
-        found = .true.
-      case('FLOW_CORRECTION')
-        this%correct_flow = .TRUE.
-        write(this%iout, '(4x,a,/,4x,a)') &
-          'MAW-GWF FLOW CORRECTIONS WILL BE APPLIED WHEN MAW HEADS ARE BELOW',    &
-          'OR GWF HEADS IN CONNECTED CELLS ARE BELOW THE CELL BOTTOM.'
-        found = .true.
-      case('MAW_FLOW_REDUCE_CSV')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          call this%maw_redflow_csv_init(fname)
-        else
-          call store_error('OPTIONAL MAW_FLOW_REDUCE_CSV KEYWORD MUST BE &
-            &FOLLOWED BY FILEOUT')
-        end if
+      else
+        call store_error('Optional maw budget keyword must be '// &
+                         'followed by fileout.')
+      end if
+    case ('BUDGETCSV')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ibudcsv = getunit()
+        call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                      filstat_opt='REPLACE')
+        write (this%iout, fmtmawbin) 'BUDGET CSV', fname, this%ibudcsv
+      else
+        call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+          &FILEOUT')
+      end if
+    case ('FLOWING_WELLS')
+      this%iflowingwells = 1
+      write (this%iout, fmtflowingwells)
+      found = .true.
+    case ('SHUTDOWN_THETA')
+      this%theta = this%parser%GetDouble()
+      write (this%iout, fmtshutdown) 'THETA', this%theta
+      found = .true.
+    case ('SHUTDOWN_KAPPA')
+      this%kappa = this%parser%GetDouble()
+      write (this%iout, fmtshutdown) 'KAPPA', this%kappa
+      found = .true.
+    case ('MOVER')
+      this%imover = 1
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+      found = .true.
+    case ('NO_WELL_STORAGE')
+      this%imawissopt = 1
+      write (this%iout, fmtnostoragewells)
+      found = .true.
+    case ('FLOW_CORRECTION')
+      this%correct_flow = .TRUE.
+      write (this%iout, '(4x,a,/,4x,a)') &
+        'MAW-GWF FLOW CORRECTIONS WILL BE APPLIED WHEN MAW HEADS ARE BELOW', &
+        'OR GWF HEADS IN CONNECTED CELLS ARE BELOW THE CELL BOTTOM.'
+      found = .true.
+    case ('MAW_FLOW_REDUCE_CSV')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        call this%maw_redflow_csv_init(fname)
+      else
+        call store_error('OPTIONAL MAW_FLOW_REDUCE_CSV KEYWORD MUST BE &
+          &FOLLOWED BY FILEOUT')
+      end if
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
       !    These options are only available when IDEVELOPMODE in
       !    constants module is set to 1
-      case('DEV_PEACEMAN_EFFECTIVE_RADIUS')
-        call this%parser%DevOpt()
-        this%ieffradopt = 1
-        write(this%iout, '(4x,a)')                                             &
-     &    'EFFECTIVE RADIUS FOR STRUCTURED GRIDS WILL BE CALCULATED ' //       &
-     &    'USING PEACEMAN 1983'
-        found = .true.
-      case default
-        !
-        ! -- No options found
-        found = .false.
+    case ('DEV_PEACEMAN_EFFECTIVE_RADIUS')
+      call this%parser%DevOpt()
+      this%ieffradopt = 1
+      write (this%iout, '(4x,a)') &
+        'EFFECTIVE RADIUS FOR STRUCTURED GRIDS WILL BE CALCULATED &
+        &USING PEACEMAN 1983'
+      found = .true.
+    case default
+      !
+      ! -- No options found
+      found = .false.
     end select
     !
     ! -- return
@@ -1885,19 +1890,19 @@ contains
   end subroutine maw_read_options
 
   subroutine maw_ar(this)
-  ! ******************************************************************************
-  ! maw_ar -- Allocate and Read
-  ! Subroutine: (1) create new-style package
-  !             (2) point bndobj to the new package
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      ! -- dummy
-      class(MawType),intent(inout) :: this
-      ! -- local
-      ! -- format
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! maw_ar -- Allocate and Read
+    ! Subroutine: (1) create new-style package
+    !             (2) point bndobj to the new package
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(MawType), intent(inout) :: this
+    ! -- local
+    ! -- format
+    ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
@@ -1914,14 +1919,13 @@ contains
     !
     ! -- setup pakmvrobj
     if (this%imover /= 0) then
-      allocate(this%pakmvrobj)
+      allocate (this%pakmvrobj)
       call this%pakmvrobj%ar(this%nmawwells, this%nmawwells, this%memoryPath)
     end if
     !
     ! -- return
     return
   end subroutine maw_ar
-
 
   subroutine maw_rp(this)
 ! ******************************************************************************
@@ -1935,12 +1939,12 @@ contains
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: text
-    character (len=16) :: csteady
+    character(len=16) :: csteady
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: ierr
@@ -1954,10 +1958,10 @@ contains
     integer(I4B) :: jpos
     integer(I4B) :: iheadlimit_warning
     ! -- formats
-    character(len=*),parameter :: fmtblkerr = &
-      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
-      "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
+    character(len=*), parameter :: fmtblkerr = &
+      &"('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+    character(len=*), parameter :: fmtlsp = &
+      &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize counters
@@ -1976,7 +1980,7 @@ contains
     !
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
-    if(this%inunit == 0) return
+    if (this%inunit == 0) return
     !
     ! -- get stress period data
     if (this%ionper < kper) then
@@ -1984,7 +1988,7 @@ contains
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
                                 supportOpenClose=.true.)
-      if(isfound) then
+      if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
         call this%read_check_ionper()
@@ -1997,22 +2001,22 @@ contains
         else
           ! -- Found invalid block
           call this%parser%GetCurrentLine(line)
-          write(errmsg, fmtblkerr) adjustl(trim(line))
+          write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg, terminate=.TRUE.)
         end if
       end if
     end if
     !
     ! -- Read data if ionper == kper
-    if(this%ionper == kper) then
+    if (this%ionper == kper) then
       !
       ! -- setup table for period data
       if (this%iprpak /= 0) then
         !
         ! -- reset the input table object
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
-                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
-        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        title = trim(adjustl(this%text))//' PACKAGE ('// &
+                trim(adjustl(this%packName))//') DATA FOR PERIOD'
+        write (title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(1, 5, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
@@ -2020,7 +2024,7 @@ contains
         text = 'KEYWORD'
         call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
         do n = 1, 3
-          write(text, '(a,1x,i6)') 'VALUE', n
+          write (text, '(a,1x,i6)') 'VALUE', n
           call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
         end do
       end if
@@ -2033,8 +2037,8 @@ contains
 
         imaw = this%parser%GetInteger()
         if (imaw < 1 .or. imaw > this%nmawwells) then
-          write(errmsg,'(2(a,1x),i0,a)')                                        &
-            'IMAW must be greater than 0 and',                                  &
+          write (errmsg, '(2(a,1x),i0,a)') &
+            'IMAW must be greater than 0 and', &
             'less than or equal to ', this%nmawwells, '.'
           call store_error(errmsg)
           cycle
@@ -2052,17 +2056,17 @@ contains
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-    !
-    ! -- using data from the last stress period
+      !
+      ! -- using data from the last stress period
     else
-      write(this%iout,fmtlsp) trim(this%filtyp)
+      write (this%iout, fmtlsp) trim(this%filtyp)
     end if
     !
     ! -- issue warning messages
     if (iheadlimit_warning > 0) then
-      write(warnmsg, '(a,a,a,1x,a,1x,a)')                                        &
-        "HEAD_LIMIT in '", trim(this%packName),"' was below the well bottom",    &
-        "for one or more multi-aquifer well(s). This may result in",             &
+      write (warnmsg, '(a,a,a,1x,a,1x,a)') &
+        "HEAD_LIMIT in '", trim(this%packName), "' was below the well bottom", &
+        "for one or more multi-aquifer well(s). This may result in", &
         "convergence failures for some models."
       call store_warning(warnmsg, substring=warnmsg(:50))
     end if
@@ -2085,23 +2089,23 @@ contains
         end if
         !
         ! -- reset the input table object for rate data
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
-                trim(adjustl(this%packName)) //') ' // trim(adjustl(csteady)) //     &
+        title = trim(adjustl(this%text))//' PACKAGE ('// &
+                trim(adjustl(this%packName))//') '//trim(adjustl(csteady))// &
                 ' RATE DATA FOR PERIOD'
-        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        write (title, '(a,1x,i6)') trim(adjustl(title)), kper
         ntabcols = 6
         call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(this%nmawwells, ntabcols, this%iout)
         text = 'NUMBER'
-        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)      
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'STATUS'
-        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         text = 'RATE'
-        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         text = 'SPECIFIED HEAD'
-        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         text = 'PUMP ELEVATION'
-        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         text = 'REDUCTION LENGTH'
         call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         do n = 1, this%nmawwells
@@ -2125,10 +2129,10 @@ contains
         if (this%iflowingwells > 0) then
           !
           ! -- reset the input table object for flowing well data
-          title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
-                  trim(adjustl(this%packName)) //') ' // trim(adjustl(csteady)) //   &
+          title = trim(adjustl(this%text))//' PACKAGE ('// &
+                  trim(adjustl(this%packName))//') '//trim(adjustl(csteady))// &
                   ' FLOWING WELL DATA FOR PERIOD'
-          write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+          write (title, '(a,1x,i6)') trim(adjustl(title)), kper
           ntabcols = 4
           ntabrows = 0
           do n = 1, this%nmawwells
@@ -2140,11 +2144,11 @@ contains
             call table_cr(this%inputtab, this%packName, title)
             call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
             text = 'NUMBER'
-            call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)      
+            call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
             text = 'ELEVATION'
-            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
             text = 'CONDUCT.'
-            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
             text = 'REDUCTION LENGTH'
             call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
             do n = 1, this%nmawwells
@@ -2159,10 +2163,10 @@ contains
         end if
         !
         ! -- reset the input table object for shutoff data
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
-                trim(adjustl(this%packName)) //') '// trim(adjustl(csteady)) //      &
+        title = trim(adjustl(this%text))//' PACKAGE ('// &
+                trim(adjustl(this%packName))//') '//trim(adjustl(csteady))// &
                 ' WELL SHUTOFF DATA FOR PERIOD'
-        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        write (title, '(a,1x,i6)') trim(adjustl(title)), kper
         ntabcols = 4
         ntabrows = 0
         do n = 1, this%nmawwells
@@ -2174,11 +2178,11 @@ contains
           call table_cr(this%inputtab, this%packName, title)
           call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
           text = 'NUMBER'
-          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)      
+          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
           text = 'ELEVATION'
-          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
           text = 'MINIMUM. Q'
-          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
           text = 'MAXIMUM Q'
           call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
           do n = 1, this%nmawwells
@@ -2200,13 +2204,13 @@ contains
         jpos = this%get_jpos(n, j)
         node = this%get_gwfnode(n, j)
         this%nodelist(ibnd) = node
-        this%bound(1,ibnd) = this%xnewpak(n)
-        this%bound(2,ibnd) = this%satcond(jpos)
-        this%bound(3,ibnd) = this%botscrn(jpos)
+        this%bound(1, ibnd) = this%xnewpak(n)
+        this%bound(2, ibnd) = this%satcond(jpos)
+        this%bound(3, ibnd) = this%botscrn(jpos)
         if (this%iboundpak(n) > 0) then
-          this%bound(4,ibnd) = this%rate(n)
+          this%bound(4, ibnd) = this%rate(n)
         else
-          this%bound(4,ibnd) = DZERO
+          this%bound(4, ibnd) = DZERO
         end if
         ibnd = ibnd + 1
       end do
@@ -2223,7 +2227,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only : kper, kstp
+    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MawType) :: this
     ! -- local
@@ -2263,7 +2267,7 @@ contains
     !
     !--use the appropriate xoldsto if intial heads are above the
     !  specified flowing well discharge elevation
-    if (kper==1 .and. kstp==1) then
+    if (kper == 1 .and. kstp == 1) then
       do n = 1, this%nmawwells
         if (this%fwcond(n) > DZERO) then
           if (this%xoldsto(n) > this%fwelev(n)) then
@@ -2277,7 +2281,7 @@ contains
     this%ishutoffcnt = 0
     !
     ! -- pakmvrobj ad
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%ad()
     end if
     !
@@ -2291,20 +2295,20 @@ contains
   end subroutine maw_ad
 
   subroutine maw_cf(this, reset_mover)
-  ! ******************************************************************************
-  ! maw_cf -- Formulate the HCOF and RHS terms
-  ! Subroutine: (1) skip if no multi-aquifer wells
-  !             (2) calculate hcof and rhs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! maw_cf -- Formulate the HCOF and RHS terms
+    ! Subroutine: (1) skip if no multi-aquifer wells
+    !             (2) calculate hcof and rhs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     logical, intent(in), optional :: reset_mover
     ! -- local
     logical :: lrm
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- Calculate maw conductance and update package RHS and HCOF
     call this%maw_cfupdate()
@@ -2312,7 +2316,7 @@ contains
     ! -- pakmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. lrm) then
+    if (this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     end if
     !
@@ -2364,7 +2368,7 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%fc()
     end if
     !
@@ -2424,12 +2428,12 @@ contains
         !
         ! -- If mover is active, add receiver water to rhs and
         !    store available water (as positive value)
-        if(this%imover == 1) then
+        if (this%imover == 1) then
           rhs(iloc) = rhs(iloc) - this%pakmvrobj%get_qfrommvr(n)
           !
           ! -- add pumping rate to mover if not injection
           if (rate < 0) then
-            call this%pakmvrobj%accumulate_qformvr(n, -rate)  !pumped water
+            call this%pakmvrobj%accumulate_qformvr(n, -rate) !pumped water
           end if
           !
           ! -- add flowing well flow to mover
@@ -2446,7 +2450,7 @@ contains
           hgwf = this%xnew(igwfnode)
           !
           ! -- calculate connection terms
-          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term, &
                                              flow)
           this%simcond(jpos) = cmaw
           !
@@ -2467,7 +2471,7 @@ contains
           amatsln(ipossymd) = amatsln(ipossymd) - term
           amatsln(ipossymoffd) = term
           !
-          ! -- add correction term to gwf row 
+          ! -- add correction term to gwf row
           rhs(isymnode) = rhs(isymnode) + cterm
         end if
         !
@@ -2541,7 +2545,7 @@ contains
         rate = this%ratesim(n)
         !
         !-- calculate final derivative for pumping rate
-        call this%maw_calculate_wellq(n, hmaw+DEM4, rate2)
+        call this%maw_calculate_wellq(n, hmaw + DEM4, rate2)
         drterm = (rate2 - rate) / DEM4
         !
         !-- fill amat and rhs with newton-raphson terms
@@ -2569,7 +2573,7 @@ contains
               drterm = -(cfw + this%fwcond(n) * derv * (hmaw - bt))
               !
               ! -- fill amat and rhs with newton-raphson terms
-              amatsln(iposd) = amatsln(iposd) -                                &
+              amatsln(iposd) = amatsln(iposd) - &
                                this%fwcond(n) * derv * (hmaw - bt)
               rhs(iloc) = rhs(iloc) - rterm + drterm * hmaw
             end if
@@ -2595,7 +2599,7 @@ contains
           ipossymoffd = this%idxsymoffdglo(idx)
           !
           ! -- calculate newton terms
-          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term,  &
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, term, &
                                              flow, term2)
           !
           ! -- maw is upstream
@@ -2618,8 +2622,8 @@ contains
                 amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
               end if
             end if
-          !
-          ! -- gwf is upstream
+            !
+            ! -- gwf is upstream
           else
             if (icflow /= 0) then
               rhsterm = term2 * hmaw + term * hgwf
@@ -2650,7 +2654,6 @@ contains
     ! -- return
     return
   end subroutine maw_fn
-
 
   subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
@@ -2687,7 +2690,7 @@ contains
       !    solution head is below the bottom of the well
       if (x(n) < botw) then
         inewtonur = 1
-        xx = xtemp(n)*(DONE-DP9) + botw*DP9
+        xx = xtemp(n) * (DONE - DP9) + botw * DP9
         dxx = x(n) - xx
         if (abs(dxx) > abs(dxmax)) then
           locmax = n
@@ -2848,10 +2851,10 @@ contains
     !
     ! -- write the flows from the budobj
     ibinun = 0
-    if(this%ibudgetout /= 0) then
+    if (this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
-    if(icbcfl == 0) ibinun = 0
+    if (icbcfl == 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
                                   pertim, totim, this%iout)
@@ -2861,7 +2864,7 @@ contains
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
-    
+
   end subroutine maw_ot_package_flows
 
   subroutine maw_ot_dv(this, idvsave, idvprint)
@@ -2878,10 +2881,10 @@ contains
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
-    if(this%iheadout /= 0) then
+    if (this%iheadout /= 0) then
       ibinun = this%iheadout
     end if
-    if(idvsave == 0) ibinun = 0
+    if (idvsave == 0) ibinun = 0
     !
     ! -- write maw binary output
     if (ibinun > 0) then
@@ -2895,45 +2898,45 @@ contains
         end if
         this%dbuff(n) = v
       end do
-      call ulasav(this%dbuff, '            HEAD',                               &
-                  kstp, kper, pertim, totim,                                    &
+      call ulasav(this%dbuff, '            HEAD', &
+                  kstp, kper, pertim, totim, &
                   this%nmawwells, 1, 1, ibinun)
     end if
-     !
-     ! -- write maw head table
-     if (idvprint /= 0 .and. this%iprhed /= 0) then
+    !
+    ! -- write maw head table
+    if (idvprint /= 0 .and. this%iprhed /= 0) then
       !
       ! -- set table kstp and kper
       call this%headtab%set_kstpkper(kstp, kper)
       !
       ! -- fill stage data
       do n = 1, this%nmawwells
-        if(this%inamedbound==1) then
+        if (this%inamedbound == 1) then
           call this%headtab%add_term(this%cmawname(n))
         end if
         call this%headtab%add_term(n)
         call this%headtab%add_term(this%xnewpak(n))
       end do
-     end if
-    
+    end if
+
   end subroutine maw_ot_dv
-  
+
   subroutine maw_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(MawType) :: this              !< MawType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(MawType) :: this !< MawType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
     ! -- return
     return
   end subroutine maw_ot_bdsummary
-  
+
   subroutine maw_da(this)
 ! ******************************************************************************
 ! maw_da -- deallocate
@@ -2951,14 +2954,14 @@ contains
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
-    deallocate(this%budobj)
-    nullify(this%budobj)
+    deallocate (this%budobj)
+    nullify (this%budobj)
     !
     ! -- head table
     if (this%iprhed > 0) then
       call this%headtab%table_da()
-      deallocate(this%headtab)
-      nullify(this%headtab)
+      deallocate (this%headtab)
+      nullify (this%headtab)
     end if
     !
     ! -- character arrays
@@ -3049,7 +3052,7 @@ contains
     call mem_deallocate(this%idense)
     !
     ! -- pointers to gwf variables
-    nullify(this%gwfiss)
+    nullify (this%gwfiss)
     !
     ! -- call standard BndType deallocate
     call this%BndType%bnd_da()
@@ -3070,26 +3073,25 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     end if
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
     ! -- return
     return
   end subroutine define_listlabel
-
 
   subroutine maw_set_pointers(this, neq, ibound, xnew, xold, flowja)
 ! ******************************************************************************
@@ -3123,7 +3125,8 @@ contains
     iend = istart + this%nmawwells - 1
     this%iboundpak => this%ibound(istart:iend)
     this%xnewpak => this%xnew(istart:iend)
-    call mem_checkin(this%xnewpak, 'HEAD', this%memoryPath, 'X', this%memoryPathModel)
+    call mem_checkin(this%xnewpak, 'HEAD', this%memoryPath, 'X', &
+                     this%memoryPathModel)
     call mem_allocate(this%xoldpak, this%nmawwells, 'XOLDPAK', this%memoryPath)
     !
     ! -- initialize xnewpak
@@ -3137,35 +3140,34 @@ contains
   !
   ! -- Procedures related to observations (type-bound)
   logical function maw_obs_supported(this)
-  ! ******************************************************************************
-  ! maw_obs_supported
-  !   -- Return true because MAW package supports observations.
-  !   -- Overrides BndType%bnd_obs_supported()
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! maw_obs_supported
+    !   -- Return true because MAW package supports observations.
+    !   -- Overrides BndType%bnd_obs_supported()
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     class(MawType) :: this
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     maw_obs_supported = .true.
     return
   end function maw_obs_supported
 
-
   subroutine maw_df_obs(this)
-  ! ******************************************************************************
-  ! maw_df_obs (implements bnd_df_obs)
-  !   -- Store observation type supported by MAW package.
-  !   -- Overrides BndType%bnd_df_obs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! maw_df_obs (implements bnd_df_obs)
+    !   -- Store observation type supported by MAW package.
+    !   -- Overrides BndType%bnd_df_obs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     ! -- local
     integer(I4B) :: indx
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for head observation type.
@@ -3225,7 +3227,6 @@ contains
     return
   end subroutine maw_df_obs
 
-
   subroutine maw_bd_obs(this)
     ! **************************************************************************
     ! maw_bd_obs
@@ -3260,95 +3261,95 @@ contains
           v = DNODATA
           jj = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
-            case ('HEAD')
-              if (this%iboundpak(jj) /= 0) then
-                v = this%xnewpak(jj)
+          case ('HEAD')
+            if (this%iboundpak(jj) /= 0) then
+              v = this%xnewpak(jj)
+            end if
+          case ('FROM-MVR')
+            if (this%iboundpak(jj) /= 0) then
+              if (this%imover == 1) then
+                v = this%pakmvrobj%get_qfrommvr(jj)
               end if
-            case ('FROM-MVR')
-              if (this%iboundpak(jj) /= 0) then
+            end if
+          case ('MAW')
+            n = this%imap(jj)
+            if (this%iboundpak(n) /= 0) then
+              v = this%qleak(jj)
+            end if
+          case ('RATE')
+            if (this%iboundpak(jj) /= 0) then
+              v = this%ratesim(jj)
+              if (v < DZERO .and. this%qout(jj) < DZERO) then
+                qfact = v / this%qout(jj)
                 if (this%imover == 1) then
-                  v = this%pakmvrobj%get_qfrommvr(jj)
+                  v = v + this%pakmvrobj%get_qtomvr(jj) * qfact
                 end if
               end if
-            case ('MAW')
-              n = this%imap(jj)
-              if (this%iboundpak(n) /= 0) then
-                v = this%qleak(jj)
-              end if
-            case ('RATE')
-              if (this%iboundpak(jj) /= 0) then
+            end if
+          case ('RATE-TO-MVR')
+            if (this%iboundpak(jj) /= 0) then
+              if (this%imover == 1) then
                 v = this%ratesim(jj)
+                qfact = DZERO
                 if (v < DZERO .and. this%qout(jj) < DZERO) then
                   qfact = v / this%qout(jj)
-                  if (this%imover == 1) then
-                    v = v + this%pakmvrobj%get_qtomvr(jj) * qfact
-                  end if
+                end if
+                v = this%pakmvrobj%get_qtomvr(jj) * qfact
+                if (v > DZERO) then
+                  v = -v
                 end if
               end if
-            case ('RATE-TO-MVR')
-              if (this%iboundpak(jj) /= 0) then
+            end if
+          case ('FW-RATE')
+            if (this%iboundpak(jj) /= 0 .and. this%iflowingwells > 0) then
+              hmaw = this%xnewpak(jj)
+              cmaw = this%fwcondsim(jj)
+              v = cmaw * (this%fwelev(jj) - hmaw)
+              if (v < DZERO .and. this%qout(jj) < DZERO) then
+                qfact = v / this%qout(jj)
                 if (this%imover == 1) then
-                  v = this%ratesim(jj)
-                  qfact = DZERO
-                  if (v < DZERO .and. this%qout(jj) < DZERO) then
-                    qfact = v / this%qout(jj)
-                  end if
-                  v = this%pakmvrobj%get_qtomvr(jj) * qfact
-                  if (v > DZERO) then
-                    v = -v
-                  end if
+                  v = v + this%pakmvrobj%get_qtomvr(jj) * qfact
                 end if
               end if
-            case ('FW-RATE')
-              if (this%iboundpak(jj) /= 0 .and. this%iflowingwells > 0) then
+            end if
+          case ('FW-TO-MVR')
+            if (this%iboundpak(jj) /= 0 .and. this%iflowingwells > 0) then
+              if (this%imover == 1) then
                 hmaw = this%xnewpak(jj)
                 cmaw = this%fwcondsim(jj)
                 v = cmaw * (this%fwelev(jj) - hmaw)
+                qfact = DZERO
                 if (v < DZERO .and. this%qout(jj) < DZERO) then
                   qfact = v / this%qout(jj)
-                  if (this%imover == 1) then
-                    v = v + this%pakmvrobj%get_qtomvr(jj) * qfact
-                  end if
+                end if
+                v = this%pakmvrobj%get_qtomvr(jj) * qfact
+                if (v > DZERO) then
+                  v = -v
                 end if
               end if
-            case ('FW-TO-MVR')
-              if (this%iboundpak(jj) /= 0 .and. this%iflowingwells > 0) then
-                if (this%imover == 1) then
-                  hmaw = this%xnewpak(jj)
-                  cmaw = this%fwcondsim(jj)
-                  v = cmaw * (this%fwelev(jj) - hmaw)
-                  qfact = DZERO
-                  if (v < DZERO .and. this%qout(jj) < DZERO) then
-                    qfact = v / this%qout(jj)
-                  end if
-                  v = this%pakmvrobj%get_qtomvr(jj) * qfact
-                  if (v > DZERO) then
-                    v = -v
-                  end if
-                end if
-              end if
-            case ('STORAGE')
-              if (this%iboundpak(jj) /= 0 .and. this%imawissopt /= 1) then
-                v = this%qsto(jj)
-              end if
-            case ('CONSTANT')
-              if (this%iboundpak(jj) /= 0) then
-                v = this%qconst(jj)
-              end if
-            case ('CONDUCTANCE')
-              n = this%imap(jj)
-              if (this%iboundpak(n) /= 0) then
-                nn = jj - this%iaconn(n) + 1
-                jpos = this%get_jpos(n, nn)
-                v = this%simcond(jpos)
-              end if
-            case ('FW-CONDUCTANCE')
-              if (this%iboundpak(jj) /= 0) then
-                v = this%fwcondsim(jj)
-              end if
-            case default
-              errmsg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
-              call store_error(errmsg)
+            end if
+          case ('STORAGE')
+            if (this%iboundpak(jj) /= 0 .and. this%imawissopt /= 1) then
+              v = this%qsto(jj)
+            end if
+          case ('CONSTANT')
+            if (this%iboundpak(jj) /= 0) then
+              v = this%qconst(jj)
+            end if
+          case ('CONDUCTANCE')
+            n = this%imap(jj)
+            if (this%iboundpak(n) /= 0) then
+              nn = jj - this%iaconn(n) + 1
+              jpos = this%get_jpos(n, nn)
+              v = this%simcond(jpos)
+            end if
+          case ('FW-CONDUCTANCE')
+            if (this%iboundpak(jj) /= 0) then
+              v = this%fwcondsim(jj)
+            end if
+          case default
+            errmsg = 'Unrecognized observation type: '//trim(obsrv%ObsTypeId)
+            call store_error(errmsg)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
@@ -3369,7 +3370,6 @@ contains
     return
   end subroutine maw_bd_obs
 
-
   subroutine maw_rp_obs(this)
     use TdisModule, only: kper
     ! -- dummy
@@ -3383,11 +3383,11 @@ contains
     integer(I4B) :: jj
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
-    class(ObserveType),   pointer :: obsrv => null()
+    class(ObserveType), pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
     ! -- formats
-10  format('Boundary "',a,'" for observation "',a,                               &
-           '" is invalid in package "',a,'"')
+10  format('Boundary "', a, '" for observation "', a, &
+           '" is invalid in package "', a, '"')
     !
     ! -- process each package observation
     !    only done the first stress period since boundaries are fixed
@@ -3405,10 +3405,10 @@ contains
             !    Iterate through all multi-aquifer wells to identify and store
             !    corresponding index in bound array.
             jfound = .false.
-            if (obsrv%ObsTypeId=='MAW' .or.   &
-                 obsrv%ObsTypeId=='CONDUCTANCE') then
+            if (obsrv%ObsTypeId == 'MAW' .or. &
+                obsrv%ObsTypeId == 'CONDUCTANCE') then
               do j = 1, this%nmawwells
-                do jj = this%iaconn(j), this%iaconn(j+1) - 1
+                do jj = this%iaconn(j), this%iaconn(j + 1) - 1
                   if (this%boundname(jj) == bname) then
                     jfound = .true.
                     call obsrv%AddObsIndex(jj)
@@ -3424,14 +3424,15 @@ contains
               end do
             end if
             if (.not. jfound) then
-              write(errmsg,10) trim(bname), trim(obsrv%Name), trim(this%packName)
+              write (errmsg, 10) &
+                trim(bname), trim(obsrv%Name), trim(this%packName)
               call store_error(errmsg)
             end if
           end if
         else
           if (obsrv%indxbnds_count == 0) then
-            if (obsrv%ObsTypeId=='MAW' .or.   &
-                 obsrv%ObsTypeId=='CONDUCTANCE') then
+            if (obsrv%ObsTypeId == 'MAW' .or. &
+                obsrv%ObsTypeId == 'CONDUCTANCE') then
               nn2 = obsrv%NodeNumber2
               j = this%iaconn(nn1) + nn2 - 1
               call obsrv%AddObsIndex(j)
@@ -3448,38 +3449,38 @@ contains
         !    by a boundname that is assigned to more than one element
         if (obsrv%ObsTypeId == 'HEAD') then
           if (obsrv%indxbnds_count > 1) then
-            write (errmsg, '(a,3(1x,a))')                                        &
-              trim(adjustl(obsrv%ObsTypeId)),                                    &
-              'for observation', trim(adjustl(obsrv%Name)),                      &
+            write (errmsg, '(a,3(1x,a))') &
+              trim(adjustl(obsrv%ObsTypeId)), &
+              'for observation', trim(adjustl(obsrv%Name)), &
               'must be assigned to a multi-aquifer well with a unique boundname.'
             call store_error(errmsg)
           end if
         end if
         !
         ! -- check that index values are valid
-        if (obsrv%ObsTypeId=='MAW' .or.   &
-            obsrv%ObsTypeId=='CONDUCTANCE') then
+        if (obsrv%ObsTypeId == 'MAW' .or. &
+            obsrv%ObsTypeId == 'CONDUCTANCE') then
           do j = 1, obsrv%indxbnds_count
-            nn1 =  obsrv%indxbnds(j)
+            nn1 = obsrv%indxbnds(j)
             n = this%imap(nn1)
             nn2 = nn1 - this%iaconn(n) + 1
-            jj = this%iaconn(n+1) - this%iaconn(n)
+            jj = this%iaconn(n + 1) - this%iaconn(n)
             if (nn1 < 1 .or. nn1 > this%maxbound) then
-              write (errmsg, '(3(a,1x),i0,1x,a,i0,a)')                           &
-                trim(adjustl(obsrv%ObsTypeId)),                                  &
-                'multi-aquifer well connection number must be greater than 0',   &
+              write (errmsg, '(3(a,1x),i0,1x,a,i0,a)') &
+                trim(adjustl(obsrv%ObsTypeId)), &
+                'multi-aquifer well connection number must be greater than 0', &
                 'and less than', jj, '(specified value is ', nn2, ').'
               call store_error(errmsg)
             end if
           end do
         else
           do j = 1, obsrv%indxbnds_count
-            nn1 =  obsrv%indxbnds(j)
+            nn1 = obsrv%indxbnds(j)
             if (nn1 < 1 .or. nn1 > this%nmawwells) then
-              write (errmsg, '(3(a,1x),i0,1x,a,i0,a)')                           &
-                trim(adjustl(obsrv%ObsTypeId)),                                  &
-                'multi-aquifer well must be greater than 0 ',                    &
-                'and less than or equal to', this%nmawwells,                     &
+              write (errmsg, '(3(a,1x),i0,1x,a,i0,a)') &
+                trim(adjustl(obsrv%ObsTypeId)), &
+                'multi-aquifer well must be greater than 0 ', &
+                'and less than or equal to', this%nmawwells, &
                 '(specified value is ', nn1, ').'
               call store_error(errmsg)
             end if
@@ -3497,17 +3498,16 @@ contains
     return
   end subroutine maw_rp_obs
 
-
   !
   ! -- Procedures related to observations (NOT type-bound)
   subroutine maw_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
     !    the ID string of an observation definition for MAW package observations.
     ! -- dummy
-    type(ObserveType),      intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B),            intent(in)    :: inunitobs
-    integer(I4B),            intent(in)    :: iout
+    type(ObserveType), intent(inout) :: obsrv
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop
@@ -3525,15 +3525,15 @@ contains
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      if (obsrv%ObsTypeId=='MAW' .or. &
-          obsrv%ObsTypeId=='CONDUCTANCE') then
+      if (obsrv%ObsTypeId == 'MAW' .or. &
+          obsrv%ObsTypeId == 'CONDUCTANCE') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (len_trim(bndName) < 1 .and. nn2 < 0) then
-          write(errmsg, '(a,1x,a,a,1x,a,1x,a)')                              &
-                'For observation type', trim(adjustl(obsrv%ObsTypeId)),      &
-                ', ID given as an integer and not as boundname,',            &
-                'but ID2 (icon) is missing.  Either change ID to valid',     &
-                'boundname or supply valid entry for ID2.'
+          write (errmsg, '(a,1x,a,a,1x,a,1x,a)') &
+            'For observation type', trim(adjustl(obsrv%ObsTypeId)), &
+            ', ID given as an integer and not as boundname,', &
+            'but ID2 (icon) is missing.  Either change ID to valid', &
+            'boundname or supply valid entry for ID2.'
           call store_error(errmsg)
         end if
         if (nn2 == NAMEDBOUNDFLAG) then
@@ -3561,20 +3561,20 @@ contains
     class(MawType), intent(inout) :: this !< MawType object
     character(len=*), intent(in) :: fname
     ! -- format
-    character(len=*),parameter :: fmtredflowcsv = &
+    character(len=*), parameter :: fmtredflowcsv = &
       "(4x, 'MAW REDUCED FLOW INFORMATION WILL BE SAVED TO FILE: ', a, /4x, &
     &'OPENED ON UNIT: ', I0)"
-    
+
     this%ioutredflowcsv = getunit()
     call openfile(this%ioutredflowcsv, this%iout, fname, 'CSV', &
-      filstat_opt='REPLACE')
-    write(this%iout,fmtredflowcsv) trim(adjustl(fname)), &
-                                this%ioutredflowcsv
-    write(this%ioutredflowcsv, '(a)') &
+                  filstat_opt='REPLACE')
+    write (this%iout, fmtredflowcsv) trim(adjustl(fname)), &
+      this%ioutredflowcsv
+    write (this%ioutredflowcsv, '(a)') &
       'time,period,step,MAWnumber,rate-requested,rate-actual,maw-reduction'
     return
   end subroutine maw_redflow_csv_init
-  
+
   !> @brief MAW reduced flows only when & where they occur
   subroutine maw_redflow_csv_write(this)
     ! -- modules
@@ -3590,20 +3590,20 @@ contains
     do n = 1, this%nmawwells
       !
       ! -- test if node is constant or inactive
-      if(this%status(n) .ne. 'ACTIVE') then
+      if (this%status(n) .ne. 'ACTIVE') then
         cycle
       end if
       v = this%rate(n) - this%ratesim(n) !reductions in extraction will be negative and reductions in injection will be positive; follows convention of WEL AUTO_FLOW_REDUCE_CSV
-      if (abs(v) > DEM9) then   !need to check absolute value of difference for both extraction and injection; using 1e-9 as epsilon value but could be tweaked
-        write(this%ioutredflowcsv,'(*(G0,:,","))') &
+      if (abs(v) > DEM9) then !need to check absolute value of difference for both extraction and injection; using 1e-9 as epsilon value but could be tweaked
+        write (this%ioutredflowcsv, '(*(G0,:,","))') &
           totim, kper, kstp, n, this%rate(n), this%ratesim(n), v
       end if
-    enddo
+    end do
   end subroutine maw_redflow_csv_write
-  
+
   subroutine maw_calculate_satcond(this, i, j, node)
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: i
     integer(I4B), intent(in) :: j
     integer(I4B), intent(in) :: node
@@ -3661,7 +3661,7 @@ contains
     ! -- set gwftop, gwfbot, and gwfsat
     gwftop = this%dis%top(node)
     gwfbot = this%dis%bot(node)
-    tthka  = gwftop - gwfbot
+    tthka = gwftop - gwfbot
     gwfsat = this%gwfsat(node)
     !
     ! -- set top and bottom of well screen
@@ -3687,9 +3687,10 @@ contains
       Tyy = k22 * tthka
       dx = sqrt(this%dis%area(node))
       dy = dx
-      yx4 = (Tyy/Txx)**DQUARTER
-      xy4 = (Txx/Tyy)**DQUARTER
-      eradius = 0.28_DP * ((yx4*dx)**DTWO + (xy4*dy)**DTWO)**DHALF / (yx4+xy4)
+      yx4 = (Tyy / Txx)**DQUARTER
+      xy4 = (Txx / Tyy)**DQUARTER
+      eradius = 0.28_DP * ((yx4 * dx)**DTWO + &
+                           (xy4 * dy)**DTWO)**DHALF / (yx4 + xy4)
     else
       area = this%dis%area(node)
       eradius = sqrt(area / (DEIGHT * DPI))
@@ -3709,17 +3710,17 @@ contains
         skin = (Tcontrast - DONE) * log(this%sradius(jpos) / this%radius(i))
         !
         ! -- trap invalid transmissvity contrast if using skin equation (2).
-        !    Not trapped for cumulative Thiem and skin equations (3) 
-        !    because the MNW2 package allowed this condition (for 
-        !    backward compatibility with the MNW2 package for  
+        !    Not trapped for cumulative Thiem and skin equations (3)
+        !    because the MNW2 package allowed this condition (for
+        !    backward compatibility with the MNW2 package for
         !    MODFLOW-2005, MODFLOW-NWT, and MODFLOW-USG).
         if (Tcontrast <= 1 .and. this%ieqn(i) == 2) then
           iTcontrastErr = 1
-          write(errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                   &
-            'Invalid calculated transmissivity contrast (', Tcontrast,           &
-            ') for maw well', i, 'connection', j, '.', 'This happens when the',  &
+          write (errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))') &
+            'Invalid calculated transmissivity contrast (', Tcontrast, &
+            ') for maw well', i, 'connection', j, '.', 'This happens when the', &
             'skin transmissivity equals or exceeds the aquifer transmissivity.', &
-            'Consider decreasing HK_SKIN for the connection or using the',       &
+            'Consider decreasing HK_SKIN for the connection or using the', &
             'CUMULATIVE or MEAN conductance equations.'
           call store_error(errmsg)
         else
@@ -3727,7 +3728,7 @@ contains
         end if
       end if
     end if
-    ! -- conductance using screen elevations, hk, well radius, 
+    ! -- conductance using screen elevations, hk, well radius,
     !    and screen radius
     if (this%ieqn(i) == 4) then
       hks = this%hk(jpos)
@@ -3737,7 +3738,7 @@ contains
       c = hks * pavg * tthkw / slen
     end if
     !
-    ! -- calculate final conductance for Theim (1), Skin (2), and 
+    ! -- calculate final conductance for Theim (1), Skin (2), and
     ! and cumulative Thiem and skin equations (3)
     if (this%ieqn(i) < 4) then
       if (lc1 + lc2 /= DZERO) then
@@ -3750,11 +3751,11 @@ contains
     ! -- ensure that the conductance is not negative. Only write error message
     !    if error condition has not occured for skin calculations (LC2)
     if (c < DZERO .and. iTcontrastErr == 0) then
-      write(errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                       &
-        'Invalid calculated negative conductance (', c,                          &
-        ') for maw well', i, 'connection', j, '.', 'this happens when the',      &
-        'skin transmissivity equals or exceeds the aquifer transmissivity.',     &
-        'consider decreasing hk_skin for the connection or using the',           &
+      write (errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))') &
+        'Invalid calculated negative conductance (', c, &
+        ') for maw well', i, 'connection', j, '.', 'this happens when the', &
+        'skin transmissivity equals or exceeds the aquifer transmissivity.', &
+        'consider decreasing hk_skin for the connection or using the', &
         'mean conductance equation.'
       call store_error(errmsg)
     end if
@@ -3766,10 +3767,9 @@ contains
     return
   end subroutine maw_calculate_satcond
 
-
   subroutine maw_calculate_saturation(this, n, j, node, sat)
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: j
     integer(I4B), intent(in) :: node
@@ -3827,12 +3827,12 @@ contains
     ! -- return
     return
   end subroutine maw_calculate_saturation
-  
-  subroutine maw_calculate_conn_terms(this, n, j, icflow, cmaw, cterm, term,   &
+
+  subroutine maw_calculate_conn_terms(this, n, j, icflow, cmaw, cterm, term, &
                                       flow, term2)
 ! ******************************************************************************
 ! maw_calculate_conn_terms-- Calculate matrix terms for a multi-aquifer well
-!                            connection. Terms for fc and fn methods are 
+!                            connection. Terms for fc and fn methods are
 !                            calculated based on whether term2 is passed
 !
 ! -- Arguments are as follows:
@@ -3948,8 +3948,8 @@ contains
           term = drterm * this%satcond(jpos) * (hbar - hmaw)
           dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
           term2 = cmaw * (dhbarterm - DONE)
-        !
-        ! -- gwf is upstream
+          !
+          ! -- gwf is upstream
         else
           hbar = sQuadratic0sp(hmaw, en, this%satomega)
           term = -drterm * this%satcond(jpos) * (hgwf - hbar)
@@ -3973,10 +3973,10 @@ contains
     !
     ! -- add density part here
     if (this%idense /= 0 .and. inewton == 0) then
-      call this%maw_calculate_density_exchange(jpos, hmaw, hgwf, cmaw,        &
-                                               bmaw, flow, term, cterm)    
-    end if  
-    
+      call this%maw_calculate_density_exchange(jpos, hmaw, hgwf, cmaw, &
+                                               bmaw, flow, term, cterm)
+    end if
+
     !
     ! -- return
     return
@@ -4014,7 +4014,7 @@ contains
     if (rate < DZERO) then
       !
       ! -- If well shut off is activated, then turn off well if necessary,
-      !    or if shut off is not activated then check to see if rate scaling 
+      !    or if shut off is not activated then check to see if rate scaling
       !    is on.
       if (this%shutofflevel(n) /= DEP20) then
         call this%maw_calculate_qpot(n, q)
@@ -4031,14 +4031,14 @@ contains
         weight = this%shutoffweight(n)
         !
         ! -- for flip-flop condition, decrease factor
-        if ( this%shutoffdq(n) * dq < DZERO ) then
+        if (this%shutoffdq(n) * dq < DZERO) then
           weight = this%theta * this%shutoffweight(n)
-        !
-        ! -- when change is of same sign, increase factor
+          !
+          ! -- when change is of same sign, increase factor
         else
           weight = this%shutoffweight(n) + this%kappa
         end if
-        if ( weight > DONE ) weight = DONE
+        if (weight > DONE) weight = DONE
 
         q = this%shutoffqold(n) + weight * dq
 
@@ -4046,7 +4046,7 @@ contains
         this%shutoffdq(n) = dq
         this%shutoffweight(n) = weight
         !
-        ! -- If shutoffmin and shutoffmax are specified then apply 
+        ! -- If shutoffmin and shutoffmax are specified then apply
         !    additional checks for when to shut off the well.
         if (this%shutoffmin(n) > DZERO) then
           if (hmaw < this%shutofflevel(n)) then
@@ -4055,8 +4055,8 @@ contains
             ! -- well is shutoff
             if (this%ishutoff(n) /= 0) then
               q = DZERO
-            !
-            ! --- well is not shut off
+              !
+              ! --- well is not shut off
             else
               ! -- turn off well if q is less than the minimum rate and
               !    reset the ishutoff flag if at least on iteration 3
@@ -4065,13 +4065,13 @@ contains
                   this%ishutoff(n) = 1
                 end if
                 q = DZERO
-              !
-              ! -- leave well on and use the specified rate
-              !    or the potential rate
+                !
+                ! -- leave well on and use the specified rate
+                !    or the potential rate
               end if
             end if
-          !
-          ! -- try to use the specified rate or the potential rate
+            !
+            ! -- try to use the specified rate or the potential rate
           else
             if (q > this%shutoffmax(n)) then
               if (this%ishutoffcnt <= 2) then
@@ -4089,8 +4089,8 @@ contains
       else
         scale = DONE
         !
-        ! -- Apply rate scaling by reducing pumpage when hmaw is less than the 
-        !    sum of maw pump elevation (pumpelev) and the specified reduction 
+        ! -- Apply rate scaling by reducing pumpage when hmaw is less than the
+        !    sum of maw pump elevation (pumpelev) and the specified reduction
         !    length.  The rate will go to zero as hmaw drops to the pump
         !    elevation.
         if (this%reduction_length(n) /= DEP20) then
@@ -4100,7 +4100,7 @@ contains
         end if
         q = scale * rate
       end if
-    !
+      !
     else
       !
       ! -- Handle the injection case (rate > 0) differently than extraction.
@@ -4121,25 +4121,25 @@ contains
         weight = this%shutoffweight(n)
         !
         ! -- for flip-flop condition, decrease factor
-        if ( this%shutoffdq(n) * dq < DZERO ) then
+        if (this%shutoffdq(n) * dq < DZERO) then
           weight = this%theta * this%shutoffweight(n)
-        !
-        ! -- when change is of same sign, increase factor
+          !
+          ! -- when change is of same sign, increase factor
         else
           weight = this%shutoffweight(n) + this%kappa
         end if
-        if ( weight > DONE ) weight = DONE
-        
+        if (weight > DONE) weight = DONE
+
         q = this%shutoffqold(n) + weight * dq
-        
+
         this%shutoffqold(n) = q
         this%shutoffdq(n) = dq
         this%shutoffweight(n) = weight
-        
+
       else
         scale = DONE
         !
-        ! -- Apply rate scaling for an injection well by reducting the 
+        ! -- Apply rate scaling for an injection well by reducting the
         !    injection rate as hmaw rises above the pump elevation.  The rate
         !    will approach zero as hmaw approaches pumpelev + reduction_length.
         if (this%reduction_length(n) /= DEP20) then
@@ -4162,9 +4162,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule,only:delt
+    use TdisModule, only: delt
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: n
     real(DP), intent(inout) :: qnet
     ! -- local
@@ -4238,72 +4238,72 @@ contains
   end subroutine maw_calculate_qpot
 
   subroutine maw_cfupdate(this)
-  ! ******************************************************************************
-  ! maw_cfupdate -- Update MAW satcond and package rhs and hcof
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
-      class(MawType) :: this
-      ! -- dummy
-      ! -- local
-      integer(I4B) :: j
-      integer(I4B) :: n
-      integer(I4B) :: jpos
-      integer(I4B) :: icflow
-      integer(I4B) :: ibnd
-      real(DP) :: flow
-      real(DP) :: cmaw
-      real(DP) :: hmaw
-      real(DP) :: cterm
-      real(DP) :: term
+    ! ******************************************************************************
+    ! maw_cfupdate -- Update MAW satcond and package rhs and hcof
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
+    class(MawType) :: this
+    ! -- dummy
+    ! -- local
+    integer(I4B) :: j
+    integer(I4B) :: n
+    integer(I4B) :: jpos
+    integer(I4B) :: icflow
+    integer(I4B) :: ibnd
+    real(DP) :: flow
+    real(DP) :: cmaw
+    real(DP) :: hmaw
+    real(DP) :: cterm
+    real(DP) :: term
 ! ------------------------------------------------------------------------------
-  !
-  ! -- Return if no maw wells
-      if(this%nbound.eq.0) return
-  !
-  ! -- Update shutoff count
-      this%ishutoffcnt = this%ishutoffcnt + 1
-  !
-  ! -- Calculate hcof and rhs for each maw entry
-      ibnd = 1
-      do n = 1, this%nmawwells
-        hmaw = this%xnewpak(n)
-        do j = 1, this%ngwfnodes(n)
-          jpos = this%get_jpos(n, j)
-          this%hcof(ibnd) = DZERO
-          this%rhs(ibnd) = DZERO
-          !
-          ! -- set bound, hcof, and rhs components
-          !
-          ! -- use connection method so the gwf-maw budget flows
-          !    are consistent with the maw-gwf budget flows
-          if (this%iboundpak(n) == 0) then
-            cmaw = DZERO
-            term = DZERO
-            cterm = DZERO
-          else
-            call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm,      &
-                                               term, flow)
-          end if
-          this%simcond(jpos) = cmaw
-          this%bound(2,ibnd) = cmaw
-          this%hcof(ibnd) = -term
-          this%rhs(ibnd) = -term * hmaw + cterm
-          !
-          ! -- increment boundary number
-          ibnd = ibnd + 1
-        end do
+    !
+    ! -- Return if no maw wells
+    if (this%nbound .eq. 0) return
+    !
+    ! -- Update shutoff count
+    this%ishutoffcnt = this%ishutoffcnt + 1
+    !
+    ! -- Calculate hcof and rhs for each maw entry
+    ibnd = 1
+    do n = 1, this%nmawwells
+      hmaw = this%xnewpak(n)
+      do j = 1, this%ngwfnodes(n)
+        jpos = this%get_jpos(n, j)
+        this%hcof(ibnd) = DZERO
+        this%rhs(ibnd) = DZERO
+        !
+        ! -- set bound, hcof, and rhs components
+        !
+        ! -- use connection method so the gwf-maw budget flows
+        !    are consistent with the maw-gwf budget flows
+        if (this%iboundpak(n) == 0) then
+          cmaw = DZERO
+          term = DZERO
+          cterm = DZERO
+        else
+          call this%maw_calculate_conn_terms(n, j, icflow, cmaw, cterm, &
+                                             term, flow)
+        end if
+        this%simcond(jpos) = cmaw
+        this%bound(2, ibnd) = cmaw
+        this%hcof(ibnd) = -term
+        this%rhs(ibnd) = -term * hmaw + cterm
+        !
+        ! -- increment boundary number
+        ibnd = ibnd + 1
       end do
-      !
-      ! -- Return
-      return
+    end do
+    !
+    ! -- Return
+    return
   end subroutine maw_cfupdate
 
   subroutine maw_setup_budobj(this)
 ! ******************************************************************************
 ! maw_setup_budobj -- Set up the budget object that stores all the maw flows
-!   The terms listed here must correspond in number and order to the ones 
+!   The terms listed here must correspond in number and order to the ones
 !   listed in the maw_fill_budobj routine.
 ! ******************************************************************************
 !
@@ -4323,8 +4323,8 @@ contains
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
     !
-    ! -- Determine the number of maw budget terms. These are fixed for 
-    !    the simulation and cannot change.  
+    ! -- Determine the number of maw budget terms. These are fixed for
+    !    the simulation and cannot change.
     ! gwf rate [flowing_well] storage constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
     nbudterm = 4
     if (this%iflowingwells > 0) then
@@ -4346,10 +4346,10 @@ contains
     !
     ! -- Go through and set up each budget term
     !
-    ! -- 
+    ! --
     text = '             GWF'
     idx = idx + 1
-    maxlist = this%maxbound 
+    maxlist = this%maxbound
     naux = 1
     auxtxt(1) = '       FLOW-AREA'
     call this%budobj%budterm(idx)%initialize(text, &
@@ -4368,20 +4368,20 @@ contains
       end do
     end do
     !
-    ! -- 
+    ! --
     text = '            RATE'
     idx = idx + 1
     maxlist = this%nmawwells
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
-                                              this%name_model, &
-                                              this%packName, &
-                                              this%name_model, &
-                                              this%packName, &
-                                              maxlist, .false., .false., &
-                                              naux)
+                                             this%name_model, &
+                                             this%packName, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             maxlist, .false., .false., &
+                                             naux)
     !
-    ! -- 
+    ! --
     if (this%iflowingwells > 0) then
       text = '         FW-RATE'
       idx = idx + 1
@@ -4396,10 +4396,10 @@ contains
                                                naux)
     end if
     !
-    ! -- 
+    ! --
     text = '         STORAGE'
     idx = idx + 1
-    maxlist = this%nmawwells 
+    maxlist = this%nmawwells
     naux = 1
     auxtxt(1) = '          VOLUME'
     call this%budobj%budterm(idx)%initialize(text, &
@@ -4410,7 +4410,7 @@ contains
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
     !
-    ! -- 
+    ! --
     text = '        CONSTANT'
     idx = idx + 1
     maxlist = this%nmawwells
@@ -4423,10 +4423,10 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     if (this%imover == 1) then
       !
-      ! -- 
+      ! --
       text = '        FROM-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
@@ -4439,7 +4439,7 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
       !
-      ! -- 
+      ! --
       text = '     RATE-TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
@@ -4465,10 +4465,10 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
       !
-      ! -- 
+      ! --
       if (this%iflowingwells > 0) then
         !
-        ! -- 
+        ! --
         text = '  FW-RATE-TO-MVR'
         idx = idx + 1
         maxlist = this%nmawwells
@@ -4483,11 +4483,11 @@ contains
       end if
     end if
     !
-    ! -- 
+    ! --
     naux = this%naux
     if (naux > 0) then
       !
-      ! -- 
+      ! --
       text = '       AUXILIARY'
       idx = idx + 1
       maxlist = this%maxbound
@@ -4706,7 +4706,7 @@ contains
           call this%budobj%budterm(idx)%update_term(n, n, q)
         end do
       end if
-      
+
     end if
     !
     ! -- AUXILIARY VARIABLES
@@ -4729,9 +4729,9 @@ contains
 
   subroutine maw_setup_tableobj(this)
 ! ******************************************************************************
-! maw_setup_tableobj -- Set up the table object that is used to write the maw 
-!                       head data. The terms listed here must correspond in  
-!                       number and order to the ones written to the head table 
+! maw_setup_tableobj -- Set up the table object that is used to write the maw
+!                       head data. The terms listed here must correspond in
+!                       number and order to the ones written to the head table
 !                       in the maw_ot method.
 ! ******************************************************************************
 !
@@ -4755,12 +4755,12 @@ contains
       if (this%inamedbound == 1) nterms = nterms + 1
       !
       ! -- set up table title
-      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%packName)) //') HEADS FOR EACH CONTROL VOLUME'
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') HEADS FOR EACH CONTROL VOLUME'
       !
       ! -- set up head tableobj
       call table_cr(this%headtab, this%packName, title)
-      call this%headtab%table_df(this%nmawwells, nterms, this%iout,              &
+      call this%headtab%table_df(this%nmawwells, nterms, this%iout, &
                                  transient=.TRUE.)
       !
       ! -- Go through and set up table budget term
@@ -4838,7 +4838,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j
     ! -- formats
@@ -4853,17 +4853,17 @@ contains
         this%denseterms(j, i) = DZERO
       end do
     end do
-    write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR MAW &
-      &PACKAGE: ' // trim(adjustl(this%packName))
+    write (this%iout, '(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR MAW &
+      &PACKAGE: '//trim(adjustl(this%packName))
     !
     ! -- return
     return
   end subroutine maw_activate_density
 
-  subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond,     &
+  subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond, &
                                             bmaw, flow, hcofterm, rhsterm)
 ! ******************************************************************************
-! maw_calculate_density_exchange -- Calculate the groundwater-maw density 
+! maw_calculate_density_exchange -- Calculate the groundwater-maw density
 !                                   exchange terms.
 !
 ! -- Arguments are as follows:
@@ -4881,7 +4881,7 @@ contains
 !                     col 1 is relative density of maw (densemaw / denseref)
 !                     col 2 is relative density of gwf cell (densegwf / denseref)
 !                     col 3 is elevation of gwf cell
-! 
+!
 ! -- Upon return, amat and rhs for maw row should be updated as:
 !    amat(idiag) = amat(idiag) - hcofterm
 !    rhs(n) = rhs(n) + rhsterm
@@ -4891,7 +4891,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(MawType),intent(inout) :: this
+    class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: iconn
     real(DP), intent(in) :: hmaw
     real(DP), intent(in) :: hgwf

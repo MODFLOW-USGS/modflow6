@@ -2,10 +2,10 @@
 !!
 !! This module contains the overridden methods from the base model package
 !! class for the API package. The API package is designed to be used with the
-!! shared object and have period data specified using the MODFLOW API. Several 
-!! methods need to be overridden since no period data are specified in the 
+!! shared object and have period data specified using the MODFLOW API. Several
+!! methods need to be overridden since no period data are specified in the
 !! API input file. Overridden methods include:
-!!   - bnd_rp no period data is specified 
+!!   - bnd_rp no period data is specified
 !!   - bnd_fc BOUND array is not filled. hcof and rhs are specified dierctly
 !!
 !<
@@ -24,7 +24,7 @@ module apimodule
   public :: api_create
   public :: ApiType
   !
-  character(len=LENFTYPE)       :: ftype = 'API'
+  character(len=LENFTYPE) :: ftype = 'API'
   character(len=LENPACKAGENAME) :: text = '             API'
   !
   type, extends(BndType) :: ApiType
@@ -46,13 +46,13 @@ contains
   !<
   subroutine api_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
     ! -- dummy variables
-    class(BndType), pointer :: packobj          !< pointer to default package type
-    integer(I4B), intent(in) :: id              !< package id
-    integer(I4B), intent(in) :: ibcnum          !< boundary condition number
-    integer(I4B), intent(in) :: inunit          !< unit number of USR package input file
-    integer(I4B), intent(in) :: iout            !< unit number of model listing file
-    character(len=*), intent(in) :: namemodel   !< model name
-    character(len=*), intent(in) :: pakname     !< package name
+    class(BndType), pointer :: packobj !< pointer to default package type
+    integer(I4B), intent(in) :: id !< package id
+    integer(I4B), intent(in) :: ibcnum !< boundary condition number
+    integer(I4B), intent(in) :: inunit !< unit number of USR package input file
+    integer(I4B), intent(in) :: iout !< unit number of model listing file
+    character(len=*), intent(in) :: namemodel !< model name
+    character(len=*), intent(in) :: pakname !< package name
     ! -- local variables
     type(ApiType), pointer :: apiobj
     !
@@ -133,10 +133,10 @@ contains
   subroutine api_fc(this, rhs, ia, idxglo, amatsln)
     ! -- dummy variables
     class(ApiType) :: this
-    real(DP), dimension(:), intent(inout) :: rhs      !< right-hand side vector
-    integer(I4B), dimension(:), intent(in) :: ia      !< pointer to the rows in A matrix
-    integer(I4B), dimension(:), intent(in) :: idxglo  !< position of entries in A matrix
-    real(DP), dimension(:), intent(inout) :: amatsln  !< A matrix for solution
+    real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector
+    integer(I4B), dimension(:), intent(in) :: ia !< pointer to the rows in A matrix
+    integer(I4B), dimension(:), intent(in) :: idxglo !< position of entries in A matrix
+    real(DP), dimension(:), intent(inout) :: amatsln !< A matrix for solution
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -157,7 +157,7 @@ contains
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).
-      qusr = this%rhs(i) - this%hcof(i)*this%xnew(n)
+      qusr = this%rhs(i) - this%hcof(i) * this%xnew(n)
       if (this%imover == 1 .and. qusr > DZERO) then
         call this%pakmvrobj%accumulate_qformvr(i, qusr)
       end if
