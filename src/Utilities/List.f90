@@ -24,13 +24,13 @@ module ListModule
     procedure, public :: DeallocateBackward
     procedure, public :: GetNextItem
     procedure, public :: GetPreviousItem
-    generic,   public :: GetItem => get_item_by_index, get_current_item
+    generic, public :: GetItem => get_item_by_index, get_current_item
     procedure, public :: InsertAfter
     procedure, public :: InsertBefore
     procedure, public :: Next
     procedure, public :: Previous
     procedure, public :: Reset
-    generic,   public :: RemoveNode => remove_node_by_index, remove_this_node
+    generic, public :: RemoveNode => remove_node_by_index, remove_this_node
     ! -- Private procedures
     procedure, private :: get_current_item
     procedure, private :: get_item_by_index
@@ -46,21 +46,21 @@ module ListModule
     type(ListNodeType), pointer, public :: nextNode => null()
     type(ListNodeType), pointer, public :: prevNode => null()
     ! -- Private members
-    class(*),           pointer, private :: Value => null()
+    class(*), pointer, private :: Value => null()
   contains
     ! -- Public procedure
-    procedure,  public :: GetItem
+    procedure, public :: GetItem
     ! -- Private procedures
     procedure, private :: DeallocValue
   end type ListNodeType
-  
+
   interface
     function isEqualIface(obj1, obj2) result(isEqual)
       class(*), pointer :: obj1, obj2
       logical :: isEqual
     end function
   end interface
-  
+
 contains
 
   ! -- Public type-bound procedures for ListType
@@ -72,16 +72,16 @@ contains
     class(*), pointer, intent(inout) :: objptr
     !
     if (.not. associated(this%firstNode)) then
-      allocate(this%firstNode)
+      allocate (this%firstNode)
       this%firstNode%Value => objptr
       this%firstNode%prevNode => null()
       this%lastNode => this%firstNode
     else
-      allocate(this%lastNode%nextNode)
+      allocate (this%lastNode%nextNode)
       this%lastNode%nextNode%prevNode => this%lastNode
       this%lastNode%nextNode%value => objptr
       this%lastNode => this%lastNode%nextNode
-    endif
+    end if
     this%nodeCount = this%nodeCount + 1
     return
   end subroutine Add
@@ -106,14 +106,14 @@ contains
     destroyLocal = .false.
     if (present(destroy)) then
       destroyLocal = destroy
-    endif
+    end if
     !
     if (.not. associated(this%firstNode)) return
     ! -- The last node will be deallocated in the loop below.
     !    Just nullify the pointer to the last node to avoid
     !    having a dangling pointer. Also nullify currentNode.
-    nullify(this%lastNode)
-    nullify(this%currentNode)
+    nullify (this%lastNode)
+    nullify (this%currentNode)
     !
     current => this%firstNode
     do while (associated(current))
@@ -122,12 +122,12 @@ contains
       ! -- Deallocate the object stored in the current node
       call current%DeallocValue(destroyLocal)
       ! -- Deallocate the current node
-      deallocate(current)
+      deallocate (current)
       this%firstNode => next
       this%nodeCount = this%nodeCount - 1
       ! -- Advance to the next node
       current => next
-    enddo
+    end do
     !
     call this%Reset()
     !
@@ -160,7 +160,7 @@ contains
     logical :: hasObj
     ! local
     type(ListNodeType), pointer :: current => null()
-   
+
     hasObj = .false.
     current => this%firstNode
     do while (associated(current))
@@ -168,21 +168,21 @@ contains
         hasObj = .true.
         return
       end if
-      
+
       ! -- Advance to the next node
       current => current%nextNode
-    enddo
-    
+    end do
+
     ! this means there is no match
     return
-  end function  
-  
+  end function
+
   function arePointersEqual(obj1, obj2) result(areIdentical)
     class(*), pointer :: obj1, obj2
     logical :: areIdentical
-    areIdentical = associated(obj1, obj2) 
+    areIdentical = associated(obj1, obj2)
   end function arePointersEqual
-  
+
   subroutine DeallocateBackward(this, fromNode)
     ! **************************************************************************
     ! DeallocateBackward
@@ -205,18 +205,18 @@ contains
         this%firstNode => fromNode%nextNode
       else
         this%firstNode => null()
-      endif
+      end if
       ! -- deallocate fromNode and all previous nodes
       current => fromNode
       do while (associated(current))
         prev => current%prevNode
         call current%DeallocValue(.true.)
-        deallocate(current)
+        deallocate (current)
         this%nodeCount = this%nodeCount - 1
         current => prev
-      enddo
+      end do
       fromNode => null()
-    endif
+    end if
     !
     return
   end subroutine DeallocateBackward
@@ -263,7 +263,7 @@ contains
       precedingNode => this%get_node_by_index(indx)
       if (associated(precedingNode%nextNode)) then
         followingNode => precedingNode%nextNode
-        allocate(newNode)
+        allocate (newNode)
         newNode%Value => objptr
         newNode%nextNode => followingNode
         newNode%prevNode => precedingNode
@@ -271,11 +271,11 @@ contains
         followingNode%prevNode => newNode
         this%nodeCount = this%nodeCount + 1
       else
-        write(line,'(a)') 'Programming error in ListType%insert_after'
+        write (line, '(a)') 'Programming error in ListType%insert_after'
         call sim_message(line)
         call stop_with_error(1)
-      endif
-    endif
+      end if
+    end if
     !
     return
   end subroutine InsertAfter
@@ -292,10 +292,10 @@ contains
     !
     if (.not. associated(targetNode)) then
       stop 'Programming error, likely in call to ListType%InsertBefore'
-    endif
+    end if
     !
     ! Allocate a new list node and point its Value member to the object
-    allocate(newNode)
+    allocate (newNode)
     newNode%Value => objptr
     !
     ! Do the insertion
@@ -308,7 +308,7 @@ contains
       ! Insert before first node
       this%firstNode => newNode
       newNode%prevNode => null()
-    endif
+    end if
     targetNode%prevNode => newNode
     this%nodeCount = this%nodeCount + 1
     !
@@ -326,7 +326,7 @@ contains
       else
         this%currentNode => null()
         this%currentNodeIndex = 0
-      endif
+      end if
     else
       if (associated(this%currentNode%nextNode)) then
         this%currentNode => this%currentNode%nextNode
@@ -334,8 +334,8 @@ contains
       else
         this%currentNode => null()
         this%currentNodeIndex = 0
-      endif
-    endif
+      end if
+    end if
     return
   end subroutine Next
 
@@ -348,7 +348,7 @@ contains
     else
       this%currentNode => this%currentNode%prevNode
       this%currentNodeIndex = this%currentNodeIndex - 1
-    endif
+    end if
     return
   end subroutine Previous
 
@@ -365,8 +365,8 @@ contains
     implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
-    integer(I4B),    intent(in)    :: i
-    logical,         intent(in)    :: destroyValue
+    integer(I4B), intent(in) :: i
+    logical, intent(in) :: destroyValue
     ! -- local
     type(ListNodeType), pointer :: node
     !
@@ -374,7 +374,7 @@ contains
     node => this%get_node_by_index(i)
     if (associated(node)) then
       call this%remove_this_node(node, destroyValue)
-    endif
+    end if
     !
     return
   end subroutine remove_node_by_index
@@ -382,9 +382,9 @@ contains
   subroutine remove_this_node(this, node, destroyValue)
     implicit none
     ! -- dummy
-    class(ListType),             intent(inout) :: this
+    class(ListType), intent(inout) :: this
     type(ListNodeType), pointer, intent(inout) :: node
-    logical,                     intent(in)    :: destroyValue
+    logical, intent(in) :: destroyValue
     ! -- local
     !
     logical :: first, last
@@ -398,32 +398,32 @@ contains
         else
           node%prevNode%nextNode => null()
           this%lastNode => node%prevNode
-        endif
+        end if
       else
         first = .true.
-      endif
+      end if
       if (associated(node%nextNode)) then
         if (associated(node%prevNode)) then
           node%prevNode%nextNode => node%nextNode
         else
           node%nextNode%prevNode => null()
           this%firstNode => node%nextNode
-        endif
+        end if
       else
         last = .true.
-      endif
+      end if
       if (destroyValue) then
         call node%DeallocValue(destroyValue)
-      endif
-      deallocate(node)
+      end if
+      deallocate (node)
       this%nodeCount = this%nodeCount - 1
       if (first .and. last) then
         this%firstNode => null()
         this%lastNode => null()
         this%currentNode => null()
-      endif
+      end if
       call this%Reset()
-    endif
+    end if
     !
     return
   end subroutine remove_this_node
@@ -439,7 +439,7 @@ contains
     resultobj => null()
     if (associated(this%currentNode)) then
       resultobj => this%currentNode%Value
-    endif
+    end if
     return
   end function get_current_item
 
@@ -466,13 +466,13 @@ contains
     ! -- Ensure that this%currentNode is associated
     if (.not. associated(this%currentNode)) then
       this%currentNodeIndex = 0
-    endif
+    end if
     if (this%currentNodeIndex == 0) then
       if (associated(this%firstNode)) then
         this%currentNode => this%firstNode
         this%currentNodeIndex = 1
-      endif
-    endif
+      end if
+    end if
     !
     ! -- Check indx position relative to current node index
     i = 0
@@ -483,28 +483,28 @@ contains
         this%currentNode => this%firstNode
         this%currentNodeIndex = 1
         i = 1
-      endif
+      end if
     else
       i = this%currentNodeIndex
-    endif
+    end if
     if (i == 0) return
     !
     ! -- If current node is requested node,
     !    assign pointer and return
-    if (i==indx) then
+    if (i == indx) then
       resultobj => this%currentNode%Value
       return
-    endif
+    end if
     !
     ! -- Iterate from current node to requested node
     do while (associated(this%currentNode%nextNode))
       this%currentNode => this%currentNode%nextNode
       this%currentNodeIndex = this%currentNodeIndex + 1
-      if (this%currentNodeIndex==indx) then
+      if (this%currentNodeIndex == indx) then
         resultobj => this%currentNode%Value
         return
-      endif
-    enddo
+      end if
+    end do
     return
   end function get_item_by_index
 
@@ -533,8 +533,8 @@ contains
       if (associated(this%firstNode)) then
         this%currentNode => this%firstNode
         this%currentNodeIndex = 1
-      endif
-    endif
+      end if
+    end if
     !
     ! -- Check indx position relative to current node index
     i = 0
@@ -545,28 +545,28 @@ contains
         this%currentNode => this%firstNode
         this%currentNodeIndex = 1
         i = 1
-      endif
+      end if
     else
       i = this%currentNodeIndex
-    endif
+    end if
     if (i == 0) return
     !
     ! -- If current node is requested node,
     !    assign pointer and return
-    if (i==indx) then
+    if (i == indx) then
       resultnode => this%currentNode
       return
-    endif
+    end if
     !
     ! -- Iterate from current node to requested node
     do while (associated(this%currentNode%nextNode))
       this%currentNode => this%currentNode%nextNode
       this%currentNodeIndex = this%currentNodeIndex + 1
-      if (this%currentNodeIndex==indx) then
+      if (this%currentNodeIndex == indx) then
         resultnode => this%currentNode
         return
-      endif
-    enddo
+      end if
+    end do
     return
   end function get_node_by_index
 
@@ -602,11 +602,11 @@ contains
     if (associated(this%Value)) then
       if (present(destroy)) then
         if (destroy) then
-          deallocate(this%Value)
-        endif
-      endif
-      nullify(this%Value)
-    endif
+          deallocate (this%Value)
+        end if
+      end if
+      nullify (this%Value)
+    end if
     return
   end subroutine DeallocValue
 

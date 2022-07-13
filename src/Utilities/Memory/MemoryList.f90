@@ -4,7 +4,7 @@ module MemoryListModule
   use ListModule, only: ListType
   private
   public :: MemoryListType
-  
+
   type :: MemoryListType
     type(ListType), private :: list
   contains
@@ -13,9 +13,9 @@ module MemoryListModule
     procedure :: count
     procedure :: clear
   end type MemoryListType
-  
-  contains
-  
+
+contains
+
   subroutine add(this, mt)
     class(MemoryListType) :: this
     type(MemoryType), pointer :: mt
@@ -23,7 +23,7 @@ module MemoryListModule
     obj => mt
     call this%list%add(obj)
   end subroutine add
-  
+
   function get(this, ipos) result(res)
     class(MemoryListType) :: this
     integer(I4B), intent(in) :: ipos
@@ -36,7 +36,7 @@ module MemoryListModule
     end select
     return
   end function get
-  
+
   function count(this) result(nval)
     class(MemoryListType) :: this
     integer(I4B) :: nval
@@ -48,5 +48,5 @@ module MemoryListModule
     class(MemoryListType) :: this
     call this%list%Clear()
   end subroutine clear
-  
+
 end module MemoryListModule
