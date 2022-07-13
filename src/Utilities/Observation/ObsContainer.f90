@@ -16,7 +16,7 @@ module ObsContainerModule
 
   type :: ObsContainerType
     ! -- Public members
-    class(ObserveType), pointer, public                    :: obsrv => null()
+    class(ObserveType), pointer, public :: obsrv => null()
   end type ObsContainerType
 
 end module ObsContainerModule

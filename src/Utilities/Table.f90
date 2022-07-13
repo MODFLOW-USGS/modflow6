@@ -1,22 +1,22 @@
-! Comprehensive table object that stores all of the 
-! intercell flows, and the inflows and the outflows for 
+! Comprehensive table object that stores all of the
+! intercell flows, and the inflows and the outflows for
 ! an advanced package.
 module TableModule
-  
+
   use KindModule, only: I4B, I8B, DP
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT,                              &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,        &
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                              TABCENTER
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
-  
+
   implicit none
-  
+
   public :: TableType
   public :: table_cr
-  
+
   type :: TableType
     !
     ! -- name, number of control volumes, and number of table terms
@@ -45,18 +45,18 @@ module TableModule
     !
     ! -- table table object, for writing the typical MODFLOW table
     type(TableType), pointer :: table => null()
-    
+
     character(len=LINELENGTH), pointer :: linesep => null()
     character(len=LINELENGTH), pointer :: dataline => null()
     character(len=LINELENGTH), dimension(:), pointer :: header => null()
-    
-    contains
-  
+
+  contains
+
     procedure :: table_df
     procedure :: table_da
     procedure :: initialize_column
     procedure :: line_to_columns
-    procedure :: finalize_table  
+    procedure :: finalize_table
     procedure :: set_maxbound
     procedure :: set_kstpkper
     procedure :: set_title
@@ -65,20 +65,20 @@ module TableModule
     procedure :: print_separator
 
     procedure, private :: allocate_strings
-    procedure, private :: set_header  
-    procedure, private :: write_header 
-    procedure, private :: write_line  
+    procedure, private :: set_header
+    procedure, private :: write_header
+    procedure, private :: write_line
     procedure, private :: finalize
     procedure, private :: add_error
     procedure, private :: reset
-    
-    generic, public :: add_term => add_integer, add_long_integer,                &
-                                   add_real, add_string
-    procedure, private :: add_integer, add_long_integer, add_real, add_string    
+
+    generic, public :: add_term => add_integer, add_long_integer, &
+      add_real, add_string
+    procedure, private :: add_integer, add_long_integer, add_real, add_string
 
   end type TableType
-  
-  contains
+
+contains
 
   subroutine table_cr(this, name, title)
 ! ******************************************************************************
@@ -98,12 +98,12 @@ module TableModule
     ! -- check if table already associated and reset if necessary
     if (associated(this)) then
       call this%table_da()
-      deallocate(this)
-      nullify(this)
+      deallocate (this)
+      nullify (this)
     end if
     !
     ! -- Create the object
-    allocate(this)
+    allocate (this)
     !
     ! -- initialize variables
     this%name = name
@@ -113,7 +113,7 @@ module TableModule
     return
   end subroutine table_cr
 
-  subroutine table_df(this, maxbound, ntableterm, iout, transient,               &
+  subroutine table_df(this, maxbound, ntableterm, iout, transient, &
                       lineseparator, separator, finalize)
 ! ******************************************************************************
 ! table_df -- Define the new table object
@@ -134,29 +134,29 @@ module TableModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
-    allocate(this%sep)
-    allocate(this%write_csv)
-    allocate(this%first_entry)
-    allocate(this%transient)
-    allocate(this%add_linesep)
-    allocate(this%allow_finalization)
-    allocate(this%iout)
-    allocate(this%maxbound)
-    allocate(this%nheaderlines)
-    allocate(this%nlinewidth)
-    allocate(this%ntableterm)
-    allocate(this%ientry)
-    allocate(this%iloc)
-    allocate(this%icount)
+    allocate (this%sep)
+    allocate (this%write_csv)
+    allocate (this%first_entry)
+    allocate (this%transient)
+    allocate (this%add_linesep)
+    allocate (this%allow_finalization)
+    allocate (this%iout)
+    allocate (this%maxbound)
+    allocate (this%nheaderlines)
+    allocate (this%nlinewidth)
+    allocate (this%ntableterm)
+    allocate (this%ientry)
+    allocate (this%iloc)
+    allocate (this%icount)
     !
     ! -- allocate space for tableterm
-    allocate(this%tableterm(ntableterm))
+    allocate (this%tableterm(ntableterm))
     !
     ! -- initialize values based on optional dummy variables
     if (present(transient)) then
       this%transient = transient
-      allocate(this%kstp)
-      allocate(this%kper)
+      allocate (this%kstp)
+      allocate (this%kper)
     else
       this%transient = .FALSE.
     end if
@@ -193,7 +193,7 @@ module TableModule
     ! -- return
     return
   end subroutine table_df
-  
+
   subroutine initialize_column(this, text, width, alignment)
 ! ******************************************************************************
 ! initialize_column -- Initialize data for a column
@@ -225,16 +225,16 @@ module TableModule
     !
     ! -- check that ientry is in bounds
     if (this%ientry > this%ntableterm) then
-      write(errmsg,'(a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)')                      &
-        'Trying to add column "', trim(adjustl(text)), '" (',                    &
-        this%ientry, ') in the', trim(adjustl(this%name)), 'table ("',           &
-        trim(adjustl(this%title)), '") that only has', this%ntableterm,          &
+      write (errmsg, '(a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)') &
+        'Trying to add column "', trim(adjustl(text)), '" (', &
+        this%ientry, ') in the', trim(adjustl(this%name)), 'table ("', &
+        trim(adjustl(this%title)), '") that only has', this%ntableterm, &
         'columns.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
     ! -- initialize table term
-    call this%tableterm(idx)%initialize(text, width, alignment=ialign)      
+    call this%tableterm(idx)%initialize(text, width, alignment=ialign)
     !
     ! -- create header when all terms have been specified
     if (this%ientry == this%ntableterm) then
@@ -247,7 +247,7 @@ module TableModule
     ! -- return
     return
   end subroutine initialize_column
-  
+
   subroutine set_header(this)
 ! ******************************************************************************
 ! set_header -- Set the table object header
@@ -306,19 +306,19 @@ module TableModule
         alignment = this%tableterm(j)%get_alignment()
         call this%tableterm(j)%get_header(n, cval)
         if (this%write_csv) then
-          if ( j == 1) then
-            write(this%header(nn), '(a)') trim(adjustl(cval))
+          if (j == 1) then
+            write (this%header(nn), '(a)') trim(adjustl(cval))
           else
-            write(this%header(nn), '(a,",",G0)')                                 &
+            write (this%header(nn), '(a,",",G0)') &
               trim(this%header(nn)), trim(adjustl(cval))
           end if
         else
           if (j == this%ntableterm) then
-            call UWWORD(this%header(nn), iloc, width, TABUCSTRING,               &
-                          cval(1:width), ival, rval, ALIGNMENT=alignment)
+            call UWWORD(this%header(nn), iloc, width, TABUCSTRING, &
+                        cval(1:width), ival, rval, ALIGNMENT=alignment)
           else
-            call UWWORD(this%header(nn), iloc, width, TABUCSTRING,               &
-                        cval(1:width), ival, rval, ALIGNMENT=alignment,          &
+            call UWWORD(this%header(nn), iloc, width, TABUCSTRING, &
+                        cval(1:width), ival, rval, ALIGNMENT=alignment, &
                         SEP=this%sep)
           end if
         end if
@@ -328,7 +328,7 @@ module TableModule
     ! -- return
     return
   end subroutine set_header
-  
+
   subroutine allocate_strings(this, width, nlines)
 ! ******************************************************************************
 ! allocate_strings -- Allocate allocatable character arrays
@@ -359,9 +359,9 @@ module TableModule
     this%nlinewidth = width
     !
     ! -- allocate deferred length strings
-    allocate(this%header(this%nheaderlines))
-    allocate(this%linesep)
-    allocate(this%dataline)
+    allocate (this%header(this%nheaderlines))
+    allocate (this%linesep)
+    allocate (this%dataline)
     !
     ! -- initialize lines
     this%linesep = linesep(1:width)
@@ -374,12 +374,12 @@ module TableModule
     !    linesep
     if (this%add_linesep) then
       this%header(1) = linesep(1:width)
-      this%header(nlines+2) = linesep(1:width)
+      this%header(nlines + 2) = linesep(1:width)
     end if
     !
     ! -- return
     return
-  end subroutine allocate_strings  
+  end subroutine allocate_strings
 
   subroutine write_header(this)
 ! ******************************************************************************
@@ -405,16 +405,16 @@ module TableModule
       ! -- write title
       title = this%title
       if (this%transient) then
-        write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', this%kper
-        write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', this%kstp
+        write (title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', this%kper
+        write (title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', this%kstp
       end if
       if (len_trim(title) > 0) then
-        write(this%iout, '(/,1x,a)') trim(adjustl(title))
+        write (this%iout, '(/,1x,a)') trim(adjustl(title))
       end if
       !
       ! -- write header
       do n = 1, this%nheaderlines
-        write(this%iout, '(1x,a)') this%header(n)(1:width)
+        write (this%iout, '(1x,a)') this%header(n) (1:width)
       end do
     end if
     !
@@ -426,7 +426,7 @@ module TableModule
     ! -- return
     return
   end subroutine write_header
-  
+
   subroutine write_line(this)
 ! ******************************************************************************
 ! write_line -- Write the data line
@@ -445,7 +445,7 @@ module TableModule
     width = this%nlinewidth
     !
     ! -- write the dataline
-    write(this%iout, '(1x,a)') this%dataline(1:width)
+    write (this%iout, '(1x,a)') this%dataline(1:width)
     !
     ! -- update column and line counters
     this%ientry = 0
@@ -455,11 +455,11 @@ module TableModule
     ! -- return
     return
   end subroutine write_line
-  
+
   subroutine finalize(this)
 ! ******************************************************************************
 ! finalize -- Private method that test for last line. If last line the
-!             public finalize_table method is called  
+!             public finalize_table method is called
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -478,7 +478,7 @@ module TableModule
     ! -- return
     return
   end subroutine finalize
-  
+
   subroutine finalize_table(this)
 ! ******************************************************************************
 ! finalize -- Public method to finalize the table
@@ -496,14 +496,14 @@ module TableModule
     call this%print_separator(iextralines=1)
     !
     ! -- flush file
-    flush(this%iout)
+    flush (this%iout)
     !
     ! -- reinitialize variables
     call this%reset()
     !
     ! -- return
     return
-  end subroutine finalize_table  
+  end subroutine finalize_table
 
   subroutine table_da(this)
 ! ******************************************************************************
@@ -525,37 +525,37 @@ module TableModule
     end do
     !
     ! -- deallocate space for tableterm
-    deallocate(this%tableterm)
+    deallocate (this%tableterm)
     !
     ! -- deallocate character scalars and arrays
-    deallocate(this%linesep)
-    deallocate(this%dataline)
-    deallocate(this%header)
+    deallocate (this%linesep)
+    deallocate (this%dataline)
+    deallocate (this%header)
     !
     ! -- deallocate scalars
     if (this%transient) then
-      deallocate(this%kstp)
-      deallocate(this%kper)
+      deallocate (this%kstp)
+      deallocate (this%kper)
     end if
-    deallocate(this%sep)
-    deallocate(this%write_csv)
-    deallocate(this%first_entry)
-    deallocate(this%transient)
-    deallocate(this%add_linesep)
-    deallocate(this%allow_finalization)
-    deallocate(this%iout)
-    deallocate(this%maxbound)
-    deallocate(this%nheaderlines)
-    deallocate(this%nlinewidth)
-    deallocate(this%ntableterm)
-    deallocate(this%ientry)
-    deallocate(this%iloc)
-    deallocate(this%icount)
+    deallocate (this%sep)
+    deallocate (this%write_csv)
+    deallocate (this%first_entry)
+    deallocate (this%transient)
+    deallocate (this%add_linesep)
+    deallocate (this%allow_finalization)
+    deallocate (this%iout)
+    deallocate (this%maxbound)
+    deallocate (this%nheaderlines)
+    deallocate (this%nlinewidth)
+    deallocate (this%ntableterm)
+    deallocate (this%ientry)
+    deallocate (this%iloc)
+    deallocate (this%icount)
     !
     ! -- Return
     return
   end subroutine table_da
-  
+
   subroutine line_to_columns(this, line)
 ! ******************************************************************************
 ! line_to_columns -- convert a line to the correct number of columns
@@ -599,12 +599,12 @@ module TableModule
     end do
     !
     ! -- clean up local allocatable array
-    deallocate(words)
+    deallocate (words)
     !
     ! -- Return
     return
-  end subroutine line_to_columns  
-  
+  end subroutine line_to_columns
+
   subroutine add_error(this)
 ! ******************************************************************************
 ! add_error -- evaluate if error condition occurs when adding data to dataline
@@ -620,9 +620,9 @@ module TableModule
     !
     ! -- check that ientry is within bounds
     if (this%ientry > this%ntableterm) then
-      write(errmsg,'(a,1x,i0,5(1x,a),1x,i0,1x,a)')                               &
-        'Trying to add data to column ', this%ientry, 'in the',                  &
-        trim(adjustl(this%name)), 'table (', trim(adjustl(this%title)),          &
+      write (errmsg, '(a,1x,i0,5(1x,a),1x,i0,1x,a)') &
+        'Trying to add data to column ', this%ientry, 'in the', &
+        trim(adjustl(this%name)), 'table (', trim(adjustl(this%title)), &
         ') that only has', this%ntableterm, 'columns.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
@@ -630,7 +630,7 @@ module TableModule
     ! -- Return
     return
   end subroutine add_error
-  
+
   subroutine add_integer(this, ival)
 ! ******************************************************************************
 ! add_integer -- add integer value to the dataline
@@ -674,16 +674,16 @@ module TableModule
     ! -- add data to line
     if (this%write_csv) then
       if (j == 1) then
-        write(this%dataline, '(G0)') ival
+        write (this%dataline, '(G0)') ival
       else
-        write(this%dataline, '(a,",",G0)') trim(this%dataline), ival
+        write (this%dataline, '(a,",",G0)') trim(this%dataline), ival
       end if
     else
       if (j == this%ntableterm) then
-        call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                 &
+        call UWWORD(this%dataline, this%iloc, width, TABINTEGER, &
                     cval, ival, rval, ALIGNMENT=alignment)
       else
-        call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                 &
+        call UWWORD(this%dataline, this%iloc, width, TABINTEGER, &
                     cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
       end if
     end if
@@ -701,7 +701,7 @@ module TableModule
     ! -- Return
     return
   end subroutine add_integer
-  
+
   subroutine add_long_integer(this, long_ival)
 ! ******************************************************************************
 ! add_long_integer -- add long integer value to the dataline
@@ -746,17 +746,17 @@ module TableModule
     ! -- add data to line
     if (this%write_csv) then
       if (j == 1) then
-        write(this%dataline, '(G0)') long_ival
+        write (this%dataline, '(G0)') long_ival
       else
-        write(this%dataline, '(a,",",G0)') trim(this%dataline), long_ival
+        write (this%dataline, '(a,",",G0)') trim(this%dataline), long_ival
       end if
     else
-      write(cval, '(i0)') long_ival
+      write (cval, '(i0)') long_ival
       if (j == this%ntableterm) then
-        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING, &
                     trim(cval), ival, rval, ALIGNMENT=alignment)
       else
-        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING, &
                     trim(cval), ival, rval, ALIGNMENT=alignment, SEP=this%sep)
       end if
     end if
@@ -818,16 +818,16 @@ module TableModule
     ! -- add data to line
     if (this%write_csv) then
       if (j == 1) then
-        write(this%dataline, '(G0)') rval
+        write (this%dataline, '(G0)') rval
       else
-        write(this%dataline, '(a,",",G0)') trim(this%dataline), rval
+        write (this%dataline, '(a,",",G0)') trim(this%dataline), rval
       end if
     else
       if (j == this%ntableterm) then
-        call UWWORD(this%dataline, this%iloc, width, TABREAL,                    &
+        call UWWORD(this%dataline, this%iloc, width, TABREAL, &
                     cval, ival, rval, ALIGNMENT=alignment)
       else
-        call UWWORD(this%dataline, this%iloc, width, TABREAL,                    &
+        call UWWORD(this%dataline, this%iloc, width, TABREAL, &
                     cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
       end if
     end if
@@ -845,7 +845,7 @@ module TableModule
     ! -- Return
     return
   end subroutine add_real
-  
+
   subroutine add_string(this, cval)
 ! ******************************************************************************
 ! add_string -- add string value to the dataline
@@ -889,17 +889,17 @@ module TableModule
     ! -- add data to line
     if (this%write_csv) then
       if (j == 1) then
-        write(this%dataline, '(a)') trim(adjustl(cval))
+        write (this%dataline, '(a)') trim(adjustl(cval))
       else
-        write(this%dataline, '(a,",",a)')                                        &
+        write (this%dataline, '(a,",",a)') &
           trim(this%dataline), trim(adjustl(cval))
       end if
     else
       if (j == this%ntableterm) then
-        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING, &
                     cval, ival, rval, ALIGNMENT=alignment)
       else
-        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING, &
                     cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
       end if
     end if
@@ -917,7 +917,7 @@ module TableModule
     ! -- Return
     return
   end subroutine add_string
-  
+
   subroutine set_maxbound(this, maxbound)
 ! ******************************************************************************
 ! set_maxbound -- reset maxbound
@@ -940,8 +940,8 @@ module TableModule
     !
     ! -- return
     return
-  end subroutine set_maxbound   
-  
+  end subroutine set_maxbound
+
   subroutine set_kstpkper(this, kstp, kper)
 ! ******************************************************************************
 ! set_kstpkper -- reset kstp and kper
@@ -963,8 +963,8 @@ module TableModule
     !
     ! -- return
     return
-  end subroutine set_kstpkper   
-  
+  end subroutine set_kstpkper
+
   subroutine set_title(this, title)
 ! ******************************************************************************
 ! set_maxbound -- reset maxbound
@@ -985,7 +985,7 @@ module TableModule
     ! -- return
     return
   end subroutine set_title
-  
+
   subroutine set_iout(this, iout)
 ! ******************************************************************************
 ! set_iout -- reset iout
@@ -1005,8 +1005,8 @@ module TableModule
     !
     ! -- return
     return
-  end subroutine set_iout   
-  
+  end subroutine set_iout
+
   subroutine print_list_entry(this, i, nodestr, q, bname)
 ! ******************************************************************************
 ! print_list_entry -- write flow term table values
@@ -1034,8 +1034,8 @@ module TableModule
     !
     ! -- return
     return
-  end subroutine print_list_entry  
-  
+  end subroutine print_list_entry
+
   subroutine print_separator(this, iextralines)
 ! ******************************************************************************
 ! print_separator -- print a line separator to the table
@@ -1065,16 +1065,16 @@ module TableModule
     !
     ! -- print line separator
     if (this%add_linesep) then
-      write(this%iout, '(1x,a)') this%linesep(1:width)
+      write (this%iout, '(1x,a)') this%linesep(1:width)
       do i = 1, iextra
-        write(this%iout, '(/)')
+        write (this%iout, '(/)')
       end do
     end if
     !
     ! -- return
     return
   end subroutine print_separator
-  
+
   subroutine reset(this)
 ! ******************************************************************************
 ! reset -- Private method to reset table counters
@@ -1095,6 +1095,6 @@ module TableModule
     !
     ! -- return
     return
-  end subroutine reset 
+  end subroutine reset
 
 end module TableModule

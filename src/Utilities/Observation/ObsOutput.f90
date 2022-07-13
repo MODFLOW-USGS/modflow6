@@ -64,9 +64,9 @@ contains
     implicit none
     ! -- dummy
     class(ObsOutputType), intent(inout) :: this
-    ! -- write a line return to end of observation output line 
+    ! -- write a line return to end of observation output line
     !    for this totim
-    write(this%nunit,'(a)', advance='YES') ''
+    write (this%nunit, '(a)', advance='YES') ''
     !
     return
   end subroutine WriteLineout
@@ -115,7 +115,7 @@ contains
     character(len=*), intent(in) :: fname
     integer(I4B), intent(in) :: nunit
     !
-    allocate(newObsOutput)
+    allocate (newObsOutput)
     newObsOutput%filename = fname
     newObsOutput%nunit = nunit
     return
@@ -124,7 +124,7 @@ contains
   subroutine AddObsOutputToList(list, obsOutput)
     implicit none
     ! -- dummy
-    type(ListType),               intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(ObsOutputType), pointer, intent(inout) :: obsOutput
     ! -- local
     class(*), pointer :: obj
@@ -135,12 +135,12 @@ contains
     return
   end subroutine AddObsOutputToList
 
-  function GetObsOutputFromList(list, idx) result (res)
+  function GetObsOutputFromList(list, idx) result(res)
     implicit none
     ! -- dummy
-    type(ListType),   intent(inout) :: list
-    integer(I4B),          intent(in)    :: idx
-    type(ObsOutputType), pointer    :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    type(ObsOutputType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

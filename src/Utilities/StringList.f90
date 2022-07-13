@@ -1,5 +1,5 @@
 module StringListModule
-  
+
   use KindModule, only: DP, I4B
   use ListModule, only: ListType
 
@@ -12,17 +12,17 @@ module StringListModule
 
 contains
 
-  subroutine ConstructCharacterContainer (newCharCont, text)
+  subroutine ConstructCharacterContainer(newCharCont, text)
     implicit none
     type(CharacterContainerType), pointer, intent(out) :: newCharCont
     character(len=*), intent(in) :: text
     !
-    allocate(newCharCont)
+    allocate (newCharCont)
     newCharCont%charstring = text
     return
   end subroutine ConstructCharacterContainer
 
-  function CastAsCharacterContainerType(obj) result (res)
+  function CastAsCharacterContainerType(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
     type(CharacterContainerType), pointer :: res
@@ -51,12 +51,12 @@ contains
     if (associated(newCharacterContainer)) then
       obj => newCharacterContainer
       call list%Add(obj)
-    endif
+    end if
     !
     return
   end subroutine AddStringToList
-  
-  function GetStringFromList(list, indx) result (string)
+
+  function GetStringFromList(list, indx) result(string)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
@@ -71,7 +71,7 @@ contains
     charcont => CastAsCharacterContainerType(obj)
     if (associated(charcont)) then
       string = charcont%charstring
-    endif
+    end if
     !
     return
   end function GetStringFromList
