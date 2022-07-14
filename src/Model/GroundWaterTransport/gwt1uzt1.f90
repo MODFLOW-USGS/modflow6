@@ -13,7 +13,7 @@
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for water volumes
 ! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
 ! AUXILIARY                 none          none                  none
-! none                      none          STORAGE (aux MASS)    
+! none                      none          STORAGE (aux MASS)
 ! none                      none          AUXILIARY             none
 
 ! -- terms from UZF that need to be handled here
@@ -23,37 +23,36 @@
 ! REJ-INF-TO-MVR            idxbudritm    REJ-INF-TO-MVR        q * cinfil?
 
 ! -- terms from UZF that should be skipped
-  
-  
+
 module GwtUztModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use UzfModule, only: UzfType
   use GwtAptModule, only: GwtAptType
-  
+
   implicit none
-  
+
   public uzt_create
-  
+
   character(len=*), parameter :: ftype = 'UZT'
   character(len=*), parameter :: flowtype = 'UZF'
-  character(len=16)           :: text  = '             UZT'
-  
+  character(len=16) :: text = '             UZT'
+
   type, extends(GwtAptType) :: GwtUztType
-    
-    integer(I4B), pointer                       :: idxbudinfl => null()  ! index of uzf infiltration terms in flowbudptr
-    integer(I4B), pointer                       :: idxbudrinf => null()  ! index of rejected infiltration terms in flowbudptr
-    integer(I4B), pointer                       :: idxbuduzet => null()  ! index of unsat et terms in flowbudptr
-    integer(I4B), pointer                       :: idxbudritm => null()  ! index of rej infil to mover rate to mover terms in flowbudptr
-    real(DP), dimension(:), pointer, contiguous :: concinfl => null()    ! infiltration concentration
-    real(DP), dimension(:), pointer, contiguous :: concuzet => null()    ! unsat et concentration
+
+    integer(I4B), pointer :: idxbudinfl => null() ! index of uzf infiltration terms in flowbudptr
+    integer(I4B), pointer :: idxbudrinf => null() ! index of rejected infiltration terms in flowbudptr
+    integer(I4B), pointer :: idxbuduzet => null() ! index of unsat et terms in flowbudptr
+    integer(I4B), pointer :: idxbudritm => null() ! index of rej infil to mover rate to mover terms in flowbudptr
+    real(DP), dimension(:), pointer, contiguous :: concinfl => null() ! infiltration concentration
+    real(DP), dimension(:), pointer, contiguous :: concuzet => null() ! unsat et concentration
 
   contains
-  
+
     procedure :: bnd_da => uzt_da
     procedure :: allocate_scalars
     procedure :: apt_allocate_arrays => uzt_allocate_arrays
@@ -70,11 +69,11 @@ module GwtUztModule
     procedure :: pak_df_obs => uzt_df_obs
     procedure :: pak_bd_obs => uzt_bd_obs
     procedure :: pak_set_stressperiod => uzt_set_stressperiod
-    
+
   end type GwtUztType
 
-  contains  
-  
+contains
+
   subroutine uzt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi)
 ! ******************************************************************************
@@ -85,19 +84,19 @@ module GwtUztModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
     ! -- local
     type(GwtUztType), pointer :: uztobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(uztobj)
+    allocate (uztobj)
     packobj => uztobj
     !
     ! -- create name and memory path
@@ -116,7 +115,7 @@ module GwtUztModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-    
+
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
@@ -158,7 +157,7 @@ module GwtUztModule
       !
     else
       if (associated(this%fmi%gwfbndlist)) then
-        ! -- Look through gwfbndlist for a flow package with the same name as 
+        ! -- Look through gwfbndlist for a flow package with the same name as
         !    this transport package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
@@ -169,8 +168,8 @@ module GwtUztModule
             !    use the select type to point to the budobj in flow package
             this%flowpackagebnd => packobj
             select type (packobj)
-              type is (UzfType)
-                this%flowbudptr => packobj%budobj
+            type is (UzfType)
+              this%flowbudptr => packobj%budobj
             end select
           end if
           if (found) exit
@@ -180,54 +179,54 @@ module GwtUztModule
     !
     ! -- error if flow package not found
     if (.not. found) then
-      write(errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
-                            &// trim(adjustl(this%flowpackagename)) // '.'
+      write (errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
+                            &//trim(adjustl(this%flowpackagename))//'.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
-    ! -- allocate space for idxbudssm, which indicates whether this is a 
+    ! -- allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
     nbudterm = this%flowbudptr%nbudterm
     call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
-    write(this%iout, '(/, a, a)') &
-      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%packName
-    write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN ' // flowtype // ' PACKAGE'
-    write(this%iout, '(a, i0)') &
-      '  NUMBER OF ' // flowtype // ' = ', this%flowbudptr%ncv
+    write (this%iout, '(/, a, a)') &
+      'PROCESSING '//ftype//' INFORMATION FOR ', this%packName
+    write (this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN '//flowtype//' PACKAGE'
+    write (this%iout, '(a, i0)') &
+      '  NUMBER OF '//flowtype//' = ', this%flowbudptr%ncv
     icount = 1
     do ip = 1, this%flowbudptr%nbudterm
-      select case(trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)))
-      case('FLOW-JA-FACE')
+      select case (trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)))
+      case ('FLOW-JA-FACE')
         this%idxbudfjf = ip
         this%idxbudssm(ip) = 0
-      case('GWF')
+      case ('GWF')
         this%idxbudgwf = ip
         this%idxbudssm(ip) = 0
-      case('STORAGE')
+      case ('STORAGE')
         this%idxbudsto = ip
         this%idxbudssm(ip) = 0
-      case('INFILTRATION')
+      case ('INFILTRATION')
         this%idxbudinfl = ip
         this%idxbudssm(ip) = 0
-      case('REJ-INF')
+      case ('REJ-INF')
         this%idxbudrinf = ip
         this%idxbudssm(ip) = 0
-      case('UZET')
+      case ('UZET')
         this%idxbuduzet = ip
         this%idxbudssm(ip) = 0
-      case('REJ-INF-TO-MVR')
+      case ('REJ-INF-TO-MVR')
         this%idxbudritm = ip
         this%idxbudssm(ip) = 0
-      case('TO-MVR')
+      case ('TO-MVR')
         this%idxbudtmvr = ip
         this%idxbudssm(ip) = 0
-      case('FROM-MVR')
+      case ('FROM-MVR')
         this%idxbudfmvr = ip
         this%idxbudssm(ip) = 0
-      case('AUXILIARY')
+      case ('AUXILIARY')
         this%idxbudaux = ip
         this%idxbudssm(ip) = 0
       case default
@@ -237,11 +236,11 @@ module GwtUztModule
         this%idxbudssm(ip) = icount
         icount = icount + 1
       end select
-      write(this%iout, '(a, i0, " = ", a,/, a, i0)') &
+      write (this%iout, '(a, i0, " = ", a,/, a, i0)') &
         '  TERM ', ip, trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)), &
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
     end do
-    write(this%iout, '(a, //)') 'DONE PROCESSING ' // ftype // ' INFORMATION'
+    write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
     !
     ! -- Return
     return
@@ -321,7 +320,7 @@ module GwtUztModule
 
   subroutine uzt_solve(this)
 ! ******************************************************************************
-! uzt_solve -- add terms specific to the unsaturated zone to the explicit 
+! uzt_solve -- add terms specific to the unsaturated zone to the explicit
 !              unsaturated-zone solve
 ! ******************************************************************************
 !
@@ -370,7 +369,7 @@ module GwtUztModule
     ! -- Return
     return
   end subroutine uzt_solve
-  
+
   function uzt_get_nbudterms(this) result(nbudterms)
 ! ******************************************************************************
 ! uzt_get_nbudterms -- function to return the number of budget terms just for
@@ -397,7 +396,7 @@ module GwtUztModule
     ! -- Return
     return
   end function uzt_get_nbudterms
-  
+
   subroutine uzt_setup_budobj(this, idx)
 ! ******************************************************************************
 ! uzt_setup_budobj -- Set up the budget object that stores all the unsaturated-
@@ -416,7 +415,7 @@ module GwtUztModule
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! -- 
+    ! --
     text = '    INFILTRATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudinfl)%maxlist
@@ -428,9 +427,9 @@ module GwtUztModule
                                              this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
-    
+
     !
-    ! -- 
+    ! --
     if (this%idxbudrinf /= 0) then
       text = '         REJ-INF'
       idx = idx + 1
@@ -444,9 +443,9 @@ module GwtUztModule
                                                maxlist, .false., .false., &
                                                naux)
     end if
-    
+
     !
-    ! -- 
+    ! --
     if (this%idxbuduzet /= 0) then
       text = '            UZET'
       idx = idx + 1
@@ -460,9 +459,9 @@ module GwtUztModule
                                                maxlist, .false., .false., &
                                                naux)
     end if
-    
+
     !
-    ! -- 
+    ! --
     if (this%idxbudritm /= 0) then
       text = '  INF-REJ-TO-MVR'
       idx = idx + 1
@@ -476,7 +475,7 @@ module GwtUztModule
                                                maxlist, .false., .false., &
                                                naux)
     end if
-    
+
     !
     ! -- return
     return
@@ -502,7 +501,7 @@ module GwtUztModule
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
-    
+
     ! -- INFILTRATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudinfl)%nlist
@@ -512,7 +511,7 @@ module GwtUztModule
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
+
     ! -- REJ-INF
     if (this%idxbudrinf /= 0) then
       idx = idx + 1
@@ -524,7 +523,7 @@ module GwtUztModule
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-    
+
     ! -- UZET
     if (this%idxbuduzet /= 0) then
       idx = idx + 1
@@ -536,7 +535,7 @@ module GwtUztModule
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-    
+
     ! -- REJ-INF-TO-MVR
     if (this%idxbudritm /= 0) then
       idx = idx + 1
@@ -548,7 +547,7 @@ module GwtUztModule
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-    
+
     !
     ! -- return
     return
@@ -576,7 +575,7 @@ module GwtUztModule
     call mem_allocate(this%idxbudrinf, 'IDXBUDRINF', this%memoryPath)
     call mem_allocate(this%idxbuduzet, 'IDXBUDUZET', this%memoryPath)
     call mem_allocate(this%idxbudritm, 'IDXBUDRITM', this%memoryPath)
-    ! 
+    !
     ! -- Initialize
     this%idxbudinfl = 0
     this%idxbudrinf = 0
@@ -601,7 +600,7 @@ module GwtUztModule
     ! -- local
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
-    !    
+    !
     ! -- time series
     call mem_allocate(this%concinfl, this%ncv, 'CONCINFL', this%memoryPath)
     call mem_allocate(this%concuzet, this%ncv, 'CONCUZET', this%memoryPath)
@@ -619,7 +618,7 @@ module GwtUztModule
     ! -- Return
     return
   end subroutine uzt_allocate_arrays
-  
+
   subroutine uzt_da(this)
 ! ******************************************************************************
 ! uzt_da
@@ -692,7 +691,7 @@ module GwtUztModule
     ! -- return
     return
   end subroutine uzt_infl_term
-  
+
   subroutine uzt_rinf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -724,7 +723,7 @@ module GwtUztModule
     ! -- return
     return
   end subroutine uzt_rinf_term
-  
+
   subroutine uzt_uzet_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -759,13 +758,13 @@ module GwtUztModule
     if (present(rrate)) &
       rrate = omega * qbnd * this%xnewpak(n1) + &
               (DONE - omega) * qbnd * ctmp
-    if (present(rhsval)) rhsval = - (DONE - omega) * qbnd * ctmp
+    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
     if (present(hcofval)) hcofval = omega * qbnd
     !
     ! -- return
     return
   end subroutine uzt_uzet_term
-  
+
   subroutine uzt_ritm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -797,7 +796,7 @@ module GwtUztModule
     ! -- return
     return
   end subroutine uzt_ritm_term
-  
+
   subroutine uzt_df_obs(this)
 ! ******************************************************************************
 ! uzt_df_obs -- obs are supported?
@@ -837,7 +836,7 @@ module GwtUztModule
     !
     return
   end subroutine uzt_df_obs
-  
+
   subroutine uzt_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
 ! uzt_bd_obs -- calculate observation value and pass it back to APT
@@ -857,24 +856,24 @@ module GwtUztModule
     !
     found = .true.
     select case (obstypeid)
-      case ('INFILTRATION')
-        if (this%iboundpak(jj) /= 0 .and. this%idxbudinfl > 0) then
-          call this%uzt_infl_term(jj, n1, n2, v)
-        end if
-      case ('REJ-INF')
-        if (this%iboundpak(jj) /= 0 .and. this%idxbudrinf > 0) then
-          call this%uzt_rinf_term(jj, n1, n2, v)
-        end if
-      case ('UZET')
-        if (this%iboundpak(jj) /= 0 .and. this%idxbuduzet > 0) then
-          call this%uzt_uzet_term(jj, n1, n2, v)
-        end if
-      case ('REJ-INF-TO-MVR')
-        if (this%iboundpak(jj) /= 0 .and. this%idxbudritm > 0) then
-          call this%uzt_ritm_term(jj, n1, n2, v)
-        end if
-      case default
-        found = .false.
+    case ('INFILTRATION')
+      if (this%iboundpak(jj) /= 0 .and. this%idxbudinfl > 0) then
+        call this%uzt_infl_term(jj, n1, n2, v)
+      end if
+    case ('REJ-INF')
+      if (this%iboundpak(jj) /= 0 .and. this%idxbudrinf > 0) then
+        call this%uzt_rinf_term(jj, n1, n2, v)
+      end if
+    case ('UZET')
+      if (this%iboundpak(jj) /= 0 .and. this%idxbuduzet > 0) then
+        call this%uzt_uzet_term(jj, n1, n2, v)
+      end if
+    case ('REJ-INF-TO-MVR')
+      if (this%iboundpak(jj) /= 0 .and. this%idxbudritm > 0) then
+        call this%uzt_ritm_term(jj, n1, n2, v)
+      end if
+    case default
+      found = .false.
     end select
     !
     return
@@ -889,7 +888,7 @@ module GwtUztModule
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtUztType),intent(inout) :: this
+    class(GwtUztType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
@@ -906,39 +905,38 @@ module GwtUztModule
     !
     found = .true.
     select case (keyword)
-      case ('INFILTRATION')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) then
-          goto 999
-        end if
-        call this%parser%GetString(text)
-        jj = 1
-        bndElem => this%concinfl(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'INFILTRATION')
-      case ('UZET')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) then
-          goto 999
-        end if
-        call this%parser%GetString(text)
-        jj = 1
-        bndElem => this%concuzet(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'UZET')
-      case default
-        !
-        ! -- keyword not recognized so return to caller with found = .false.
-        found = .false.
+    case ('INFILTRATION')
+      ierr = this%apt_check_valid(itemno)
+      if (ierr /= 0) then
+        goto 999
+      end if
+      call this%parser%GetString(text)
+      jj = 1
+      bndElem => this%concinfl(itemno)
+      call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'INFILTRATION')
+    case ('UZET')
+      ierr = this%apt_check_valid(itemno)
+      if (ierr /= 0) then
+        goto 999
+      end if
+      call this%parser%GetString(text)
+      jj = 1
+      bndElem => this%concuzet(itemno)
+      call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'UZET')
+    case default
+      !
+      ! -- keyword not recognized so return to caller with found = .false.
+      found = .false.
     end select
     !
-999 continue      
+999 continue
     !
     ! -- return
     return
   end subroutine uzt_set_stressperiod
-
 
 end module GwtUztModule

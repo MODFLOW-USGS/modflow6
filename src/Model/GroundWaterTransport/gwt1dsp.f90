@@ -1,13 +1,13 @@
 module GwtDspModule
 
-  use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF, DPI
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: DONE, DZERO, DHALF, DPI
   use NumericalPackageModule, only: NumericalPackageType
-  use BaseDisModule,          only: DisBaseType
-  use GwtFmiModule,           only: GwtFmiType
-  use Xt3dModule,             only: Xt3dType, xt3d_cr
-  use GwtDspOptionsModule,    only: GwtDspOptionsType
-  use GwtDspGridDataModule,   only: GwtDspGridDataType
+  use BaseDisModule, only: DisBaseType
+  use TspFmiModule, only: TspFmiType
+  use Xt3dModule, only: Xt3dType, xt3d_cr
+  use TspDspOptionsModule, only: TspDspOptionsType
+  use TspDspGridDataModule, only: TspDspGridDataType
 
   implicit none
   private
@@ -15,35 +15,35 @@ module GwtDspModule
   public :: dsp_cr
 
   type, extends(NumericalPackageType) :: GwtDspType
-    
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound     => null()    ! pointer to GWT model ibound
-    type(GwtFmiType), pointer                        :: fmi        => null()    ! pointer to GWT fmi object
-    real(DP), dimension(:), pointer, contiguous      :: porosity   => null()    ! pointer to GWT storage porosity
-    real(DP), dimension(:), pointer, contiguous      :: diffc      => null()    ! molecular diffusion coefficient for each cell
-    real(DP), dimension(:), pointer, contiguous      :: alh        => null()    ! longitudinal horizontal dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: alv        => null()    ! longitudinal vertical dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: ath1       => null()    ! transverse horizontal dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: ath2       => null()    ! transverse horizontal dispersivity
-    real(DP), dimension(:), pointer, contiguous      :: atv        => null()    ! transverse vertical dispersivity
-    integer(I4B), pointer                            :: idiffc     => null()    ! flag indicating diffusion is active
-    integer(I4B), pointer                            :: idisp      => null()    ! flag indicating mechanical dispersion is active
-    integer(I4B), pointer                            :: ixt3d      => null()    ! flag indicating xt3d is active
-    type(Xt3dType), pointer                          :: xt3d       => null()    ! xt3d object
-    real(DP), dimension(:), pointer, contiguous      :: dispcoef   => null()    ! disp coefficient (only if xt3d not active)
-    integer(I4B), pointer                            :: id22       => null()    ! flag indicating d22 is available
-    integer(I4B), pointer                            :: id33       => null()    ! flag indicating d33 is available
-    real(DP), dimension(:), pointer, contiguous      :: d11        => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer, contiguous      :: d22        => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer, contiguous      :: d33        => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer, contiguous      :: angle1     => null()    ! rotation angle 1
-    real(DP), dimension(:), pointer, contiguous      :: angle2     => null()    ! rotation angle 2
-    real(DP), dimension(:), pointer, contiguous      :: angle3     => null()    ! rotation angle 3
-    integer(I4B), pointer                            :: iangle1    => null()    ! flag indicating angle1 is available
-    integer(I4B), pointer                            :: iangle2    => null()    ! flag indicating angle2 is available
-    integer(I4B), pointer                            :: iangle3    => null()    ! flag indicating angle3 is available
-    
+
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWT model ibound
+    type(TspFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() ! pointer to GWT storage porosity
+    real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
+    real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous :: alv => null() ! longitudinal vertical dispersivity
+    real(DP), dimension(:), pointer, contiguous :: ath1 => null() ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous :: ath2 => null() ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous :: atv => null() ! transverse vertical dispersivity
+    integer(I4B), pointer :: idiffc => null() ! flag indicating diffusion is active
+    integer(I4B), pointer :: idisp => null() ! flag indicating mechanical dispersion is active
+    integer(I4B), pointer :: ixt3d => null() ! flag indicating xt3d is active
+    type(Xt3dType), pointer :: xt3d => null() ! xt3d object
+    real(DP), dimension(:), pointer, contiguous :: dispcoef => null() ! disp coefficient (only if xt3d not active)
+    integer(I4B), pointer :: id22 => null() ! flag indicating d22 is available
+    integer(I4B), pointer :: id33 => null() ! flag indicating d33 is available
+    real(DP), dimension(:), pointer, contiguous :: d11 => null() ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous :: d22 => null() ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous :: d33 => null() ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous :: angle1 => null() ! rotation angle 1
+    real(DP), dimension(:), pointer, contiguous :: angle2 => null() ! rotation angle 2
+    real(DP), dimension(:), pointer, contiguous :: angle3 => null() ! rotation angle 3
+    integer(I4B), pointer :: iangle1 => null() ! flag indicating angle1 is available
+    integer(I4B), pointer :: iangle2 => null() ! flag indicating angle2 is available
+    integer(I4B), pointer :: iangle3 => null() ! flag indicating angle3 is available
+
   contains
-  
+
     procedure :: dsp_df
     procedure :: dsp_ac
     procedure :: dsp_mc
@@ -59,11 +59,11 @@ module GwtDspModule
     procedure, private :: set_data
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
-   
+
   end type GwtDspType
-  
-  contains
-  
+
+contains
+
   subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi)
 ! ******************************************************************************
 ! dsp_cr -- Create a new DSP object
@@ -76,11 +76,11 @@ module GwtDspModule
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(TspFmiType), intent(in), target :: fmi
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(dspobj)
+    allocate (dspobj)
     !
     ! -- create name and memory path
     call dspobj%set_names(1, name_model, 'DSP', 'DSP')
@@ -108,12 +108,12 @@ module GwtDspModule
     ! -- dummy
     class(GwtDspType) :: this
     class(DisBaseType), pointer :: dis
-    type(GwtDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
+    type(TspDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
                                                                 !! creating DSP from file
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtdsp =                                    &
-      "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
+    character(len=*), parameter :: fmtdsp = &
+      "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
@@ -127,7 +127,7 @@ module GwtDspModule
     ! -- Read dispersion options
     if (present(dspOptions)) then
       this%ixt3d = dspOptions%ixt3d
-    else      
+    else
       !
       ! -- Initialize block parser
       call this%parser%Initialize(this%inunit, this%iout)
@@ -135,12 +135,12 @@ module GwtDspModule
     end if
     !
     ! -- xt3d create
-    if(this%ixt3d > 0) then
-      call xt3d_cr(this%xt3d, this%name_model, this%inunit, this%iout,       &
+    if (this%ixt3d > 0) then
+      call xt3d_cr(this%xt3d, this%name_model, this%inunit, this%iout, &
                    ldispopt=.true.)
       this%xt3d%ixt3d = this%ixt3d
       call this%xt3d%xt3d_df(dis)
-    endif
+    end if
     !
     ! -- Return
     return
@@ -188,7 +188,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Call xt3d map connections
-    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
+    if (this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
     !
     ! -- Return
     return
@@ -210,18 +210,18 @@ module GwtDspModule
                                                                 !! to create the package without input file
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtdsp =                                    &
-      "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
+    character(len=*), parameter :: fmtdsp = &
+      "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- dsp pointers to arguments that were passed in
-    this%ibound  => ibound
+    this%ibound => ibound
     this%porosity => porosity
     !
     ! -- Print a message identifying the dispersion package.
     if (this%iout > 0) then
-      write(this%iout, fmtdsp) this%inunit
+      write (this%iout, fmtdsp) this%inunit
     end if
     !
     ! -- Allocate arrays
@@ -231,7 +231,7 @@ module GwtDspModule
       ! -- Set dispersion data
       call this%set_data(grid_data)
     else
-      ! -- Read dispersion data    
+      ! -- Read dispersion data
       call this%read_data()
     end if
     !
@@ -257,11 +257,13 @@ module GwtDspModule
     ! TODO: might consider adding a new mf6 level set pointers method, and
     ! doing this stuff there instead of in the time step loop.
     if (kstp * kper == 1) then
-      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0,           &
-        this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
-        this%iangle1, this%iangle2, this%iangle3,                              &
-        this%angle1, this%angle2, this%angle3)
-    endif
+      if (this%ixt3d > 0) then
+        call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0, this%d11, this%id33, &
+                               this%d33, this%fmi%gwfsat, this%id22, this%d22, &
+                               this%iangle1, this%iangle2, this%iangle3, &
+                               this%angle1, this%angle2, this%angle3)
+      end if
+    end if
     !
     ! -- Fill d11, d22, d33, angle1, angle2, angle3 using specific discharge
     call this%calcdispellipse()
@@ -272,7 +274,7 @@ module GwtDspModule
         call this%calcdispcoef()
       else if (this%ixt3d > 0) then
         call this%xt3d%xt3d_fcpc(this%dis%nodes, .false.)
-      endif
+      end if
     end if
     !
     ! -- Return
@@ -290,29 +292,29 @@ module GwtDspModule
     ! -- dummy
     class(GwtDspType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    integer(I4B),intent(in) :: njasln
-    real(DP),dimension(njasln),intent(inout) :: amatsln
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: cnew
+    integer(I4B), intent(in) :: nodes
+    integer(I4B), intent(in) :: nja
+    integer(I4B), intent(in) :: njasln
+    real(DP), dimension(njasln), intent(inout) :: amatsln
+    integer(I4B), intent(in), dimension(nja) :: idxglo
+    real(DP), intent(inout), dimension(nodes) :: rhs
+    real(DP), intent(inout), dimension(nodes) :: cnew
     ! -- local
     integer(I4B) :: n, m, idiag, idiagm, ipos, isympos, isymcon
     real(DP) :: dnm
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d > 0) then
+    if (this%ixt3d > 0) then
       call this%xt3d%xt3d_fc(kiter, njasln, amatsln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
-        if(this%fmi%ibdgwfsat0(n) == 0) cycle
+        if (this%fmi%ibdgwfsat0(n) == 0) cycle
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           if (this%dis%con%mask(ipos) == 0) cycle
           m = this%dis%con%ja(ipos)
           if (m < n) cycle
-          if(this%fmi%ibdgwfsat0(m) == 0) cycle
+          if (this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           !
@@ -325,14 +327,14 @@ module GwtDspModule
           isymcon = this%dis%con%isym(ipos)
           amatsln(idxglo(isymcon)) = amatsln(idxglo(isymcon)) + dnm
           amatsln(idxglo(idiagm)) = amatsln(idxglo(idiagm)) - dnm
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     !
     ! -- Return
     return
   end subroutine dsp_fc
-  
+
   subroutine dsp_cq(this, cnew, flowja)
 ! ******************************************************************************
 ! dsp_cq -- Calculate dispersion contribution to flowja
@@ -351,25 +353,25 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate dispersion and add to flowja
-    if(this%ixt3d > 0) then
+    if (this%ixt3d > 0) then
       call this%xt3d%xt3d_flowja(cnew, flowja)
     else
       do n = 1, this%dis%nodes
-        if(this%fmi%ibdgwfsat0(n) == 0) cycle
+        if (this%fmi%ibdgwfsat0(n) == 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
-          if(this%fmi%ibdgwfsat0(m) == 0) cycle
+          if (this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     !
     ! -- Return
     return
   end subroutine dsp_cq
-  
+
   subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars
@@ -444,11 +446,11 @@ module GwtDspModule
     !
     ! -- Allocate dispersion coefficient array if xt3d not in use
     if (this%ixt3d == 0) then
-      call mem_allocate(this%dispcoef, this%dis%njas, 'DISPCOEF',              &
-        trim(this%memoryPath))
+      call mem_allocate(this%dispcoef, this%dis%njas, 'DISPCOEF', &
+                        trim(this%memoryPath))
     else
       call mem_allocate(this%dispcoef, 0, 'DISPCOEF', trim(this%memoryPath))
-    endif
+    end if
     !
     ! -- Return
     return
@@ -487,7 +489,7 @@ module GwtDspModule
     end if
     !
     ! -- deallocate objects
-    if (this%ixt3d > 0) deallocate(this%xt3d)
+    if (this%ixt3d > 0) deallocate (this%xt3d)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%idiffc)
@@ -514,8 +516,8 @@ module GwtDspModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: store_error
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
@@ -531,27 +533,27 @@ module GwtDspModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING DISPERSION OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING DISPERSION OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('XT3D_OFF')
-            this%ixt3d = 0
-            write(this%iout, '(4x,a)')                                         &
-                             'XT3D FORMULATION HAS BEEN SHUT OFF.'
-          case ('XT3D_RHS')
-            this%ixt3d = 2
-            write(this%iout, '(4x,a)')                                         &
-                             'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
-          case default
-            write(errmsg,'(4x,a,a)')'UNKNOWN DISPERSION OPTION: ', &
-                                     trim(keyword)
-            call store_error(errmsg, terminate=.TRUE.)
+        case ('XT3D_OFF')
+          this%ixt3d = 0
+          write (this%iout, '(4x,a)') &
+            'XT3D FORMULATION HAS BEEN SHUT OFF.'
+        case ('XT3D_RHS')
+          this%ixt3d = 2
+          write (this%iout, '(4x,a)') &
+            'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
+        case default
+          write (errmsg, '(4x,a,a)') 'UNKNOWN DISPERSION OPTION: ', &
+            trim(keyword)
+          call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF DISPERSION OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF DISPERSION OPTIONS'
     end if
     !
     ! -- Return
@@ -565,8 +567,8 @@ module GwtDspModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: store_error, count_errors
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate, mem_copyptr, mem_reassignptr
     ! -- dummy
     class(GwtDsptype) :: this
@@ -575,16 +577,16 @@ module GwtDspModule
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(6)           :: lname
+    logical, dimension(6) :: lname
     character(len=24), dimension(6) :: aname
     ! -- formats
     ! -- data
-    data aname(1) /'   DIFFUSION COEFFICIENT'/
-    data aname(2) /'                     ALH'/
-    data aname(3) /'                     ALV'/
-    data aname(4) /'                    ATH1'/
-    data aname(5) /'                    ATH2'/
-    data aname(6) /'                     ATV'/
+    data aname(1)/'   DIFFUSION COEFFICIENT'/
+    data aname(2)/'                     ALH'/
+    data aname(3)/'                     ALV'/
+    data aname(4)/'                    ATH1'/
+    data aname(5)/'                    ATH2'/
+    data aname(6)/'                     ATV'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -593,8 +595,8 @@ module GwtDspModule
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
+    if (isfound) then
+      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -603,130 +605,131 @@ module GwtDspModule
         lloc = 1
         select case (keyword)
         case ('DIFFC')
-            call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC',           &
+          call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC', &
                               trim(this%memoryPath))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%diffc,     &
-                                         aname(1))
-            lname(1) = .true.
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%diffc, &
+                                        aname(1))
+          lname(1) = .true.
         case ('ALH')
-          call mem_reallocate(this%alh, this%dis%nodes, 'ALH',                 &
-                            trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
-                                         this%parser%iuactive, this%alh,       &
-                                         aname(2))
-            lname(2) = .true.
+          call mem_reallocate(this%alh, this%dis%nodes, 'ALH', &
+                              trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%alh, &
+                                        aname(2))
+          lname(2) = .true.
         case ('ALV')
-          call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                 &
-                            trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
-                                         this%parser%iuactive, this%alv,       &
-                                         aname(3))
-            lname(3) = .true.
+          call mem_reallocate(this%alv, this%dis%nodes, 'ALV', &
+                              trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%alv, &
+                                        aname(3))
+          lname(3) = .true.
         case ('ATH1')
-          call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1',               &
-                            trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
-                                         this%parser%iuactive, this%ath1,      &
-                                         aname(4))
+          call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1', &
+                              trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%ath1, &
+                                        aname(4))
           lname(4) = .true.
         case ('ATH2')
-          call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',               &
-                            trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
-                                         this%parser%iuactive, this%ath2,      &
-                                         aname(5))
+          call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2', &
+                              trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%ath2, &
+                                        aname(5))
           lname(5) = .true.
         case ('ATV')
-          call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                 &
-                            trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
-                                         this%parser%iuactive, this%atv,       &
-                                         aname(6))
-            lname(6) = .true.
+          call mem_reallocate(this%atv, this%dis%nodes, 'ATV', &
+                              trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%atv, &
+                                        aname(6))
+          lname(6) = .true.
         case default
-          write(errmsg,'(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
+          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
+      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write(errmsg,'(1x,a)') 'Required GRIDDATA block not found.'
+      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
-    if(lname(1)) this%idiffc = 1
-    if(lname(2)) this%idisp = this%idisp + 1
-    if(lname(3)) this%idisp = this%idisp + 1
-    if(lname(4)) this%idisp = this%idisp + 1
-    if(lname(5)) this%idisp = this%idisp + 1
+    if (lname(1)) this%idiffc = 1
+    if (lname(2)) this%idisp = this%idisp + 1
+    if (lname(3)) this%idisp = this%idisp + 1
+    if (lname(4)) this%idisp = this%idisp + 1
+    if (lname(5)) this%idisp = this%idisp + 1
     !
     ! -- if dispersivities are specified, then both alh and ath1 must be included
-    if(this%idisp > 0) then
+    if (this%idisp > 0) then
       !
       ! -- make sure alh was specified
       if (.not. lname(2)) then
-        write(errmsg,'(1x,a)') 'IF DISPERSIVITIES ARE SPECIFIED THEN ALH IS REQUIRED.'
+        write (errmsg, '(1x,a)') &
+          'IF DISPERSIVITIES ARE SPECIFIED THEN ALH IS REQUIRED.'
         call store_error(errmsg)
-      endif
+      end if
       !
       ! -- make sure ath1 was specified
       if (.not. lname(4)) then
-        write(errmsg,'(1x,a)') 'IF DISPERSIVITIES ARE SPECIFIED THEN ATH1 IS REQUIRED.'
+        write (errmsg, '(1x,a)') &
+          'IF DISPERSIVITIES ARE SPECIFIED THEN ATH1 IS REQUIRED.'
         call store_error(errmsg)
-      endif
+      end if
       !
       ! -- If alv not specified then point it to alh
-      if(.not. lname(3)) then
-        call mem_reassignptr(this%alv, 'ALV', trim(this%memoryPath),                 &
-                                       'ALH', trim(this%memoryPath))
-      endif
+      if (.not. lname(3)) then
+        call mem_reassignptr(this%alv, 'ALV', trim(this%memoryPath), &
+                             'ALH', trim(this%memoryPath))
+      end if
       !
       ! -- If ath2 not specified then assign it to ath1
       if (.not. lname(5)) then
-        call mem_reassignptr(this%ath2, 'ATH2', trim(this%memoryPath),                 &
-                                        'ATH1', trim(this%memoryPath))
-      endif
+        call mem_reassignptr(this%ath2, 'ATH2', trim(this%memoryPath), &
+                             'ATH1', trim(this%memoryPath))
+      end if
       !
       ! -- If atv not specified then assign it to ath2
       if (.not. lname(6)) then
-        call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath),                 &
-                                       'ATH2', trim(this%memoryPath))
-      endif
-    endif
+        call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath), &
+                             'ATH2', trim(this%memoryPath))
+      end if
+    end if
     !
     ! -- terminate if errors
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine read_data
 
-
   !< @brief Set the grid data to the package
   !<
   subroutine set_data(this, grid_data)
     use MemoryManagerModule, only: mem_reallocate
-    class(GwtDspType) :: this                         !< this DSP package
+    class(GwtDspType) :: this !< this DSP package
     type(GwtDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
     ! local
     integer(I4B) :: i
 
-    call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC',                   &
+    call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC', &
                         trim(this%memoryPath))
-    call mem_reallocate(this%alh, this%dis%nodes, 'ALH',                       &
+    call mem_reallocate(this%alh, this%dis%nodes, 'ALH', &
                         trim(this%memoryPath))
-    call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                       &
+    call mem_reallocate(this%alv, this%dis%nodes, 'ALV', &
                         trim(this%memoryPath))
-    call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1',                     &
+    call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1', &
                         trim(this%memoryPath))
-    call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                     &
+    call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2', &
                         trim(this%memoryPath))
-    call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                       &
+    call mem_reallocate(this%atv, this%dis%nodes, 'ATV', &
                         trim(this%memoryPath))
 
     do i = 1, this%dis%nodes
@@ -770,7 +773,7 @@ module GwtDspModule
       this%angle1(n) = DZERO
       this%angle2(n) = DZERO
       this%angle3(n) = DZERO
-      if(this%fmi%ibdgwfsat0(n) == 0) cycle
+      if (this%fmi%ibdgwfsat0(n) == 0) cycle
       !
       ! -- specific discharge
       qx = DZERO
@@ -780,7 +783,7 @@ module GwtDspModule
       qx = this%fmi%gwfspdis(1, n)
       qy = this%fmi%gwfspdis(2, n)
       qz = this%fmi%gwfspdis(3, n)
-      q = qx ** 2 + qy ** 2 + qz ** 2
+      q = qx**2 + qy**2 + qz**2
       if (q > DZERO) q = sqrt(q)
       !
       ! -- dispersion coefficients
@@ -795,22 +798,22 @@ module GwtDspModule
         ath1 = this%ath1(n)
         ath2 = this%ath2(n)
         atv = this%atv(n)
-      endif
+      end if
       dstar = DZERO
       if (this%idiffc > 0) then
         dstar = this%diffc(n) * this%porosity(n)
-      endif
+      end if
       !
       ! -- Calculate the longitudal and transverse dispersivities
       al = DZERO
       at1 = DZERO
       at2 = DZERO
       if (q > DZERO) then
-        qzoqsquared = (qz / q) ** 2
+        qzoqsquared = (qz / q)**2
         al = alh * (DONE - qzoqsquared) + alv * qzoqsquared
         at1 = ath1 * (DONE - qzoqsquared) + atv * qzoqsquared
         at2 = ath2 * (DONE - qzoqsquared) + atv * qzoqsquared
-      endif
+      end if
       !
       ! -- Calculate and save the diagonal components of the dispersion tensor
       this%d11(n) = al * q + dstar
@@ -839,7 +842,7 @@ module GwtDspModule
           a = qx / a
         else
           a = DZERO
-        endif
+        end if
         !
         ! -- acos(1) not defined, so set to zero if necessary
         if (a <= -DONE) then
@@ -848,10 +851,10 @@ module GwtDspModule
           this%angle1(n) = DZERO
         else
           this%angle1(n) = acos(a)
-        endif
+        end if
         !
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- Return
     return
@@ -885,7 +888,7 @@ module GwtDspModule
     ! -- Proces connections
     nodes = size(this%d11)
     do n = 1, nodes
-      if(this%fmi%ibdgwfsat0(n) == 0) cycle
+      if (this%fmi%ibdgwfsat0(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         !
@@ -896,7 +899,7 @@ module GwtDspModule
         if (m < n) cycle
         isympos = this%dis%con%jas(ipos)
         this%dispcoef(isympos) = DZERO
-        if(this%fmi%ibdgwfsat0(m) == 0) cycle
+        if (this%fmi%ibdgwfsat0(m) == 0) cycle
         !
         ! -- cell dimensions
         hwva = this%dis%con%hwva(isympos)
@@ -916,16 +919,16 @@ module GwtDspModule
         !    normal to the shared n-m face and for cell m in the direction
         !    normal to the shared n-m face.
         call this%dis%connection_normal(n, m, ihc, vg1, vg2, vg3, ipos)
-        dn = hyeff_calc(this%d11(n), this%d22(n), this%d33(n),                 &
-                        this%angle1(n), this%angle2(n), this%angle3(n),        &
+        dn = hyeff_calc(this%d11(n), this%d22(n), this%d33(n), &
+                        this%angle1(n), this%angle2(n), this%angle3(n), &
                         vg1, vg2, vg3, iavgmeth)
-        dm = hyeff_calc(this%d11(m), this%d22(m), this%d33(m),                 &
-                        this%angle1(m), this%angle2(m), this%angle3(m),        &
+        dm = hyeff_calc(this%d11(m), this%d22(m), this%d33(m), &
+                        this%angle1(m), this%angle2(m), this%angle3(m), &
                         vg1, vg2, vg3, iavgmeth)
         !
         ! -- Calculate dispersion conductance based on NPF subroutines and the
         !    effective dispersion coefficients dn and dm.
-        if(ihc == 0) then
+        if (ihc == 0) then
           clnm = satn * (topn - botn) * DHALF
           clmn = satm * (topm - botm) * DHALF
           anm = hwva
@@ -935,18 +938,18 @@ module GwtDspModule
             anm = DZERO
           else if (n > m .and. satn < DONE) then
             anm = DZERO
-          endif
+          end if
           !
           ! -- m is convertible and unsaturated
           if (satm == DZERO) then
             anm = DZERO
           else if (m > n .and. satm < DONE) then
             anm = DZERO
-          endif
+          end if
           !
           ! -- amn is the same as anm for vertical flow
           amn = anm
-        !
+          !
         else
           !
           ! -- horizontal conductance
@@ -971,7 +974,7 @@ module GwtDspModule
           if (satn == DZERO .or. satm == DZERO) then
             anm = DZERO
             amn = DZERO
-          endif
+          end if
           !
         end if
         !
@@ -990,11 +993,11 @@ module GwtDspModule
         ! -- Assign the calculated dispersion conductance
         this%dispcoef(isympos) = cond
         !
-      enddo
-    enddo
+      end do
+    end do
     !
     ! -- Return
     return
   end subroutine calcdispcoef
-  
+
 end module GwtDspModule

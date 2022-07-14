@@ -14,7 +14,7 @@ module GwtSrcModule
   public :: src_create
   !
   character(len=LENFTYPE) :: ftype = 'SRC'
-  character(len=16)       :: text  = '             SRC'
+  character(len=16) :: text = '             SRC'
   !
   type, extends(BndType) :: GwtSrcType
   contains
@@ -43,10 +43,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -54,7 +54,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(srcobj)
+    allocate (srcobj)
     packobj => srcobj
     !
     ! -- create name and memory path
@@ -142,26 +142,26 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sources
-    if(this%nbound == 0) return
+    if (this%nbound == 0) return
     !
     ! -- pakmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. lrm) then
+    if (this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
-    endif
+    end if
     !
     ! -- Calculate hcof and rhs for each source entry
     do i = 1, this%nbound
       node = this%nodelist(i)
       this%hcof(i) = DZERO
-      if(this%ibound(node) <= 0) then
+      if (this%ibound(node) <= 0) then
         this%rhs(i) = DZERO
         cycle
       end if
-      q = this%bound(1,i)
+      q = this%bound(1, i)
       this%rhs(i) = -q
-    enddo
+    end do
     !
     return
   end subroutine src_cf
@@ -184,9 +184,9 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%fc()
-    endif
+    end if
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
@@ -197,10 +197,10 @@ contains
       !
       ! -- If mover is active and mass is being withdrawn,
       !    store available mass (as positive value).
-      if(this%imover == 1 .and. this%rhs(i) > DZERO) then
+      if (this%imover == 1 .and. this%rhs(i) > DZERO) then
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
@@ -218,21 +218,21 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
@@ -240,36 +240,36 @@ contains
 
   ! -- Procedures related to observations
   logical function src_obs_supported(this)
-  ! ******************************************************************************
-  ! src_obs_supported
-  !   -- Return true because SRC package supports observations.
-  !   -- Overrides BndType%bnd_obs_supported()
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! src_obs_supported
+    !   -- Return true because SRC package supports observations.
+    !   -- Overrides BndType%bnd_obs_supported()
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     implicit none
     class(GwtSrcType) :: this
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     src_obs_supported = .true.
     return
   end function src_obs_supported
 
   subroutine src_df_obs(this)
-  ! ******************************************************************************
-  ! src_df_obs (implements bnd_df_obs)
-  !   -- Store observation type supported by SRC package.
-  !   -- Overrides BndType%bnd_df_obs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! src_df_obs (implements bnd_df_obs)
+    !   -- Store observation type supported by SRC package.
+    !   -- Overrides BndType%bnd_df_obs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(GwtSrcType) :: this
     ! -- local
     integer(I4B) :: indx
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     call this%obs%StoreObsType('src', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -296,14 +296,14 @@ contains
     type(TimeSeriesLinkType), pointer :: tslink => null()
     !
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
-        if (tslink%JCol==1) then
+        if (tslink%JCol == 1) then
           tslink%Text = 'SMASSRATE'
-        endif
-      endif
-    enddo
+        end if
+      end if
+    end do
     !
     return
   end subroutine src_rp_ts

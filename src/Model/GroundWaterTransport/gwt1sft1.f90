@@ -5,7 +5,7 @@
 !
 ! SFR flows (sfrbudptr)     index var     SFT term              Transport Type
 !---------------------------------------------------------------------------------
-  
+
 ! -- terms from SFR that will be handled by parent APT Package
 ! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
@@ -19,7 +19,7 @@
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * cfeat
-  
+
 ! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
 ! AUXILIARY                 none          none                  none
@@ -36,33 +36,33 @@ module GwtSftModule
   use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use SfrModule, only: SfrType
   use GwtAptModule, only: GwtAptType
-  
+
   implicit none
-  
+
   public sft_create
-  
+
   character(len=*), parameter :: ftype = 'SFT'
   character(len=*), parameter :: flowtype = 'SFR'
-  character(len=16)           :: text  = '             SFT'
-  
-  type, extends(GwtAptType) :: GwtSftType
-    
-    integer(I4B), pointer                              :: idxbudrain => null()  ! index of rainfall terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudevap => null()  ! index of evaporation terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in flowbudptr
+  character(len=16) :: text = '             SFT'
 
-    real(DP), dimension(:), pointer, contiguous        :: concrain => null()    ! rainfall concentration
-    real(DP), dimension(:), pointer, contiguous        :: concevap => null()    ! evaporation concentration
-    real(DP), dimension(:), pointer, contiguous        :: concroff => null()    ! runoff concentration
-    real(DP), dimension(:), pointer, contiguous        :: conciflw => null()    ! inflow concentration
+  type, extends(GwtAptType) :: GwtSftType
+
+    integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
+    integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
+    integer(I4B), pointer :: idxbudroff => null() ! index of runoff terms in flowbudptr
+    integer(I4B), pointer :: idxbudiflw => null() ! index of inflow terms in flowbudptr
+    integer(I4B), pointer :: idxbudoutf => null() ! index of outflow terms in flowbudptr
+
+    real(DP), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
+    real(DP), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
+    real(DP), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
+    real(DP), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
 
   contains
-  
+
     procedure :: bnd_da => sft_da
     procedure :: allocate_scalars
     procedure :: apt_allocate_arrays => sft_allocate_arrays
@@ -80,11 +80,11 @@ module GwtSftModule
     procedure :: pak_df_obs => sft_df_obs
     procedure :: pak_bd_obs => sft_bd_obs
     procedure :: pak_set_stressperiod => sft_set_stressperiod
-    
+
   end type GwtSftType
 
-  contains  
-  
+contains
+
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi)
 ! ******************************************************************************
@@ -95,19 +95,19 @@ module GwtSftModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
     ! -- local
     type(GwtSftType), pointer :: lktobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(lktobj)
+    allocate (lktobj)
     packobj => lktobj
     !
     ! -- create name and memory path
@@ -126,7 +126,7 @@ module GwtSftModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-    
+
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
@@ -168,7 +168,7 @@ module GwtSftModule
       !
     else
       if (associated(this%fmi%gwfbndlist)) then
-        ! -- Look through gwfbndlist for a flow package with the same name as 
+        ! -- Look through gwfbndlist for a flow package with the same name as
         !    this transport package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
@@ -179,8 +179,8 @@ module GwtSftModule
             !    use the select type to point to the budobj in flow package
             this%flowpackagebnd => packobj
             select type (packobj)
-              type is (SfrType)
-                this%flowbudptr => packobj%budobj
+            type is (SfrType)
+              this%flowbudptr => packobj%budobj
             end select
           end if
           if (found) exit
@@ -190,57 +190,57 @@ module GwtSftModule
     !
     ! -- error if flow package not found
     if (.not. found) then
-      write(errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
-                            &// trim(adjustl(this%flowpackagename)) // '.'
+      write (errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
+                            &//trim(adjustl(this%flowpackagename))//'.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
-    ! -- allocate space for idxbudssm, which indicates whether this is a 
+    ! -- allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
     nbudterm = this%flowbudptr%nbudterm
     call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
-    write(this%iout, '(/, a, a)') &
-      'PROCESSING ' // ftype // ' INFORMATION FOR ', this%packName
-    write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN ' // flowtype // ' PACKAGE'
-    write(this%iout, '(a, i0)') &
-      '  NUMBER OF ' // flowtype // ' = ', this%flowbudptr%ncv
+    write (this%iout, '(/, a, a)') &
+      'PROCESSING '//ftype//' INFORMATION FOR ', this%packName
+    write (this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN '//flowtype//' PACKAGE'
+    write (this%iout, '(a, i0)') &
+      '  NUMBER OF '//flowtype//' = ', this%flowbudptr%ncv
     icount = 1
     do ip = 1, this%flowbudptr%nbudterm
-      select case(trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)))
-      case('FLOW-JA-FACE')
+      select case (trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)))
+      case ('FLOW-JA-FACE')
         this%idxbudfjf = ip
         this%idxbudssm(ip) = 0
-      case('GWF')
+      case ('GWF')
         this%idxbudgwf = ip
         this%idxbudssm(ip) = 0
-      case('STORAGE')
+      case ('STORAGE')
         this%idxbudsto = ip
         this%idxbudssm(ip) = 0
-      case('RAINFALL')
+      case ('RAINFALL')
         this%idxbudrain = ip
         this%idxbudssm(ip) = 0
-      case('EVAPORATION')
+      case ('EVAPORATION')
         this%idxbudevap = ip
         this%idxbudssm(ip) = 0
-      case('RUNOFF')
+      case ('RUNOFF')
         this%idxbudroff = ip
         this%idxbudssm(ip) = 0
-      case('EXT-INFLOW')
+      case ('EXT-INFLOW')
         this%idxbudiflw = ip
         this%idxbudssm(ip) = 0
-      case('EXT-OUTFLOW')
+      case ('EXT-OUTFLOW')
         this%idxbudoutf = ip
         this%idxbudssm(ip) = 0
-      case('TO-MVR')
+      case ('TO-MVR')
         this%idxbudtmvr = ip
         this%idxbudssm(ip) = 0
-      case('FROM-MVR')
+      case ('FROM-MVR')
         this%idxbudfmvr = ip
         this%idxbudssm(ip) = 0
-      case('AUXILIARY')
+      case ('AUXILIARY')
         this%idxbudaux = ip
         this%idxbudssm(ip) = 0
       case default
@@ -250,15 +250,15 @@ module GwtSftModule
         this%idxbudssm(ip) = icount
         icount = icount + 1
       end select
-      write(this%iout, '(a, i0, " = ", a,/, a, i0)') &
+      write (this%iout, '(a, i0, " = ", a,/, a, i0)') &
         '  TERM ', ip, trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)), &
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
     end do
-    write(this%iout, '(a, //)') 'DONE PROCESSING ' // ftype // ' INFORMATION'
+    write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
     !
     ! -- Return
     return
-end subroutine find_sft_package
+  end subroutine find_sft_package
 
   subroutine sft_fc_expanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
@@ -401,7 +401,7 @@ end subroutine find_sft_package
     ! -- Return
     return
   end subroutine sft_solve
-  
+
   function sft_get_nbudterms(this) result(nbudterms)
 ! ******************************************************************************
 ! sft_get_nbudterms -- function to return the number of budget terms just for
@@ -424,7 +424,7 @@ end subroutine find_sft_package
     ! -- Return
     return
   end function sft_get_nbudterms
-  
+
   subroutine sft_setup_budobj(this, idx)
 ! ******************************************************************************
 ! sft_setup_budobj -- Set up the budget object that stores all the sfr flows
@@ -442,7 +442,7 @@ end subroutine find_sft_package
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! -- 
+    ! --
     text = '        RAINFALL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
@@ -455,7 +455,7 @@ end subroutine find_sft_package
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '     EVAPORATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudevap)%maxlist
@@ -468,7 +468,7 @@ end subroutine find_sft_package
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '          RUNOFF'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
@@ -481,7 +481,7 @@ end subroutine find_sft_package
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '      EXT-INFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudiflw)%maxlist
@@ -494,7 +494,7 @@ end subroutine find_sft_package
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '     EXT-OUTFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudoutf)%maxlist
@@ -531,7 +531,7 @@ end subroutine find_sft_package
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
-    
+
     ! -- RAIN
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
@@ -541,8 +541,7 @@ end subroutine find_sft_package
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
-    
+
     ! -- EVAPORATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
@@ -552,8 +551,7 @@ end subroutine find_sft_package
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
-    
+
     ! -- RUNOFF
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
@@ -563,8 +561,7 @@ end subroutine find_sft_package
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
-    
+
     ! -- EXT-INFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
@@ -574,8 +571,7 @@ end subroutine find_sft_package
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
-    
+
     ! -- EXT-OUTFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
@@ -585,7 +581,6 @@ end subroutine find_sft_package
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
 
     !
     ! -- return
@@ -615,7 +610,7 @@ end subroutine find_sft_package
     call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%memoryPath)
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
-    ! 
+    !
     ! -- Initialize
     this%idxbudrain = 0
     this%idxbudevap = 0
@@ -641,7 +636,7 @@ end subroutine find_sft_package
     ! -- local
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
-    !    
+    !
     ! -- time series
     call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%memoryPath)
     call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%memoryPath)
@@ -663,7 +658,7 @@ end subroutine find_sft_package
     ! -- Return
     return
   end subroutine sft_allocate_arrays
-  
+
   subroutine sft_da(this)
 ! ******************************************************************************
 ! sft_da
@@ -729,7 +724,7 @@ end subroutine find_sft_package
     ! -- return
     return
   end subroutine sft_rain_term
-  
+
   subroutine sft_evap_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -764,13 +759,13 @@ end subroutine find_sft_package
     if (present(rrate)) &
       rrate = omega * qbnd * this%xnewpak(n1) + &
               (DONE - omega) * qbnd * ctmp
-    if (present(rhsval)) rhsval = - (DONE - omega) * qbnd * ctmp
+    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
     if (present(hcofval)) hcofval = omega * qbnd
     !
     ! -- return
     return
   end subroutine sft_evap_term
-  
+
   subroutine sft_roff_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -802,7 +797,7 @@ end subroutine find_sft_package
     ! -- return
     return
   end subroutine sft_roff_term
-  
+
   subroutine sft_iflw_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -834,7 +829,7 @@ end subroutine find_sft_package
     ! -- return
     return
   end subroutine sft_iflw_term
-  
+
   subroutine sft_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
@@ -866,7 +861,7 @@ end subroutine find_sft_package
     ! -- return
     return
   end subroutine sft_outf_term
-  
+
   subroutine sft_df_obs(this)
 ! ******************************************************************************
 ! sft_df_obs -- obs are supported?
@@ -911,7 +906,7 @@ end subroutine find_sft_package
     !
     return
   end subroutine sft_df_obs
-  
+
   subroutine sft_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
 ! sft_bd_obs -- calculate observation value and pass it back to APT
@@ -931,28 +926,28 @@ end subroutine find_sft_package
     !
     found = .true.
     select case (obstypeid)
-      case ('RAINFALL')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_rain_term(jj, n1, n2, v)
-        end if
-      case ('EVAPORATION')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_evap_term(jj, n1, n2, v)
-        end if
-      case ('RUNOFF')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_roff_term(jj, n1, n2, v)
-        end if
-      case ('EXT-INFLOW')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_iflw_term(jj, n1, n2, v)
-        end if
-      case ('EXT-OUTFLOW')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_outf_term(jj, n1, n2, v)
-        end if
-      case default
-        found = .false.
+    case ('RAINFALL')
+      if (this%iboundpak(jj) /= 0) then
+        call this%sft_rain_term(jj, n1, n2, v)
+      end if
+    case ('EVAPORATION')
+      if (this%iboundpak(jj) /= 0) then
+        call this%sft_evap_term(jj, n1, n2, v)
+      end if
+    case ('RUNOFF')
+      if (this%iboundpak(jj) /= 0) then
+        call this%sft_roff_term(jj, n1, n2, v)
+      end if
+    case ('EXT-INFLOW')
+      if (this%iboundpak(jj) /= 0) then
+        call this%sft_iflw_term(jj, n1, n2, v)
+      end if
+    case ('EXT-OUTFLOW')
+      if (this%iboundpak(jj) /= 0) then
+        call this%sft_outf_term(jj, n1, n2, v)
+      end if
+    case default
+      found = .false.
     end select
     !
     return
@@ -967,7 +962,7 @@ end subroutine find_sft_package
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtSftType),intent(inout) :: this
+    class(GwtSftType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
@@ -987,61 +982,60 @@ end subroutine find_sft_package
     !
     found = .true.
     select case (keyword)
-      case ('RAINFALL')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) then
-          goto 999
-        end if
-        call this%parser%GetString(text)
-        jj = 1
-        bndElem => this%concrain(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'RAINFALL')
-      case ('EVAPORATION')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) then
-          goto 999
-        end if
-        call this%parser%GetString(text)
-        jj = 1
-        bndElem => this%concevap(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'EVAPORATION')
-      case ('RUNOFF')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) then
-          goto 999
-        end if
-        call this%parser%GetString(text)
-        jj = 1
-        bndElem => this%concroff(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'RUNOFF')
-      case ('INFLOW')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) then
-          goto 999
-        end if
-        call this%parser%GetString(text)
-        jj = 1
-        bndElem => this%conciflw(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'INFLOW')
-      case default
-        !
-        ! -- keyword not recognized so return to caller with found = .false.
-        found = .false.
+    case ('RAINFALL')
+      ierr = this%apt_check_valid(itemno)
+      if (ierr /= 0) then
+        goto 999
+      end if
+      call this%parser%GetString(text)
+      jj = 1
+      bndElem => this%concrain(itemno)
+      call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'RAINFALL')
+    case ('EVAPORATION')
+      ierr = this%apt_check_valid(itemno)
+      if (ierr /= 0) then
+        goto 999
+      end if
+      call this%parser%GetString(text)
+      jj = 1
+      bndElem => this%concevap(itemno)
+      call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'EVAPORATION')
+    case ('RUNOFF')
+      ierr = this%apt_check_valid(itemno)
+      if (ierr /= 0) then
+        goto 999
+      end if
+      call this%parser%GetString(text)
+      jj = 1
+      bndElem => this%concroff(itemno)
+      call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'RUNOFF')
+    case ('INFLOW')
+      ierr = this%apt_check_valid(itemno)
+      if (ierr /= 0) then
+        goto 999
+      end if
+      call this%parser%GetString(text)
+      jj = 1
+      bndElem => this%conciflw(itemno)
+      call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
+                                         this%packName, 'BND', this%tsManager, &
+                                         this%iprpak, 'INFLOW')
+    case default
+      !
+      ! -- keyword not recognized so return to caller with found = .false.
+      found = .false.
     end select
     !
-999 continue      
+999 continue
     !
     ! -- return
     return
   end subroutine sft_set_stressperiod
-
 
 end module GwtSftModule
