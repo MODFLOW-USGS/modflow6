@@ -1,6 +1,6 @@
 ! A budget term is the information needed to describe flow.
-! The budget object contains an array of budget terms.  
-! For an advanced package.  The budget object describes all of 
+! The budget object contains an array of budget terms.
+! For an advanced package.  The budget object describes all of
 ! the flows.
 module BudgetTermModule
 
@@ -12,29 +12,29 @@ module BudgetTermModule
   implicit none
 
   public :: BudgetTermType
-  
+
   type :: BudgetTermType
-    
-    character(len=LENBUDTXT) :: flowtype                           ! type of flow (WEL, DRN, ...)
-    character(len=LENBUDTXT) :: text1id1                           ! model
-    character(len=LENBUDTXT) :: text2id1                           ! to model
-    character(len=LENBUDTXT) :: text1id2                           ! package/model
-    character(len=LENBUDTXT) :: text2id2                           ! to package/model
-    character(len=LENBUDTXT), dimension(:), pointer :: auxtxt => null()     ! name of auxiliary variables
-    integer(I4B) :: maxlist                                        ! allocated size of arrays
-    integer(I4B) :: naux                                           ! number of auxiliary variables
-    integer(I4B) :: nlist                                          ! size of arrays for this period
-    logical :: olconv1 = .false.                                   ! convert id1 to user node upon output
-    logical :: olconv2 = .false.                                   ! convert id2 to user node upon output
-    logical :: ordered_id1                                         ! the id1 array is ordered sequentially
-    integer(I4B), dimension(:), pointer :: id1 => null()           ! first id (maxlist)
-    integer(I4B), dimension(:), pointer :: id2 => null()           ! second id (maxlist)
-    real(DP), dimension(:), pointer :: flow => null()              ! point this to simvals or simtomvr (maxlist)
-    real(DP), dimension(:, :), pointer :: auxvar => null()         ! auxiliary variables (naux, maxlist)
-    integer(I4B) :: icounter                                       ! counter variable
-  
+
+    character(len=LENBUDTXT) :: flowtype ! type of flow (WEL, DRN, ...)
+    character(len=LENBUDTXT) :: text1id1 ! model
+    character(len=LENBUDTXT) :: text2id1 ! to model
+    character(len=LENBUDTXT) :: text1id2 ! package/model
+    character(len=LENBUDTXT) :: text2id2 ! to package/model
+    character(len=LENBUDTXT), dimension(:), pointer :: auxtxt => null() ! name of auxiliary variables
+    integer(I4B) :: maxlist ! allocated size of arrays
+    integer(I4B) :: naux ! number of auxiliary variables
+    integer(I4B) :: nlist ! size of arrays for this period
+    logical :: olconv1 = .false. ! convert id1 to user node upon output
+    logical :: olconv2 = .false. ! convert id2 to user node upon output
+    logical :: ordered_id1 ! the id1 array is ordered sequentially
+    integer(I4B), dimension(:), pointer :: id1 => null() ! first id (maxlist)
+    integer(I4B), dimension(:), pointer :: id2 => null() ! second id (maxlist)
+    real(DP), dimension(:), pointer :: flow => null() ! point this to simvals or simtomvr (maxlist)
+    real(DP), dimension(:, :), pointer :: auxvar => null() ! auxiliary variables (naux, maxlist)
+    integer(I4B) :: icounter ! counter variable
+
   contains
-  
+
     procedure :: initialize
     procedure :: allocate_arrays
     procedure :: reset
@@ -49,11 +49,11 @@ module BudgetTermModule
     procedure :: read_flows
     procedure :: fill_from_bfr
     procedure :: deallocate_arrays
-    
+
   end type BudgetTermType
 
-  contains
-  
+contains
+
   subroutine initialize(this, flowtype, text1id1, text2id1, &
                         text1id2, text2id2, maxlist, olconv1, olconv2, &
                         naux, auxtxt, ordered_id1)
@@ -94,7 +94,7 @@ module BudgetTermModule
     this%ordered_id1 = .true.
     if (present(ordered_id1)) this%ordered_id1 = ordered_id1
   end subroutine initialize
-  
+
   subroutine allocate_arrays(this)
 ! ******************************************************************************
 ! allocate_arrays -- allocate budget term arrays
@@ -106,13 +106,13 @@ module BudgetTermModule
     ! -- dummy
     class(BudgetTermType) :: this
 ! ------------------------------------------------------------------------------
-    allocate(this%id1(this%maxlist))
-    allocate(this%id2(this%maxlist))
-    allocate(this%flow(this%maxlist))
-    allocate(this%auxvar(this%naux, this%maxlist))
-    allocate(this%auxtxt(this%naux))
+    allocate (this%id1(this%maxlist))
+    allocate (this%id2(this%maxlist))
+    allocate (this%flow(this%maxlist))
+    allocate (this%auxvar(this%naux, this%maxlist))
+    allocate (this%auxtxt(this%naux))
   end subroutine allocate_arrays
-  
+
   subroutine deallocate_arrays(this)
 ! ******************************************************************************
 ! deallocate_arrays -- deallocate budget term arrays
@@ -124,13 +124,13 @@ module BudgetTermModule
     ! -- dummy
     class(BudgetTermType) :: this
 ! ------------------------------------------------------------------------------
-    deallocate(this%id1)
-    deallocate(this%id2)
-    deallocate(this%flow)
-    deallocate(this%auxvar)
-    deallocate(this%auxtxt)
+    deallocate (this%id1)
+    deallocate (this%id2)
+    deallocate (this%flow)
+    deallocate (this%auxvar)
+    deallocate (this%auxtxt)
   end subroutine deallocate_arrays
-  
+
   subroutine reset(this, nlist)
 ! ******************************************************************************
 ! reset -- reset the budget term and counter so terms can be updated
@@ -146,10 +146,10 @@ module BudgetTermModule
     this%nlist = nlist
     this%icounter = 1
   end subroutine reset
-  
+
   subroutine update_term(this, id1, id2, flow, auxvar)
 ! ******************************************************************************
-! update_term -- replace the terms in position this%icounter 
+! update_term -- replace the terms in position this%icounter
 !   for id1, id2, flow, and aux
 ! ******************************************************************************
 !
@@ -169,7 +169,7 @@ module BudgetTermModule
     if (present(auxvar)) this%auxvar(:, this%icounter) = auxvar(1:this%naux)
     this%icounter = this%icounter + 1
   end subroutine update_term
-  
+
   subroutine accumulate_flow(this, ratin, ratout)
 ! ******************************************************************************
 ! accumulate_flow -- calculate ratin and ratout for all the flow terms
@@ -197,7 +197,7 @@ module BudgetTermModule
       end if
     end do
   end subroutine accumulate_flow
-  
+
   subroutine save_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim, &
                         iout)
 ! ******************************************************************************
@@ -254,7 +254,7 @@ module BudgetTermModule
                                      olconv2=this%olconv2)
     end do
   end subroutine save_flows
-  
+
   function get_nlist(this) result(nlist)
 ! ******************************************************************************
 ! get_nlist -- get the number of entries for the stress period
@@ -264,7 +264,7 @@ module BudgetTermModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
-    integer(I4B) :: nlist   
+    integer(I4B) :: nlist
     ! -- dummy
     class(BudgetTermType) :: this
 ! ------------------------------------------------------------------------------
@@ -273,7 +273,7 @@ module BudgetTermModule
     ! -- return
     return
   end function get_nlist
-  
+
   function get_flowtype(this) result(flowtype)
 ! ******************************************************************************
 ! get_flowtype -- get the flowtype for the budget term
@@ -283,7 +283,7 @@ module BudgetTermModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
-    character(len=LENBUDTXT) :: flowtype   
+    character(len=LENBUDTXT) :: flowtype
     ! -- dummy
     class(BudgetTermType) :: this
 ! ------------------------------------------------------------------------------
@@ -292,7 +292,7 @@ module BudgetTermModule
     ! -- return
     return
   end function get_flowtype
-  
+
   function get_id1(this, icount) result(id1)
 ! ******************************************************************************
 ! get_id1 -- get id1(icount) for the budget term
@@ -302,7 +302,7 @@ module BudgetTermModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
-    integer(I4B) :: id1 
+    integer(I4B) :: id1
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: icount
@@ -312,7 +312,7 @@ module BudgetTermModule
     ! -- return
     return
   end function get_id1
-  
+
   function get_id2(this, icount) result(id2)
 ! ******************************************************************************
 ! get_id2 -- get id2(icount) for the budget term
@@ -322,7 +322,7 @@ module BudgetTermModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
-    integer(I4B) :: id2 
+    integer(I4B) :: id2
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: icount
@@ -332,7 +332,7 @@ module BudgetTermModule
     ! -- return
     return
   end function get_id2
-  
+
   function get_flow(this, icount) result(flow)
 ! ******************************************************************************
 ! get_flow -- get flow(icount) for the budget term
@@ -342,7 +342,7 @@ module BudgetTermModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- return
-    real(DP) :: flow 
+    real(DP) :: flow
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: icount
@@ -352,7 +352,7 @@ module BudgetTermModule
     ! -- return
     return
   end function get_flow
-  
+
   subroutine read_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim)
 ! ******************************************************************************
 ! read_flows -- read flows from a binary file
@@ -377,48 +377,48 @@ module BudgetTermModule
     integer(I4B) :: n2
     real(DP) :: q
 ! ------------------------------------------------------------------------------
-    read(ibinun) kstp, kper, this%flowtype, this%nlist, idum1, idum2
-    read(ibinun) imeth, delt, pertim, totim
-    read(ibinun) this%text1id1
-    read(ibinun) this%text2id1
-    read(ibinun) this%text1id2
-    read(ibinun) this%text2id2
-    read(ibinun) this%naux
+    read (ibinun) kstp, kper, this%flowtype, this%nlist, idum1, idum2
+    read (ibinun) imeth, delt, pertim, totim
+    read (ibinun) this%text1id1
+    read (ibinun) this%text2id1
+    read (ibinun) this%text1id2
+    read (ibinun) this%text2id2
+    read (ibinun) this%naux
     this%naux = this%naux - 1
     if (.not. associated(this%auxtxt)) then
-      allocate(this%auxtxt(this%naux))
+      allocate (this%auxtxt(this%naux))
     else
       if (size(this%auxtxt) /= this%naux) then
-        deallocate(this%auxtxt)
-        allocate(this%auxtxt(this%naux))
+        deallocate (this%auxtxt)
+        allocate (this%auxtxt(this%naux))
       end if
     end if
-    if (this%naux > 0) read(ibinun) (this%auxtxt(j), j = 1, this%naux)
-    read(ibinun) this%nlist
+    if (this%naux > 0) read (ibinun) (this%auxtxt(j), j=1, this%naux)
+    read (ibinun) this%nlist
     if (.not. associated(this%id1)) then
       this%maxlist = this%nlist
-      allocate(this%id1(this%maxlist))
-      allocate(this%id2(this%maxlist))
-      allocate(this%flow(this%maxlist))
-      allocate(this%auxvar(this%naux, this%maxlist))
+      allocate (this%id1(this%maxlist))
+      allocate (this%id2(this%maxlist))
+      allocate (this%flow(this%maxlist))
+      allocate (this%auxvar(this%naux, this%maxlist))
     else
       if (this%nlist > this%maxlist) then
         this%maxlist = this%nlist
-        deallocate(this%id1)
-        deallocate(this%id2)
-        deallocate(this%flow)
-        deallocate(this%auxvar)
-        allocate(this%id1(this%maxlist))
-        allocate(this%id2(this%maxlist))
-        allocate(this%flow(this%maxlist))
-        allocate(this%auxvar(this%naux, this%maxlist))
+        deallocate (this%id1)
+        deallocate (this%id2)
+        deallocate (this%flow)
+        deallocate (this%auxvar)
+        allocate (this%id1(this%maxlist))
+        allocate (this%id2(this%maxlist))
+        allocate (this%flow(this%maxlist))
+        allocate (this%auxvar(this%naux, this%maxlist))
       end if
     end if
     do i = 1, this%nlist
-      read(ibinun) n1
-      read(ibinun) n2
-      read(ibinun) q
-      read(ibinun) (this%auxvar(j, i), j = 1, this%naux)
+      read (ibinun) n1
+      read (ibinun) n2
+      read (ibinun) q
+      read (ibinun) (this%auxvar(j, i), j=1, this%naux)
       if (this%olconv1) n1 = dis%get_nodenumber(n1, 0)
       if (this%olconv2) n2 = dis%get_nodenumber(n2, 0)
       this%id1(i) = n1
@@ -426,7 +426,7 @@ module BudgetTermModule
       this%flow(i) = q
     end do
   end subroutine read_flows
-  
+
   subroutine fill_from_bfr(this, bfr, dis)
 ! ******************************************************************************
 ! fill_from_bfr -- copy the flow from the binary file reader into this budterm
@@ -453,32 +453,32 @@ module BudgetTermModule
     this%text2id2 = bfr%dstpackagename
     this%naux = bfr%naux
     if (.not. associated(this%auxtxt)) then
-      allocate(this%auxtxt(this%naux))
+      allocate (this%auxtxt(this%naux))
     else
       if (size(this%auxtxt) /= this%naux) then
-        deallocate(this%auxtxt)
-        allocate(this%auxtxt(this%naux))
+        deallocate (this%auxtxt)
+        allocate (this%auxtxt(this%naux))
       end if
     end if
     if (this%naux > 0) this%auxtxt(:) = bfr%auxtxt(:)
     this%nlist = bfr%nlist
     if (.not. associated(this%id1)) then
       this%maxlist = this%nlist
-      allocate(this%id1(this%maxlist))
-      allocate(this%id2(this%maxlist))
-      allocate(this%flow(this%maxlist))
-      allocate(this%auxvar(this%naux, this%maxlist))
+      allocate (this%id1(this%maxlist))
+      allocate (this%id2(this%maxlist))
+      allocate (this%flow(this%maxlist))
+      allocate (this%auxvar(this%naux, this%maxlist))
     else
       if (this%nlist > this%maxlist) then
         this%maxlist = this%nlist
-        deallocate(this%id1)
-        deallocate(this%id2)
-        deallocate(this%flow)
-        deallocate(this%auxvar)
-        allocate(this%id1(this%maxlist))
-        allocate(this%id2(this%maxlist))
-        allocate(this%flow(this%maxlist))
-        allocate(this%auxvar(this%naux, this%maxlist))
+        deallocate (this%id1)
+        deallocate (this%id2)
+        deallocate (this%flow)
+        deallocate (this%auxvar)
+        allocate (this%id1(this%maxlist))
+        allocate (this%id2(this%maxlist))
+        allocate (this%flow(this%maxlist))
+        allocate (this%auxvar(this%naux, this%maxlist))
       end if
     end if
     do i = 1, this%nlist
@@ -493,5 +493,5 @@ module BudgetTermModule
       this%flow(i) = q
     end do
   end subroutine fill_from_bfr
-  
+
 end module BudgetTermModule

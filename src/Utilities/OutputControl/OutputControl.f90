@@ -7,13 +7,13 @@
 !<
 module OutputControlModule
 
-  use KindModule,              only: DP, I4B
-  use ConstantsModule,         only: LENMODELNAME, LENMEMPATH
-  use SimVariablesModule,      only: errmsg
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENMODELNAME, LENMEMPATH
+  use SimVariablesModule, only: errmsg
   use OutputControlDataModule, only: OutputControlDataType, ocd_cr
-  use BlockParserModule,       only: BlockParserType
+  use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
-  
+
   implicit none
   private
   public OutputControlType, oc_cr
@@ -22,16 +22,17 @@ module OutputControlModule
   !!
   !!  Generalized output control package
   !<
-  type OutputControlType  
-    character(len=LENMEMPATH)                           :: memoryPath                       !< path to data stored in the memory manager
-    character(len=LENMODELNAME), pointer                :: name_model => null()             !< name of the model
-    integer(I4B), pointer                               :: inunit     => null()             !< unit number for input file
-    integer(I4B), pointer                               :: iout       => null()             !< unit number for output file
-    integer(I4B), pointer                               :: ibudcsv    => null()             !< unit number for budget csv output file
-    integer(I4B), pointer                               :: iperoc     => null()             !< stress period number for next output control
-    integer(I4B), pointer                               :: iocrep     => null()             !< output control repeat flag (period 0 step 0)
-    type(OutputControlDataType), dimension(:), pointer, contiguous  :: ocdobj     => null() !< output control objects
-    type(BlockParserType)                               :: parser
+  type OutputControlType
+    character(len=LENMEMPATH) :: memoryPath !< path to data stored in the memory manager
+    character(len=LENMODELNAME), pointer :: name_model => null() !< name of the model
+    integer(I4B), pointer :: inunit => null() !< unit number for input file
+    integer(I4B), pointer :: iout => null() !< unit number for output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for budget csv output file
+    integer(I4B), pointer :: iperoc => null() !< stress period number for next output control
+    integer(I4B), pointer :: iocrep => null() !< output control repeat flag (period 0 step 0)
+    type(OutputControlDataType), dimension(:), &
+      pointer, contiguous :: ocdobj => null() !< output control objects
+    type(BlockParserType) :: parser
   contains
     procedure :: oc_df
     procedure :: oc_rp
@@ -45,7 +46,7 @@ module OutputControlModule
     procedure :: set_print_flag
   end type OutputControlType
 
-  contains
+contains
 
   !> @ brief Create OutputControlType
   !!
@@ -55,13 +56,13 @@ module OutputControlModule
   !<
   subroutine oc_cr(ocobj, name_model, inunit, iout)
     ! -- dummy
-    type(OutputControlType), pointer :: ocobj   !< OutputControlType object
-    character(len=*), intent(in) :: name_model  !< name of the model
-    integer(I4B), intent(in) :: inunit          !< unit number for input
-    integer(I4B), intent(in) :: iout            !< unit number for output
+    type(OutputControlType), pointer :: ocobj !< OutputControlType object
+    character(len=*), intent(in) :: name_model !< name of the model
+    integer(I4B), intent(in) :: inunit !< unit number for input
+    integer(I4B), intent(in) :: iout !< unit number for output
     !
     ! -- Create the object
-    allocate(ocobj)
+    allocate (ocobj)
     !
     ! -- Allocate scalars
     call ocobj%allocate_scalars(name_model)
@@ -84,7 +85,7 @@ module OutputControlModule
   !<
   subroutine oc_df(this)
     ! -- dummy
-    class(OutputControlType) :: this  !< OutputControlType object
+    class(OutputControlType) :: this !< OutputControlType object
     !
     ! -- Return
     return
@@ -97,11 +98,11 @@ module OutputControlModule
   !<
   subroutine oc_rp(this)
     ! -- modules
-    use TdisModule,              only: kper, nper
-    use ConstantsModule,         only: LINELENGTH
+    use TdisModule, only: kper, nper
+    use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
-    class(OutputControlType) :: this  !< OutputControlType object
+    class(OutputControlType) :: this !< OutputControlType object
     ! -- local
     integer(I4B) :: ierr, ival, ipos
     logical :: isfound, found, endOfBlock
@@ -110,19 +111,19 @@ module OutputControlModule
     character(len=LINELENGTH) :: printsave
     class(OutputControlDataType), pointer :: ocdobjptr
     ! -- formats
-    character(len=*), parameter :: fmtboc =                                    &
-      "(1X,/1X,'BEGIN READING OUTPUT CONTROL FOR STRESS PERIOD ',I0)"
-    character(len=*), parameter :: fmteoc =                                    &
-      "(/,1X,'END READING OUTPUT CONTROL FOR STRESS PERIOD ',I0)"
-    character(len=*), parameter :: fmterr =                                    &
-      "(' ERROR READING OUTPUT CONTROL PERIOD BLOCK: ')"
-    character(len=*), parameter :: fmtroc =                                    &
-      "(1X,/1X,'OUTPUT CONTROL FOR STRESS PERIOD ',I0,                         &
-       &' IS REPEATED USING SETTINGS FROM A PREVIOUS STRESS PERIOD.')"
-    character(len=*), parameter :: fmtpererr =                                 &
-      "(1x,'CURRENT STRESS PERIOD GREATER THAN PERIOD IN OUTPUT CONTROL.')"
-    character(len=*), parameter :: fmtpererr2 =                                 &
-      "(1x,'CURRENT STRESS PERIOD: ',I0,' SPECIFIED STRESS PERIOD: ',I0)"
+    character(len=*), parameter :: fmtboc = &
+      &"(1X,/1X,'BEGIN READING OUTPUT CONTROL FOR STRESS PERIOD ',I0)"
+    character(len=*), parameter :: fmteoc = &
+      &"(/,1X,'END READING OUTPUT CONTROL FOR STRESS PERIOD ',I0)"
+    character(len=*), parameter :: fmterr = &
+      &"(' ERROR READING OUTPUT CONTROL PERIOD BLOCK: ')"
+    character(len=*), parameter :: fmtroc = &
+      "(1X,/1X,'OUTPUT CONTROL FOR STRESS PERIOD ',I0, &
+      &' IS REPEATED USING SETTINGS FROM A PREVIOUS STRESS PERIOD.')"
+    character(len=*), parameter :: fmtpererr = &
+      &"(1x,'CURRENT STRESS PERIOD GREATER THAN PERIOD IN OUTPUT CONTROL.')"
+    character(len=*), parameter :: fmtpererr2 = &
+      &"(1x,'CURRENT STRESS PERIOD: ',I0,' SPECIFIED STRESS PERIOD: ',I0)"
     !
     ! -- Read next block header if kper greater than last one read
     if (this%iperoc < kper) then
@@ -134,38 +135,38 @@ module OutputControlModule
       ! -- If end of file, set iperoc past kper, else parse line
       if (ierr < 0) then
         this%iperoc = nper + 1
-        write(this%iout, '(/,1x,a)') 'END OF FILE DETECTED IN OUTPUT CONTROL.'
-        write(this%iout, '(1x,a)') 'CURRENT OUTPUT CONTROL SETTINGS WILL BE '
-        write(this%iout, '(1x,a)') 'REPEATED UNTIL THE END OF THE SIMULATION.'
+        write (this%iout, '(/,1x,a)') 'END OF FILE DETECTED IN OUTPUT CONTROL.'
+        write (this%iout, '(1x,a)') 'CURRENT OUTPUT CONTROL SETTINGS WILL BE '
+        write (this%iout, '(1x,a)') 'REPEATED UNTIL THE END OF THE SIMULATION.'
       else
         !
         ! -- Read period number
         ival = this%parser%GetInteger()
         !
         ! -- Check to see if this is a valid kper
-        if(ival <= 0 .or. ival > nper) then
-          write(ermsg, '(a,i0)') 'PERIOD NOT VALID IN OUTPUT CONTROL: ', ival
+        if (ival <= 0 .or. ival > nper) then
+          write (ermsg, '(a,i0)') 'PERIOD NOT VALID IN OUTPUT CONTROL: ', ival
           call store_error(ermsg)
-          write(ermsg, '(a, a)') 'LINE: ', trim(adjustl(line))
+          write (ermsg, '(a, a)') 'LINE: ', trim(adjustl(line))
           call store_error(ermsg)
-        endif
+        end if
         !
         ! -- Check to see if specified is less than kper
-        if(ival < kper) then
-          write(ermsg, fmtpererr)
+        if (ival < kper) then
+          write (ermsg, fmtpererr)
           call store_error(ermsg)
-          write(ermsg, fmtpererr2) kper, ival
+          write (ermsg, fmtpererr2) kper, ival
           call store_error(ermsg)
-          write(ermsg, '(a, a)') 'LINE: ', trim(adjustl(line))
+          write (ermsg, '(a, a)') 'LINE: ', trim(adjustl(line))
           call store_error(ermsg)
-        endif
+        end if
         !
         ! -- Stop or set iperoc and continue
-        if(count_errors() > 0) then
+        if (count_errors() > 0) then
           call this%parser%StoreErrorUnit()
-        endif
+        end if
         this%iperoc = ival
-      endif
+      end if
     end if
     !
     ! -- Read the stress period block
@@ -175,10 +176,10 @@ module OutputControlModule
       do ipos = 1, size(this%ocdobj)
         ocdobjptr => this%ocdobj(ipos)
         call ocdobjptr%psmobj%init()
-      enddo
+      end do
       !
       ! -- Output control time step matches simulation time step.
-      write(this%iout,fmtboc) this%iperoc
+      write (this%iout, fmtboc) this%iperoc
       !
       ! -- loop to read records
       recordloop: do
@@ -199,33 +200,33 @@ module OutputControlModule
         found = .false.
         do ipos = 1, size(this%ocdobj)
           ocdobjptr => this%ocdobj(ipos)
-          if(keyword2 == trim(ocdobjptr%cname)) then
+          if (keyword2 == trim(ocdobjptr%cname)) then
             found = .true.
             exit
-          endif
-        enddo
+          end if
+        end do
         if (.not. found) then
           call this%parser%GetCurrentLine(line)
-          write(ermsg, fmterr)
+          write (ermsg, fmterr)
           call store_error(ermsg)
           call store_error('UNRECOGNIZED KEYWORD: '//keyword2)
           call store_error(trim(line))
           call this%parser%StoreErrorUnit()
-        endif
+        end if
         call this%parser%GetRemainingLine(line)
-        call ocdobjptr%psmobj%rp(trim(printsave)//' '//line,      &
+        call ocdobjptr%psmobj%rp(trim(printsave)//' '//line, &
                                  this%iout)
         call ocdobjptr%ocd_rp_check(this%parser%iuactive)
         !
         ! -- End of recordloop
-      enddo recordloop
-      write(this%iout,fmteoc) this%iperoc
+      end do recordloop
+      write (this%iout, fmteoc) this%iperoc
     else
       !
       ! -- Write message that output control settings are from a previous
       !    stress period.
-      write(this%iout, fmtroc) kper
-    endif
+      write (this%iout, fmtroc) kper
+    end if
     !
     ! -- return
     return
@@ -241,11 +242,11 @@ module OutputControlModule
     ! -- modules
     use TdisModule, only: kstp, endofperiod
     ! -- dummy
-    class(OutputControlType) :: this      !< OutputControlType object
-    integer(I4B), intent(inout) :: ipflg  !< flag indicating if data was printed
+    class(OutputControlType) :: this !< OutputControlType object
+    integer(I4B), intent(inout) :: ipflg !< flag indicating if data was printed
     ! -- local
     integer(I4B) :: ipos
-    type(OutputControlDataType), pointer   :: ocdobjptr
+    type(OutputControlDataType), pointer :: ocdobjptr
     !
     ! -- Clear printout flag(ipflg).  This flag indicates that an array was
     !    printed to the listing file.
@@ -254,7 +255,7 @@ module OutputControlModule
     do ipos = 1, size(this%ocdobj)
       ocdobjptr => this%ocdobj(ipos)
       call ocdobjptr%ocd_ot(ipflg, kstp, endofperiod, this%iout)
-    enddo
+    end do
     !
     ! -- Return
     return
@@ -269,16 +270,16 @@ module OutputControlModule
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(OutputControlType) :: this  !< OutputControlType object
+    class(OutputControlType) :: this !< OutputControlType object
     ! -- local
     integer(I4B) :: i
     !
     do i = 1, size(this%ocdobj)
       call this%ocdobj(i)%ocd_da()
-    enddo
-    deallocate(this%ocdobj)
+    end do
+    deallocate (this%ocdobj)
     !
-    deallocate(this%name_model)
+    deallocate (this%name_model)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%ibudcsv)
@@ -299,12 +300,12 @@ module OutputControlModule
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    class(OutputControlType) :: this            !< OutputControlType object
-    character(len=*), intent(in) :: name_model  !< name of model
+    class(OutputControlType) :: this !< OutputControlType object
+    character(len=*), intent(in) :: name_model !< name of model
     !
     this%memoryPath = create_mem_path(name_model, 'OC')
     !
-    allocate(this%name_model)    
+    allocate (this%name_model)
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
@@ -332,7 +333,7 @@ module OutputControlModule
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(OutputControlType) :: this  !< OutputControlType object
+    class(OutputControlType) :: this !< OutputControlType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: keyword2
@@ -341,15 +342,15 @@ module OutputControlModule
     integer(I4B) :: ierr
     integer(I4B) :: ipos
     logical :: isfound, found, endOfBlock
-    type(OutputControlDataType), pointer   :: ocdobjptr
+    type(OutputControlDataType), pointer :: ocdobjptr
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-      supportOpenClose=.true., blockRequired=.false.)
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(/,1x,a,/)') 'PROCESSING OC OPTIONS'
+      write (this%iout, '(/,1x,a,/)') 'PROCESSING OC OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -359,34 +360,35 @@ module OutputControlModule
           call this%parser%GetStringCaps(keyword2)
           if (keyword2 /= 'FILEOUT') then
             errmsg = "BUDGETCSV must be followed by FILEOUT and then budget &
-              &csv file name.  Found '" // trim(keyword2) // "'."
+              &csv file name.  Found '"//trim(keyword2)//"'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end if
           call this%parser%GetString(fname)
           this%ibudcsv = GetUnit()
-          call openfile(this%ibudcsv, this%iout, fname, 'CSV', filstat_opt='REPLACE')
+          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                        filstat_opt='REPLACE')
           found = .true.
         end if
-        
+
         if (.not. found) then
           do ipos = 1, size(this%ocdobj)
             ocdobjptr => this%ocdobj(ipos)
-            if(keyword == trim(ocdobjptr%cname)) then
+            if (keyword == trim(ocdobjptr%cname)) then
               found = .true.
               exit
-            endif
-          enddo
+            end if
+          end do
           if (.not. found) then
-            errmsg = "UNKNOWN OC OPTION '" // trim(keyword) // "'."
+            errmsg = "UNKNOWN OC OPTION '"//trim(keyword)//"'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
-          endif
+          end if
           call this%parser%GetRemainingLine(line)
           call ocdobjptr%set_option(line, this%parser%iuactive, this%iout)
         end if
       end do
-      write(this%iout,'(1x,a)') 'END OF OC OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF OC OPTIONS'
     end if
     !
     ! -- return
@@ -402,8 +404,8 @@ module OutputControlModule
     ! -- modules
     use TdisModule, only: kstp, endofperiod
     ! -- dummy
-    class(OutputControlType) :: this       !< OutputControlType object
-    character(len=*), intent(in) :: cname  !< character string for data name
+    class(OutputControlType) :: this !< OutputControlType object
+    character(len=*), intent(in) :: cname !< character string for data name
     ! -- local
     integer(I4B) :: ipos
     logical :: found
@@ -413,14 +415,14 @@ module OutputControlModule
     found = .false.
     do ipos = 1, size(this%ocdobj)
       ocdobjptr => this%ocdobj(ipos)
-      if(cname == trim(ocdobjptr%cname)) then
+      if (cname == trim(ocdobjptr%cname)) then
         found = .true.
         exit
-      endif
-    enddo
-    if(found) then
+      end if
+    end do
+    if (found) then
       oc_save = ocdobjptr%psmobj%kstp_to_save(kstp, endofperiod)
-    endif
+    end if
     !
     ! -- Return
     return
@@ -435,8 +437,8 @@ module OutputControlModule
     ! -- modules
     use TdisModule, only: kstp, endofperiod
     ! -- dummy
-    class(OutputControlType) :: this       !< OutputControlType object
-    character(len=*), intent(in) :: cname  !< character string for data name
+    class(OutputControlType) :: this !< OutputControlType object
+    character(len=*), intent(in) :: cname !< character string for data name
     ! -- local
     integer(I4B) :: ipos
     logical :: found
@@ -446,14 +448,14 @@ module OutputControlModule
     found = .false.
     do ipos = 1, size(this%ocdobj)
       ocdobjptr => this%ocdobj(ipos)
-      if(cname == trim(ocdobjptr%cname)) then
+      if (cname == trim(ocdobjptr%cname)) then
         found = .true.
         exit
-      endif
-    enddo
-    if(found) then
+      end if
+    end do
+    if (found) then
       oc_print = ocdobjptr%psmobj%kstp_to_print(kstp, endofperiod)
-    endif
+    end if
     !
     ! -- Return
     return
@@ -469,8 +471,8 @@ module OutputControlModule
     ! -- return
     integer(I4B) :: oc_save_unit
     ! -- dummy
-    class(OutputControlType) :: this       !< OutputControlType object
-    character(len=*), intent(in) :: cname  !< character string for data name
+    class(OutputControlType) :: this !< OutputControlType object
+    character(len=*), intent(in) :: cname !< character string for data name
     ! -- local
     integer(I4B) :: ipos
     logical :: found
@@ -480,14 +482,14 @@ module OutputControlModule
     found = .false.
     do ipos = 1, size(this%ocdobj)
       ocdobjptr => this%ocdobj(ipos)
-      if(cname == trim(ocdobjptr%cname)) then
+      if (cname == trim(ocdobjptr%cname)) then
         found = .true.
         exit
-      endif
-    enddo
-    if(found) then
+      end if
+    end do
+    if (found) then
       oc_save_unit = ocdobjptr%idataun
-    endif
+    end if
     !
     ! -- Return
     return
@@ -504,25 +506,25 @@ module OutputControlModule
     ! -- return
     integer(I4B) :: iprint_flag
     ! -- dummy
-    class(OutputControlType) :: this       !< OutputControlType object
-    character(len=*), intent(in) :: cname  !< character string for data name
-    integer(I4B), intent(in) :: icnvg      !< convergence flag
-    logical, intent(in) :: endofperiod     !< end of period logical flag
+    class(OutputControlType) :: this !< OutputControlType object
+    character(len=*), intent(in) :: cname !< character string for data name
+    integer(I4B), intent(in) :: icnvg !< convergence flag
+    logical, intent(in) :: endofperiod !< end of period logical flag
     ! -- local
     !
     ! -- default is to not print
     iprint_flag = 0
     !
     ! -- if the output control file indicates that cname should be printed
-    if(this%oc_print(cname)) iprint_flag = 1
+    if (this%oc_print(cname)) iprint_flag = 1
     !
     ! -- if it is not a CONTINUE run, then set to print if not converged
     if (isimcontinue == 0) then
-      if(icnvg == 0) iprint_flag = 1
+      if (icnvg == 0) iprint_flag = 1
     end if
     !
     ! -- if it's the end of the period, then set flag to print
-    if(endofperiod) iprint_flag = 1
+    if (endofperiod) iprint_flag = 1
     !
     ! -- Return
     return

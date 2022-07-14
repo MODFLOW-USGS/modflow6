@@ -1,23 +1,23 @@
 module TimeSeriesLinkModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,   only: DZERO, LENBOUNDNAME, LENPACKAGENAME, &
-                               LENTIMESERIESTEXT
+  use ConstantsModule, only: DZERO, LENBOUNDNAME, LENPACKAGENAME, &
+                             LENTIMESERIESTEXT
   use InputOutputModule, only: UPCASE
-  use ListModule,        only: ListType
-  use TimeSeriesModule,  only: TimeSeriesType
+  use ListModule, only: ListType
+  use TimeSeriesModule, only: TimeSeriesType
 
   implicit none
 
   private
-  public :: TimeSeriesLinkType, ConstructTimeSeriesLink,  &
+  public :: TimeSeriesLinkType, ConstructTimeSeriesLink, &
             GetTimeSeriesLinkFromList, AddTimeSeriesLinkToList
   private :: CastAsTimeSeriesLinkType
 
   type :: TimeSeriesLinkType
     ! -- Public members
-    integer(I4B), public :: IRow = 0                                             ! row index (2nd dim) in bound or auxval array
-    integer(I4B), public :: JCol = 0                                             ! column index (1st dim) in bound or auxval array
+    integer(I4B), public :: IRow = 0 ! row index (2nd dim) in bound or auxval array
+    integer(I4B), public :: JCol = 0 ! column index (1st dim) in bound or auxval array
     integer(I4B), public :: Iprpak = 1
     ! BndElement can point to an element in either the bound or auxval
     ! array of BndType, or any other double precision variable or array
@@ -53,7 +53,7 @@ contains
     ! -- local
     character(len=LENPACKAGENAME) :: pkgNameTemp
     !
-    allocate(newTsLink)
+    allocate (newTsLink)
     !
     ! Store package name as all caps
     pkgNameTemp = pkgName
@@ -68,7 +68,7 @@ contains
     !
     if (present(text)) then
       newTsLink%Text = text
-    endif
+    end if
     !
     return
   end subroutine ConstructTimeSeriesLink
@@ -110,7 +110,7 @@ contains
   subroutine AddTimeSeriesLinkToList(list, tslink)
     implicit none
     ! -- dummy
-    type(ListType),             intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(TimeSeriesLinkType), pointer, intent(inout) :: tslink
     ! -- local
     class(*), pointer :: obj
