@@ -831,7 +831,7 @@ contains
       if (this%gwfmodelname2 /= '') then
         call store_error('GWFMODELNAME2 has already been set to ' &
                          //trim(this%gwfmodelname2)// &
-                         s'. Cannot set more than once.')
+                         '. Cannot set more than once.')
         call this%parser%StoreErrorUnit()
       end if
       this%gwfmodelname2 = subkey(1:LENMODELNAME)

@@ -268,11 +268,13 @@ contains
     ! TODO: might consider adding a new mf6 level set pointers method, and
     ! doing this stuff there instead of in the time step loop.
     if (kstp * kper == 1) then
-      if (this%ixt3d > 0)
-      call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0, this%d11, this%id33, &
-                             this%d33, this%fmi%gwfsat, this%id22, &
-                             this%d22, this%iangle1, this%iangle2, &
-                             this%iangle3, this%angle1, this%angle2, this%angle3)
+      if (this%ixt3d > 0) then
+        call this%xt3d%xt3d_ar(this%fmi%ibdgwfsat0, this%d11, this%id33, &
+                               this%d33, this%fmi%gwfsat, this%id22, &
+                               this%d22, this%iangle1, this%iangle2, &
+                               this%iangle3, this%angle1, this%angle2, &
+                               this%angle3)
+      end if
     end if
     !
     ! -- Fill d11, d22, d33, angle1, angle2, angle3 using specific discharge
