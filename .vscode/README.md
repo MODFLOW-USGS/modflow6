@@ -22,9 +22,6 @@ Install the following VSCode extensions:
 - Modern Fortran:
   https://marketplace.visualstudio.com/items?itemName=krvajalm.linter-gfortran
 
-- vscode-modern-fortran-formatter:
-  https://marketplace.visualstudio.com/items?itemName=yukiuuh.vscode-modern-fortran-formatter
-
 Note: The Remote - WSL extension may be required if you want to use a windows VSCode
 installation in a WSL environment.
 
@@ -39,8 +36,8 @@ the [fortls](https://github.com/gnikit/fortls) fortran language server run:
 pip install -U fortls
 ```
 
-The vscode-modern-fortran-formatter requires `fprettify`, which can be installed in a similar way
-using pip or conda.
+The Modern Fortran formatting capability requires `fprettify`, which can be installed in a similar way
+using `pip` or `conda`.
 
 
 ### Settings
@@ -74,8 +71,9 @@ The fortran formatter can be integrated with VSCode using the following settings
 ```json
 {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "yukiuuh.vscode-modern-fortran-formatter",
-    "modernFortranFormatter.fprettifyArgs": "-c C:\\<full path to modflow6>\\distribution\\.fprettify.yaml"
+    "editor.defaultFormatter": "fortran-lang.linter-gfortran",
+    "fortran.formatting.formatter": "fprettify",
+    "fortran.formatting.fprettifyArgs": ["-c", "C:\\<full path to modflow6>\\distribution\\.fprettify.yaml"],
 }
 ```
 
