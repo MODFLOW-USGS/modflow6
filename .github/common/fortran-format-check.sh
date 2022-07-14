@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SEARCHPATHS=(src srcbmi utils)
-SEARCHPATHS=(src)
+SEARCHPATHS=(src srcbmi)
 EXCLUDEDIRS=(src/Utilities/Libraries/blas # external library blas
              src/Utilities/Libraries/daglib # external library dag
              src/Utilities/Libraries/rcm # external library rcm
