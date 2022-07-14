@@ -7,7 +7,7 @@ module CircularGeometryModule
 
   private
   public :: CircularGeometryType
-  
+
   type, extends(BaseGeometryType) :: CircularGeometryType
     real(DP) :: radius = DZERO
   contains
@@ -18,9 +18,9 @@ module CircularGeometryModule
     procedure :: set_attribute
     procedure :: print_attributes
   end type CircularGeometryType
-  
-  contains
-  
+
+contains
+
   function area_sat(this)
 ! ******************************************************************************
 ! area_sat -- return area as if geometry is fully saturated
@@ -37,12 +37,12 @@ module CircularGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
-    area_sat = DPI * this%radius ** DTWO
+    area_sat = DPI * this%radius**DTWO
     !
     ! -- Return
     return
   end function area_sat
-  
+
   function perimeter_sat(this)
 ! ******************************************************************************
 ! perimeter_sat -- return perimeter as if geometry is fully saturated
@@ -64,7 +64,7 @@ module CircularGeometryModule
     ! -- return
     return
   end function perimeter_sat
-  
+
   function area_wet(this, depth)
 ! ******************************************************************************
 ! area_wet -- return wetted area
@@ -82,25 +82,26 @@ module CircularGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
-    if(depth <= DZERO) then
-      area_wet = DZERO      
-    elseif(depth <= this%radius) then
-      area_wet = this%radius * this%radius *                                   &
-                 acos((this%radius - depth) / this%radius) -                   &
-                 (this%radius - depth) * sqrt(this%radius * this%radius -      &
-                 (this%radius - depth) ** DTWO)
-    elseif(depth <= DTWO * this%radius) then
-      area_wet = this%radius * this%radius * (DPI - acos((depth - this%radius) &
-                 / this%radius)) - (this%radius - depth) * sqrt(this%radius *  &
-                 this%radius - (this%radius - depth) ** DTWO)
+    if (depth <= DZERO) then
+      area_wet = DZERO
+    elseif (depth <= this%radius) then
+      area_wet = this%radius * this%radius * &
+                 acos((this%radius - depth) / this%radius) - &
+                 (this%radius - depth) * &
+                 sqrt(this%radius * this%radius - (this%radius - depth)**DTWO)
+    elseif (depth <= DTWO * this%radius) then
+      area_wet = this%radius * this%radius * &
+                 (DPI - acos((depth - this%radius) / this%radius)) - &
+                 (this%radius - depth) * &
+                 sqrt(this%radius * this%radius - (this%radius - depth)**DTWO)
     else
       area_wet = DPI * this%radius * this%radius
-    endif
+    end if
     !
     ! -- Return
     return
   end function area_wet
-  
+
   function perimeter_wet(this, depth)
 ! ******************************************************************************
 ! perimeter_wet -- return wetted perimeter
@@ -118,22 +119,22 @@ module CircularGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
-    if(depth <= DZERO) then
-      perimeter_wet = DZERO      
-    elseif(depth <= this%radius) then
-      perimeter_wet = DTWO * this%radius * acos((this%radius - depth) /        &
-                      this%radius)
-    elseif(depth <= DTWO * this%radius) then
+    if (depth <= DZERO) then
+      perimeter_wet = DZERO
+    elseif (depth <= this%radius) then
+      perimeter_wet = DTWO * this%radius * acos((this%radius - depth) / &
+                                                this%radius)
+    elseif (depth <= DTWO * this%radius) then
       perimeter_wet = DTWO * this%radius * (DPI - acos((depth - this%radius) / &
-                      this%radius))
+                                                       this%radius))
     else
       perimeter_wet = DTWO * DPI * this%radius
-    endif
+    end if
     !
     ! -- return
     return
   end function perimeter_wet
-  
+
   subroutine set_attribute(this, line)
 ! ******************************************************************************
 ! set_attribute -- set a parameter for this circular object
@@ -153,23 +154,23 @@ module CircularGeometryModule
     integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
 ! ------------------------------------------------------------------------------
-    !    
+    !
     ! -- should change this and set id if uninitialized or store it
-    lloc=1
+    lloc = 1
     call urword(line, lloc, istart, istop, 2, ival, rval, 0, 0)
     this%id = ival
-    
+
     ! -- Parse the attribute
     call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
-    select case(line(istart:istop))
-    case('NAME')
+    select case (line(istart:istop))
+    case ('NAME')
       call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
       this%name = line(istart:istop)
-    case('RADIUS')
+    case ('RADIUS')
       call urword(line, lloc, istart, istop, 3, ival, rval, 0, 0)
-      this%radius = rval      
+      this%radius = rval
     case default
-      write(errmsg,'(4x,a,a)') &
+      write (errmsg, '(4x,a,a)') &
         'Unknown circular geometry attribute: ', line(istart:istop)
       call store_error(errmsg, terminate=.TRUE.)
     end select
@@ -198,12 +199,12 @@ module CircularGeometryModule
     call this%BaseGeometryType%print_attributes(iout)
     !
     ! -- Print specifics of this geometry type
-    write(iout, fmttd) 'RADIUS = ', this%radius
-    write(iout, fmttd) 'SATURATED AREA = ', this%area_sat()
-    write(iout, fmttd) 'SATURATED WETTED PERIMETER = ', this%perimeter_sat()
+    write (iout, fmttd) 'RADIUS = ', this%radius
+    write (iout, fmttd) 'SATURATED AREA = ', this%area_sat()
+    write (iout, fmttd) 'SATURATED WETTED PERIMETER = ', this%perimeter_sat()
     !
     ! -- return
     return
   end subroutine print_attributes
-  
+
 end module CircularGeometryModule
