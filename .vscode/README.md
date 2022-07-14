@@ -25,10 +25,8 @@ Install the following VSCode extensions:
 - vscode-modern-fortran-formatter:
   https://marketplace.visualstudio.com/items?itemName=yukiuuh.vscode-modern-fortran-formatter
 
-- Remote - WSL:
-  https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl
-
-Remote - WSL is only needed if you want to use a windows vscode installation in a WSL environment.
+Note: The Remote - WSL extension may be required if you want to use a windows VSCode
+installation in a WSL environment.
 
 ### Dependencies
 
@@ -57,37 +55,27 @@ In general, to determine the path of an installed tool in your environment run:
 - cmd: `where <toolname>`, e.g. `where python`
 - PowerShell: `Get-Command <toolname>` e.g. `Get-Command fprettify`
 
-The setting "python.defaultInterpreterPath" points toward your Python executable:
+The setting "python.defaultInterpreterPath" describes the path of your Python executable:
 ```json
 {
     "python.defaultInterpreterPath": "/path/to/python",
 }
 ```
 
-The setting "fortran.fortls.path" points toward your fortls executable:
+The setting "fortran.fortls.path" describes the path of your fortls executable:
 ```json
 {
     "fortran.fortls.path": "/path/to/fortls"
 }
 ```
 
-The fortran formatter can be integrated with vscode using the following settings:
+The fortran formatter can be integrated with VSCode using the following settings:
 
 ```json
 {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "yukiuuh.vscode-modern-fortran-formatter",
     "modernFortranFormatter.fprettifyArgs": "-c C:\\<full path to modflow6>\\distribution\\.fprettify.yaml"
-}
-```
-
-...or, in a WSL environment:
-
-```json
-{
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "yukiuuh.vscode-modern-fortran-formatter",
-    "modernFortranFormatter.fprettifyArgs": "-c /<full path to modflow6>/distribution/.fprettify.yaml",
 }
 ```
 
