@@ -206,7 +206,7 @@ contains
     class(GwtDspType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
-    type(GwtDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
+    type(TspDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
                                                                 !! to create the package without input file
     ! -- local
     ! -- formats
@@ -715,7 +715,7 @@ contains
   subroutine set_data(this, grid_data)
     use MemoryManagerModule, only: mem_reallocate
     class(GwtDspType) :: this !< this DSP package
-    type(GwtDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
+    type(TspDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
     ! local
     integer(I4B) :: i
 

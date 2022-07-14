@@ -12,7 +12,7 @@ module GwtModule
   use ConstantsModule, only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
-  use TransportModelModule, only: TransportModelType
+  use TransportModelModule, only: TransportModelType, cunit, niunit
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use TspIcModule, only: TspIcType
