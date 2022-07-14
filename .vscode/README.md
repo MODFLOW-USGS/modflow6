@@ -30,7 +30,7 @@ installation in a WSL environment.
 
 ### Dependencies
 
-Required and optional dependencies for modflow6 are discussed in [DEVELOPER.md](../DEVELOPER.md)
+Required and optional dependencies for MODFLOW 6 are discussed in [DEVELOPER.md](../DEVELOPER.md)
 
 The Modern Fortran extension requires a Fortran compiler and language server.  To install
 the [fortls](https://github.com/gnikit/fortls) fortran language server run:
@@ -83,7 +83,7 @@ Setting the formatter up in this way will cause a source file to reformat with e
 
 ### Running VSCode
 
-Open the top level `modflow6` repository directoy on your system when starting VSCode. The program will
+Open the top level `modflow6` repository directory on your system when starting VSCode. The program will
 then look for the `modflow6/.vscode` directory to discover settings relevant to your session.
 
 A nice alternative on any system is to start VSCode from the shell. For example, in a bash or git bash
