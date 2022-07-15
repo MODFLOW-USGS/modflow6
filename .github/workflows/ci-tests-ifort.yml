@@ -17,13 +17,14 @@ on:
       - develop
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18417/w_HPCKit_p_2022.1.0.93_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18438/l_HPCKit_p_2022.1.1.97_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18341/m_HPCKit_p_2022.1.0.86_offline.dmg
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18679/l_HPCKit_p_2022.2.0.191_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18681/m_HPCKit_p_2022.2.0.158_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
   LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
   FC: ifort
+  VS_VER: vs2022
 
 jobs:
   test:
@@ -34,19 +35,17 @@ jobs:
         include:
           - os: ubuntu-latest
           - os: macos-latest
-          - os: windows-2019
+          - os: windows-latest
     defaults:
       run:
-        shell: bash
+        shell: bash -l {0}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
 
-      - name: Setup Python 3.8
-        uses: actions/setup-python@v2.2.2
-        with:
-          python-version: 3.8
+      - name: Install Conda environment from environment.yml
+        uses: mamba-org/provision-with-micromamba@main
 
       - name: cache install ifort on linux
         if: runner.os == 'Linux'
@@ -88,13 +87,9 @@ jobs:
         run: |
           .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
 
-      - name: Install python packages
-        run: |
-          .github/common/install-python-std.sh
-
       - name: Print python package versions
         run: |
-          .github/common/python-version.sh
+          pip list
 
       - name: Test make for MODFLOW 6 programs
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -130,9 +125,10 @@ jobs:
 
       - name: Build MODFLOW 6 (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: cmd /C CALL {0}
         run: |
-          call ".github/intel-scripts/ifortvars_windows.bat"
+          call micromamba activate modflow6
+          call ".github/intel-scripts/build_windows.bat"
           meson setup builddir -Ddebug=false --prefix=%CD% --libdir=bin
           meson install -C builddir
           cd autotest
@@ -150,6 +146,5 @@ jobs:
 
       - name: exclude unused files from cache on windows
         if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
-        shell: bash
         run: |
           .github/intel-scripts/cache_exclude_windows.sh

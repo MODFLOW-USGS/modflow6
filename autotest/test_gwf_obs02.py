@@ -3,8 +3,9 @@ Test obs package to make sure that the header in output csv files  is
 correct.
 """
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -87,7 +88,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=gwfname,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
     gwf.name_file.save_flows = True
 
@@ -106,10 +107,8 @@ def build_model(idx, dir):
     # build list of obs csv files to create
     obsdict = {}
     for i in range(nrow):
-        obslst = [
-            ("h_{}_{}".format(i, j), "head", (0, i, j)) for j in range(ncol)
-        ]
-        fname = "{}.{}.obs.csv".format(name, i)
+        obslst = [(f"h_{i}_{j}", "head", (0, i, j)) for j in range(ncol)]
+        fname = f"{name}.{i}.obs.csv"
         obsdict[fname] = obslst
 
     flopy.mf6.ModflowUtlobs(
@@ -138,7 +137,7 @@ def build_model(idx, dir):
     # output control
     flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name),
+        head_filerecord=f"{name}.hds",
         printrecord=[("BUDGET", "LAST"), ("HEAD", "LAST")],
         saverecord=[("HEAD", "LAST")],
     )
@@ -151,12 +150,12 @@ def eval_model(sim):
     name = ex[sim.idxsim]
     headcsv = np.empty((nlay, nrow, ncol), dtype=float)
     for i in range(nrow):
-        fname = "{}.{}.obs.csv".format(name, i)
-        print("Loading and testing {}".format(fname))
+        fname = f"{name}.{i}.obs.csv"
+        print(f"Loading and testing {fname}")
         fname = os.path.join(sim.simpath, fname)
         rec = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
         for j in range(ncol):
-            obsname_true = "h_{}_{}".format(i, j).upper()
+            obsname_true = f"h_{i}_{j}".upper()
             obsname_found = rec.dtype.names[j + 1].upper()
             errmsg = (
                 'obsname in {} is incorrect.  Looking for "{}" but found "{}"'
@@ -165,7 +164,7 @@ def eval_model(sim):
             assert obsname_true == obsname_found, errmsg
         headcsv[0, i, :] = np.array(rec.tolist()[1:])
 
-    fn = os.path.join(sim.simpath, "{}.hds".format(name))
+    fn = os.path.join(sim.simpath, f"{name}.hds")
     hobj = flopy.utils.HeadFile(fn)
     headbin = hobj.get_data()
 
@@ -208,7 +207,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

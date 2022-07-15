@@ -1,0 +1,22 @@
+name: modflow6
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - appdirs 
+  - fprettify
+  - numpy
+  - matplotlib
+  - meson!=0.63.0
+  - ninja
+  - pip
+  - pip:
+      - git+https://github.com/modflowpy/flopy.git
+      - git+https://github.com/modflowpy/pymake.git
+      - git+https://github.com/Deltares/xmipy.git
+      - git+https://github.com/MODFLOW-USGS/modflowapi.git
+  - pytest
+  - pytest-xdist
+  - requests

@@ -1,17 +1,18 @@
 import os
-import sys
-import flopy
-import pymake
 import shutil
 import subprocess
+import sys
 from multiprocessing import Pool
+
+import flopy
+import pymake
 
 # Set VERIFY
 VERIFY = False
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from build_exes import build_mf6
+from build_exes import meson_build
 
 github_repo = "MODFLOW-USGS/modflow6"
 working_dir = "./temp/"
@@ -29,7 +30,9 @@ def _get_version():
             version = sys.argv[idx + 1]
             break
     if version is None:
-        version = pymake.repo_latest_version(github_repo=github_repo, verify=VERIFY)
+        version = pymake.repo_latest_version(
+            github_repo=github_repo, verify=VERIFY
+        )
     return version
 
 
@@ -75,17 +78,16 @@ def _get_previous_version():
 
 def build_previous_version(pth):
     _del_version()
-    srcdir = os.path.join(pth, "src")
-    appdir = os.path.join(base_build_dir, "rebuilt")
+    appdir = os.path.abspath(os.path.join(base_build_dir, "rebuilt"))
     if not _is_dryrun():
-        build_mf6(srcdir=srcdir, appdir=appdir)
+        meson_build(dir_path=pth, libdir=appdir)
 
     return os.path.abspath(os.path.join(appdir, f"mf6{app_ext}"))
 
 
 def build_current_version():
     if not _is_dryrun():
-        build_mf6(appdir=base_build_dir)
+        meson_build()
     return os.path.abspath(os.path.join(base_build_dir, f"mf6{app_ext}"))
 
 
@@ -159,7 +161,9 @@ def revert_files(app, example):
                     with open(fpth, "w") as f:
                         for line in lines:
                             if replace[0] in line.lower():
-                                line = line.lower().replace(replace[0], replace[1])
+                                line = line.lower().replace(
+                                    replace[0], replace[1]
+                                )
                             f.write(line)
     return
 
@@ -205,7 +209,9 @@ def elapsed_real_to_string(elt):
 
 def get_examples():
     examples_repo = "MODFLOW-USGS/modflow6-examples"
-    version = pymake.repo_latest_version(github_repo=examples_repo, verify=VERIFY)
+    version = pymake.repo_latest_version(
+        github_repo=examples_repo, verify=VERIFY
+    )
     print(f"current examples version: {version}")
     url = (
         f"https://github.com/{examples_repo}"

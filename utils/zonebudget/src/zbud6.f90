@@ -5,11 +5,11 @@ program zonbudmf6
   use SimVariablesModule, only: iout, errmsg
   use SimModule, only: store_error
   use GenericUtilitiesModule, only: sim_message, write_centered
-  use InputOutputModule,  only: openfile
-  
+  use InputOutputModule, only: openfile
+
   implicit none
-  
-  character(len=10), parameter :: mfvnam=' Version 6'
+
+  character(len=10), parameter :: mfvnam = ' Version 6'
   character(len=LINELENGTH) :: line
   character(len=LENHUGELINE) :: fnam, flst, fcsv
   integer(I4B) :: iunit_lst = 20
@@ -19,7 +19,7 @@ program zonbudmf6
   integer(I4B) :: iunit_zon = 24
   integer(I4B) :: iunit_grb = 25
   logical :: exists
-  
+
   ! -- Write title to screen
   call write_centered('ZONEBUDGET'//mfvnam, 80)
   call write_centered('U.S. GEOLOGICAL SURVEY', 80)
@@ -28,12 +28,12 @@ program zonbudmf6
   ! -- Find name of zone budget name file and lst file
   fnam = 'zbud.nam'
   call parse_command_line(fnam, flst, fcsv)
-  inquire(file=fnam, exist=exists)
+  inquire (file=fnam, exist=exists)
   if (.not. exists) then
-    write(errmsg,'(a)') 'Name file not found. Looking for: ' // trim(fnam)
+    write (errmsg, '(a)') 'Name file not found. Looking for: '//trim(fnam)
     call store_error(errmsg, terminate=.TRUE.)
-  endif
-  !  
+  end if
+  !
   ! -- Open list file and write title
   iout = iunit_lst
   call openfile(iunit_lst, 0, flst, 'LIST', filstat_opt='REPLACE')
@@ -50,10 +50,10 @@ program zonbudmf6
   call process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   !
   ! -- close output files
-  write(iunit_lst, '(/, a)') 'Normal Termination'
-  close(iunit_lst)
-  close(iunit_csv)
-  write(line,'(a)') 'Normal Termination'
+  write (iunit_lst, '(/, a)') 'Normal Termination'
+  close (iunit_lst)
+  close (iunit_csv)
+  write (line, '(a)') 'Normal Termination'
   call sim_message(line, skipbefore=1)
   !
   ! -- end of program
@@ -71,7 +71,7 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
   use SimVariablesModule, only: iout, errmsg
   use SimModule, only: store_error
   use ConstantsModule, only: LENHUGELINE, LINELENGTH
-  use InputOutputModule,  only: openfile
+  use InputOutputModule, only: openfile
   use OpenSpecModule, only: form, access
   use BlockParserModule, only: BlockParserType
   implicit none
@@ -91,7 +91,7 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
   !
   call parser%Initialize(iunit_nam, iout)
   call parser%GetBlock('ZONEBUDGET', isfound, ierr)
-  if(isfound) then
+  if (isfound) then
     do
       call parser%GetNextLine(endOfBlock)
       if (endOfBlock) exit
@@ -99,40 +99,40 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
       fm = 'FORMATTED'
       acc = 'SEQUENTIAL'
       select case (keyword)
-        case ('BUD')
-          iu = iunit_bud
-          fm = form
-          acc = access
-          call parser%GetString(filename)
-        case ('ZON')
-          iu = iunit_zon
-          call parser%GetString(filename)
-        case ('GRB')
-          iu = iunit_grb
-          fm = form
-          acc = access
-          call parser%GetString(filename)
-        case default
-          write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN ZONEBUDGET ENTRY: ',            &
-                                    trim(keyword)
-          call store_error(errmsg)
-          call parser%StoreErrorUnit()
-        end select
-        call openfile(iu, iout, trim(filename), trim(keyword), fm, acc)
+      case ('BUD')
+        iu = iunit_bud
+        fm = form
+        acc = access
+        call parser%GetString(filename)
+      case ('ZON')
+        iu = iunit_zon
+        call parser%GetString(filename)
+      case ('GRB')
+        iu = iunit_grb
+        fm = form
+        acc = access
+        call parser%GetString(filename)
+      case default
+        write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN ZONEBUDGET ENTRY: ', &
+          trim(keyword)
+        call store_error(errmsg)
+        call parser%StoreErrorUnit()
+      end select
+      call openfile(iu, iout, trim(filename), trim(keyword), fm, acc)
     end do
   else
-    write(errmsg,'(1x,a)')'ERROR.  REQUIRED ZONEBUDGET BLOCK NOT FOUND.'
+    write (errmsg, '(1x,a)') 'ERROR.  REQUIRED ZONEBUDGET BLOCK NOT FOUND.'
     call store_error(errmsg)
     call parser%StoreErrorUnit()
   end if
   !
   ! -- close name file
-  close(iunit_nam)
+  close (iunit_nam)
   !
   ! -- return
   return
 end subroutine read_namefile
-  
+
 subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
 ! ******************************************************************************
 ! process_budget
@@ -146,20 +146,20 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   use SimVariablesModule, only: iout, errmsg
   use GenericUtilitiesModule, only: sim_message
   use SimModule, only: store_error
-  use BudgetDataModule, only: budgetdata_init, budgetdata_read,                &
-                              budgetdata_finalize,                             &
-                              ia, ja, budtxt, nbudterms,                       &
-                              nodesrc, nodedst, flowdata, flowja, kper, kstp,  &
-                              delt, totim, dstpackagename, hasimeth1flowja,    &
+  use BudgetDataModule, only: budgetdata_init, budgetdata_read, &
+                              budgetdata_finalize, &
+                              ia, ja, budtxt, nbudterms, &
+                              nodesrc, nodedst, flowdata, flowja, kper, kstp, &
+                              delt, totim, dstpackagename, hasimeth1flowja, &
                               srcmodelname, dstmodelname
-  use ZoneModule,       only: zone_init, clear_accumulators,                   &
-                              flowja_accumulate, flowiaja_accumulate,          &
-                              flow_accumulate,                                 &
-                              flowch_setich, flowch_accumulate,                &
-                              zone_finalize, nmznfl, vbvl, vbznfl, maxzone
-  use ZoneOutputModule, only: zoneoutput_init, zoneoutput_write,               &
+  use ZoneModule, only: zone_init, clear_accumulators, &
+                        flowja_accumulate, flowiaja_accumulate, &
+                        flow_accumulate, &
+                        flowch_setich, flowch_accumulate, &
+                        zone_finalize, nmznfl, vbvl, vbznfl, maxzone
+  use ZoneOutputModule, only: zoneoutput_init, zoneoutput_write, &
                               zoneoutput_finalize
-  use GrbModule,        only: read_grb
+  use GrbModule, only: read_grb
   implicit none
   ! -- dummy
   integer, intent(in) :: iunit_csv
@@ -192,7 +192,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   ! -- Check to see if GRB is required, and read it if necessary
   ncrgrb = 0
   if (hasimeth1flowja) then
-    inquire(unit=iunit_grb, opened=opengrb)
+    inquire (unit=iunit_grb, opened=opengrb)
     if (opengrb) then
       hasiaja = .true.
       call read_grb(iunit_grb, ia, ja, mshape)
@@ -202,21 +202,21 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       call store_error(errmsg)
       errmsg = 'ADD GRB ENTRY TO ZONE BUDGET NAME FILE.'
       call store_error(errmsg, terminate=.TRUE.)
-    endif
+    end if
   else
-    inquire(unit=iunit_grb, opened=opengrb)
+    inquire (unit=iunit_grb, opened=opengrb)
     if (opengrb) then
       errmsg = 'BINARY GRID FILE IS PRESENT, BUT BUDGET FILE DOES NOT HAVE &
-        &"FLOW-JA-FACE" RECORD IN THE IMETH=1 FORMAT. CHECK TO MAKE SURE &
-        &FLOWS ARE SAVED TO THE BUDGET FILE'
+               &"FLOW-JA-FACE" RECORD IN THE IMETH=1 FORMAT. CHECK TO MAKE SURE &
+               &FLOWS ARE SAVED TO THE BUDGET FILE'
       call store_error(errmsg, terminate=.TRUE.)
-    endif
+    end if
     !
     ! -- At this point, must be a budget file from an advanced package without
     !    the IMETH=1 flow-ja-face record.
-    allocate(mshape(1))
+    allocate (mshape(1))
     mshape(1) = ncrgrb
-  endif
+  end if
   !
   ! -- Read the zone file to get number of cells/reaches
   ncr = ncrgrb
@@ -225,24 +225,24 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   ! -- Initialize zone and zoneoutput modules
   !call zone_init(iunit_zon, nbudterms, ncr)
   call zoneoutput_init(iout, iunit_csv, maxzone, nbudterms)
-  allocate(budtxtarray(nbudterms))
-  allocate(packagenamearray(nbudterms))
-  allocate(internalflow(nbudterms))
+  allocate (budtxtarray(nbudterms))
+  allocate (packagenamearray(nbudterms))
+  allocate (internalflow(nbudterms))
   !
   ! -- time loop
   timeloop: do
     !
     ! -- Clear budget accumulators and loop through budget terms
     call clear_accumulators()
-    write(iout, '(/, a)') 'Reading records from budget file'
+    write (iout, '(/, a)') 'Reading records from budget file'
     do ibudterm = 1, nbudterms
       !
       ! -- read data
       call budgetdata_read(success, iout)
       if (.not. success) then
-        write(iout, '(a)') 'Done reading records.  Exiting time loop.'
+        write (iout, '(a)') 'Done reading records.  Exiting time loop.'
         exit timeloop
-      endif
+      end if
       !
       ! -- write message and check
       call sim_message(cdot, advance=.FALSE.)
@@ -254,16 +254,16 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
           internalflow(ibudterm) = 1
         else
           internalflow(ibudterm) = 0
-        endif
+        end if
       else
-        if (budtxt /= budtxtarray(ibudterm) .or.                               &
+        if (budtxt /= budtxtarray(ibudterm) .or. &
             dstpackagename /= packagenamearray(ibudterm)) then
-          errmsg = 'Expecting ' // trim(packagenamearray(itime)) // '-' //  &
-            trim(budtxtarray(itime)) // ' but found ' // trim(dstpackagename)  &
-            // '-' // trim(budtxt)
+          errmsg = 'Expecting '//trim(packagenamearray(itime))//'-'// &
+                   trim(budtxtarray(itime))//' but found '//trim(dstpackagename) &
+                   //'-'//trim(budtxt)
           call store_error(errmsg, terminate=.TRUE.)
-        endif
-      endif
+        end if
+      end if
       !
       ! -- Accumulate flow terms (or set ich for constant heads)
       if (internalflow(ibudterm) == 1) then
@@ -271,31 +271,31 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
           call flowiaja_accumulate(ia, ja, flowja)
         else
           call flowja_accumulate(nodesrc, nodedst, flowdata)
-        endif
+        end if
       else
-        if(trim(adjustl(budtxt)) == 'CONSTANT HEAD') then
+        if (trim(adjustl(budtxt)) == 'CONSTANT HEAD') then
           call flowch_setich(ibudterm, nodesrc)
           foundchd = .true.
         else
           call flow_accumulate(ibudterm, nodesrc, flowdata)
-        endif
-      endif
+        end if
+      end if
       !
-    enddo
-    write(iout, '(a)') 'Done reading records from budget file'
+    end do
+    write (iout, '(a)') 'Done reading records from budget file'
     !
     ! -- Now that all constant heads read, can process budgets for them
-    if(hasiaja .and. foundchd) then
+    if (hasiaja .and. foundchd) then
       call flowch_accumulate(ia, ja, flowja)
-    endif
+    end if
     !
     ! -- Write information for this time
-    call zoneoutput_write(itime, kstp, kper, delt, totim, nbudterms, nmznfl,   &
-                          vbvl, vbznfl, packagenamearray, budtxtarray,         &
+    call zoneoutput_write(itime, kstp, kper, delt, totim, nbudterms, nmznfl, &
+                          vbvl, vbznfl, packagenamearray, budtxtarray, &
                           internalflow)
     itime = itime + 1
 
-  enddo timeloop
+  end do timeloop
   !
   ! -- Finalize
   call sim_message(cdot)
@@ -306,8 +306,8 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   ! -- return
   return
 end subroutine process_budget
-      
-  subroutine parse_command_line(fnam, flst, fcsv)
+
+subroutine parse_command_line(fnam, flst, fcsv)
 ! ******************************************************************************
 ! Parse command line arguments
 !   Assign zone budget name file as first argument.
@@ -316,61 +316,61 @@ end subroutine process_budget
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    ! -- modules
-    use KindModule
-    use InputOutputModule, only: urword
-    use ConstantsModule, only: LENHUGELINE
-    implicit none
-    ! -- dummy
-    character(len=*), intent(inout) :: fnam
-    character(len=*), intent(inout) :: flst
-    character(len=*), intent(inout) :: fcsv
-    ! -- local
-    character(len=LENHUGELINE) :: line
-    integer(I4B) :: inunit = 0
-    integer(I4B) :: ilen
-    integer(I4B) :: istat
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: ival
-    integer(I4B) :: i
-    real(DP) :: rval
+  ! -- modules
+  use KindModule
+  use InputOutputModule, only: urword
+  use ConstantsModule, only: LENHUGELINE
+  implicit none
+  ! -- dummy
+  character(len=*), intent(inout) :: fnam
+  character(len=*), intent(inout) :: flst
+  character(len=*), intent(inout) :: fcsv
+  ! -- local
+  character(len=LENHUGELINE) :: line
+  integer(I4B) :: inunit = 0
+  integer(I4B) :: ilen
+  integer(I4B) :: istat
+  integer(I4B) :: lloc
+  integer(I4B) :: istart
+  integer(I4B) :: istop
+  integer(I4B) :: ival
+  integer(I4B) :: i
+  real(DP) :: rval
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Get the command line string
-    call GET_COMMAND(line, ilen, istat)
-    !
-    ! -- This will read zonebudget executable
-    lloc = 1
-    call urword(line, lloc, istart, istop, 0, ival, rval, 0, inunit)
-    !
-    ! -- This will read first argument (zone budget name file)
-    call urword(line, lloc, istart, istop, 0, ival, rval, 0, inunit)
-    if (istart < len(line)) fnam = line(istart:istop)
-    !
-    ! -- Set lst and csv file names by replacing fnam suffix with .lst
-    istart = 0
-    istop = len_trim(fnam)
-    do i = istop, 1, -1
-      if (fnam(i:i) == '.') then
-        istart = i
-        exit
-      endif
-    enddo
-    if (istart == 0) istart = istop + 1
-    !
-    ! -- Create flst name
-    flst = fnam(1:istart)
-    istop = istart + 3
-    flst(istart:istop) = '.lst'
-    !
-    ! -- Create fcsv name
-    fcsv = fnam(1:istart)
-    istop = istart + 3
-    fcsv(istart:istop) = '.csv'
-    !
-    ! -- Return
-    return
-  end subroutine parse_command_line
+  !
+  ! -- Get the command line string
+  call GET_COMMAND(line, ilen, istat)
+  !
+  ! -- This will read zonebudget executable
+  lloc = 1
+  call urword(line, lloc, istart, istop, 0, ival, rval, 0, inunit)
+  !
+  ! -- This will read first argument (zone budget name file)
+  call urword(line, lloc, istart, istop, 0, ival, rval, 0, inunit)
+  if (istart < len(line)) fnam = line(istart:istop)
+  !
+  ! -- Set lst and csv file names by replacing fnam suffix with .lst
+  istart = 0
+  istop = len_trim(fnam)
+  do i = istop, 1, -1
+    if (fnam(i:i) == '.') then
+      istart = i
+      exit
+    end if
+  end do
+  if (istart == 0) istart = istop + 1
+  !
+  ! -- Create flst name
+  flst = fnam(1:istart)
+  istop = istart + 3
+  flst(istart:istop) = '.lst'
+  !
+  ! -- Create fcsv name
+  fcsv = fnam(1:istart)
+  istop = istart + 3
+  fcsv(istart:istop) = '.csv'
+  !
+  ! -- Return
+  return
+end subroutine parse_command_line
 

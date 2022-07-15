@@ -6,8 +6,9 @@ the non-bmi simulation.
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 from modflowapi import ModflowApi
 
 try:
@@ -148,7 +149,7 @@ def get_model(ws, name, sy):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name),
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -259,7 +260,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

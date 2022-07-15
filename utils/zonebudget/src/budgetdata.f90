@@ -4,15 +4,15 @@ module BudgetDataModule
   use SimModule, only: store_error, store_error_unit, ustop
   use ConstantsModule, only: LINELENGTH
   implicit none
-  
+
   private
   public :: budgetdata_init
   public :: budgetdata_read
   public :: budgetdata_finalize
-  public :: budtxt, ia, ja, flowja, nodesrc, nodedst, flowdata,                &
-            dstpackagename, nbudterms, kstp, kper, delt, totim,                &
+  public :: budtxt, ia, ja, flowja, nodesrc, nodedst, flowdata, &
+            dstpackagename, nbudterms, kstp, kper, delt, totim, &
             srcmodelname, dstmodelname, hasimeth1flowja
-  
+
   logical :: hasimeth1flowja = .false.
   integer(I4B) :: inunit
   integer(I4B) :: nbudterms = 0
@@ -39,9 +39,9 @@ module BudgetDataModule
   real(DP), dimension(:, :), allocatable :: flowdata
   character(len=16) :: dstmodelname
   character(len=16) :: dstpackagename
-  
-  contains
-  
+
+contains
+
   subroutine budgetdata_init(iu, iout, ncrbud)
 ! ******************************************************************************
 ! budgetdata_init
@@ -65,10 +65,11 @@ module BudgetDataModule
     call budgetdata_read(success)
     kstp_last = kstp
     kper_last = kper
-    rewind(inunit)
+    rewind (inunit)
     !
     ! -- Determine number of budget terms within a time step
-    write(iout, '(a)') 'Reading budget file to determine number of terms per time step.'
+    write (iout, '(a)') &
+      'Reading budget file to determine number of terms per time step.'
     icount = 1
     do
       call budgetdata_read(success, iout)
@@ -78,16 +79,17 @@ module BudgetDataModule
       nbudterms = nbudterms + 1
       if (trim(adjustl(budtxt)) == 'FLOW-JA-FACE' .and. &
           srcmodelname == dstmodelname) then
-        if(allocated(nodesrc)) ncrbud = maxval(nodesrc)
-      endif
-    enddo
-    rewind(inunit)
-    write(iout, '(a, i0, a)') 'Detected ', nbudterms, ' unique flow terms in budget file.'
+        if (allocated(nodesrc)) ncrbud = maxval(nodesrc)
+      end if
+    end do
+    rewind (inunit)
+    write (iout, '(a, i0, a)') &
+      'Detected ', nbudterms, ' unique flow terms in budget file.'
     !
     ! -- return
     return
   end subroutine budgetdata_init
-  
+
   subroutine budgetdata_read(success, iout_opt)
 ! ******************************************************************************
 ! budgetdata_read
@@ -107,7 +109,7 @@ module BudgetDataModule
       iout = iout_opt
     else
       iout = 0
-    endif
+    end if
     !
     kstp = 0
     kper = 0
@@ -119,64 +121,65 @@ module BudgetDataModule
     srcpackagename = ''
     dstmodelname = ''
     dstpackagename = ''
-     
+
     success = .true.
-    read(inunit, iostat=iostat) kstp, kper, budtxt, nval, idum1, idum2
+    read (inunit, iostat=iostat) kstp, kper, budtxt, nval, idum1, idum2
     if (iostat /= 0) then
       success = .false.
       return
-    endif
-    read(inunit) imeth, delt, pertim, totim
-    if(imeth == 1) then
+    end if
+    read (inunit) imeth, delt, pertim, totim
+    if (imeth == 1) then
       if (trim(adjustl(budtxt)) == 'FLOW-JA-FACE') then
-        if(allocated(flowja)) deallocate(flowja)
-        allocate(flowja(nval))
-        read(inunit) flowja
+        if (allocated(flowja)) deallocate (flowja)
+        allocate (flowja(nval))
+        read (inunit) flowja
         hasimeth1flowja = .true.
       else
         nval = nval * idum1 * abs(idum2)
-        if(allocated(flowdata)) deallocate(flowdata)
-        allocate(flowdata(1, nval))
-        if(allocated(nodesrc)) deallocate(nodesrc)
-        allocate(nodesrc(nval))
-        read(inunit) flowdata
+        if (allocated(flowdata)) deallocate (flowdata)
+        allocate (flowdata(1, nval))
+        if (allocated(nodesrc)) deallocate (nodesrc)
+        allocate (nodesrc(nval))
+        read (inunit) flowdata
         do i = 1, nval
           nodesrc(i) = i
-        enddo
-      endif
+        end do
+      end if
     elseif (imeth == 6) then
       ! -- method code 6
-      read(inunit) srcmodelname
-      read(inunit) srcpackagename
-      read(inunit) dstmodelname
-      read(inunit) dstpackagename
-      read(inunit) ndat
-      if(allocated(auxtxt)) deallocate(auxtxt)
-      allocate(auxtxt(ndat-1))
-      read(inunit) auxtxt
-      read(inunit) nlist
-      if(allocated(nodesrc)) deallocate(nodesrc)
-      allocate(nodesrc(nlist))
-      if(allocated(nodedst)) deallocate(nodedst)
-      allocate(nodedst(nlist))
-      if(allocated(flowdata)) deallocate(flowdata)
-      allocate(flowdata(ndat, nlist))
-      read(inunit) (nodesrc(n), nodedst(n), (flowdata(i,n), i = 1, ndat), n = 1, nlist)
+      read (inunit) srcmodelname
+      read (inunit) srcpackagename
+      read (inunit) dstmodelname
+      read (inunit) dstpackagename
+      read (inunit) ndat
+      if (allocated(auxtxt)) deallocate (auxtxt)
+      allocate (auxtxt(ndat - 1))
+      read (inunit) auxtxt
+      read (inunit) nlist
+      if (allocated(nodesrc)) deallocate (nodesrc)
+      allocate (nodesrc(nlist))
+      if (allocated(nodedst)) deallocate (nodedst)
+      allocate (nodedst(nlist))
+      if (allocated(flowdata)) deallocate (flowdata)
+      allocate (flowdata(ndat, nlist))
+      read (inunit) &
+        (nodesrc(n), nodedst(n), (flowdata(i, n), i=1, ndat), n=1, nlist)
     else
-      write(errmsg, '(a, a)') 'ERROR READING: ', trim(budtxt)
+      write (errmsg, '(a, a)') 'ERROR READING: ', trim(budtxt)
       call store_error(errmsg)
-      write(errmsg, '(a, i0)') 'INVALID METHOD CODE DETECTED: ', imeth
+      write (errmsg, '(a, i0)') 'INVALID METHOD CODE DETECTED: ', imeth
       call store_error(errmsg)
       call store_error_unit(inunit)
-    endif
+    end if
     if (iout > 0) then
-      write(iout, '(1pg15.6, a, 1x, a)') totim, budtxt, dstpackagename
-    endif
+      write (iout, '(1pg15.6, a, 1x, a)') totim, budtxt, dstpackagename
+    end if
     !
     ! -- return
     return
   end subroutine budgetdata_read
-  
+
   subroutine budgetdata_finalize()
 ! ******************************************************************************
 ! budgetdata_finalize
@@ -185,17 +188,17 @@ module BudgetDataModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
 ! ------------------------------------------------------------------------------
-    close(inunit)
-    if(allocated(auxtxt)) deallocate(auxtxt)
-    if(allocated(ia)) deallocate(ia)
-    if(allocated(ja)) deallocate(ja)
-    if(allocated(flowja)) deallocate(flowja)
-    if(allocated(nodesrc)) deallocate(nodesrc)
-    if(allocated(nodedst)) deallocate(nodedst)
-    if(allocated(flowdata)) deallocate(flowdata)
+    close (inunit)
+    if (allocated(auxtxt)) deallocate (auxtxt)
+    if (allocated(ia)) deallocate (ia)
+    if (allocated(ja)) deallocate (ja)
+    if (allocated(flowja)) deallocate (flowja)
+    if (allocated(nodesrc)) deallocate (nodesrc)
+    if (allocated(nodedst)) deallocate (nodedst)
+    if (allocated(flowdata)) deallocate (flowdata)
     !
     ! -- return
     return
   end subroutine budgetdata_finalize
-  
+
 end module BudgetDataModule

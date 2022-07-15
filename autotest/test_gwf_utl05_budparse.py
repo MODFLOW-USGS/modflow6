@@ -4,8 +4,9 @@ Test of budget table parsing
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -93,7 +94,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -147,8 +148,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -167,7 +168,7 @@ def eval_flow(sim):
     gwfname = "gwf_" + name
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, "{}.lst".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     print(names)
@@ -208,7 +209,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

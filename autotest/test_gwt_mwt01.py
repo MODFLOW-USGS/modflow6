@@ -4,9 +4,10 @@
 # flows into the aquifer.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -74,7 +75,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=gwfname,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     imsgwf = flopy.mf6.ModflowIms(
@@ -90,7 +91,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     idomain = np.full((nlay, nrow, ncol), 1)
@@ -133,11 +134,11 @@ def build_model(idx, dir):
         save_flows=False,
         pname="CHD-1",
         auxiliary="CONCENTRATION",
-        filename="{}.chd".format(gwfname),
+        filename=f"{gwfname}.chd",
     )
 
     # MAW
-    opth = "{}.maw.obs".format(name)
+    opth = f"{name}.maw.obs"
     wellbottom = -3.0
     wellrecarray = [[0, 0.1, wellbottom, 0.0, "THIEM", 3]]
     wellconnectionsrecarray = [
@@ -148,7 +149,7 @@ def build_model(idx, dir):
     wellperiodrecarray = [[0, "rate", -1.0]]
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
-        filename="{}.maw".format(gwfname),
+        filename=f"{gwfname}.maw",
         print_input=True,
         print_head=True,
         print_flows=True,
@@ -162,8 +163,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -175,7 +176,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
 
     if not single_matrix:
@@ -192,7 +193,7 @@ def build_model(idx, dir):
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
-            filename="{}.ims".format(gwtname),
+            filename=f"{gwtname}.ims",
         )
         sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -209,19 +210,17 @@ def build_model(idx, dir):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=0.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="UPSTREAM", filename="{}.adv".format(gwtname)
+        gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
     )
 
     # storage
     porosity = 0.30
     sto = flopy.mf6.ModflowGwtmst(
-        gwt, porosity=porosity, filename="{}.sto".format(gwtname)
+        gwt, porosity=porosity, filename=f"{gwtname}.sto"
     )
     # sources
     sourcerecarray = [
@@ -229,7 +228,7 @@ def build_model(idx, dir):
         # ('WEL-1', 'AUX', 'CONCENTRATION'),
     ]
     ssm = flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename="{}.ssm".format(gwtname)
+        gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
     )
 
     mwt_obs = {
@@ -271,8 +270,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -289,7 +288,7 @@ def build_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     return sim, None
@@ -330,7 +329,7 @@ def eval_results(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     res = tc["MWT1CONC"]
     print(res)
@@ -376,7 +375,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

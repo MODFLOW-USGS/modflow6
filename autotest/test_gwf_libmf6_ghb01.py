@@ -7,8 +7,9 @@ uses the well package to simulate the effect of the same ghb. This is a
 possible solution to https://github.com/MODFLOW-USGS/modflow6/issues/724
 """
 import os
-import pytest
+
 import numpy as np
+import pytest
 from modflowapi import ModflowApi
 
 try:
@@ -173,7 +174,7 @@ def get_model(ws, name, api=False):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name),
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -271,7 +272,7 @@ def api_func(exe, idx, model_ws=None):
             kiter += 1
 
             if has_converged:
-                msg = "Converged in {}".format(kiter) + " outer iterations"
+                msg = f"Converged in {kiter}" + " outer iterations"
                 print(msg)
                 break
 
@@ -330,7 +331,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

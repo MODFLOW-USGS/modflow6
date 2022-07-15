@@ -12,6 +12,7 @@
 
 
 import os
+
 import numpy as np
 
 
@@ -34,11 +35,11 @@ def eval_bud_diff(fpth, b0, b1, ia=None, dtol=1e-6):
 
     # open a summary file and write header
     f = open(fpth, "w")
-    line = "{:15s}".format("Time")
-    line += " {:15s}".format("Datatype")
-    line += " {:15s}".format("File 1")
-    line += " {:15s}".format("File 2")
-    line += " {:15s}".format("Difference")
+    line = f"{'Time':15s}"
+    line += f" {'Datatype':15s}"
+    line += f" {'File 1':15s}"
+    line += f" {'File 2':15s}"
+    line += f" {'Difference':15s}"
     f.write(line + "\n")
     f.write(len(line) * "-" + "\n")
 
@@ -79,45 +80,41 @@ def eval_bud_diff(fpth, b0, b1, ia=None, dtol=1e-6):
                 difftime = t
             if abs(diff) > dtol:
                 fail = True
-            line = "{:15g}".format(t)
-            line += " {:15s}".format(key)
-            line += " {:15g}".format(v0)
-            line += " {:15g}".format(v1)
-            line += " {:15g}".format(diff)
+            line = f"{t:15g}"
+            line += f" {key:15s}"
+            line += f" {v0:15g}"
+            line += f" {v1:15g}"
+            line += f" {diff:15g}"
             f.write(line + "\n")
 
     # evaluate the sums
     diff = v0sum - v1sum
     if abs(diff) > dtol:
         fail = True
-    line = "{:15g}".format(t)
-    line += " {:15s}".format("TOTAL")
-    line += " {:15g}".format(v0sum)
-    line += " {:15g}".format(v1sum)
-    line += " {:15g}".format(diff)
+    line = f"{t:15g}"
+    line += f" {'TOTAL':15s}"
+    line += f" {v0sum:15g}"
+    line += f" {v1sum:15g}"
+    line += f" {diff:15g}"
     f.write(line + "\n")
 
-    msg = "\nSummary of changes in {}\n".format(os.path.basename(fpth))
+    msg = f"\nSummary of changes in {os.path.basename(fpth)}\n"
     msg += "-" * 72 + "\n"
-    msg += "Maximum cbc difference:        {}\n".format(diffmax)
-    msg += "Maximum cbc difference time:   {}\n".format(difftime)
-    msg += "Maximum cbc datatype:          {}\n".format(difftag)
+    msg += f"Maximum cbc difference:        {diffmax}\n"
+    msg += f"Maximum cbc difference time:   {difftime}\n"
+    msg += f"Maximum cbc datatype:          {difftag}\n"
     if fail:
-        msg += "Maximum cbc criteria exceeded:  {}".format(dtol)
+        msg += f"Maximum cbc criteria exceeded:  {dtol}"
     assert not fail, msg
 
     # close summary file and print the final message
     f.close()
     print(msg)
 
-    msg = "sum of first cbc file flows ({}) ".format(
-        v0sum
-    ) + "exceeds dtol ({})".format(dtol)
+    msg = f"sum of first cbc file flows ({v0sum}) " + f"exceeds dtol ({dtol})"
     assert abs(v0sum) < dtol, msg
 
-    msg = "sum of second cbc file flows ({}) ".format(
-        v1sum
-    ) + "exceeds dtol ({})".format(dtol)
+    msg = f"sum of second cbc file flows ({v1sum}) " + f"exceeds dtol ({dtol})"
     assert abs(v1sum) < dtol, msg
 
     return

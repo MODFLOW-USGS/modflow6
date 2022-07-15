@@ -1,7 +1,8 @@
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -76,7 +77,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -106,11 +107,11 @@ def build_model(idx, dir):
         top=100.0,
         botm=0.0,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -119,7 +120,7 @@ def build_model(idx, dir):
         icelltype=1,
         k=hk,
         k33=hk,
-        filename="{}.npf".format(name),
+        filename=f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -130,7 +131,7 @@ def build_model(idx, dir):
         sy=0.1,
         steady_state={0: True},
         # transient={1: False},
-        filename="{}.sto".format(name),
+        filename=f"{name}.sto",
     )
 
     # chd files
@@ -147,11 +148,11 @@ def build_model(idx, dir):
         gwf,
         stress_period_data=chdspdict,
         save_flows=False,
-        filename="{}.chd".format(name),
+        filename=f"{name}.chd",
     )
 
     # MAW
-    opth = "{}.maw.obs".format(name)
+    opth = f"{name}.maw.obs"
     wellbottom = 0.0
     wellrecarray = [
         [0, 0.1, wellbottom, 100.0, "THIEM", 1],
@@ -183,8 +184,8 @@ def build_model(idx, dir):
     mawo_dict["maw_obs.csv"] = [("mh1", "head", 1)]
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
-        filename="{}.maw".format(name),
-        budget_filerecord="{}.maw.cbc".format(name),
+        filename=f"{name}.maw",
+        budget_filerecord=f"{name}.maw.cbc",
         print_input=True,
         print_head=True,
         print_flows=True,
@@ -199,12 +200,12 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     return sim, None
@@ -214,9 +215,7 @@ def eval_maw(sim):
     print("evaluating MAW budgets...")
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(
         fpth, budgetkey="MAW-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP"
     )
@@ -230,9 +229,7 @@ def eval_maw(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(
-        sim.simpath, "{}.maw.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.maw.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -262,9 +259,9 @@ def eval_maw(sim):
             d["totim"][idx] = t
             d["time_step"][idx] = k[0]
             d["stress_period"] = k[1]
-            key = "{}_IN".format(text)
+            key = f"{text}_IN"
             d[key][idx] = qin
-            key = "{}_OUT".format(text)
+            key = f"{text}_OUT"
             d[key][idx] = qout
 
     maw_vals = [
@@ -281,39 +278,39 @@ def eval_maw(sim):
         for ov, sv in zip(ovs, svs):
             diffv.append(ov - sv)
     diffv = np.abs(np.array(diffv)).max()
-    msg = "\nmaximum absolute maw rate difference     ({})\n".format(diffv)
+    msg = f"\nmaximum absolute maw rate difference     ({diffv})\n"
 
     # calculate difference between water budget items in the lst and cbc files
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
-    msg += "maximum absolute total-budget difference ({}) ".format(diffmax)
+    msg += f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.bud.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
         if i == 0:
-            line = "{:>10s}".format("TIME")
+            line = f"{'TIME':>10s}"
             for idx, key in enumerate(bud_lst):
-                line += "{:>25s}".format(key + "_LST")
-                line += "{:>25s}".format(key + "_CBC")
-                line += "{:>25s}".format(key + "_DIF")
+                line += f"{key + '_LST':>25s}"
+                line += f"{key + '_CBC':>25s}"
+                line += f"{key + '_DIF':>25s}"
             f.write(line + "\n")
-        line = "{:10g}".format(d["totim"][i])
+        line = f"{d['totim'][i]:10g}"
         for idx, key in enumerate(bud_lst):
-            line += "{:25g}".format(d0[key][i])
-            line += "{:25g}".format(d[key][i])
-            line += "{:25g}".format(diff[i, idx])
+            line += f"{d0[key][i]:25g}"
+            line += f"{d[key][i]:25g}"
+            line += f"{diff[i, idx]:25g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > budtol or diffv > budtol:
         sim.success = False
-        msg += "\n...exceeds {}".format(budtol)
+        msg += f"\n...exceeds {budtol}"
         assert diffmax < budtol, msg
     else:
         sim.success = True
@@ -354,7 +351,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -6,8 +6,9 @@ with a decay rate of 1.  And a starting concentration of 8.  Result should be
 
 """
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -73,7 +74,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
 
@@ -91,7 +92,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -105,13 +106,11 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=8.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=8.0, filename=f"{gwtname}.ic")
 
     # mass storage and transfer
     mst = flopy.mf6.ModflowGwtmst(
@@ -130,8 +129,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.bud".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.bud",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -148,14 +147,14 @@ def eval_transport(sim):
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
         )
         conc = cobj.get_ts((0, 0, 0))
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # The answer
     # print(conc[:, 1])
@@ -167,11 +166,11 @@ def eval_transport(sim):
     assert np.allclose(cres, conc[:, 1]), msg
 
     # Check budget file
-    fpth = os.path.join(sim.simpath, "{}.bud".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.bud")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
     decay_list = bobj.get_data(text="DECAY-AQUEOUS")
     decay_rate = [dr[0] for dr in decay_list]
     decay_rate_answer = [
@@ -227,7 +226,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -6,6 +6,7 @@
 
 import os
 import shutil
+
 import numpy as np
 
 try:
@@ -16,9 +17,8 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import set_teardown_test
-
 import targets
+from framework import set_teardown_test
 
 exe_name_mf6 = targets.target_dict["mf6"]
 exe_name_mf6 = os.path.abspath(exe_name_mf6)
@@ -95,7 +95,7 @@ def run_flow_model():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -259,7 +259,7 @@ def run_flow_model():
 
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = "flow model did not terminate successfully\n{}".format(buff)
+    errmsg = f"flow model did not terminate successfully\n{buff}"
     assert success, errmsg
 
     return
@@ -287,7 +287,7 @@ def run_transport_model():
     gwt = flopy.mf6.ModflowGwt(
         sim,
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
 
     imsgwt = flopy.mf6.ModflowIms(
@@ -303,7 +303,7 @@ def run_transport_model():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwtdis(
@@ -319,32 +319,30 @@ def run_transport_model():
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=10.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=10.0, filename=f"{gwtname}.ic")
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="UPSTREAM", filename="{}.adv".format(gwtname)
+        gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
     )
 
     # storage
     porosity = 1.0
     sto = flopy.mf6.ModflowGwtmst(
-        gwt, porosity=porosity, filename="{}.sto".format(gwtname)
+        gwt, porosity=porosity, filename=f"{gwtname}.sto"
     )
     # sources
     sourcerecarray = [
         ("WEL-1", "AUX", "CONCENTRATION"),
     ]
     ssm = flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename="{}.ssm".format(gwtname)
+        gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
     )
 
     # sft
     sftpackagedata = []
     for irno in range(ncol):
-        t = (irno, 0.0, 99.0, 999.0, "myreach{}".format(irno + 1))
+        t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
         sftpackagedata.append(t)
 
     sftperioddata = [
@@ -353,8 +351,7 @@ def run_transport_model():
 
     sft_obs = {
         (gwtname + ".sft.obs.csv",): [
-            ("sft-{}-conc".format(i + 1), "CONCENTRATION", i + 1)
-            for i in range(7)
+            (f"sft-{i + 1}-conc", "CONCENTRATION", i + 1) for i in range(7)
         ]
         + [
             ("sft-1-extinflow", "EXT-INFLOW", 1),
@@ -390,7 +387,7 @@ def run_transport_model():
     )
 
     # mover transport package
-    fname = "{}.mvt.bud".format(gwtname)
+    fname = f"{gwtname}.mvt.bud"
     mvt = flopy.mf6.modflow.ModflowGwtmvt(
         gwt, print_flows=True, budget_filerecord=fname
     )
@@ -418,7 +415,7 @@ def run_transport_model():
 
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = "transport model did not terminate successfully\n{}".format(buff)
+    errmsg = f"transport model did not terminate successfully\n{buff}"
     assert success, errmsg
 
     print("evaluating results...")
@@ -457,14 +454,14 @@ def run_transport_model():
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # compare observation concs with binary file concs
     for i in range(7):
         oname = f"SFT{i+1}CONC"
-        assert np.allclose(tc[oname][-1], csft[i]), "{} {}".format(
+        assert np.allclose(
             tc[oname][-1], csft[i]
-        )
+        ), f"{tc[oname][-1]} {csft[i]}"
 
     simres = tc["SFT1CONC"]
     answer = [
@@ -480,7 +477,7 @@ def run_transport_model():
         71.6825866699,
     ]
 
-    assert np.allclose(simres, answer), "{} {}".format(simres, answer)
+    assert np.allclose(simres, answer), f"{simres} {answer}"
 
     # load the mvt budget file
     mobj = mvt.output.budget()
@@ -516,7 +513,7 @@ def test_mvt02fmi():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run tests
     test_mvt02fmi()

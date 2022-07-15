@@ -62,9 +62,7 @@ def test_rebuild_from_dfn():
         # run python
         argv = ["python", "mf6ivar.py"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} with {}".format(
-            ierr, argv[0], argv[1]
-        )
+        msg = f"\nERROR {ierr}: could not run {argv[0]} with {argv[1]}"
         assert ierr == 0, buff + msg
 
         # get list for dfn files
@@ -85,13 +83,14 @@ def test_rebuild_from_dfn():
         for f in dfnfiles:
             if "common" in f:
                 continue
-            fpth = "{}-desc".format(f)
+            fpth = f"{f}-desc"
             if fpth not in texfiles:
                 icnt += 1
-                missing += "  {:3d} {}.tex\n".format(icnt, fpth)
-        msg = "\n{} TeX file(s) are missing. ".format(
-            icnt
-        ) + "Missing files:\n{}".format(missing)
+                missing += f"  {icnt:3d} {fpth}.tex\n"
+        msg = (
+            "\n{} TeX file(s) are missing. ".format(icnt)
+            + f"Missing files:\n{missing}"
+        )
         assert icnt == 0, msg
 
     return
@@ -114,30 +113,22 @@ def test_build_mfio():
         # build pdf
         argv = ["pdflatex", f"{base_name}.tex"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} on {}".format(
-            ierr, argv[0], argv[1]
-        )
+        msg = f"\nERROR {ierr}: could not run {argv[0]} on {argv[1]}"
         assert ierr == 0, buff + msg
 
         argv = ["bibtex", f"{base_name}.aux"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} on {}".format(
-            ierr, argv[0], argv[1]
-        )
+        msg = f"\nERROR {ierr}: could not run {argv[0]} on {argv[1]}"
         assert ierr == 0, buff + msg
 
         argv = ["pdflatex", f"{base_name}.tex"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} on {}".format(
-            ierr, argv[0], argv[1]
-        )
+        msg = f"\nERROR {ierr}: could not run {argv[0]} on {argv[1]}"
         assert ierr == 0, buff + msg
 
         argv = ["pdflatex", f"{base_name}.tex"]
         buff, ierr = run_command(argv, pth)
-        msg = "\nERROR {}: could not run {} on {}".format(
-            ierr, argv[0], argv[1]
-        )
+        msg = f"\nERROR {ierr}: could not run {argv[0]} on {argv[1]}"
         assert ierr == 0, buff + msg
 
     return
@@ -161,10 +152,10 @@ def delete_files(files, pth, allow_failure=False):
     for file in files:
         fpth = os.path.join(pth, file)
         try:
-            print("removing...{}".format(file))
+            print(f"removing...{file}")
             os.remove(fpth)
         except:
-            print("could not remove...{}".format(file))
+            print(f"could not remove...{file}")
             if not allow_failure:
                 return False
     return True
@@ -194,7 +185,7 @@ def run_command(argv, pth, timeout=10):
 def main():
     # write message
     tnam = os.path.splitext(os.path.basename(__file__))[0]
-    msg = "Running {} test".format(tnam)
+    msg = f"Running {tnam} test"
     print(msg)
 
     print("running...test_rebuild_from_dfn()")
@@ -210,7 +201,7 @@ def main():
 
 
 if __name__ == "__main__":
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

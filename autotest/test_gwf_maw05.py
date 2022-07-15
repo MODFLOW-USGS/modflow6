@@ -4,9 +4,10 @@
 # maw_05c - well starts at or below 3.0; not working yet
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -87,7 +88,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -140,16 +141,16 @@ def build_model(idx, dir):
         print_head=True,
         print_flows=True,
         save_flows=True,
-        head_filerecord="{}.maw.bin".format(gwfname),
-        budget_filerecord="{}.maw.bud".format(gwfname),
+        head_filerecord=f"{gwfname}.maw.bin",
+        budget_filerecord=f"{gwfname}.maw.bud",
         packagedata=mawpackagedata,
         connectiondata=mawconnectiondata,
         perioddata=mawperioddata,
         pname="MAW-1",
     )
-    opth = "{}.maw.obs".format(gwfname)
+    opth = f"{gwfname}.maw.obs"
     obsdata = {
-        "{}.maw.obs.csv".format(gwfname): [
+        f"{gwfname}.maw.obs.csv": [
             ("whead", "head", (0,)),
         ]
     }
@@ -160,8 +161,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[
             (
@@ -217,9 +218,9 @@ def eval_results(sim):
 
     print(
         "Initial volumes\n"
-        + "  Groundwater:    {}\n".format(v0gwf)
-        + "  Well:           {}\n".format(v0maw)
-        + "  Total:          {}".format(v0)
+        + f"  Groundwater:    {v0gwf}\n"
+        + f"  Well:           {v0maw}\n"
+        + f"  Total:          {v0}"
     )
 
     # calculate current volume of water in well and aquifer and compare with
@@ -235,20 +236,20 @@ def eval_results(sim):
         vmaw = stage[kstp] * np.pi * 0.1**2
         vnow = vmaw + vgwf
         errmsg = (
-            "kstp {}: \n".format(kstp + 1)
-            + "  Groundwater:   {}\n".format(vgwf)
-            + "  Well:          {}\n".format(vmaw)
-            + "  Total:         {}\n".format(vnow)
-            + "  Initial Total: {}".format(v0)
+            f"kstp {kstp + 1}: \n"
+            + f"  Groundwater:   {vgwf}\n"
+            + f"  Well:          {vmaw}\n"
+            + f"  Total:         {vnow}\n"
+            + f"  Initial Total: {v0}"
         )
         assert np.allclose(v0, vnow), errmsg
 
     print(
-        "kstp {}: \n".format(kstp + 1)
-        + "  Groundwater:   {}\n".format(vgwf)
-        + "  Well:          {}\n".format(vmaw)
-        + "  Total:         {}\n".format(vnow)
-        + "  Initial Total: {}".format(v0)
+        f"kstp {kstp + 1}: \n"
+        + f"  Groundwater:   {vgwf}\n"
+        + f"  Well:          {vmaw}\n"
+        + f"  Total:         {vnow}\n"
+        + f"  Initial Total: {v0}"
     )
 
     return
@@ -283,7 +284,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -31,6 +31,7 @@ that is clearly not through when simulating without XT3D.
 
 """
 import os
+
 import numpy as np
 import pytest
 
@@ -43,6 +44,7 @@ except:
     raise Exception(msg)
 
 from flopy.utils.lgrutil import Lgr
+
 from framework import testing_framework
 from simulation import Simulation
 
@@ -166,8 +168,8 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(parent_name),
-        budget_filerecord="{}.cbc".format(parent_name),
+        head_filerecord=f"{parent_name}.hds",
+        budget_filerecord=f"{parent_name}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -198,8 +200,8 @@ def get_model(idx, dir):
     )
     oc = flopy.mf6.ModflowGwfoc(
         gwfc,
-        head_filerecord="{}.hds".format(child_name),
-        budget_filerecord="{}.cbc".format(child_name),
+        head_filerecord=f"{child_name}.hds",
+        budget_filerecord=f"{child_name}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -252,11 +254,11 @@ def build_model(idx, exdir):
 def eval_heads(sim):
     print("comparing heads  for child model to analytical result...")
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(child_name))
+    fpth = os.path.join(sim.simpath, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
+    fpth = os.path.join(sim.simpath, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # (note that without XT3D on the exchange, the 'error'
@@ -276,7 +278,7 @@ def eval_heads(sim):
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.simpath, "{}.cbc".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -287,9 +289,7 @@ def eval_heads(sim):
         for fjf in flow_ja_face:
             fjf = fjf.flatten()
             res = fjf[ia[:-1]]
-            errmsg = "min or max residual too large {} {}".format(
-                res.min(), res.max()
-            )
+            errmsg = f"min or max residual too large {res.min()} {res.max()}"
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
@@ -325,7 +325,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

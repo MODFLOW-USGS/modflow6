@@ -1,9 +1,10 @@
 # tests to ability to run flow model first followed by transport model
 
 import os
-import pytest
 import shutil
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -119,7 +120,7 @@ def test_fmi():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run tests
     test_fmi()

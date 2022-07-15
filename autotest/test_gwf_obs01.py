@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -22,10 +23,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 cell_dimensions = (300,)
-ex = [
-    "gwf_obs01{}".format(chr(ord("a") + idx))
-    for idx in range(len(cell_dimensions))
-]
+ex = [f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -46,16 +44,16 @@ def get_obs(idx):
         for j in range(ncol):
             node = i * ncol + j + 1
             obs_lst.append([node, "head", (0, i, j)])
-    return {"{}.gwf.obs.csv".format(ex[idx]): obs_lst}
+    return {f"{ex[idx]}.gwf.obs.csv": obs_lst}
 
 
 def get_obs_out(sim):
-    fpth = os.path.join(sim.simpath, "{}.gwf.obs.csv".format(ex[sim.idxsim]))
+    fpth = os.path.join(sim.simpath, f"{ex[sim.idxsim]}.gwf.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
         return tc.view((float, len(tc.dtype.names)))[1:]
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
 
 def get_chd(idx):
@@ -117,7 +115,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=gwfname,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
     gwf.name_file.save_flows = True
 
@@ -201,7 +199,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

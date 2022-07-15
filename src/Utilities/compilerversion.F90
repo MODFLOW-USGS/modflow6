@@ -45,7 +45,7 @@ contains
     end if
     !
     ! -- write string with compiler information
-    write (txt, '(a,4(1x,a))') &
+    write (txt, '(a,3(1x,a))') &
       'MODFLOW 6 compiled', trim(adjustl(cdate)), &
       'with', trim(adjustl(compiler_version()))
     !

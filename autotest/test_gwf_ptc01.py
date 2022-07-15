@@ -1,7 +1,8 @@
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -67,7 +68,7 @@ def build_mf6(idx, ws, storage=True):
     gwf = flopy.mf6.ModflowGwf(
         sim,
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
         save_flows=True,
         newtonoptions="NEWTON",
     )
@@ -109,11 +110,11 @@ def build_mf6(idx, ws, storage=True):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=hk)
@@ -133,8 +134,8 @@ def build_mf6(idx, ws, storage=True):
     # output control
     flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -187,7 +188,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

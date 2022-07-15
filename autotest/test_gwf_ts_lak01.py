@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -255,7 +256,7 @@ lak_obs = {"lak_obs.csv": [("lake1", "STAGE", (0,))]}
 
 
 def get_model(ws, name, timeseries=False):
-    hdsfile = "{}.hds".format(name)
+    hdsfile = f"{name}.hds"
 
     # build the model
     sim = flopy.mf6.MFSimulation(sim_name=name, exe_name="mf6", sim_ws=ws)
@@ -312,13 +313,13 @@ def get_model(ws, name, timeseries=False):
         pname="lak-1",
     )
     lak.obs.initialize(
-        filename="{}.lak.obs".format(name),
+        filename=f"{name}.lak.obs",
         digits=20,
         print_input=True,
         continuous=lak_obs,
     )
     if timeseries:
-        fname = "{}.lak.ts".format(name)
+        fname = f"{name}.lak.ts"
         lak.ts.initialize(
             filename=fname,
             timeseries=ts_data,
@@ -329,8 +330,8 @@ def get_model(ws, name, timeseries=False):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name),
-        budget_filerecord="{}.cbc".format(name),
+        head_filerecord=f"{name}.hds",
+        budget_filerecord=f"{name}.cbc",
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("BUDGET", "LAST")],
     )
@@ -357,12 +358,12 @@ def eval_budget(sim):
     from budget_file_compare import eval_bud_diff
 
     # get ia/ja from binary grid file
-    fname = "{}.dis.grb".format(os.path.basename(sim.name))
+    fname = f"{os.path.basename(sim.name)}.dis.grb"
     fpth = os.path.join(sim.simpath, fname)
     grbobj = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grbobj._datadict["IA"] - 1
 
-    fname = "{}.cbc".format(os.path.basename(sim.name))
+    fname = f"{os.path.basename(sim.name)}.cbc"
 
     # open first cbc file
     fpth = os.path.join(sim.simpath, fname)
@@ -373,7 +374,7 @@ def eval_budget(sim):
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
-    fname = "{}.cbc.cmp.out".format(os.path.basename(sim.name))
+    fname = f"{os.path.basename(sim.name)}.cbc.cmp.out"
     fpth = os.path.join(sim.simpath, fname)
     eval_bud_diff(fpth, cobj0, cobj1, ia, dtol=0.1)
 
@@ -414,7 +415,7 @@ def main():
 # use python testmf6_drn_ddrn01.py
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

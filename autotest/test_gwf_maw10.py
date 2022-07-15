@@ -8,9 +8,10 @@ flow rates from the specified input (requested) values.
 """
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -38,47 +39,47 @@ for s in ex:
 
 # maw settings for runs a, b, c and d
 mawsetting_a = {
-        0: [
-            [0, "rate", -2000.0],
-            [0, "head_limit", -0.4],
-           ],
-        1: [
-            [0, "status", "inactive"],
-           ],
-    }
+    0: [
+        [0, "rate", -2000.0],
+        [0, "head_limit", -0.4],
+    ],
+    1: [
+        [0, "status", "inactive"],
+    ],
+}
 mawsetting_b = {
-        0: [
-            [0, "rate", -2000.0],
-            [0, "rate_scaling", -1.4, 1.0],
-           ],
-        1: [
-            [0, "status", "inactive"],
-           ],
-    }
+    0: [
+        [0, "rate", -2000.0],
+        [0, "rate_scaling", -1.4, 1.0],
+    ],
+    1: [
+        [0, "status", "inactive"],
+    ],
+}
 mawsetting_c = {
-        0: [
-            [0, "rate", 2000.0],
-            [0, "head_limit", 0.4],
-           ],
-        1: [
-            [0, "status", "inactive"],
-           ],
-    }
+    0: [
+        [0, "rate", 2000.0],
+        [0, "head_limit", 0.4],
+    ],
+    1: [
+        [0, "status", "inactive"],
+    ],
+}
 mawsetting_d = {
-        0: [
-            [0, "rate", 2000.0],
-            [0, "rate_scaling", 0.0, 1.0],
-           ],
-        1: [
-            [0, "status", "inactive"],
-           ],
-    }
+    0: [
+        [0, "rate", 2000.0],
+        [0, "rate_scaling", 0.0, 1.0],
+    ],
+    1: [
+        [0, "status", "inactive"],
+    ],
+}
 
-#simple single stress period without going inactive in 2nd stress period
-#mawsetting_a = [(0, "rate", -2000.0), (0, "head_limit", -0.4)]
-#mawsetting_b = [[(0, "rate", -2000.0), (0, "rate_scaling", -1.4, 1.0)], ["status", "inactive"]]
-#mawsetting_c = [[(0, "rate", 2000.0), (0, "head_limit", 0.4)], ["status", "inactive"]]
-#mawsetting_d = [[(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)], ["status", "inactive"]]
+# simple single stress period without going inactive in 2nd stress period
+# mawsetting_a = [(0, "rate", -2000.0), (0, "head_limit", -0.4)]
+# mawsetting_b = [[(0, "rate", -2000.0), (0, "rate_scaling", -1.4, 1.0)], ["status", "inactive"]]
+# mawsetting_c = [[(0, "rate", 2000.0), (0, "head_limit", 0.4)], ["status", "inactive"]]
+# mawsetting_d = [[(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)], ["status", "inactive"]]
 mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c, mawsetting_d]
 
 
@@ -86,9 +87,9 @@ def build_model(idx, dir):
 
     nlay, nrow, ncol = 1, 101, 101
     nper = 2
-    perlen = [500.0,500.0]
-    nstp = [50,50]
-    tsmult = [1.2,1.2]
+    perlen = [500.0, 500.0]
+    nstp = [50, 50]
+    tsmult = [1.2, 1.2]
     delr = delc = 142.0
     top = 0.0
     botm = [-1000.0]
@@ -118,7 +119,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -148,11 +149,11 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -161,7 +162,7 @@ def build_model(idx, dir):
         icelltype=1,
         k=hk,
         k33=hk,
-        filename="{}.npf".format(name),
+        filename=f"{name}.npf",
     )
 
     # storage
@@ -173,23 +174,23 @@ def build_model(idx, dir):
         sy=0.1,
         steady_state={0: False},
         transient={0: True},
-        filename="{}.sto".format(name),
+        filename=f"{name}.sto",
     )
 
     # MAW
-    opth = "{}.maw.obs".format(name)
+    opth = f"{name}.maw.obs"
     wellbottom = -1000
     wellrecarray = [[0, 0.15, wellbottom, 0.0, "THIEM", 1]]
     wellconnectionsrecarray = [[0, 0, (0, 50, 50), 0.0, wellbottom, 0.0, 0.0]]
     wellperiodrecarray = mawsettings[idx]
     mawo_dict = {}
-    mawo_dict["{}.maw.obs.csv".format(name)] = [
+    mawo_dict[f"{name}.maw.obs.csv"] = [
         ("m1head", "head", (0,)),
         ("m1rate", "rate", (0,)),
     ]  # is this index one-based? Not if in a tuple
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
-        filename="{}.maw".format(name),
+        filename=f"{name}.maw",
         print_input=True,
         print_head=True,
         print_flows=True,
@@ -204,23 +205,23 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     # head observations
     obs_data0 = [("head_well_cell", "HEAD", (0, 0, 0))]
-    obs_recarray = {"{}.obs.csv".format(name): obs_data0}
+    obs_recarray = {f"{name}.obs.csv": obs_data0}
     obs = flopy.mf6.ModflowUtlobs(
         gwf,
         pname="head_obs",
-        filename="{}.obs".format(name),
+        filename=f"{name}.obs",
         digits=15,
         print_input=True,
         continuous=obs_recarray,
@@ -228,9 +229,10 @@ def build_model(idx, dir):
 
     return sim, None
 
-#2 tests to perform here:
-#1. within the .maw-reduction.csv file, do values of actual + reduction = requested?
-#2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at each time
+
+# 2 tests to perform here:
+# 1. within the .maw-reduction.csv file, do values of actual + reduction = requested?
+# 2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at each time
 #  (and all are reduction times present in the obs file)?
 def eval_mawred(sim):
     print("evaluating MAW flow reduction outputs...")
@@ -238,18 +240,20 @@ def eval_mawred(sim):
     # MODFLOW 6 maw results
     idx = sim.idxsim
     name = ex[idx]
-    fpthobs = os.path.join(sim.simpath, "{}.maw.obs.csv".format(name))
-    fpthmfr = os.path.join(sim.simpath, "{}.maw-reduction.csv".format(name))
+    fpthobs = os.path.join(sim.simpath, f"{name}.maw.obs.csv")
+    fpthmfr = os.path.join(sim.simpath, f"{name}.maw-reduction.csv")
     try:
         tcobs = np.genfromtxt(fpthobs, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpthobs)
+        assert False, f'could not load data from "{fpthobs}"'
     try:
-        tcmfr = np.genfromtxt(fpthmfr, names=True, delimiter=",", deletechars="")
+        tcmfr = np.genfromtxt(
+            fpthmfr, names=True, delimiter=",", deletechars=""
+        )
     except:
-        assert False, 'could not load data from "{}"'.format(fpthmfr)
+        assert False, f'could not load data from "{fpthmfr}"'
 
-    #test 1: does rate-requested = rate-actual + maw-reduction at each time in the .maw.reduced.csv?
+    # test 1: does rate-requested = rate-actual + maw-reduction at each time in the .maw.reduced.csv?
     for rowmfr in tcmfr:
         v1 = rowmfr["rate-requested"]
         v2 = rowmfr["rate-actual"] + rowmfr["maw-reduction"]
@@ -257,30 +261,30 @@ def eval_mawred(sim):
         errmsg += f"{v1} /= {v2}"
         assert np.allclose(v1, v2), errmsg
 
-    #test 2: do values of rate-actual in .maw.reduced.csv equal those flow values reported in .maw.obs.csv?
+    # test 2: do values of rate-actual in .maw.reduced.csv equal those flow values reported in .maw.obs.csv?
     #        (and are there matching times?)
     for rowmfr in tcmfr:
         timevalmfr = rowmfr["time"]
         actvalmfr = rowmfr["rate-actual"]
         msgtime = (
-          "There should be a matching time in the maw.obs.csv file for each "
-          "time in the maw.reduce.csv file, but no match was found for "
-          "time = {} in the maw.obs.csv file".format(timevalmfr)
+            "There should be a matching time in the maw.obs.csv file for each "
+            "time in the maw.reduce.csv file, but no match was found for "
+            "time = {} in the maw.obs.csv file".format(timevalmfr)
         )
         blnFoundTimeMatch = False
         for rowobs in tcobs:
             timevalobs = rowobs["time"]
-            if np.isclose(timevalmfr,timevalobs):
+            if np.isclose(timevalmfr, timevalobs):
                 blnFoundTimeMatch = True
                 actvalobs = rowobs["M1RATE"]
                 msgval = (
-                  "The maw.obs.csv file rate-actual value of {} should have "
-                  "matched the maw.reduce.csv file rate-actual value of {} "
-                  "at time {}".format(actvalobs, actvalmfr, timevalobs)
+                    "The maw.obs.csv file rate-actual value of {} should have "
+                    "matched the maw.reduce.csv file rate-actual value of {} "
+                    "at time {}".format(actvalobs, actvalmfr, timevalobs)
                 )
                 break
         assert blnFoundTimeMatch, msgtime
-        assert np.isclose(actvalmfr,actvalobs), msgval
+        assert np.isclose(actvalmfr, actvalobs), msgval
 
     return
 
@@ -317,7 +321,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

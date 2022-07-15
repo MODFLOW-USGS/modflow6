@@ -6,9 +6,10 @@
 # the effects of tides on the aquifer.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -132,7 +133,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
         no_ptcrecord=True,
     )
     sim.register_ims_package(imsgwf, [gwfname])
@@ -236,14 +237,14 @@ def build_model(idx, dir):
         save_flows=False,
         pname="WEL-1",
         auxiliary="CONCENTRATION",
-        filename="{}.wel".format(gwfname),
+        filename=f"{gwfname}.wel",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -256,7 +257,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
 
     imsgwt = flopy.mf6.ModflowIms(
@@ -271,7 +272,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -333,8 +334,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -350,7 +351,7 @@ def build_model(idx, dir):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     return sim, None
@@ -358,8 +359,8 @@ def build_model(idx, dir):
 
 def get_patch_collection(modelgrid, head, conc, cmap="jet", zorder=None):
     # create patches for each cell
-    import matplotlib.patches
     import matplotlib.collections
+    import matplotlib.patches
 
     xv, yv, zv = modelgrid.xyzvertices
     botm = modelgrid.botm
@@ -463,7 +464,7 @@ def make_plot(sim, headall, concall):
         if ifig == nplots - 1:
             ax.set_xlabel("DISTANCE, IN METERS", fontsize=6)
         ax.set_ylabel("ELEVATION, IN METERS", fontsize=6)
-        ttl = "TIME = {:.3f} days".format(simtime[itime])
+        ttl = f"TIME = {simtime[itime]:.3f} days"
         ax.set_title(ttl, fontsize=6)
         ax.text(1.9, 1.025, figtxt[ifig], fontsize=6)
 
@@ -528,10 +529,10 @@ def eval_transport(sim):
         ]
     )
 
-    errmsg = "heads not right for cell (0, 0, 20):\n{}\n{}".format(hsim, hans)
+    errmsg = f"heads not right for cell (0, 0, 20):\n{hsim}\n{hans}"
     assert np.allclose(hsim, hans, atol=1.0e-3), errmsg
 
-    errmsg = "concs not right for cell (0, 0, 20):\n{}\n{}".format(csim, cans)
+    errmsg = f"concs not right for cell (0, 0, 20):\n{csim}\n{cans}"
     assert np.allclose(hsim, hans, atol=1.0e-3), errmsg
 
     makeplot = False
@@ -574,7 +575,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

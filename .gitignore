@@ -71,6 +71,7 @@ autotest/*.html
 autotest/notebooks/
 
 distribution/temp/
+distribution/temp_zip/
 distribution/*.zip
 
 mod_temp/

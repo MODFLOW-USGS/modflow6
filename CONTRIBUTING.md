@@ -9,6 +9,7 @@ Contributions to MODFLOW 6 are welcome from the community. As a contributor, her
  - [Feature Requests](#feature)
  - [Submission Guidelines](#submit)
  - [Coding Rules](#rules)
+ - [Format Rules](#format)
  - [Commit Message Guidelines](#commit)
 
 ## <a name="coc"></a> Code of Conduct
@@ -135,6 +136,30 @@ from the main (upstream) repository:
 To ensure consistency throughout the source code, keep these rules in mind as you are working:
 
 * All features or bug fixes **must be tested** by one or more specs (unit-tests and/or integration/regression-tests).
+* All Fortran souce code submissions must adhere to modflow6 [Format Rules](#format)
+
+## <a name="format"></a> Format Rules
+
+Fortran souce code format rules are met by running the
+[fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6
+fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml).
+The tool can be run from the command line or integrated into a
+[VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio environment.
+
+The format configuration file reflects the current minimum standard for Fortran source
+formatting.  The main goal, however, is consistent and readable Fortran source code and as such
+pay particular attention to consistency within and across files.  As the formatting tool may at
+times shift code in unexpected ways, check for formatting consistency after running.
+
+An example run of the command line tool from the MODFLOW 6 root directory:
+`fprettify -c ./distribution/.fprettify.yaml ./utils/zonebudget/src/zbud6.f90`
+
+When run in this way, the tool will modify the file in place and generate no output if successful. The
+tool will write stderr warnings when unable to complete formatting. In general, these warnings (e.g.
+for excess line length) must be manually fixed before attempting to rerun the tool.
+
+Fortran source files can be excluded from the formatting standard if necessary, as is the case
+for Fortran source found under the `modflow6/src/Utilities/Libraries` path.
 
 ## <a name="commit"></a> Commit Message Guidelines
 

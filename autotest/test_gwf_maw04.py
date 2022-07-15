@@ -1,7 +1,8 @@
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -19,7 +20,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 ex = [
@@ -186,8 +187,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
     # build MODFLOW-2005 files
@@ -292,7 +293,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

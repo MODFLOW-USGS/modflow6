@@ -21,9 +21,9 @@ on:
     - cron: '0 6 * * *' # run at 6 AM UTC every day
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18417/w_HPCKit_p_2022.1.0.93_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18438/l_HPCKit_p_2022.1.1.97_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18341/m_HPCKit_p_2022.1.0.86_offline.dmg
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
+  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18679/l_HPCKit_p_2022.2.0.191_offline.sh
+  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18681/m_HPCKit_p_2022.2.0.158_offline.dmg
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
   LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
   MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
@@ -38,22 +38,21 @@ jobs:
         test_script: [ largetests, examples ]
     defaults:
       run:
-        shell: bash
+        shell: bash -l {0}
 
     if: github.repository_owner == 'MODFLOW-USGS'
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
 
-      - name: Setup Python 3.8
-        uses: actions/setup-python@v2.2.2
-        with:
-          python-version: 3.8
+      - name: Install Conda environment from environment.yml
+        uses: mamba-org/provision-with-micromamba@main
 
       - name: set FC=ifort environmental variable
         if: matrix.FC == 'ifort'
         run: |
           echo "FC=ifort" >> $GITHUB_ENV
+          echo "VS_VER=vs2022" >> $GITHUB_ENV
 
       - name: cache install ifort on linux
         if: matrix.FC == 'ifort'
@@ -76,17 +75,13 @@ jobs:
           sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
           sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
 
-      - name: Install python packages
-        run: |
-          .github/common/install-python-std.sh
-
       - name: Install additional python packages
         run: |
           pip install jupyter jupytext shapely scipy pandas pyshp
 
       - name: Print python package versions
         run: |
-          .github/common/python-version.sh
+          pip list
 
       - name: Set and print branch name
         run: |

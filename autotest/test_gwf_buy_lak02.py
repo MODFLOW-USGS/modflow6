@@ -12,9 +12,10 @@
 #  4.  lak has concentration of 35., aquifer is 0.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -88,12 +89,12 @@ def build_model(idx, dir):
         under_relaxation="NONE",
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord="{} strict".format(rclose),
+        rcloserecord=f"{rclose} strict",
         linear_acceleration="BICGSTAB",
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     idomain = np.full((nlay, nrow, ncol), 1)
@@ -167,7 +168,7 @@ def build_model(idx, dir):
     ]
 
     # note: for specifying lake number, use fortran indexing!
-    fname = "{}.lak.obs.csv".format(gwfname)
+    fname = f"{gwfname}.lak.obs.csv"
     lak_obs = {
         fname: [
             ("lakestage", "stage", 1),
@@ -193,8 +194,8 @@ def build_model(idx, dir):
         print_input=True,
         print_flows=True,
         print_stage=True,
-        stage_filerecord="{}.lak.bin".format(gwfname),
-        budget_filerecord="{}.lak.bud".format(gwfname),
+        stage_filerecord=f"{gwfname}.lak.bin",
+        budget_filerecord=f"{gwfname}.lak.bud",
         nlakes=len(pak_data),
         ntables=0,
         packagedata=pak_data,
@@ -208,8 +209,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -229,12 +230,12 @@ def build_model(idx, dir):
             under_relaxation="NONE",
             inner_maximum=ninner,
             inner_dvclose=hclose,
-            rcloserecord="{} strict".format(rclose),
+            rcloserecord=f"{rclose} strict",
             linear_acceleration="BICGSTAB",
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
-            filename="{}.ims".format(gwtname),
+            filename=f"{gwtname}.ims",
         )
         sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -289,8 +290,8 @@ def build_model(idx, dir):
         # output control
         oc = flopy.mf6.ModflowGwtoc(
             gwt,
-            budget_filerecord="{}.cbc".format(gwtname),
-            concentration_filerecord="{}.ucn".format(gwtname),
+            budget_filerecord=f"{gwtname}.cbc",
+            concentration_filerecord=f"{gwtname}.ucn",
             concentrationprintrecord=[
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
@@ -306,7 +307,7 @@ def build_model(idx, dir):
             exgtype="GWF6-GWT6",
             exgmnamea=gwfname,
             exgmnameb=gwtname,
-            filename="{}.gwfgwt".format(name),
+            filename=f"{name}.gwfgwt",
         )
 
     return sim, None
@@ -356,8 +357,8 @@ def eval_results(sim):
     vl0 = (2.25 - 2.0) * 2 + (2.25 - 1.0)
     m0 += vl0 * lak_conc_list[sim.idxsim]
     v0 += vl0
-    print("initial volume of water in model = {}".format(v0))
-    print("initial mass of solute in model = {}".format(m0))
+    print(f"initial volume of water in model = {v0}")
+    print(f"initial mass of solute in model = {m0}")
 
     # calculate ending water volume in model
     head = np.where(head > 1e10, -1e10, head)
@@ -379,15 +380,15 @@ def eval_results(sim):
     vl = (s - 2.0) * 2 + (s - 1.0)
     v = v + vl
     m += vl * clak[0]
-    print("final volume of water in model = {}".format(v))
-    print("final mass of solute in model = {}".format(m))
+    print(f"final volume of water in model = {v}")
+    print(f"final mass of solute in model = {m}")
 
     # check to make sure starting water volume same as equalized final volume
-    errmsg = "initial and final water volume not equal: {} {}".format(v0, v)
+    errmsg = f"initial and final water volume not equal: {v0} {v}"
     assert np.allclose(v0, v), errmsg
 
     # check to make sure starting starting solute mass same as equalized solute mass
-    errmsg = "initial and final solute mass not equal: {} {}".format(m0, m)
+    errmsg = f"initial and final solute mass not equal: {m0} {m}"
     assert np.allclose(m0, m), errmsg
 
     # todo: add a better check of the lake concentrations
@@ -425,7 +426,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 try:
@@ -17,7 +18,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 ex = [
@@ -158,7 +159,7 @@ def get_model(idx, ws):
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, model_nam_file="{}.nam".format(name)
+        sim, modelname=name, model_nam_file=f"{name}.nam"
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -170,11 +171,11 @@ def get_model(idx, ws):
         delc=delc,
         top=top,
         botm=botm,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -217,8 +218,8 @@ def get_model(idx, ws):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -278,7 +279,7 @@ def main():
 # use python test_gwf_csub_sub02.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

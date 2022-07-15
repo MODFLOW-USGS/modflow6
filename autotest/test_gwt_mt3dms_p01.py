@@ -20,10 +20,11 @@ dispersion, and reaction (sorption and decay):
 """
 
 import os
-import pytest
 import shutil
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -261,7 +262,7 @@ def p01mf6(
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -278,7 +279,7 @@ def p01mf6(
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -292,16 +293,14 @@ def p01mf6(
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # initial conditions
     strt = np.zeros((nlay, nrow, ncol), dtype=float)
     h1 = q * Lx
     strt[0, 0, 0] = h1
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -326,8 +325,8 @@ def p01mf6(
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -339,7 +338,7 @@ def p01mf6(
         sim,
         modelname=gwtname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
 
@@ -357,7 +356,7 @@ def p01mf6(
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -371,13 +370,11 @@ def p01mf6(
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=0.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # advection
     if mixelm == 0:
@@ -387,7 +384,7 @@ def p01mf6(
     else:
         raise Exception()
     adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, filename="{}.adv".format(gwtname)
+        gwt, scheme=scheme, filename=f"{gwtname}.adv"
     )
 
     # dispersion
@@ -426,9 +423,7 @@ def p01mf6(
         pname="CNC-1",
     )
 
-    ssm = flopy.mf6.ModflowGwtssm(
-        gwt, sources=[[]], filename="{}.ssm".format(gwtname)
-    )
+    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]], filename=f"{gwtname}.ssm")
 
     if zeta is not None:
         ist = flopy.mf6.ModflowGwtist(
@@ -442,15 +437,15 @@ def p01mf6(
             decay_sorbed=decay_rate_sorbed,
             zetaim=zeta,
             thetaim=prsity2,
-            filename="{}.ist".format(gwtname),
+            filename=f"{gwtname}.ist",
             pname="IST-1",
         )
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.bud".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.bud",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -464,7 +459,7 @@ def p01mf6(
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(name),
+        filename=f"{name}.gwfgwt",
     )
 
     sim.write_simulation()
@@ -517,7 +512,7 @@ def test_mt3dmsp01a():
         prsity2,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
 
     # load transport budget
@@ -525,12 +520,12 @@ def test_mt3dmsp01a():
     #     STORAGE-AQUEOUS, DECAY-AQUEOUS, STORAGE-SORBED,
     #     DECAY-SORBED, FLOW-JA-FACE, SOURCE-SINK MIX, CONSTANT CONC
     gwtname = "gwt_p01"
-    fname = os.path.join(mf6_ws, "{}.bud".format(gwtname))
+    fname = os.path.join(mf6_ws, f"{gwtname}.bud")
     try:
         bobj = flopy.utils.CellBudgetFile(fname, precision="double")
         budra = bobj.get_data(kstpkper=(9, 0), text="DECAY-AQUEOUS")[0]
     except:
-        assert False, 'could not load data from "{}"'.format(fname)
+        assert False, f'could not load data from "{fname}"'
 
     # ensure decay aqueous is zero
     decay_aqueous = bobj.get_data(kstpkper=(9, 0), text="DECAY-AQUEOUS")[0]
@@ -543,7 +538,7 @@ def test_mt3dmsp01a():
     # ensure storage sorbed is zero
     storage_sorbed = bobj.get_data(kstpkper=(9, 0), text="STORAGE-SORBED")[0]
     bobj.file.close()
-    assert np.allclose(0.0, storage_sorbed), "{}".format(storage_sorbed)
+    assert np.allclose(0.0, storage_sorbed), f"{storage_sorbed}"
 
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -581,7 +576,7 @@ def test_mt3dmsp01b():
         prsity2,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -619,7 +614,7 @@ def test_mt3dmsp01c():
         prsity2,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -657,7 +652,7 @@ def test_mt3dmsp01d():
         prsity2,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -695,7 +690,7 @@ def test_mt3dmsp01e():
         prsity2,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -734,7 +729,7 @@ def test_mt3dmsp01f():
         prsity2,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -775,7 +770,7 @@ def test_mt3dmsp01g():
         zero_order_decay=True,
     )
 
-    msg = "concentrations not equal {} {}".format(conc_mt3d, conc_mf6)
+    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
     assert np.allclose(conc_mt3d, conc_mf6, atol=1.0e-4), msg
     if remove_files:
         shutil.rmtree(mf6_ws)
@@ -784,7 +779,7 @@ def test_mt3dmsp01g():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
     test_mt3dmsp01a()
     test_mt3dmsp01b()
     test_mt3dmsp01c()

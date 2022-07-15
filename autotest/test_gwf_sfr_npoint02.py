@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pytest
 
@@ -281,7 +282,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()
