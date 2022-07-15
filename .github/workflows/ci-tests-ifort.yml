@@ -89,7 +89,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          micromamba list
+          conda list
 
       - name: Test make for MODFLOW 6 programs
         if: runner.os == 'Linux' || runner.os == 'macOS'

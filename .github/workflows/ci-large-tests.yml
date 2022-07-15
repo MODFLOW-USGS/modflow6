@@ -81,7 +81,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          micromamba list
+          conda list
 
       - name: Set and print branch name
         run: |
