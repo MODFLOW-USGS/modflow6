@@ -22,7 +22,7 @@ jobs:
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main
 
-      - name: Install packages for Sphinx using pip
+      - name: Install additional packages for Sphinx using pip
         run: |
           pip install -r requirements.rtd.txt
         working-directory: ${{env.working-directory}}
