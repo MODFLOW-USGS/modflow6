@@ -9,8 +9,8 @@ module GweInterfaceModelModule
   use TspAdvModule, only: adv_cr, TspAdvType
   use TspAdvOptionsModule, only: TspAdvOptionsType
   use GweDspModule, only: dsp_cr, GweDspType
-  use TspDspOptionsModule, only: TspDspOptionsType
-  use TspDspGridDataModule, only: TspDspGridDataType
+  use GweDspOptionsModule, only: GweDspOptionsType
+  use GweDspGridDataModule, only: GweDspGridDataType
   use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
 
@@ -106,7 +106,7 @@ contains
     ! local
     class(*), pointer :: disPtr
     type(TspAdvOptionsType) :: adv_options
-    type(TspDspOptionsType) :: dsp_options
+    type(GweDspOptionsType) :: dsp_options
     integer(I4B) :: i
 
     this%moffset = 0
@@ -150,7 +150,7 @@ contains
   subroutine gweifmod_ar(this)
     class(GweInterfaceModelType) :: this !< the GWE interface model
     ! local
-    type(TspDspGridDataType) :: dspGridData
+    type(GweDspGridDataType) :: dspGridData
 
     call this%fmi%fmi_ar(this%ibound)
     if (this%inadv > 0) then
@@ -171,7 +171,7 @@ contains
 !<
   subroutine setDspGridData(this, gridData)
     class(GweInterfaceModelType) :: this !< the GWE interface model
-    type(TspDspGridDataType) :: gridData !< the dsp grid data to be set
+    type(GweDspGridDataType) :: gridData !< the dsp grid data to be set
     ! local
     integer(I4B) :: i, idx
     class(GweModelType), pointer :: gweModel

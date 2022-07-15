@@ -1,11 +1,11 @@
-module TspDspGridDataModule
+module GweDspGridDataModule
   use KindModule, only: DP, I4B
   implicit none
   private
 
 !> @brief data structure and helpers for passing dsp grid data
 !< into the package, as opposed to reading from file
-  type, public :: TspDspGridDataType
+  type, public :: GweDspGridDataType
     real(DP), dimension(:), pointer, contiguous :: diffc => null() !< molecular diffusion coefficient for each cell
     real(DP), dimension(:), pointer, contiguous :: alh => null() !< longitudinal horizontal dispersivity
     real(DP), dimension(:), pointer, contiguous :: alv => null() !< longitudinal vertical dispersivity
@@ -19,14 +19,14 @@ module TspDspGridDataModule
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: destroy
-  end type TspDspGridDataType
+  end type GweDspGridDataType
 
 contains
 
 !> @brief allocate data structure
 !<
   subroutine construct(this, nodes)
-    class(TspDspGridDataType) :: this
+    class(GweDspGridDataType) :: this
     integer(I4B) :: nodes
 
     allocate (this%diffc(nodes))
@@ -45,7 +45,7 @@ contains
 !> @brief clean up
 !<
   subroutine destroy(this)
-    class(TspDspGridDataType) :: this
+    class(GweDspGridDataType) :: this
 
     deallocate (this%diffc)
     deallocate (this%alh)
@@ -60,4 +60,4 @@ contains
 
   end subroutine destroy
 
-end module TspDspGridDataModule
+end module GweDspGridDataModule

@@ -6,8 +6,8 @@ module GweDspModule
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
-  use TspDspOptionsModule, only: TspDspOptionsType
-  use TspDspGridDataModule, only: TspDspGridDataType
+  use GweDspOptionsModule, only: GweDspOptionsType
+  use GweDspGridDataModule, only: GweDspGridDataType
 
   implicit none
   private
@@ -115,7 +115,7 @@ contains
     ! -- dummy
     class(GweDspType) :: this
     class(DisBaseType), pointer :: dis
-    type(TspDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
+    type(GweDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
                                                                 !! creating DSP from file
     ! -- local
     ! -- formats
@@ -215,7 +215,7 @@ contains
     real(DP), dimension(:), pointer, contiguous :: porosity
     real(DP), dimension(:), pointer, contiguous :: cpw
     real(DP), dimension(:), pointer, contiguous :: rhow
-    type(TspDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
+    type(GweDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
                                                                 !! to create the package without input file
     ! -- local
     ! -- formats
@@ -756,7 +756,7 @@ contains
   subroutine set_data(this, grid_data)
     use MemoryManagerModule, only: mem_reallocate
     class(GweDspType) :: this !< this DSP package
-    type(TspDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
+    type(GweDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
     ! local
     integer(I4B) :: i
 
