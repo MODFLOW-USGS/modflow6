@@ -119,17 +119,9 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "nbsphinx",
     "nbsphinx_link",
-    "recommonmark",
+    "myst_parser",
     "sphinx_markdown_tables",
 ]
-
-source_parsers = {
-    ".md": "recommonmark.parser.CommonMarkParser",
-}
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".md": "markdown",
-}
 
 # # Tell sphinx what the pygments highlight language should be.
 # highlight_language = 'fortran'

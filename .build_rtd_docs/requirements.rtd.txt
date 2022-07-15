@@ -6,7 +6,7 @@ nbsphinx_link
 ipython
 ipykernel
 rtds_action
-recommonmark
+myst_parser
 sphinx_rtd_theme
 
 
