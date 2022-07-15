@@ -47,7 +47,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          conda list
+          pip list
 
       - name: Set and print branch name
         run: |

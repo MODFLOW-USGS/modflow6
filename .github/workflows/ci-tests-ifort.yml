@@ -47,6 +47,10 @@ jobs:
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main
 
+      - name: Print python package versions
+        run: |
+          pip list
+
       - name: cache install ifort on linux
         if: runner.os == 'Linux'
         id: cache-install-linux
@@ -86,10 +90,6 @@ jobs:
         if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
         run: |
           .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
-
-      - name: Print python package versions
-        run: |
-          conda list
 
       - name: Test make for MODFLOW 6 programs
         if: runner.os == 'Linux' || runner.os == 'macOS'

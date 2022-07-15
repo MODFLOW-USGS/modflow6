@@ -29,7 +29,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          conda list
+          pip list
 
       - name: Install TeX Live
         run: |
@@ -129,7 +129,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          conda list
+          pip list
 
       - name: update MODFLOW 6 version
         run: |

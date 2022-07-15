@@ -29,6 +29,10 @@ jobs:
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main
 
+      - name: Print python package versions
+        run: |
+          pip list
+
       - name: Workaround for windows-2022 v20220626.1 gfortran executable run failures
         if: runner.os == 'Windows'
         run: |
@@ -53,10 +57,6 @@ jobs:
           gfortran --version
           gcc --version
           g++ --version
-
-      - name: Print python package versions
-        run: |
-          conda list
 
       - name: Set and print branch name
         run: |
