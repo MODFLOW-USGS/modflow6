@@ -24,8 +24,7 @@ jobs:
 
       - name: Upgrade pip and install packages for Sphinx
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          mamba install --file requirements.rtd.txt
         working-directory: ${{env.working-directory}}
 
       - name: Install TeX Live
