@@ -77,11 +77,11 @@ jobs:
 
       - name: Install additional python packages
         run: |
-          mamba install jupyter jupytext shapely scipy pandas pyshp
+          micromamba install jupyter jupytext shapely scipy pandas pyshp
 
       - name: Print python package versions
         run: |
-          mamba list
+          micromamba list
 
       - name: Set and print branch name
         run: |

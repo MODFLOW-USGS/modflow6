@@ -27,7 +27,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          mamba list
+          micromamba list
 
       - name: Set and print branch name
         run: |

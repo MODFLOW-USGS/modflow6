@@ -39,7 +39,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          mamba list
+          micromicromamba list
 
       - name: Setup modflow
         run: |
@@ -76,7 +76,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          mamba list
+          micromamba list
 
       - name: Update flopy MODFLOW 6 classes
         working-directory: autotest
