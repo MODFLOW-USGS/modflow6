@@ -1,4 +1,4 @@
-name: tests - gfortran - previous versions - end of life
+name: tests - gfortran - end of life versions
 
 on:
   push:

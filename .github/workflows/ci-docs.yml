@@ -27,6 +27,10 @@ jobs:
           pip install -r requirements.rtd.txt
         working-directory: ${{env.working-directory}}
 
+      - name: Print python package versions
+        run: |
+          micromamba list
+
       - name: Install TeX Live
         run: |
           sudo apt-get update
@@ -104,6 +108,9 @@ jobs:
       distribution-directory: distribution
       common-directory: .github/common
       branch-name: ${GITHUB_REF##*/}
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
       - uses: actions/checkout@v2.3.4
@@ -117,10 +124,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install doxygen graphviz
 
-      - name: Setup Python
-        uses: actions/setup-python@v4.0.0
-        with:
-          python-version: 3.9
+      - name: Install Conda environment from environment.yml
+        uses: mamba-org/provision-with-micromamba@main
+
+      - name: Print python package versions
+        run: |
+          micromamba list
 
       - name: update MODFLOW 6 version
         run: |
