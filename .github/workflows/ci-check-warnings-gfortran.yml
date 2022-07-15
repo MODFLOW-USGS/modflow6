@@ -39,7 +39,7 @@ jobs:
 
       - name: Print python package versions
         run: |
-          micromicromamba list
+          micromamba list
 
       - name: Setup modflow
         run: |

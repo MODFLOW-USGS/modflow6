@@ -22,9 +22,9 @@ jobs:
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main
 
-      - name: Upgrade pip and install packages for Sphinx
+      - name: Install packages for Sphinx using pip
         run: |
-          micromamba install --file requirements.rtd.txt
+          pip install -r requirements.rtd.txt
         working-directory: ${{env.working-directory}}
 
       - name: Install TeX Live
