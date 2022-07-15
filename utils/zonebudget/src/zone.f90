@@ -20,7 +20,7 @@ module ZoneModule
   public :: maxzone
   public :: iuniqzone
   public :: nmznfl, vbvl, vbznfl
-  
+
   integer(I4B) :: ncells
   integer(I4B) :: maxzone
   integer(I4B), dimension(:), allocatable :: izoneuser
@@ -31,9 +31,9 @@ module ZoneModule
   real(DP), dimension(:, :, :), allocatable :: vbznfl
   real(DP), dimension(:, :, :), allocatable :: vbvl
   character(len=LINELENGTH) :: errmsg, keyword
-  
-  contains
-  
+
+contains
+
   subroutine zone_init(inunit, nbudterms, ncr, mshape)
 ! ******************************************************************************
 ! zone_init
@@ -61,26 +61,26 @@ module ZoneModule
     ! -- Read DIMENSIONS block, set NCELLS
     call parser%Initialize(inunit, iout)
     call parser%GetBlock('DIMENSIONS', isfound, ierr)
-    if(isfound) then
-      write(iout,'(/, a)') 'Processing zone dimensions'
+    if (isfound) then
+      write (iout, '(/, a)') 'Processing zone dimensions'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('NCELLS')
-            ncells = parser%GetInteger()
-            write(iout,'(4x,a,i0)') 'NCELLS = ', ncells
-          case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN DIMENSIONS ENTRY: ',       &
-                                      trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
-          end select
+        case ('NCELLS')
+          ncells = parser%GetInteger()
+          write (iout, '(4x,a,i0)') 'NCELLS = ', ncells
+        case default
+          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN DIMENSIONS ENTRY: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
+        end select
       end do
-      write(iout,'(a)') 'End processing zone dimensions'
+      write (iout, '(a)') 'End processing zone dimensions'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED ZONE DIMENSIONS BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED ZONE DIMENSIONS BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -88,63 +88,64 @@ module ZoneModule
     ! -- Validate size and allocate arrays
     if (ncr > 0) then
       if (ncells /= ncr) then
-        write(errmsg, '(a,i0)') 'GRB FILE INDICATES NUMBER OF CELLS OR ' //   &
+        write (errmsg, '(a,i0)') 'GRB FILE INDICATES NUMBER OF CELLS OR '// &
           'REACHES IS ', ncr
         call store_error(errmsg)
-        write(errmsg, '(a,i0)') 'INSTEAD ZONE ARRAY SPECIFIED AS SIZE ', ncells
+        write (errmsg, '(a,i0)') 'INSTEAD ZONE ARRAY SPECIFIED AS SIZE ', ncells
         call store_error(errmsg)
-        write(errmsg, '(a,i0)') 'CHANGE SIZE OF ZONE ARRAY TO  ', ncr
+        write (errmsg, '(a,i0)') 'CHANGE SIZE OF ZONE ARRAY TO  ', ncr
         call store_error(errmsg)
         call store_error_unit(inunit)
-      endif
+      end if
     else
       ! -- Number of cells/reaches not available in grb or no grb specified
       !    Setting ncr to ncells
       ncr = ncells
-    endif
-    allocate(izoneuser(ncells))
-    allocate(izone(ncells))
-    allocate(ich(ncells))
+    end if
+    allocate (izoneuser(ncells))
+    allocate (izone(ncells))
+    allocate (ich(ncells))
     !
     ! -- get griddata block
     call parser%GetBlock('GRIDDATA', isfound, ierr)
-    if(isfound) then
-      write(iout,'(/, a)') 'Processing zone griddata'
+    if (isfound) then
+      write (iout, '(/, a)') 'Processing zone griddata'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('IZONE')
-            call parser%GetStringCaps(keyword)
-            if (keyword .EQ. 'LAYERED') then
-              if (size(mshape) > 1) then
-                nlay = mshape(1)
-              else
-                write(errmsg,'(4x,a)') 'ERROR. LAYERED INPUT NOT SUPPORTED &
-                  &FOR IZONE.  LAYERED INPUT CAN ONLY BE USED FOR IZONE &
-                  &WHEN A BINARY GRID FILE IS PROVIDED AND THE MODEL IS LAYERED'
-                call store_error(errmsg)
-                call parser%StoreErrorUnit()
-              endif
-              ncpl = ncells / nlay
-              write(iout, '(4x, a, i0)') 'LAYERED detected.  Using NLAY = ', nlay
-              write(iout, '(4x, a, i0, a)') 'Reading ', ncpl, ' values per layer'
-              istart = 1
-              istop = ncpl
-              do k = 1, nlay
-                call ReadArray(inunit, izoneuser(istart:istop), aname, 1, ncpl, iout, k)
-                istart = istop + 1
-                istop = istart + ncpl - 1
-              enddo
+        case ('IZONE')
+          call parser%GetStringCaps(keyword)
+          if (keyword .EQ. 'LAYERED') then
+            if (size(mshape) > 1) then
+              nlay = mshape(1)
             else
-              call ReadArray(inunit, izoneuser, aname, 1, ncells, iout, 0)
-            endif
-          case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN ZONE GRIDDATA TAG: ',      &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
+              write (errmsg, '(4x,a)') 'ERROR. LAYERED INPUT NOT SUPPORTED &
+                &FOR IZONE.  LAYERED INPUT CAN ONLY BE USED FOR IZONE &
+                &WHEN A BINARY GRID FILE IS PROVIDED AND THE MODEL IS LAYERED'
+              call store_error(errmsg)
+              call parser%StoreErrorUnit()
+            end if
+            ncpl = ncells / nlay
+            write (iout, '(4x, a, i0)') 'LAYERED detected.  Using NLAY = ', nlay
+            write (iout, '(4x, a, i0, a)') 'Reading ', ncpl, ' values per layer'
+            istart = 1
+            istop = ncpl
+            do k = 1, nlay
+              call ReadArray(inunit, izoneuser(istart:istop), aname, 1, ncpl, &
+                             iout, k)
+              istart = istop + 1
+              istop = istart + ncpl - 1
+            end do
+          else
+            call ReadArray(inunit, izoneuser, aname, 1, ncells, iout, 0)
+          end if
+        case default
+          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN ZONE GRIDDATA TAG: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
     else
@@ -153,7 +154,7 @@ module ZoneModule
     end if
     !
     ! -- Write messages
-    close(inunit)
+    close (inunit)
     !
     ! -- Find max and min values
     iminval = HUGE(iminval)
@@ -162,18 +163,19 @@ module ZoneModule
       izone(n) = izoneuser(n)
       if (izoneuser(n) /= 0) then
         if (izoneuser(n) < iminval) then
-          iminval = izoneuser(n) 
+          iminval = izoneuser(n)
         end if
         if (izoneuser(n) > imaxval) then
-          imaxval = izoneuser(n) 
+          imaxval = izoneuser(n)
         end if
       end if
     end do
     !
     ! -- write minimum and maximum zone numbers
-    write(iout, '(/, 4x, a, i0)') 'Successfully read zone array with NCELLS = ', ncells
-    write(iout, '(4x, a, i0)') 'Minimum user-specified zone number is ', iminval
-    write(iout, '(4x, a, i0)') 'Maximum user-specified zone number is ', imaxval
+    write (iout, '(/, 4x, a, i0)') &
+      'Successfully read zone array with NCELLS = ', ncells
+    write (iout, '(4x, a, i0)') 'Minimum user-specified zone number is ', iminval
+    write (iout, '(4x, a, i0)') 'Maximum user-specified zone number is ', imaxval
     !
     ! -- find unique zones
     call unique_values(izone, iuniqzone)
@@ -185,7 +187,7 @@ module ZoneModule
     maxzone = size(iuniqzone)
     !
     ! -- allocate and initialize izonecount
-    allocate(izonecount(0:maxzone))
+    allocate (izonecount(0:maxzone))
     do i = 0, maxzone
       izonecount(i) = 0
     end do
@@ -207,34 +209,34 @@ module ZoneModule
     end do
     !
     ! -- write zone mapping
-    write(iout, '(//,4x,3(a20,1x))') 'USER ZONE', 'ZONE NUMBER', 'CELL COUNT'
-    write(iout, '(4x,62("-"))') 
-    write(iout, '(4x,3(i20,1x))') 0, 0, izonecount(0)
+    write (iout, '(//,4x,3(a20,1x))') 'USER ZONE', 'ZONE NUMBER', 'CELL COUNT'
+    write (iout, '(4x,62("-"))')
+    write (iout, '(4x,3(i20,1x))') 0, 0, izonecount(0)
     do i = 1, maxzone
-      write(iout, '(4x,3(i20,1x))') iuniqzone(i), i, izonecount(i)
+      write (iout, '(4x,3(i20,1x))') iuniqzone(i), i, izonecount(i)
     end do
-    write(iout, '(4x,62("-"),/)') 
-    
+    write (iout, '(4x,62("-"),/)')
+
     !
     !maxzone = maxval(izone)
-    write(iout,'(a)') 'End processing zone griddata'
+    write (iout, '(a)') 'End processing zone griddata'
     !
     ! -- nmznfl is map showing connections between two zones.  If 1, then
     !    there is flow between zones, and zone to zone flow will be written.
-    allocate(nmznfl(0:maxzone, 0:maxzone))
-    allocate(vbznfl(2, 0:maxzone, 0:maxzone))
-    allocate(vbvl(2, 0:maxzone, nbudterms))
+    allocate (nmznfl(0:maxzone, 0:maxzone))
+    allocate (vbznfl(2, 0:maxzone, 0:maxzone))
+    allocate (vbvl(2, 0:maxzone, nbudterms))
     !
     ! -- deallocate local variables
-    deallocate(izonecount)
+    deallocate (izonecount)
     !
     ! -- close the zone file
-    close(inunit)
+    close (inunit)
     !
     ! -- return
     return
   end subroutine zone_init
-  
+
   subroutine clear_accumulators()
 ! ******************************************************************************
 ! clear_accumulators
@@ -280,8 +282,8 @@ module ZoneModule
         vbznfl(2, iz1, iz2) = vbznfl(2, iz1, iz2) - q
       else
         vbznfl(1, iz1, iz2) = vbznfl(1, iz1, iz2) + q
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
@@ -316,9 +318,9 @@ module ZoneModule
           vbznfl(2, iz1, iz2) = vbznfl(2, iz1, iz2) - q
         else
           vbznfl(1, iz1, iz2) = vbznfl(1, iz1, iz2) + q
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- return
     return
@@ -349,13 +351,13 @@ module ZoneModule
         vbvl(2, iz1, ibudterm) = vbvl(2, iz1, ibudterm) - q
       else
         vbvl(1, iz1, ibudterm) = vbvl(1, iz1, ibudterm) + q
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
   end subroutine flow_accumulate
-  
+
   subroutine flowch_setich(ibudterm, nodesrc)
 ! ******************************************************************************
 ! Set ICH equal to ibudterm for all constant head cells
@@ -374,12 +376,12 @@ module ZoneModule
     do i = 1, size(nodesrc)
       n = nodesrc(i)
       ich(n) = ibudterm
-    enddo
+    end do
     !
     ! -- return
     return
   end subroutine flowch_setich
-  
+
   subroutine flowch_accumulate(ia, ja, flowja)
 ! ******************************************************************************
 ! flowiaja_accumulate
@@ -416,14 +418,14 @@ module ZoneModule
           vbvl(2, iz, ibudterm) = vbvl(2, iz, ibudterm) - q
         else
           vbvl(1, iz, ibudterm) = vbvl(1, iz, ibudterm) + q
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- return
     return
   end subroutine flowch_accumulate
-  
+
   subroutine pop_zero_zone(ia)
     ! -- dummy arguments
     integer(I4B), dimension(:), allocatable, intent(inout) :: ia
@@ -449,7 +451,7 @@ module ZoneModule
     if (ipop /= 0) then
       !
       ! -- allocate ib
-      allocate(ib(nlen-1))
+      allocate (ib(nlen - 1))
       !
       ! -- fill itmp with everything in ia except 0
       n = 1
@@ -462,16 +464,16 @@ module ZoneModule
       end do
       !
       ! -- deallocate ia
-      deallocate(ia)
+      deallocate (ia)
       !
       ! -- allocate ia and fill with ib
-      allocate(ia(size(ib)))
+      allocate (ia(size(ib)))
       do i = 1, size(ib)
         ia(i) = ib(i)
       end do
       !
       ! -- deallocate ib
-      deallocate(ib)
+      deallocate (ib)
     end if
     !
     ! -- return
@@ -486,15 +488,15 @@ module ZoneModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
 ! ------------------------------------------------------------------------------
-    deallocate(izone)
-    deallocate(ich)
-    deallocate(nmznfl)
-    deallocate(vbznfl)
-    deallocate(vbvl)
+    deallocate (izone)
+    deallocate (ich)
+    deallocate (nmznfl)
+    deallocate (vbznfl)
+    deallocate (vbvl)
     !
     ! -- return
     return
   end subroutine zone_finalize
-  
+
 end module ZoneModule
 
