@@ -10,7 +10,7 @@
 !!
 !!        GWT       |        GWE        | src files w/label
 !! -----------------|-------------------|--------------
-!! "Concentration"  |"Temperature"      | gwt1.f90
+!! "Concentration"  |"Temperature"      | gwt1.f90/gwe1.f90
 !!                  |                   | gwt1apt1.f90
 !!                  |                   | gwt1cnc1.f90
 !!                  |                   | gwt1ist1.f90
@@ -23,9 +23,8 @@
 !!                  |                   | gwt1fmi1.f90
 !!                  |                   | tsp1ic1.f90
 !!                  |                   | GwtSpc.f90
-!! "Concentration"  |"Temperature"      | Gwe.f90
 !! "Cumulative Mass"|"Cumulative Energy"| Budget.f90 (_ot routine)
-!! "MASS", "M"      |"?", "?"           | gwt1.f90 (gwt_df routine & _ot routine)
+!! "MASS", "M"      |"ENERGY", "E"      | gwt1.f90 (gwt_df routine & _ot routine)
 !! "M/T"            |"Watts"  (?)       |
 !! "M"              |"Joules" or "E"    |
 !<
@@ -38,6 +37,7 @@ module TspLabelsModule
   private
   public :: TspLabelsType
   public :: tsplabels_cr
+  public :: setTspLabels
 
   !> @brief Define labels for use with generalized transport model
   !!
@@ -47,14 +47,16 @@ module TspLabelsModule
   !!
   !<
   type TspLabelsType
+    
     character(len=LENVARNAME), pointer :: modname => null() !< name of the model that module is associated with
     character(len=LENVARNAME), pointer :: tsptype => null() !< "solute" or "heat"
     character(len=LENVARNAME), pointer :: depvartype => null() !< "concentration" or "temperature"
-    character(len=LENVARNAME), pointer :: depvarunit => null() !< "mass" or "joules"
-    character(len=LENVARNAME), pointer :: depvarunitabbrev => null() !< "M/T" or "watts" (or "kilowatts")
+    character(len=LENVARNAME), pointer :: depvarunit => null() !< "mass" or "energy"
+    character(len=LENVARNAME), pointer :: depvarunitabbrev => null() !< "M" or "J"
 
   contains
-    procedure :: tsplabels_df
+    !-- public
+    procedure, public :: setTspLabels
     ! -- private
     procedure :: allocate_label_names
 
@@ -91,44 +93,28 @@ contains
   !! Set variable names according to type of transport model
   !!
   !<
-  subroutine tsplabels_df(this, tsptype, depvartype, depvarunit, depvarunitabbrev)
+  subroutine setTspLabels(this, tsptype, depvartype, depvarunit, depvarunitabbrev)
     class(TspLabelsType) :: this
-    character(len=*), optional :: tsptype !< type of model, default is GWT6
-    character(len=*), optional :: depvartype !< dependent variable type, default is "CONCENTRATION"
-    character(len=*), optional :: depvarunit !< units of dependent variable for writing to list file
-    character(len=*), optional :: depvarunitabbrev !< abbreviation of associated units
+    character(len=*), intent(in) :: tsptype !< type of model, default is GWT6
+    character(len=*), intent(in) :: depvartype !< dependent variable type, default is "CONCENTRATION"
+    character(len=*), intent(in) :: depvarunit !< units of dependent variable for writing to list file
+    character(len=*), intent(in) :: depvarunitabbrev !< abbreviation of associated units
     !
     ! -- Set the model type
-    if (present(tsptype)) then
-      this%tsptype = tsptype
-    else
-      this%tsptype = 'GWT6'
-    end if
+    this%tsptype = tsptype
     !
     ! -- Set the type of dependent variable being solved for
-    if (present(tsptype)) then
-      this%depvartype = depvartype
-    else
-      this%depvartype = 'CONCENTRATION'
-    end if
+    this%depvartype = depvartype
     !
     ! -- Set the units associated with the dependent variable
-    if (present(depvarunit)) then
-      this%depvarunit = depvarunit
-    else
-      this%depvarunit = 'MASS'
-    end if
+    this%depvarunit = depvarunit
     !
     ! -- Set the units abbreviation
-    if (present(depvarunitabbrev)) then
-      this%depvarunitabbrev = depvarunitabbrev
-    else
-      this%depvarunitabbrev = 'M/T'
-    end if
+    this%depvarunitabbrev = depvarunitabbrev
     !
     ! -- Return
     return
-  end subroutine tsplabels_df
+  end subroutine setTspLabels
 
   !> @brief Define the information this object holds
   !!

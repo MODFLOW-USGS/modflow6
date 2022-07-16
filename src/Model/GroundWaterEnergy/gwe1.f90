@@ -31,7 +31,7 @@ module GweModule
 
   type, extends(TransportModelType) :: GweModelType
 
-    type(TspLabelsType), pointer :: tsplabel => null()
+    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
     type(TspIcType), pointer :: ic => null() ! initial conditions package
     type(TspFmiType), pointer :: fmi => null() ! flow model interface
     type(TspAdvType), pointer :: adv => null() ! advection package
@@ -42,7 +42,6 @@ module GweModule
     type(GweMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GweDspType), pointer :: dsp => null() ! dispersion package
     type(BudgetType), pointer :: budget => null() ! budget object
-    type(TspLabelsType), pointer :: tsplab => null()
     integer(I4B), pointer :: inic => null() ! unit number IC
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
@@ -121,7 +120,7 @@ contains
     use GweMstModule, only: mst_cr
     use GweDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
-    use TspLabelsModule, only: tsplabels_cr
+    use TspLabelsModule, only: tsplabels_cr, setTspLabels
 
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -238,6 +237,9 @@ contains
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
+    !
+    ! -- Set labels to be used with transport model
+    call this%tsplab%setTspLabels(this%macronym, 'TEMPERATURE', 'ENERGY', 'E')
     !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)

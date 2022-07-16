@@ -15,7 +15,7 @@ module BaseModelModule
     character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
 
     character(len=LENMODELNAME), pointer :: name => null() !< name of the model
-    character(len=3), pointer :: macronym => null() !< 3 letter model acronym (GWF, GWT, ...)
+    character(len=3), pointer :: macronym => null() !< 3 letter model acronym (GWF, GWT, GWE, ...)
     integer(I4B), pointer :: idsoln => null() !< id of the solution model is in
     integer(I4B), pointer :: id => null() !< model id
     integer(I4B), pointer :: iout => null() !< output unit number

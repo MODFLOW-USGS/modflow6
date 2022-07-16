@@ -36,7 +36,7 @@ module GwtModule
 
   type, extends(TransportModelType) :: GwtModelType
 
-    type(TspLabelsType), pointer :: tsplabel => null() ! object defining the appropriate labels
+    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
     type(TspIcType), pointer :: ic => null() ! initial conditions package
     type(TspFmiType), pointer :: fmi => null() ! flow model interface
     type(TspAdvType), pointer :: adv => null() ! advection package
@@ -126,7 +126,7 @@ contains
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
-    use TspLabelsModule, only: tsplabels_cr
+    use TspLabelsModule, only: tsplabels_cr, setTspLabels
     use NameFileModule, only: NameFileType
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -229,9 +229,6 @@ contains
     ! -- Check to make sure that required ftype's have been specified
     call this%ftype_check(namefile_obj, indis)
     !
-    ! -- Prior to instantiating packages, assign appropriate labels (GWT or GWE)
-    !call tsplabels_cr(this%tsplabel
-    !
     ! -- Create discretization object
     if (indis6 > 0) then
       call dis_cr(this%dis, this%name, indis, this%iout)
@@ -243,6 +240,9 @@ contains
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
+    !
+    ! -- Set labels to be used with transport model
+    call this%tsplab%setTspLabels(this%macronym, 'CONCENTRATION', 'MASS', 'M') 
     !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
