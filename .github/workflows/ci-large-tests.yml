@@ -77,7 +77,7 @@ jobs:
 
       - name: Install additional python packages
         run: |
-          pip install jupyter jupytext shapely scipy pandas pyshp
+          micromamba install jupyter jupytext shapely scipy pandas pyshp
 
       - name: Print python package versions
         run: |
