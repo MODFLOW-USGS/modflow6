@@ -57,6 +57,7 @@ module TspLabelsModule
   contains
     !-- public
     procedure, public :: setTspLabels
+    procedure, public :: tsplabels_da
     ! -- private
     procedure :: allocate_label_names
 

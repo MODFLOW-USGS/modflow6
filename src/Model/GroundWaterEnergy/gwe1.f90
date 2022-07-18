@@ -972,6 +972,7 @@ contains
     call this%budget%budget_da()
     call this%oc%oc_da()
     call this%obs%obs_da()
+    call this%tsplab%tsplabels_da()
     !
     ! -- Internal package objects
     deallocate (this%dis)
@@ -985,6 +986,7 @@ contains
     deallocate (this%budget)
     deallocate (this%oc)
     deallocate (this%obs)
+    deallocate (this%tsplab)
     !
     ! -- Boundary packages
     do ip = 1, this%bndlist%Count()

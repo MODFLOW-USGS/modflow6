@@ -991,6 +991,7 @@ contains
     call this%budget%budget_da()
     call this%oc%oc_da()
     call this%obs%obs_da()
+    call this%tsplab%tsplabels_da()
     !
     ! -- Internal package objects
     deallocate (this%dis)
