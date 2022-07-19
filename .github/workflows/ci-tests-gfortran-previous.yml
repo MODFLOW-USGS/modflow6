@@ -29,6 +29,9 @@ jobs:
 
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main
+        with:
+            cache-downloads: true
+            cache-env: true
 
       - name: Set up gfortran ${{ matrix.GCC_V }}
         run: |
