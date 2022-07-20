@@ -43,7 +43,7 @@ contains
   subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         tsplab)
 ! ******************************************************************************
-! cnc_create -- Create a New Constant Concentration Package
+! cnc_create -- Create a New Constant Concentration/Temperature Package
 ! Subroutine: (1) create new-style package
 !             (2) point packobj to the new package
 ! ******************************************************************************
@@ -196,7 +196,7 @@ contains
     ! -- Advance the time series
     call this%TsManager%ad()
     !
-    ! -- Process each entry in the constant concentration cell list
+    ! -- Process each entry in the constant concentration/temperature cell list
     do i = 1, this%nbound
       node = this%nodelist(i)
       cb = this%bound(1, i)
@@ -467,10 +467,9 @@ contains
 
   subroutine cnc_rp_ts(this)
 ! ******************************************************************************
-! -- Assign tsLink%Text appropriately for
-!    all time series in use by package.
-!    In CNC package variable CONCENTRATION
-!    can be controlled by time series.
+! -- Assign tsLink%Text appropriately for all time series in use by package.
+!    In CNC package variable CONCENTRATION or TEMPERATURE can be controlled 
+!    by time series.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
