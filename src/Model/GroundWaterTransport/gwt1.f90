@@ -126,7 +126,7 @@ contains
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
-    use TspLabelsModule, only: tsplabels_cr, setTspLabels
+    use TspLabelsModule, only: tsplabels_cr
     use NameFileModule, only: NameFileType
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -160,6 +160,9 @@ contains
     this%name = modelname
     this%macronym = 'GWT'
     this%id = id
+    !
+    ! -- Instantiate generalized labels for later assignment
+    call tsplabels_cr(this%tsplab, this%name)
     !
     ! -- Open namefile and set iout
     call namefile_obj%init(this%filename, 0)
@@ -241,9 +244,6 @@ contains
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
     !
-    ! -- Set labels to be used with transport model
-    call this%tsplab%setTspLabels(this%macronym, 'CONCENTRATION', 'MASS', 'M') 
-    !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
@@ -283,12 +283,16 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TspLabelsModule, only: setTspLabels
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Set labels to be used with transport model
+    call this%tsplab%setTspLabels(this%macronym, 'CONCENTRATION', 'MASS', 'M')     
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
@@ -420,7 +424,7 @@ contains
     !call this%dis%dis_ar(this%npf%icelltype)
     !
     ! -- set up output control
-    call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%oc%oc_ar(this%x, this%dis, DHNOFLO, this%tsplab%depvartype)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
@@ -770,8 +774,8 @@ contains
     idvprint = 0
     icbcfl = 0
     ibudfl = 0
-    if (this%oc%oc_save('CONCENTRATION')) idvsave = 1
-    if (this%oc%oc_print('CONCENTRATION')) idvprint = 1
+    if (this%oc%oc_save(trim(this%tsplab%depvartype))) idvsave = 1
+    if (this%oc%oc_print(trim(this%tsplab%depvartype))) idvprint = 1
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
     if (this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
@@ -779,7 +783,7 @@ contains
     ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwt_ot_obs()
@@ -1160,9 +1164,11 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%tsplab)
     case ('SRC6')
-      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname)
     case ('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi)
@@ -1179,7 +1185,8 @@ contains
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%mst)
     case ('API6')
-      call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname)
     case default
       write (errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg, terminate=.TRUE.)

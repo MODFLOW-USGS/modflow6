@@ -580,7 +580,7 @@ module InputOutputModule
   subroutine lowcase(word)
     implicit none
     ! -- dummy variables
-    character(len=*) :: word  !< 
+    character(len=*), intent(inout) :: word  !< word to convert to lower case
     ! -- local variables
     integer(I4B) :: idiff, k, l
     !

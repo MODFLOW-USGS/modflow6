@@ -104,7 +104,7 @@ contains
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
     use SimModule, only: store_error, count_errors
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use NameFileModule, only: NameFileType
     use GwfDisModule, only: dis_cr
@@ -120,7 +120,7 @@ contains
     use GweMstModule, only: mst_cr
     use GweDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
-    use TspLabelsModule, only: tsplabels_cr, setTspLabels
+    use TspLabelsModule, only: tsplabels_cr
 
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -128,9 +128,10 @@ contains
     character(len=*), intent(in) :: modelname
     ! -- local
     integer(I4B) :: indis, indis6, indisu6, indisv6
-    integer(I4B) :: i
+    integer(I4B) :: ipakid, i, j, iu, ipaknum
     integer(I4B) :: nwords
     character(len=LINELENGTH) :: errmsg
+    character(len=LENPACKAGENAME) :: pakname
     character(len=LINELENGTH), allocatable, dimension(:) :: words
     type(NameFileType) :: namefile_obj
     type(GweModelType), pointer :: this
@@ -238,9 +239,6 @@ contains
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
     !
-    ! -- Set labels to be used with transport model
-    call this%tsplab%setTspLabels(this%macronym, 'TEMPERATURE', 'ENERGY', 'E')
-    !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
@@ -251,6 +249,20 @@ contains
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
+    !
+    ! -- Create stress packages
+    ipakid = 1
+    do i = 1, niunit
+      ipaknum = 1
+      do j = 1, namefile_obj%get_nval_for_row(i)
+        iu = namefile_obj%get_unitnumber_rowcol(i, j)
+        call namefile_obj%get_pakname(i, j, pakname)
+        call this%package_create(cunit(i), ipakid, ipaknum, pakname, iu, &
+                                 this%iout)
+        ipaknum = ipaknum + 1
+        ipakid = ipakid + 1
+      end do
+    end do
     !
     ! -- return
     return
@@ -266,12 +278,16 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TspLabelsModule, only: setTspLabels
     ! -- dummy
     class(GweModelType) :: this
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Set labels to be used with transport model
+    call this%tsplab%setTspLabels(this%macronym, 'TEMPERATURE', 'ENERGY', 'E')
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
@@ -405,7 +421,7 @@ contains
     !call this%dis%dis_ar(this%npf%icelltype)
     !
     ! -- set up output control
-    call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%oc%oc_ar(this%x, this%dis, DHNOFLO, this%tsplab%depvartype)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
@@ -753,8 +769,8 @@ contains
     idvprint = 0
     icbcfl = 0
     ibudfl = 0
-    if (this%oc%oc_save('CONCENTRATION')) idvsave = 1
-    if (this%oc%oc_print('CONCENTRATION')) idvprint = 1
+    if (this%oc%oc_save(trim(this%tsplab%depvartype))) idvsave = 1
+    if (this%oc%oc_print(trim(this%tsplab%depvartype))) idvprint = 1
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
     if (this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
@@ -762,7 +778,7 @@ contains
     ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwe_ot_obs()
@@ -1141,26 +1157,29 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
-      !case('SRC6')
-      !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
-      !case('LKT6')
-      !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
-      !                  pakname, this%fmi)
-      !case('SFT6')
-      !  call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
-      !                  pakname, this%fmi)
-      !case('MWT6')
-      !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
-      !                  pakname, this%fmi)
-      !case('UZT6')
-      !  call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
-      !                  pakname, this%fmi)
-      !case('IST6')
-      !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
-      !                  pakname, this%fmi, this%mst)
-      !case('API6')
-      !  call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%tsplab)
+    !case('SRC6')
+    !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname)
+    !case('LKT6')
+    !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname, this%fmi)
+    !case('SFT6')
+    !  call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname, this%fmi)
+    !case('MWT6')
+    !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname, this%fmi)
+    !case('UZT6')
+    !  call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname, this%fmi)
+    !case('IST6')
+    !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname, this%fmi, this%mst)
+    !case('API6')
+    !  call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    !                  pakname)
     case default
       write (errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg, terminate=.TRUE.)

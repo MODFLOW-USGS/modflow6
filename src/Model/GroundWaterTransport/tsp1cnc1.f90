@@ -2,9 +2,10 @@ module TspCncModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE, &
-                             LENPACKAGENAME
+                             LENPACKAGENAME, LENVARNAME
   use ObsModule, only: DefaultObsIdProcessor
   use BndModule, only: BndType
+  use TspLabelsModule, only: TspLabelsType
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
@@ -39,7 +40,8 @@ module TspCncModule
 
 contains
 
-  subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        tsplab)
 ! ******************************************************************************
 ! cnc_create -- Create a New Constant Concentration Package
 ! Subroutine: (1) create new-style package
@@ -56,6 +58,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    type(TspLabelsType), pointer :: tsplab
     ! -- local
     type(TspCncType), pointer :: cncobj
 ! ------------------------------------------------------------------------------
@@ -81,6 +84,10 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
+    !
+    ! -- Store pointer to labels associated with the current model so that the 
+    !    package has access to the assigned labels
+    packobj%tsplab => tsplab
     !
     ! -- return
     return
@@ -127,10 +134,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SimModule, only: store_error
+    use InputOutputModule, only: lowcase
     implicit none
     class(TspCncType), intent(inout) :: this
     integer(I4B) :: i, node, ibd, ierr
     character(len=30) :: nodestr
+    character(len=LENVARNAME) :: dvtype
 ! ------------------------------------------------------------------------------
     !
     ! -- Reset previous CNCs to active cell
@@ -142,15 +151,17 @@ contains
     ! -- Call the parent class read and prepare
     call this%BndType%bnd_rp()
     !
-    ! -- Set ibound to -(ibcnum + 1) for constant concentration cells
+    ! -- Set ibound to -(ibcnum + 1) for constant concentration/temperature cells
     ierr = 0
     do i = 1, this%nbound
       node = this%nodelist(i)
       ibd = this%ibound(node)
       if (ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
-        call store_error('Error.  Cell is already a constant concentration: ' &
-                         //trim(adjustl(nodestr)))
+        dvtype = trim(this%tsplab%depvartype) 
+        call lowcase(dvtype)
+        call store_error('Error.  Cell is already a constant ' & 
+                         // dvtype // ': ' //trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
         this%ibound(node) = -this%ibcnum
@@ -399,7 +410,8 @@ contains
     else
       write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     end if
-    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'CONCENTRATION'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), &
+           trim(this%tsplab%depvartype)
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
@@ -476,7 +488,7 @@ contains
       if (associated(tslink)) then
         select case (tslink%JCol)
         case (1)
-          tslink%Text = 'CONCENTRATION'
+          tslink%Text = trim(this%tsplab%depvartype)
         end select
       end if
     end do

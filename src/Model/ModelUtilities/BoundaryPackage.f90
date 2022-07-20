@@ -30,6 +30,7 @@ module BndModule
   use BaseDisModule, only: DisBaseType
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use TspLabelsModule, only: TspLabelsType
 
   implicit none
 
@@ -101,6 +102,9 @@ module BndModule
     type(TableType), pointer :: inputtab => null() !< input table object
     type(TableType), pointer :: outputtab => null() !< output table object for package flows writtent to the model listing file
     type(TableType), pointer :: errortab => null() !< package error table
+    !
+    ! -- labels
+    type(TspLabelsType), pointer :: tsplab => null()
 
   contains
     procedure :: bnd_df
