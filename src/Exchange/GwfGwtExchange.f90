@@ -171,6 +171,16 @@ contains
       gwtmodel => mb
     end select
     !
+    ! -- Check to make sure that flow is solved before transport and in a
+    !    different IMS solution
+    if (gwfmodel%idsoln >= gwtmodel%idsoln) then
+      write (errmsg, '(3a)') 'Problem with GWF-GWT exchange ', trim(this%name), &
+        '.  The GWF model must be solved by a different IMS than the GWT model. &
+        &Furthermore, the IMS specified for GWF must be listed in mfsim.nam &
+        &before the IMS for GWT.'
+      call store_error(errmsg, terminate=.true.)      
+    end if
+    !
     ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     !

@@ -210,6 +210,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item Corrected programming error in XT3D functionality that could occur when running coupled flow models or transport models.  The XT3D code would result in a memory access error when a child model with a much larger level of refinement was coupled to a coarser parent model.  The XT3D code was generalized to handle this situation. 
 		\item Corrected a programming error in which the final message would be written twice to the screen and twice to mfsim.lst when the simulation terminated prematurely. 
 		\item Terminate with error if METHOD or METHODS not specified in time series input files.  Prior to this change, the program would continue without an interpolated value for one or more time series records.
+		\item When a GWF Model and a corresponding GWT model are solved in the same simulation, the GWF Model must be solved before the corresponding GWT model.  The GWF Model must also be solved by a different IMS than the GWT Model.  There was not a check for this in previous versions and if these conditions were not met, the solution would often not converge or it would give erroneous results.
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}
