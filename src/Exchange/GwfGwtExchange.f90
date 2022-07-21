@@ -178,7 +178,7 @@ contains
         '.  The GWF model must be solved by a different IMS than the GWT model. &
         &Furthermore, the IMS specified for GWF must be listed in mfsim.nam &
         &before the IMS for GWT.'
-      call store_error(errmsg, terminate=.true.)      
+      call store_error(errmsg, terminate=.true.)
     end if
     !
     ! -- Set pointer to flowja
