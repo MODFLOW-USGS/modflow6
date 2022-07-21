@@ -209,15 +209,15 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 		\item Corrected programming error in XT3D functionality that could occur when running coupled flow models or transport models.  The XT3D code would result in a memory access error when a child model with a much larger level of refinement was coupled to a coarser parent model.  The XT3D code was generalized to handle this situation. 
 		\item Corrected a programming error in which the final message would be written twice to the screen and twice to mfsim.lst when the simulation terminated prematurely. 
-	%	\item xxx
+		\item Terminate with error if METHOD or METHODS not specified in time series input files.  Prior to this change, the program would continue without an interpolated value for one or more time series records.
 	\end{itemize}
 
-	%\underline{INTERNAL FLOW PACKAGES}
-	%\begin{itemize}
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item Corrected programming error in the Time-Variable Hydraulic Conductivity (TVK) Package in which the vertical hydraulic conductivity was not reset properly if the K33OVERK option was invoked in the Node Property Flow (NPF) Package.
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
