@@ -66,8 +66,8 @@ Documentation describing how to set the intel environment variables can be found
 
 #### Windows
 
-- Visual Studio 2017 or 2019 with the appropriate redistributable libraries must be installed for ifort to compile on Windows.
-- ifort does not work yet with the latest Visual Studio (2022). Older versions can be found here: https://visualstudio.microsoft.com/vs/older-downloads/
+- Visual Studio with the appropriate redistributable libraries must be installed for ifort to compile on Windows.
+- Install Visual Studio, which can be found [here](https://visualstudio.microsoft.com/). Note: the latest version of Visual Studio, 2022, requires a sufficiently new version of the Intel OneAPI as well.
 - The redistributable libraries can installed via ticking the "Desktop Development with C++" checkbox in the Visual Studio Installer in the Workloads tab. 
 
 ### Doxygen & LaTeX (optional)
