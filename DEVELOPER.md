@@ -61,7 +61,14 @@ conda env create --force -f environment.yml
 
 Intel fortran can be used to compile MODFLOW 6 and associated utilities and generate distributable files (if not using gfortran).
 Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
-Documentation describing how to set the intel envrionment variables can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html).
+
+Documentation describing how to set the intel environment variables can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html).
+
+#### Windows
+
+- Visual Studio with the appropriate redistributable libraries must be installed for ifort to compile on Windows.
+- Install Visual Studio, which can be found [here](https://visualstudio.microsoft.com/). Note: the latest version of Visual Studio, 2022, requires a sufficiently new version of the Intel OneAPI as well.
+- The redistributable libraries can installed via ticking the "Desktop Development with C++" checkbox in the Visual Studio Installer in the Workloads tab. 
 
 ### Doxygen & LaTeX (optional)
 
