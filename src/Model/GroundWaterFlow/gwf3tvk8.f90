@@ -224,7 +224,7 @@ contains
       end if
     elseif (varName == 'K33') then
       if (this%ik33overk == 1) then
-        this%k33(n) = this%k33(n) * this%k33(n)
+        this%k33(n) = this%k33(n) * this%k11(n)
       end if
       if (this%k33(n) <= DZERO) then
         call this%dis%noder_to_string(n, cellstr)

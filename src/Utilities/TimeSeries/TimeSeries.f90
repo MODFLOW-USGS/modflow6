@@ -1243,6 +1243,7 @@ contains
     integer(I4B) :: ierr, inunit
     logical :: autoDeallocateLocal = .true.
     logical :: continueread, found, endOfBlock
+    logical :: methodWasSet
     real(DP) :: sfaclocal
     character(len=40) :: keyword, keyvalue
     character(len=:), allocatable :: line
@@ -1252,6 +1253,7 @@ contains
     ! -- Initialize some variables
     if (present(autoDeallocate)) autoDeallocateLocal = autoDeallocate
     iMethod = UNDEFINED
+    methodWasSet = .false.
     !
     ! -- Assign members
     this%iout = iout
@@ -1318,6 +1320,7 @@ contains
                                                          autoDeallocateLocal)
         end do
       case ('METHOD')
+        methodWasSet = .true.
         if (this%nTimeSeries == 0) then
           errmsg = 'Error: NAME attribute not provided before METHOD in file: ' &
                    //trim(filename)
@@ -1339,6 +1342,7 @@ contains
           this%timeSeries(j)%iMethod = iMethod
         end do
       case ('METHODS')
+        methodWasSet = .true.
         if (this%nTimeSeries == 0) then
           errmsg = 'Error: NAME attribute not provided before METHODS in file: ' &
                    //trim(filename)
@@ -1414,6 +1418,13 @@ contains
     if (.not. this%read_tsfile_line()) then
       errmsg = 'Error: No time-series data contained in file: '// &
                trim(this%datafile)
+      call store_error(errmsg)
+    end if
+    !
+    ! -- Ensure method was set
+    if (.not. methodWasSet) then
+      errmsg = 'Interpolation method was not set.  METHOD or METHODS &
+      &must be specified in the ATTRIBUTES block for this time series file.'
       call store_error(errmsg)
     end if
     !
