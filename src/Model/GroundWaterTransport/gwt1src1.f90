@@ -3,6 +3,7 @@ module GwtSrcModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE
   use BndModule, only: BndType
+  use TspLabelsModule, only: TspLabelsType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
@@ -32,7 +33,8 @@ module GwtSrcModule
 
 contains
 
-  subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        tsplab)
 ! ******************************************************************************
 ! src_create -- Create a New Src Package
 ! Subroutine: (1) create new-style package
@@ -49,6 +51,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    type(TspLabelsType), pointer :: tsplab
     ! -- local
     type(GwtSrcType), pointer :: srcobj
 ! ------------------------------------------------------------------------------
@@ -73,6 +76,10 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
+    !
+    ! -- Store pointer to labels associated with the current model so that the 
+    !    package has access to the assigned labels
+    packobj%tsplab => tsplab
     !
     ! -- return
     return

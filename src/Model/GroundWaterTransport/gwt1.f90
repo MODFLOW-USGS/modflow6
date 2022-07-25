@@ -1168,7 +1168,7 @@ contains
                       pakname, this%tsplab)
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname)
+                      pakname, this%tsplab)
     case ('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi)

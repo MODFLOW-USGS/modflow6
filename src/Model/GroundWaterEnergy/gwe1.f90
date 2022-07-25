@@ -1156,7 +1156,7 @@ contains
     !
     ! -- This part creates the package object
     select case (filtyp)
-    case ('CNC6')
+    case ('TMP6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab)
     !case('SRC6')

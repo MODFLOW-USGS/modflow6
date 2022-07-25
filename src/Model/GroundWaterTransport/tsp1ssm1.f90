@@ -16,6 +16,7 @@ module TspSsmModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
+  use TspLabelsModule, only: TspLabelsType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
 
