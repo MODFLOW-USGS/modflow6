@@ -245,7 +245,7 @@ contains
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)

@@ -15,6 +15,7 @@ module NumericalPackageModule
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
   use MemoryHelperModule, only: create_mem_path
+  use TspLabelsModule, only: TspLabelsType
 
   implicit none
   private
@@ -45,6 +46,9 @@ module NumericalPackageModule
     ! -- derived types
     type(BlockParserType) :: parser !< parser object for reading blocks of information
     class(DisBaseType), pointer :: dis => null() !< model discretization object
+    !
+    ! -- labels
+    type(TspLabelsType), pointer :: tsplab => null()
 
   contains
     procedure :: set_names

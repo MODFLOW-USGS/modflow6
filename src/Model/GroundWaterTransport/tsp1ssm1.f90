@@ -78,13 +78,14 @@ contains
   !!  and initializing the parser.
   !!
   !<
-  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi)
+  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab)
     ! -- dummy
     type(TspSsmType), pointer :: ssmobj !< TspSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< fortran unit for input
     integer(I4B), intent(in) :: iout !< fortran unit for output
-    type(TspFmiType), intent(in), target :: fmi !< GWT FMI package
+    type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
+    type(TspLabelsType), intent(in), pointer :: tsplab !< TspLabelsType object
     !
     ! -- Create the object
     allocate (ssmobj)
@@ -102,6 +103,10 @@ contains
     !
     ! -- Initialize block parser
     call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
+    !
+    ! -- Store pointer to labels associated with the current model so that the 
+    !    package has access to the assigned labels
+    ssmobj%tsplab => tsplab
     !
     ! -- Return
     return
@@ -1143,8 +1148,9 @@ contains
     call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
                             trim(packname))
 
-    write (this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ', &
-      trim(filename), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(packname)
+    write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
+      trim(filename), ' TO SET ',trim(this%tsplab%depvartype),'S FOR PACKAGE ', &
+      trim(packname)
     !
     ! -- return
     return
