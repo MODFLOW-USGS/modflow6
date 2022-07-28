@@ -4,14 +4,6 @@ import sys
 import pytest
 
 try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = "Error. FloPy package is not available.\n"
@@ -19,16 +11,30 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from common_regression import (
-    get_example_basedir,
-    get_example_dirs,
-    get_home_dir,
-    get_select_dirs,
-    get_select_packages,
-    is_directory_available,
-)
-from simulation import Simulation
-from targets import get_mf6_version
+try:
+    from modflow_devtools import (
+        get_example_basedir,
+        get_example_dirs,
+        get_home_dir,
+        get_select_dirs,
+        get_select_packages,
+        is_directory_available,
+        Simulation,
+        get_mf6_version,
+        set_mf6_regression,
+    )
+except:
+    from common_regression import (
+        get_example_basedir,
+        get_example_dirs,
+        get_home_dir,
+        get_select_dirs,
+        get_select_packages,
+        is_directory_available,
+        set_mf6_regression,
+    )
+    from simulation import Simulation
+    from targets import get_mf6_version
 
 # find path to modflow6-examples directory
 home = get_home_dir()
@@ -122,7 +128,7 @@ def run_mf6(sim):
     sim.teardown()
 
 
-def set_make_comparison(test):
+def set_make_comparison(test, context=None):
     compare_tests = {
         "ex-gwf-capture": ("6.2.1",),
         "ex-gwf-sagehen": ("6.2.1",),
@@ -139,10 +145,14 @@ def set_make_comparison(test):
     }
     make_comparison = True
     if test in compare_tests.keys():
-        version = get_mf6_version()
+        if context:
+            version = context.get_mf6_version()
+            regression_version = context.get_mf6_version(version="mf6-regression")
+        else:
+            version = get_mf6_version()
+            regression_version = get_mf6_version(version="mf6-regression")
         print(f"MODFLOW version='{version}'")
-        version = get_mf6_version(version="mf6-regression")
-        print(f"MODFLOW regression version='{version}'")
+        print(f"MODFLOW regression version='{regression_version}'")
         if version in compare_tests[test]:
             print(
                 f"Test {test} does not run with versions {compare_tests[test]}"
@@ -161,14 +171,15 @@ mf6_models = get_mf6_models()
     "exdir",
     mf6_models,
 )
-def test_mf6model(exdir):
+def test_mf6model(exdir, mf6testctx):
     # run the test model
     run_mf6(
         Simulation(
             exdir,
+            exe_dict=mf6testctx.get_target_dictionary(),
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=set_make_comparison(exdir),
+            make_comparison=set_make_comparison(exdir, context=mf6testctx),
         )
     )
 

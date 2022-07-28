@@ -17,8 +17,12 @@
 name: Run and test modflow6-largetestmodels and modflow6-examples (z03)
 
 on:
-  schedule:
-    - cron: '0 6 * * *' # run at 6 AM UTC every day
+  pull_request:
+    branches:
+      - develop
+#  schedule:
+#    - cron: '0 6 * * *' # run at 6 AM UTC every day
+
 
 env:
   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
@@ -86,6 +90,11 @@ jobs:
         run: |
           pip list
 
+      - name: Clone devtools and add to PYTHONPATH
+        run: |
+          git clone -b develop https://github.com/MODFLOW-USGS/modflow-devtools.git ../modflow-devtools
+          echo "PYTHONPATH=$PWD/../modflow-devtools:$PYTHONPATH" >> $GITHUB_ENV
+
       - name: Set and print branch name
         run: |
           .github/common/git-branch-export.sh
@@ -112,18 +121,22 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          cd autotest
-          pytest -v --durations=0 get_exes.py
 
       - name: Build gfortran applications
         if: matrix.FC == 'gfortran'
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          cd autotest
-          pytest -v --durations=0 get_exes.py
 
-      - name: Test applications
+      - name: Test ifort built applications
+        if: matrix.FC == 'ifort'
+        working-directory: autotest
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          pytest -v -n=auto --durations=0 test_z03_${{ matrix.test_script }}.py
+
+      - name: Test gfortran built applications
+        if: matrix.FC == 'gfortran'
         working-directory: autotest
         run: |
           pytest -v -n=auto --durations=0 test_z03_${{ matrix.test_script }}.py
