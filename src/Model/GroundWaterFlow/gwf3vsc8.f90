@@ -20,28 +20,30 @@ module GwfVscModule
   public :: vsc_cr
 
   type :: ConcentrationPointer
-    real(DP), dimension(:), pointer :: conc => null() ! pointer to concentration array
-    integer(I4B), dimension(:), pointer :: icbund => null() ! store pointer to gwt ibound array
+    real(DP), dimension(:), pointer :: conc => null() !< pointer to concentration array
+    integer(I4B), dimension(:), pointer :: icbund => null() !< store pointer to gwt ibound array
+    integer(I4B), dimension(:), pointer :: istmpr => null() !< integer flag for identifying whether the "species" array is temperature
   end type ConcentrationPointer
 
   type, extends(NumericalPackageType) :: GwfVscType
-    type(GwfNpfType), pointer :: npf => null() ! npf object
-    integer(I4B), pointer :: ioutvisc => null() ! unit number for saving viscosity
-    integer(I4B), pointer :: ireadconcvsc => null() ! if 1 then visc has been read from this vsc input file   ! kluge note: is this ever really used?
-    integer(I4B), pointer :: iconcset => null() ! if 1 then conc is pointed to a gwt model%x
-    real(DP), pointer :: viscref => null() ! reference fluid viscosity
-    real(DP), dimension(:), pointer, contiguous :: visc => null() ! viscosity
-    real(DP), dimension(:), pointer, contiguous :: concvsc => null() ! concentration array if specified in vsc package    ! kluge note: is this ever really used?
-    integer(I4B), dimension(:), pointer :: ibound => null() ! store pointer to ibound
+    type(GwfNpfType), pointer :: npf => null() !< npf object
+    integer(I4B), pointer :: ivisc => null() !< viscosity formulation flag (1:Voss (1984), 2:Pawlowski (1991), 3:Guo and Zhou (2005))
+    integer(I4B), pointer :: ioutvisc => null() !< unit number for saving viscosity
+    integer(I4B), pointer :: ireadconcvsc => null() !< if 1 then visc has been read from this vsc input file   ! kluge note: is this ever really used?
+    integer(I4B), pointer :: iconcset => null() !< if 1 then conc points to a gwt (or gwe) model%x array
+    real(DP), pointer :: viscref => null() !< reference fluid viscosity
+    real(DP), dimension(:), pointer, contiguous :: visc => null() !< viscosity
+    real(DP), dimension(:), pointer, contiguous :: concvsc => null() !< concentration (or temperature) array if specified in vsc package    ! kluge note: is this ever really used?
+    integer(I4B), dimension(:), pointer :: ibound => null() !< store pointer to ibound
 
-    integer(I4B), pointer :: nviscspecies => null() ! number of species used in viscosity equation
-    real(DP), dimension(:), pointer, contiguous :: dviscdc => null() ! change in viscosity with change in concentration   ! kluge note: parameters will depend on formula; linear for now
-    real(DP), dimension(:), pointer, contiguous :: cviscref => null() ! reference concentration used in viscosity equation
-    real(DP), dimension(:), pointer, contiguous :: ctemp => null() ! temporary array of size (nviscspec) to pass to calcvisc
-    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname ! names of gwt models used in viscosity equation
-    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname ! names of aux columns used in viscosity equation
+    integer(I4B), pointer :: nviscspecies => null() !< number of concentration species used in viscosity equation
+    real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< change in viscosity with change in concentration   ! kluge note: parameters will depend on formula; linear for now
+    real(DP), dimension(:), pointer, contiguous :: cviscref => null() !< reference concentration used in viscosity equation
+    real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calcvisc
+    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt (or gwe) models used in viscosity equation
+    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of aux columns used in viscosity equation
 
-    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc ! concentration pointer for each transport model
+    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc !< concentration (or temperature) pointer for each solute (or heat) transport model
 
   contains
     procedure :: vsc_df
@@ -356,7 +358,6 @@ contains
                                    nwidthp, editdesc, dinact)
       end if
     end if
-
     !
     ! -- Return
     return
@@ -692,7 +693,7 @@ contains
     ! -- dummy
     class(GwfVscType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword, keyword2
     character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -700,6 +701,15 @@ contains
     character(len=*), parameter :: fmtfileout = &
       "(4x, 'VSC ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
       &a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*), parameter :: fmtvoss = &
+      "(4x, 'VISCOSITY CALCULATION ADOPTS FORMULA OFFERED IN VOSS (1984). ')"
+    character(len=*), parameter :: fmtpawlowski = &
+      "(4x, 'VISCOSITY CALCULATION ADOPTS FORMULA OFFERED IN PAWLOWSKI (1991).')"
+    character(len=*), parameter :: fmtguo = &
+      "(4x, 'VISCOSITY CALCULATION ADOPTS FORMULA OFFERED IN GUO AND &
+      &ZHOU (2005). THIS RELATIONSHIP IS FOR OIL VISCOSITY AS A FUNCTION &
+      &OF TEMPERATURE (BETWEEN 5 AND 170 DECREES CELSIUS). RELATION IS & 
+      &NOT APPLICABLE TO WATER.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -733,6 +743,19 @@ contains
                      'FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
+        case ('VISCOSITY_FUNC')
+          call this%parser%GetStringCaps(keyword2)
+          if (trim(adjustl(keyword2)) == 'VOSS') this%ivisc = 1
+          if (trim(adjustl(keyword2)) == 'PAWLOWSKI') this%ivisc = 2
+          if (trim(adjustl(keyword2)) == 'GUO') this%ivisc = 3
+          select case (this%ivisc)
+          case (1)
+            write (this%iout, fmtvoss)
+          case (2)
+            write (this%iout, fmtpawlowski)
+          case (3)
+            write (this%iout, fmtguo)
+          end select
         case default
           write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN VSC OPTION: ', &
             trim(keyword)
@@ -756,6 +779,7 @@ contains
     this%viscref = input_data%viscref
 
   end subroutine set_options
+
 
   subroutine set_concentration_pointer(this, modelname, conc, icbund)
 ! ******************************************************************************
