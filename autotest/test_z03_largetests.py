@@ -159,10 +159,15 @@ mf6_models = get_mf6_models()
 )
 def test_mf6model(exdir, mf6testctx):
     # run the test model
+
+    exe_dict=None
+    if mf6testctx:
+        exe_dict = mf6testctx.get_target_dictionary()
+
     run_mf6(
         Simulation(
             exdir,
-            exe_dict=mf6testctx.get_target_dictionary(),
+            exe_dict=exe_dict,
             mf6_regression=set_mf6_regression(),
             cmp_verbose=False,
             make_comparison=set_make_comparison(exdir, context=mf6testctx),

@@ -13,5 +13,8 @@ try:
     @pytest.fixture(scope="session")
     def mf6testctx(request):
         return MFTestContext(testbin=modflow6_devbin)
+
 except:
-    pass
+    @pytest.fixture(scope="session")
+    def mf6testctx(request):
+        return None
