@@ -3,7 +3,7 @@
 module GwfVscModule
 
   use KindModule, only: DP, I4B
-  use SimModule, only: store_error, count_errors
+  use SimModule, only: store_error, count_errors, store_warning
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate
   use ConstantsModule, only: DHALF, DZERO, DONE, LENMODELNAME, &
@@ -13,7 +13,7 @@ module GwfVscModule
   use GwfNpfModule, only: GwfNpfType
   use GwfVscInputDataModule, only: GwfVscInputDataType
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-  use GwfModule, only: GwfModelType
+!  use GwfModule, only: GwfModelType   ! kluge note: circular dependency
   use GwtModule, only: GwtModelType
   use GweModule, only: GweModelType
 
@@ -483,7 +483,7 @@ contains
     class(GwfVscType) :: this
     ! -- local
     class(BaseModelType), pointer :: mb => null()
-    type(GwfModelType), pointer :: gwfmodel => null()
+!    type(GwfModelType), pointer :: gwfmodel => null()    ! kluge note: circular dependency
     type(GwtModelType), pointer :: gwtmodel => null()
     type(GweModelType), pointer :: gwemodel => null()
     character(len=LINELENGTH) :: warnmsg, errmsg
