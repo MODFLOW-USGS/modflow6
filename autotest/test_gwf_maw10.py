@@ -14,14 +14,6 @@ import numpy as np
 import pytest
 
 try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = "Error. FloPy package is not available.\n"
@@ -29,13 +21,16 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework
-from simulation import Simulation
+try:
+    from modflow_devtools import (
+        testing_framework,
+        Simulation,
+    )
+except:
+    from framework import testing_framework
+    from simulation import Simulation
 
-ex = ["maw10a", "maw10b", "maw10c", "maw10d"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
+runs = ["maw10a", "maw10b", "maw10c", "maw10d"]
 
 # maw settings for runs a, b, c and d
 mawsetting_a = {
@@ -103,7 +98,7 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = runs[idx]
 
     # build MODFLOW 6 files
     ws = dir
@@ -239,7 +234,7 @@ def eval_mawred(sim):
 
     # MODFLOW 6 maw results
     idx = sim.idxsim
-    name = ex[idx]
+    name = runs[idx]
     fpthobs = os.path.join(sim.simpath, f"{name}.maw.obs.csv")
     fpthmfr = os.path.join(sim.simpath, f"{name}.maw-reduction.csv")
     try:
@@ -290,19 +285,21 @@ def eval_mawred(sim):
 
 
 # - No need to change any code below
+@pytest.mark.gwf
+@pytest.mark.gwf_maw
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, run",
+    list(enumerate(runs)),
 )
-def test_mf6model(idx, dir):
+def test_gwf_maw10(idx, run, tmpdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the models
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, str(tmpdir))
 
     # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_mawred, idxsim=idx))
+    test.run_mf6(Simulation(str(tmpdir), exfunc=eval_mawred, idxsim=idx))
 
 
 def main():
@@ -311,9 +308,14 @@ def main():
 
     # build the models
     # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_mawred, idxsim=idx)
+    for idx, run in enumerate(runs):
+        simdir = os.path.join(
+            "results",
+            os.path.splitext(os.path.basename(__file__))[0].split("_", 1)[1],
+            run,
+        )
+        test.build_mf6_models(build_model, idx, simdir)
+        sim = Simulation(simdir, exfunc=eval_mawred, idxsim=idx)
         test.run_mf6(sim)
 
     return

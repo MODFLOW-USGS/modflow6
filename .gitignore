@@ -66,6 +66,7 @@ UserPrefs.xml
 
 tmp_simulations/
 autotest/temp/
+autotest/results/
 autotest/tempbin/
 autotest/*.html
 autotest/notebooks/

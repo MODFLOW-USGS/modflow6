@@ -12,14 +12,6 @@ import numpy as np
 import pytest
 
 try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = "Error. FloPy package is not available.\n"
@@ -32,13 +24,10 @@ import targets
 mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
 newtonoptions = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
-ex = "maw_obs"
-exdir = os.path.join("temp", ex)
-
-ddir = "data"
+test = "maw_obs"
 
 
-def build_model():
+def build_model(simdir):
 
     nlay, nrow, ncol = 1, 1, 3
     nper = 3
@@ -60,10 +49,10 @@ def build_model():
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex
+    name = test
 
     # build MODFLOW 6 files
-    ws = exdir
+    ws = simdir
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
     )
@@ -192,9 +181,12 @@ def build_model():
     return sim
 
 
-def test_mf6model():
+@pytest.mark.gwf
+@pytest.mark.gwf_maw
+def test_gwf_maw_obs(tmpdir):
+    print(str(tmpdir))
     # build the models
-    sim = build_model()
+    sim = build_model(str(tmpdir))
 
     # write model input
     sim.write_simulation()
@@ -203,7 +195,7 @@ def test_mf6model():
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdir, "mfsim.lst"), "r")
+    f = open(os.path.join(str(tmpdir), "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -217,8 +209,8 @@ def test_mf6model():
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdir, ex + ".maw.obs")
-    new_fl = os.path.join(exdir, ex + ".maw.obs.new")
+    orig_fl = os.path.join(str(tmpdir), test + ".maw.obs")
+    new_fl = os.path.join(str(tmpdir), test + ".maw.obs.new")
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 
@@ -242,12 +234,11 @@ def test_mf6model():
 
     assert success, "model rerun failed"
 
-    shutil.rmtree(exdir, ignore_errors=True)
+    # shutil.rmtree(exdir, ignore_errors=True)
 
 
 def main():
-    test_mf6model()
-
+    test_gwf_maw_obs()
     return
 
 

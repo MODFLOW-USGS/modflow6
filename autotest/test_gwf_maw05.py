@@ -17,14 +17,17 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework
-from simulation import Simulation
+try:
+    from modflow_devtools import (
+        testing_framework,
+        Simulation,
+    )
+except:
+    from framework import testing_framework
+    from simulation import Simulation
 
-ex = ["maw_05a", "maw_05b", "maw_05c"]
+runs = ["maw_05a", "maw_05b", "maw_05c"]
 mawstrt = [4.0, 3.5, 2.5]  # add 3.0
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
 def build_model(idx, dir):
@@ -54,7 +57,7 @@ def build_model(idx, dir):
     nouter, ninner = 700, 10
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = runs[idx]
 
     # build MODFLOW 6 files
     ws = dir
@@ -193,7 +196,7 @@ def eval_results(sim):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = runs[sim.idxsim]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
     fname = os.path.join(sim.simpath, fname)
@@ -256,19 +259,21 @@ def eval_results(sim):
 
 
 # - No need to change any code below
+@pytest.mark.gwf
+@pytest.mark.gwf_maw
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, run",
+    list(enumerate(runs)),
 )
-def test_mf6model(idx, dir):
+def test_gwf_maw05(idx, run, tmpdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, str(tmpdir))
 
     # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
+    test.run_mf6(Simulation(str(tmpdir), exfunc=eval_results, idxsim=idx))
 
 
 def main():
@@ -276,9 +281,14 @@ def main():
     test = testing_framework()
 
     # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
+    for idx, run in enumerate(runs):
+        simdir = os.path.join(
+            "results",
+            os.path.splitext(os.path.basename(__file__))[0].split("_", 1)[1],
+            run,
+        )
+        test.build_mf6_models(build_model, idx, simdir)
+        sim = Simulation(simdir, exfunc=eval_results, idxsim=idx)
         test.run_mf6(sim)
 
 

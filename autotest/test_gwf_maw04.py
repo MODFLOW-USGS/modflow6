@@ -5,14 +5,6 @@ import numpy as np
 import pytest
 
 try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = "Error. FloPy package is not available.\n"
@@ -20,10 +12,17 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+try:
+    from modflow_devtools import (
+        running_on_CI,
+        testing_framework,
+        Simulation,
+    )
+except:
+    from framework import running_on_CI, testing_framework
+    from simulation import Simulation
 
-ex = [
+runs = [
     "maw_iss305a",
     "maw_iss305b",
     "maw_iss305c",
@@ -31,19 +30,14 @@ ex = [
     "maw_iss305e",
     "maw_iss305f",
 ]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
+
 cmppth = "mf2005"
 
-paktest = "maw"
-
-require_failure = [True for i in range(len(exdirs))]
+require_failure = [True for i in range(len(runs))]
 require_failure[0] = False
 
 # set travis to True when version 1.13.0 is released
-continuous_integration = [True for n in ex]
+continuous_integration = [True for n in runs]
 
 # set replace_exe to None to use default executable
 replace_exe = None
@@ -117,13 +111,14 @@ hclose, rclose = 1e-9, 1e-6
 
 
 def build_model(idx, dir):
-    name = ex[idx]
+    name = runs[idx]
     ws = dir
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
+
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
@@ -257,11 +252,13 @@ def build_model(idx, dir):
 
 
 # - No need to change any code below
+@pytest.mark.gwf
+@pytest.mark.gwf_maw
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, run",
+    list(enumerate(runs)),
 )
-def test_mf6model(idx, dir):
+def test_gwf_maw04(idx, run, tmpdir):
     # determine if running on CI infrastructure
     is_CI = running_on_CI()
 
@@ -269,12 +266,12 @@ def test_mf6model(idx, dir):
     test = testing_framework()
 
     # build the models
-    test.build_mf6_models_legacy(build_model, idx, dir)
+    test.build_mf6_models_legacy(build_model, idx, str(tmpdir))
 
     # run the test model
     if is_CI and not continuous_integration[idx]:
         return
-    test.run_mf6(Simulation(dir, require_failure=require_failure[idx]))
+    test.run_mf6(Simulation(str(tmpdir), require_failure=require_failure[idx]))
 
 
 def main():
@@ -283,9 +280,14 @@ def main():
 
     # build the models
     # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models_legacy(build_model, idx, dir)
-        sim = Simulation(dir, require_failure=require_failure[idx])
+    for idx, run in enumerate(runs):
+        simdir = os.path.join(
+            "results",
+            os.path.splitext(os.path.basename(__file__))[0].split("_", 1)[1],
+            run,
+        )
+        test.build_mf6_models_legacy(build_model, idx, simdir)
+        sim = Simulation(simdir, require_failure=require_failure[idx])
         test.run_mf6(sim)
 
     return

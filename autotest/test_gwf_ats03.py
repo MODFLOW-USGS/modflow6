@@ -16,14 +16,6 @@ import numpy as np
 import pytest
 
 try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = "Error. FloPy package is not available.\n"
@@ -31,14 +23,16 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework
-from simulation import Simulation
+try:
+    from modflow_devtools import (
+        testing_framework,
+        Simulation,
+    )
+except:
+    from framework import testing_framework
+    from simulation import Simulation
 
-ex = ["gwf_ats03a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
+runs = ["gwf_ats03a"]
 nlay, nrow, ncol = 1, 1, 10
 
 
@@ -61,7 +55,7 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = runs[idx]
 
     # build MODFLOW 6 files
     ws = dir
@@ -214,7 +208,7 @@ def build_model(idx, dir):
 def eval_flow(sim):
     print("evaluating flow...")
 
-    name = ex[sim.idxsim]
+    name = runs[sim.idxsim]
     gwfname = name
 
     # ensure obs2 (a constant head time series) drops linearly from 100 to 50
@@ -231,19 +225,21 @@ def eval_flow(sim):
 
 
 # - No need to change any code below
+@pytest.mark.gwf
+@pytest.mark.gwf_ats
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, run",
+    list(enumerate(runs)),
 )
-def test_mf6model(idx, dir):
+def test_gwf_ats03(idx, run, tmpdir):
     # initialize testing framework
     test = testing_framework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, dir)
+    test.build_mf6_models(build_model, idx, str(tmpdir))
 
     # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
+    test.run_mf6(Simulation(str(tmpdir), exfunc=eval_flow, idxsim=idx))
 
 
 def main():
@@ -251,9 +247,14 @@ def main():
     test = testing_framework()
 
     # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
+    for idx, run in enumerate(runs):
+        simdir = os.path.join(
+            "results",
+            os.path.splitext(os.path.basename(__file__))[0].split("_", 1)[1],
+            run,
+        )
+        test.build_mf6_models(build_model, idx, simdir)
+        sim = Simulation(simdir, exfunc=eval_flow, idxsim=idx)
         test.run_mf6(sim)
 
 
