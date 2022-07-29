@@ -328,7 +328,7 @@ contains
     return
   end function get_bnd_viscosity
 
-  subroutine vsc_ot_dv(this, idvfl)    ! kluge note: rename to _vv ?
+  subroutine vsc_ot_dv(this, idvfl)    ! kluge note: rename to _vv ?  save viscosity ratio?  do we want this at all?
 ! ******************************************************************************
 ! vsc_ot_dv -- Save viscosity array to binary file
 ! ******************************************************************************

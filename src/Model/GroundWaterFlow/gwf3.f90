@@ -11,6 +11,7 @@ module GwfModule
   use GwfNpfModule, only: GwfNpfType
   use Xt3dModule, only: Xt3dType
   use GwfBuyModule, only: GwfBuyType
+  use GwfVscModule, only: GwfVscType
   use GwfHfbModule, only: GwfHfbType
   use GwfStoModule, only: GwfStoType
   use GwfCsubModule, only: GwfCsubType
@@ -35,6 +36,7 @@ module GwfModule
     type(GwfNpfType), pointer :: npf => null() ! node property flow package
     type(Xt3dType), pointer :: xt3d => null() ! xt3d option for npf
     type(GwfBuyType), pointer :: buy => null() ! buoyancy package
+    type(GwfVscType), pointer :: vsc => null() ! viscosity package
     type(GwfStoType), pointer :: sto => null() ! storage package
     type(GwfCsubType), pointer :: csub => null() ! subsidence package
     type(GwfOcType), pointer :: oc => null() ! output control package
@@ -47,6 +49,7 @@ module GwfModule
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: innpf => null() ! unit number NPF
     integer(I4B), pointer :: inbuy => null() ! unit number BUY
+    integer(I4B), pointer :: invsc => null() ! unit number VSC
     integer(I4B), pointer :: insto => null() ! unit number STO
     integer(I4B), pointer :: incsub => null() ! unit number CSUB
     integer(I4B), pointer :: inmvr => null() ! unit number MVR
@@ -122,6 +125,7 @@ contains
     use GwfNpfModule, only: npf_cr
     use Xt3dModule, only: xt3d_cr
     use GwfBuyModule, only: buy_cr
+    use GwfVscModule, only: vsc_cr
     use GwfStoModule, only: sto_cr
     use GwfCsubModule, only: csub_cr
     use GwfMvrModule, only: mvr_cr
@@ -237,6 +241,7 @@ contains
     call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
     call namefile_obj%get_unitnumber('NPF6', this%innpf, 1)
     call namefile_obj%get_unitnumber('BUY6', this%inbuy, 1)
+    call namefile_obj%get_unitnumber('VSC6', this%invsc, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
     call namefile_obj%get_unitnumber('CSUB6', this%incsub, 1)
     call namefile_obj%get_unitnumber('MVR6', this%inmvr, 1)
@@ -263,6 +268,7 @@ contains
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
     call buy_cr(this%buy, this%name, this%inbuy, this%iout)
+    call vsc_cr(this%vsc, this%name, this%invsc, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -312,6 +318,7 @@ contains
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if (this%inbuy > 0) call this%buy%buy_df(this%dis)
+    if (this%invsc > 0) call this%vsc%vsc_df(this%dis)
     if (this%ingnc > 0) call this%gnc%gnc_df(this)
     !
     ! -- Assign or point model members to dis members
@@ -414,12 +421,23 @@ contains
     ! -- locals
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
+    integer(I4B) :: ikmodgwf
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Set flag that indicates whether hydraulic conductivities get modified
+    !    from their user-input values (e.g., via npf or tvk input) internally
+    !    by another package (e.g., vsc).
+    ikmodgwf = 0
+    if (this%invsc) then
+      ikmodgwf = 1
+    end if
     !
     ! -- Allocate and read modules attached to model
     if (this%inic > 0) call this%ic%ic_ar(this%x)
-    if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
+    if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x,     &
+                                             ikmodgwf)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
+    if (this%invsc > 0) call this%vsc%vsc_ar(this%npf, this%ibound)
     if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
@@ -441,6 +459,7 @@ contains
       ! -- Read and allocate package
       call packobj%bnd_ar()
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
+!      if (this%invsc > 0) call this%buy%vsc_ar_bnd(packobj, this%x)  ! kluge !
     end do
     !
     ! -- return
@@ -468,6 +487,7 @@ contains
     ! -- Read and prepare
     if (this%innpf > 0) call this%npf%npf_rp()
     if (this%inbuy > 0) call this%buy%buy_rp()
+    if (this%invsc > 0) call this%vsc%vsc_rp()
     if (this%inhfb > 0) call this%hfb%hfb_rp()
     if (this%inoc > 0) call this%oc%oc_rp()
     if (this%insto > 0) call this%sto%sto_rp()
@@ -522,6 +542,7 @@ contains
     if (this%insto > 0) call this%sto%sto_ad()
     if (this%incsub > 0) call this%csub%csub_ad(this%dis%nodes, this%x)
     if (this%inbuy > 0) call this%buy%buy_ad()
+    if (this%invsc > 0) call this%vsc%vsc_ad()
     if (this%inmvr > 0) call this%mvr%mvr_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -1131,7 +1152,7 @@ contains
 
     ! -- save density to binary file
     if (this%inbuy > 0) then
-      call this%buy%buy_ot_dv(idvsave)
+      call this%buy%buy_ot_dv(idvsave)  ! kluge note: do similar for viscosity (or viscosity ratio)?
     end if
 
     ! -- Print advanced package dependent variables
@@ -1209,6 +1230,7 @@ contains
     call this%npf%npf_da()
     call this%xt3d%xt3d_da()
     call this%buy%buy_da()
+    call this%vsc%vsc_da()
     call this%gnc%gnc_da()
     call this%sto%sto_da()
     call this%csub%csub_da()
@@ -1224,6 +1246,7 @@ contains
     deallocate (this%npf)
     deallocate (this%xt3d)
     deallocate (this%buy)
+    deallocate (this%vsc)
     deallocate (this%gnc)
     deallocate (this%sto)
     deallocate (this%csub)
@@ -1246,6 +1269,7 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%innpf)
     call mem_deallocate(this%inbuy)
+    call mem_deallocate(this%invsc)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%incsub)
     call mem_deallocate(this%inmvr)
@@ -1338,6 +1362,7 @@ contains
     call mem_allocate(this%inoc, 'INOC', this%memoryPath)
     call mem_allocate(this%innpf, 'INNPF', this%memoryPath)
     call mem_allocate(this%inbuy, 'INBUY', this%memoryPath)
+    call mem_allocate(this%invsc, 'INVSC', this%memoryPath)
     call mem_allocate(this%insto, 'INSTO', this%memoryPath)
     call mem_allocate(this%incsub, 'INCSUB', this%memoryPath)
     call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
@@ -1351,6 +1376,7 @@ contains
     this%inoc = 0
     this%innpf = 0
     this%inbuy = 0
+    this%invsc = 0
     this%insto = 0
     this%incsub = 0
     this%inmvr = 0

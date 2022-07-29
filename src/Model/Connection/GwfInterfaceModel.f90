@@ -122,10 +122,11 @@ contains
     class(GwfInterfaceModelType) :: this !< the GWF interface model
     ! local
     type(GwfNpfGridDataType) :: npfGridData
+    integer(I4B), target :: ikmod = 0    ! kluge
 
     call npfGridData%construct(this%dis%nodes)
     call this%setNpfGridData(npfGridData)
-    call this%npf%npf_ar(this%ic, this%ibound, this%x, npfGridData)
+    call this%npf%npf_ar(this%ic, this%ibound, this%x, ikmod, npfGridData)   ! kluge note: added local "ikmod" as a placeholder; speak to Martijn about integrating VSC
     call npfGridData%destroy()
 
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
