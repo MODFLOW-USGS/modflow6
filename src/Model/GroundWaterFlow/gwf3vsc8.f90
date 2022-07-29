@@ -12,6 +12,10 @@ module GwfVscModule
   use BaseDisModule, only: DisBaseType
   use GwfNpfModule, only: GwfNpfType
   use GwfVscInputDataModule, only: GwfVscInputDataType
+  use BaseModelModule, only: BaseModelType, GetBaseModelFromList
+  use GwfModule, only: GwfModelType
+  use GwtModule, only: GwtModelType
+  use GweModule, only: GweModelType
 
   implicit none
 
@@ -42,6 +46,12 @@ module GwfVscModule
     real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calcvisc
     character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt (or gwe) models used in viscosity equation
     character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of aux columns used in viscosity equation
+    !
+    ! -- Viscosity constants
+    real(DP), dimension(:), pointer, contiguous :: a2 => null() !< an empirical parameter specified by the user for calculating viscosity
+    real(DP), dimension(:), pointer, contiguous :: a3 => null() !< an empirical parameter specified by the user for calculating viscosity
+    real(DP), dimension(:), pointer, contiguous :: a4 => null() !< an empirical parameter specified by the user for calculating viscosity
+    real(DP), dimension(:), pointer, contiguous :: a5 => null() !< an empirical parameter specified by the user for calculating viscosity
 
     type(ConcentrationPointer), allocatable, dimension(:) :: modelconc !< concentration (or temperature) pointer for each solute (or heat) transport model
 
@@ -382,12 +392,17 @@ contains
       call mem_deallocate(this%dviscdc)
       call mem_deallocate(this%cviscref)
       call mem_deallocate(this%ctemp)
+      call mem_deallocate(this%a2)
+      call mem_deallocate(this%a3)
+      call mem_deallocate(this%a4)
+      call mem_deallocate(this%a5)
       deallocate (this%cmodelname)
       deallocate (this%cauxspeciesname)
       deallocate (this%modelconc)
     end if
     !
     ! -- Scalars
+    call mem_deallocate(this%ivisc)
     call mem_deallocate(this%ioutvisc)
     call mem_deallocate(this%ireadconcvsc)
     call mem_deallocate(this%iconcset)
@@ -457,19 +472,23 @@ contains
     return
   end subroutine read_dimensions
 
+  !> @ brief Read data for package
+  !!
+  !!  Method to read data for the package.
+  !!
+  !<
   subroutine read_packagedata(this)
-! ******************************************************************************
-! read_packagedata -- Read PACKAGEDATA block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwfVscType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
+    class(BaseModelType), pointer :: mb => null()
+    type(GwfModelType), pointer :: gwfmodel => null()
+    type(GwtModelType), pointer :: gwtmodel => null()
+    type(GweModelType), pointer :: gwemodel => null()
+    character(len=LINELENGTH) :: warnmsg, errmsg
     character(len=LINELENGTH) :: line
+    character(len=LENMODELNAME) :: mname
     integer(I4B) :: ierr
     integer(I4B) :: iviscspec
     logical :: isfound, endOfBlock
@@ -510,13 +529,90 @@ contains
           call store_error(errmsg)
         end if
         itemp(iviscspec) = 1
-        this%dviscdc(iviscspec) = this%parser%GetDouble()
+        this%a2(iviscspec) = this%parser%GetDouble()
+        if (this%ivisc == 1) then
+          this%dviscdc(iviscspec) = this%a2(iviscspec)
+        end if
+        this%a3(iviscspec) = this%parser%GetDouble() 
+        this%a4(iviscspec) = this%parser%GetDouble() 
+        this%a5(iviscspec) = this%parser%GetDouble() 
+        !
         this%cviscref(iviscspec) = this%parser%GetDouble()
         call this%parser%GetStringCaps(this%cmodelname(iviscspec))
         call this%parser%GetStringCaps(this%cauxspeciesname(iviscspec))
+        !
+        ! -- check if modelname corresponds to a GWE model, and, if so
+        !    set istmpr ("is temperature") equal to 1 to signify species is GWE
+        mname = this%cmodelname(iviscspec)
+        
+        !
+        ! -- Check for errors, and when helpful issue warnings
+        !if (this%modelconc(iviscspec)%istmpr == 1) then
+          if (this%ivisc == 1) then
+            if (this%a2(iviscspec) == 0.0) then
+              write(errmsg, '(a)') 'LINEAR OPTION SELECTED FOR VARYING  &
+                &VISCOSITY, BUT A1, A SURROGATE FOR dVISC/dT, SET EQUAL TO 0.0'
+              call store_error(errmsg)
+            end if
+          end if
+          if (this%ivisc > 1) then
+            if(this%a2(iviscspec) == 0) then
+              write (warnmsg, '(a)') 'A1 SET EQUAL TO ZERO WHICH MAY LEAD TO &
+                &UNINTENDED VALUES FOR VISCOSITY'
+              call store_warning(errmsg)
+            end if
+          end if
+          if (this%ivisc == 2 .or. this%ivisc == 3) then
+            if (this%a3(iviscspec) == 0) then
+              write (warnmsg, '(a)') 'A3 WILL BE USED IN THE SELECTED VISCOSITY &
+                &CALCULATION BUT HAS BEEN SET EQUAL TO ZERO. CAREFULLY CONSIDER &
+                &WHETHER THE SPECIFIED VALUE OF 0.0 WAS INTENDED.'
+              call store_warning(warnmsg)
+            end if
+            if (this%a4(iviscspec) == 0) then
+              write (warnmsg, '(a)') 'A4 WILL BE USED IN THE SELECTED VISCOSITY &
+                &CALCULATION BUT HAS BEEN SET EQUAL TO ZERO. CAREFULLY CONSIDER &
+                &WHETHER THE SPECIFIED VALUE OF 0.0 WAS INTENDED.'
+              call store_warning(warnmsg)
+            end if
+          end if
+          if (this%ivisc == 3) then
+            if (this%a5(iviscspec) == 0) then
+              write (warnmsg, '(a)') 'A5 WILL BE USED IN THE SELECTED VISCOSITY &
+                &CALCULATION BUT HAS BEEN SET EQUAL TO ZERO. CAREFULLY CONSIDER &
+                &WHETHER THE SPECIFIED VALUE OF 0.0 WAS INTENDED.'
+              call store_warning(errmsg)
+            end if
+          end if
+          if (this%ivisc == 2 .or. this%ivisc == 4) then
+            if (this%a5(iviscspec) /= 0) then
+              write (warnmsg, '(a)') 'VISCOSITY_FUNC SETTING DOES NOT REQUIRE &
+                &A5,BUT A5 WAS SPECIFIED. A5 WILL HAVE NO AFFECT ON SIMULATION &
+                &RESULTS.'
+            end if
+          end if
+          if (this%ivisc == 4) then
+            if (this%a3(iviscspec) /= 0) then
+              write (warnmsg, '(a)') 'VISCOSITY_FUNC SETTING DOES NOT REQUIRE &
+                &A3, BUT A3 WAS SPECIFIED. A3 WILL HAVE NO AFFECT ON SIMULATION &
+                &RESULTS.'
+            end if  
+            if (this%a4(iviscspec) /= 0) then
+              write (warnmsg, '(a)') 'VISCOSITY_FUNC SETTING DOES NOT REQUIRE &
+                &A4, BUT A4 WAS SPECIFIED. A4 WILL HAVE NO AFFECT ON SIMULATION &
+                &RESULTS.'
+            end if  
+          end if
+        !end if  
       end do
       write (this%iout, '(1x,a)') 'END OF VSC PACKAGEDATA'
     end if
+    !
+    ! -- terminate if errors
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+
     !
     ! -- Check for errors.
     if (count_errors() > 0) then
@@ -616,6 +712,7 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%ivisc, 'IVISC', this%memoryPath)
     call mem_allocate(this%ioutvisc, 'IOUTVISC', this%memoryPath)
     call mem_allocate(this%ireadconcvsc, 'IREADCONCVSC', this%memoryPath)
     call mem_allocate(this%iconcset, 'ICONCSET', this%memoryPath)
@@ -625,13 +722,13 @@ contains
 
     !
     ! -- Initialize
+    this%ivisc = 0
     this%ioutvisc = 0
     this%iconcset = 0
     this%ireadconcvsc = 0
     this%viscref = 1000.d0
 
     this%nviscspecies = 0
-
     !
     ! -- Return
     return
@@ -657,6 +754,10 @@ contains
     call mem_allocate(this%concvsc, 0, 'CONCVSC', this%memoryPath)
     call mem_allocate(this%dviscdc, this%nviscspecies, 'DRHODC', this%memoryPath)
     call mem_allocate(this%cviscref, this%nviscspecies, 'CRHOREF', this%memoryPath)
+    call mem_allocate(this%a2, this%nviscspecies, 'A2', this%memoryPath)
+    call mem_allocate(this%a3, this%nviscspecies, 'A3', this%memoryPath)
+    call mem_allocate(this%a4, this%nviscspecies, 'A4', this%memoryPath)
+    call mem_allocate(this%a5, this%nviscspecies, 'A5', this%memoryPath)
     call mem_allocate(this%ctemp, this%nviscspecies, 'CTEMP', this%memoryPath)
     allocate (this%cmodelname(this%nviscspecies))
     allocate (this%cauxspeciesname(this%nviscspecies))
@@ -671,9 +772,14 @@ contains
     do i = 1, this%nviscspecies
       this%dviscdc(i) = DZERO
       this%cviscref(i) = DZERO
+      this%A2(i) = DZERO
+      this%A3(i) = DZERO
+      this%A4(i) = DZERO
+      this%A5(i) = DZERO
       this%ctemp(i) = DZERO
       this%cmodelname(i) = ''
       this%cauxspeciesname(i) = ''
+      this%modelconc(i)%istmpr = 0
     end do
     !
     ! -- Return
@@ -701,12 +807,16 @@ contains
     character(len=*), parameter :: fmtfileout = &
       "(4x, 'VSC ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
       &a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*), parameter :: fmtlinear = &
+      "(4x, 'VISCOSITY WILL VARY LINEARLY WITH TEMPERATURE CHANGE. ')"
     character(len=*), parameter :: fmtvoss = &
-      "(4x, 'VISCOSITY CALCULATION ADOPTS FORMULA OFFERED IN VOSS (1984). ')"
+      "(4x, 'VISCOSITY WILL VARY NON-LINEARLY USING FORMULA OFFERED &
+      &IN VOSS (1984). ')"
     character(len=*), parameter :: fmtpawlowski = &
-      "(4x, 'VISCOSITY CALCULATION ADOPTS FORMULA OFFERED IN PAWLOWSKI (1991).')"
+      "(4x, 'VISCOSITY WILL VARY NON-LINEARLY USING FORMULA OFFERED &
+      &IN PAWLOWSKI (1991).')"
     character(len=*), parameter :: fmtguo = &
-      "(4x, 'VISCOSITY CALCULATION ADOPTS FORMULA OFFERED IN GUO AND &
+      "(4x, 'VISCOSITY WILL VARY NON-LINEARLY USING FORMULA OFFERED IN GUO AND &
       &ZHOU (2005). THIS RELATIONSHIP IS FOR OIL VISCOSITY AS A FUNCTION &
       &OF TEMPERATURE (BETWEEN 5 AND 170 DECREES CELSIUS). RELATION IS & 
       &NOT APPLICABLE TO WATER.')"
@@ -745,15 +855,18 @@ contains
           end if
         case ('VISCOSITY_FUNC')
           call this%parser%GetStringCaps(keyword2)
-          if (trim(adjustl(keyword2)) == 'VOSS') this%ivisc = 1
-          if (trim(adjustl(keyword2)) == 'PAWLOWSKI') this%ivisc = 2
-          if (trim(adjustl(keyword2)) == 'GUO') this%ivisc = 3
+          if (trim(adjustl(keyword2)) == 'LINEAR') this%ivisc = 1
+          if (trim(adjustl(keyword2)) == 'VOSS') this%ivisc = 2
+          if (trim(adjustl(keyword2)) == 'PAWLOWSKI') this%ivisc = 3
+          if (trim(adjustl(keyword2)) == 'GUO') this%ivisc = 4
           select case (this%ivisc)
           case (1)
-            write (this%iout, fmtvoss)
+            write (this%iout, fmtlinear)
           case (2)
-            write (this%iout, fmtpawlowski)
+            write (this%iout, fmtvoss)
           case (3)
+            write (this%iout, fmtpawlowski)
+          case (4)
             write (this%iout, fmtguo)
           end select
         case default
@@ -769,7 +882,7 @@ contains
     ! -- Return
     return
   end subroutine read_options
-
+  
   !> @brief Sets options as opposed to reading them from a file
   !<
   subroutine set_options(this, input_data)
