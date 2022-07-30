@@ -13,7 +13,6 @@ module GwfVscInputDataModule
     real(DP) :: viscref !< see VSC for description
     ! dim
     integer(I4B) :: nviscspecies !< see VSC for description
-
     ! pkg data
     real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< see VSC for description
     real(DP), dimension(:), pointer, contiguous :: cviscref => null() !< see VSC for description

@@ -3,7 +3,7 @@
 module GwfVscModule
 
   use KindModule, only: DP, I4B
-  use SimModule, only: store_error, count_errors
+  use SimModule, only: store_error, store_warning, count_errors
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate
   use ConstantsModule, only: DHALF, DZERO, DONE, LENMODELNAME, &
@@ -13,9 +13,9 @@ module GwfVscModule
   use GwfNpfModule, only: GwfNpfType
   use GwfVscInputDataModule, only: GwfVscInputDataType
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-  use GwfModule, only: GwfModelType
   use GwtModule, only: GwtModelType
   use GweModule, only: GweModelType
+  use ListsModule, only: basemodellist
 
   implicit none
 
@@ -155,7 +155,7 @@ contains
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtvsc = &
-      "(1x,/1x,'VSC -- VISCOSITY PACKAGE, VERSION 1, 5/16/2018', &
+      "(1x,/1x,'VSC -- VISCOSITY PACKAGE, VERSION 1, 9/30/2023', &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
@@ -483,13 +483,13 @@ contains
     class(GwfVscType) :: this
     ! -- local
     class(BaseModelType), pointer :: mb => null()
-    type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
     type(GweModelType), pointer :: gwemodel => null()
     character(len=LINELENGTH) :: warnmsg, errmsg
     character(len=LINELENGTH) :: line
     character(len=LENMODELNAME) :: mname
     integer(I4B) :: ierr
+    integer(I4B) :: im
     integer(I4B) :: iviscspec
     logical :: isfound, endOfBlock
     logical :: blockrequired
@@ -541,12 +541,27 @@ contains
         call this%parser%GetStringCaps(this%cmodelname(iviscspec))
         call this%parser%GetStringCaps(this%cauxspeciesname(iviscspec))
         !
-        ! -- check if modelname corresponds to a GWE model, and, if so
+        ! -- Check if modelname corresponds to a GWE model, and, if so
         !    set istmpr ("is temperature") equal to 1 to signify species is GWE
         mname = this%cmodelname(iviscspec)
-        
+        do im = 1, basemodellist%Count()
+          mb => GetBaseModelFromList(basemodellist, im)
+          ! -- Check if GWE model type in list and flag
+          if (mb%macronym == 'GWE') then
+            !-- Ensure user-specified modelname corresponds to the GWE model name
+            !   in mb (There can be only one GWE model per GWF model)
+            if (mb%name == mname) then
+              this%modelconc(iviscspec)%istmpr = 1
+            else
+              write (errmsg, '(a,a,a)') 'MODEL NAME PROVIDED IN VSC &
+                &PACKAGEDATA BLOCK, ',  trim(mname), ', DOES NOT MATCH KNOWN &
+                &GWE MODEL TYPE.'
+              call store_error(errmsg)              
+            end if
+          end if
+        end do
         !
-        ! -- Check for errors, and when helpful issue warnings
+        ! -- Check for errors or issue warnings if appropriate
         !if (this%modelconc(iviscspec)%istmpr == 1) then
           if (this%ivisc == 1) then
             if (this%a2(iviscspec) == 0.0) then
@@ -612,7 +627,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-
     !
     ! -- Check for errors.
     if (count_errors() > 0) then
