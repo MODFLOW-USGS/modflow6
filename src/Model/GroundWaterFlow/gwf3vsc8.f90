@@ -12,9 +12,6 @@ module GwfVscModule
   use BaseDisModule, only: DisBaseType
   use GwfNpfModule, only: GwfNpfType
   use GwfVscInputDataModule, only: GwfVscInputDataType
-  use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-  use GwtModule, only: GwtModelType
-  use GweModule, only: GweModelType
   use ListsModule, only: basemodellist
 
   implicit none
@@ -26,12 +23,12 @@ module GwfVscModule
   type :: ConcentrationPointer
     real(DP), dimension(:), pointer :: conc => null() !< pointer to concentration array
     integer(I4B), dimension(:), pointer :: icbund => null() !< store pointer to gwt ibound array
-    integer(I4B), dimension(:), pointer :: istmpr => null() !< integer flag for identifying whether the "species" array is temperature
   end type ConcentrationPointer
 
   type, extends(NumericalPackageType) :: GwfVscType
     type(GwfNpfType), pointer :: npf => null() !< npf object
     integer(I4B), pointer :: ivisc => null() !< viscosity formulation flag (1:Voss (1984), 2:Pawlowski (1991), 3:Guo and Zhou (2005))
+    integer(I4B), pointer :: idxtmpr => null() !< if greater than 0 then an index for identifying whether the "species" array is temperature
     integer(I4B), pointer :: ioutvisc => null() !< unit number for saving viscosity
     integer(I4B), pointer :: ireadconcvsc => null() !< if 1 then visc has been read from this vsc input file   ! kluge note: is this ever really used?
     integer(I4B), pointer :: iconcset => null() !< if 1 then conc points to a gwt (or gwe) model%x array
@@ -48,10 +45,9 @@ module GwfVscModule
     character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of aux columns used in viscosity equation
     !
     ! -- Viscosity constants
-    real(DP), dimension(:), pointer, contiguous :: a2 => null() !< an empirical parameter specified by the user for calculating viscosity
-    real(DP), dimension(:), pointer, contiguous :: a3 => null() !< an empirical parameter specified by the user for calculating viscosity
-    real(DP), dimension(:), pointer, contiguous :: a4 => null() !< an empirical parameter specified by the user for calculating viscosity
-    real(DP), dimension(:), pointer, contiguous :: a5 => null() !< an empirical parameter specified by the user for calculating viscosity
+    real(DP), pointer :: a2 => null() !< an empirical parameter specified by the user for calculating viscosity
+    real(DP), pointer :: a3 => null() !< an empirical parameter specified by the user for calculating viscosity
+    real(DP), pointer :: a4 => null() !< an empirical parameter specified by the user for calculating viscosity
 
     type(ConcentrationPointer), allocatable, dimension(:) :: modelconc !< concentration (or temperature) pointer for each solute (or heat) transport model
 
@@ -96,9 +92,22 @@ contains
     !
     nviscspec = size(dviscdc)
     visc = viscref
+    
     do i = 1, nviscspec
+      ! if (i \= this%idxtmpr) then
       visc = visc + dviscdc(i) * (conc(i) - cviscref(i))    ! kluge note: linear for now
+      ! end if
     end do
+
+    ! Order matters!! (This assumes we apply the temperature correction after 
+    ! accounting for solute concentrations) 
+    ! REMEMBER: idxtmpr
+    ! For the case i == idxtmpr 
+    ! special multiplicative eqn here that leverages idxtmpr
+    ! - check to make sure that idxtmpr is not zero b/c that means there 
+    !   is no temperature (remember to initialize idxtmpr to 0)
+
+
     !
     ! -- return
     return
@@ -234,7 +243,7 @@ contains
     integer(I4B) :: i
     ! -- formats
     character(len=*), parameter :: fmtc = &
-      "('VISCOSITY PACKAGE DOES NOT HAVE HAVE A CONCENTRATION SET &
+      "('VISCOSITY PACKAGE DOES NOT HAVE A CONCENTRATION SET &
        &FOR SPECIES ',i0,'. ONE OR MORE MODEL NAMES MAY BE SPECIFIED &
        &INCORRECTLY IN THE PACKAGEDATA BLOCK OR A GWF-GWT EXCHANGE MAY NEED &
        &TO BE ACTIVATED.')"
@@ -395,7 +404,6 @@ contains
       call mem_deallocate(this%a2)
       call mem_deallocate(this%a3)
       call mem_deallocate(this%a4)
-      call mem_deallocate(this%a5)
       deallocate (this%cmodelname)
       deallocate (this%cauxspeciesname)
       deallocate (this%modelconc)
@@ -403,6 +411,7 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%ivisc)
+    call mem_deallocate(this%idxtmpr)
     call mem_deallocate(this%ioutvisc)
     call mem_deallocate(this%ireadconcvsc)
     call mem_deallocate(this%iconcset)
@@ -482,9 +491,6 @@ contains
     ! -- dummy
     class(GwfVscType) :: this
     ! -- local
-    class(BaseModelType), pointer :: mb => null()
-    type(GwtModelType), pointer :: gwtmodel => null()
-    type(GweModelType), pointer :: gwemodel => null()
     character(len=LINELENGTH) :: warnmsg, errmsg
     character(len=LINELENGTH) :: line
     character(len=LENMODELNAME) :: mname
@@ -529,103 +535,22 @@ contains
           call store_error(errmsg)
         end if
         itemp(iviscspec) = 1
-        this%a2(iviscspec) = this%parser%GetDouble()
-        if (this%ivisc == 1) then
-          this%dviscdc(iviscspec) = this%a2(iviscspec)
-        end if
-        this%a3(iviscspec) = this%parser%GetDouble() 
-        this%a4(iviscspec) = this%parser%GetDouble() 
-        this%a5(iviscspec) = this%parser%GetDouble() 
         !
         this%cviscref(iviscspec) = this%parser%GetDouble()
         call this%parser%GetStringCaps(this%cmodelname(iviscspec))
         call this%parser%GetStringCaps(this%cauxspeciesname(iviscspec))
         !
-        ! -- Check if modelname corresponds to a GWE model, and, if so
-        !    set istmpr ("is temperature") equal to 1 to signify species is GWE
-        mname = this%cmodelname(iviscspec)
-        do im = 1, basemodellist%Count()
-          mb => GetBaseModelFromList(basemodellist, im)
-          ! -- Check if GWE model type in list and flag
-          if (mb%macronym == 'GWE') then
-            !-- Ensure user-specified modelname corresponds to the GWE model name
-            !   in mb (There can be only one GWE model per GWF model)
-            if (mb%name == mname) then
-              this%modelconc(iviscspec)%istmpr = 1
-            else
-              write (errmsg, '(a,a,a)') 'MODEL NAME PROVIDED IN VSC &
-                &PACKAGEDATA BLOCK, ',  trim(mname), ', DOES NOT MATCH KNOWN &
-                &GWE MODEL TYPE.'
-              call store_error(errmsg)              
-            end if
-          end if
-        end do
-        !
-        ! -- Check for errors or issue warnings if appropriate
-        !if (this%modelconc(iviscspec)%istmpr == 1) then
-          if (this%ivisc == 1) then
-            if (this%a2(iviscspec) == 0.0) then
-              write(errmsg, '(a)') 'LINEAR OPTION SELECTED FOR VARYING  &
-                &VISCOSITY, BUT A1, A SURROGATE FOR dVISC/dT, SET EQUAL TO 0.0'
-              call store_error(errmsg)
-            end if
-          end if
-          if (this%ivisc > 1) then
-            if(this%a2(iviscspec) == 0) then
-              write (warnmsg, '(a)') 'A1 SET EQUAL TO ZERO WHICH MAY LEAD TO &
-                &UNINTENDED VALUES FOR VISCOSITY'
-              call store_warning(errmsg)
-            end if
-          end if
-          if (this%ivisc == 2 .or. this%ivisc == 3) then
-            if (this%a3(iviscspec) == 0) then
-              write (warnmsg, '(a)') 'A3 WILL BE USED IN THE SELECTED VISCOSITY &
-                &CALCULATION BUT HAS BEEN SET EQUAL TO ZERO. CAREFULLY CONSIDER &
-                &WHETHER THE SPECIFIED VALUE OF 0.0 WAS INTENDED.'
-              call store_warning(warnmsg)
-            end if
-            if (this%a4(iviscspec) == 0) then
-              write (warnmsg, '(a)') 'A4 WILL BE USED IN THE SELECTED VISCOSITY &
-                &CALCULATION BUT HAS BEEN SET EQUAL TO ZERO. CAREFULLY CONSIDER &
-                &WHETHER THE SPECIFIED VALUE OF 0.0 WAS INTENDED.'
-              call store_warning(warnmsg)
-            end if
-          end if
-          if (this%ivisc == 3) then
-            if (this%a5(iviscspec) == 0) then
-              write (warnmsg, '(a)') 'A5 WILL BE USED IN THE SELECTED VISCOSITY &
-                &CALCULATION BUT HAS BEEN SET EQUAL TO ZERO. CAREFULLY CONSIDER &
-                &WHETHER THE SPECIFIED VALUE OF 0.0 WAS INTENDED.'
-              call store_warning(errmsg)
-            end if
-          end if
-          if (this%ivisc == 2 .or. this%ivisc == 4) then
-            if (this%a5(iviscspec) /= 0) then
-              write (warnmsg, '(a)') 'VISCOSITY_FUNC SETTING DOES NOT REQUIRE &
-                &A5,BUT A5 WAS SPECIFIED. A5 WILL HAVE NO AFFECT ON SIMULATION &
-                &RESULTS.'
-            end if
-          end if
-          if (this%ivisc == 4) then
-            if (this%a3(iviscspec) /= 0) then
-              write (warnmsg, '(a)') 'VISCOSITY_FUNC SETTING DOES NOT REQUIRE &
-                &A3, BUT A3 WAS SPECIFIED. A3 WILL HAVE NO AFFECT ON SIMULATION &
-                &RESULTS.'
-            end if  
-            if (this%a4(iviscspec) /= 0) then
-              write (warnmsg, '(a)') 'VISCOSITY_FUNC SETTING DOES NOT REQUIRE &
-                &A4, BUT A4 WAS SPECIFIED. A4 WILL HAVE NO AFFECT ON SIMULATION &
-                &RESULTS.'
-            end if  
-          end if
-        !end if  
+        if (this%cauxspeciesname(iviscspec) == 'TEMPERATURE') then
+          if (this%idxtmpr > 0) then
+            write(errmsg, '(a)') 'MORE THAN ONE SPECIES IN VSC INPUT IDENTIFIED &
+              &AS "TEMPERATURE".  ONLY ONE SPECIES MAY BE DESIGNATED AS &
+              &TEMPERATURE.'
+            call store_error(errmsg)
+          else
+            this%idxtmpr = iviscspec
+          endif
+        end if
       end do
-      write (this%iout, '(1x,a)') 'END OF VSC PACKAGEDATA'
-    end if
-    !
-    ! -- terminate if errors
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check for errors.
@@ -636,13 +561,11 @@ contains
     ! -- write packagedata information
     write (this%iout, '(/,a)') 'SUMMARY OF SPECIES INFORMATION IN VSC PACKAGE'
     write (this%iout, '(1a11, 4a17)') &
-      'SPECIES', 'DRHODC', 'CRHOREF', 'MODEL', &
-      'AUXSPECIESNAME'
+      'SPECIES', 'CVISCREF', 'MODEL', 'AUXSPECIESNAME'
     do iviscspec = 1, this%nviscspecies
       write (c10, '(i0)') iviscspec
       line = ' '//adjustr(c10)
-      write (c16, '(g15.6)') this%dviscdc(iviscspec)
-      line = trim(line)//' '//adjustr(c16)
+
       write (c16, '(g15.6)') this%cviscref(iviscspec)
       line = trim(line)//' '//adjustr(c16)
       write (c16, '(a)') this%cmodelname(iviscspec)
@@ -654,6 +577,8 @@ contains
     !
     ! -- deallocate
     deallocate (itemp)
+    !
+    write (this%iout, '(1x,a)') 'END OF VSC PACKAGEDATA'
     !
     ! -- return
     return
@@ -727,21 +652,28 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%ivisc, 'IVISC', this%memoryPath)
+    call mem_allocate(this%idxtmpr, 'IDXTMPR', this%memoryPath)
     call mem_allocate(this%ioutvisc, 'IOUTVISC', this%memoryPath)
     call mem_allocate(this%ireadconcvsc, 'IREADCONCVSC', this%memoryPath)
     call mem_allocate(this%iconcset, 'ICONCSET', this%memoryPath)
     call mem_allocate(this%viscref, 'VISCREF', this%memoryPath)
-
+    call mem_allocate(this%a2, 'A2', this%memoryPath)
+    call mem_allocate(this%a3, 'A3', this%memoryPath)
+    call mem_allocate(this%a4, 'A4', this%memoryPath)
+    !
     call mem_allocate(this%nviscspecies, 'NVISCSPECIES', this%memoryPath)
-
     !
     ! -- Initialize
     this%ivisc = 0
+    this%idxtmpr = 0
     this%ioutvisc = 0
     this%iconcset = 0
     this%ireadconcvsc = 0
     this%viscref = 1000.d0
-
+    this%A2 = DZERO
+    this%A3 = DZERO
+    this%A4 = DZERO
+    !
     this%nviscspecies = 0
     !
     ! -- Return
@@ -768,10 +700,6 @@ contains
     call mem_allocate(this%concvsc, 0, 'CONCVSC', this%memoryPath)
     call mem_allocate(this%dviscdc, this%nviscspecies, 'DRHODC', this%memoryPath)
     call mem_allocate(this%cviscref, this%nviscspecies, 'CRHOREF', this%memoryPath)
-    call mem_allocate(this%a2, this%nviscspecies, 'A2', this%memoryPath)
-    call mem_allocate(this%a3, this%nviscspecies, 'A3', this%memoryPath)
-    call mem_allocate(this%a4, this%nviscspecies, 'A4', this%memoryPath)
-    call mem_allocate(this%a5, this%nviscspecies, 'A5', this%memoryPath)
     call mem_allocate(this%ctemp, this%nviscspecies, 'CTEMP', this%memoryPath)
     allocate (this%cmodelname(this%nviscspecies))
     allocate (this%cauxspeciesname(this%nviscspecies))
@@ -786,14 +714,9 @@ contains
     do i = 1, this%nviscspecies
       this%dviscdc(i) = DZERO
       this%cviscref(i) = DZERO
-      this%A2(i) = DZERO
-      this%A3(i) = DZERO
-      this%A4(i) = DZERO
-      this%A5(i) = DZERO
       this%ctemp(i) = DZERO
       this%cmodelname(i) = ''
       this%cauxspeciesname(i) = ''
-      this%modelconc(i)%istmpr = 0
     end do
     !
     ! -- Return
@@ -813,27 +736,21 @@ contains
     ! -- dummy
     class(GwfVscType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, keyword2
+    character(len=LINELENGTH) :: warnmsg, errmsg, keyword, keyword2
     character(len=MAXCHARLEN) :: fname
+    character(len=LINELENGTH) :: line
+    character(len=10) :: c10
+    character(len=16) :: c16
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtfileout = &
-      "(4x, 'VSC ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
+      "(x, 'VSC', 1x, a, 1x, 'WILL BE SAVED TO FILE: ', &
       &a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*), parameter :: fmtlinear = &
-      "(4x, 'VISCOSITY WILL VARY LINEARLY WITH TEMPERATURE CHANGE. ')"
-    character(len=*), parameter :: fmtvoss = &
-      "(4x, 'VISCOSITY WILL VARY NON-LINEARLY USING FORMULA OFFERED &
-      &IN VOSS (1984). ')"
-    character(len=*), parameter :: fmtpawlowski = &
-      "(4x, 'VISCOSITY WILL VARY NON-LINEARLY USING FORMULA OFFERED &
-      &IN PAWLOWSKI (1991).')"
-    character(len=*), parameter :: fmtguo = &
-      "(4x, 'VISCOSITY WILL VARY NON-LINEARLY USING FORMULA OFFERED IN GUO AND &
-      &ZHOU (2005). THIS RELATIONSHIP IS FOR OIL VISCOSITY AS A FUNCTION &
-      &OF TEMPERATURE (BETWEEN 5 AND 170 DECREES CELSIUS). RELATION IS & 
-      &NOT APPLICABLE TO WATER.')"
+      "(/,x,'VISCOSITY WILL VARY LINEARLY WITH TEMPERATURE CHANGE ')"
+    character(len=*), parameter :: fmtnonlinear = &
+      "(/,x,'VISCOSITY WILL VARY NON-LINEARLY WITH TEMPERATURE CHANGE ')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -870,28 +787,66 @@ contains
         case ('VISCOSITY_FUNC')
           call this%parser%GetStringCaps(keyword2)
           if (trim(adjustl(keyword2)) == 'LINEAR') this%ivisc = 1
-          if (trim(adjustl(keyword2)) == 'VOSS') this%ivisc = 2
-          if (trim(adjustl(keyword2)) == 'PAWLOWSKI') this%ivisc = 3
-          if (trim(adjustl(keyword2)) == 'GUO') this%ivisc = 4
+          if (trim(adjustl(keyword2)) == 'NONLINEAR') this%ivisc = 2
           select case (this%ivisc)
           case (1)
             write (this%iout, fmtlinear)
           case (2)
-            write (this%iout, fmtvoss)
-          case (3)
-            write (this%iout, fmtpawlowski)
-          case (4)
-            write (this%iout, fmtguo)
+            write (this%iout, fmtnonlinear)
+            this%a2 = this%parser%GetDouble()
+            this%a3 = this%parser%GetDouble()
+            this%a4 = this%parser%GetDouble()
+            !
+            ! -- Write viscosity function selection to lst file
+            write (this%iout, '(/,x,a,a,a)') 'CONSTANTS USED IN ', &
+              trim(keyword2), ' VISCOSITY FORMULATION ARE '
+            write(this%iout, '(x,a)') &
+                '              A2,              A3,              A4'
+            line = ' '
+            write (c16, '(g15.6)') this%a2
+            line = trim(line)//' '//adjustr(c16)
+            write (c16, '(g15.6)') this%a3
+            line = trim(line)//' '//adjustr(c16)
+            write (c16, '(g15.6)') this%a4
+            line = trim(line)//' '//adjustr(c16)
+            write (this%iout, '(a)') trim(line)
+
           end select
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN VSC OPTION: ', &
+          write (errmsg, '(4x,a,a)') '**ERROR. UNKNOWN VSC OPTION: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
-      write (this%iout, '(1x,a)') 'END OF VSC OPTIONS'
+      !
+      if (this%ivisc == 1) then
+        if (this%a2 == 0.0) then
+          write(errmsg, '(a)') 'LINEAR OPTION SELECTED FOR VARYING  &
+            &VISCOSITY, BUT A1, A SURROGATE FOR dVISC/dT, SET EQUAL TO 0.0'
+          call store_error(errmsg)
+        end if
+      end if
+      if (this%ivisc > 1) then
+        if(this%a2 == 0) then
+          write (warnmsg, '(a)') 'A2 SET EQUAL TO ZERO WHICH MAY LEAD TO &
+            &UNINTENDED VALUES FOR VISCOSITY'
+          call store_warning(errmsg)
+        end if
+        if (this%a3 == 0) then
+          write (warnmsg, '(a)') 'A3 SET EQUAL TO ZERO WHICH MAY LEAD TO &
+            &UNINTENDED VALUES FOR VISCOSITY'
+          call store_warning(warnmsg)
+        end if
+        if (this%a4 == 0) then
+          write (warnmsg, '(a)') 'A4 SET EQUAL TO ZERO WHICH MAY LEAD TO &
+            &UNINTENDED VALUES FOR VISCOSITY'
+          call store_warning(warnmsg)
+        end if
+      end if
     end if
+    !
+    write (this%iout, '(/,x,a)') 'END OF VSC OPTIONS'
     !
     ! -- Return
     return
@@ -908,7 +863,7 @@ contains
   end subroutine set_options
 
 
-  subroutine set_concentration_pointer(this, modelname, conc, icbund)
+  subroutine set_concentration_pointer(this, modelname, conc, icbund, istmpr)
 ! ******************************************************************************
 ! set_concentration_pointer -- pass in a gwt model name, concentration array
 !   and ibound, and store a pointer to these in the VSC package so that
@@ -924,6 +879,7 @@ contains
     character(len=LENMODELNAME), intent(in) :: modelname
     real(DP), dimension(:), pointer :: conc
     integer(I4B), dimension(:), pointer :: icbund
+    integer(I4B), intent(in) :: istmpr
     ! -- local
     integer(I4B) :: i
     logical :: found

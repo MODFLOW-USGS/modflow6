@@ -255,6 +255,10 @@ contains
       call gwfmodel%buy%set_concentration_pointer(gwemodel%name, gwemodel%x, &
                                                   gwemodel%ibound)
     end if
+    if (gwfmodel%invsc > 0) then
+      call gwfmodel%vsc%set_concentration_pointer(gwemodel%name, gwemodel%x, &
+                                                  gwemodel%ibound, 1)
+    end if
     !
     ! -- transfer the boundary package information from gwf to gwe
     call this%gwfbnd2gwefmi()

@@ -99,7 +99,7 @@ module GwfModule
             &'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
             &'API6 ', 'CHD6 ', '     ', '     ', '     ', & ! 20
             &'     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
-            &'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', '     ', & ! 30
+            &'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', 'VSC6 ', & ! 30
             &70*'     '/
 
 contains
