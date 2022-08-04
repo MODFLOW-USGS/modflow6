@@ -79,7 +79,7 @@ type integer
 reader urword
 optional false
 longname number of species used in density equation of state
-description number of species used in density equation of state.  This value must be one or greater.  The value must be one if concentrations are specified using the CONCENTRATION keyword in the PERIOD block below.
+description number of species used in density equation of state.  This value must be one or greater if the BUY package is activated.  
 
 
 # --------------------- gwf buy packagedata ---------------------
