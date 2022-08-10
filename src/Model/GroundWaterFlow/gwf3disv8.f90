@@ -2,7 +2,7 @@ module GwfDisvModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, DZERO, DONE, DHALF
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
@@ -264,7 +264,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
@@ -346,7 +345,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
@@ -441,8 +439,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use ConstantsModule, only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
@@ -543,8 +539,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use ConstantsModule, only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
@@ -687,8 +681,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use ConstantsModule, only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisvType) :: this
     integer(I4B) :: i
@@ -773,8 +765,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use ConstantsModule, only: LINELENGTH, DZERO
     use InputOutputModule, only: urword
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
@@ -912,9 +902,15 @@ contains
     ! -- local
     integer(I4B) :: j, k
     integer(I4B) :: noder, nrsize
+    integer(I4B) :: narea_eq_zero
+    integer(I4B) :: narea_lt_zero
     real(DP) :: area
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    narea_eq_zero = 0
+    narea_lt_zero = 0
     !
     ! -- Assign the cell area
     do j = 1, this%ncpl
@@ -923,16 +919,37 @@ contains
         noder = this%get_nodenumber(k, j, 0)
         if (noder > 0) this%area(noder) = area
       end do
-      if (area < 0) then
-        write (errmsg, '(a,i0)') 'ERROR. CELL2D AREA LESS THAN ZERO FOR CELL ', j
+      if (area < DZERO) then
+        narea_lt_zero = narea_lt_zero + 1
+        write (errmsg, '(a,i0)') &
+          &'Calculated CELL2D area less than zero for cell ', j
+        call store_error(errmsg)
+      end if
+      if (area == DZERO) then
+        narea_eq_zero = narea_eq_zero + 1
+        write (errmsg, '(a,i0)') &
+          'Calculated CELL2D area is zero for cell ', j
         call store_error(errmsg)
       end if
     end do
     !
     ! -- check for errors
     if (count_errors() > 0) then
-      write (errmsg, '(a)') 'CELL VERTICES MUST BE LISTED IN CLOCKWISE ORDER. '
-      call store_error(errmsg)
+      if (narea_lt_zero > 0) then
+        write (errmsg, '(i0, a)') narea_lt_zero, &
+          ' cell(s) have an area less than zero.  Calculated cell &
+          &areas must be greater than zero.  Negative areas often &
+          &mean vertices are not listed in clockwise order.'
+        call store_error(errmsg)
+      end if
+      if (narea_eq_zero > 0) then
+        write (errmsg, '(i0, a)') narea_eq_zero, &
+          ' cell(s) have an area equal to zero.  Calculated cell &
+          &areas must be greater than zero.  Calculated cell &
+          &areas equal to zero indicate that the cell is not defined &
+          &by a valid polygon.'
+        call store_error(errmsg)
+      end if
       call store_error_unit(this%inunit)
     end if
     !
@@ -964,7 +981,6 @@ contains
     ! -- modules
     use InputOutputModule, only: getunit, openfile
     use OpenSpecModule, only: access, form
-    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwfDisvType) :: this
     integer(I4B), dimension(:), intent(in) :: icelltype
@@ -1174,7 +1190,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     ! -- return
     integer(I4B) :: nodenumber
     ! -- dummy
@@ -1216,7 +1231,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     use InputOutputModule, only: get_node
     implicit none
     ! -- return
@@ -1272,8 +1286,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DONE, DZERO
-    use SimModule, only: store_error
     ! -- dummy
     class(GwfDisvType) :: this
     integer(I4B), intent(in) :: noden
@@ -1331,8 +1343,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO, DONE, DHALF
-    use SimModule, only: store_error
     use InputOutputModule, only: get_jk
     use DisvGeom, only: line_unit_vector
     ! -- dummy
@@ -1495,7 +1505,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- module
-    use ConstantsModule, only: DZERO, DHALF, DONE
     ! -- dummy
     class(GwfDisvType) :: this
     integer(I4B), intent(in) :: icell2d
@@ -1754,8 +1763,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisvType), intent(inout) :: this
     character(len=*), intent(inout) :: line
@@ -1824,8 +1831,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisvType), intent(inout) :: this
     character(len=*), intent(inout) :: line
@@ -2095,8 +2100,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: get_node
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisvType) :: this
     integer(I4B), intent(in) :: maxbnd
