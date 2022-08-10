@@ -907,17 +907,17 @@ contains
       errmsg = 'ADVSCHEME is no longer a valid keyword.  Use ADV_SCHEME &
         &instead.'
       call store_error(errmsg)
-      call this%parser%StoreErrorUnit()      
+      call this%parser%StoreErrorUnit()
     case ('XT3D_OFF')
       errmsg = 'XT3D_OFF is no longer a valid keyword.  Use DSP_XT3D_OFF &
         &instead.'
       call store_error(errmsg)
-      call this%parser%StoreErrorUnit()      
+      call this%parser%StoreErrorUnit()
     case ('XT3D_RHS')
       errmsg = 'XT3D_RHS is no longer a valid keyword.  Use DSP_XT3D_RHS &
         &instead.'
       call store_error(errmsg)
-      call this%parser%StoreErrorUnit()      
+      call this%parser%StoreErrorUnit()
     case default
       parsed = .false.
     end select
@@ -1246,7 +1246,7 @@ contains
     ! if support is added in the future for simpler flow calcuation,
     ! then set useIM as follows
     !useIM = (this%ixt3d > 0)
-    
+
     ! For now set useIM to .true. since the interface model approach
     ! must currently be used for any GWT-GWT exchange.
     useIM = .true.
