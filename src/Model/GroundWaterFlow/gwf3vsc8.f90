@@ -40,7 +40,7 @@ module GwfVscModule
     integer(I4B), pointer :: nviscspecies => null() !< number of concentration species used in viscosity equation
     real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< change in viscosity with change in concentration   ! kluge note: parameters will depend on formula; linear for now
     real(DP), dimension(:), pointer, contiguous :: cviscref => null() !< reference concentration used in viscosity equation
-    real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calcvisc
+    real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calc_visc_x
     character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt (or gwe) models used in viscosity equation
     character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of aux columns used in viscosity equation
     !
@@ -71,34 +71,51 @@ module GwfVscModule
 
 contains
 
-  function calcvisc(viscref, dviscdc, cviscref, conc) result(visc)
+  function calc_visc(ivisc, viscref, dviscdc, cviscref, conc, &
+      a2, a3, a4) result(visc)
 ! ******************************************************************************
-! calcvisc -- generic function to calculate fluid viscosity from concentration
+! calc_visc -- generic function to calculate changes in fluid viscosity 
+!                  using a linear formulation
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+
     ! -- dummy
+    integer(I4B), intent(in) :: ivisc
     real(DP), intent(in) :: viscref
     real(DP), dimension(:), intent(in) :: dviscdc
     real(DP), dimension(:), intent(in) :: cviscref
     real(DP), dimension(:), intent(in) :: conc
+    real(DP), intent(in) :: a2, a3, a4
     ! -- return
     real(DP) :: visc
     ! -- local
     integer(I4B) :: nviscspec
     integer(I4B) :: i
+    real(DP) :: mu_t
+    real(DP) :: expon
 ! ------------------------------------------------------------------------------
     !
     nviscspec = size(dviscdc)
     visc = viscref
     
     do i = 1, nviscspec
-      ! if (i \= this%idxtmpr) then
-      visc = visc + dviscdc(i) * (conc(i) - cviscref(i))    ! kluge note: linear for now
+      if (ivisc == 1) then
+        visc = visc + dviscdc(i) * (conc(i) - cviscref(i))    ! kluge note: linear for now
+      else 
+        expon = -1 * ((conc(i) - cviscref(i)) / &
+              ((conc(i) + a4) * (cviscref(i) + a4)))
+        mu_t = viscref * a2 ** expon
+        ! If a nonlinear correction is applied, then b/c it takes into account
+        ! viscref, need to subtract it in this case
+        ! At most, there will only ever be 1 nonlinear correction 
+        visc = (visc - viscref) + mu_t
+      end if
       ! end if
     end do
 
+    ! NOTES (from in-person meeting with Alden) 
     ! Order matters!! (This assumes we apply the temperature correction after 
     ! accounting for solute concentrations) 
     ! REMEMBER: idxtmpr
@@ -111,7 +128,7 @@ contains
     !
     ! -- return
     return
-  end function calcvisc
+  end function calc_visc
 
   subroutine vsc_cr(vscobj, name_model, inunit, iout)
 ! ******************************************************************************
@@ -327,7 +344,7 @@ contains
           ctemp(i) = auxvar(locconc(i), n)
         end if
       end do
-      viscbnd = calcvisc(viscref, dviscdc, cviscref, ctemp)
+     ! viscbnd = calc_visc_lin(viscref, dviscdc, cviscref, ctemp)
     else
       ! -- neither of the above, so assign as viscref
       viscbnd = viscref
@@ -536,6 +553,7 @@ contains
         end if
         itemp(iviscspec) = 1
         !
+        this%dviscdc(iviscspec) = this%parser%GetDouble()
         this%cviscref(iviscspec) = this%parser%GetDouble()
         call this%parser%GetStringCaps(this%cmodelname(iviscspec))
         call this%parser%GetStringCaps(this%cauxspeciesname(iviscspec))
@@ -559,13 +577,15 @@ contains
     end if
     !
     ! -- write packagedata information
-    write (this%iout, '(/,a)') 'SUMMARY OF SPECIES INFORMATION IN VSC PACKAGE'
-    write (this%iout, '(1a11, 4a17)') &
-      'SPECIES', 'CVISCREF', 'MODEL', 'AUXSPECIESNAME'
+    write (this%iout, '(/,1x,a)') 'SUMMARY OF SPECIES INFORMATION IN VSC PACKAGE'
+    write (this%iout, '(1a11,5a17)') &
+      'SPECIES', 'DVISCDC', 'CVISCREF', 'MODEL', 'AUXSPECIESNAME'
     do iviscspec = 1, this%nviscspecies
       write (c10, '(i0)') iviscspec
       line = ' '//adjustr(c10)
 
+      write (c16, '(g15.6)') this%dviscdc(iviscspec)
+      line = trim(line)//' '//adjustr(c16)
       write (c16, '(g15.6)') this%cviscref(iviscspec)
       line = trim(line)//' '//adjustr(c16)
       write (c16, '(a)') this%cmodelname(iviscspec)
@@ -578,7 +598,7 @@ contains
     ! -- deallocate
     deallocate (itemp)
     !
-    write (this%iout, '(1x,a)') 'END OF VSC PACKAGEDATA'
+    write (this%iout, '(/,1x,a)') 'END OF VSC PACKAGEDATA'
     !
     ! -- return
     return
@@ -625,8 +645,19 @@ contains
           this%ctemp(i) = this%modelconc(i)%conc(n)
         end if
       end do
-      this%visc(n) = calcvisc(this%viscref, this%dviscdc, this%cviscref, &
-                               this%ctemp)
+      !
+      ! -- Call function corresponding to (1) temperature or (2) concentration
+      !if (i == this%idxtmpr) then
+        ! Temperature
+        !this%visc(n) = this%visc(n) + calc_visc_t(this%viscref, this%dviscdc, &
+        !                                          this%cviscref, this%ctemp, &
+        !                                          this%
+      !else
+        ! Concentration
+        this%visc(n) = calc_visc(this%ivisc, this%viscref, this%dviscdc, &
+                                 this%cviscref, this%ctemp, this%a2, &
+                                 this%a3, this%a4)      
+      !end if
     end do
     !
     ! -- Return
@@ -879,7 +910,7 @@ contains
     character(len=LENMODELNAME), intent(in) :: modelname
     real(DP), dimension(:), pointer :: conc
     integer(I4B), dimension(:), pointer :: icbund
-    integer(I4B), intent(in) :: istmpr
+    integer(I4B), optional, intent(in) :: istmpr
     ! -- local
     integer(I4B) :: i
     logical :: found
