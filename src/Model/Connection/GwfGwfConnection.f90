@@ -1,6 +1,7 @@
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH
+  use ConstantsModule, only: DZERO, DONE, DEM6, LENVARNAME, &
+                             LENCOMPONENTNAME, LENMEMPATH, LINELENGTH
   use CsrUtilsModule, only: getCSRIndex
   use SparseModule, only: sparsematrix
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
@@ -18,10 +19,20 @@ module GwfGwfConnectionModule
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
 
+  use DistributedDataModule
+  use InterfaceMapModule
+
   implicit none
   private
 
   public :: CastAsGwfGwfConnection
+
+  type, private :: DistVarType
+    character(len=LENVARNAME) :: var_name !< name of variable, e.g. "K11"
+    character(len=LENCOMPONENTNAME) :: component_name !< component, e.g. "NPF"
+    integer(I4B), dimension(:), allocatable :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
+                                                           !! which is before AD and CF
+  end type DistVarType
 
   !> Connecting a GWF model to other models in space, implements
   !! NumericalExchangeType so the solution can used this object to determine
@@ -39,6 +50,8 @@ module GwfGwfConnectionModule
     integer(I4B) :: iout = 0 !< the list file for the interface model
 
     real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< flowja through exchange faces
+    
+    type(DistVarType), dimension(:), pointer :: distVars => null()
 
   contains
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -63,6 +76,7 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: allocateScalars
     procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: setGridExtent
+    procedure, pass(this), private :: mapVariables
     procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchange
@@ -122,6 +136,11 @@ contains
 
     allocate (this%gwfInterfaceModel)
     this%interfaceModel => this%gwfInterfaceModel
+
+    allocate(this%distVars(3))
+    this%distVars(1) = DistVarType("X", "", (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(2) = DistVarType("IBOUND", "", (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(3) = DistVarType("XOLD", "", (/  BEFORE_AD, BEFORE_CF /))
 
   end subroutine gwfGwfConnection_ctor
 
@@ -236,7 +255,36 @@ contains
       end if
     end if
 
+    call this%mapVariables()
+
   end subroutine gwfgwfcon_ar
+
+
+  !> @brief Map interface variables to the specified
+  !< source data
+  subroutine mapVariables(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local    
+    type(InterfaceMap), pointer :: ifaceMap
+    integer(I4B) :: i, m
+
+    ! map distributed model variables for synchronization
+    ifaceMap => this%gridConnection%interfaceMap
+
+    ! loop over variables
+    do i = 1, size(this%distVars)
+      do m = 1, ifaceMap%nr_models
+        call distributed_data%map_model_data(this%gwfInterfaceModel%name, &
+                                            this%distVars(i)%component_name, &
+                                            this%distVars(i)%var_name, &
+                                            ifaceMap%model_ids(m), &
+                                            ifaceMap%node_map(m), &
+                                            this%distVars(i)%sync_stages )
+      end do
+    end do
+
+  end subroutine mapVariables
+
 
   !> @brief Read time varying data when required
   !<
@@ -309,9 +357,10 @@ contains
       idx = this%gridConnection%idxToGlobal(icell)%index
       model => this%gridConnection%idxToGlobal(icell)%model
 
-      this%x(icell) = model%x(idx)
-      this%gwfInterfaceModel%ibound(icell) = model%ibound(idx)
-      this%gwfInterfaceModel%xold(icell) = model%xold(idx)
+      !this%x(icell) = model%x(idx)
+      !this%gwfInterfaceModel%ibound(icell) = model%ibound(idx)
+      !this%gwfInterfaceModel%xold(icell) = model%xold(idx)
+
     end do
 
   end subroutine syncInterfaceModel

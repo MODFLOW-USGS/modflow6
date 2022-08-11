@@ -471,7 +471,7 @@ contains
     allocate (mt)
     !
     ! -- set memory type
-    mt%astr1d => astr1d
+    if (isize > 0) mt%astr1d => astr1d
     mt%isize = isize
     mt%name = name
     mt%path = mem_path

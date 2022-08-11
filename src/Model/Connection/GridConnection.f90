@@ -1,7 +1,7 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
-  use ConstantsModule, only: LENMEMPATH, DZERO, DPIO180
+  use ConstantsModule, only: LENMEMPATH, DZERO, DPIO180, LENMODELNAME
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface, arePointersEqual
@@ -11,6 +11,7 @@ module GridConnectionModule
   use CellWithNbrsModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
+  use InterfaceMapModule
   implicit none
   private
 
@@ -68,6 +69,8 @@ module GridConnectionModule
     type(ConnectionsType), pointer :: connections => null() !< sparse matrix with the connections
     integer(I4B), dimension(:), pointer :: connectionMask => null() !< to mask out connections from the amat coefficient calculation
 
+    type(InterfaceMap), pointer :: interfaceMap => null() !< describing how the interface maps onto the models it is built from
+
   contains
     ! public
     procedure, pass(this) :: construct
@@ -106,6 +109,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
     procedure, private, pass(this) :: createLookupTable
+    procedure, private, pass(this) :: createInterfaceMap
   end type
 
 contains
@@ -332,6 +336,8 @@ contains
 
     call this%buildConnections()
 
+    call this%createInterfaceMap()
+
   end subroutine extendConnection
 
   !> @brief Builds a sparse matrix holding all cell connections,
@@ -419,6 +425,72 @@ contains
 
   end subroutine buildConnections
 
+  !> @brief Build interface map object for outside use
+  !<
+  subroutine createInterfaceMap(this)
+    use VectorIntModule
+    class(GridConnectionType), intent(inout) :: this !< this grid connection
+    ! local
+    integer(I4B) :: i, m
+    integer(I4B) :: modelId
+    type(VectorInt) :: modelIds, srcIdxTmp, tgtIdxTmp
+
+    allocate(this%interfaceMap)
+
+    ! first get the participating models
+    call modelIds%init()
+    do i = 1, this%nrOfCells
+      modelId = this%idxToGlobal(i)%model%id
+      if (.not. modelIds%contains(modelId)) then
+        call modelIds%push_back(modelId)
+      end if
+    end do
+
+    ! allocate space
+    this%interfaceMap%nr_models = modelIds%size
+    allocate(this%interfaceMap%model_ids(modelIds%size))
+    do m = 1, modelIds%size
+      this%interfaceMap%model_ids(m) = modelIds%at(m)
+    end do
+    allocate(this%interfaceMap%node_map(modelIds%size))
+    allocate(this%interfaceMap%connection_map(modelIds%size))
+    
+    ! for each model part of this interface, ...
+    do m = 1, modelIds%size
+      
+      call srcIdxTmp%init()
+      call tgtIdxTmp%init()
+
+      ! store the index map
+      modelId = modelIds%at(m)
+      do i = 1, this%nrOfCells
+        if (modelId == this%idxToGlobal(i)%model%id) then
+          call srcIdxTmp%push_back(this%idxToGlobal(i)%index)
+          call tgtIdxTmp%push_back(i)
+        end if
+      end do
+
+      ! and copy into interface map
+      allocate(this%interfaceMap%node_map(m)%src_idx(srcIdxTmp%size))
+      do i = 1, srcIdxTmp%size
+        this%interfaceMap%node_map(m)%src_idx(i) = srcIdxTmp%at(i)
+      end do
+      allocate(this%interfaceMap%node_map(m)%tgt_idx(tgtIdxTmp%size))
+      do i = 1, tgtIdxTmp%size
+        this%interfaceMap%node_map(m)%tgt_idx(i) = tgtIdxTmp%at(i)
+      end do
+
+      ! clear
+      call srcIdxTmp%destroy()
+      call tgtIdxTmp%destroy()
+      
+    end do
+
+    ! clean up
+    call modelIds%destroy()
+        
+  end subroutine createInterfaceMap
+
   !< @brief Routine for finding neighbors-of-neighbors, recursively
   !<
   recursive subroutine addNeighbors(this, cellNbrs, depth, mask, interior)
@@ -441,6 +513,7 @@ contains
     newDepth = depth - 1
 
     conn => cellNbrs%cell%model%dis%con
+    !ia => getDistModelData(cellNbrs%cell%modelIdx, 'DIS/CON/IA')%aint1d
 
     ! find neighbors local to this cell by looping through grid connections
     do ipos = conn%ia(cellNbrs%cell%index) + 1, &
@@ -1086,6 +1159,7 @@ contains
     ! 6. generate ia/ja from sparse
 
   end subroutine getDiscretization
+
 
   !> @brief Deallocate grid connection resources
   !<

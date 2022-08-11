@@ -29,6 +29,7 @@ module NumericalSolutionModule
   use SimVariablesModule, only: iout, isim_mode
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
+  use DistributedDataModule
 
   implicit none
   private
@@ -1399,6 +1400,9 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     class(NumericalModelType), pointer :: mp => null()
 
+    ! synchronize for CF
+    call distributed_data%synchronize(BEFORE_AD)
+
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
@@ -1900,6 +1904,9 @@ contains
     !
     ! -- Set amat and rhs to zero
     call this%sln_reset()
+
+    ! synchronize for CF
+    call distributed_data%synchronize(BEFORE_CF)
 
     !
     ! -- Calculate the matrix terms for each exchange

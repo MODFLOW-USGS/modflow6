@@ -1,5 +1,5 @@
 module VectorIntModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use SimModule, only: ustop
   use ArrayHandlersModule, only: ExpandArray
   implicit none
@@ -21,6 +21,7 @@ module VectorIntModule
     procedure, pass(this) :: clear ! empties the vector, leaves memory unchanged
     procedure, pass(this) :: shrink_to_fit ! reduces the allocated memory to fit the actual vector size
     procedure, pass(this) :: destroy ! deletes the memory
+    procedure, pass(this) :: contains ! true when element already present
     ! private
     procedure, private, pass(this) :: expand
   end type VectorInt
@@ -140,5 +141,23 @@ contains ! module routines
     this%capacity = this%capacity + increment
 
   end subroutine expand
+
+  ! check if the element is already present
+  function contains(this, val) result(res)
+    class(VectorInt), intent(inout) :: this
+    integer(I4B) :: val
+    logical(LGP) :: res
+    ! local
+    integer(I4B) :: i
+
+    res = .false.
+    do i = 1, this%size
+      if (this%at(i) == val) then
+        res = .true.
+        return 
+      end if
+    end do  
+
+  end function contains
 
 end module VectorIntModule
