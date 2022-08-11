@@ -881,8 +881,7 @@ contains
       inobs = GetUnit()
       call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
       this%obs%inUnitObs = inobs
-    case ('ADVSCHEME')
-      !cdl todo: change to ADV_SCHEME?
+    case ('ADV_SCHEME')
       call this%parser%GetStringCaps(subkey)
       select case (subkey)
       case ('UPSTREAM')
@@ -898,14 +897,27 @@ contains
       end select
       write (iout, '(4x,a,a)') &
         'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    case ('XT3D_OFF')
-      !cdl todo: change to DSP_XT3D_OFF?
+    case ('DSP_XT3D_OFF')
       this%ixt3d = 0
       write (iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
-    case ('XT3D_RHS')
-      !cdl todo: change to DSP_XT3D_RHS?
+    case ('DSP_XT3D_RHS')
       this%ixt3d = 2
       write (iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
+    case ('ADVSCHEME')
+      errmsg = 'ADVSCHEME is no longer a valid keyword.  Use ADV_SCHEME &
+        &instead.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    case ('XT3D_OFF')
+      errmsg = 'XT3D_OFF is no longer a valid keyword.  Use DSP_XT3D_OFF &
+        &instead.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    case ('XT3D_RHS')
+      errmsg = 'XT3D_RHS is no longer a valid keyword.  Use DSP_XT3D_RHS &
+        &instead.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
     case default
       parsed = .false.
     end select
@@ -1220,12 +1232,24 @@ contains
   end function gwt_gwt_connects_model
 
   !> @brief Should interface model be used for this exchange
+  !!
+  !! For now this always returns true, since we do not support
+  !! a classic-style two-point flux approximation for GWT-GWT.
+  !! If we ever add logic to support a simpler non-interface
+  !! model flux calculation, then logic should be added here to
+  !! set the return accordingly.
   !<
   function use_interface_model(this) result(useIM)
     class(GwtExchangeType) :: this !<  GwtExchangeType
     logical(LGP) :: useIM !< true when interface model should be used
 
-    useIM = (this%ixt3d > 0)
+    ! if support is added in the future for simpler flow calcuation,
+    ! then set useIM as follows
+    !useIM = (this%ixt3d > 0)
+
+    ! For now set useIM to .true. since the interface model approach
+    ! must currently be used for any GWT-GWT exchange.
+    useIM = .true.
 
   end function
 

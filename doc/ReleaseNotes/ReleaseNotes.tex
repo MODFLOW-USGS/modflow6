@@ -242,12 +242,12 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	%	\item xxx
 	%\end{itemize}
 
-	%\underline{EXCHANGES}
-	%\begin{itemize}
-	%	\item Fixed a bug that occurred when flow and transport models were run simultaneously and auxiliary variable(s), for example CONCENTRATION, and mover were both active in the OPTIONS block of a boundary package (e.g., WEL). When running the flow and transport problems separately, no issues occurred.  The issue only seemed to be a problem when running flow and transport simultaneously because an indexing variable would get out of sync in SSM that reported an error message to the screen and prematurely exited MF6.  Two new autotests added: the first runs GWF & GWT independently while the second runs them simultaneously and would trigger the condition that this bug report aims to fix.
+	\underline{EXCHANGES}
+	\begin{itemize}
+		\item The GWT-GWT Exchange did not work when the XT3D\_OFF option was specified.  Fixed the program so that the XT3D dispersion terms can be shut off for a GWT-GWT Exchange.  GWT-GWT Exchange keywords were renamed from ADVSCHEME, XT3D\_OFF, and XT3D\_RHS to ADV\_SCHEME, DSP\_XT3D\_OFF, and DSP\_XT3D\_OFF, respectively, to more clearly indicate how the keywords relate to the underlying processes.  
 	%	\item xxx
 	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	
 \end{itemize}
