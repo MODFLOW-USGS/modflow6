@@ -288,12 +288,14 @@ def run_model(app, app0, example, fmd, silent=True, pool=False):
         elt = get_elapsed_time(buff)
         line += f" {elt} |"
     else:
+        print(buff)
         line += " -- |"
 
     if success0:
         elt0 = get_elapsed_time(buff0)
         line += f" {elt0} |"
     else:
+        print(buff0)
         line += " -- |"
 
     if success and success0:
