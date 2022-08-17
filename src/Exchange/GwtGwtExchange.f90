@@ -49,6 +49,7 @@ module GwtGwtExchangeModule
     ! -- names of the GWF models that are connected by this exchange
     character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of gwfmodel that corresponds to gwtmodel1
     character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of gwfmodel that corresponds to gwtmodel2
+    real(DP), dimension(:), pointer, contiguous :: gwfsimvals => null() !< simulated gwf flow rate for each exchange
     !
     ! -- pointers to gwt models
     type(GwtModelType), pointer :: gwtmodel1 => null() !< pointer to GWT Model 1
@@ -994,6 +995,7 @@ contains
     ! -- arrays
     call mem_deallocate(this%cond)
     call mem_deallocate(this%simvals)
+    call mem_deallocate(this%gwfsimvals, 'GWFSIMVALS', this%memoryPath) ! linked memory
     !
     ! -- output table objects
     if (associated(this%outputtab1)) then

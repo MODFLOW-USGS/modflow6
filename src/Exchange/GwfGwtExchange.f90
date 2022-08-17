@@ -301,6 +301,7 @@ contains
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
     use SimModule, only: store_error
     use SimVariablesModule, only: iout
+    use MemoryManagerModule, only: mem_checkin
     class(GwfGwtExchangeType) :: this !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GwtModelType), pointer :: gwtModel !< the transport model
@@ -378,6 +379,13 @@ contains
                 ' to ', trim(gwfEx%name), ' for GWT model ', &
                 trim(gwtModel%name)
               gwfExIdx = iex
+              if (gwtConn%exchangeIsOwned) then
+                gwtConn%gwtExchange%gwfsimvals => gwfEx%simvals
+                call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
+                                'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
+                                'SIMVALS', gwfEx%memoryPath)
+              end if
+              ! TODO_MJR: this should go after distributed_data module is up and running
               gwtConn%exgflowja => gwfEx%simvals
 
               !cdl link up mvt to mvr
@@ -415,11 +423,20 @@ contains
   !> @brief Links a GWT connection to its GWF counterpart
   !<
   subroutine link_connections(this, gwtConn, gwfConn)
+    use MemoryManagerModule, only: mem_checkin
     class(GwfGwtExchangeType) :: this !< this exchange
     class(GwtGwtConnectionType), pointer :: gwtConn !< GWT connection
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 
     !gwtConn%exgflowja => gwfConn%exgflowja
+    if (gwtConn%exchangeIsOwned) then
+      gwtConn%gwtExchange%gwfsimvals => gwfConn%gwfExchange%simvals
+      call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
+                      'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
+                      'SIMVALS', gwfConn%gwfExchange%memoryPath)
+    end if
+
+    ! TODO_MJR: this should go
     gwtConn%exgflowja => gwfConn%gwfExchange%simvals
 
     !cdl link up mvt to mvr

@@ -72,7 +72,6 @@ module GwtGwtConnectionModule
     ! local stuff
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
-    procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: setGridExtent
     procedure, pass(this), private :: setFlowToExchange
 
@@ -146,9 +145,11 @@ contains
 !> @brief define the GWT-GWT connection
 !<
   subroutine gwtgwtcon_df(this)
+    use ListsModule, only: baseexchangelist
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
     character(len=LENCOMPONENTNAME) :: imName
+    integer(I4B) :: ix    
 
     ! determine advection scheme (the GWT-GWT exchange
     ! has been read at this point)
@@ -195,7 +196,7 @@ contains
                                    SYNC_CONNECTIONS, '', &
                                    (/ BEFORE_AD, BEFORE_CF /))
     this%distVars(6) = DistVarType('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                                   SYNC_EXCHANGES, 'SIMVALS', &
+                                   SYNC_EXCHANGES, 'GWFSIMVALS', &
                                    (/ BEFORE_AD, BEFORE_CF /))
 
     call this%allocate_arrays()
@@ -225,6 +226,11 @@ contains
     ! connect pointers (used by BUY)
     this%conc => this%gwtInterfaceModel%x
     this%icbound => this%gwtInterfaceModel%ibound
+
+    ! connect exchange to GWF counterpart
+    do ix = 1, baseexchangelist%Count()
+
+    end do
 
     ! add connections from the interface model to solution matrix
     call this%spatialcon_connect()
@@ -409,9 +415,6 @@ contains
   subroutine gwtgwtcon_ad(this)
     class(GwtGwtConnectionType) :: this !< this connection
 
-    ! copy model data into interface model
-    !call this%syncInterfaceModel()
-
     ! recalculate dispersion ellipse
     if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
 
@@ -427,10 +430,6 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! copy model data into interface model
-    ! (when kiter == 1, this is already done in _ad)
-    !if (kiter > 1) call this%syncInterfaceModel()
-
     ! reset interface system
     do i = 1, this%nja
       this%amat(i) = 0.0_DP
@@ -443,53 +442,6 @@ contains
 
   end subroutine gwtgwtcon_cf
 
-!> @brief called during advance (*_ad), to copy the data
-!! from the models into the connection's placeholder arrays
-!<
-  subroutine syncInterfaceModel(this)
-    class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i, n, m, ipos, iposLoc
-    type(ConnectionsType), pointer :: imCon !< interface model connections
-    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
-    type(GlobalCellType), pointer :: boundaryCell, connectedCell
-    class(GwtModelType), pointer :: gwtModel
-    class(*), pointer :: modelPtr
-
-    ! for readability
-    imCon => this%gwtInterfaceModel%dis%con
-    toGlobal => this%gridConnection%idxToGlobal
-
-    ! loop over connections in interface
-    do n = 1, this%neq
-      do ipos = imCon%ia(n) + 1, imCon%ia(n + 1) - 1
-        m = imCon%ja(ipos)
-        if (associated(toGlobal(n)%model, toGlobal(m)%model)) then
-          ! internal connection for a model, copy from its flowja
-          iposLoc = getCSRIndex(toGlobal(n)%index, toGlobal(m)%index, &
-                                toGlobal(n)%model%ia, toGlobal(n)%model%ja)
-          modelPtr => toGlobal(n)%model
-          gwtModel => CastAsGwtModel(modelPtr)
-          this%gwfflowja(ipos) = gwtModel%fmi%gwfflowja(iposLoc)
-        end if
-      end do
-    end do
-
-    ! the flowja for exchange cells
-    do i = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell => this%gridConnection%boundaryCells(i)%cell
-      connectedCell => this%gridConnection%connectedCells(i)%cell
-      n = this%gridConnection%getInterfaceIndex(boundaryCell%index, &
-                                                boundaryCell%model)
-      m = this%gridConnection%getInterfaceIndex(connectedCell%index, &
-                                                connectedCell%model)
-      ipos = getCSRIndex(n, m, imCon%ia, imCon%ja)
-      this%gwfflowja(ipos) = this%exgflowja(i) * this%exgflowSign
-      ipos = getCSRIndex(m, n, imCon%ia, imCon%ja)
-      this%gwfflowja(ipos) = -this%exgflowja(i) * this%exgflowSign
-    end do
-
-  end subroutine syncInterfaceModel
 
   subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     class(GwtGwtConnectionType) :: this !< the connection

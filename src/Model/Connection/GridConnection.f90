@@ -1098,7 +1098,8 @@ contains
     class(GridConnectionType) :: this !< this grid connection
     type(InterfaceMapType), pointer :: interfaceMap
     ! local
-    integer(I4B) :: i, j, im, ix, mid, n
+    integer(I4B) :: i, j, iloc, jloc
+    integer(I4B) :: im, ix, mid, n
     integer(I4B) :: ipos, iposModel
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
@@ -1156,7 +1157,9 @@ contains
         do ipos = this%connections%ia(i), this%connections%ia(i+1) - 1
           j = this%connections%ja(ipos)
           if (mid /= this%idxToGlobal(j)%model%id) cycle
-          iposModel = this%idxToGlobal(j)%model%dis%con%getjaindex(i, j) 
+          iloc = this%idxToGlobal(i)%index
+          jloc = this%idxToGlobal(j)%index
+          iposModel = this%idxToGlobal(j)%model%dis%con%getjaindex(iloc, jloc) 
           call srcIdxTmp%push_back(iposModel)
           call tgtIdxTmp%push_back(ipos)
         end do
@@ -1201,9 +1204,8 @@ contains
         call tgtIdxTmp%push_back(ipos)
         call signTmp%push_back(1)
         ! and the reverse connection:
-        ipos = this%connections%getjaindex(j, i)
         call srcIdxTmp%push_back(n)
-        call tgtIdxTmp%push_back(ipos)
+        call tgtIdxTmp%push_back(this%connections%isym(ipos))
         call signTmp%push_back(-1)
       end do
         

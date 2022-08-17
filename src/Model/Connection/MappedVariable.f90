@@ -102,13 +102,11 @@ contains
     ! local
     integer(I4B) :: i, k
     
-    write(*,*) 'before sync ', this%src%name
     do i = 1, size(this%tgt_idx)
       do k = 1, size(this%src%adbl2d, dim=1)
         this%tgt%adbl2d(k, this%tgt_idx(i)) = this%src%adbl2d(k, this%src_idx(i))
       end do
-    end do    
-    write(*,*) 'after ', this%src%name
+    end do
 
   end subroutine sync_dbl2d
 
