@@ -62,31 +62,25 @@ contains
     type(InterfaceMapType), pointer :: interface_map
     ! local
     integer(I4B) :: i, m, e
+    type(IndexMapType), pointer :: idxMap
 
      ! loop over variables
     do i = 1, size(dist_vars)
-      if (dist_vars(i)%map_type == SYNC_NODES) then        
-        ! map node data for all models in this interface
+      if (dist_vars(i)%map_type == SYNC_NODES .or. &
+          dist_vars(i)%map_type == SYNC_CONNECTIONS) then        
+        ! map node data or connection data for all models in this interface
         do m = 1, interface_map%nr_models
+          
+          idxMap => interface_map%node_map(m)
+          if (dist_vars(i)%map_type == SYNC_CONNECTIONS) then
+            idxMap => interface_map%connection_map(m)
+          end if
           call distributed_data%map_model_data(sol_id, &
                                               dist_vars(i)%comp_name, &
                                               dist_vars(i)%subcomp_name, &
                                               dist_vars(i)%var_name, &
                                               interface_map%model_names(m), &
-                                              interface_map%node_map(m), &
-                                              dist_vars(i)%sync_stages)
-        end do
-      end if
-      if (dist_vars(i)%map_type == SYNC_CONNECTIONS) then        
-        ! map connection data for all models in this interface,
-        ! this includes connections managed by the exchanges
-        do m = 1, interface_map%nr_models
-          call distributed_data%map_model_data(sol_id, &
-                                              dist_vars(i)%comp_name, &
-                                              dist_vars(i)%subcomp_name, &
-                                              dist_vars(i)%var_name, &
-                                              interface_map%model_names(m), &
-                                              interface_map%connection_map(m), &
+                                              idxMap, &
                                               dist_vars(i)%sync_stages)
         end do
       end if
@@ -285,7 +279,7 @@ contains
   subroutine destroy(this)
     class(DistributedDataType) :: this
 
-    call this%print_variables()
+    !call this%print_variables()
     
     call this%variable_list%Clear(destroy=.true.)
     call this%remote_memory_list%clear()
