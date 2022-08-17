@@ -62,25 +62,31 @@ contains
     type(InterfaceMapType), pointer :: interface_map
     ! local
     integer(I4B) :: i, m, e
-    type(IndexMapType), pointer :: idxMap
 
-     ! loop over variables
+    ! loop over variables
     do i = 1, size(dist_vars)
-      if (dist_vars(i)%map_type == SYNC_NODES .or. &
-          dist_vars(i)%map_type == SYNC_CONNECTIONS) then        
-        ! map node data or connection data for all models in this interface
+      if (dist_vars(i)%map_type == SYNC_NODES) then        
+        ! map node data for all models in this interface
         do m = 1, interface_map%nr_models
-          
-          idxMap => interface_map%node_map(m)
-          if (dist_vars(i)%map_type == SYNC_CONNECTIONS) then
-            idxMap => interface_map%connection_map(m)
-          end if
           call distributed_data%map_model_data(sol_id, &
                                               dist_vars(i)%comp_name, &
                                               dist_vars(i)%subcomp_name, &
                                               dist_vars(i)%var_name, &
                                               interface_map%model_names(m), &
-                                              idxMap, &
+                                              interface_map%node_map(m), &
+                                              dist_vars(i)%sync_stages)
+        end do
+      end if
+      if (dist_vars(i)%map_type == SYNC_CONNECTIONS) then        
+        ! map connection data for all models in this interface,
+        ! this includes connections managed by the exchanges
+        do m = 1, interface_map%nr_models
+          call distributed_data%map_model_data(sol_id, &
+                                              dist_vars(i)%comp_name, &
+                                              dist_vars(i)%subcomp_name, &
+                                              dist_vars(i)%var_name, &
+                                              interface_map%model_names(m), &
+                                              interface_map%connection_map(m), &
                                               dist_vars(i)%sync_stages)
         end do
       end if
@@ -113,7 +119,7 @@ contains
     character(len=*), intent(in) :: tgt_comp_name
     character(len=*), intent(in) :: tgt_var_name
     character(len=*), intent(in) :: src_model_name
-    type(IndexMapType), pointer, intent(in) :: index_map
+    type(IndexMapType), intent(in) :: index_map
     integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
     ! local
     type(MemoryType), pointer :: src_mt, tgt_mt
@@ -185,7 +191,7 @@ contains
     character(len=*), intent(in) :: tgt_var_name
     character(len=*), intent(in) :: src_exg_name
     character(len=*), intent(in) :: src_var_name
-    type(IndexMapSgnType), pointer, intent(in) :: index_map_sgn
+    type(IndexMapSgnType), intent(in) :: index_map_sgn
     integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
     ! local
     type(MemoryType), pointer :: src_mt, tgt_mt

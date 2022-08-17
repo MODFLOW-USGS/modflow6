@@ -1203,7 +1203,7 @@ contains
         call srcIdxTmp%push_back(n)
         call tgtIdxTmp%push_back(ipos)
         call signTmp%push_back(1)
-        
+
         ! and the reverse connection:
         call srcIdxTmp%push_back(n)
         call tgtIdxTmp%push_back(this%connections%isym(ipos))

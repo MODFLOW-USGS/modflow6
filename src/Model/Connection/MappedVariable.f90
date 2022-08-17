@@ -76,7 +76,7 @@ contains
     class(MappedVariableType) :: this
     ! local
     integer(I4B) :: i
-
+    
     do i = 1, size(this%tgt_idx)
       this%tgt%adbl1d(this%tgt_idx(i)) = this%src%adbl1d(this%src_idx(i))
     end do
