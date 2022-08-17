@@ -1,19 +1,29 @@
 module InterfaceMapModule
   use KindModule, only: I4B
+  use ConstantsModule, only: LENMODELNAME, LENEXCHANGENAME
 
   implicit none
   private
 
-  type, public :: IndexMap
+  type, public :: IndexMapType
     integer(I4B), dimension(:), pointer :: src_idx
     integer(I4B), dimension(:), pointer :: tgt_idx
-  end type IndexMap
+  end type IndexMapType
 
-  type, public :: InterfaceMap
+  type, public :: IndexMapSgnType
+    integer(I4B), dimension(:), pointer :: src_idx
+    integer(I4B), dimension(:), pointer :: tgt_idx
+    integer(I4B), dimension(:), pointer :: sign
+  end type IndexMapSgnType
+
+  type, public :: InterfaceMapType
     integer(I4B) :: nr_models
-    integer(I4B), dimension(:), pointer :: model_ids
-    type(IndexMap), dimension(:), pointer :: node_map
-    type(IndexMap), dimension(:), pointer :: connection_map
-  end type InterfaceMap
+    character(len=LENMODELNAME), dimension(:), pointer :: model_names
+    integer(I4B) :: nr_exchanges
+    character(len=LENEXCHANGENAME), dimension(:), pointer :: exchange_names
+    type(IndexMapType), dimension(:), pointer :: node_map
+    type(IndexMapType), dimension(:), pointer :: connection_map
+    type(IndexMapSgnType), dimension(:), pointer :: exchange_map
+  end type InterfaceMapType
 
 end module InterfaceMapModule

@@ -3,7 +3,7 @@ module GwtGwtConnectionModule
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO, LENBUDTXT
   use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use SpatialModelConnectionModule
   use NumericalModelModule
   use GwtModule
@@ -13,6 +13,7 @@ module GwtGwtConnectionModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
+  use DistributedDataModule
 
   implicit none
   private
@@ -142,32 +143,6 @@ contains
 
   end subroutine allocate_scalars
 
-!> @brief Allocate array variables for this connection
-!<
-  subroutine allocate_arrays(this)
-    class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i
-
-    call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA', &
-                      this%memoryPath)
-    call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
-    call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
-    call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
-
-    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
-                      'EXGFLOWJAGWT', this%memoryPath)
-
-    do i = 1, size(this%gwfflowja)
-      this%gwfflowja = 0.0_DP
-    end do
-
-    do i = 1, this%neq
-      this%gwfsat = 0.0_DP
-    end do
-
-  end subroutine allocate_arrays
-
 !> @brief define the GWT-GWT connection
 !<
   subroutine gwtgwtcon_df(this)
@@ -198,19 +173,54 @@ contains
     call this%gwtInterfaceModel%gwtifmod_cr(imName, &
                                             this%iout, &
                                             this%gridConnection)
+    call this%gwtInterfaceModel%set_idsoln(this%gwtModel%idsoln)
     this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
+
+    allocate(this%distVars(6))   
+    this%distVars(1) = DistVarType('X', '', this%gwtInterfaceModel%name, &
+                                   SYNC_NODES, '', &
+                                   (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(2) = DistVarType('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
+                                   SYNC_NODES, '', &
+                                   (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(3) = DistVarType('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
+                                   SYNC_NODES, '', &
+                                   (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(4) = DistVarType('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, &
+                                   SYNC_NODES, '', &
+                                   (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(5) = DistVarType('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
+                                   SYNC_CONNECTIONS, '', &
+                                   (/ BEFORE_AD, BEFORE_CF /))
+    this%distVars(6) = DistVarType('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
+                                   SYNC_EXCHANGES, 'SIMVALS', &
+                                   (/ BEFORE_AD, BEFORE_CF /))
 
     call this%allocate_arrays()
 
     ! connect X, RHS, IBOUND, and flowja
     call this%spatialcon_setmodelptrs()
 
-    this%gwtInterfaceModel%fmi%gwfflowja => this%gwfflowja
-    this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
+    ! set up fmi arrays, assignment is equivalent to GWF-GWT
     this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
+    call mem_checkin(this%gwtInterfaceModel%fmi%gwfhead, &
+                     'GWFHEAD', this%gwtInterfaceModel%fmi%memoryPath, &
+                     'GWFHEAD', this%memoryPath)                        
+    this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
+    call mem_checkin(this%gwtInterfaceModel%fmi%gwfsat, &
+                     'GWFSAT', this%gwtInterfaceModel%fmi%memoryPath, &
+                     'GWFSAT', this%memoryPath)
     this%gwtInterfaceModel%fmi%gwfspdis => this%gwfspdis
+    call mem_checkin(this%gwtInterfaceModel%fmi%gwfspdis, &
+                     'GWFSPDIS', this%gwtInterfaceModel%fmi%memoryPath, &
+                     'GWFSPDIS', this%memoryPath)
+                     
+    this%gwtInterfaceModel%fmi%gwfflowja => this%gwfflowja
+    call mem_checkin(this%gwtInterfaceModel%fmi%gwfflowja, &
+                     'GWFFLOWJA', this%gwtInterfaceModel%fmi%memoryPath, &
+                     'GWFFLOWJA', this%memoryPath)
 
     ! connect pointers (used by BUY)
     this%conc => this%gwtInterfaceModel%x
@@ -220,6 +230,33 @@ contains
     call this%spatialcon_connect()
 
   end subroutine gwtgwtcon_df
+  
+!> @brief Allocate array variables for this connection
+!<
+  subroutine allocate_arrays(this)
+    class(GwtGwtConnectionType) :: this !< the connection
+    ! local
+    integer(I4B) :: i
+
+    call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA', &
+                      this%memoryPath)
+                      
+    call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
+    call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
+    call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
+
+    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
+                      'EXGFLOWJAGWT', this%memoryPath)
+
+    do i = 1, size(this%gwfflowja)
+      this%gwfflowja = 0.0_DP
+    end do
+
+    do i = 1, this%neq
+      this%gwfsat = 0.0_DP
+    end do
+
+  end subroutine allocate_arrays
 
 !> @brief Set required extent of the interface grid from
 !< the configuration
@@ -373,7 +410,7 @@ contains
     class(GwtGwtConnectionType) :: this !< this connection
 
     ! copy model data into interface model
-    call this%syncInterfaceModel()
+    !call this%syncInterfaceModel()
 
     ! recalculate dispersion ellipse
     if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
@@ -392,7 +429,7 @@ contains
 
     ! copy model data into interface model
     ! (when kiter == 1, this is already done in _ad)
-    if (kiter > 1) call this%syncInterfaceModel()
+    !if (kiter > 1) call this%syncInterfaceModel()
 
     ! reset interface system
     do i = 1, this%nja
@@ -412,7 +449,7 @@ contains
   subroutine syncInterfaceModel(this)
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
-    integer(I4B) :: i, n, m, ipos, iposLoc, idx
+    integer(I4B) :: i, n, m, ipos, iposLoc
     type(ConnectionsType), pointer :: imCon !< interface model connections
     type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
     type(GlobalCellType), pointer :: boundaryCell, connectedCell
@@ -450,27 +487,6 @@ contains
       this%gwfflowja(ipos) = this%exgflowja(i) * this%exgflowSign
       ipos = getCSRIndex(m, n, imCon%ia, imCon%ja)
       this%gwfflowja(ipos) = -this%exgflowja(i) * this%exgflowSign
-    end do
-
-    ! copy concentrations
-    do i = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(i)%index
-      this%x(i) = this%gridConnection%idxToGlobal(i)%model%x(idx)
-      this%gwtInterfaceModel%xold(i) = &
-        this%gridConnection%idxToGlobal(i)%model%xold(idx)
-    end do
-
-    ! copy fmi
-    do i = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(i)%index
-      modelPtr => this%gridConnection%idxToGlobal(i)%model
-      gwtModel => CastAsGwtModel(modelPtr)
-
-      this%gwfsat(i) = gwtModel%fmi%gwfsat(idx)
-      this%gwfhead(i) = gwtModel%fmi%gwfhead(idx)
-      this%gwfspdis(1, i) = gwtModel%fmi%gwfspdis(1, idx)
-      this%gwfspdis(2, i) = gwtModel%fmi%gwfspdis(2, idx)
-      this%gwfspdis(3, i) = gwtModel%fmi%gwfspdis(3, idx)
     end do
 
   end subroutine syncInterfaceModel
@@ -602,7 +618,8 @@ contains
 
     ! interface model
     call this%gwtInterfaceModel%model_da()
-    deallocate (this%gwtInterfaceModel)
+    deallocate(this%gwtInterfaceModel)
+    deallocate(this%distVars)
 
     ! dealloc base
     call this%spatialcon_da()

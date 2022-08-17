@@ -16,6 +16,7 @@ module Mf6CoreModule
                                           GetSpatialModelConnectionFromList
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
+  use DistributedDataModule
   implicit none
 
 contains
@@ -190,6 +191,7 @@ contains
     end do
     call simulation_da()
     call lists_da()
+    call distributed_data%destroy()
     !
     ! -- Write memory usage, elapsed time and terminate
     call mem_write_usage(iout)

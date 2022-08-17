@@ -148,6 +148,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -183,6 +184,10 @@ contains
     !
     ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
+    call mem_checkin(gwtmodel%fmi%gwfflowja, &
+                    'GWFFLOWJA', gwtmodel%fmi%memoryPath, &
+                    'FLOWJA', gwfmodel%memoryPath)
+
     !
     ! -- Set the npf flag so that specific discharge is available for
     !    transport calculations if dispersion is active
@@ -202,6 +207,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -244,8 +250,17 @@ contains
     !
     ! -- setup pointers to gwf variables allocated in gwf_ar
     gwtmodel%fmi%gwfhead => gwfmodel%x
+    call mem_checkin(gwtmodel%fmi%gwfhead, &
+                     'GWFHEAD', gwtmodel%fmi%memoryPath, &
+                     'X', gwfmodel%memoryPath)
     gwtmodel%fmi%gwfsat => gwfmodel%npf%sat
+    call mem_checkin(gwtmodel%fmi%gwfsat, &
+                     'GWFSAT', gwtmodel%fmi%memoryPath, &
+                     'SAT', gwfmodel%npf%memoryPath)
     gwtmodel%fmi%gwfspdis => gwfmodel%npf%spdis
+    call mem_checkin(gwtmodel%fmi%gwfspdis, &
+                     'GWFSPDIS', gwtmodel%fmi%memoryPath, &
+                     'SPDIS', gwfmodel%npf%memoryPath)
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are
     !    available after the gwf_ar routine is called.

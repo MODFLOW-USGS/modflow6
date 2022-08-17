@@ -1401,7 +1401,7 @@ contains
     class(NumericalModelType), pointer :: mp => null()
 
     ! synchronize for CF
-    call distributed_data%synchronize(BEFORE_AD)
+    call distributed_data%synchronize(this%id, BEFORE_AD)
 
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()
@@ -1906,7 +1906,7 @@ contains
     call this%sln_reset()
 
     ! synchronize for CF
-    call distributed_data%synchronize(BEFORE_CF)
+    call distributed_data%synchronize(this%id, BEFORE_CF)
 
     !
     ! -- Calculate the matrix terms for each exchange
@@ -1920,6 +1920,10 @@ contains
       mp => GetNumericalModelFromList(this%modellist, im)
       call mp%model_cf(kiter)
     end do
+
+    ! synchronize for FC
+    call distributed_data%synchronize(this%id, BEFORE_FC)
+
     !
     ! -- Add exchange coefficients to the solution
     do ic = 1, this%exchangelist%Count()

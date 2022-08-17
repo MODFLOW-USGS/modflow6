@@ -9,7 +9,9 @@ module SpatialModelConnectionModule
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use MemoryHelperModule, only: create_mem_path
-  use GridConnectionModule, only: GridConnectionType
+  use GridConnectionModule, only: GridConnectionType  
+  use InterfaceMapModule
+  use DistributedDataModule
   use ListModule, only: ListType
 
   implicit none
@@ -51,6 +53,8 @@ module SpatialModelConnectionModule
     ! these are not in the memory manager
     class(GridConnectionType), pointer :: gridConnection => null() !< facility to build the interface grid connection structure
     integer(I4B), dimension(:), pointer :: mapIdxToSln => null() !< mapping between interface matrix and the solution matrix
+    type(DistVarType), dimension(:), pointer :: distVars => null() !< interface data for synchronization (use in concrete connection)
+    type(InterfaceMapType), pointer :: interfaceMap => null() !< a map of the interface into models and exchanges
 
   contains
 
@@ -81,7 +85,8 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays
     procedure, private, pass(this) :: createCoefficientMatrix
-    procedure, private, pass(this) :: maskOwnerConnections
+    procedure, private, pass(this) :: maskOwnerConnections    
+    procedure, private, pass(this) :: mapVariables
 
   end type SpatialModelConnectionType
 
@@ -160,7 +165,23 @@ contains ! module procedures
                                     gc%idxToGlobal(localIdx)%model%moffset
     end do
 
+    ! set up mapping for distributed data
+    call this%mapVariables()
+
   end subroutine spatialcon_ar
+
+  !> @brief Map interface variables to the specified
+  !< source data
+  subroutine mapVariables(this)
+    class(SpatialModelConnectionType) :: this !< this connection
+
+    ! map distributed model variables for synchronization
+    this%interfaceMap => this%gridConnection%getInterfaceMap()
+    call distributed_data%map_variables(this%interfaceModel%idsoln, &
+                                        this%distVars, &
+                                        this%interfaceMap)
+
+  end subroutine mapVariables
 
   !> @brief set model pointers to connection
   !<
@@ -344,8 +365,10 @@ contains ! module procedures
     call mem_deallocate(this%active)
 
     call this%gridConnection%destroy()
-    deallocate (this%gridConnection)
-    deallocate (this%mapIdxToSln)
+    deallocate(this%gridConnection)
+    deallocate(this%interfaceMap)
+    deallocate(this%mapIdxToSln)
+
 
   end subroutine spatialcon_da
 

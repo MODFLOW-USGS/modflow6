@@ -68,10 +68,9 @@ module GridConnectionModule
     integer(I4B), pointer :: indexCount => null() !< counts the number of cells in the interface
     type(ConnectionsType), pointer :: connections => null() !< sparse matrix with the connections
     integer(I4B), dimension(:), pointer :: connectionMask => null() !< to mask out connections from the amat coefficient calculation
-
-    type(InterfaceMap), pointer :: interfaceMap => null() !< describing how the interface maps onto the models it is built from
-
+    
   contains
+    
     ! public
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars
@@ -81,8 +80,8 @@ module GridConnectionModule
     procedure, pass(this) :: extendConnection
     generic :: getInterfaceIndex => getInterfaceIndexByCell, &
       getInterfaceIndexByIndexModel
-
-    procedure, pass(this) :: getDiscretization
+    procedure, pass(this) :: getDiscretization    
+    procedure, pass(this) :: getInterfaceMap
 
     ! 'protected'
     procedure, pass(this) :: isPeriodic
@@ -109,7 +108,6 @@ module GridConnectionModule
     procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
     procedure, private, pass(this) :: createLookupTable
-    procedure, private, pass(this) :: createInterfaceMap
   end type
 
 contains
@@ -336,8 +334,6 @@ contains
 
     call this%buildConnections()
 
-    call this%createInterfaceMap()
-
   end subroutine extendConnection
 
   !> @brief Builds a sparse matrix holding all cell connections,
@@ -424,73 +420,7 @@ contains
     call this%createLookupTable()
 
   end subroutine buildConnections
-
-  !> @brief Build interface map object for outside use
-  !<
-  subroutine createInterfaceMap(this)
-    use VectorIntModule
-    class(GridConnectionType), intent(inout) :: this !< this grid connection
-    ! local
-    integer(I4B) :: i, m
-    integer(I4B) :: modelId
-    type(VectorInt) :: modelIds, srcIdxTmp, tgtIdxTmp
-
-    allocate(this%interfaceMap)
-
-    ! first get the participating models
-    call modelIds%init()
-    do i = 1, this%nrOfCells
-      modelId = this%idxToGlobal(i)%model%id
-      if (.not. modelIds%contains(modelId)) then
-        call modelIds%push_back(modelId)
-      end if
-    end do
-
-    ! allocate space
-    this%interfaceMap%nr_models = modelIds%size
-    allocate(this%interfaceMap%model_ids(modelIds%size))
-    do m = 1, modelIds%size
-      this%interfaceMap%model_ids(m) = modelIds%at(m)
-    end do
-    allocate(this%interfaceMap%node_map(modelIds%size))
-    allocate(this%interfaceMap%connection_map(modelIds%size))
-    
-    ! for each model part of this interface, ...
-    do m = 1, modelIds%size
-      
-      call srcIdxTmp%init()
-      call tgtIdxTmp%init()
-
-      ! store the index map
-      modelId = modelIds%at(m)
-      do i = 1, this%nrOfCells
-        if (modelId == this%idxToGlobal(i)%model%id) then
-          call srcIdxTmp%push_back(this%idxToGlobal(i)%index)
-          call tgtIdxTmp%push_back(i)
-        end if
-      end do
-
-      ! and copy into interface map
-      allocate(this%interfaceMap%node_map(m)%src_idx(srcIdxTmp%size))
-      do i = 1, srcIdxTmp%size
-        this%interfaceMap%node_map(m)%src_idx(i) = srcIdxTmp%at(i)
-      end do
-      allocate(this%interfaceMap%node_map(m)%tgt_idx(tgtIdxTmp%size))
-      do i = 1, tgtIdxTmp%size
-        this%interfaceMap%node_map(m)%tgt_idx(i) = tgtIdxTmp%at(i)
-      end do
-
-      ! clear
-      call srcIdxTmp%destroy()
-      call tgtIdxTmp%destroy()
-      
-    end do
-
-    ! clean up
-    call modelIds%destroy()
-        
-  end subroutine createInterfaceMap
-
+  
   !< @brief Routine for finding neighbors-of-neighbors, recursively
   !<
   recursive subroutine addNeighbors(this, cellNbrs, depth, mask, interior)
@@ -1160,6 +1090,162 @@ contains
 
   end subroutine getDiscretization
 
+  !> @brief Build interface map object for outside use,
+  !< (caller owns the memory)
+  function getInterfaceMap(this) result(interfaceMap) 
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
+    use VectorIntModule
+    class(GridConnectionType) :: this !< this grid connection
+    type(InterfaceMapType), pointer :: interfaceMap
+    ! local
+    integer(I4B) :: i, j, im, ix, mid, n
+    integer(I4B) :: ipos, iposModel
+    type(VectorInt) :: modelIds
+    type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
+    class(DisConnExchangeType), pointer :: connEx
+
+    allocate(interfaceMap)
+
+    ! first get the participating models
+    call modelIds%init()
+    do i = 1, this%nrOfCells
+      if (.not. modelIds%contains(this%idxToGlobal(i)%model%id)) then
+        call modelIds%push_back(this%idxToGlobal(i)%model%id)
+      end if
+    end do
+
+    ! allocate space
+    interfaceMap%nr_models = modelIds%size
+    allocate(interfaceMap%model_names(modelIds%size))
+    allocate(interfaceMap%node_map(modelIds%size))
+    allocate(interfaceMap%connection_map(modelIds%size))
+    
+    ! for each model part of this interface, ...
+    do im = 1, modelIds%size
+      mid = modelIds%at(im)
+      interfaceMap%model_names(im) = get_model_name(mid)
+      call srcIdxTmp%init()
+      call tgtIdxTmp%init()
+
+      ! store the node map for this model
+      do i = 1, this%nrOfCells
+        if (mid == this%idxToGlobal(i)%model%id) then
+          call srcIdxTmp%push_back(this%idxToGlobal(i)%index)
+          call tgtIdxTmp%push_back(i)
+        end if
+      end do
+
+      ! and copy into interface map
+      allocate(interfaceMap%node_map(im)%src_idx(srcIdxTmp%size))
+      allocate(interfaceMap%node_map(im)%tgt_idx(tgtIdxTmp%size))
+      do i = 1, srcIdxTmp%size
+        interfaceMap%node_map(im)%src_idx(i) = srcIdxTmp%at(i)
+        interfaceMap%node_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
+      end do
+
+      call srcIdxTmp%destroy()
+      call tgtIdxTmp%destroy()
+
+      ! and for connections
+      call srcIdxTmp%init()
+      call tgtIdxTmp%init()
+
+      ! store the connection map for this model
+      do i = 1, this%nrOfCells
+        if (mid /= this%idxToGlobal(i)%model%id) cycle
+        do ipos = this%connections%ia(i), this%connections%ia(i+1) - 1
+          j = this%connections%ja(ipos)
+          if (mid /= this%idxToGlobal(j)%model%id) cycle
+          iposModel = this%idxToGlobal(j)%model%dis%con%getjaindex(i, j) 
+          call srcIdxTmp%push_back(iposModel)
+          call tgtIdxTmp%push_back(ipos)
+        end do
+      end do
+
+      ! copy into interface map
+      allocate(interfaceMap%connection_map(im)%src_idx(srcIdxTmp%size))
+      allocate(interfaceMap%connection_map(im)%tgt_idx(tgtIdxTmp%size))
+      do i = 1, srcIdxTmp%size
+        interfaceMap%connection_map(im)%src_idx(i) = srcIdxTmp%at(i)
+        interfaceMap%connection_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
+      end do
+      
+      call srcIdxTmp%destroy()
+      call tgtIdxTmp%destroy()
+      
+    end do
+
+    call modelIds%destroy()
+
+    ! for each exchange that is part of this interface
+    interfaceMap%nr_exchanges = this%exchanges%Count()
+    allocate(interfaceMap%exchange_names(interfaceMap%nr_exchanges))
+    allocate(interfaceMap%exchange_map(interfaceMap%nr_exchanges))
+    do ix = 1, this%exchanges%Count()
+      
+      ! all exchanges in this list should have at
+      ! least one relevant connection for this map
+      connEx => GetDisConnExchangeFromList(this%exchanges, ix)
+      interfaceMap%exchange_names(ix) = connEx%name
+
+      call srcIdxTmp%init()
+      call tgtIdxTmp%init()
+      call signTmp%init()
+
+      do n = 1, connEx%nexg
+        i = this%getInterfaceIndex(connEx%nodem1(n), connEx%model1)
+        j = this%getInterfaceIndex(connEx%nodem2(n), connEx%model2)
+        if (i == -1 .or. j == -1) cycle ! not all exchanges are part of the interface
+        ipos = this%connections%getjaindex(i, j)
+        call srcIdxTmp%push_back(n)
+        call tgtIdxTmp%push_back(ipos)
+        call signTmp%push_back(1)
+        ! and the reverse connection:
+        ipos = this%connections%getjaindex(j, i)
+        call srcIdxTmp%push_back(n)
+        call tgtIdxTmp%push_back(ipos)
+        call signTmp%push_back(-1)
+      end do
+        
+      allocate(interfaceMap%exchange_map(ix)%src_idx(srcIdxTmp%size))
+      allocate(interfaceMap%exchange_map(ix)%tgt_idx(tgtIdxTmp%size))
+      allocate(interfaceMap%exchange_map(ix)%sign(signTmp%size))
+      do i = 1, srcIdxTmp%size
+        interfaceMap%exchange_map(ix)%src_idx(i) = srcIdxTmp%at(i)
+        interfaceMap%exchange_map(ix)%tgt_idx(i) = tgtIdxTmp%at(i)
+        interfaceMap%exchange_map(ix)%sign(i) = signTmp%at(i)
+      end do
+
+      call srcIdxTmp%destroy()
+      call tgtIdxTmp%destroy()
+      call signTmp%destroy()
+
+    end do
+        
+  end function getInterfaceMap
+
+  !> @brief Helper function to get model names when ids are given
+  !<
+  function get_model_name(id) result(name)
+    use ListsModule, only: basemodellist
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
+    use MemoryHelperModule, only: create_mem_path
+    integer(I4B) :: id
+    character(len=LENMODELNAME) :: name
+    ! local
+    class(BaseModelType), pointer :: model
+    integer(I4B) :: im
+
+    name = ''
+    do im = 1, basemodellist%Count()
+      model => GetBaseModelFromList(basemodellist, im)
+      if (model%id == id) then
+        name = model%name
+        return
+      end if  
+    end do
+
+  end function get_model_name
 
   !> @brief Deallocate grid connection resources
   !<
