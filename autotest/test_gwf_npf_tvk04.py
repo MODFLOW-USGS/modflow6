@@ -156,14 +156,14 @@ def build_model(idx, dir):
     ghbspd = []
     ghbcond = time_varying_k[1] * delz * delc / (0.5 * delr)
     for i in range(nrow):
-        ghbspd.append([(nlay-1, i, ncol-1), top, ghbcond])
+        ghbspd.append([(nlay - 1, i, ncol - 1), top, ghbcond])
 
     ghb = flopy.mf6.ModflowGwfghb(
         gwf,
         stress_period_data=ghbspd,
         save_flows=False,
         print_flows=True,
-        pname="GHB-1"
+        pname="GHB-1",
     )
 
     # output control
@@ -203,7 +203,9 @@ def eval_model(sim):
 
     # comment when done testing
     print(f"Total outflow in stress period 1 is {str(sp_x[0][8])}")
-    print(f"Total outflow in stress period 2 after increasing K33 is {str(sp_x[1][8])}")
+    print(
+        f"Total outflow in stress period 2 after increasing K33 is {str(sp_x[1][8])}"
+    )
     errmsg = f"Expect higher flow rate in period 2 compared to period 1, but found equal or higher flow rate in period 1"
     assert 2.0 * sp_x[0][8] < sp_x[1][8], errmsg
 

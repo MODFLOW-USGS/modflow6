@@ -128,7 +128,7 @@ def build_model(idx, dir):
     # problem
     tvkspd = {}
     kper = 1
-    k33 = 1000.
+    k33 = 1000.0
     spd = []
     for k in range(nlay):
         for i in range(nrow):
@@ -157,14 +157,14 @@ def build_model(idx, dir):
     ghbspd = []
     ghbcond = hk * delz * delc / (0.5 * delr)
     for i in range(nrow):
-        ghbspd.append([(0, i, ncol-1), top, ghbcond])
+        ghbspd.append([(0, i, ncol - 1), top, ghbcond])
 
     ghb = flopy.mf6.ModflowGwfghb(
         gwf,
         stress_period_data=ghbspd,
         save_flows=False,
         print_flows=True,
-        pname="GHB-1"
+        pname="GHB-1",
     )
 
     # output control
@@ -204,7 +204,9 @@ def eval_model(sim):
 
     # comment when done testing
     print(f"Total outflow in stress period 1 is {str(sp_x[0][8])}")
-    print(f"Total outflow in stress period 2 after increasing K33 should have no effect on final solution")
+    print(
+        f"Total outflow in stress period 2 after increasing K33 should have no effect on final solution"
+    )
     errmsg = f"Period 2 budget should be exactly the same as period 1"
     assert sp_x[0][8] == sp_x[1][8], errmsg
 
