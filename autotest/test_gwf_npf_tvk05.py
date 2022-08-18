@@ -35,7 +35,7 @@ time_varying_k = [1.0, 10.0]
 
 
 def build_model(idx, dir):
-    nlay, nrow, ncol = 3, 3, 3
+    nlay, nrow, ncol = 1, 3, 3
     perlen = [100.0, 100.0]
     nper = len(perlen)
     nstp = nper * [1]
@@ -45,7 +45,7 @@ def build_model(idx, dir):
     delz = 1.0
     top = 1.0
     laytyp = 0
-    botm = [0.0, -1.0, -2.0]
+    botm = [0.0]
     strt = 1.0
     hk = 0.1
 
@@ -123,16 +123,17 @@ def build_model(idx, dir):
     )
 
     # tvk
-    # k33 not originally specified in NPF, but specifying an
-    # alternate value in the 2nd stress period to test MF6
+    # k33 not originally specified in NPF; however, specifying
+    # it in tvk in this test should not change the solution to the
+    # problem
     tvkspd = {}
     kper = 1
-    hydraulic_conductivity = time_varying_k[kper]
+    k33 = 1000.
     spd = []
     for k in range(nlay):
         for i in range(nrow):
             for j in range(ncol):
-                spd.append([(k, i, j), "K33", hydraulic_conductivity])
+                spd.append([(k, i, j), "K33", k33])
     tvkspd[kper] = spd
 
     tvk = flopy.mf6.ModflowUtltvk(
@@ -154,9 +155,9 @@ def build_model(idx, dir):
 
     # ghb files
     ghbspd = []
-    ghbcond = time_varying_k[1] * delz * delc / (0.5 * delr)
+    ghbcond = hk * delz * delc / (0.5 * delr)
     for i in range(nrow):
-        ghbspd.append([(nlay-1, i, ncol-1), top, ghbcond])
+        ghbspd.append([(0, i, ncol-1), top, ghbcond])
 
     ghb = flopy.mf6.ModflowGwfghb(
         gwf,
@@ -203,9 +204,9 @@ def eval_model(sim):
 
     # comment when done testing
     print(f"Total outflow in stress period 1 is {str(sp_x[0][8])}")
-    print(f"Total outflow in stress period 2 after increasing K33 is {str(sp_x[1][8])}")
-    errmsg = f"Expect higher flow rate in period 2 compared to period 1, but found equal or higher flow rate in period 1"
-    assert 2.0 * sp_x[0][8] < sp_x[1][8], errmsg
+    print(f"Total outflow in stress period 2 after increasing K33 should have no effect on final solution")
+    errmsg = f"Period 2 budget should be exactly the same as period 1"
+    assert sp_x[0][8] == sp_x[1][8], errmsg
 
     return
 
