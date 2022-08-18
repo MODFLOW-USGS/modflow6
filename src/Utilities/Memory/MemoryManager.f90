@@ -1092,7 +1092,8 @@ contains
   !<
   subroutine reallocate_charstr1d(astr, nrow, name, mem_path)
     integer(I4B), intent(in) :: nrow !< number of rows
-    type(CharacterStringType), dimension(:), pointer, contiguous, intent(inout) :: astr !< the reallocated charstring array
+    type(CharacterStringType), dimension(:), pointer, contiguous, &
+      intent(inout) :: astr !< the reallocated charstring array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
     ! -- local
@@ -1926,7 +1927,8 @@ contains
   !!
   !<
   subroutine deallocate_charstr1d(astr1d, name, mem_path)
-    type(CharacterStringType), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< array of strings
+    type(CharacterStringType), dimension(:), pointer, contiguous, &
+      intent(inout) :: astr1d !< array of strings
     character(len=*), optional, intent(in) :: name !< variable name
     character(len=*), optional, intent(in) :: mem_path !< path where variable is stored
     ! -- local

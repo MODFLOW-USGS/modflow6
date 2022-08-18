@@ -35,7 +35,8 @@ module MemoryTypeModule
     real(DP), dimension(:), pointer, contiguous :: adbl1d => null() !< pointer to 1d double array
     real(DP), dimension(:, :), pointer, contiguous :: adbl2d => null() !< pointer to 2d double array
     real(DP), dimension(:, :, :), pointer, contiguous :: adbl3d => null() !< pointer to 3d double array
-    type(CharacterStringType), dimension(:), pointer, contiguous :: acharstr1d => null() !< pointer to the 1d character string array
+    type(CharacterStringType), dimension(:), pointer, contiguous :: &
+      acharstr1d => null() !< pointer to the 1d character string array
   contains
     procedure :: table_entry
     procedure :: mt_associated
