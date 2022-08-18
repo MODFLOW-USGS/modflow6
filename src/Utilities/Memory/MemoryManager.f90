@@ -536,10 +536,10 @@ contains
     call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
-    isize = nrow  ! todo: need to tabulate isize somehow
+    isize = nrow ! todo: need to tabulate isize somehow
     !
     ! -- allocate deferred length string array
-    allocate(acharstr1d(nrow), stat=istat, errmsg=errmsg)
+    allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
     !
     ! -- check for error condition
     if (istat /= 0) then
@@ -1951,7 +1951,8 @@ contains
       end do
     end if
     if (.not. found .and. size(astr1d) > 0) then
-      call store_error('programming error in deallocate_charstr1d', terminate=.TRUE.)
+      call store_error('programming error in deallocate_charstr1d', &
+                       terminate=.TRUE.)
     else
       if (mt%master) then
         deallocate (astr1d)

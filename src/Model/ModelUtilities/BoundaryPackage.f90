@@ -1241,12 +1241,12 @@ contains
         case ('AUX', 'AUXILIARY')
           !
           ! -- error if aux variable already specified
-          if(this%naux > 0) then
-            write(errmsg,'(a)') &
+          if (this%naux > 0) then
+            write (errmsg, '(a)') &
               'Auxiliary variables already specified. Auxiliary &
               &variables must be specified on one line in the options block.'
             call store_error(errmsg)
-          endif
+          end if
           !
           ! -- parse the remaining part of the line into caux
           call this%parser%GetRemainingLine(line)
@@ -1259,7 +1259,7 @@ contains
                               'AUXNAME_CST', this%memoryPath)
           do n = 1, this%naux
             if (len_trim(caux(n)) > LENAUXNAME) then
-              write(errmsg, '(a, a, a, i0, a, i0, a)') &
+              write (errmsg, '(a, a, a, i0, a, i0, a)') &
                 'Found auxiliary variable (', trim(caux(n)), &
                 ') with a name of size ', len_trim(caux(n)), &
                 '. Auxiliary variable names must be len than or equal&
@@ -1267,12 +1267,12 @@ contains
               call store_error(errmsg)
             end if
             call upcase(caux(n))
-            this%auxname(n) = caux(n)(1:LENAUXNAME)
-            this%auxname_cst(n) = caux(n)(1:LENAUXNAME)
-            if(this%iout > 0) then
-              write(this%iout, "(4X,'AUXILIARY ',a,' VARIABLE: ',A)")                     &
+            this%auxname(n) = caux(n) (1:LENAUXNAME)
+            this%auxname_cst(n) = caux(n) (1:LENAUXNAME)
+            if (this%iout > 0) then
+              write (this%iout, "(4X,'AUXILIARY ',a,' VARIABLE: ',A)") &
                 trim(adjustl(this%text)), trim(adjustl(caux(n)))
-            endif
+            end if
           end do
           deallocate (caux)
         case ('SAVE_FLOWS')
