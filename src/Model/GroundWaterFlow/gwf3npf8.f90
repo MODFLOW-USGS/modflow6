@@ -146,7 +146,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    type(GwfNpftype), pointer :: npfobj
+    type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -187,7 +187,7 @@ contains
     use SimModule, only: store_error
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
-    class(GwfNpftype) :: this !< instance of the NPF package
+    class(GwfNpfType) :: this !< instance of the NPF package
     class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(Xt3dType), pointer :: xt3d !< the pointer to the XT3D 'package'
     integer(I4B), intent(in) :: ingnc !< ghostnodes enabled? (>0 means yes)
@@ -243,7 +243,7 @@ contains
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
@@ -266,7 +266,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
@@ -293,7 +293,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfNpftype) :: this !< instance of the NPF package
+    class(GwfNpfType) :: this !< instance of the NPF package
     type(GwfIcType), pointer, intent(in) :: ic !< initial conditions
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound !< model ibound array
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
@@ -1024,7 +1024,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- TVK
@@ -1109,7 +1109,7 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
@@ -1208,7 +1208,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     integer(I4B), intent(in) :: ncells
     integer(I4B), intent(in) :: njas
     ! -- local
@@ -1285,7 +1285,7 @@ contains
     use SimModule, only: store_error, count_errors
     implicit none
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword, fname
     integer(I4B) :: ierr
@@ -1504,7 +1504,7 @@ contains
   end subroutine read_options
 
   subroutine set_options(this, options)
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     type(GwfNpfOptionsType), intent(in) :: options
 
     this%icellavg = options%icellavg
@@ -1530,7 +1530,7 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     ! -- local
     integer(I4B) :: ival
     character(len=LINELENGTH) :: keyword, errmsg
@@ -1620,7 +1620,7 @@ contains
     use SimModule, only: store_error, count_errors
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
@@ -1689,7 +1689,7 @@ contains
                                    mem_reassignptr
     use SimModule, only: store_error, count_errors
     ! -- dummy
-    class(GwfNpftype) :: this
+    class(GwfNpfType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n, ierr
@@ -1754,6 +1754,15 @@ contains
     ! -- set ik33 flag
     if (lname(3)) then
       this%ik33 = 1
+    else if (.not. lname(3) .and. this%intvk > 0) then
+      this%ik33 = 1
+      if (this%ik33overk /= 0) then
+        write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
+        call store_error(errmsg)
+      end if
+      write (this%iout, '(1x, a)') 'K33 not provided but TVK is active. &
+          &Setting K33 = K to support possible TVK adjustments.'
+      call this%dis%fill_grid_array(this%k11, this%k33)
     else
       if (this%ik33overk /= 0) then
         write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
@@ -1767,6 +1776,15 @@ contains
     ! -- set ik22 flag
     if (lname(4)) then
       this%ik22 = 1
+    else if (.not. lname(4) .and. this%intvk > 0) then
+      this%ik22 = 1
+      if (this%ik22overk /= 0) then
+        write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
+        call store_error(errmsg)
+      end if
+      write (this%iout, '(1x, a)') 'K22 not provided but TVK is active. &
+          &Setting K22 = K to support possible TVK adjustments.'
+      call this%dis%fill_grid_array(this%k11, this%k22)
     else
       if (this%ik22overk /= 0) then
         write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
