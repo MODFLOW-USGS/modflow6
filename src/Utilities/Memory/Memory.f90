@@ -5,6 +5,7 @@ module MemoryTypeModule
                              LENVARNAME, MAXMEMRANK, LENMEMTYPE, &
                              TABSTRING, TABINTEGER, &
                              TABCENTER, TABLEFT, TABRIGHT
+  use CharacterStringModule, only: CharacterStringType
   use TableModule, only: TableType
   use MemoryHelperModule, only: create_mem_address
 
@@ -34,6 +35,7 @@ module MemoryTypeModule
     real(DP), dimension(:), pointer, contiguous :: adbl1d => null() !< pointer to 1d double array
     real(DP), dimension(:, :), pointer, contiguous :: adbl2d => null() !< pointer to 2d double array
     real(DP), dimension(:, :, :), pointer, contiguous :: adbl3d => null() !< pointer to 3d double array
+    type(CharacterStringType), dimension(:), pointer, contiguous :: acharstr1d => null() !< pointer to the 1d character string array
   contains
     procedure :: table_entry
     procedure :: mt_associated
@@ -92,6 +94,7 @@ contains
     if (associated(this%adbl1d)) al = .true.
     if (associated(this%adbl2d)) al = .true.
     if (associated(this%adbl3d)) al = .true.
+    if (associated(this%acharstr1d)) al = .true.
   end function mt_associated
 
 end module MemoryTypeModule

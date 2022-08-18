@@ -146,8 +146,8 @@
 		<Filter Name="LinearMethods">
 		<File RelativePath="..\src\Solution\LinearMethods\ims8base.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8linear.f90"/>
-		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/>
-		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/></Filter>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
@@ -195,6 +195,7 @@
 		<File RelativePath="..\src\Utilities\BudgetFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetObject.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetTerm.f90"/>
+		<File RelativePath="..\src\Utilities\CharString.f90"/>
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
 		<File RelativePath="..\src\Utilities\compilerversion.F90">
 			<FileConfiguration Name="Debug|Win32">

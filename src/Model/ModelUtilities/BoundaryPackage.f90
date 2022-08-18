@@ -30,6 +30,7 @@ module BndModule
   use BaseDisModule, only: DisBaseType
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
 
@@ -49,6 +50,8 @@ module BndModule
     character(len=LENPACKAGENAME) :: text = '' !< text string for package flow term
     character(len=LENAUXNAME), dimension(:), pointer, &
       contiguous :: auxname => null() !< vector of auxname
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: auxname_cst => null() !< vector of auxname
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: boundname => null() !< vector of boundnames
     !
@@ -899,6 +902,7 @@ contains
     call mem_deallocate(this%auxvar, 'AUXVAR', this%memoryPath)
     call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
     call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
+    call mem_deallocate(this%auxname_cst, 'AUXNAME_CST', this%memoryPath)
     nullify (this%icelltype)
     !
     ! -- pakmvrobj
@@ -1014,6 +1018,7 @@ contains
     !
     ! -- allocate text strings
     call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
+    call mem_allocate(this%auxname_cst, 0, 'AUXNAME_CST', this%memoryPath)
     !
     ! -- Initialize variables
     this%isadvpak = 0
@@ -1188,7 +1193,7 @@ contains
   !<
   subroutine bnd_read_options(this)
     ! -- modules
-    use InputOutputModule, only: urdaux
+    use InputOutputModule, only: ParseLine, upcase
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy variables
     class(BndType), intent(inout) :: this !< BndType object
@@ -1197,10 +1202,7 @@ contains
     character(len=LINELENGTH) :: fname
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME) :: sfacauxname
-    character(len=LENAUXNAME), dimension(:), allocatable :: caux
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
+    character(len=LINELENGTH), dimension(:), allocatable :: caux
     integer(I4B) :: n
     integer(I4B) :: ierr
     integer(I4B) :: inobs
@@ -1237,14 +1239,40 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case ('AUX', 'AUXILIARY')
+          !
+          ! -- error if aux variable already specified
+          if(this%naux > 0) then
+            write(errmsg,'(a)') &
+              'Auxiliary variables already specified. Auxiliary &
+              &variables must be specified on one line in the options block.'
+            call store_error(errmsg)
+          endif
+          !
+          ! -- parse the remaining part of the line into caux
           call this%parser%GetRemainingLine(line)
-          lloc = 1
-          call urdaux(this%naux, this%parser%iuactive, this%iout, lloc, &
-                      istart, istop, caux, line, this%text)
+          call ParseLine(line, this%naux, caux)
+          !
+          ! -- reallocate auxname and fill with caux
           call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
                               'AUXNAME', this%memoryPath)
+          call mem_reallocate(this%auxname_cst, this%naux, &
+                              'AUXNAME_CST', this%memoryPath)
           do n = 1, this%naux
-            this%auxname(n) = caux(n)
+            if (len_trim(caux(n)) > LENAUXNAME) then
+              write(errmsg, '(a, a, a, i0, a, i0, a)') &
+                'Found auxiliary variable (', trim(caux(n)), &
+                ') with a name of size ', len_trim(caux(n)), &
+                '. Auxiliary variable names must be len than or equal&
+                & to ', LENAUXNAME, ' characters.'
+              call store_error(errmsg)
+            end if
+            call upcase(caux(n))
+            this%auxname(n) = caux(n)(1:LENAUXNAME)
+            this%auxname_cst(n) = caux(n)(1:LENAUXNAME)
+            if(this%iout > 0) then
+              write(this%iout, "(4X,'AUXILIARY ',a,' VARIABLE: ',A)")                     &
+                trim(adjustl(this%text)), trim(adjustl(caux(n)))
+            endif
           end do
           deallocate (caux)
         case ('SAVE_FLOWS')
@@ -1362,7 +1390,7 @@ contains
       ! -- Assign mult column
       this%iauxmultcol = 0
       do n = 1, this%naux
-        if (sfacauxname == this%auxname(n)) then
+        if (sfacauxname == this%auxname_cst(n)) then
           this%iauxmultcol = n
           exit
         end if
