@@ -1752,17 +1752,13 @@ contains
     end if
     !
     ! -- set ik33 flag
-    if (lname(3)) then
-      this%ik33 = 1
-    else if (.not. lname(3) .and. this%intvk > 0) then
-      this%ik33 = 1
-      if (this%ik33overk /= 0) then
-        write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
-        call store_error(errmsg)
+    if (lname(3) .or. this%intvk > 0) then
+      if (this%intvk > 0 .and. this%ik33 == 0) then
+        write (this%iout, '(1x, a)') 'K33 not provided but TVK is active. &
+            &Setting K33 = K to support possible TVK adjustments.'
+        call this%dis%fill_grid_array(this%k11, this%k33)
       end if
-      write (this%iout, '(1x, a)') 'K33 not provided but TVK is active. &
-          &Setting K33 = K to support possible TVK adjustments.'
-      call this%dis%fill_grid_array(this%k11, this%k33)
+      this%ik33 = 1
     else
       if (this%ik33overk /= 0) then
         write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
@@ -1774,17 +1770,13 @@ contains
     end if
     !
     ! -- set ik22 flag
-    if (lname(4)) then
-      this%ik22 = 1
-    else if (.not. lname(4) .and. this%intvk > 0) then
-      this%ik22 = 1
-      if (this%ik22overk /= 0) then
-        write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
-        call store_error(errmsg)
+    if (lname(4) .or. this%intvk > 0) then
+      if (this%intvk > 0 .and. this%ik22 == 0) then
+        write (this%iout, '(1x, a)') 'K22 not provided but TVK is active. &
+            &Setting K22 = K to support possible TVK adjustments.'
+        call this%dis%fill_grid_array(this%k11, this%k22)
       end if
-      write (this%iout, '(1x, a)') 'K22 not provided but TVK is active. &
-          &Setting K22 = K to support possible TVK adjustments.'
-      call this%dis%fill_grid_array(this%k11, this%k22)
+      this%ik22 = 1
     else
       if (this%ik22overk /= 0) then
         write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
