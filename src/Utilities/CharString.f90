@@ -31,7 +31,9 @@ module CharacterStringModule
     procedure :: write_unformatted
     generic :: assignment(=) => assign_to_charstring, assign_from_charstring
     generic :: operator(==) => character_eq_charstring, charstring_eq_character
-    generic :: write(unformatted) => write_unformatted
+    ! not supported by gfortran 5 and 6
+    ! disable for now
+    ! generic :: write (unformatted) => write_unformatted
   end type CharacterStringType
 
 contains
@@ -81,7 +83,7 @@ contains
     character(len=*), intent(inout) :: iomsg
     iostat = 0
     if (allocated(this%charstring)) then
-      write(unit, iostat=iostat) this%charstring
+      write (unit, iostat=iostat) this%charstring
     end if
   end subroutine write_unformatted
 
