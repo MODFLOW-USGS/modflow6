@@ -1385,7 +1385,6 @@ contains
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DHNOFLO, DHDRY
     use BudgetModule, only: BudgetType
-    use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(UzfType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x

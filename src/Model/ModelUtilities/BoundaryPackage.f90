@@ -51,7 +51,7 @@ module BndModule
     character(len=LENAUXNAME), dimension(:), pointer, &
       contiguous :: auxname => null() !< vector of auxname
     type(CharacterStringType), dimension(:), pointer, &
-      contiguous :: auxname_cst => null() !< vector of auxname
+      contiguous :: auxname_cst => null() !< copy of vector auxname that can be stored in memory manager
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: boundname => null() !< vector of boundnames
     !
@@ -1193,7 +1193,7 @@ contains
   !<
   subroutine bnd_read_options(this)
     ! -- modules
-    use InputOutputModule, only: ParseLine, upcase
+    use InputOutputModule, only: urdaux
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy variables
     class(BndType), intent(inout) :: this !< BndType object
@@ -1202,7 +1202,10 @@ contains
     character(len=LINELENGTH) :: fname
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME) :: sfacauxname
-    character(len=LINELENGTH), dimension(:), allocatable :: caux
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
     integer(I4B) :: n
     integer(I4B) :: ierr
     integer(I4B) :: inobs
@@ -1239,40 +1242,17 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case ('AUX', 'AUXILIARY')
-          !
-          ! -- error if aux variable already specified
-          if (this%naux > 0) then
-            write (errmsg, '(a)') &
-              'Auxiliary variables already specified. Auxiliary &
-              &variables must be specified on one line in the options block.'
-            call store_error(errmsg)
-          end if
-          !
-          ! -- parse the remaining part of the line into caux
           call this%parser%GetRemainingLine(line)
-          call ParseLine(line, this%naux, caux)
-          !
-          ! -- reallocate auxname and fill with caux
+          lloc = 1
+          call urdaux(this%naux, this%parser%iuactive, this%iout, lloc, &
+                      istart, istop, caux, line, this%text)
           call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
                               'AUXNAME', this%memoryPath)
           call mem_reallocate(this%auxname_cst, this%naux, &
                               'AUXNAME_CST', this%memoryPath)
           do n = 1, this%naux
-            if (len_trim(caux(n)) > LENAUXNAME) then
-              write (errmsg, '(a, a, a, i0, a, i0, a)') &
-                'Found auxiliary variable (', trim(caux(n)), &
-                ') with a name of size ', len_trim(caux(n)), &
-                '. Auxiliary variable names must be len than or equal&
-                & to ', LENAUXNAME, ' characters.'
-              call store_error(errmsg)
-            end if
-            call upcase(caux(n))
-            this%auxname(n) = caux(n) (1:LENAUXNAME)
-            this%auxname_cst(n) = caux(n) (1:LENAUXNAME)
-            if (this%iout > 0) then
-              write (this%iout, "(4X,'AUXILIARY ',a,' VARIABLE: ',A)") &
-                trim(adjustl(this%text)), trim(adjustl(caux(n)))
-            end if
+            this%auxname(n) = caux(n)
+            this%auxname_cst(n) = caux(n)
           end do
           deallocate (caux)
         case ('SAVE_FLOWS')
@@ -1390,7 +1370,7 @@ contains
       ! -- Assign mult column
       this%iauxmultcol = 0
       do n = 1, this%naux
-        if (sfacauxname == this%auxname_cst(n)) then
+        if (sfacauxname == this%auxname(n)) then
           this%iauxmultcol = n
           exit
         end if

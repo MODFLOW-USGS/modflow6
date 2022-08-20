@@ -505,7 +505,9 @@ contains
     allocate (mt)
     !
     ! -- set memory type
-    mt%astr1d => astr1d
+    ! this does not work with gfortran 11.3 and 12.1
+    ! so we have to disable the pointing to astr1d
+    ! mt%astr1d => astr1d
     mt%isize = isize
     mt%name = name
     mt%path = mem_path

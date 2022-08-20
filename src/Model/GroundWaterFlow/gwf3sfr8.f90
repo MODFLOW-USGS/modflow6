@@ -2272,7 +2272,6 @@ contains
   !<
   subroutine sfr_cq(this, x, flowja, iadv)
     ! -- modules
-    use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy variables
     class(SfrType), intent(inout) :: this !< SfrType object

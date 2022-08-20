@@ -2715,7 +2715,6 @@ contains
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME
-    use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy
     class(MawType), intent(inout) :: this
