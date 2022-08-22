@@ -1507,8 +1507,8 @@ contains
 
   !> @ brief Copy boundnames into boundnames_cst
     !!
-    !!  boundnames_cst is an array of type(CharacterStringType), 
-    !!  which can be stored in the MemoryManager.  
+    !!  boundnames_cst is an array of type(CharacterStringType),
+    !!  which can be stored in the MemoryManager.
     !!
   !<
   subroutine copy_boundname(this)
