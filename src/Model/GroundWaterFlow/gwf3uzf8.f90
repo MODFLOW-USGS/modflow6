@@ -251,6 +251,9 @@ contains
       end do
     end if
     !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
+    !
     ! -- copy igwfnode into nodelist and set water table
     do i = 1, this%nodes
       this%nodelist(i) = this%igwfnode(i)

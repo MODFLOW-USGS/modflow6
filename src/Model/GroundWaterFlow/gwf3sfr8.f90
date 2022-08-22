@@ -769,6 +769,9 @@ contains
       end do
     end if
     !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
+    !
     ! -- copy igwfnode into nodelist
     do n = 1, this%maxbound
       this%nodelist(n) = this%igwfnode(n)

@@ -1792,6 +1792,9 @@ contains
       end do
     end if
     !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
+    !
     ! -- set pointer to gwf iss and gwf hk
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     call mem_setptr(this%gwfk11, 'K11', create_mem_path(this%name_model, 'NPF'))

@@ -1788,6 +1788,9 @@ contains
       end do
     end if
     !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
+    !
     ! -- return
     return
   end subroutine apt_read_initial_attr
