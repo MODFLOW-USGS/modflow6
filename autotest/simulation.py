@@ -198,6 +198,10 @@ class Simulation(object):
 
     def setup_comparison(self, src, dst, testModel=True):
 
+        # evaluate if comparison should be made
+        if not self.make_comparison:
+            return
+
         # adjust htol if it is smaller than IMS outer_dvclose
         dvclose = self._get_dvclose(dst)
         if dvclose is not None:
