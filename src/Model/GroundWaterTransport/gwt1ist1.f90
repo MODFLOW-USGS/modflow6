@@ -55,7 +55,7 @@ module GwtIstModule
     integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on)
+    integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on); only linear is supported in ist
     integer(I4B), pointer :: kiter => null() !< picard iteration counter
     real(DP), dimension(:), pointer, contiguous :: cim => null() !< concentration for immobile domain
     real(DP), dimension(:), pointer, contiguous :: cimnew => null() !< immobile concentration at end of current time step
@@ -198,12 +198,15 @@ contains
     ! -- Perform a check to ensure that sorption and decay are set
     !    consistently between the MST and IST packages.
     if (this%idcy /= this%mst%idcy) then
-      call store_error('DECAY MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
-        &MST AND IST PACKAGES.  TURN DECAY ON OR OFF FOR BOTH PACKAGES.')
+      call store_error('DECAY must be activated consistently between the &
+        &MST and IST Packages.  Activate or deactivate DECAY for both &
+        &Packages.')
     end if
     if (this%isrb /= this%mst%isrb) then
-      call store_error('SORPTION MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
-        &MST AND IST PACKAGES.  TURN SORPTION ON OR OFF FOR BOTH PACKAGES.')
+      call store_error('Sorption is active for the IST Package but it is not &
+        &compatible with the sorption option selected for the MST Package.  &
+        &If sorption is active for the IST Package, then SORPTION LINEAR must &
+        &be specified in the options block of the MST Package.')
     end if
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()

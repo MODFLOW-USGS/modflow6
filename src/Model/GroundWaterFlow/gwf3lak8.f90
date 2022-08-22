@@ -5864,11 +5864,12 @@ contains
                                      ibudcsv=this%ibudcsv)
     idx = 0
     !
-    ! -- Go through and set up each budget term
+    ! -- Go through and set up each budget term. nlen is the number
+    !    of outlets that discharge into another lake
     if (nlen > 0) then
       text = '    FLOW-JA-FACE'
       idx = idx + 1
-      maxlist = 2 * this%noutlets
+      maxlist = 2 * nlen
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
